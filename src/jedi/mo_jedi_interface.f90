@@ -178,10 +178,9 @@ CONTAINS
     USE mo_jedi_process,           ONLY: calc_Ctradeoff,jedi_water_stress_factor,jedi_soil_depth_to_layers_1d!,drop_expensive_tissue
     USE mo_jsb_physical_constants, ONLY: tmelt  
     USE mo_jsb_time,               ONLY: t_datetime,is_newday, is_newyear, timesteps_per_day, &
-      &  is_time_experiment_start, is_time_restart, get_year_at_model_start,     &
-      &  get_time_experiment_start, get_year, deallocateDatetime
+      &                                  is_time_experiment_start, is_time_restart, get_year_at_experiment_start, get_year
     USE mo_jedi_constants,         ONLY: max_pipe_transpir
-    USE mo_jsb_grid_class,         ONLY:  t_jsb_vgrid !PHS: root_depth
+    USE mo_jsb_grid_class,         ONLY: t_jsb_vgrid !PHS: root_depth
     USE mo_hydro_util,             ONLY: get_water_in_root_zone !PHS: root_depth
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -198,7 +197,6 @@ CONTAINS
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-  
     ! Declare variavles for JeDi carbon allocation 
     ! 
-    TYPE(t_datetime), POINTER    :: inidate
     INTEGER                      :: iniyear
     LOGICAL                      :: lspinup_jedi
   
@@ -405,9 +403,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%current_datetime, dtime) ) CALL message(TRIM(routine), &
                                                            'update_tradeoff: First time step of new year')
     
-    inidate => get_time_experiment_start()
-    iniyear = get_year(inidate)
-    CALL deallocateDatetime(inidate)
+    iniyear = get_year_at_experiment_start()
     lspinup_jedi = dsl4jsb_Config(JEDI_)%l_spinup_jedi
     
     IF ((get_year(options%current_datetime) .LE. iniyear + 2 ) .AND. lspinup_jedi ) THEN    !  PHS: initial carbon
