@@ -400,6 +400,7 @@ CONTAINS
   ! @param [in]      delta_time         Time step [s]
 !pdv >
   ! @param [in]      l_infil_subzero
+  ! @param [in]      l_diffuse_all_ws
   ! @param [in]      l_hyd_ref 
   ! @param [in]      l_discount_scool 
   ! @param [in]      l_drain_lat
@@ -438,7 +439,7 @@ CONTAINS
     ! in
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
 !pdv >
-    & l_infil_subzero, l_hyd_ref, l_discount_scool, l_drain_lat,                                                 &
+    & l_infil_subzero, l_hyd_ref, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                               &
 !pdv <
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
@@ -466,7 +467,7 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
 !pdv >
-    LOGICAL, INTENT(in) :: l_infil_subzero, l_hyd_ref, l_discount_scool, l_drain_lat
+    LOGICAL, INTENT(in) :: l_infil_subzero, l_hyd_ref, l_diffuse_all_ws, l_discount_scool, l_drain_lat
 !pdv <
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
@@ -699,7 +700,7 @@ CONTAINS
     ! Drainage calculation with multi-layer soil scheme
     CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, &
 !pdv >
-        l_hyd_ref, l_discount_scool, l_drain_lat, &
+        l_hyd_ref, l_diffuse_all_ws, l_discount_scool, l_drain_lat, &
 !pdv <
          ws_l, soil_depth_l, &
          wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l,   &
@@ -733,7 +734,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
   SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog,                           &
 !pdv >
-       l_hyd_ref, l_discount_scool, l_drain_lat,                                     &
+       l_hyd_ref, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                   &
 !pdv <
        ws_l, dsoil,                                                                  &
        wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
@@ -758,6 +759,7 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: jllog                      !
 !pdv >
     LOGICAL,  INTENT(IN)            :: l_hyd_ref
+    LOGICAL,  INTENT(IN)            :: l_diffuse_all_ws
     LOGICAL,  INTENT(IN)            :: l_discount_scool
     LOGICAL,  INTENT(IN)            :: l_drain_lat
 !pdv <
@@ -978,7 +980,7 @@ CONTAINS
         END IF
 
 !pdv >
-        IF (l_hyd_ref .OR. l_drain_lat) THEN
+        IF (l_drain_lat) THEN
 !pdv <
           IF (dsoil(j,i) > 0._wp .AND. soil_below(j)) THEN
 
@@ -1005,17 +1007,16 @@ CONTAINS
               END IF
               ! drainage is limited by the soil moisture within the layer
               drain_l(j) = MIN(drain_l(j) * delta_time, (ws_tmp(j) - ws_immo_l(j,i)))
+
+              IF (.NOT. ltpe_closed) THEN                ! Not closed terraplanet setup (-> no drainage)
+                ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture
+                drainage(j) = drainage(j) + drain_l(j)   ! and add it to the total drainage
+              END IF
             END IF
           END IF
 !pdv >
         END IF ! lateral drainage
 !pdv <
-        IF (.NOT. ltpe_closed) THEN
-          IF (dsoil(j,i) > 0._wp .AND. soil_below(j) .AND. ws_tmp(j) > ws_immo_l(j,i)) THEN
-            ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture
-            drainage(j) = drainage(j) + drain_l(j)   ! and add it to the total drainage
-          END IF
-        END IF                                       ! no drainage for TPE closed case
 
       END DO  ! soil level
 
@@ -1031,7 +1032,7 @@ CONTAINS
 
         ws_rel(j,i) = 0._wp
 !pdv >
-        IF (l_hyd_ref) THEN
+        IF (l_diffuse_all_ws) THEN
 !pdv <
           IF (ws_l(j,i) > 0._wp) THEN
             ws_rel(j,i) =  ws_l(j,i) / dsoil(j,i)  &

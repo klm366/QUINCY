@@ -1049,6 +1049,7 @@ CONTAINS
 !pdv >
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,             &
       & dsl4jsb_Config(HYDRO_)%l_hyd_ref,                   &
+      & dsl4jsb_Config(HYDRO_)%l_diffuse_all_ws,            &
       & dsl4jsb_Config(HYDRO_)%l_discount_scool,            &
       & dsl4jsb_Config(HYDRO_)%l_drain_lat,                 &
 !pdv <
