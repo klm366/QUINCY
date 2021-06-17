@@ -32,10 +32,10 @@ MODULE mo_jsb4_forcing
   USE mo_time_control,    ONLY: lresume, lstart, get_year_day                    
   USE mo_time_conversion, ONLY: IMerge_HMS2Sec, day_in_year, time_days
 #else
-  USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart, get_year_day, &
-    &                           get_year_length, get_year_at_experiment_start
+  USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart, get_year_day
 #endif
-  USE mo_jsb_time,        ONLY: get_date_components, t_datetime, is_newyear, is_newday
+  USE mo_jsb_time,        ONLY: get_date_components, t_datetime, is_newyear, is_newday, &
+    &                           get_year_length, get_year_at_experiment_start
 
   ! Apparently in echam and icon
   USE mo_math_constants,         ONLY: pi
@@ -153,8 +153,8 @@ MODULE mo_jsb4_forcing
   ! --- Structures for handling input data
   ! options relating forcing read from namelist
   TYPE forcing_options_type
-    REAL(wp) :: delta_time_observations
     INTEGER  :: cyclic_nyears                  !! Number of years for cyclic forcing; default: 0 = no cyclic forcing
+    INTEGER  :: cyclic_start_year              !! First year for cyclic forcing; default: 9999, i.e. use experiment start year
     INTEGER  :: forcing_synchron_factor      
     INTEGER  :: forcing_steps_per_file
     LOGICAL  :: forcing_set_ocean_to_constants !! Specifies if external forcing is only defined for land cells (true)
@@ -365,6 +365,7 @@ CONTAINS
 
     ! --- compute specific humidity
     ALLOCATE(sat_spec_humidity(ice, nblks))
+    sat_spec_humidity(:,:) = 0._wp
     SELECT CASE(forcing_options%type_of_qair_forcing)
     CASE(NONE_)
       ! ratio of actual to potential evapotranspiration from the previous day
@@ -530,8 +531,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, steplen
 
     ! --- Namelist parameters
-    REAL(wp) :: delta_time_observations
-    INTEGER  :: cyclic_nyears
+    INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
+    INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
                                         ! each atmospheric forcing time step that is read in      
     INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72
@@ -591,7 +592,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
-    NAMELIST /jsb_forcing_nml/ delta_time_observations, cyclic_nyears, forcing_synchron_factor, forcing_steps_per_file,       &
+    NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_file,             &
       & forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,                                         &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
       & forcing_temp_unit,                                                                                                    &
@@ -619,8 +620,8 @@ CONTAINS
 
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
-      delta_time_observations  = 86400._wp
-      cyclic_nyears = 0 ! No cyclic forcing
+      cyclic_nyears = 0             ! No cyclic forcing
+      cyclic_start_year = 9999      ! Use year of experiment start for first cyclic year
       forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
                                     ! each atmospheric forcing time step that is read in
       forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72
@@ -680,13 +681,15 @@ CONTAINS
       f_unit = position_nml ('jsb_forcing_nml', nml_handler, status=read_status)
       IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_nml)
 
-      forcing_options%delta_time_observations = delta_time_observations
       forcing_options%cyclic_nyears           = cyclic_nyears
+      IF (cyclic_start_year == 9999) cyclic_start_year = get_year_at_experiment_start()
+      forcing_options%cyclic_start_year       = cyclic_start_year
       forcing_options%forcing_synchron_factor = forcing_synchron_factor
       forcing_options%forcing_steps_per_file  = forcing_steps_per_file
 
       IF (cyclic_nyears > 0) THEN
-        CALL message(routine, 'Using cyclic forcing from ' // TRIM(int2string(cyclic_nyears)) // ' years.')
+        CALL message(routine, 'Using cyclic forcing from ' // TRIM(int2string(cyclic_nyears)) // ' years ' // &
+          &                   'starting in ' // TRIM(int2string(cyclic_start_year)))
       END IF
 
         ! ----- derive options - forcing heights: as in jsb3 it is expected that "HeightHumidity and HeightTemperature have to be equal"
@@ -745,10 +748,10 @@ CONTAINS
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
-      CALL p_bcast(delta_time_observations, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%cyclic_nyears, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%cyclic_start_year, p_io, mpi_comm)
       CALL p_bcast(forcing_synchron_factor, p_io, mpi_comm)
       CALL p_bcast(forcing_steps_per_file, p_io, mpi_comm)
-      CALL p_bcast(forcing_options%cyclic_nyears, p_io, mpi_comm)
       CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io, mpi_comm)
       CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io, mpi_comm)
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io, mpi_comm)
@@ -862,8 +865,9 @@ CONTAINS
     LOGICAL ::  new_year_forcing     ! jsb3: defined comparing current_date with next_date, because with stepwise forcing
     LOGICAL ::  new_day_forcing      ! the dates in the forcing file shall correspond to the dates of stepwise output.
 
-    INTEGER           :: year, month, day, hour, minute, second, ydate, year_experiment_start, cyclic_year
+    INTEGER           :: year, month, day, hour, minute, second, ydate, cyclic_year
     INTEGER           :: frequency, currentTimeStep, thisDayStart, thisDayEnd, ith_timestep, index_time, nc_var_id
+    LOGICAL           :: do_advance
     CHARACTER(len=8)  :: year_label
     CHARACTER(len=NF_MAX_NAME)  :: readUnit
 
@@ -891,20 +895,22 @@ CONTAINS
     CALL get_date_components(next_datetime, year, month, day, hour, minute, second)
 
     ! Find year of forcing file and date for new datetime
+    do_advance = .TRUE.
     IF (forcing_options%cyclic_nyears > 0) THEN
-      year_experiment_start = get_year_at_experiment_start()
-      cyclic_year = year_experiment_start + MOD(year - year_experiment_start, forcing_options%cyclic_nyears)
-      WRITE(year_label,'(i8.4)') cyclic_year
+      cyclic_year = forcing_options%cyclic_start_year &
+        &           + MOD(year - get_year_at_experiment_start(), forcing_options%cyclic_nyears)
       ! If current year is a leap year but year from forcing file is not, read in Feb 28 twice
       IF (get_year_length(year) == 366 .AND. get_year_length(cyclic_year) == 365) THEN
-        IF (month == 2 .AND. day == 29) day = 28
+        IF (month == 2 .AND. day == 29) THEN
+          day = 28
+          do_advance = .FALSE.
+        END IF
       END IF
-      ydate = ISIGN(1,cyclic_year)*(IABS(cyclic_year)*10000+month*100+day)
-    ELSE
-      WRITE(year_label,'(i8.4)') year
-      ydate = ISIGN(1,year)*(IABS(year)*10000+month*100+day)
+      year = cyclic_year
     END IF
 
+    WRITE(year_label,'(i8.4)') year
+    ydate = ISIGN(1,year)*(IABS(year)*10000+month*100+day)
     ith_timestep = IMerge_HMS2Sec(hour, minute, second)/int(delta_time) + 1 !+1 because 00:00/X => 0; and 1 based vector
 
     ! ----- CO2 ghg_scenario exception: in case of ghg_scenario a single file is used, which contains one CO2 value per year
@@ -1065,18 +1071,22 @@ CONTAINS
         & start_time_step=thisDayStart, end_time_step=thisDayEnd, fill_array=forcing_input_variable%data_read)
 
       ! Set the ocean cells of the read data to the constant ocean value and increase the start and end for the next day to be read
-      IF(forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
+      IF (forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
         DO index_time = 1,time_steps_per_day
           CALL set_ocean_cells(nblks, ics, ice, model_id, &
             & forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,index_time))
         ENDDO
-        forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
-        forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+time_steps_per_day
-      ELSEIF(forcing_input_variable%frequency .EQ. DAILY_) THEN
+        IF (do_advance) THEN
+          forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
+          forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+time_steps_per_day
+        END IF
+      ELSE IF (forcing_input_variable%frequency .EQ. DAILY_) THEN
         CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, &
           &                  forcing_input_variable%data_read(:,:,1))
-        forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
-        forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
+        IF (do_advance) THEN
+          forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
+          forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
+        END IF
       ENDIF
     ENDIF
 
@@ -1334,7 +1344,7 @@ CONTAINS
       ! adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 (r8893)
       IF(forcing_options%heightWind > 0._wp .AND. forcing_options%heightHumidity > 0._wp) THEN
         zg(1:ic) = forcing_options%heightWind * grav
-        zgh(1:ic) = forcing_options%heightHumidity * grav ! jsb31:ic "HeightHumidity and HeightTemperature have to be equal"
+        zgh(1:ic) = forcing_options%heightHumidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
       ELSE
         ! TODO Once forcing from model data is implemented this has to be activated again!
         ! zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
@@ -1350,7 +1360,7 @@ CONTAINS
       zchnl(1:ic) = ckap**2 / (LOG(1._wp + zg(1:ic) / (grav * rough_m_srf_proc(1:ic,iblk) )) &
                 * LOG( ( grav * rough_m_srf_proc(1:ic,iblk) + zgh(1:ic) ) / (grav * rough_h_srf_proc(1:ic,iblk) )))
 
-      ! account for stable/unstable case1:ic helper variables
+      ! account for stable/unstable case: helper variables
       zscfl(1:ic) = SQRT ( 1._wp + 5._wp * ABS(zril(1:ic)))
       zucfhl(1:ic) = 1._wp / (1._wp + zcons11 * zchnl(1:ic) * SQRT(ABS(zril(1:ic)) * (1._wp &
         & + zgh(1:ic) / (grav * rough_h_srf_proc(1:ic,iblk)))))
