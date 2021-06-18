@@ -399,9 +399,11 @@ CONTAINS
   ! @param [in]      nlat               (Effective) number of latitudes
   ! @param [in]      delta_time         Time step [s]
 !pdv >
+  ! @param [in]      l_runoff_with_ice  Include soil ice in calculation of runoff and infiltration
   ! @param [in]      l_infil_subzero
   ! @param [in]      l_diffuse_all_ws
   ! @param [in]      l_hyd_ref 
+  ! @param [in]      l_ws_max_depend_on_org  ws_max re-calculated depending on organic matter
   ! @param [in]      l_discount_scool 
   ! @param [in]      l_drain_lat
 !pdv <
@@ -439,7 +441,7 @@ CONTAINS
     ! in
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
 !pdv >
-    & l_infil_subzero, l_hyd_ref, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                               &
+    & l_infil_subzero, l_hyd_ref, l_runoff_with_ice, l_ws_max_depend_on_org, l_diffuse_all_ws, l_discount_scool, l_drain_lat, &
 !pdv <
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
@@ -467,7 +469,8 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
 !pdv >
-    LOGICAL, INTENT(in) :: l_infil_subzero, l_hyd_ref, l_diffuse_all_ws, l_discount_scool, l_drain_lat
+    LOGICAL, INTENT(in) :: l_infil_subzero, l_hyd_ref, l_runoff_with_ice, l_ws_max_depend_on_org,  &
+      & l_diffuse_all_ws, l_discount_scool, l_drain_lat
 !pdv <
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
@@ -540,18 +543,19 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
+!vg       vfc_times_sd_l(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
+!vg       CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+!vg>>
+    !vg: is it necessary to re-calculate ws_max here? Shouldn't it come as input?
+    CALL get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+!vg<<
 !pdv >
+    IF (l_ws_max_depend_on_org) THEN
 !!!! Careful: ws_max is used inconsistantly -> it is used to calculate the relative saturation of the soil but using water+ice 
 !!!! so at this point the ice should not be deducted (as it is in field_cap_l), or later the saturation should not be calculated by:
 !!!! (w_liq + ice) / ws_max -- see changes below
 !!!! But in any case the question whether or not ice is discounted should not depend on the organic matter content of the soil
-    IF (l_hyd_ref) THEN
 !pdv <
-!vg       vfc_times_sd_l(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
-!vg       CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
-!vg>>
-      CALL get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
-!vg<<
       !$claw acc data present(fract_org_l,ws_max,ws_max_mineral)
       !$claw acc parallel loop gang vector
       DO i = 1, nidx
@@ -562,8 +566,6 @@ CONTAINS
       !$claw acc end parallel
       !$claw acc end data
 !pdv >
-    ELSE
-      CALL get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
     END IF
 !pdv <
 
@@ -622,7 +624,7 @@ CONTAINS
         runoff(i) = 0._wp
         infilt(i) = water_to_soil(i)
       ELSE
-        IF ((.NOT. l_infil_subzero .OR. l_hyd_ref) .AND. (t_soil_upper_layer(i) < tmelt)) THEN
+        IF (.NOT. l_infil_subzero .AND. (t_soil_upper_layer(i) < tmelt)) THEN
           !pdv: Temperature dependence should not be included when using the 5-layer snow scheme because:
           !pdv  when tsurf == 0.C; T_soil < 0.C -- and all snow melt is going to surfcae runoff 
           runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
@@ -630,7 +632,7 @@ CONTAINS
         ELSE
 !pdv >
           !pdv: ice should not be included in the calculation because ws_max (and ws_min_drain) does not include ice
-          IF (l_hyd_ref) THEN
+          IF (l_runoff_with_ice) THEN
             ws_keep = ws(i)
             ws(i) = ws(i) + ice_rootzone(i)       ! soil water including ice
           END IF
@@ -649,7 +651,7 @@ CONTAINS
             infilt(i) = water_to_soil(i)                                ! all water infiltrated
           END IF
 !pdv >
-          IF (l_hyd_ref) THEN
+          IF (l_runoff_with_ice) THEN
             !just to have again only the liqued soil water in ws
             ws(i) = ws_keep(i)
           END IF
