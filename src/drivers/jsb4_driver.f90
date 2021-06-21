@@ -439,6 +439,9 @@ PROGRAM jsb4_driver
     CALL nf_check(nf_close(ncid))
   ENDIF
 
+  CALL close_output_streams
+  CALL message('INFO','Closed output streams')
+
   CALL jsbach_finalize()
 
 !$OMP PARALLEL
