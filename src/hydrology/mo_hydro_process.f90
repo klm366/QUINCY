@@ -399,11 +399,12 @@ CONTAINS
   ! @param [in]      nlat               (Effective) number of latitudes
   ! @param [in]      delta_time         Time step [s]
 !pdv >
-  ! @param [in]      l_runoff_with_ice  Include soil ice in calculation of runoff and infiltration
-  ! @param [in]      l_infil_subzero
+  ! @param [in]      l_infil_subzero        Allow infiltration of supercolled water
+  ! @param [in]      l_runoff_with_ice      Include soil ice in calculation of runoff and infiltration
+  ! @param [in]      l_ws_max_depend_on_org ws_max re-calculated depending on organic matter
+  ! @param [in]      l_correct_ws_from_top  Start soil moisture correction from top level
+  ! @param [in]      l_ice_impedance        Account for ice impedance
   ! @param [in]      l_diffuse_all_ws
-  ! @param [in]      l_hyd_ref 
-  ! @param [in]      l_ws_max_depend_on_org  ws_max re-calculated depending on organic matter
   ! @param [in]      l_discount_scool 
   ! @param [in]      l_drain_lat
 !pdv <
@@ -441,7 +442,8 @@ CONTAINS
     ! in
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
 !pdv >
-    & l_infil_subzero, l_hyd_ref, l_runoff_with_ice, l_ws_max_depend_on_org, l_diffuse_all_ws, l_discount_scool, l_drain_lat, &
+    & l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top,                         &
+    & l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                                          &
 !pdv <
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
@@ -469,8 +471,8 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
 !pdv >
-    LOGICAL, INTENT(in) :: l_infil_subzero, l_hyd_ref, l_runoff_with_ice, l_ws_max_depend_on_org,  &
-      & l_diffuse_all_ws, l_discount_scool, l_drain_lat
+    LOGICAL, INTENT(in) :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top, &
+      & l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat
 !pdv <
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
@@ -678,7 +680,7 @@ CONTAINS
     ! Changes by evaporation fluxes
     CALL digest_evapotrans(nidx, nsoil,  &
 !pdv >
-      &     l_hyd_ref,                   &
+      &     l_correct_ws_from_top,       &
 !pdv <
       &     root_depth_l, soil_depth_l, &
       &     field_cap_l, transpiration_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
@@ -702,7 +704,7 @@ CONTAINS
     ! Drainage calculation with multi-layer soil scheme
     CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, &
 !pdv >
-        l_hyd_ref, l_diffuse_all_ws, l_discount_scool, l_drain_lat, &
+         l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat, &
 !pdv <
          ws_l, soil_depth_l, &
          wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l,   &
@@ -736,7 +738,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
   SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog,                           &
 !pdv >
-       l_hyd_ref, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                   &
+       l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat,             &
 !pdv <
        ws_l, dsoil,                                                                  &
        wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
@@ -760,7 +762,7 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: ilog                       !
     INTEGER,  INTENT(IN)            :: jllog                      !
 !pdv >
-    LOGICAL,  INTENT(IN)            :: l_hyd_ref
+    LOGICAL,  INTENT(IN)            :: l_ice_impedance
     LOGICAL,  INTENT(IN)            :: l_diffuse_all_ws
     LOGICAL,  INTENT(IN)            :: l_discount_scool
     LOGICAL,  INTENT(IN)            :: l_drain_lat
@@ -881,7 +883,7 @@ CONTAINS
       DO i = 1, nsoil
         IF (l_discount_scool) THEN
           !!!! When there is supercooled water in the soil, this should not be able to move vertically
-          ws_immo_l(j,i) = MAX(pot_scool_l(j,i), p_wilt_l(j,i))
+          ws_immo_l(j,i) = MAX(pot_scool_l(j,i), p_wilt_l(j,i)) !!!vg: error!!!
         ELSE
           ws_immo_l(j,i) = p_wilt_l(j,i)
         END IF
@@ -891,7 +893,7 @@ CONTAINS
       !$claw acc loop seq
       DO i = 1, nsoil-1
         IF (field_cap_l(j,i) > zfcmin .AND. field_cap_l(j,i) > ws_immo_l(j,i)) THEN
-          IF (l_hyd_ref) THEN
+          IF (.NOT. l_ice_impedance) THEN
 
             ws_rel(j,i) = MAX(ws_l(j,i) - ws_immo_l(j,i), 0._wp) / (field_cap_l(j,i) - ws_immo_l(j,i))
             ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
@@ -957,7 +959,7 @@ CONTAINS
             ! The lateral drainage from each soil layer should very much be discussed with Stefan again ...
             ! I would not include it.
             ! Furthermore, when there is supercooled water it should not be assumed to move through the soil
-            IF (l_hyd_ref) THEN
+            IF (.NOT. l_discount_scool) THEN
 !pdv <
               IF (ws_l(j,i) > ws_crit(j)) THEN
                 drain_crit(j) = (zdrmax-zdrmin)  &
@@ -1313,7 +1315,7 @@ CONTAINS
     & nidx,                     &
     & nsoil,                    &
 !pdv >
-    & l_hyd_ref,                &
+    & l_correct_ws_from_top,    &
 !pdv <
     & droot,                    &
     & dsoil,                    &
@@ -1340,7 +1342,7 @@ CONTAINS
     INTEGER,  INTENT(in)     :: nidx                    ! vector length
     INTEGER,  INTENT(in)     :: nsoil                   ! number of soil layers
 !pdv >
-    LOGICAL,  INTENT(in)     :: l_hyd_ref
+    LOGICAL,  INTENT(in)     :: l_correct_ws_from_top
 !pdv <
     REAL(wp), INTENT(in)     :: droot(:,:)              ! root depth within layer [m]
     REAL(wp), INTENT(in)     :: dsoil(:,:)              ! soil depth until bedrock within layer [m]
@@ -1463,20 +1465,7 @@ CONTAINS
       ! changed to close the land surface water balance.
 
 !pdv >
-      IF (l_hyd_ref) THEN
-!pdv <
-        ws(i) = SUM(ws_l(i,:)) + SUM(soil_ice_l(i,:))  ! water and ice  within the column
-
-        !$claw acc loop seq
-        DO jk=1, nsoil
-          IF (reduce_evapo(i) < 0._wp .AND. ws(i) > 0._wp) THEN
-            ! reduce soil moisture and ice relative to the water content of each layer
-            ws_l(i,jk)     = MAX(0._wp, ws_l(i,jk)     + reduce_evapo(i) * ws_l(i,jk)/ws(i))
-            soil_ice_l(i,jk) = MAX(0._wp, soil_ice_l(i,jk) + reduce_evapo(i) * soil_ice_l(i,jk)/ws(i))
-          END IF
-        END DO
-!pdv >
-      ELSE
+      IF (l_correct_ws_from_top) THEN
         ! Deficit should be taken from layers starting at the surface to accelerate the feedback on evapotranspiration
         DO jk=1, nsoil
           IF (reduce_evapo(i) < 0._wp .AND. ws_l(i,jk) * field_cap_l(i,jk) * zwilt > 0._wp) THEN
@@ -1486,16 +1475,16 @@ CONTAINS
             ws_l(i,jk)     = ws_l_new(i)
           END IF
         END DO
-        ws(i) = SUM(ws_l(i,:)) + SUM(soil_ice_l(i,:))  ! water and ice within the column
-        DO jk=1, nsoil
-          IF (reduce_evapo(i) < 0._wp .AND. ws(i) > 0._wp) THEN
-            ! reduce soil moisture and ice relative to the water content of each layer
-            ws_l(i,jk)     = MAX(0._wp, ws_l(i,jk)     + reduce_evapo(i) * ws_l(i,jk)/ws(i))
-            soil_ice_l(i,jk) = MAX(0._wp, soil_ice_l(i,jk) + reduce_evapo(i) * soil_ice_l(i,jk)/ws(i))
-          END IF
-        END DO
       END IF
 !pdv <
+      ws(i) = SUM(ws_l(i,:)) + SUM(soil_ice_l(i,:))  ! water and ice within the column
+      DO jk=1, nsoil
+        IF (reduce_evapo(i) < 0._wp .AND. ws(i) > 0._wp) THEN
+          ! reduce soil moisture and ice relative to the water content of each layer
+          ws_l(i,jk)     = MAX(0._wp, ws_l(i,jk)     + reduce_evapo(i) * ws_l(i,jk)/ws(i))
+          soil_ice_l(i,jk) = MAX(0._wp, soil_ice_l(i,jk) + reduce_evapo(i) * soil_ice_l(i,jk)/ws(i))
+        END IF
+      END DO
     END DO ! nidx loop
 
     !$claw acc end parallel

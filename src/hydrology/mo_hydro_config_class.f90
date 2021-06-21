@@ -16,7 +16,7 @@ MODULE mo_hydro_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
-  USE mo_util,              ONLY: real2string
+  USE mo_util,              ONLY: real2string, logical2string
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_control,       ONLY: debug_on
@@ -44,18 +44,20 @@ MODULE mo_hydro_config_class
       & l_organic,           & !< Use organic component of soil layers
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
 !pdv >
-      & l_hyd_ref,           & !< Reference version, i.e. without KoPF changes
-      & l_runoff_with_ice,   & !< Include soil ice in runoff and infiltration calculations
-      & l_ws_max_depend_org, & !< ws_max re-calculation (in calc_soil_hydrology) depending on organic soil fraction
-      & l_diffuse_all_ws,    & !< Calculate soil water diffusion from all soil water, including immobile
-      & l_stress_from_all_ws, & !< Calculate water stress from all soil water, including water below
-                                !  the root zone and including supercooled water
-      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
-      & l_discount_scool,    & !< supercooled water is neither available to plants nor percolates
-      & l_drain_lat,         & !< Lateral drainage, i.e. drainage from upper to lower soil layers;
-                               !  if false, only the lowest soil level drains.
-      & l_percolation_theory   !< The saturated hydraulic conductivity is calculated following
-                               !  the percolation theory
+      & l_hyd_compat420,        & !< Reference version: JSBACH 4.20, i.e. without KoPF changes
+      & l_runoff_with_ice,      & !< Include soil ice in runoff and infiltration calculations
+      & l_ws_max_depend_on_org, & !< ws_max re-calculation (in calc_soil_hydrology) depends on organic soil fraction
+      & l_correct_ws_from_top,  & !< Start soil water correction from top layer (instead of equal reduction from all layers)
+      & l_ice_impedance,        & !< Account for ice impedance
+      & l_diffuse_all_ws,       & !< Calculate soil water diffusion from all soil water, including immobile
+      & l_infil_subzero,        & !< Allow infiltration at soil temperatures below 0°C
+      & l_discount_scool,       & !< supercooled water is neither available to plants nor percolates
+      & l_drain_lat,            & !< Lateral drainage, i.e. drainage from upper to lower soil layers;
+                                  !  if false, only the lowest soil level drains.
+      & l_stress_from_all_ws,   & !< Calculate water stress from all soil water, including water below
+                                  !  the root zone and including supercooled water.
+      & l_percolation_theory      !< The saturated hydraulic conductivity is calculated following
+                                  !  the percolation theory
 !pdv <
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -82,9 +84,9 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
 !pdv >
-    LOGICAL                     :: l_hyd_ref
-    LOGICAL                     :: l_runoff_with_ice, l_ws_max_depend_org, l_diffuse_all_ws, l_stress_from_all_ws, l_infil_subzero
-    LOGICAL                     :: l_discount_scool, l_drain_lat, l_percolation_theory
+    LOGICAL     :: l_hyd_compat420
+    LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top, l_ice_impedance
+    LOGICAL     :: l_diffuse_all_ws, l_discount_scool, l_drain_lat, l_stress_from_all_ws, l_percolation_theory
 !pdv <
 
     NAMELIST /jsb_hydro_nml/        &
@@ -101,14 +103,16 @@ CONTAINS
       & l_organic,                  &
       & l_glac_in_soil,             &
 !pdv >
-      & l_hyd_ref,                  &
-      & l_runoff_with_ice,          &
-      & l_ws_max_depend_org,        &
-      & l_diffuse_all_ws,           &
-      & l_stress_from_all_ws,       &
+      & l_hyd_compat420,            &
       & l_infil_subzero,            &
+      & l_runoff_with_ice,          &
+      & l_ws_max_depend_on_org,     &
+      & l_correct_ws_from_top,      &
+      & l_ice_impedance,            &
+      & l_diffuse_all_ws,           &
       & l_discount_scool,           &
       & l_drain_lat,                &
+      & l_stress_from_all_ws,       &
       & l_percolation_theory
 !pdv <
 
@@ -138,15 +142,17 @@ CONTAINS
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
 !pdv >
-    l_hyd_ref         = .TRUE.
-    l_runoff_with_ice = .TRUE.
-    l_ws_max_depend_org = .TRUE.
-    l_diffuse_all_ws  = .FALSE.
-    l_stress_from_all_ws = .FALSE.
-    l_infil_subzero   = .FALSE.
-    l_discount_scool  = .FALSE.
-    l_drain_lat       = .FALSE.
-    l_percolation_theory = .FALSE.
+    l_hyd_compat420        = .TRUE.
+    l_infil_subzero        = .FALSE.
+    l_runoff_with_ice      = .TRUE.
+    l_ws_max_depend_on_org = .TRUE.
+    l_correct_ws_from_top  = .FALSE.
+    l_ice_impedance        = .FALSE.
+    l_diffuse_all_ws       = .TRUE.
+    l_discount_scool       = .FALSE.
+    l_drain_lat            = .TRUE.
+    l_stress_from_all_ws   = .TRUE.
+    l_percolation_theory   = .FALSE.
 !pdv <
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -183,15 +189,91 @@ CONTAINS
 
     config%l_glac_in_soil      = l_glac_in_soil
 !pdv >
-    config%l_hyd_ref           = l_hyd_ref
-    config%l_runoff_with_ice   = l_runoff_with_ice
-    config%l_ws_max_depend_org = l_ws_max_depend_org
-    config%l_diffuse_all_ws    = l_diffuse_all_ws
-    config%l_stress_from_all_ws = l_stress_from_all_ws
-    config%l_infil_subzero     = l_infil_subzero
-    config%l_discount_scool    = l_discount_scool
-    config%l_drain_lat         = l_drain_lat
-    config%l_percolation_theory = l_percolation_theory
+    config%l_hyd_compat420     = l_hyd_compat420
+    IF (l_hyd_compat420) THEN
+      CALL message(TRIM(routine), 'Hydrology settings as in JSBACH 4.20')
+      IF (l_infil_subzero) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_infil_subzero=F. Namelist definition of l_infil_subzero ignored.')
+        l_infil_subzero        = .FALSE.
+      END IF
+      IF (.NOT. l_runoff_with_ice) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_runoff_with_ice=T. Namelist definition of l_runoff_with_ice ignored.')
+        l_runoff_with_ice      = .TRUE.
+      END IF
+      IF (.NOT. l_ws_max_depend_on_org) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_ws_max_depend_on_org=T. Namelist definition of l_ws_max_depend_on_org ignored.')
+        l_ws_max_depend_on_org = .TRUE.
+      END IF
+      IF (l_correct_ws_from_top) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_correct_ws_from_top=F. Namelist definition of l_correct_ws_from_top ignored.')
+        l_correct_ws_from_top  = .FALSE.
+      END IF
+      IF (l_ice_impedance) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_ice_impedance=F. Namelist definition of l_ice_impedance ignored.')
+        l_ice_impedance        = .FALSE.
+      END IF
+      IF (.NOT. l_diffuse_all_ws) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_diffuse_all_ws=T. Namelist definition of l_diffuse_all_ws ignored.')
+        l_diffuse_all_ws       = .TRUE.
+      END IF
+      IF (l_discount_scool) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_discount_scool=F. Namelist definition of l_discount_scool ignored.')
+        l_discount_scool       = .FALSE.
+      END IF
+      IF (.NOT. l_drain_lat) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_drain_lat=T. Namelist definition of l_drain_lat ignored.')
+        l_drain_lat            = .TRUE.
+      END IF
+      IF (l_percolation_theory) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_percolation_theory=F. Namelist definition of l_percolation_theory ignored.')
+        l_percolation_theory   = .FALSE.
+      END IF
+      IF (.NOT. l_stress_from_all_ws) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_stress_from_all_ws=T. Namelist definition of l_stress_from_all_ws ignored.')
+        l_stress_from_all_ws   = .TRUE.
+      END IF
+    END IF
+    config%l_infil_subzero        = l_infil_subzero
+    CALL message(TRIM(routine), &
+     & 'Infiltration possible at soil temperatures below 0 degC: '//TRIM(logical2string(l_infil_subzero)))
+    config%l_runoff_with_ice      = l_runoff_with_ice
+    CALL message(TRIM(routine), &
+     & 'Calculate runoff including ice: '//TRIM(logical2string(l_runoff_with_ice)))
+    config%l_ws_max_depend_on_org = l_ws_max_depend_on_org
+    CALL message(TRIM(routine), &
+     & 'Re-calculate ws_max from initialfile dep. on organic: '//TRIM(logical2string(l_ws_max_depend_on_org)))
+    config%l_correct_ws_from_top  = l_correct_ws_from_top
+    CALL message(TRIM(routine), &
+     & 'Start correction of soil moisture from top level: '//TRIM(logical2string(l_correct_ws_from_top)))
+    config%l_ice_impedance        = l_ice_impedance
+    CALL message(TRIM(routine), &
+     & 'Account for ice impedance: '//TRIM(logical2string(l_ice_impedance)))
+    config%l_diffuse_all_ws       = l_diffuse_all_ws
+    CALL message(TRIM(routine), &
+     & 'Calculate diffusion of all water, including supercooled water: '//TRIM(logical2string(l_diffuse_all_ws)))
+    config%l_discount_scool       = l_discount_scool
+    CALL message(TRIM(routine), &
+     & 'Account for supercooled water: '//TRIM(logical2string(l_discount_scool)))
+    config%l_drain_lat            = l_drain_lat
+    CALL message(TRIM(routine), &
+     & 'Lateral drainage is possible: '//TRIM(logical2string(l_drain_lat)))
+    config%l_percolation_theory   = l_percolation_theory
+    CALL message(TRIM(routine), &
+     & 'Calculate percolation from Percolation Theory: '//TRIM(logical2string(l_percolation_theory)))
+    config%l_stress_from_all_ws   = l_stress_from_all_ws
+    CALL message(TRIM(routine), &
+     & 'Account for all water for water stress calculation, including water below the rootzone and supercooled water: ' &
+     & //TRIM(logical2string(l_stress_from_all_ws)))
 !pdv <
 
     CALL close_nml(nml_handler)

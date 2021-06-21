@@ -1048,9 +1048,10 @@ CONTAINS
       & ltpe_closed, ltpe_open,                             &
 !pdv >
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,             &
-      & dsl4jsb_Config(HYDRO_)%l_hyd_ref,                   &
       & dsl4jsb_Config(HYDRO_)%l_runoff_with_ice,           &
-      & dsl4jsb_Config(HYDRO_)%l_ws_max_depend_org,         &
+      & dsl4jsb_Config(HYDRO_)%l_ws_max_depend_on_org,      &
+      & dsl4jsb_Config(HYDRO_)%l_correct_ws_from_top,       &
+      & dsl4jsb_Config(HYDRO_)%l_ice_impedance,             &
       & dsl4jsb_Config(HYDRO_)%l_diffuse_all_ws,            &
       & dsl4jsb_Config(HYDRO_)%l_discount_scool,            &
       & dsl4jsb_Config(HYDRO_)%l_drain_lat,                 &
