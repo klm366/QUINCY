@@ -107,7 +107,12 @@ CONTAINS
     & WoodLit_coef3,              & ! in, optional, necessary with yasso
     & WoodLit_coef4,              & ! in, optional, necessary with yasso
     & WoodLit_coef5,              & ! in, optional, necessary with yasso
-    & WoodLitterSize              & ! in, optional, necessary with yasso
+    & WoodLitterSize,             & ! in, optional, necessary with yasso
+    !
+    & c_decomp_humus_1_sum,       & ! out, optional, necessary with yasso
+    & c_decomp_humus_2_sum,       & ! out, optional, necessary with yasso
+    & c_into_humus_1_sum,         & ! out, optional, necessary with yasso
+    & c_into_humus_2_sum          & ! out, optional, necessary with yasso
     & )
 
     USE mo_carbon_constants,       ONLY : fract_green_aboveGround, fract_wood_aboveGround
@@ -219,7 +224,11 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in)    :: WoodLit_coef5          ! fraction going to the humus pool
     REAL(wp), OPTIONAL, INTENT(in)    :: WoodLitterSize         ! size of coarse debris
 
-
+    !
+    REAL(wp), OPTIONAL, INTENT(inout) :: c_decomp_humus_1_sum   ! annual cflux sum of humus decomposed (leaf) [mol(C)/m^2(canopy)]
+    REAL(wp), OPTIONAL, INTENT(inout) :: c_decomp_humus_2_sum   ! annual cflux sum of humus decomposed (wood) [mol(C)/m^2(canopy)]
+    REAL(wp), OPTIONAL, INTENT(inout) :: c_into_humus_1_sum     ! annual cflux sum into humus (leaf) [mol(C)/m^2(canopy)]
+    REAL(wp), OPTIONAL, INTENT(inout) :: c_into_humus_2_sum     ! annual cflux sum into humus (wood) [mol(C)/m^2(canopy)]
 
     ! locals
     LOGICAL  :: is_crop                 ! logical crop mask
@@ -253,7 +262,7 @@ CONTAINS
     ! local variables for Yasso
     REAL(wp), DIMENSION(18) :: Yasso_io_pools
     REAL(wp), DIMENSION(2)  :: Weather
-    REAL(wp), DIMENSION(16) :: Yasso_out
+    REAL(wp), DIMENSION(18) :: Yasso_out
     REAL(wp), DIMENSION(5)  :: LeafLit_coefV
     REAL(wp), DIMENSION(5)  :: WoodLit_coefV
     REAL(wp)                :: leafLitter      ! amount of leafLitter
@@ -384,7 +393,7 @@ CONTAINS
     WoodLit_coefV(4) = WoodLit_coef4
     WoodLit_coefV(5) = WoodLit_coef5
 
-    Yasso_out(1:16) = 0.0_wp           ! array to store the Yasso pools/fluxes
+    Yasso_out(1:18) = 0.0_wp           ! array to store the Yasso pools/fluxes
     leafLitter      = 0.0_wp           ! amount of leafLitter
     sizeZero        = 0.0_wp
 
@@ -718,6 +727,9 @@ CONTAINS
     c_nonsoluble_bg1  = Yasso_out(8)
     c_humus_1         = Yasso_out(9)
 
+    c_decomp_humus_1_sum = c_decomp_humus_1_sum + Yasso_out(17)
+    c_into_humus_1_sum   = c_into_humus_1_sum + Yasso_out(18)
+
     ! rescale respiration (from leaf litter decomposition) from "per day" to "per second"
     soilResp_rate = Yasso_out(10) / sec_per_day
 
@@ -738,6 +750,10 @@ CONTAINS
     !! Yasso total respiration
     ! add respiration from wood litter decomposition and rescale respiration from "per day" to "per second"
     soilResp_rate = soilResp_rate  + Yasso_out(10) / sec_per_day
+
+    c_decomp_humus_2_sum = c_decomp_humus_2_sum + Yasso_out(17)
+    c_into_humus_2_sum   = c_into_humus_2_sum + Yasso_out(18)
+
 
     ! always:
     !! ============== Decay of crop harvest =============
@@ -1104,7 +1120,7 @@ CONTAINS
                                                                !     part                                                   [ ]
     REAL(wp),                INTENT(IN)  :: NPP_2_rootExudates ! root exudates [daily]  [mol(C)/m2/day]
 
-    REAL(wp), DIMENSION(16), INTENT(OUT) :: Yasso_out          ! updated Y pools(1:9) [mol(c)/m2] & respiration(10) [mol(c)/m2/d]
+    REAL(wp), DIMENSION(18), INTENT(OUT) :: Yasso_out          ! updated Y pools(1:9) [mol(c)/m2] & respiration(10) [mol(c)/m2/d]
                                                                ! & Cflx_2_humus (11) [mol(c)/m2/d] ... see update_Cpools for more
                                                                ! information
 
@@ -1359,16 +1375,6 @@ CONTAINS
                                  + Cflx_from_water_bg      * W_2_N  &
                                  + Cflx_from_ethanol_bg    * E_2_N)
 
-    Cflx_2_humus          = ABS(Cflx_from_acid_ag                &
-                              + Cflx_from_water_ag               &
-                              + Cflx_from_ethanol_ag             &
-                              + Cflx_from_nonsoluble_ag          &
-                              + Cflx_from_acid_bg                &
-                              + Cflx_from_water_bg               &
-                              + Cflx_from_ethanol_bg             &
-                              + Cflx_from_nonsoluble_bg          &
-                              ) * AWEN_2_H
-
     Cflx_2_humusAG        = ABS(Cflx_from_acid_ag                &
                               + Cflx_from_water_ag               &
                               + Cflx_from_ethanol_ag             &
@@ -1380,6 +1386,8 @@ CONTAINS
                               + Cflx_from_ethanol_bg             &
                               + Cflx_from_nonsoluble_bg          &
                               ) * AWEN_2_H
+
+    Cflx_2_humus          = Cflx_2_humusAG + Cflx_2_humusBG
 
     ! the remaining fractions of the loss fluxes enter the atmosphere as respiration
     soilResp_rateYasso    =  (Cflx_from_acid_ag + Cflx_from_acid_bg)               &
@@ -1510,6 +1518,10 @@ CONTAINS
       ! 3. decomposition rate for Npool litter green
       Yasso_out(16)           = d_litter_green
     ENDIF
+
+    ! 4.3 Write diagnostics to determine equilibrium of humus pools (according to jsb3 svn rev. )
+    Yasso_out(17)           = -1._wp * Cflx_from_humus * dt
+    Yasso_out(18)           = (Cflx_2_humus + Cflx_litter_2_humus) * dt
 
   END SUBROUTINE yasso
 
