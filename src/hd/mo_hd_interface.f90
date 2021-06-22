@@ -266,6 +266,7 @@ CONTAINS
       & discharge_ocean,       &
       & internal_drain,        &
       & lake_storage,          &
+      & lake_outflow,          &
       & lake_height,           &
       & lake_area,             &
       & lake_height_max,       &
@@ -286,13 +287,19 @@ CONTAINS
       & global_outflow_resid,   &
       & global_internal_drain,  &
       & global_discharge_ocean, &
-      & sum_weights
+      & sum_weights,            &
+      & dyn_min,                &
+      & lake_flow
 
     INTEGER  ::         &
       & nproma,         &
       & nblks,          &
       & blks, blke,     &
       & jcs, jce
+
+    INTEGER  ::         &
+      & nblk(3),        &
+      & njc(3)       ! beighbor grid cell block and cell index
 
     REAL(wp), ALLOCATABLE :: cos_lat(:,:) ! Cosines of latitudes of cell centers
 
@@ -341,6 +348,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, lake_storage)     ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_height)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_area)        ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_height_max)  ! IN
@@ -443,6 +451,36 @@ CONTAINS
       END WHERE
 
 
+      ! update dynamic lake water flow between lake grid cells
+      lake_outflow(:,:) = 0._wp
+      ! block index (blk)
+      blks = grid%get_blk_start()
+      blke = grid%get_blk_end()
+      DO blk = blks, blke
+        ! grid cell index (jc)
+        jcs = grid%get_col_start(blk)
+        jce = grid%get_col_end(blk)
+        DO jc = jcs, jce
+          ! block and cell index of the 3 neighbors aligned to the 3 edges of
+          ! the selected grid cell
+          njc =  grid%patch%cells%neighbor_idx(jc,blk,:)
+          nblk =  grid%patch%cells%neighbor_blk(jc,blk,:)
+          ! grid cell with lowest elevation: used to determine flow direction
+          dyn_min = MIN( MINVAL(dyn_height(njc , nblk)), dyn_height(jc, blk))
+          DO n = 1, 3
+            IF (dyn_height(njc(n), nblk(n)) == dyn_min) THEN
+              ! lake water flows into neighbor grid cell with lowest lake water level
+              lake_flow = MAX( MIN( ( dyn_height(jc,blk) - dyn_height(njc(n),nblk(n)) )  &
+                                     * lake_area(jc,blk), lake_storage(jc,blk)), 0._wp)  &
+                                     * 0.35/160000._wp
+              lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
+              lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
+            END IF
+          END DO
+        END DO
+      END DO
+      lake_storage(:,:) = lake_storage(:,:) + lake_outflow(:,:) * steplen
+
       ! update grid cell lake height [m] and area [m3]
       WHERE (lake_area_max(:,:).GT.0._wp)
         WHERE (lake_storage(:,:).LE.lake_volume_max(:,:))
@@ -450,7 +488,7 @@ CONTAINS
         ELSE WHERE (lake_storage(:,:).GT.lake_volume_max(:,:))
           lake_height(:,:) = lake_height_max(:,:) + ( lake_storage(:,:) - lake_volume_max(:,:) )/lake_area_max(:,:)
         END WHERE
-        lake_area(:,:) = lake_area_max(:,:) * MAX( ( lake_storage(:,:) / lake_volume_max(:,:) )**beta(:,:), 1._wp )
+        lake_area(:,:) = lake_area_max(:,:) * MIN( ( lake_storage(:,:) / lake_volume_max(:,:) )**beta(:,:), 1._wp )
       ELSE WHERE
         lake_height(:,:) = 0._wp
         lake_area(:,:) = 0._wp
