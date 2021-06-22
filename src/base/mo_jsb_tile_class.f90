@@ -132,22 +132,34 @@ MODULE mo_jsb_tile_class
     !
     PROCEDURE                              :: Cache_GPU_pointers
     !
-    PROCEDURE(Init_interface),      DEFERRED :: Init
-    PROCEDURE(Init_vars_interface), DEFERRED :: Init_vars
-    PROCEDURE(Print_interface),     DEFERRED :: Print
-    PROCEDURE(Handler_interface),   DEFERRED :: Handler
+    PROCEDURE(Init_interface),           DEFERRED :: Init
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars
+    PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
+    PROCEDURE(Print_interface),          DEFERRED :: Print
+    PROCEDURE(Handler_interface),        DEFERRED :: Handler
   END type t_jsb_tile_abstract
 
   ABSTRACT INTERFACE
-    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, in_var_groups)
+    SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, grid_id, in_var_groups)
+      IMPORT :: t_jsb_tile_abstract
+      CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
+      CHARACTER(len=*),           INTENT(in)    :: varlist_name
+      CHARACTER(len=*),           INTENT(in)    :: prefix
+      CHARACTER(len=*),           INTENT(in)    :: suffix
+      INTEGER,                    INTENT(in)    :: grid_id
+      LOGICAL,                    INTENT(in)    :: in_var_groups
+    END SUBROUTINE Init_interface
+  END INTERFACE
+
+  ABSTRACT INTERFACE
+    SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
       CHARACTER(len=*),           INTENT(in)    :: varlist_name
       CHARACTER(len=*),           INTENT(in)    :: prefix
       CHARACTER(len=*),           INTENT(in)    :: suffix
       LOGICAL,                    INTENT(in)    :: l_fixed_fractions
-      LOGICAL,                    INTENT(in)    :: in_var_groups
-    END SUBROUTINE Init_interface
+    END SUBROUTINE Init_fractions_interface
   END INTERFACE
 
   ABSTRACT INTERFACE
