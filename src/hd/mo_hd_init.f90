@@ -163,6 +163,10 @@ CONTAINS
         & variable_name='BETA',                     &
         & fill_array = dsl4jsb_var_ptr(HD_,beta))
 
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='ELEV_MIN',                     &
+        & fill_array = dsl4jsb_var_ptr(HD_,elev_min))
 
       nproma = grid%nproma
       nblks  = grid%nblks

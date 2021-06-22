@@ -57,6 +57,8 @@ MODULE mo_hd_memory_class
       lake_height_max , &  !< maximum lake water height of endorheic lakes [m]
       lake_area_max   , &  !< maximum lake water area of endorheic lakes [m^2]
       lake_volume_max , &  !< maximum lake water volume of endorheic lakes [m^3]
+      elev_min        , &  !< minimum elevation within ICON grid cell [m]
+      dyn_height      , &  !< minimum dynamic height within ICON grid cell [m]
       alpha           , &  !< parameter to describe lake volume-height relation
       beta            , &  !< parameter to describe lake volume-area relation
       water_budget    , &
@@ -249,6 +251,22 @@ CONTAINS
     CALL mem%Add_var( 'lake_volume_max', mem%lake_volume_max,       &
       & hgrid, surface,&
       & t_cf('lake_volume_max', 'm3', 'grid cell maxium lake volume'),&
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),&
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'elev_min', mem%elev_min,       &
+      & hgrid, surface,&
+      & t_cf('elev_min', 'm', 'minimum elevation within grid cell'),&
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),&
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'dyn_height', mem%dyn_height,       &
+      & hgrid, surface,&
+      & t_cf('dyn_height', 'm', 'dynamic minimum height in each grid cell'),&
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),&
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &

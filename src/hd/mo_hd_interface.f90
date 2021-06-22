@@ -271,9 +271,10 @@ CONTAINS
       & lake_height_max,       &
       & lake_area_max,         &
       & lake_volume_max,       &
+      & elev_min,              &
+      & dyn_height,            &
       & alpha,                 &
-      & beta 
-
+      & beta
 
     dsl4jsb_Real3D_onDomain :: &
       & nidx_upstream,         &
@@ -340,13 +341,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, lake_storage)     ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_height)      ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_area)        ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_height_max)  ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_area_max)    ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_volume_max)  ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, beta)             ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_height)      ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_area)        ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_height_max)  ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_area_max)    ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_volume_max)  ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, elev_min)         ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, dyn_height)         ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, beta)             ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     !dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
@@ -452,6 +455,7 @@ CONTAINS
         lake_height(:,:) = 0._wp
         lake_area(:,:) = 0._wp
       END WHERE
+      dyn_height(:,:) = elev_min(:,:) + lake_height(:,:)
 
 
       ! global integrals
