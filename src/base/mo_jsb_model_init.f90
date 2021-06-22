@@ -352,8 +352,10 @@ CONTAINS
         & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
 
-      CALL tile%Init_fractions(TRIM(model%shortname), '', TRIM(tile%name),  &
-        &                      l_fixed_fractions=.NOT. model%processes(ALCC_)%p%config%active)
+      CALL tile%Init_fractions(                                           &
+        & TRIM(model%shortname), '', TRIM(tile%name),                     &
+        & l_fixed_fractions=.NOT. model%processes(ALCC_)%p%config%active, &
+        & l_rel_fractions=model%config%relative_fractions_in_file)
 
         ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
@@ -453,6 +455,8 @@ CONTAINS
                   EXIT
                 END IF
               END DO
+              CALL tile%Get_fraction(fract=fract_tmp(:,:))
+              tile%lcts(ilct)%fract(:,:) = MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
             END IF
             child => child%Get_next_sibling_tile()
           END DO
