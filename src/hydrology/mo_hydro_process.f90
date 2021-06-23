@@ -397,7 +397,6 @@ CONTAINS
   ! @param [in]      nsoil              Number of soil layers
   ! @param [in]      dz                 (Fixed) Thicknesses of soil layers [m]
   ! @param [in]      nlat               (Effective) number of latitudes
-  ! @param [in]      lstart             T: Start of experiment
   ! @param [in]      delta_time         Time step [s]
 !pdv >
   ! @param [in]      l_infil_subzero        Allow infiltration of supercolled water
@@ -441,7 +440,7 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                                                &
     ! in
-    & nidx, nsoil, dz, nlat, lstart, delta_time, ltpe_closed, ltpe_open,                                         &
+    & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
 !pdv >
     & l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top,                         &
     & l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                                          &
@@ -467,7 +466,6 @@ CONTAINS
       & nidx, nsoil, nlat
     REAL(wp), INTENT(in) :: &
       & dz(nsoil)
-    LOGICAL, INTENT(in) :: lstart
     REAL(wp), INTENT(in) :: &
       & delta_time
     LOGICAL, INTENT(in) :: ltpe_closed
@@ -704,7 +702,7 @@ CONTAINS
          ws_l, drainage, w_soil_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
-    CALL soilhyd(nidx, nsoil, lstart, delta_time, ilog, jllog, &
+    CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, &
 !pdv >
          l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat, &
 !pdv <
@@ -738,7 +736,7 @@ CONTAINS
   END SUBROUTINE calc_soil_hydrology
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE soilhyd(nidx, nsoil, lstart, delta_time, ilog, jllog,                   &
+  SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog,                   &
 !pdv >
        l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat,             &
 !pdv <
@@ -760,7 +758,6 @@ CONTAINS
 
     INTEGER,  INTENT(IN)            :: nidx                       ! vector length
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
-    LOGICAL,  INTENT(IN)            :: lstart                     ! .true. at start of experiment
     REAL(wp), INTENT(IN)            :: delta_time                 ! model time step legth [s]
     INTEGER,  INTENT(IN)            :: ilog                       !
     INTEGER,  INTENT(IN)            :: jllog                      !
@@ -884,7 +881,7 @@ CONTAINS
     DO j = 1, nidx
 !pdv >
       DO i = 1, nsoil
-        IF (l_discount_scool .AND. .NOT. lstart) THEN   ! pot_scool_l not available at first time step
+        IF (l_discount_scool) THEN
           !!!! When there is supercooled water in the soil, this should not be able to move vertically
           ws_immo_l(j,i) = MAX(pot_scool_l(j,i), p_wilt_l(j,i))
         ELSE

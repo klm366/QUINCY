@@ -1044,7 +1044,6 @@ CONTAINS
       & nsoil, &
       & soil_w%dz(:), &
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
-      & is_time_experiment_start(options%current_datetime), &
       & dtime, &
       & ltpe_closed, ltpe_open,                             &
 !pdv >
@@ -1198,9 +1197,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 !pdv >
-    IF (dsl4jsb_Config(HYDRO_)%l_discount_scool &
-     &  .AND. .NOT. (is_time_experiment_start(options%current_datetime))) THEN
-      !vg: w_soil_pot_scool_sl not available at initialization
+    IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
       dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
     END IF
 !pdv <
