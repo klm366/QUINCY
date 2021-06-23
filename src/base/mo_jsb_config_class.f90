@@ -33,7 +33,8 @@ MODULE mo_jsb_config_class
     CHARACTER(len=40)              :: usecase
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
-    LOGICAL                        :: use_quincy
+    LOGICAL                        :: use_quincy       !< use the QUINCY set of Tasks T/F
+    CHARACTER(len=10)              :: quincy_model     !< canopy/plant/land - selection of Tasks and Code within subroutines
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
@@ -93,6 +94,7 @@ CONTAINS
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
+    CHARACTER(len=10)             :: quincy_model
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
@@ -105,6 +107,7 @@ CONTAINS
       use_lakes, &
       use_glacier, &
       use_quincy, &
+      quincy_model, &
       l_compat401, &
       usecase, &
       tpe_scheme, &
@@ -125,6 +128,7 @@ CONTAINS
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
+    quincy_model               = 'plant'
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
@@ -152,6 +156,7 @@ CONTAINS
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
     model_config%use_quincy                 = use_quincy
+    model_config%quincy_model               = TRIM(quincy_model)
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
     model_config%tpe_scheme                 = tpe_scheme
