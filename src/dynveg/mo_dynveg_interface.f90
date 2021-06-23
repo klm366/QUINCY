@@ -177,6 +177,7 @@ CONTAINS
     REAL(wp), POINTER  ::  max_green_bio(:,:)
     REAL(wp), POINTER  ::  sla(:,:)
     REAL(wp), POINTER  ::  cover_fract_pot_previous_year(:,:)
+    REAL(wp), POINTER  ::  cover_fract_sum(:)
     REAL(wp), PARAMETER  ::  accelerate_dynveg = 1._wp
     REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
 
@@ -315,6 +316,8 @@ CONTAINS
     new_day = is_newday(options%current_datetime, options%dtime)
 
     ! import cover fractions from grid
+    ALLOCATE (cover_fract_sum(nc))
+    cover_fract_sum(:) = 0._wp
     grid => Get_grid(model%grid_id)
     DO itile = 1,no_children
       ! Point to the correct pft
@@ -325,7 +328,10 @@ CONTAINS
       END IF
       ! get cover fractions
       CALL ptr_tile%Get_fraction(ics, ice, iblk, fract=cover_fract(:,itile))
+      cover_fract_sum(:) = cover_fract_sum(:) + cover_fract(:,itile)
     END DO ! itile
+    ! scale cover_fract to fractions relative to the veg_tile
+    cover_fract(:,:) = cover_fract(:,:) / MAX(SPREAD(cover_fract_sum(:), NCOPIES=no_children, DIM=2),1.e-10_wp)
 !!$    WRITE (*,*) 'sum of cover_fract: ',SUM(cover_fract(:,:),DIM=2)
 
     ! allocate more local variables
@@ -382,7 +388,7 @@ CONTAINS
                 ptr_tile => ptr_tile%Get_next_sibling_tile()
              END IF
              ! set cover fractions
-             CALL ptr_tile%Set_fraction(ics, ice, iblk, fract=cover_fract(:,itile))
+             CALL ptr_tile%Set_fraction(ics, ice, iblk, fract=cover_fract(:,itile) * cover_fract_sum(:))
           END DO ! itile
           ! new desert fraction
           CALL desert_fraction(nc, no_children, init_running_means, accelerate_dynveg, &
@@ -413,6 +419,7 @@ CONTAINS
     DEALLOCATE(burned_fract, damaged_fract)
     DEALLOCATE(max_green_bio, sla)
     DEALLOCATE(cover_fract_pot_previous_year)
+    DEALLOCATE(cover_fract_sum)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     

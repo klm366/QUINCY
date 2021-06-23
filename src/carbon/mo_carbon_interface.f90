@@ -409,6 +409,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1 .AND. new_year ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
+
     ! Initializations
     cflux_npp_2_atm_yday_ta  = 0._wp
     cflux_npp_2_atm_ta       = 0._wp

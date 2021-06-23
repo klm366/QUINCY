@@ -27,6 +27,7 @@ MODULE mo_jsb_model_class
   USE mo_jsb_task_class,    ONLY: t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
+  USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
 
   IMPLICIT NONE
   PRIVATE
@@ -49,7 +50,7 @@ MODULE mo_jsb_model_class
     ! TYPE(t_Action)              :: actions(MAX_ACTIONS) !< List of possible actions (events)
     ! Extensions:
     INTEGER                            :: id                !< Model id
-    CHARACTER(len=10)                  :: shortname         !< Model short name
+    CHARACTER(len=SHORT_NAME_LEN)      :: shortname         !< Model short name
     CHARACTER(len=132)                 :: description       !< Model description
     CHARACTER(len=filename_max)        :: namelist_filename !< Model namelist file
     TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration

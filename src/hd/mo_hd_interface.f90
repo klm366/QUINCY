@@ -1,16 +1,15 @@
+!> Summary: Contains the interfaces to the HD model
 !>
-!! @brief Contains the interfaces to the HD model
-!!
-!! @author
-!!  Veronika Gayler, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Veronika Gayler (2013-04-20)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> @author
+!>  Veronika Gayler, MPI-M Hamburg
+!>
+!> @par Revision History
+!> First version by Veronika Gayler (2013-04-20)
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__

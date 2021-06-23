@@ -27,6 +27,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_process_class,   ONLY: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_
   USE mo_jsb_process_factory, ONLY: max_no_of_processes
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task !, t_jsb_task_msg
+  USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan
 
 #ifdef _OPENACC
   USE openacc
@@ -47,6 +48,8 @@ MODULE mo_jsb_tile
     PROCEDURE :: Init           => Init_tile
     PROCEDURE :: Init_fractions => Init_fractions_on_tile
     PROCEDURE :: Init_vars      => Init_vars_on_tile
+    PROCEDURE :: Count_conserved_quantities => Count_conserved_quantities_on_tile
+    PROCEDURE :: Collect_conserved_variables => Collect_conserved_variables_on_tile
     PROCEDURE :: Print          => Print_tile
     PROCEDURE :: Handler        => Process_task_on_tile
   END TYPE t_jsb_tile
@@ -69,6 +72,7 @@ CONTAINS
 
     USE mo_jsb_class,           ONLY: Get_model
     USE mo_util,                ONLY: one_of
+    USE mo_jsb_cqt_class,       ONLY: Get_number_of_types
     USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE
     USE mo_jsb_process_class,   ONLY: SEB_, A2L_, L2A_
 
@@ -162,6 +166,9 @@ CONTAINS
     ELSE
       return_ptr%fract_varname = ''
     END IF
+
+    ! - Init the list of conserved quantities (common for all LCC processes working with the tile)
+    ALLOCATE(return_ptr%conserved_quantities(Get_number_of_types()))
 
     ! Loop over all processes and set actions for this tile
     DO i=1,max_no_of_processes
@@ -401,7 +408,7 @@ CONTAINS
       & t_cf('tile_fraction', '',                                                                          &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, loutput=.NOT. l_fixed_fractions,                     &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     CALL this%Set_fract_ptr(tmp_fract)
@@ -613,6 +620,153 @@ CONTAINS
     END DO
 
   END SUBROUTINE Init_vars_on_tile
+
+  ! ================================================================================================================================
+  !>
+  !! @brief identifies the conserved quantity types in use on this tile and counts the number of conserved quantities 
+  !!        for each of these types on the given tile
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !
+  SUBROUTINE Count_conserved_quantities_on_tile(this)
+
+    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
+    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+    USE mo_jsb_cqt_class,       ONLY: Get_cqt_name, max_cqt_name_length
+
+    CLASS(t_jsb_tile), INTENT(inout) :: this
+
+    CLASS(t_jsb_memory), POINTER   :: mem
+    INTEGER                        :: iproc, i, child_no, id, ind
+    LOGICAL                        :: consQuanTypeInUse
+    TYPE(t_jsb_consQuan), POINTER  :: consQuanType
+    CHARACTER(len=max_cqt_name_length) :: thisCQTName
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Count_conserved_quantities_on_tile'
+
+    IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
+    
+    ! Loop over all processes
+    DO iproc=1,max_no_of_processes
+
+      ! if the current process is not on the current tile exit DO loop
+      SELECT CASE (this%process_action(iproc))
+      CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
+        CYCLE
+      END SELECT
+
+      ! loop over all variables in the memory of the process and count number of vars for each used type
+      mem => this%mem(iproc)%p
+      DO i=1,mem%no_of_vars
+
+        ! check those variables that have a conservative quantity type
+        IF ( mem%vars(i)%p%is_conserved_quan ) THEN
+          id = mem%vars(i)%p%cons_quan_type_id
+
+          ! check if this type is already accounted for
+          consQuanTypeInUse = .FALSE.
+          DO ind=1,this%numberOfConservedQuanTypes
+            IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
+              consQuanTypeInUse = .TRUE.
+              this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1             
+              EXIT
+            END IF
+          END DO
+
+          IF (.NOT. consQuanTypeInUse) THEN
+            ! needs to be one of those in mo_jsb_cqt_class
+            thisCQTName = Get_cqt_name(id)
+            IF (debug_on())  CALL message(TRIM(routine), '... vars of type '//TRIM(thisCQTName))
+
+            this%numberOfConservedQuanTypes = this%numberOfConservedQuanTypes + 1
+
+            ALLOCATE(consQuanType)
+            this%conserved_quantities(this%numberOfConservedQuanTypes)%p => consQuanType
+            this%conserved_quantities(this%numberOfConservedQuanTypes)%p%type_id = id
+            this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1
+          ENDIF
+
+        END IF
+      END DO
+    END DO
+
+  END SUBROUTINE Count_conserved_quantities_on_tile  
+
+  ! ================================================================================================================================
+  !>
+  !! @brief collects the pointers to the variables that are conserved quantities on the given tile
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !
+  SUBROUTINE Collect_conserved_variables_on_tile(this)
+
+    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
+    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+
+    CLASS(t_jsb_tile), INTENT(inout) :: this
+
+    CLASS(t_jsb_memory), POINTER  :: mem
+    INTEGER                       :: iproc, i, child_no, id, ind, last_index, nrOfConsQuans
+    LOGICAL                       :: consQuanTypeInUse    
+    TYPE(t_jsb_consQuan), POINTER :: consQuanType
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_conserved_variables_on_tile'
+
+    IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
+    
+    ! Loop over all processes
+    DO iproc=1,max_no_of_processes
+
+      ! if the current process is not on the current tile exit DO loop
+      SELECT CASE (this%process_action(iproc))
+      CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
+        CYCLE
+      END SELECT
+
+      ! loop over all variables in the memory of the process
+      mem => this%mem(iproc)%p
+      DO i=1,mem%no_of_vars
+
+        ! only address those variables that have a conservative quantity type
+        IF ( mem%vars(i)%p%is_conserved_quan ) THEN
+          id = mem%vars(i)%p%cons_quan_type_id
+          consQuanTypeInUse = .FALSE.
+
+          ! find container for this type 
+          DO ind=1,this%numberOfConservedQuanTypes
+            IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
+              consQuanTypeInUse = .TRUE.
+              nrOfConsQuans = this%conserved_quantities(ind)%p%no_of_vars
+
+              ! If this is the first collected variable: allocate collector for var pointers 
+              IF (.NOT. (ALLOCATED(this%conserved_quantities(ind)%p%consQuanVars2D))) THEN
+                ALLOCATE(this%conserved_quantities(ind)%p%consQuanVars2D(nrOfConsQuans))
+              ENDIF
+
+              this%conserved_quantities(ind)%p%last_index_used = this%conserved_quantities(ind)%p%last_index_used + 1
+              last_index = this%conserved_quantities(ind)%p%last_index_used
+              ! Assert: last_index > no_of_vars should not be possible
+              IF ( nrOfConsQuans < last_index) &
+                & CALL finish(TRIM(routine), 'Assigned conserved quantities exceed expected number.')              
+
+              ! Add current variable
+              this%conserved_quantities(ind)%p%consQuanVars2D(last_index)%p => mem%vars(i)%p
+
+              ! Since the type has been found: exit do loop now
+              EXIT
+            END IF
+          END DO
+
+          ! Assert: type should have been found
+          IF (.NOT. consQuanTypeInUse) &
+            & CALL finish(TRIM(routine), 'Conserved quantity type not found.')
+
+        END IF
+      END DO
+    END DO
+
+  END SUBROUTINE Collect_conserved_variables_on_tile  
+
 
   ! Task handler function for tile (HSM message handler)
   FUNCTION Process_task_on_tile(this, msg_in) RESULT(return_ptr)
