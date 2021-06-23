@@ -1383,6 +1383,7 @@ CONTAINS
     USE mo_carbon_constants,    ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
       &                               nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
     USE mo_carbon_process,      ONLY: add_litter_to_yasso_pool
+    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
@@ -1396,9 +1397,9 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER   :: model
 
-    INTEGER :: i, k, i_pool, i_active, i_passive, i_this_active, nc, ics, ice, iblk
+    INTEGER :: i, k, i_pool, i_active, i_passive, i_this_active, i_litter_coefficient, nc, ics, ice, iblk
     
-    REAL(wp) :: litter_coefficient, i_litter_coefficient, fraction, this_fract
+    REAL(wp) :: litter_coefficient, fraction, this_fract
     REAL(wp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
     ! -------------------------------------------------------------------------------------------------- !
 
@@ -1416,9 +1417,9 @@ CONTAINS
     non_woody_litter = 0.0
     woody_litter = 0.0
     CALL collect_matter_of_active_vars_onChunk( &
-      & non_woody_litter, lcc_relocations, i_tile, options, (/ 'c_green', 'c_reserve' /))
+      & non_woody_litter, lcc_relocations, i_tile, options, [character(len=VARNAME_LEN) :: 'c_green', 'c_reserve' ])
     CALL collect_matter_of_active_vars_onChunk( &
-      & woody_litter, lcc_relocations, i_tile, options, (/ 'c_woods' /))
+      & woody_litter, lcc_relocations, i_tile, options, [character(len=VARNAME_LEN) ::  'c_woods' ])
 
     !--- And distribute them according to the yasso scheme
     DO i_pool = 1, nr_of_yasso_pools
