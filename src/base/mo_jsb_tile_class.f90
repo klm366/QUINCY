@@ -95,7 +95,7 @@ MODULE mo_jsb_tile_class
     CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
-    INTEGER                                :: numberOfConservedQuanTypes = 0  ! number of types in use on the tile 
+    INTEGER                                :: nr_of_cqts = 0          ! number of conserved quantity types in use on the tile 
     TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) ! list of conserved quantities sort by type
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
     TYPE(t_jsb_memory_p),       POINTER    :: mem(:)
@@ -1176,7 +1176,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(in) :: this
     LOGICAL                   :: return_value
 
-    return_value = this%numberOfConservedQuanTypes /= 0
+    return_value = this%nr_of_cqts /= 0
 
   END FUNCTION Has_conserved_quantities  
 
