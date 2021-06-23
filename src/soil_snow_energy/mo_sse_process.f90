@@ -606,6 +606,13 @@ CONTAINS
       END DO
       !$claw acc end parallel
 
+!pdv >
+    ELSE ! lstart
+      IF (l_freeze .AND. PRESENT(ws)) THEN
+        !$claw expand parallel update
+        liquid_max(1:nidx,1:nsoil) = 0._wp
+      END IF
+!pdv <
     END IF
 
 
