@@ -22,10 +22,10 @@ MODULE mo_tcq_constants
   ! Definitions for lcc
 
   !> list of potential active variables for the tcq process: For these variables the tcq interface provides active relocation
-  CHARACTER(len=VARNAME_LEN) :: tcq_potential_active_vars(1) = (/ 'a_veg_c_tcq' /)
+  CHARACTER(len=VARNAME_LEN) :: tcq_potential_active_vars(1) = [character(len=VARNAME_LEN) :: 'a_veg_c_tcq' ]
 
   !> list of required passive vars if vars are active (because these are used to relocate the active variables)
-  CHARACTER(len=VARNAME_LEN) :: tcq_required_passive_vars(1) = (/ 'a_dead_c_tcq' /)
+  CHARACTER(len=VARNAME_LEN) :: tcq_required_passive_vars(1) = [character(len=VARNAME_LEN) :: 'a_dead_c_tcq' ]
 
 #endif
 END MODULE mo_tcq_constants
