@@ -133,6 +133,7 @@ MODULE mo_veg_memory_class
 
     !------------------------------------------------------------------------------------------------------ !
     !>canopy layer information
+    !>  need 'lrestart = .TRUE.' because lai and lai_cl (PHENO_) are also 'lrestart = .TRUE.'
     !>
     TYPE(t_jsb_var_real3d)          :: &   ! DIMENSION(ncanopy)
                                     leaf_nitrogen_cl  , &           !< N in canopy layer [mmol m-2 LAI]
@@ -997,7 +998,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('fn_chl_cl', mem%fn_chl_cl, &
@@ -1007,7 +1008,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('fn_et_cl', mem%fn_et_cl, &
@@ -1017,7 +1018,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('fn_rub_cl', mem%fn_rub_cl, &
@@ -1027,7 +1028,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('fn_pepc_cl', mem%fn_pepc_cl, &
@@ -1037,7 +1038,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('fn_oth_cl', mem%fn_oth_cl, &
@@ -1047,7 +1048,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('fleaf_sunlit_cl', mem%fleaf_sunlit_cl, &
@@ -1057,7 +1058,7 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('maint_respiration_pot', mem%maint_respiration_pot, &
