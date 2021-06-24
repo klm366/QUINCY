@@ -120,7 +120,7 @@ CONTAINS
     REAL(wp),                               INTENT(in)              :: lctlib_g1             !< lctlib parameter
     REAL(wp),                               INTENT(in)              :: lctlib_t_jmax_omega   !< lctlib parameter  
     LOGICAL,                                INTENT(in)              :: flag_optimal_Nfraction!< on/off optimise leaf internal N allocation
-    CHARACTER(len=*),                       INTENT(IN)              :: canopy_cond_scheme    !< canopy_conductance_scheme: medlyn / ballberry
+    CHARACTER(len=*),                       INTENT(in)              :: canopy_cond_scheme    !< canopy_conductance_scheme: medlyn / ballberry
     REAL(wp),DIMENSION(ncanopy),            INTENT(in)              :: canopy_layer_depth    !< thickness of each single canopy layer [m2 m-2 LAI]
     REAL(wp),DIMENSION(nc),                 INTENT(in)              :: leaf_nitrogen         !< total canopy N (mol/m2)
     REAL(wp),DIMENSION(nc),                 INTENT(in)              :: lai                   !< total leaf area index
@@ -155,7 +155,7 @@ CONTAINS
     REAL(wp)                        :: f_pepc                                        ! fraction of N in PEP Carboxylase
     LOGICAL                         :: optimise_n_fractions
     INTEGER                         :: icanopy, ipoint                               ! looping over ncanopy and nc
-    REAL(wp),DIMENSION(nc,ncanopy)  :: hlp1,hlp2,hlp3,hlp4
+    ! REAL(wp),DIMENSION(nc,ncanopy)  :: hlp1, hlp2, hlp3, hlp4
     REAL(wp),DIMENSION(nc,ncanopy)  :: mid_point_lai_cl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_layers'
     ! ---------------------------
@@ -172,15 +172,16 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     
 
-    !> 0.9 initialise output (to ensure that 0.0 is returned in case of the below statements is TRUE)
-    !! 
+    !>0.9 initialise output and local variables
+    !> 
     lai_cl(:,:)           = 0._wp
     cumm_lai_cl(:,:)      = 0._wp
     leaf_nitrogen_cl(:,:) = 0._wp
-    mid_point_lai_cl(:,:) = 0._wp
+    leaf_nitrogen_tc(:)   = 0._wp
+    mid_point_lai_cl(:,:) = 0._wp    
 
-    !> 0.9.1  set pathway specific constants 
-    !! 
+    !>0.9.1  set pathway specific constants 
+    !> 
     IF(lctlib_ps_pathway == ic4phot) THEN
         jmax2vcmax = jmax2vcmax_C4
         k0_fn_chl  = k0_fn_chl_C4
@@ -193,14 +194,15 @@ CONTAINS
         f_pepc     = k0_fn_pepc_C3
     ENDIF
 
-    !> 0.9.2 configure options for fractions optimisation
-    !! 
+    !>0.9.2 configure options for fractions optimisation
+    !> 
     optimise_n_fractions = flag_optimal_Nfraction
     IF (PRESENT(inquire_n_fractions)) optimise_n_fractions = .NOT.inquire_n_fractions
 
     !> 0.9.3  check presence of all arguments that are OPTIONAL but needed for 'CALL optimise_canopy_n_fractions()' \n
-    !!         only in case optimise_n_fractions = TRUE \n
-    !!         note, all variables are of DIMENSION(nc)         but compiler gives an error if '(:)' is added here
+    !>         only in case optimise_n_fractions = TRUE \n
+    !>         note, all variables are of DIMENSION(nc)         but compiler gives an error if '(:)' is added here
+    !>
     IF(optimise_n_fractions)THEN
        IF(.NOT.PRESENT(t_air)            .OR..NOT.PRESENT(t_acclim)         .OR..NOT.PRESENT(press_srf)    .OR. &
           .NOT.PRESENT(co2_mixing_ratio) .OR..NOT.PRESENT(ga)               .OR. &
@@ -214,13 +216,14 @@ CONTAINS
     ENDIF
 
 
-    !> 1.0 calculate top of the canopy N
-    !!
-    !! dz(1) == ubounds(1) -> thickness of uppermost canopy layer
+    !>1.0 calculate top of the canopy N
+    !>
+    !>  dz(1) == ubounds(1) -> thickness of uppermost canopy layer
+    !>
     WHERE(lai(:) > dz(1))
        leaf_nitrogen_tc(:) = leaf_nitrogen(:) * 1000._wp * kn / (1._wp - exp(-kn * lai(:)))
     ELSEWHERE(lai(:) > eps8)  ! if LAI does not fill the first canopy layer, top canopy N = leaf N
-       leaf_nitrogen_tc(:) = leaf_nitrogen(:) * 1000._wp /lai(:)
+       leaf_nitrogen_tc(:) = leaf_nitrogen(:) * 1000._wp / lai(:)
     ENDWHERE
 
 
@@ -316,24 +319,24 @@ CONTAINS
            ! fraction of Rubisco is determined as the remainder
            fn_rub_cl(:,:) = 1._wp - fn_oth_cl(:,:) - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:)
 
-           ! convert mmol N / m2 to mg N / g DW
-           hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / &
-                         ((molar_mass_C / lctlib_sla) / carbon_per_dryweight_leaf)
-           hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib_np_leaf * molar_mass_P / &
-                         ((molar_mass_C / lctlib_sla) / carbon_per_dryweight_leaf)
-           !DE stuff Vmax = exp(k1 + k2 * log(P) + k3 * log(N))
-           ! implied Vmax and Jmax in nmol / g DW / s
-           !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
-           !hlp2(:,:) = exp(5.49435_wp + 0.37345_wp*log10(hlp4(:,:)) + 0.41435_wp*log10(hlp3(:,:)))
-           ! convert to f_rub_cl: Vmax = vmax2n * frub * leaf_n | µmol / m2 / s
-           !                      Vmax1 = vmax2n * frub * leaf_n / DW * 1000 | nmol / gDW / s
-           !                      exp(X) = vmax2n * frub * leaf_n
-           !                      frub = exp(X) / leaf_n / vmax2n         
-           !fn_rub_cl(:,:) = exp(4.44904_wp + 0.3472_wp*log(hlp4(:,:)) + 0.49078*log(hlp3(:,:))) / & 
-           !                 (leaf_nitrogen_cl(:,:) * vcmax2n * 1000._wp / (molar_mass_C / lctlib_sla / 0.48_wp))
-           !fn_et_cl(:,:) = exp(5.49435_wp + 0.37345_wp*log(hlp4(:,:)) + 0.41435_wp*log(hlp3(:,:))) / 4.0_wp / &
-           !                 (leaf_nitrogen_cl(:,:) * jmax2n * 1000._wp / (molar_mass_C / lctlib_sla / 0.48_wp))
-           !fn_oth_cl(:,:) = 1.0_wp - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:) - fn_rub_cl(:,:)
+           ! ! convert mmol N / m2 to mg N / g DW
+           ! hlp3(:,:) = leaf_nitrogen_cl(:,:) * molar_mass_N / &
+           !               ((molar_mass_C / lctlib_sla) / carbon_per_dryweight_leaf)
+           ! hlp4(:,:) = leaf_nitrogen_cl(:,:) / lctlib_np_leaf * molar_mass_P / &
+           !               ((molar_mass_C / lctlib_sla) / carbon_per_dryweight_leaf)
+           ! !DE stuff Vmax = exp(k1 + k2 * log(P) + k3 * log(N))
+           ! ! implied Vmax and Jmax in nmol / g DW / s
+           ! !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
+           ! !hlp2(:,:) = exp(5.49435_wp + 0.37345_wp*log10(hlp4(:,:)) + 0.41435_wp*log10(hlp3(:,:)))
+           ! ! convert to f_rub_cl: Vmax = vmax2n * frub * leaf_n | µmol / m2 / s
+           ! !                      Vmax1 = vmax2n * frub * leaf_n / DW * 1000 | nmol / gDW / s
+           ! !                      exp(X) = vmax2n * frub * leaf_n
+           ! !                      frub = exp(X) / leaf_n / vmax2n         
+           ! !fn_rub_cl(:,:) = exp(4.44904_wp + 0.3472_wp*log(hlp4(:,:)) + 0.49078*log(hlp3(:,:))) / & 
+           ! !                 (leaf_nitrogen_cl(:,:) * vcmax2n * 1000._wp / (molar_mass_C / lctlib_sla / 0.48_wp))
+           ! !fn_et_cl(:,:) = exp(5.49435_wp + 0.37345_wp*log(hlp4(:,:)) + 0.41435_wp*log(hlp3(:,:))) / 4.0_wp / &
+           ! !                 (leaf_nitrogen_cl(:,:) * jmax2n * 1000._wp / (molar_mass_C / lctlib_sla / 0.48_wp))
+           ! !fn_oth_cl(:,:) = 1.0_wp - fn_chl_cl(:,:) - fn_et_cl(:,:) - fn_pepc_cl(:,:) - fn_rub_cl(:,:)
 
         ELSEWHERE ! canopy layers without leaves
            leaf_nitrogen_cl(:,:)  = 0.0_wp

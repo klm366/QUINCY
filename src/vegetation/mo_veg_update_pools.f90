@@ -602,31 +602,31 @@ CONTAINS
                              lctlib%t_jmax_omega                                    , &
                              dsl4jsb_Config(ASSIMI_)%flag_optimal_Nfraction         , &
                              TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme), & ! ASSIMI_ config (medlyn/ballberry)
-                             canopy_layer_depth(:)                          , &
-                             veg_pool%leaf%nitrogen(:)                      , &
-                             lai(:)                                         , &
-                             ppfd_sunlit_tfrac_mavg_cl(:,:)                 , &
-                             ppfd_shaded_tfrac_mavg_cl(:,:)                 , & 
-                             fleaf_sunlit_tfrac_mavg_cl(:,:)                , &
-                             t_air_tfrac_mavg(:)                            , &
-                             t_air_tacclim_mavg(:)                          , &
-                             press_srf_tfrac_mavg(:)                        , &
-                             co2_mixing_ratio_tfrac_mavg(:)                 , &
-                             ga_tfrac_mavg(:)                               , &
-                             beta_air_tfrac_mavg(:)                         , &
-                             beta_soa_tphen_mavg(:)                         , &
-                             beta_soil_ps_tfrac_mavg(:)                     , &
-                             beta_sinklim_ps_tfrac_mavg(:)                  , &
-                             beta_soil_gs_tfrac_mavg(:)                     , & 
-                             t_jmax_opt_mavg(:)                             , &
-                             lai_cl(:,:)                                    , & ! out
-                             cumm_lai_cl(:,:)                               , & ! out
-                             leaf_nitrogen_cl(:,:)                          , & ! inout
-                             fn_rub_cl(:,:)                                 , &
-                             fn_et_cl(:,:)                                  , &
-                             fn_pepc_cl(:,:)                                , &
-                             fn_chl_cl(:,:)                                 , &
-                             fn_oth_cl(:,:)                                 )
+                             canopy_layer_depth(:)                                  , &
+                             veg_pool%leaf%nitrogen(:)                              , &
+                             lai(:)                                                 , & ! in
+                             ppfd_sunlit_tfrac_mavg_cl(:,:)                         , & ! inout
+                             ppfd_shaded_tfrac_mavg_cl(:,:)                         , & ! inout 
+                             fleaf_sunlit_tfrac_mavg_cl(:,:)                        , & ! inout
+                             t_air_tfrac_mavg(:)                                    , & ! OPTIONAL in
+                             t_air_tacclim_mavg(:)                                  , & ! OPTIONAL in
+                             press_srf_tfrac_mavg(:)                                , & ! OPTIONAL in
+                             co2_mixing_ratio_tfrac_mavg(:)                         , & ! OPTIONAL in
+                             ga_tfrac_mavg(:)                                       , & ! OPTIONAL in
+                             beta_air_tfrac_mavg(:)                                 , & ! OPTIONAL in
+                             beta_soa_tphen_mavg(:)                                 , & ! OPTIONAL in
+                             beta_soil_ps_tfrac_mavg(:)                             , & ! OPTIONAL in
+                             beta_sinklim_ps_tfrac_mavg(:)                          , & ! OPTIONAL in
+                             beta_soil_gs_tfrac_mavg(:)                             , & ! OPTIONAL in 
+                             t_jmax_opt_mavg(:)                                     , & ! OPTIONAL in
+                             lai_cl(:,:)                                            , & ! out
+                             cumm_lai_cl(:,:)                                       , & ! out
+                             leaf_nitrogen_cl(:,:)                                  , & ! out
+                             fn_rub_cl(:,:)                                         , & ! inout
+                             fn_et_cl(:,:)                                          , & ! inout
+                             fn_pepc_cl(:,:)                                        , & ! inout
+                             fn_chl_cl(:,:)                                         , & ! inout
+                             fn_oth_cl(:,:)                                           ) ! inout
 
 
     !> 5.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass

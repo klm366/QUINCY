@@ -666,7 +666,7 @@ CONTAINS
         it =  it + 1
       END DO  ! closing: [DO WHILE (it < ps_it_max .AND. dan_cl > eps4 ) ]
       !> END DO WHILE
-    ENDIF     ! closing: [IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN]
+    ENDIF     ! closing: IF (.NOT. l_day) THEN
 
     !> for output purposes, convert ci to ppm
     ci_cl = ci_cl / ppm2Pa
