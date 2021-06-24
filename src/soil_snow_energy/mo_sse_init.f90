@@ -232,11 +232,12 @@ CONTAINS
     !$acc end data
 
     ! quincy
-    ! soil texture - currently simply using default values, no ic/bc from input files
-    dsl4jsb_var3D_onDomain(SSE_, sand_sl) = dsl4jsb_Config(SSE_)%soil_sand
-    dsl4jsb_var3D_onDomain(SSE_, silt_sl) = dsl4jsb_Config(SSE_)%soil_silt
-    dsl4jsb_var3D_onDomain(SSE_, clay_sl) = dsl4jsb_Config(SSE_)%soil_clay
-    
+    IF (model%config%use_quincy) THEN
+      ! soil texture - currently simply using default values, no ic/bc from input files
+      dsl4jsb_var3D_onDomain(SSE_, sand_sl) = dsl4jsb_Config(SSE_)%soil_sand
+      dsl4jsb_var3D_onDomain(SSE_, silt_sl) = dsl4jsb_Config(SSE_)%soil_silt
+      dsl4jsb_var3D_onDomain(SSE_, clay_sl) = dsl4jsb_Config(SSE_)%soil_clay
+    END IF
 
   END SUBROUTINE sse_init_bc
 

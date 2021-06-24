@@ -360,7 +360,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    IF (tile%contains_soil) THEN
+    IF (tile%contains_soil .AND. model%config%use_quincy) THEN
       ! SSE_ 3D
       dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! in
       dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! in
@@ -475,7 +475,7 @@ CONTAINS
     END IF
 
     ! quincy
-    IF (tile%contains_soil) THEN
+    IF (tile%contains_soil .AND. model%config%use_quincy) THEN
       ! from SSE_ init
       !>soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
       !> 

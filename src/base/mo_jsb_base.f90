@@ -198,7 +198,6 @@ CONTAINS
     IF (model%config%use_quincy) THEN
       CALL message(TRIM(routine), 'Starting init of QUINCY process constants')
       CALL init_rad_constants      
-      CALL init_atmland_constants  
       CALL init_assimi_constants   
       CALL init_veg_constants      
       CALL init_sse_constants
@@ -207,6 +206,7 @@ CONTAINS
       IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')
     ENDIF
     ! init quincy constants also for jsb4
+    CALL init_atmland_constants  
     CALL init_hydro_constants
 
     IF (debug_on()) CALL message(TRIM(routine), 'done basic setup (models, process configs)')

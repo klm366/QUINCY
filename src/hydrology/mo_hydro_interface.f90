@@ -1269,7 +1269,7 @@ CONTAINS
     ! needed for quincy only (i.e., two variables not used in jsb4 at the moment)
     ! copy/paste from mo_sse_update_physics:calc_soil_hydrology() 
     ! calculate plant fractional water availability 
-    IF (tile%contains_vegetation) THEN
+    IF (tile%contains_vegetation .AND. model%config%use_quincy) THEN
       ! catch "no water"
       DO ic = 1,nc
         IF ((w_soil_root_fc(ic) - w_soil_root_pwp(ic)) > eps8 .OR. &

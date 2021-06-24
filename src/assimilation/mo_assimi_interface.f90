@@ -531,6 +531,7 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     !dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(A2L_)
 
     ! Get process variables

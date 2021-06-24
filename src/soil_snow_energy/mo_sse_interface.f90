@@ -405,7 +405,9 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
-    dsl4jsb_Get_var2D_onChunk(SSE_,   t_soil_root)          ! out
+    IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
+      dsl4jsb_Get_var2D_onChunk(SSE_,   t_soil_root)          ! out
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
     IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
