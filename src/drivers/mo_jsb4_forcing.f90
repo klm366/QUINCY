@@ -34,7 +34,8 @@ MODULE mo_jsb4_forcing
 #else
   USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart, get_year_day
 #endif
-  USE mo_jsb_time,        ONLY: get_date_components, t_datetime, is_newyear, is_newday
+  USE mo_jsb_time,        ONLY: get_date_components, t_datetime, is_newyear, is_newday, &
+    &                           get_year_length, get_year_at_experiment_start
 
   ! Apparently in echam and icon
   USE mo_math_constants,         ONLY: pi
@@ -152,7 +153,8 @@ MODULE mo_jsb4_forcing
   ! --- Structures for handling input data
   ! options relating forcing read from namelist
   TYPE forcing_options_type
-    REAL(wp) :: delta_time_observations
+    INTEGER  :: cyclic_nyears                  !! Number of years for cyclic forcing; default: 0 = no cyclic forcing
+    INTEGER  :: cyclic_start_year              !! First year for cyclic forcing; default: 9999, i.e. use experiment start year
     INTEGER  :: forcing_synchron_factor      
     INTEGER  :: forcing_steps_per_file
     LOGICAL  :: forcing_set_ocean_to_constants !! Specifies if external forcing is only defined for land cells (true)
@@ -529,6 +531,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, steplen
 
     ! --- Namelist parameters
+    INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
+    INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
                                         ! each atmospheric forcing time step that is read in      
     INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72
@@ -588,7 +592,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
-    NAMELIST /jsb_forcing_nml/ forcing_synchron_factor, forcing_steps_per_file,                      &
+    NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_file,             &
       & forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,                                         &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
       & forcing_temp_unit,                                                                                                    &
@@ -616,6 +620,8 @@ CONTAINS
 
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
+      cyclic_nyears = 0             ! No cyclic forcing
+      cyclic_start_year = 9999      ! Use year of experiment start for first cyclic year
       forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
                                     ! each atmospheric forcing time step that is read in
       forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72
@@ -675,10 +681,18 @@ CONTAINS
       f_unit = position_nml ('jsb_forcing_nml', nml_handler, status=read_status)
       IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_nml)
 
+      forcing_options%cyclic_nyears           = cyclic_nyears
+      IF (cyclic_start_year == 9999) cyclic_start_year = get_year_at_experiment_start()
+      forcing_options%cyclic_start_year       = cyclic_start_year
       forcing_options%forcing_synchron_factor = forcing_synchron_factor
       forcing_options%forcing_steps_per_file  = forcing_steps_per_file
 
-      ! ----- derive options - forcing heights: as in jsb3 it is expected that "HeightHumidity and HeightTemperature have to be equal"
+      IF (cyclic_nyears > 0) THEN
+        CALL message(routine, 'Using cyclic forcing from ' // TRIM(int2string(cyclic_nyears)) // ' years ' // &
+          &                   'starting in ' // TRIM(int2string(cyclic_start_year)))
+      END IF
+
+        ! ----- derive options - forcing heights: as in jsb3 it is expected that "HeightHumidity and HeightTemperature have to be equal"
       forcing_options%heightWind = forcing_height_wind
       forcing_options%heightHumidity = forcing_height_humidity
       ! --- Temperature timestep (if daily two variables - max and min - need to be read)
@@ -734,6 +748,8 @@ CONTAINS
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
+      CALL p_bcast(forcing_options%cyclic_nyears, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%cyclic_start_year, p_io, mpi_comm)
       CALL p_bcast(forcing_synchron_factor, p_io, mpi_comm)
       CALL p_bcast(forcing_steps_per_file, p_io, mpi_comm)
       CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io, mpi_comm)
@@ -849,8 +865,9 @@ CONTAINS
     LOGICAL ::  new_year_forcing     ! jsb3: defined comparing current_date with next_date, because with stepwise forcing
     LOGICAL ::  new_day_forcing      ! the dates in the forcing file shall correspond to the dates of stepwise output.
 
-    INTEGER           :: year, month, day, hour, minute, second, ydate
+    INTEGER           :: year, month, day, hour, minute, second, ydate, cyclic_year
     INTEGER           :: frequency, currentTimeStep, thisDayStart, thisDayEnd, ith_timestep, index_time, nc_var_id
+    LOGICAL           :: do_advance
     CHARACTER(len=8)  :: year_label
     CHARACTER(len=NF_MAX_NAME)  :: readUnit
 
@@ -876,6 +893,22 @@ CONTAINS
     new_day_forcing  = is_newday (current_datetime, delta_time)
 
     CALL get_date_components(next_datetime, year, month, day, hour, minute, second)
+
+    ! Find year of forcing file and date for new datetime
+    do_advance = .TRUE.
+    IF (forcing_options%cyclic_nyears > 0) THEN
+      cyclic_year = forcing_options%cyclic_start_year &
+        &           + MOD(year - get_year_at_experiment_start(), forcing_options%cyclic_nyears)
+      ! If current year is a leap year but year from forcing file is not, read in Feb 28 twice
+      IF (get_year_length(year) == 366 .AND. get_year_length(cyclic_year) == 365) THEN
+        IF (month == 2 .AND. day == 29) THEN
+          day = 28
+          do_advance = .FALSE.
+        END IF
+      END IF
+      year = cyclic_year
+    END IF
+
     WRITE(year_label,'(i8.4)') year
     ydate = ISIGN(1,year)*(IABS(year)*10000+month*100+day)
     ith_timestep = IMerge_HMS2Sec(hour, minute, second)/int(delta_time) + 1 !+1 because 00:00/X => 0; and 1 based vector
@@ -948,8 +981,8 @@ CONTAINS
     ! --- if new current run or new file - get the timeseries of the forcing file and the current position in the timeseries
     IF (new_year_forcing .OR. lstart .OR. lresume) THEN
 
+      IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
       IF (my_process_is_stdio()) THEN
-        IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
         forcing_input_variable%input_file = jsb_netcdf_open_input( &
           & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
   
@@ -964,7 +997,7 @@ CONTAINS
         currentTimeStep = 1
         thisDayStart = 0
         thisDayEnd = 0
-        ! determine current date in the file
+        ! Determine current date in the file
         DO WHILE (currentTimeStep .LE. forcing_input_variable%length_time_series)
           IF ( ydate .EQ. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
             IF (thisDayStart .EQ. 0) thisDayStart = currentTimeStep
@@ -1038,18 +1071,22 @@ CONTAINS
         & start_time_step=thisDayStart, end_time_step=thisDayEnd, fill_array=forcing_input_variable%data_read)
 
       ! Set the ocean cells of the read data to the constant ocean value and increase the start and end for the next day to be read
-      IF(forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
+      IF (forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
         DO index_time = 1,time_steps_per_day
           CALL set_ocean_cells(nblks, ics, ice, model_id, &
             & forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,index_time))
         ENDDO
-        forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
-        forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+time_steps_per_day
-      ELSEIF(forcing_input_variable%frequency .EQ. DAILY_) THEN
+        IF (do_advance) THEN
+          forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
+          forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+time_steps_per_day
+        END IF
+      ELSE IF (forcing_input_variable%frequency .EQ. DAILY_) THEN
         CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, &
           &                  forcing_input_variable%data_read(:,:,1))
-        forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
-        forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
+        IF (do_advance) THEN
+          forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
+          forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
+        END IF
       ENDIF
     ENDIF
 
