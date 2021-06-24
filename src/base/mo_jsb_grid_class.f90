@@ -44,6 +44,10 @@ MODULE mo_jsb_grid_class
     INTEGER                       :: nland = 0
     REAL(wp), POINTER             :: lon(:,:) => NULL()  !< Longitudes of grid in degrees
     REAL(wp), POINTER             :: lat(:,:) => NULL()  !< Latitudes of grid in degrees
+    REAL(wp), POINTER             :: coslat(:,:) => NULL()
+    REAL(wp), POINTER             :: sinlat(:,:) => NULL()
+    REAL(wp), POINTER             :: coslon(:,:) => NULL()
+    REAL(wp), POINTER             :: sinlon(:,:) => NULL()
     REAL(wp), POINTER             :: area(:,:) => NULL()
     LOGICAL,  POINTER             :: lsm(:,:) => NULL()
     REAL(wp), POINTER             :: lsf(:,:) => NULL()
@@ -60,6 +64,7 @@ MODULE mo_jsb_grid_class
   CONTAINS
     PROCEDURE :: Get_nblks
     PROCEDURE :: Get_nproma
+    PROCEDURE :: Get_npromz
     PROCEDURE :: Get_blk_start
     PROCEDURE :: Get_blk_end
     PROCEDURE :: Get_col_start
@@ -107,6 +112,8 @@ CONTAINS
 
   FUNCTION new_grid_from_host(patch, type) RESULT(grid)
 
+    USE mo_jsb_math_constants, ONLY: pi
+
     TYPE(t_patch),    TARGET, INTENT(in) :: patch
     CHARACTER(LEN=*),         INTENT(in) :: type
     TYPE(t_jsb_grid),         POINTER    :: grid
@@ -143,6 +150,12 @@ CONTAINS
     new%npromz   = new%ntotal - new%nproma * (new%nblks - 1)
     new%lon     => get_lon_domain          (patch)
     new%lat     => get_lat_domain          (patch)
+    ALLOCATE(new%coslat(new%nproma,new%nblks), new%sinlat(new%nproma,new%nblks), &
+      &      new%coslon(new%nproma,new%nblks), new%sinlon(new%nproma,new%nblks))
+    new%coslat(:,:) = COS(pi * new%lat(:,:) / 180._wp)
+    new%sinlat(:,:) = SIN(pi * new%lat(:,:) / 180._wp)
+    new%coslon(:,:) = COS(pi * new%lon(:,:) / 180._wp)
+    new%sinlon(:,:) = SIN(pi * new%lon(:,:) / 180._wp)
     new%area    => get_area_domain         (patch)
     ALLOCATE(new%lsm(new%nproma,new%nblks), new%lsf(new%nproma,new%nblks))
     new%lsm(:,:) = .TRUE.
@@ -232,6 +245,10 @@ CONTAINS
     IF (ASSOCIATED(self%lsf)) DEALLOCATE(self%lsf)
     IF (ASSOCIATED(self%lon)) DEALLOCATE(self%lon)
     IF (ASSOCIATED(self%lat)) DEALLOCATE(self%lat)
+    IF (ASSOCIATED(self%coslat)) DEALLOCATE(self%coslat)
+    IF (ASSOCIATED(self%sinlat)) DEALLOCATE(self%sinlat)
+    IF (ASSOCIATED(self%coslon)) DEALLOCATE(self%coslon)
+    IF (ASSOCIATED(self%sinlon)) DEALLOCATE(self%sinlon)
 
     DEALLOCATE(self)
 
@@ -299,6 +316,20 @@ CONTAINS
     get_nproma = self%nproma
 
   END FUNCTION get_nproma
+
+  INTEGER FUNCTION get_npromz(self)
+
+#ifdef HAVE_F2003
+    CLASS(t_jsb_grid), INTENT(in) :: self
+#else
+    CLASS(t_jsb_grid)             :: self
+#endif
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_npromz'
+
+    get_npromz = self%npromz
+
+  END FUNCTION get_npromz
 
   INTEGER FUNCTION get_blk_start(grid)
 

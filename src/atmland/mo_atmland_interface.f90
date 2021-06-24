@@ -58,7 +58,7 @@ CONTAINS
     & swvis_srf_down,         &
     & swnir_srf_down,         &
     & swpar_srf_down,         &
-    & fract_par_diffuse,       &
+    & fract_par_diffuse,      &
     & press_srf,              &
     & drag_srf,               &
     & t_acoef,                &
@@ -68,6 +68,8 @@ CONTAINS
     & pch,                    &
     & cos_zenith_angle,       &
     & CO2_air,                &
+    & DEBUG_VAR,              &
+    ! For lakes:
     & drag_wtr,               &
     & drag_ice,               &
     & t_acoef_wtr,            &
@@ -89,7 +91,7 @@ CONTAINS
     REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
       & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
       & fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,         &
-      & CO2_air, drag_wtr, drag_ice,                                                                               &
+      & CO2_air, DEBUG_VAR, drag_wtr, drag_ice,                                                                    &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
 
@@ -98,7 +100,7 @@ CONTAINS
     INTEGER ::  iblk, ics, ice, nc, i
     TYPE(t_jsb_model), POINTER :: model
     LOGICAL :: use_quincy
-    LOGICAL ::  tile_contains_lake
+    LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
 
@@ -125,6 +127,7 @@ CONTAINS
       & CO2_air_ptr,           &
       & CO2_air_mol_ptr,       &
       & CO2_mixing_ratio_ptr,  &
+      & DEBUG_VAR_ptr,         &
       & drag_wtr_ptr,          &
       & drag_ice_ptr,          &
       & t_acoef_wtr_ptr,       &
@@ -152,6 +155,9 @@ CONTAINS
     IF (nc /= SIZE(t_air,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     dsl4jsb_Get_memory(A2L_)
+    IF (PRESENT(DEBUG_VAR)) THEN
+      DEBUG_VAR_ptr         => dsl4jsb_var2D_onChunk(A2L_, DEBUG_VAR)
+    END IF
 
     IF (PRESENT(t_air)) THEN
       t_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, t_air)
@@ -247,6 +253,13 @@ CONTAINS
     END IF
 
     !$acc parallel default(present)
+
+    IF (PRESENT(DEBUG_VAR)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        DEBUG_VAR_ptr(i) = DEBUG_VAR(i)
+      END DO
+    END IF
 
     IF (PRESENT(t_air)) THEN
       !$acc loop gang vector
@@ -564,7 +577,7 @@ CONTAINS
 
       !$acc data pcreate(fract_ptr) present(tile%lcts)
       fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)    ! Lake fraction
-      
+
       !$acc data present(fact_land, fact_lake, fract_ptr)
       !$acc parallel loop
       DO i=1,nc
