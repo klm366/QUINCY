@@ -86,13 +86,14 @@ CONTAINS
     USE mo_jsb_model_final,         ONLY: jsbach_finalize
     USE mo_jsb_version,             ONLY: jsbach_label_run
     USE mo_jsb_control,             ONLY: force_from_observations
-    USE mo_jsb4_forcing,            ONLY: init_forcing
+    USE mo_jsb4_forcing,            ONLY: init_forcing, finalize_external_forcing
 
     USE mo_build_decomposition,     ONLY: build_decomposition
   
     ! I/O
     USE mo_restart,                 ONLY: t_RestartDescriptor, createRestartDescriptor, deleteRestartDescriptor, detachRestartProcs
-    USE mo_name_list_output,        ONLY: name_list_io_main_proc, write_name_list_output, close_name_list_output, istime4name_list_output
+    USE mo_name_list_output,        ONLY: name_list_io_main_proc, write_name_list_output, close_name_list_output, &
+      &                                   istime4name_list_output
     USE mo_output_event_handler,    ONLY: get_current_jfile
     USE mo_icon_output_tools,       ONLY: init_io_processes
 #ifdef HAVE_CDI_PIO
@@ -365,7 +366,7 @@ CONTAINS
     CALL jsbach_init(1)
     CALL jsbach_label_run(.TRUE.)
 
-    IF (force_from_observations()) CALL init_forcing(1)
+    IF (force_from_observations()) CALL init_forcing(1, dtime, dtime)
 
     IF (isRestart()) THEN
       !
@@ -698,6 +699,7 @@ CONTAINS
 
     CALL destruct_icon_communication()
 
+    CALL finalize_external_forcing()
     CALL jsbach_finalize()
 
     ! Delete variable lists
@@ -730,7 +732,7 @@ CONTAINS
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
     USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
-    USE mo_jsb4_forcing,              ONLY: forcing_options, delta_time, time_step_len, get_interface_variables_from_external_forcing
+    USE mo_jsb4_forcing,              ONLY: forcing_options, get_interface_variables_from_external_forcing
     USE mo_psrad_orbit,               ONLY: orbit_kepler, orbit_vsop87, get_orbit_times
     USE mo_psrad_solar_parameters,    ONLY: solar_parameters
     USE mo_echam_rad_config,          ONLY: echam_rad_config
@@ -790,8 +792,6 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':perform_jsbach_for_timestep'
 
     l_force_from_obs = force_from_observations()
-    delta_time    = dtime
-    time_step_len = dtime
 
     IF (jsbach_is_restarted()) THEN
       l_first_forcing_file = .FALSE.
