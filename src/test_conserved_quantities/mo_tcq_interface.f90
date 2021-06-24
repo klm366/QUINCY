@@ -51,7 +51,7 @@ MODULE mo_tcq_interface
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: Register_tcq_tasks
+  PUBLIC :: Register_tcq_tasks, tcq_transfer_from_active_to_passive_vars_onChunk
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_tcq_interface'
   
@@ -251,6 +251,39 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_tcq
+
+
+  ! ====================================================================================================== !
+  !
+  !> Relocates content of own active to own passive vars that are part of lcc_relocations
+  !
+  SUBROUTINE tcq_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
+    USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc
+    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
+    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+    USE mo_jsb_lcc_class,       ONLY: transfer_from_active_to_passive_var_onChunk
+    USE mo_tcq_constants,       ONLY: tcq_potential_active_vars, tcq_required_passive_vars
+
+    IMPLICIT NONE
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
+        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var 
+    CLASS(t_jsb_tile_abstract), INTENT(in)    :: tile !< tile for which the relocation is be conducted
+    INTEGER,                    INTENT(in)    :: i_tile !< index of the tile in lcc structure
+    TYPE(t_jsb_task_options),   INTENT(IN)    :: options !< run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':tcq_transfer_from_active_to_passive_vars_onChunk'
+
+    ! -------------------------------------------------------------------------------------------------- !
+
+    IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
+
+    ! for tcq the transfer is simple - just put from a_veg to a_dead...
+    CALL transfer_from_active_to_passive_var_onChunk(                            &
+      & lcc_relocations, i_tile, options, tcq_potential_active_vars(1), tcq_required_passive_vars(1))
+
+  END SUBROUTINE tcq_transfer_from_active_to_passive_vars_onChunk
+
 
 #endif
 END MODULE mo_tcq_interface
