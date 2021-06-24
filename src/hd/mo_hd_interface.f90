@@ -274,7 +274,8 @@ CONTAINS
       & elev_min,              &
       & dyn_height,            &
       & alpha,                 &
-      & beta
+      & beta,                  &
+      & basin_mask
 
     dsl4jsb_Real3D_onDomain :: &
       & nidx_upstream,         &
@@ -354,9 +355,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, lake_area_max)    ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, lake_volume_max)  ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, elev_min)         ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, dyn_height)         ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, dyn_height)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, beta)             ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     !dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
@@ -443,7 +445,11 @@ CONTAINS
         ! internal drainage cells
         discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         internal_drain(:,:) = discharge(:,:)
-        lake_storage(:,:) = lake_storage(:,:) + discharge(:,:) * steplen 
+        discharge(:,:) = 0._wp
+        outflow_runoff(:,:) = 0._wp
+        outflow_drainage(:,:) = 0._wp
+      ELSE WHERE (hd_mask(:,:) == 3._wp)
+        lake_storage(:,:) = ( outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:) ) * steplen
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
@@ -462,20 +468,23 @@ CONTAINS
         DO jc = jcs, jce
           ! block and cell index of the 3 neighbors aligned to the 3 edges of
           ! the selected grid cell
-          njc =  grid%patch%cells%neighbor_idx(jc,blk,:)
-          nblk =  grid%patch%cells%neighbor_blk(jc,blk,:)
-          ! grid cell with lowest elevation: used to determine flow direction
-          dyn_min = MIN( MINVAL(dyn_height(njc , nblk)), dyn_height(jc, blk))
-          DO n = 1, 3
-            IF (dyn_height(njc(n), nblk(n)) == dyn_min) THEN
-              ! lake water flows into neighbor grid cell with lowest lake water level
-              lake_flow = MAX( MIN( ( dyn_height(jc,blk) - dyn_height(njc(n),nblk(n)) )  &
-                                     * lake_area(jc,blk), lake_storage(jc,blk)), 0._wp)  &
-                                     * 0.35/160000._wp
-              lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
-              lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
-            END IF
-          END DO
+          IF (basin_mask(jc,blk) == 1._wp) THEN 
+            njc =  grid%patch%cells%neighbor_idx(jc,blk,:)
+            nblk =  grid%patch%cells%neighbor_blk(jc,blk,:)
+            ! grid cell with lowest elevation: used to determine flow direction
+            dyn_min = MIN( MINVAL(dyn_height(njc,nblk), MASK=(basin_mask(njc,nblk)==1._wp)), dyn_height(jc, blk))
+            !dyn_min = MIN( MINVAL(dyn_height(njc, nblk)), dyn_height(jc, blk))
+            DO n = 1, 3
+              IF (dyn_height(njc(n), nblk(n)) == dyn_min) THEN
+                ! lake water flows into neighbor grid cell with lowest lake water level
+                lake_flow = MAX( MIN( ( dyn_height(jc,blk) - dyn_height(njc(n),nblk(n)) )  &
+                                       * lake_area(jc,blk), lake_storage(jc,blk)), 0._wp)  &
+                                       * 0.35/160000._wp
+                lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
+                lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
+              END IF
+            END DO
+          END IF
         END DO
       END DO
       lake_storage(:,:) = lake_storage(:,:) + lake_outflow(:,:) * steplen

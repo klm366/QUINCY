@@ -62,6 +62,7 @@ MODULE mo_hd_memory_class
       dyn_height      , &  !< minimum dynamic height within ICON grid cell [m]
       alpha           , &  !< parameter to describe lake volume-height relation
       beta            , &  !< parameter to describe lake volume-area relation
+      basin_mask      , &  !< lake basin grid points flagged as 1 else 0 
       water_budget    , &
       water_budget_old, &
       water_flux      , &
@@ -292,6 +293,14 @@ CONTAINS
     CALL mem%Add_var( 'beta', mem%beta,                                      &
       & hgrid, surface,                                                      &
       & t_cf('beta', 'none', 'parameter of area-volume relations'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'basin_mask', mem%basin_mask,                                      &
+      & hgrid, surface,                                                      &
+      & t_cf('basin_mask', 'none', 'lake basin grid point flagged'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
