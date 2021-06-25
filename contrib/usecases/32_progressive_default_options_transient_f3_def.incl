@@ -1,0 +1,62 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+##
+##    This file is part of the QUINCY model.
+##    The QUINCY model is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License version 3,
+##    as published by the Free Software Foundation.
+##
+##    The QUINCY model is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+
+# default QUINCY usecase: 32_progressive_default_options_transient_f3_def.incl
+# 
+# enable all modern features of QUINCY which 
+#  are tested and stable
+#  and are considered improvements of the default model, i.e., the default settings for the options in the prep_run_slm.sh
+# 
+# run a transient simulation with timestep output for the last full forcing period of the transient simulation
+#  with the FLUXNET3 site-set
+#  yearly spinup output
+# 
+# the options included here are only the ones that modify the current default prep_run_slm.sh 
+# 
+# use the io_perform queue
+# 
+
+experimentalID="32_progressive_defaults_transient_fluxnet3"
+forcingDataSet="fluxnet3"
+
+fluxnetTypeTransientTimestepOutput="T"
+
+sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
+flag_sb_prescribe_po4="F"       # set po4solute to a constant value
+
+biomass_alloc_scheme="dynamic"    # fixed dynamic optimal
+leaf_stoichom_scheme="dynamic"    # fixed dynamic optimal
+
+flag_dynamic_roots="T"            # F = fixed root fractions across soil layers, no changes after init (default), T = dynamic root fractions across soil layers
+
+soil_depth=9.5                  # meter (5.7 to 9.5)
+nsoil_layer=15                   # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
+
+simulation_length_number=117     # default years for forcingMode: static = 30 | transient = 115 [transient: 01.01.1901 -> 31.12.2015 without spinup!]
+output_start_first_day_year=1    # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
+output_end_last_day_year=117     # equal with or larger than option: output_start_first_day_year
+
+output_interval_pool_spinup="yearly"    # none daily weekly monthly yearly (only for transient forcingMode; if you'd need timestep please talk to Jan or Sönke)
+output_interval_flux_spinup="yearly"
+
+useSiteSpecificAWC="T"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
+flag_read_dC13="T"              # either use forcing dC13 or the prescribed default value
+flag_read_DC14="T"              # either use forcing DC14 or the prescribed default value
+n_deposition_scheme="dynamic"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
+p_deposition_scheme="dynamic"      # options: none constant dynamic (p_srf_down)
+
+queue="io_perform"

@@ -257,11 +257,13 @@ pdf("figs/diff-prop_two-exp_new-minus-old.pdf", paper="a4", height=12.4, width=7
 
       # loop over columns (variables) and create figs   
       idInfo1 <- "diff: (new - old) / old * 100"
+      idInfo2 <- paste0(oldID, " | ", newID)
       for (v in colNumStarts[p]:colNumEnds[p])
       {
         # plot simulation ID info at uppermost figures per page
         idInfo <- ""
         if(v == colNumStarts[p])     idInfo <- idInfo1
+        if(v == colNumStarts[p] + 1) idInfo <- idInfo2
         # set y-axis range to default values
         yMin <- -1
         yMax <-  1
@@ -296,5 +298,4 @@ pdf("figs/diff-prop_two-exp_new-minus-old.pdf", paper="a4", height=12.4, width=7
 garbage <- dev.off()  # run dev.off() but suppress the notification it usually provides
 
 # message
-print(" finished postprocessing comparison of two QUINCY experiments!")
-
+print(" finished creating comparison figures!")

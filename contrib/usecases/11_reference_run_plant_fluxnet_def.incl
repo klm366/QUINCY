@@ -26,7 +26,7 @@
 # 
 
 
-experimentalID="11_refrun_plant_fluxnet"
+experimentalID="11_plant_model_static_fluxnet2"
 slmModel="plant"
 
 forcingDataSet="fluxnet"
