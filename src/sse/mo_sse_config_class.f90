@@ -232,13 +232,6 @@ CONTAINS
        CALL finish(routine, message_text)
     END IF
 
-    ! avoid low bulk density values
-    ! for values lower than ~ 1000 QUINCY shows a soil temperature stability problem (very large changes across timesteps), 
-    !   which in turn results from low bulk density of the soil (or rather low thermal capacity)
-    IF(config%bulk_density < 1000.0_wp) THEN
-      config%bulk_density = 1000.0_wp
-    ENDIF
-
     !< Create vertical axis (vgrid)
     !! 
     !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
