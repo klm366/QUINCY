@@ -502,12 +502,16 @@ CONTAINS
     ! Note: at the moment, fract_org_sl doesn't change over time, but it could
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
-      IF (tile%is_vegetation .AND. tile%lcts(1)%lib_id > 0 .AND. dsl4jsb_Lctlib_param(ForestFlag)) THEN
-        ! For PFT tiles
-        dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)
-      ELSE IF (tile%is_vegetation) THEN
+      IF (tile%is_vegetation) THEN
         ! For general VEG tile
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
+        IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a PFT (otherwise lctlib not defined)
+          ! For PFT tiles
+          ! Note: in current setup hydrology does not run on PFTs
+          IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
+            dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)
+          END IF
+        END IF
       END IF
       ! The following can change later depending on the organic layers and soil ice content.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
