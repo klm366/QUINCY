@@ -404,9 +404,9 @@ CONTAINS
   ! @param [in]      l_ws_max_depend_on_org ws_max re-calculated depending on organic matter
   ! @param [in]      l_correct_ws_from_top  Start soil moisture correction from top level
   ! @param [in]      l_ice_impedance        Account for ice impedance
-  ! @param [in]      l_diffuse_all_ws
-  ! @param [in]      l_discount_scool 
-  ! @param [in]      l_drain_lat
+  ! @param [in]      l_diffuse_all_ws       Allow diffusion of supercooed water
+  ! @param [in]      l_discount_scool       Supercooled water does not percolate and is not available to plants
+  ! @param [in]      l_drain_lat            Allow lateral drainage, i.e. drainage from upper to soil layers
 !pdv <
   ! @param [in]      soil_depth_l       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_l       Thicknesses of soil layers until rooting depth [m]
