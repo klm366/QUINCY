@@ -1291,7 +1291,6 @@ CONTAINS
 
     INTEGER,                   INTENT(IN)    :: startblk, endblk, startidx(:), endidx(:), model_id
     TYPE(t_datetime), POINTER, INTENT(in)    :: current_datetime
-    TYPE(t_datetime), POINTER, INTENT(in)    :: next_datetime
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
     REAL(wp),                  INTENT(OUT)   :: current_forcing_array(:,:)
 
