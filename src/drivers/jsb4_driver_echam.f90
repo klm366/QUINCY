@@ -84,7 +84,7 @@ PROGRAM jsb4_driver
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
   INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, npromz, nblks, ncid, model_id, ics, ice
-  TYPE(t_datetime)          :: current_datetime, next_datetime
+  TYPE(t_datetime)          :: current_datetime
   TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL(), next_datetime_ptr => NULL()
 
   !! Variables of namelist jsb_parallel_nml

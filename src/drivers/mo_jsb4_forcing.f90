@@ -313,14 +313,14 @@ CONTAINS
     ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data; t_air_C for timestep
     ALLOCATE(t_air_C(ice, nblks))
     IF(forcing_options%air_temperature_as_timestep) THEN
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, forcing_input%air_temp, t_air_C)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%air_temp, t_air_C)
     ELSE
       ALLOCATE(tmin_data(ice, nblks))
       ALLOCATE(tmax_data(ice, nblks))
 
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, &
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
         & forcing_input%air_temp_min, tmin_data)
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, &
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
         & forcing_input%air_temp_max, tmax_data)
       ! estimate temperature at time step from daily temperature maximum and temperature minimum
       CALL instantly_from_daily_temp_2(nblks, ice, icz, lon, sinlat, coslat, tmin_data, tmax_data, next_datetime, t_air_C)
@@ -329,7 +329,7 @@ CONTAINS
     t_air(:,:) = t_air_C(:,:) + tmelt
 
     ! --- precipitation
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, &
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
       &                            forcing_input%precipitation, temporary_data1)
     ! convert if required
     IF(forcing_options%precip_in_mm_per_day) temporary_data1 = temporary_data1 * conv_prec_day
@@ -379,7 +379,7 @@ CONTAINS
 
     CASE(RH_)
       ALLOCATE(rel_humidity(ice, nblks))
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, &
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
         &                            forcing_input%rel_humidity, rel_humidity)
       ! check data
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
@@ -431,7 +431,7 @@ CONTAINS
       ENDIF
       DEALLOCATE(rel_humidity)
     CASE(QAIR_)
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, forcing_input%qair, q_air(:,:))
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%qair, q_air(:,:))
       ! constrain specific humidity to be lower than or equal to the saturation spec. humidity
       DO iblk = 1, nblks
         IF (iblk == nblks) THEN
@@ -448,7 +448,7 @@ CONTAINS
     ! --- compute shortwave radiation
     day_of_year=day_in_year(next_datetime)
     ALLOCATE(rad_uv_down(ice, nblks))
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, &
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
       & forcing_input%shortwave, temporary_data1)
     CALL shortwave_from_direct_shortwave( &
       ! in
@@ -471,14 +471,14 @@ CONTAINS
 
     ! --- compute longwave radiation
     IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, &
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
         & forcing_input%longwave, lw_srf_down)
     ELSE
       ! jsbach3 driver: diurnal longwave downward radiation is generated such that the average radiation matches the
       ! observations but the diurnal cycle follows temperature to help calculation of a correct
       ! net radiation flux. Note that reduces biases resulting from assuming a constant flux, but
       ! this introduces uncertainty due to biases in the assumed dial course of temperature
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, &
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
         &                            forcing_input%longwave, temporary_data1)
 
       IF (forcing_options%air_temperature_as_timestep) THEN
@@ -490,11 +490,11 @@ CONTAINS
     ENDIF
 
     ! --- wind
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, forcing_input%wind_speed, wind_air)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%wind_speed, wind_air)
     wind_10m = wind_air
 
     ! --- CO2 concentration
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, forcing_input%CO2_concentr, CO2_air)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%CO2_concentr, CO2_air)
     ! and convert to correct unit
     CO2_air = CO2_air * forcing_options%conv_CO2_2_MassRatio
 
@@ -851,12 +851,11 @@ CONTAINS
   !! @par History
   !! First version by Julia Nabel (14.01.16)
   !!
-  SUBROUTINE get_data_and_update_field(nblks, ics, ice, current_datetime, next_datetime, model_id, &
+  SUBROUTINE get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
     &                                  forcing_input_variable, current_forcing_array)
 
     INTEGER,                   INTENT(IN)    :: nblks, ics, ice, model_id
     TYPE(t_datetime), POINTER, INTENT(in)    :: current_datetime
-    TYPE(t_datetime), POINTER, INTENT(in)    :: next_datetime
     TYPE(input_variable_type), INTENT(INOUT) :: forcing_input_variable
     REAL(wp),                  INTENT(OUT)   :: current_forcing_array(:,:)
 
@@ -892,7 +891,7 @@ CONTAINS
     new_year_forcing = is_newyear(current_datetime, delta_time)
     new_day_forcing  = is_newday (current_datetime, delta_time)
 
-    CALL get_date_components(next_datetime, year, month, day, hour, minute, second)
+    CALL get_date_components(current_datetime, year, month, day, hour, minute, second)
 
     ! Find year of forcing file and date for new datetime
     do_advance = .TRUE.
@@ -1002,11 +1001,15 @@ CONTAINS
           IF ( ydate .EQ. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
             IF (thisDayStart .EQ. 0) thisDayStart = currentTimeStep
             thisDayEnd = currentTimeStep
+            currentTimeStep = currentTimeStep + 1
           ELSEIF ( ydate .LT. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
+            currentTimeStep = currentTimeStep + 1
             EXIT
+          ELSE
+            currentTimeStep = currentTimeStep + 1
           ENDIF
-          currentTimeStep = currentTimeStep + 1
         ENDDO
+        currentTimeStep = currentTimeStep - 1
         ! Assert that current date has been found
         IF (( currentTimeStep .GT. forcing_input_variable%length_time_series) &
           & .OR. (( currentTimeStep .EQ. 1) .AND. ( ydate .NE. INT(forcing_input_variable%timevalues(1)))))  THEN
