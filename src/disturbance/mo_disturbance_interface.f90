@@ -345,7 +345,7 @@ CONTAINS
               & fire_tau,                                        & ! in
               & q_rel_air_climbuf(:),                            & ! in
               & fuel(:),                                         & ! in
-              & burned_fract(:)                                  & ! out
+              & burned_fract(:)                                  & ! inout
               & )
 
           CASE (2) !! Arora & Boer algorithm

@@ -60,16 +60,9 @@ MODULE mo_alcc_process
       & c_humus_2_lost_avg,         &
       & c_bg_sum_lost_avg,          &
       & c_ag_sum_1_lost_avg,        &
-      & c_litter_green_ag_lost_avg, &
-      & c_litter_green_bg_lost_avg, &
-      & c_litter_wood_ag_lost_avg,  &
-      & c_litter_wood_bg_lost_avg,  &
       ! rest
       & NPP_pot_sum_lost_avg,          &
       & GPP_sum_lost_avg,              &
-      & alpha_lost_avg,                &
-      & alpha_sum_lost_avg,            &
-      & alpha_yDayMean_lost_avg,       &
       & soil_respiration_lost_avg,     &
       & NPP_flux_correction_lost_avg,  &
       & NPP_pot_yDayMean_lost_avg,     &
@@ -155,14 +148,9 @@ MODULE mo_alcc_process
       & c_acid_bg2_, c_water_bg2_, c_ethanol_bg2_, c_nonsoluble_bg2_, &
       & c_humus_1_, c_humus_2_,                                       &
       & c_bg_sum_, c_ag_sum_1_,                                       &
-      & c_litter_green_ag_, c_litter_green_bg_,                       &
-      & c_litter_wood_ag_, c_litter_wood_bg_,                         &
       ! rest
       & NPP_pot_sum_,          &
       & GPP_sum_,              &
-      & alpha_,                &
-      & alpha_sum_,            &
-      & alpha_yDayMean_,       &
       & soil_respiration_,     &
       & NPP_flux_correction_,  &
       & NPP_pot_yDayMean_,     &
@@ -277,16 +265,9 @@ MODULE mo_alcc_process
       & c_humus_2_lost_avg,         &
       & c_bg_sum_lost_avg,          &
       & c_ag_sum_1_lost_avg,        &
-      & c_litter_green_ag_lost_avg, &
-      & c_litter_green_bg_lost_avg, &
-      & c_litter_wood_ag_lost_avg,  &
-      & c_litter_wood_bg_lost_avg,  &
       ! rest
       & NPP_pot_sum_lost_avg,          &
       & GPP_sum_lost_avg,              &
-      & alpha_lost_avg,                &
-      & alpha_sum_lost_avg,            &
-      & alpha_yDayMean_lost_avg,       &
       & soil_respiration_lost_avg,     &
       & NPP_flux_correction_lost_avg,  &
       & NPP_pot_yDayMean_lost_avg,     &
@@ -392,16 +373,9 @@ MODULE mo_alcc_process
       & c_humus_2_,         &
       & c_bg_sum_,          &
       & c_ag_sum_1_,        &
-      & c_litter_green_ag_, &
-      & c_litter_green_bg_, &
-      & c_litter_wood_ag_,  &
-      & c_litter_wood_bg_,  &
       !
       & NPP_pot_sum_,          &
       & GPP_sum_,              &
-      & alpha_,                &
-      & alpha_sum_,            &
-      & alpha_yDayMean_,       &
       & soil_respiration_,     &
       & NPP_flux_correction_,  &
       & NPP_pot_yDayMean_,     &
@@ -527,24 +501,10 @@ MODULE mo_alcc_process
                                  & +  c_bg_sum_lost_avg          * f_d_to_new_grow_pfts
       IF (PRESENT(c_ag_sum_1_))       c_ag_sum_1_ = c_ag_sum_1_             * f_old_to_new_grow_pfts  &
                                  & +  c_ag_sum_1_lost_avg        * f_d_to_new_grow_pfts
-      IF (PRESENT(c_litter_green_ag_)) c_litter_green_ag_ = c_litter_green_ag_ * f_old_to_new_grow_pfts &
-                                 & +  c_litter_green_ag_lost_avg * f_d_to_new_grow_pfts
-      IF (PRESENT(c_litter_green_bg_)) c_litter_green_bg_ = c_litter_green_bg_ * f_old_to_new_grow_pfts &
-                                 & +  c_litter_green_bg_lost_avg * f_d_to_new_grow_pfts
-      IF (PRESENT(c_litter_wood_ag_)) c_litter_wood_ag_ = c_litter_wood_ag_ * f_old_to_new_grow_pfts  &
-                                 & +  c_litter_wood_ag_lost_avg  * f_d_to_new_grow_pfts
-      IF (PRESENT(c_litter_wood_bg_)) c_litter_wood_bg_ = c_litter_wood_bg_ * f_old_to_new_grow_pfts  &
-                                 & +  c_litter_wood_bg_lost_avg  * f_d_to_new_grow_pfts
       IF (PRESENT(NPP_pot_sum_))     NPP_pot_sum_ = NPP_pot_sum_             * f_old_to_new_grow_pfts &
                                  & +  NPP_pot_sum_lost_avg       * f_d_to_new_grow_pfts
       IF (PRESENT(GPP_sum_))         GPP_sum_ = GPP_sum_                     * f_old_to_new_grow_pfts &
                                  & +  GPP_sum_lost_avg           * f_d_to_new_grow_pfts
-      IF (PRESENT(alpha_))            alpha_ = alpha_                        * f_old_to_new_grow_pfts &
-                                 & +  alpha_lost_avg             * f_d_to_new_grow_pfts
-      IF (PRESENT(alpha_sum_))        alpha_sum_ = alpha_sum_                * f_old_to_new_grow_pfts &
-                                 & +  alpha_sum_lost_avg         * f_d_to_new_grow_pfts
-      IF (PRESENT(alpha_yDayMean_)) alpha_yDayMean_ = alpha_yDayMean_        * f_old_to_new_grow_pfts &
-                                 & +  alpha_yDayMean_lost_avg    * f_d_to_new_grow_pfts
       IF (PRESENT(soil_respiration_)) soil_respiration_ = soil_respiration_  * f_old_to_new_grow_pfts &
                                  & +  soil_respiration_lost_avg  * f_d_to_new_grow_pfts
       IF (PRESENT(NPP_flux_correction_)) NPP_flux_correction_ = NPP_flux_correction_ * f_old_to_new_grow_pfts &
