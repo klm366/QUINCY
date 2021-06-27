@@ -1,19 +1,22 @@
-!>## Contains methods for JSBACH initializations
+!> Summary: Methods for JSBACH initializations
+!>
+!>### Initialize JSBACH instance with grid, task queue, tile structure, initial/boundary conditions etc.
 !>
 !> Copyright (c) 2013-2021 Reiner Schnur  
 !> Copyright (c) 2016 Julia Nabel
+!>#### Revision History
+!> First version and many ongoing changes               by Reiner Schnur (2013-04-04 - present)
+!> Some adaptations for JSBACH4 standalone with ECHAM   by Julia Nabel   (2016-04-15)
+!> Task order changes required for forest management    by Julia Nabel   (2018-07-05)
 !>
-!>### Revision History
-!> First version                                        by Reiner Schnur (2013-04-04)  
-!> Some adaptations for JSBACH4 standalone with ECHAM   by Julia Nabel   (2016-02-20)
-!>
-!>### License
+!>#### License
 !>
 !> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
 !> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.  
 !> Where software is supplied by third parties, it is indicated in the headers of the routines.
 !>
 MODULE mo_jsb_model_init
+
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
@@ -382,7 +385,7 @@ CONTAINS
     !
     !> 2. Iterate over tiles and call initialization if necessary
     !
-    l_fixed_fractions = .NOT. model%processes(ALCC_)%p%config%active
+    l_fixed_fractions = .NOT. model%Do_fractions_change()
     IF (l_fixed_fractions) THEN
       CALL message(routine, 'Tile fractions are fixed over time')
     ELSE
@@ -688,6 +691,9 @@ CONTAINS
         call model%Goto_next_tile(tile)
         CYCLE
       END IF
+
+      ! Indicate to the weighted average aggregator that tile fractions might have changed after restart
+      tile%l_fract_children_changed(:,:) = model%Do_fractions_change()
 
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
