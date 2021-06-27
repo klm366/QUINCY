@@ -134,7 +134,7 @@ MODULE mo_rad_memory_class
       ! & alb_nir_q_,               & !< Albedo of the whole tile in the NIR (near-infrared) range [unitless]
       ! & alb_vis_snow_q_,          & !< Albedo of snow in the VIS range [unitless]
       ! & alb_nir_snow_q_,          & !< Albedo of snow in the NIR range [unitless]
-      & albedo                      !> total surface albedo [unitless]
+      & albedo                      !< total surface albedo [unitless]
 
     ! Additional variables for soil
     TYPE(t_jsb_var_real2d)  :: &

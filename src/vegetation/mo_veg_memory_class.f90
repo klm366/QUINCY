@@ -40,7 +40,7 @@ MODULE mo_veg_memory_class
   PRIVATE
   PUBLIC :: t_veg_memory, max_no_of_vars
  
-  INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_vars      = 250  !< TYPE t_jsb_var
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -168,11 +168,11 @@ CONTAINS
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1.InOut
-    CLASS(t_veg_memory),  INTENT(inout), TARGET  :: mem             !> veg memory
-    CHARACTER(len=*),     INTENT(in)             :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)             :: suffix          !> tile name
-    INTEGER,              INTENT(in)             :: lct_ids(:)      !> vector of land cover type IDs
-    INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
+    CLASS(t_veg_memory),  INTENT(inout), TARGET  :: mem             !< veg memory
+    CHARACTER(len=*),     INTENT(in)             :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)             :: suffix          !< tile name
+    INTEGER,              INTENT(in)             :: lct_ids(:)      !< vector of land cover type IDs
+    INTEGER,              INTENT(in)             :: model_id        !< model ID model\%id
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER :: model
