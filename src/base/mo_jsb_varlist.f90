@@ -22,6 +22,9 @@ MODULE mo_jsb_varlist
   USE mo_jsb_varlist_iface, ONLY: t_jsb_varlist => t_var_list,      &
                                   jsb_get_var_list => get_var_list, &
                                   jsb_new_var_list => new_var_list, &
+#ifdef __ICON__
+                                  add_var_list_element_r1d,         &
+#endif
                                   add_var_list_element_r2d, add_var_list_element_r3d, &
                                   is_variable_in_output, &
                                   VARNAME_LEN
@@ -38,7 +41,11 @@ MODULE mo_jsb_varlist
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_varlist, add_var_list_element_r2d, add_var_list_element_r3d
+  PUBLIC :: t_jsb_varlist
+#ifdef __ICON__
+  PUBLIC :: add_var_list_element_r1d
+#endif
+  PUBLIC :: add_var_list_element_r2d, add_var_list_element_r3d
   PUBLIC :: jsb_add_var, Get_varlist, Get_var_group_name
   PUBLIC :: VARNAME_LEN
   PUBLIC :: BASIC, MEDIUM, FULL
