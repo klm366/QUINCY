@@ -258,7 +258,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
 
-    lstart = is_time_experiment_start()
+    lstart = is_time_experiment_start(options%current_datetime)
 
     !$claw acc enter data create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
 
