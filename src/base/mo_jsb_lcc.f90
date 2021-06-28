@@ -228,11 +228,13 @@ CONTAINS
 
         DO i_cqt = 1, child%nr_of_cqts
           IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == active_cqts(:) )) THEN
-            CALL collect_pointers_for_cqs(i_cqt, i_tile, i_active_this_tile, &
-              & TRIM(involved_child_tiles(1)), child%conserved_quantities, lcc_relocations%active_vars, 'active')
+            CALL collect_pointers_for_cqs(i_cqt, i_tile, i_active_this_tile, child%name, &
+              & TRIM(involved_child_tiles(1)), child%conserved_quantities, &
+              & lcc_relocations%active_vars, lcc_relocations%nr_of_active_vars, 'active')
           ELSEIF(ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
-            CALL collect_pointers_for_cqs(i_cqt, i_tile, i_passive_this_tile, &
-              & TRIM(involved_child_tiles(1)), child%conserved_quantities, lcc_relocations%passive_vars, 'passive')
+            CALL collect_pointers_for_cqs(i_cqt, i_tile, i_passive_this_tile, child%name, &
+              & TRIM(involved_child_tiles(1)), child%conserved_quantities, &
+              & lcc_relocations%passive_vars, lcc_relocations%nr_of_passive_vars, 'passive')
           ENDIF
         ENDDO 
 
@@ -377,7 +379,7 @@ CONTAINS
     current_tile => tile%first_child_tile
     i_tile = 0
     DO WHILE (ASSOCIATED(current_tile))
-      IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN !JN-TODO: does this work or TRIM and DO loop?
+      IF (one_of(current_tile%name, lcc_relocations%tile_names) > 0) THEN 
         i_tile = i_tile + 1
         
         CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
@@ -636,27 +638,29 @@ CONTAINS
   !
   !> Helper: collect pointers for cqts upon lcc init
   !
-  SUBROUTINE collect_pointers_for_cqs(i_cqt, i_tile, i_var_this_tile, first_involved_child, &
-    & conserved_quantities, var_list, this_case)
+  SUBROUTINE collect_pointers_for_cqs(i_cqt, i_tile, i_var_this_tile, this_tile_name, &
+    & first_involved_child_name, conserved_quantities, var_list, nr_of_vars, this_case)
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)    :: i_cqt, i_tile
     INTEGER,                INTENT(inout) :: i_var_this_tile
-    CHARACTER(len=*),       INTENT(in)    :: first_involved_child
+    CHARACTER(len=*),       INTENT(in)    :: this_tile_name
+    CHARACTER(len=*),       INTENT(in)    :: first_involved_child_name
     TYPE(t_jsb_consQuan_p), INTENT(inout) :: conserved_quantities(:)
     TYPE(t_jsb_lcc_var_p),  INTENT(inout) :: var_list(:)
+    INTEGER,                INTENT(in)    :: nr_of_vars
     CHARACTER(len=*),       INTENT(in)    :: this_case
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER :: nr_of_vars, i_var, i
+    INTEGER :: nr_of_vars_on_cq, nr_of_vars_this_proc, i_var, i
     LOGICAL :: has_searched_var
     CHARACTER(len=VARNAME_LEN) :: thisName
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':collect_pointers_for_cqs'
     ! -------------------------------------------------------------------------------------------------- !
 
-    nr_of_vars = conserved_quantities(i_cqt)%p%no_of_vars
-    DO i_var = 1,nr_of_vars
+    nr_of_vars_on_cq = conserved_quantities(i_cqt)%p%no_of_vars
+    DO i_var = 1,nr_of_vars_on_cq
       i_var_this_tile = i_var_this_tile + 1
 
       thisName = conserved_quantities(i_cqt)%p%cq_vars_2D(i_var)%p%name
@@ -672,8 +676,8 @@ CONTAINS
       IF (.NOT. has_searched_var) THEN
         CALL finish(TRIM(routine), &
           & 'Violation of assertion: Conceptually each tile needs to contain the same active and passive vars. ' &
-          & //this_case //' var ' // TRIM(thisName) // ' does not exist on tile ' &
-          & // first_involved_child //'. Please check.' )
+          & //this_case //' var ' // TRIM(thisName) // ' of tile ' // TRIM(this_tile_name) // &
+          & ' does not exist on tile ' // first_involved_child_name //'. Please check.' )
       ENDIF
     ENDDO
 
