@@ -33,7 +33,7 @@ MODULE mo_jsb_time
   PUBLIC :: get_date_components, get_time_start, get_time_dt, &
             is_time_experiment_start, is_time_restart, &
             get_year_length, get_month_length, get_day_length, get_year_day
-  PUBLIC :: is_newday, is_newyear, get_year_at_model_start, is_time_ltrig_rad_m1, &
+  PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, is_time_ltrig_rad_m1, &
             get_year, get_month, &
             get_day, get_secs_of_day
   PUBLIC :: get_time_interpolation_weights
@@ -159,6 +159,28 @@ CONTAINS
     CALL deallocateDatetime(previous)
 
   END FUNCTION is_newday
+
+  LOGICAL FUNCTION is_newmonth(current, dt)
+
+    USE mo_jsb_time_iface, ONLY: get_time_previous
+
+    TYPE(t_datetime), POINTER, INTENT(in) :: current
+    REAL(wp),                  INTENT(in) :: dt
+
+    TYPE(t_datetime), POINTER :: previous
+
+    INTEGER :: current_month, previous_month
+
+    previous => get_time_previous(current, dt)
+
+    current_month  = INT(get_month(current))
+    previous_month = INT(get_month(previous))
+
+    is_newmonth = current_month /= previous_month
+
+    CALL deallocateDatetime(previous)
+
+  END FUNCTION is_newmonth
 
   LOGICAL FUNCTION is_newyear(current, dt)
 
