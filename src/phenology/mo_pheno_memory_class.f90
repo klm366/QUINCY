@@ -111,6 +111,17 @@ MODULE mo_pheno_memory_class
     REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
 
+    !! quincy
+    ! used as logical: 0 = FALSE / 1 = TRUE
+    TYPE(t_jsb_var_real2d)          :: &
+                                    growing_season          !< logical to identify whether the plant is in the growing season or not
+
+
+    TYPE(t_jsb_var_real2d)          :: &
+                                    gdd                 , & !< growing degree days above 5°C [K day]
+                                    nd_dormance         , & !< number of days since last growing season [# days]
+                                    lai_max                 !< maximum lai - from site specific lai data [m2 m-2]
+
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
   END TYPE t_pheno_memory
@@ -159,6 +170,10 @@ CONTAINS
     !canopy_layer => Get_vgrid('canopy_layer')
 
     dsl4jsb_Get_config(PHENO_)
+
+    !! do not add these variables if use_quincy=.TRUE.
+    !! some of these var are added to memory anyway, as they are needed also for quincy, see below
+    IF (.NOT. model%config%use_quincy) THEN
     
     !! !$acc enter data pcreate(mem)
 
@@ -339,7 +354,7 @@ CONTAINS
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_wp)
 
-!@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
+          !@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
           CALL jsb_add_var( mem,'individuals', mem%number_of_individuals, &
             & hgrid, surface,                                                    &
             & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &
@@ -365,6 +380,89 @@ CONTAINS
 
       END IF
 
+    END IF  !  VEG / LAND
+    END IF  !  IF(.NOT. use_quincy)
+    
+    !! quincy
+    IF (model%config%use_quincy) THEN
+      IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
+         & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+
+        !! jsbach4 variables, copied from above (with some minor modification for output/restart)
+        !!
+        CALL jsb_add_var( mem, 'lai', mem%lai,                                   &
+          & hgrid, surface,                                                      &
+          & t_cf('leaf_area_index', '', ''),                                     &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & lrestart=.TRUE.,                                                     &
+          & initval_r=0.0_wp )
+  
+        CALL jsb_add_var( mem, 'fract_fpc', mem%fract_fpc,                       &
+          & hgrid, surface,                                                      &
+          & t_cf('foliage_projected_cover', '', ''),                             &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & initval_r=0.0_wp )
+  
+        CALL jsb_add_var( mem, 'fract_fpc_max', mem%fract_fpc_max,               &
+          & hgrid, surface,                                                      &
+          & t_cf('maximum_fpc', '', ''),                                         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & initval_r=0.0_wp )
+  
+        CALL jsb_add_var( mem, 'veg_fract_correction', mem%veg_fract_correction, &
+          & hgrid, surface,                                                      &
+          & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & lrestart=.TRUE.,                                                     &
+          & initval_r=0.0_wp )
+
+        !! original quincy variables
+        !!
+        CALL jsb_add_var(mem, 'growing_season', mem%growing_season,                                              &
+          & hgrid, surface,                                                                                      &
+          & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) !false) ! initvalue
+  
+        CALL jsb_add_var(mem, 'gdd', mem%gdd,                                                                    &
+          & hgrid, surface,                                                                                      &
+          & t_cf('gdd', 'K days', 'growing degree days above 5 degC'),                                           &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+    
+        CALL jsb_add_var(mem, 'nd_dormance', mem%nd_dormance,                                                    &
+          & hgrid, surface,                                                                                      &
+          & t_cf('nd_dormance', '# days', 'number of days since last growing season'),                           &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+  
+        CALL jsb_add_var(mem, 'lai_max', mem%lai_max,                                                            &
+          & hgrid, surface,                                                                                      &
+          & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'),                                            &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+  
+      END IF
     END IF
 
   END SUBROUTINE Init_pheno_memory

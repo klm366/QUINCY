@@ -27,6 +27,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_mvstream,           ONLY: init_mvstream, mvstream_update_cache, mvstream_accumulate
   USE mo_jsb_time,           ONLY: t_datetime, deallocateDatetime
 
   dsl4jsb_Use_processes SEB_, TURB_, HYDRO_
@@ -56,7 +57,7 @@ PROGRAM jsb4_driver
   ! io
   USE mo_io,               ONLY: write_streams, IO_read_streams
   USE mo_filename,         ONLY: out_filetype
-  USE mo_netcdf,           ONLY: nf_check, nf_close
+  USE mo_netcdf,           ONLY: nf_check, nf_close, add_dim, SURFACE
   USE mo_memory_base,      ONLY: default_output, NETCDF
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
   USE mo_decomposition,    ONLY: local_decomposition
@@ -201,6 +202,10 @@ PROGRAM jsb4_driver
   CALL p_init_communicators(nproca, nprocb, nprocio)
   CALL machine_setup
 
+  CALL add_dim ("surface",1,                      levtyp =    1,     &
+                                                  single = .TRUE.,   &
+                                                  indx   = SURFACE)
+
   ! - jsbach_init
   CALL jsbach_setup_models('namelist.jsbach')
   CALL jsbach_setup_grid(nproca, nprocb, npedim, model_id) ! Only one model implemented for now
@@ -301,6 +306,8 @@ PROGRAM jsb4_driver
   ics = 1
   ice = nproma
 
+  CALL init_mvstream('namelist.jsbach')
+
   IF(jsbach_is_restarted()) THEN
 
     CALL IO_read_streams
@@ -328,6 +335,7 @@ PROGRAM jsb4_driver
 
   CALL init_output
   CALL open_output_streams
+  CALL mvstream_update_cache
 
   ! - Main loop
   main_loop:DO
@@ -419,7 +427,7 @@ PROGRAM jsb4_driver
 
     CALL jsbach_finish_timestep(model_id, current_datetime_ptr, time_step_len)
     CALL deallocateDatetime(current_datetime_ptr)
-
+    CALL mvstream_accumulate
     CALL out_streams
 
     IF (l_putrerun) CALL write_streams
