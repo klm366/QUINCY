@@ -117,6 +117,11 @@ MODULE mo_veg_memory_class
     ! basic plant 3D 
     TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
                                     root_fraction_sl                 !< fractions of root per layer [unitless]
+    ! veg_pool diagnostics
+    TYPE(t_jsb_var_real2d)          :: &   
+                                    total_veg_pool_c  , &            !< sum of all veg_pool%*%carbon      [mol C / m2]
+                                    total_veg_pool_n  , &            !< sum of all veg_pool%*%nitrogen    [mol C / m2]
+                                    total_veg_pool_p                 !< sum of all veg_pool%*%phosphorus  [mol C / m2]
 
     !------------------------------------------------------------------------------------------------------ !
     !>target C:N and N:P ratios for various non-leaf tissues (mol/mol)
@@ -909,6 +914,36 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('total_veg_pool_c', mem%total_veg_pool_c, &
+        & hgrid, surface, &
+        & t_cf('total_veg_pool_c', '[mol C / m2]', 'total C, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('total_veg_pool_n', mem%total_veg_pool_n, &
+        & hgrid, surface, &
+        & t_cf('total_veg_pool_n', '[mol C / m2]', 'total N, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('total_veg_pool_p', mem%total_veg_pool_p, &
+        & hgrid, surface, &
+        & t_cf('total_veg_pool_p', '[mol C / m2]', 'total P, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_cn_fine_root', mem%target_cn_fine_root, &

@@ -46,9 +46,11 @@ MODULE mo_veg_interface
   USE mo_veg_update_pools,            ONLY: update_veg_pools
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes VEG_
+  dsl4jsb_Use_processes VEG_, PHENO_, RAD_
   ! Use of process memories
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(RAD_)
 
   IMPLICIT NONE
   PRIVATE
@@ -533,65 +535,69 @@ CONTAINS
 
   END SUBROUTINE aggr_update_veg_growth
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "aggregate": update_veg_pools task
-  !! 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": update_veg_pools task
+  !> 
   SUBROUTINE aggr_update_veg_pools(tile, options)
 
-    dsl4jsb_Use_processes VEG_
-    ! ---------------------------
-    ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model),        POINTER         :: model
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_update_veg_pools'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
-    ! Get local variables from options argument
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(RAD_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggr_update_veg_pools'
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
-    !X if necessary: dtime   = options%dtime
-    !X if necessary: steplen = options%steplen
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
-    ! Get process variables (Set pointers to variables in memory)
+    ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    ! Get process memories
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(RAD_)
 
+    ! VEG_ 2D
+    dsl4jsb_Aggregate_onChunk(VEG_, diameter                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, height                      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, dens_ind                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_growth                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, dphi                        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp                         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, n_fixation_n15              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, total_veg_pool_c            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, total_veg_pool_n            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, total_veg_pool_p            , weighted_by_fract)
+    ! VEG_ 3D
+    dsl4jsb_Aggregate_onChunk(VEG_, leaf_nitrogen_cl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fn_rub_cl                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fn_et_cl                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fn_pepc_cl                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fn_chl_cl                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fn_oth_cl                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl  , weighted_by_fract)
 
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go aggregate
-    ! ------------------------------------------------------------------------------------------------------------
-    
+    ! PHENO_
+    dsl4jsb_Aggregate_onChunk(PHENO_, lai                       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(PHENO_, lai_cl                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(PHENO_, cumm_lai_cl               , weighted_by_fract)
 
-    IF (tile%Has_children()) THEN
-      weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-      ! *slmdev 
-      ! the below list is not complete, it is just an initial placeholder for all var that need to be aggregated !
-      dsl4jsb_Aggregate_onChunk(VEG_, diameter            , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(VEG_, height              , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(VEG_, mean_leaf_age       , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(VEG_, dphi                , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(VEG_, npp                 , weighted_by_fract)
-    END IF
-
-    !X Implementation: Start your process scheme here...
-    !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen Tasks aggregiert werden sollen.
+    ! RAD_
+    dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl   , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -209,6 +209,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
+    dsl4jsb_Real2D_onChunk      :: total_veg_pool_c
+    dsl4jsb_Real2D_onChunk      :: total_veg_pool_n
+    dsl4jsb_Real2D_onChunk      :: total_veg_pool_p
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
@@ -282,9 +285,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_pot)              ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! in
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! in
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, do_cohort_harvest)              ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                       ! inout
@@ -311,7 +314,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)                 ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)                 ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                 ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)                 ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)                     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)          ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)          ! in
@@ -329,8 +332,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, total_veg_pool_c)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, total_veg_pool_n)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, total_veg_pool_p)               ! out
+    ! VEG_ 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! inout
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! out
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_rub_cl)                      ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_et_cl)                       ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, fn_pepc_cl)                     ! inout
@@ -629,9 +636,9 @@ CONTAINS
                              fn_oth_cl(:,:)                                           ) ! inout
 
 
-    !> 5.0 analysis of mass conservation: sum elements across pools into veg\%total_biomass
-    !!
-    !!
+    !>5.0 analysis of mass conservation: sum elements across tissue pools into veg\%total_biomass
+    !>
+    !>
     veg_total_biomass =   veg_pool%leaf        + &     !< elements of leaf
                           veg_pool%fine_root   + &     !< elements of fine_root
                           veg_pool%coarse_root + &     !< elements of coarse_root
@@ -641,6 +648,21 @@ CONTAINS
                           veg_pool%reserve     + &     !< elements of reserve
                           veg_pool%fruit       + &     !< elements of fruit
                           veg_pool%seed_bed            !< elements of seed_bed
+
+    !>  5.1 vge_pool diagnostics: sum C/N/P each across tissue pools into 2D variable
+    !>
+    total_veg_pool_c(:) = &
+      & veg_pool%leaf%carbon(:) + veg_pool%fine_root%carbon(:) + veg_pool%coarse_root%carbon(:) + &
+      & veg_pool%sap_wood%carbon(:) + veg_pool%heart_wood%carbon(:) + veg_pool%labile%carbon(:) + & 
+      & veg_pool%reserve%carbon(:) + veg_pool%fruit%carbon(:) + veg_pool%seed_bed%carbon(:)
+    total_veg_pool_n(:) = &
+      & veg_pool%leaf%nitrogen(:) + veg_pool%fine_root%nitrogen(:) + veg_pool%coarse_root%nitrogen(:) + &
+      & veg_pool%sap_wood%nitrogen(:) + veg_pool%heart_wood%nitrogen(:) + veg_pool%labile%nitrogen(:) + & 
+      & veg_pool%reserve%nitrogen(:) + veg_pool%fruit%nitrogen(:) + veg_pool%seed_bed%nitrogen(:)
+    total_veg_pool_p(:) = &
+      & veg_pool%leaf%phosphorus(:) + veg_pool%fine_root%phosphorus(:) + veg_pool%coarse_root%phosphorus(:) + &
+      & veg_pool%sap_wood%phosphorus(:) + veg_pool%heart_wood%phosphorus(:) + veg_pool%labile%phosphorus(:) + & 
+      & veg_pool%reserve%phosphorus(:) + veg_pool%fruit%phosphorus(:) + veg_pool%seed_bed%phosphorus(:)
 
 #ifdef __QUINCY_NO_JSB__
 ! Pass back values to process memory
