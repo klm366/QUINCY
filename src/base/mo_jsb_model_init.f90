@@ -388,11 +388,14 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
 
-      CALL model%Queue_task(VEG_,    "update_veg_turnover")         !! quincy - plant model
-      CALL model%Queue_task(VEG_,    "update_veg_dynamics")         !! quincy - plant model
-      CALL model%Queue_task(VEG_,    "update_veg_growth")           !! quincy - plant model
-      CALL model%Queue_task(VEG_,    "update_veg_pools")            !! quincy - plant model
-      CALL model%Queue_task(SB_,     "update_sb_pools")             !! quincy - land/soil model
+      ! only land and plant model (i.e., not the canopy model)
+      IF((model%config%quincy_model == 'plant') .OR. (model%config%quincy_model == 'land')) THEN
+        CALL model%Queue_task(VEG_,    "update_veg_turnover")         !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,    "update_veg_dynamics")         !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,    "update_veg_growth")           !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,    "update_veg_pools")            !! quincy - land/plant model
+      END IF
+      CALL model%Queue_task(SB_,     "update_sb_pools")             !! quincy - land/plant/canopy/soil model
       
       ! averaging variables in time at the end of the timestep
       CALL model%Queue_task(RAD_,    "time_average_radiation")            !! quincy

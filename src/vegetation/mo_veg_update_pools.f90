@@ -376,7 +376,7 @@ CONTAINS
     !> 1.0 for plant and land model, update vegetation pools with fluxes
     !! 
     !!
-    SELECT CASE(TRIM(model%config%slm_model_name))
+    SELECT CASE(TRIM(model%config%quincy_model))
     CASE('plant','land')
    
        !> 1.1 net balance of the labile carbon pool due to photosynthesis and respiration

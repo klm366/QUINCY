@@ -300,7 +300,7 @@ CONTAINS
     !>
     !> QUINCY models: land, plant,soil (case 1) and canopy (case 2)
     !>
-    SELECT CASE(TRIM(model%config%slm_model_name))
+    SELECT CASE(TRIM(model%config%quincy_model))
 
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.1 land & plant & soil model

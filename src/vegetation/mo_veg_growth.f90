@@ -556,7 +556,7 @@ CONTAINS
                                           lctlib%cn_leaf, &
                                           lctlib%np_leaf, &
                                           lctlib%tau_fine_root, &
-                                          TRIM(model%config%slm_model_name), &
+                                          TRIM(model%config%quincy_model), &
                                           TRIM(dsl4jsb_Config(VEG_)%bnf_scheme), &
                                           TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                           dsl4jsb_Config(SB_)%flag_mycorrhiza, &
@@ -1077,7 +1077,7 @@ CONTAINS
                                               lctlib_cn_leaf, &
                                               lctlib_np_leaf, &
                                               lctlib_tau_fine_root, &
-                                              slm_model_name, &
+                                              quincy_model, &
                                               bnf_scheme, &
                                               sb_model_scheme, &
                                               flag_mycorrhiza  , &
@@ -1149,7 +1149,7 @@ CONTAINS
     REAL(wp),                             INTENT(in)    :: lctlib_cn_leaf               !< lctlib parameter
     REAL(wp),                             INTENT(in)    :: lctlib_np_leaf               !< lctlib parameter
     REAL(wp),                             INTENT(in)    :: lctlib_tau_fine_root         !< lctlib parameter
-    CHARACTER(len=*),                     INTENT(in)    :: slm_model_name               !< model name: land plant soil canopy
+    CHARACTER(len=*),                     INTENT(in)    :: quincy_model                 !< model name: land plant soil canopy
     CHARACTER(len=*),                     INTENT(in)    :: bnf_scheme                   !< from veg config 
     CHARACTER(len=*),                     INTENT(in)    :: sb_model_scheme              !< from sb config
     LOGICAL,                              INTENT(in)    :: flag_mycorrhiza              !< from sb config
@@ -1256,7 +1256,7 @@ CONTAINS
     !!
     !> 1.1 in case of the plant-only model, prescribe amount of N and P taken up
     !!
-    IF(slm_model_name == 'plant')THEN
+    IF(quincy_model == 'plant')THEN
        ! in case of the plant-only model, prescribe N and P uptake to match demand
        plant_uptake_nh4_sl(:,1)     = MAX(labile_carbon(:) / lctlib_cn_leaf - labile_nitrogen(:), &
                                           0.0_wp) / soil_depth_sl(:,1)
