@@ -58,10 +58,8 @@ MODULE mo_hydro_constants
     & matrix_pot_org      = 0.12_wp,       & !< Matrix potential of organic part of soil layer [m]
                                              ! (value for peat from Beringer, 2001)
     & pore_size_index_org = 0.7_wp,        & !< Pore size distribution index of organic part of soil layer []
-!pdv >
     & thresh_org          = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
     & beta_perc           = 0.139_wp         !< Parameter from percolation theory
-!pdv <
 
 #endif
 END MODULE mo_hydro_constants

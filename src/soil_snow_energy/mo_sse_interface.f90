@@ -154,9 +154,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_ice_sl
     dsl4jsb_Real3D_onChunk :: w_soil_freeze_sl
     dsl4jsb_Real3D_onChunk :: w_ice_melt_sl
-!pdv >
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
-!pdv <
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
@@ -253,9 +251,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)         ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_freeze_sl) ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)    ! out
-!pdv >
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pot_scool_sl)   ! out
-!pdv  <
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
@@ -493,9 +489,7 @@ CONTAINS
         ! optional, out
         & w_soil_freeze_sl                    (:,:), &
         & w_ice_melt_sl                       (:,:), &
-!pdv >
         & w_soil_pot_scool_sl                 (:,:)  &
-!pdv <
         & )
       !$claw acc exit data delete(ws_max_sl)
       DEALLOCATE(ws_max_sl)
@@ -565,9 +559,7 @@ CONTAINS
     END IF
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
-!pdv >
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
-!pdv >
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

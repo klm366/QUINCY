@@ -43,7 +43,6 @@ MODULE mo_hydro_config_class
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
-!pdv >
       & l_hyd_compat420,        & !< Reference version: JSBACH 4.20, i.e. without KoPF changes
       & l_runoff_with_ice,      & !< Include soil ice in runoff and infiltration calculations
       & l_ws_max_depend_on_org, & !< ws_max re-calculation (in calc_soil_hydrology) depends on organic soil fraction
@@ -51,14 +50,14 @@ MODULE mo_hydro_config_class
       & l_ice_impedance,        & !< Account for ice impedance
       & l_diffuse_all_ws,       & !< Calculate soil water diffusion from all soil water, including immobile
       & l_infil_subzero,        & !< Allow infiltration at soil temperatures below 0°C
-      & l_discount_scool,       & !< supercooled water is neither available to plants nor percolates
+      & l_discount_scool,       & !< Supercooled water is neither available to plants nor percolates
       & l_drain_lat,            & !< Lateral drainage, i.e. drainage from upper to lower soil layers;
                                   !  if false, only the lowest soil level drains.
       & l_stress_from_all_ws,   & !< Calculate water stress from all soil water, including water below
                                   !  the root zone and including supercooled water.
       & l_percolation_theory      !< The saturated hydraulic conductivity is calculated following
                                   !  the percolation theory
-!pdv <
+
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
   END type t_hydro_config
@@ -83,11 +82,9 @@ CONTAINS
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
-!pdv >
     LOGICAL     :: l_hyd_compat420
     LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top, l_ice_impedance
     LOGICAL     :: l_diffuse_all_ws, l_discount_scool, l_drain_lat, l_stress_from_all_ws, l_percolation_theory
-!pdv <
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -102,7 +99,6 @@ CONTAINS
       & scheme_stom_cond,           &
       & l_organic,                  &
       & l_glac_in_soil,             &
-!pdv >
       & l_hyd_compat420,            &
       & l_infil_subzero,            &
       & l_runoff_with_ice,          &
@@ -114,7 +110,6 @@ CONTAINS
       & l_drain_lat,                &
       & l_stress_from_all_ws,       &
       & l_percolation_theory
-!pdv <
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -141,7 +136,6 @@ CONTAINS
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
-!pdv >
     l_hyd_compat420        = .TRUE.
     l_infil_subzero        = .FALSE.
     l_runoff_with_ice      = .TRUE.
@@ -153,7 +147,6 @@ CONTAINS
     l_drain_lat            = .TRUE.
     l_stress_from_all_ws   = .TRUE.
     l_percolation_theory   = .FALSE.
-!pdv <
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -188,7 +181,6 @@ CONTAINS
     IF (l_organic) CALL message(TRIM(routine), 'Using organic component in soil hydrology')
 
     config%l_glac_in_soil      = l_glac_in_soil
-!pdv >
     config%l_hyd_compat420     = l_hyd_compat420
     IF (l_hyd_compat420) THEN
       CALL message(TRIM(routine), 'Hydrology settings as in JSBACH 4.20')
@@ -274,7 +266,6 @@ CONTAINS
     CALL message(TRIM(routine), &
      & 'Account for all water for water stress calculation, including water below the rootzone and supercooled water: ' &
      & //TRIM(logical2string(l_stress_from_all_ws)))
-!pdv <
 
     CALL close_nml(nml_handler)
 

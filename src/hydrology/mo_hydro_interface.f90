@@ -712,10 +712,7 @@ CONTAINS
   SUBROUTINE update_soil_properties(tile, options)
 
     USE mo_hydro_constants, ONLY: vol_porosity_org, hyd_cond_sat_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
-      & vol_field_cap_org, vol_p_wilt_org &
-!pdv >
-      &,thresh_org, beta_perc
-!pdv <
+      & vol_field_cap_org, vol_p_wilt_org, thresh_org, beta_perc
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -752,12 +749,10 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, i
     INTEGER  :: nsoil
 
-!pdv >
     REAL(wp) :: N_perc
     REAL(wp), ALLOCATABLE ::  fract_perc(:,:)          ! fraction of the soil with connected organic pathways 
     REAL(wp), ALLOCATABLE ::  fract_uncon(:,:)         ! fraction of the soil with unconnected organic matter
     REAL(wp), ALLOCATABLE ::  hyd_cond_sat_uncon(:,:)  ! saturated hydraulic conductivity of 'unconnected' fraction
-!pdv <
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
@@ -819,7 +814,6 @@ CONTAINS
 
     END DO
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-!pdv >
       IF (dsl4jsb_Config(HYDRO_)%l_percolation_theory) THEN
         ! Saturated hydraulic conductivity following percolation theory 
         ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
@@ -851,7 +845,6 @@ CONTAINS
         DEALLOCATE(fract_perc)
         DEALLOCATE(fract_uncon)
         DEALLOCATE(hyd_cond_sat_uncon)
-!pdv <
       ELSE
         ! Saturated hydraulic conductivity as weighted average from mineral and organic parts 
         hyd_cond_sat_sl (:,:) = (1 - fract_org_sl(:,:)) * hyd_cond_sat_sl   (:,:) + fract_org_sl(:,:) * hyd_cond_sat_org
@@ -923,9 +916,7 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-!pdv >
     USE mo_hydro_util,             ONLY: get_water_in_root_zone
-!pdv <
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -943,7 +934,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real2D_onChunk :: max_moist
-!pdv >
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
@@ -956,7 +946,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_root_scool_act
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: w_soil_overflow
-!pdv <
 
 
     ! Locally allocated vectors
@@ -1010,7 +999,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_rel)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
-!pdv >
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_fc_sl)
@@ -1023,7 +1011,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_scool_act)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, root_depth_sl)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_overflow)
-!pdv <
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
 
@@ -1046,7 +1033,6 @@ CONTAINS
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
       & ltpe_closed, ltpe_open,                             &
-!pdv >
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,             &
       & dsl4jsb_Config(HYDRO_)%l_runoff_with_ice,           &
       & dsl4jsb_Config(HYDRO_)%l_ws_max_depend_on_org,      &
@@ -1055,7 +1041,6 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%l_diffuse_all_ws,            &
       & dsl4jsb_Config(HYDRO_)%l_discount_scool,            &
       & dsl4jsb_Config(HYDRO_)%l_drain_lat,                 &
-!pdv <
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
       &                                fract_org_sl  (:,:), &
@@ -1066,9 +1051,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &
-!pdv >
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pot_scool_sl), &
-!pdv <
       & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
       &                                t_soil_sl     (:,1), &
@@ -1088,11 +1071,9 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
       & )
 
-!pdv >
     IF (dsl4jsb_Config(HYDRO_)%l_stress_from_all_ws) THEN
-      ! This definition of w_soil_rel is problematic if used for e.g. calculating the water stress of plants,
-      ! as the whole soil column is taken into account, even layers below the root zone.
-!pdv<
+      ! pdv: This definition of w_soil_rel is problematic if used for e.g. calculating the water stress of plants,
+      !      as the whole soil column is taken into account, even layers below the root zone.
 
       !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
       !$claw acc parallel loop gang vector
@@ -1108,13 +1089,12 @@ CONTAINS
       END DO
       !$claw acc end data
 
-!pdv >
     ELSE
-      ! When assuming that supercooled water is not available for plants, 
-      ! w_soil_rel should only account for the water that is available to plants relative to the maximum 
-      ! rootzone soil moisture reduced by the frozen volume & volume of potentially supercooled water.
-      ! But here the variables w_soil_root_avail has to be updated after the call to calc_soil_hydrology, 
-      ! as w_soil_column was updated.
+      ! pdv: When assuming that supercooled water is not available for plants,
+      !      w_soil_rel should only account for the water that is available to plants relative to the maximum
+      !      rootzone soil moisture reduced by the frozen volume & volume of potentially supercooled water.
+      !      But here the variables w_soil_root_avail has to be updated after the call to calc_soil_hydrology,
+      !      as w_soil_column was updated.
 
       ! Amount of water in root zone
       CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root(:))
@@ -1140,7 +1120,6 @@ CONTAINS
         END IF
       END DO
     END IF   
-!pdv <
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
       !$claw acc exit data delete(fract_org_sl)
@@ -1196,11 +1175,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pwp_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
-!pdv >
     IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
       dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
     END IF
-!pdv <
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1320,9 +1297,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(HYDRO_)
-!pdv >
     dsl4jsb_Def_config(SSE_)
-!pdv <
 
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(ASSIMI_)
@@ -1339,14 +1314,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_root_pwp     !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real2D_onChunk :: water_stress
-! pdv >
     dsl4jsb_Real2D_onChunk :: w_soil_root_scool_pot!< Potentially suppercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: w_soil_root_scool_act!< Suppercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: w_soil_root_avail    !< Plant available water content in root zone
     dsl4jsb_Real2D_onChunk :: w_soil_root_ice
     dsl4jsb_Real2D_onChunk :: w_soil_root_max      !< Maximum plant available water content in root zone
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
-! pdv <
+
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk :: beta_soil_gs
     dsl4jsb_Real2D_onChunk :: beta_soil_ps
@@ -1367,9 +1341,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(HYDRO_)
-!pdv >
     dsl4jsb_Get_config(SSE_)
-!pdv <
 
     ! Get reference to variables for current block
     !
@@ -1383,10 +1355,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
-!pdv >
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pot_scool_sl) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_ice)     ! in
-!pdv <
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist)           ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
@@ -1394,12 +1364,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_fc)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_pwp)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
-!pdv >
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_scool_pot)! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_scool_act)! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_avail)    ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_root_max)      ! out
-!pdv <
     !
     IF (model%config%use_quincy) THEN
       dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
@@ -1420,16 +1388,13 @@ CONTAINS
 
     ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-!pdv >
     IF (dsl4jsb_Config(HYDRO_)%l_stress_from_all_ws) THEN
       ! Calculate water stress by taking into account all soil water, including water 
       ! below the rootzone and supercooled water.
-!pdv <
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_stress_expand_0 tile_name=tile%name
       water_stress(:) = get_water_stress_factor(w_soil_column(:), max_moist(:), &
             &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
       !$claw end expand
-!pdv >
     ELSE
       IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
         !vg: these options are used with the calcuation of w_soil_pot_scool_sl
@@ -1459,7 +1424,6 @@ CONTAINS
       water_stress(:) = get_water_stress_factor(w_soil_root_avail(:), w_soil_root_max(:), &
             &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
     END IF
-! pdv <
 
     !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
     !!
@@ -1650,13 +1614,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, canopy_cond_limited, weighted_by_fract)
-!pdv >
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_scool_pot,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_scool_act,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_avail,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_max,     weighted_by_fract)
-!pdv <
+    dsl4jsb_Aggregate_onChunk(HYDRO_, canopy_cond_limited,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_scool_pot, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_scool_act, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_avail,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_max,       weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
