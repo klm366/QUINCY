@@ -142,6 +142,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface !, canopy_layer        ! Vertical grid
     INTEGER :: table
+    TYPE(t_grib2) :: grib2_desc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
 
@@ -172,18 +173,28 @@ CONTAINS
         !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
       ! END IF
 
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(2,0,28, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
       CALL jsb_add_var( mem, 'lai', mem%lai,                                   &
         & hgrid, surface,                                                      &
         & t_cf('leaf_area_index', '', ''),                                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
+      IF (TRIM(mem%owner_tile_name) == 'veg') THEN
+        grib2_desc = t_grib2(2,0,228, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
       CALL jsb_add_var( mem, 'fract_fpc', mem%fract_fpc,                       &
         & hgrid, surface,                                                      &
         & t_cf('foliage_projected_cover', '', ''),                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
