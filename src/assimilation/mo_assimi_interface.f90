@@ -257,7 +257,7 @@ CONTAINS
 
 
     ALLOCATE(tsk_update_canopy_fluxes::return_ptr)
-    CALL return_ptr%Construct(name='update_canopy_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='canopy_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_canopy_fluxes
 
@@ -270,7 +270,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_time_average_assimilation::return_ptr)
-    CALL return_ptr%Construct(name='time_average_assimilation', process_id=ASSIMI_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='tavrg_assimilation', process_id=ASSIMI_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_time_average_assimilation
 

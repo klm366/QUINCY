@@ -252,7 +252,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_update_sb_pools::return_ptr)
-    CALL return_ptr%Construct(name='update_sb_pools', process_id=SB_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='sb_pools', process_id=SB_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_sb_pools
 
@@ -265,7 +265,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_time_average_soilbiogeochemistry::return_ptr)
-    CALL return_ptr%Construct(name='time_average_soilbiogeochemistry', process_id=SB_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='tavrg_soilbiogeochemistry', process_id=SB_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_time_average_soilbiogeochemistry
 

@@ -201,7 +201,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_time_average_radiation::return_ptr)
-    CALL return_ptr%Construct(name='time_average_radiation', process_id=RAD_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='tavrg_radiation', process_id=RAD_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_time_average_radiation
 

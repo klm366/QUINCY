@@ -221,7 +221,7 @@ CONTAINS
 
 
     ALLOCATE(tsk_update_veg_turnover::return_ptr)
-    CALL return_ptr%Construct(name='update_veg_turnover', process_id=VEG_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='veg_turnover', process_id=VEG_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_veg_turnover
 
@@ -239,7 +239,7 @@ CONTAINS
 
 
     ALLOCATE(tsk_update_veg_dynamics::return_ptr)
-    CALL return_ptr%Construct(name='update_veg_dynamics', process_id=VEG_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='veg_dynamics', process_id=VEG_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_veg_dynamics
 
@@ -257,7 +257,7 @@ CONTAINS
 
 
     ALLOCATE(tsk_update_veg_growth::return_ptr)
-    CALL return_ptr%Construct(name='update_veg_growth', process_id=VEG_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='veg_growth', process_id=VEG_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_veg_growth
 
@@ -275,7 +275,7 @@ CONTAINS
 
 
     ALLOCATE(tsk_update_veg_pools::return_ptr)
-    CALL return_ptr%Construct(name='update_veg_pools', process_id=VEG_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='veg_pools', process_id=VEG_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_veg_pools
 
@@ -289,7 +289,7 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_time_average_vegetation::return_ptr)
-    CALL return_ptr%Construct(name='time_average_vegetation', process_id=VEG_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='tavrg_vegetation', process_id=VEG_, owner_model_id=model_id)
     
   END FUNCTION Create_task_update_time_average_vegetation
   

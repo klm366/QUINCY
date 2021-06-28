@@ -378,7 +378,7 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "soil_hydrology")
       CALL model%Queue_task(SEB_,    "snowmelt_correction")
       CALL model%Queue_task(HYDRO_,  "water_stress")
-      CALL model%Queue_task(ASSIMI_, "update_canopy_fluxes")        ! quincy
+      CALL model%Queue_task(ASSIMI_, "canopy_fluxes")               ! quincy
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
@@ -390,18 +390,18 @@ CONTAINS
 
       ! only land and plant model (i.e., not the canopy model)
       IF((model%config%quincy_model == 'plant') .OR. (model%config%quincy_model == 'land')) THEN
-        CALL model%Queue_task(VEG_,    "update_veg_turnover")         !! quincy - land/plant model
-        CALL model%Queue_task(VEG_,    "update_veg_dynamics")         !! quincy - land/plant model
-        CALL model%Queue_task(VEG_,    "update_veg_growth")           !! quincy - land/plant model
-        CALL model%Queue_task(VEG_,    "update_veg_pools")            !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,  "veg_turnover")               !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,  "veg_dynamics")               !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,  "veg_growth")                 !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,  "veg_pools")                  !! quincy - land/plant model
+        CALL model%Queue_task(SB_,   "sb_pools")                   !! quincy - land/plant/canopy/soil model
       END IF
-      CALL model%Queue_task(SB_,     "update_sb_pools")             !! quincy - land/plant/canopy/soil model
       
       ! averaging variables in time at the end of the timestep
-      CALL model%Queue_task(RAD_,    "time_average_radiation")            !! quincy
-      CALL model%Queue_task(ASSIMI_, "time_average_assimilation")         !! quincy
-      CALL model%Queue_task(VEG_,    "time_average_vegetation")           !! quincy
-      CALL model%Queue_task(SB_,     "time_average_soilbiogeochemistry")  !! quincy
+      CALL model%Queue_task(RAD_,    "tavrg_radiation")            !! quincy
+      CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")         !! quincy
+      CALL model%Queue_task(VEG_,    "tavrg_vegetation")           !! quincy
+      CALL model%Queue_task(SB_,     "tavrg_soilbiogeochemistry")  !! quincy
     ENDIF
     ! Task Queue created
     !--------------------------------------------------------------------------------------------------- !    
