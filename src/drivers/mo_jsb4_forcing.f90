@@ -44,7 +44,15 @@ MODULE mo_jsb4_forcing
   USE mo_util_string,          ONLY: tolower, int2string
   USE mo_physical_constants,   ONLY: tmelt, p0sl_bg, grav, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
   USE mo_echam_convect_tables, ONLY: tlucua, jptlucu1, jptlucu2
+#ifdef __ICON__
+#ifdef __NO_RTE_RRTMGP__
+    USE mo_psrad_orbit,       ONLY: inquire_declination
+#else
+    USE mo_radiation_orbit,   ONLY: inquire_declination
+#endif
+#else
   USE mo_orbit,                ONLY: inquire_declination
+#endif
 
   ! jsb4
   USE mo_jsb_base,           ONLY: jsbach
