@@ -113,7 +113,7 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: t_srf
 
-    thermal_radiation = stbo * zemiss_def * t_srf**4
+    thermal_radiation = stbo * zemiss_def * t_srf**4._wp
 
   END FUNCTION thermal_radiation
 
@@ -134,7 +134,7 @@ CONTAINS
 
     !$claw sca routine
 
-    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4)
+    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
 
   END FUNCTION lwnet_from_lwdown
 
