@@ -137,6 +137,8 @@ CONTAINS
       return_value = DISTURB_
     CASE ('fuel')
       return_value = FUEL_
+    CASE ('veg')
+      return_value = VEG_
     CASE DEFAULT
       return_value = 0
     END SELECT
