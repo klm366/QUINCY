@@ -307,10 +307,10 @@ CONTAINS
     ! t_slm_struct_sb_element
     CALL sb__mem%mycorrhiza_export%init(zero)
 #else
-    sb_loss               = zero
-    sb_formation          = zero
-    sb_transport          = zero
-    sb_mycorrhiza_export  = zero
+    CALL sb_loss%Set_to_scalar_on_chunk(zero)
+    CALL sb_formation%Set_to_scalar_on_chunk(zero)
+    CALL sb_transport%Set_to_scalar_on_chunk(zero)
+    CALL sb_mycorrhiza_export%Set_to_scalar_on_chunk(zero)
 #endif
 
     !>2.0 variables

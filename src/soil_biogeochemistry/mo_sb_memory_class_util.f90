@@ -1694,6 +1694,7 @@ CONTAINS
     PROCEDURE :: Init                       => t_sb_elements_pool_init
     PROCEDURE :: Init_op_ov_hlp             => t_sb_elements_pool_op_ov_hlp_init             ! init hlp object for operator overload
     PROCEDURE :: Associate_domain_var_ptr   => t_sb_elements_pool_associate_domain_variable_pointers
+    PROCEDURE :: Set_to_scalar_on_chunk     => t_sb_elements_pool_set_all_elements_to_scalar_value_on_chunk  ! e.g., set all to zero
     !! operator overload
     !! [def: field2d(nc,vgrid) | field3d(nc,vgrid,nblks)]
     ! +
@@ -1792,6 +1793,7 @@ CONTAINS
     PROCEDURE :: Init                       => t_sb_components_pool_init
     PROCEDURE :: Init_op_ov_hlp             => t_sb_components_pool_op_ov_hlp_create_init     ! create and init hlp object for operator overload
     PROCEDURE :: Associate_domain_var_ptr   => t_sb_components_pool_associate_domain_variable_pointers
+    PROCEDURE :: Set_to_scalar_on_chunk     => t_sb_components_pool_set_all_elements_to_scalar_value_on_chunk  ! e.g., set all to zero
     !! operator overload
     !! [def: field2d(nc,vgrid) | field3d(nc,vgrid,nblks)]
     ! +
@@ -1911,6 +1913,52 @@ CONTAINS
     END SELECT
 
   END FUNCTION t_sb_elements_pool_get_element_name_by_id
+
+  ! ======================================================================================================= !
+  !>set all elements of the sb_elements_pool to the scalar value
+  !> 
+  SUBROUTINE t_sb_elements_pool_set_all_elements_to_scalar_value_on_chunk(this, scalar)
+
+    CLASS(t_sb_elements_pool), INTENT(inout) :: this
+    REAL(wp)                 , INTENT(in)    :: scalar
+    
+    this%carbon(:,:)       = scalar
+    this%nitrogen(:,:)     = scalar
+    this%phosphorus(:,:)   = scalar
+    this%carbon13(:,:)     = scalar
+    this%carbon14(:,:)     = scalar
+    this%nitrogen15(:,:)   = scalar
+
+  END SUBROUTINE t_sb_elements_pool_set_all_elements_to_scalar_value_on_chunk
+
+  ! ======================================================================================================= !
+  !>set all elements of the sb_components_pool to the scalar value
+  !> 
+  SUBROUTINE t_sb_components_pool_set_all_elements_to_scalar_value_on_chunk(this, scalar)
+
+    CLASS(t_sb_components_pool), INTENT(inout) :: this
+    REAL(wp)                   , INTENT(in)    :: scalar
+    
+    ! elements
+    this%carbon(:,:)       = scalar
+    this%nitrogen(:,:)     = scalar
+    this%phosphorus(:,:)   = scalar
+    this%carbon13(:,:)     = scalar
+    this%carbon14(:,:)     = scalar
+    this%nitrogen15(:,:)   = scalar
+    ! sb_elements_pool
+    CALL this%dom%Set_to_scalar_on_chunk(scalar)
+    CALL this%dom_assoc%Set_to_scalar_on_chunk(scalar)
+    CALL this%soluable_litter%Set_to_scalar_on_chunk(scalar)
+    CALL this%polymeric_litter%Set_to_scalar_on_chunk(scalar)
+    CALL this%woody_litter%Set_to_scalar_on_chunk(scalar)
+    CALL this%fungi%Set_to_scalar_on_chunk(scalar)
+    CALL this%mycorrhiza%Set_to_scalar_on_chunk(scalar)
+    CALL this%microbial%Set_to_scalar_on_chunk(scalar)
+    CALL this%residue%Set_to_scalar_on_chunk(scalar)
+    CALL this%residue_assoc%Set_to_scalar_on_chunk(scalar)
+
+  END SUBROUTINE t_sb_components_pool_set_all_elements_to_scalar_value_on_chunk  
 
   !-----------------------------------------------------------------------------------------------------
   !> initializing an object of the SB_ elements pool "t_sb_elements_pool"
