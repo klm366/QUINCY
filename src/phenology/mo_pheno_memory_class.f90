@@ -44,6 +44,7 @@ MODULE mo_pheno_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
     TYPE(t_jsb_var_real2d)           :: &
       & lai,                            & !< Leaf area index
+      & lai_ta,                         & !< Leaf area index relative to the tile area
       & fract_fpc,                      & !< Foliage projected cover of the pft
                                           !  (fraction of ground area occupied by the vertical projection of foliage)
       & fract_fpc_max,                  & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
@@ -200,6 +201,14 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
+      CALL mem%Add_var( 'lai_ta', mem%lai_ta,                                  &
+        & hgrid, surface,                                                      &
+        & t_cf('leaf_area_index', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       IF (TRIM(mem%owner_tile_name) == 'veg') THEN
         grib2_desc = t_grib2(2,0,228, grib_bits)
       ELSE
@@ -226,7 +235,6 @@ CONTAINS
         & t_cf('forest_fraction', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'veg_fract_correction', mem%veg_fract_correction,      &
