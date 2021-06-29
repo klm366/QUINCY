@@ -166,6 +166,9 @@ CONTAINS
     ! Loop over all processes and set actions for this tile
     DO i=1,max_no_of_processes
       return_ptr%process_action(i) = SKIP_
+      IF (ASSOCIATED(model%processes(i)%p)) THEN
+        IF (.NOT. model%processes(i)%p%config%active) CYCLE
+      END IF
       iproc = -1
       j = 0
       IF (PRESENT(processes)) THEN
@@ -243,7 +246,7 @@ CONTAINS
     INTEGER                               :: iproc
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
     CLASS(t_jsb_tile_abstract), POINTER   :: parent_tile => NULL()
-    CHARACTER(LEN=15)                     :: process_name
+    CHARACTER(LEN=:), ALLOCATABLE         :: process_name
 
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
     CHARACTER(len=3)              :: model_id_suffix                    ! Suffix for domain if more than one model
