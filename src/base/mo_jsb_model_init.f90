@@ -481,11 +481,13 @@ CONTAINS
 
     DO WHILE (ASSOCIATED(tile))
 
-      IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
-        CALL model%Goto_next_tile(tile)
+      ! IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
+      IF (.NOT. tile%visited(no_omp_thread)) THEN
+          CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
+      ! tile is not a leaf and we're on the way up
       CALL tile%Init_vars()
       CALL tile%Cache_GPU_pointers()
 
