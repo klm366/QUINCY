@@ -55,7 +55,6 @@ CONTAINS
   SUBROUTINE Init_alcc_memory(mem, prefix, suffix, lct_ids, model_id)
 
     ! Declarations
-    USE mo_jsb_varlist,        ONLY: jsb_add_var
     USE mo_jsb_io,             ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
@@ -92,7 +91,7 @@ CONTAINS
 
 !    dsl4jsb_Get_config(ALCC_)
 
-    CALL jsb_add_var( mem, 'C_pools_sum_check', mem%C_pools_sum_check,       &
+    CALL mem%Add_var('C_pools_sum_check', mem%C_pools_sum_check,             &
       & hgrid, surface,                                                      &
       & t_cf('C_pools_sum_check in alcc', '[-]', ''),                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -100,7 +99,7 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & loutput=.TRUE., lrestart=.FALSE., initval_r=0._wp)
       
-    CALL jsb_add_var( mem, 'fract_pfts_currentyear_maps', mem%fract_pfts_currentyear_maps,           &
+    CALL mem%Add_var('fract_pfts_currentyear_maps', mem%fract_pfts_currentyear_maps,                 &
       & hgrid, pft_vgrid,                                                                            &
       & t_cf('Cover fractions for the pfts, which are read in yearly from a map file.', '[-]', ''),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
@@ -108,7 +107,7 @@ CONTAINS
       & output_level=BASIC,                                                                          &
       & loutput=.TRUE., lrestart=.FALSE., initval_r=-0.1_wp)
       
-    CALL jsb_add_var( mem, 'fract_pfts_before_alccstep', mem%fract_pfts_before_alccstep,                &
+    CALL mem%Add_var('fract_pfts_before_alccstep', mem%fract_pfts_before_alccstep,                      &
       & hgrid, pft_vgrid,                                                                               &
       & t_cf('Former cover fractions for the pfts, before read in yearly from a map file.', '[-]', ''), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &

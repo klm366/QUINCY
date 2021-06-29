@@ -95,10 +95,10 @@ CONTAINS
       return_value = 'disturb'
     CASE (FUEL_)
       return_value = 'fuel'
-    CASE (VEG_)
-      return_value = 'veg'
     CASE (ALCC_)
       return_value = 'alcc'
+    CASE (VEG_)
+      return_value = 'veg'
     CASE DEFAULT
       return_value = ''
     END SELECT
@@ -139,10 +139,10 @@ CONTAINS
       return_value = DISTURB_
     CASE ('fuel')
       return_value = FUEL_
-    CASE ('veg')
-      return_value = VEG_
     CASE ('alcc')
       return_value = ALCC_
+    CASE ('veg')
+      return_value = VEG_
     CASE DEFAULT
       return_value = 0
     END SELECT

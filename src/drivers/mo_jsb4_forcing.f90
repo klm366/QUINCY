@@ -289,7 +289,8 @@ CONTAINS
     INTEGER  :: iblk
     INTEGER  :: day_of_year
 
-    REAL(wp), ALLOCATABLE :: t_air(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), sat_spec_humidity(:,:), rel_humidity(:,:)
+    REAL(wp), ALLOCATABLE :: t_air(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), &
+      &                      sat_spec_humidity(:,:), rel_humidity(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
 
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
@@ -900,7 +901,8 @@ CONTAINS
         forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
         forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+time_steps_per_day
       ELSEIF(forcing_input_variable%frequency .EQ. DAILY_) THEN
-        CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,1))
+        CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, &
+          &                  forcing_input_variable%data_read(:,:,1))
         forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
         forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
       ENDIF
