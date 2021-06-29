@@ -91,7 +91,7 @@ CONTAINS
       & vgrid%cdi_axis_type, length, vgrid%name, vgrid%levels(1:length), vgrid%units, vgrid%longname, &
       & vgrid%lbounds(1:length), vgrid%ubounds(1:length))
 
-    WRITE(message_text, '(A,A,2I3)') 'Registered new vgrid: name, ID, length= ',TRIM(vgrid%name), vgrid%ZaxisID, length
+    WRITE(message_text, '(A,A,A,I10,I3)') 'Registered new vgrid: name, ID, length= ',TRIM(vgrid%name), ' ', vgrid%ZaxisID, length
     CALL message(TRIM(routine), message_text)
 
     !$acc enter data create(vgrid,vgrid%levels,vgrid%lbounds,vgrid%ubounds,vgrid%dz)
