@@ -17,7 +17,7 @@ MODULE mo_jsb_time
 
   USE mo_kind,           ONLY: wp
   USE mo_exception,      ONLY: message, message_text, finish
-  USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, &
+  USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, get_time_next, &
                                get_date_components, get_time_start, &
                                get_time_dt, is_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
@@ -29,7 +29,7 @@ MODULE mo_jsb_time
 !!$  PUBLIC :: init_jsb_time
   PUBLIC :: init_time
   PUBLIC :: update_time_at_beginloop, update_time_at_endloop
-  PUBLIC :: t_datetime, deallocateDatetime
+  PUBLIC :: t_datetime, deallocateDatetime, get_time_next
   PUBLIC :: get_date_components, get_time_start, get_time_dt, &
             is_time_experiment_start, is_time_restart, &
             get_year_length, get_month_length, get_day_length, get_year_day
