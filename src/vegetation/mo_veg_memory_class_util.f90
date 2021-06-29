@@ -1622,6 +1622,7 @@ CONTAINS
     PROCEDURE :: Init                       => t_veg_elements_pool_init
     PROCEDURE :: Init_op_ov_hlp             => t_veg_elements_pool_op_ov_hlp_init             ! init hlp object for operator overload
     PROCEDURE :: Associate_domain_var_ptr   => t_veg_elements_pool_associate_domain_variable_pointers
+    PROCEDURE :: Set_to_scalar_on_chunk     => t_veg_elements_pool_set_all_elements_to_scalar_value_on_chunk  ! e.g., set all to zero
     !! operator overload  
     !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
@@ -1719,6 +1720,7 @@ CONTAINS
     PROCEDURE :: Init                       => t_veg_tissues_pool_init                      ! pool_object created with FUNCTION Create_veg_tissues_pool()
     PROCEDURE :: Init_op_ov_hlp             => t_veg_tissues_pool_op_ov_hlp_create_init     ! create and init hlp object for operator overload
     PROCEDURE :: Associate_domain_var_ptr   => t_veg_tissues_pool_associate_domain_variable_pointers
+    PROCEDURE :: Set_to_scalar_on_chunk     => t_veg_tissues_pool_set_all_elements_to_scalar_value_on_chunk  ! e.g., set all to zero
     !! operator overload  
     !! [def: field1d(nc) | field2d(nc,nblks)]
     ! +
@@ -1840,6 +1842,51 @@ CONTAINS
     END SELECT
 
   END FUNCTION t_veg_elements_pool_get_element_name_by_id
+
+  ! ======================================================================================================= !
+  !>set all elements of the veg_elements_pool to the scalar value
+  !> 
+  SUBROUTINE t_veg_elements_pool_set_all_elements_to_scalar_value_on_chunk(this, scalar)
+
+    CLASS(t_veg_elements_pool), INTENT(inout) :: this
+    REAL(wp)                  , INTENT(in)    :: scalar
+    
+    this%carbon(:)       = scalar
+    this%nitrogen(:)     = scalar
+    this%phosphorus(:)   = scalar
+    this%carbon13(:)     = scalar
+    this%carbon14(:)     = scalar
+    this%nitrogen15(:)   = scalar
+
+  END SUBROUTINE t_veg_elements_pool_set_all_elements_to_scalar_value_on_chunk
+
+  ! ======================================================================================================= !
+  !>set all elements of the veg_elements_pool to the scalar value
+  !> 
+  SUBROUTINE t_veg_tissues_pool_set_all_elements_to_scalar_value_on_chunk(this, scalar)
+
+    CLASS(t_veg_tissues_pool), INTENT(inout) :: this
+    REAL(wp)                 , INTENT(in)    :: scalar
+    
+    ! elements
+    this%carbon(:)       = scalar
+    this%nitrogen(:)     = scalar
+    this%phosphorus(:)   = scalar
+    this%carbon13(:)     = scalar
+    this%carbon14(:)     = scalar
+    this%nitrogen15(:)   = scalar
+    ! veg_elements_pool
+    CALL this%leaf%Set_to_scalar_on_chunk(scalar)
+    CALL this%fine_root%Set_to_scalar_on_chunk(scalar)
+    CALL this%coarse_root%Set_to_scalar_on_chunk(scalar)
+    CALL this%sap_wood%Set_to_scalar_on_chunk(scalar)
+    CALL this%heart_wood%Set_to_scalar_on_chunk(scalar)
+    CALL this%labile%Set_to_scalar_on_chunk(scalar)
+    CALL this%reserve%Set_to_scalar_on_chunk(scalar)
+    CALL this%fruit%Set_to_scalar_on_chunk(scalar)
+    CALL this%seed_bed%Set_to_scalar_on_chunk(scalar)
+
+  END SUBROUTINE t_veg_tissues_pool_set_all_elements_to_scalar_value_on_chunk  
 
   !-----------------------------------------------------------------------------------------------------
   !> initializing an object of the VEG_ elements pool "t_veg_elements_pool"

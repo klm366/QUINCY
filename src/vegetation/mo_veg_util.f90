@@ -204,11 +204,11 @@ CONTAINS
     CALL veg__mem%establishment%init(zero)
     CALL veg__mem%exudation%init(zero)
 #else
-    veg_growth        = zero
-    veg_litterfall    = zero
-    veg_exudation     = zero
-    veg_establishment = zero
-    veg_reserve_use   = zero
+    CALL veg_growth%Set_to_scalar_on_chunk(zero)
+    CALL veg_litterfall%Set_to_scalar_on_chunk(zero)
+    CALL veg_exudation%Set_to_scalar_on_chunk(zero)
+    CALL veg_establishment%Set_to_scalar_on_chunk(zero)
+    CALL veg_reserve_use%Set_to_scalar_on_chunk(zero)
 #endif
 
     ! flux variables
