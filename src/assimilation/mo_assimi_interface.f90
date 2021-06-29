@@ -369,8 +369,8 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    CALL inquire_declination(declination) ! R: do not put this in elemental procedure as it would not be pure...
-                                          ! e.g. declination = 0.006918_wp
+
+    CALL inquire_declination(declination) ! out
 
     IF (dsl4jsb_Lctlib_param(NitrogenScalingFlag)) THEN
       DO i=1,ncanopy

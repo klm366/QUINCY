@@ -22,7 +22,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_model_init,     ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
   USE mo_jsb_model_final,    ONLY: jsbach_finalize
   USE mo_jsb_version,        ONLY: jsbach_init_version, jsbach_label_run
-  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted
+  USE mo_jsb_control,        ONLY: jsbach_runs_standalone, jsbach_is_restarted, timer_on, timer_forcing
   USE mo_jsb_time,           ONLY: is_newday
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -35,12 +35,12 @@ PROGRAM jsb4_driver
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(HYDRO_)
 
-  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
+  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing
 
   ! Currently from adapter
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
   USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
-  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm
+  USE mo_jsb_parallel,       ONLY: my_process_is_stdio, p_io, p_bcast, my_process_is_mpi_parallel, mpi_comm, p_global_comm
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
@@ -64,10 +64,13 @@ PROGRAM jsb4_driver
 
   ! time control and orbit calc
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
-    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, write_date, &
+    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, next_date, write_date, &
     &                            echam_time, manager_state
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
+
+  USE mo_timer, ONLY: init_timer, cleanup_timer, timer_start, timer_stop, timer_loop, timer_output, timer_restart
+
   ! ICON would be:
   ! USE mo_psrad_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
 !<<<
@@ -80,9 +83,9 @@ PROGRAM jsb4_driver
   REAL(wp), EXTERNAL:: util_walltime
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
-  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, nblks, ncid, model_id, ice, ics
+  INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, npromz, nblks, ncid, model_id, ics, ice
   TYPE(t_datetime)          :: current_datetime
-  TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL()
+  TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL(), next_datetime_ptr => NULL()
 
   !! Variables of namelist jsb_parallel_nml
   INTEGER:: nproca  ! number of processors for jsbach
@@ -193,7 +196,7 @@ PROGRAM jsb4_driver
 
   IF (my_process_is_mpi_parallel()) THEN
     buffer(:) = (/ nproca, nprocb, nprocio, npedim /)
-    CALL p_bcast (buffer, p_io, comm=mpi_comm)
+    CALL p_bcast (buffer, p_io, comm=p_global_comm)
     nproca  = buffer(1)
     nprocb  = buffer(2)
     nprocio = buffer(3)
@@ -209,6 +212,7 @@ PROGRAM jsb4_driver
 
   ! - jsbach_init
   CALL jsbach_setup_models('namelist.jsbach')
+  IF (timer_on()) CALL init_timer()
   CALL jsbach_setup_grid(nproca, nprocb, npedim, model_id) ! Only one model implemented for now
   CALL jsbach_setup_tiles(model_id)
   CALL jsbach_init(model_id)
@@ -219,9 +223,13 @@ PROGRAM jsb4_driver
   !     therefore set (and allocated fields) here -- else need to strongly adapt
   !       -> i.e. set and allocate in the iblk loop for just one and change way of reading?!
   nproma = local_decomposition%nproma
+  npromz = local_decomposition%npromz
   nblks = local_decomposition%ngpblks
   !TODO: get nproma/nblks with already existing function? 'get_nproma'
   !  -> hm, for that need to first get the model and then the grid
+  WRITE(message_text, '(A,I5,I5,I5)') 'nproma, npromz, nblks = ', nproma, npromz, nblks
+  CALL message('jsb4_driver', message_text)
+  CALL message('', '')
 
   ! forcing
   ALLOCATE(t_air_K(nproma, nblks))
@@ -274,7 +282,7 @@ PROGRAM jsb4_driver
   ALLOCATE(CO2_flux(nproma))
 
   IF (.NOT. read_interface_vars) THEN
-    CALL init_forcing(model_id)
+    CALL init_forcing(model_id, delta_time, time_step_len)
 
     !TODO: get from grid? but how to name such a function get_lon_from_grid?
     !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
@@ -307,7 +315,6 @@ PROGRAM jsb4_driver
   model => get_model(model_id)
   CALL model%Get_top_tile(tile)
   ics = 1
-  ice = nproma
 
   CALL init_mvstream('namelist.jsbach')
 
@@ -320,15 +327,20 @@ PROGRAM jsb4_driver
     dsl4jsb_Get_memory(HYDRO_)
 
     DO iblk = 1, nblks
-      CALL model%Set_options(iblk=iblk)
+      IF (iblk == nblks) THEN
+        ice = npromz
+      ELSE
+        ice = nproma
+      END IF
+      CALL model%Set_options(ics=ics, ice=ice, iblk=iblk)
 
-      t_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
-      fact_q_air_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
-      fact_qsat_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
-      rough_h_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_h)
-      rough_m_srf_proc(:,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_m)
+      t_srf_proc(ics:ice,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
+      fact_q_air_proc(ics:ice,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
+      fact_qsat_srf_proc(ics:ice,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
+      rough_h_srf_proc(ics:ice,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_h)
+      rough_m_srf_proc(ics:ice,iblk) = dsl4jsb_var2D_onChunk(TURB_, rough_m)
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
-      evapo_act2pot_proc(:,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotrans),-EPSILON(1._wp)) &
+      evapo_act2pot_proc(ics:ice,iblk) = MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapotrans),-EPSILON(1._wp)) &
         & / MIN(dsl4jsb_var2D_onChunk(HYDRO_, evapopot),  -EPSILON(1._wp))
     ENDDO
 
@@ -340,12 +352,15 @@ PROGRAM jsb4_driver
   CALL open_output_streams
   CALL mvstream_update_cache
 
+  IF (timer_on()) CALL timer_start(timer_loop)
+
   ! - Main loop
   main_loop:DO
 
     CALL time_set   !(echam!)
     CALL manager_state(echam_time, current_datetime)
     ALLOCATE(current_datetime_ptr, source=current_datetime)
+    ALLOCATE(next_datetime_ptr, source=next_date)
     IF(is_newday(current_datetime_ptr, delta_time)) THEN
       CALL write_date(current_date,'Calculate timesteps for day: ')
     ENDIF
@@ -370,48 +385,52 @@ PROGRAM jsb4_driver
       CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
         & flx_ratio, cos_zenith_angle, daylght_frc)
 
-      CALL get_interface_variables_from_external_forcing(1, 1, nproma, nblks, current_datetime_ptr, &
+      IF (timer_on()) CALL timer_start(timer_forcing(1))
+      CALL get_interface_variables_from_external_forcing(1, 1, nproma, npromz, nblks, current_datetime_ptr, next_datetime_ptr, &
         & sinlat, coslat, lon, evapo_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                              &
         & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+      IF (timer_on()) CALL timer_stop(timer_forcing(1))
     ENDIF
 
     DO iblk = 1, nblks
-      CALL model%Set_options(iblk=iblk)
 
-! current assumption for standalone: nlon=nproma=npromz, therefore set (and allocated fields) outside the loop
-!   Else would need large refactoring and:
-!          IF ( iblk == nblks ) THEN
-!            nproma = local_decomposition%npromz
-!          ELSE
-!            nproma = local_decomposition%nproma
-!          END IF
+      IF (iblk == nblks) THEN
+        ice = npromz
+      ELSE
+        ice = nproma
+      END IF
+      CALL model%Set_options(ics=ics, ice=ice, iblk=iblk)
 
       IF (read_interface_vars) THEN
-        CALL read_interface_variables( 1, nproma, iblk, ncid, current_datetime_ptr, t_air_K(:,iblk), q_air(:,iblk), rain(:,iblk), &
+        IF (timer_on()) CALL timer_start(timer_forcing(1))
+        CALL read_interface_variables( ics, ice, iblk, ncid, current_datetime_ptr, t_air_K(:,iblk), q_air(:,iblk), rain(:,iblk), &
           & snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), swvis_srf_down(:,iblk), &
           & swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), press_srf(:,iblk), drag_srf(:,iblk), &
           & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk))
+        IF (timer_on()) CALL timer_stop(timer_forcing(1))
       ENDIF
 
-      CALL jsbach_interface ( 1, iblk, 1, nproma, current_datetime_ptr, delta_time, time_step_len, t_air_K(:,iblk), &
-        & q_air(:,iblk), rain(:,iblk), snow(:,iblk), wind_air(:,iblk), wind_10m(:,iblk), lw_srf_down(:,iblk), &
-        & swvis_srf_down(:,iblk), swnir_srf_down(:,iblk), swpar_srf_down(:,iblk), fract_par_diffuse(:,iblk), &
-        & press_srf(:,iblk), drag_srf(:,iblk), &
-        & t_acoef(:,iblk), t_bcoef(:,iblk), q_acoef(:,iblk), q_bcoef(:,iblk), pch(:,iblk), cos_zenith_angle(:,iblk), &
-        & CO2_concentration(:,iblk), &
-        & t_srf_proc(:,iblk), t_eff_srf(:), qsat_srf(:), s_srf(:), fact_q_air_proc(:,iblk), fact_qsat_srf_proc(:,iblk), &
-        & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
-        & rough_h_srf_proc(:,iblk), rough_m_srf_proc(:,iblk), q_snocpymlt(:), alb_vis_dir(:), alb_nir_dir(:), &
-        & alb_vis_dif(:), alb_nir_dif(:), CO2_flux(:), evapopot=evapopot(:))
+      CALL jsbach_interface ( 1, iblk, ics, ice, current_datetime_ptr, delta_time, time_step_len, t_air_K(ics:ice,iblk),       &
+        & q_air(ics:ice,iblk), rain(ics:ice,iblk), snow(ics:ice,iblk), wind_air(ics:ice,iblk), wind_10m(ics:ice,iblk),         &
+        & lw_srf_down(ics:ice,iblk), swvis_srf_down(ics:ice,iblk), swnir_srf_down(ics:ice,iblk), swpar_srf_down(ics:ice,iblk), &
+        & fract_par_diffuse(ics:ice,iblk), press_srf(ics:ice,iblk), drag_srf(ics:ice,iblk),                                    &
+        & t_acoef(ics:ice,iblk), t_bcoef(ics:ice,iblk), q_acoef(ics:ice,iblk), q_bcoef(ics:ice,iblk), pch(ics:ice,iblk),       &
+        & cos_zenith_angle(ics:ice,iblk), CO2_concentration(ics:ice,iblk),                                                     &
+        & t_srf_proc(ics:ice,iblk), t_eff_srf(ics:ice), qsat_srf(ics:ice), s_srf(ics:ice),                                     &
+        & fact_q_air_proc(ics:ice,iblk), fact_qsat_srf_proc(ics:ice,iblk),                                                     &
+        & evapotrans(ics:ice), latent_hflx(ics:ice), sensible_hflx(ics:ice), grnd_hflx(ics:ice), grnd_hcap(ics:ice),           &
+        & rough_h_srf_proc(ics:ice,iblk), rough_m_srf_proc(ics:ice,iblk), q_snocpymlt(ics:ice),                                &
+        & alb_vis_dir(ics:ice), alb_nir_dir(ics:ice),                                                                          &
+        & alb_vis_dif(ics:ice), alb_nir_dif(ics:ice), CO2_flux(ics:ice), evapopot=evapopot(ics:ice))
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
         ! To ensure restart identity, the daily evapo_act_sum and evapo_pot_sum would need to be calculated in jsbach!
         ! => for now the instantaneous values are used instead of the daily sums, to ensure restart identity
-        evapo_act2pot_proc(:,iblk) = MIN(evapotrans(:),-EPSILON(1._wp)) / MIN(evapopot(:),  -EPSILON(1._wp))
+        evapo_act2pot_proc(ics:ice,iblk) = MIN(evapotrans(ics:ice),-EPSILON(1._wp)) / MIN(evapopot(ics:ice),  -EPSILON(1._wp))
 !        evapo_act_sum_proc(:,iblk) = evapo_act_sum(:,iblk) + MIN(evapotrans(:),-EPSILON(1._wp))
 !        evapo_pot_sum_proc(:,iblk) = evapo_pot_sum(:,iblk) + MIN(evapopot(:),  -EPSILON(1._wp))
       ENDIF
@@ -425,15 +444,24 @@ PROGRAM jsb4_driver
 
     CALL jsbach_finish_timestep(model_id, current_datetime_ptr, time_step_len)
     CALL deallocateDatetime(current_datetime_ptr)
+    CALL deallocateDatetime(next_datetime_ptr)
     CALL mvstream_accumulate
+    IF (timer_on()) CALL timer_start(timer_output)
     CALL out_streams
+    IF (timer_on()) CALL timer_stop(timer_output)
 
-    IF (l_putrerun) CALL write_streams
+    IF (l_putrerun) THEN
+      IF (timer_on()) CALL timer_start(timer_restart)
+      CALL write_streams
+      IF (timer_on()) CALL timer_stop(timer_restart)
+    END IF
 
     CALL time_reset
     IF (lstop) EXIT main_loop
 
   ENDDO main_loop
+
+  IF (timer_on()) CALL timer_stop(timer_loop)
 
   IF (read_interface_vars) THEN
     CALL nf_check(nf_close(ncid))
@@ -442,9 +470,12 @@ PROGRAM jsb4_driver
   CALL close_output_streams
   CALL message('INFO','Closed output streams')
 
+  CALL finalize_external_forcing()
   CALL jsbach_finalize()
 
-!$OMP PARALLEL
+  IF (timer_on()) CALL cleanup_timer
+
+  !$OMP PARALLEL
 !$OMP MASTER
   status = util_cputime(zutime, zstime)
 !$OMP END MASTER
