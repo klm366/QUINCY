@@ -393,7 +393,10 @@ CONTAINS
         CALL model%Queue_task(VEG_,  "veg_turnover")               !! quincy - land/plant model
         CALL model%Queue_task(VEG_,  "veg_dynamics")               !! quincy - land/plant model
         CALL model%Queue_task(VEG_,  "veg_growth")                 !! quincy - land/plant model
-        CALL model%Queue_task(VEG_,  "veg_pools")                  !! quincy - land/plant model
+      END IF
+      CALL model%Queue_task(VEG_,    "veg_pools")                  !! quincy - land/plant/canopy model
+      ! only land model
+      IF(model%config%quincy_model == 'land') THEN
         CALL model%Queue_task(SB_,   "sb_pools")                   !! quincy - land/plant/canopy/soil model
       END IF
       
