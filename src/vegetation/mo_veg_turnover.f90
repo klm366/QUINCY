@@ -143,21 +143,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)             ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                        ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root) 
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)
-    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_lai)                   ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_fine_root)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_fine_root)          ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_cn_leaf)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, target_np_leaf)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)             ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)        ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)             ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)        ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)           ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)      ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)       ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)     ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)       ! inout
+    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)                   ! out
 #ifdef __QUINCY_NO_JSB__
     ! Get pools
 #define Get_veg_pool
