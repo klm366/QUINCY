@@ -521,7 +521,7 @@ CONTAINS
     vfc_times_sd_l(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
 
 
-    CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+    CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:),'ws_max')
 
     !$claw acc data present(fract_org_l,ws_max,ws_max_mineral)
     !$claw acc parallel loop gang vector
@@ -533,8 +533,8 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
-    CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
-    CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
+    CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:),'ice_rootzone' )
+    CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:),'ws')
 
     !$claw acc data present(evapo_soil_in_m,evapotrans_soil,trans_in_m) &
     !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
@@ -656,7 +656,7 @@ CONTAINS
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     ! Note: ws only includes the soil moisture within the root zone
-    CALL get_water_in_root_zone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws(:))
+    CALL get_water_in_root_zone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws(:),'soil_hydro: ws')
 
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector

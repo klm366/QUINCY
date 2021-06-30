@@ -878,7 +878,7 @@ CONTAINS
     USE mo_util,          ONLY: soil_depth_to_layers_2d
     USE mo_jedi_process,  ONLY: jedi_soil_depth_to_layers_1d
     USE mo_hydro_process, ONLY: calc_soil_hydrology
-    USE mo_jsb_time,      ONLY: t_datetime,get_year,get_time_experiment_start,deallocateDatetime
+    USE mo_jsb_time,      ONLY: t_datetime
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
@@ -888,7 +888,6 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(JEDI_)
-    dsl4jsb_Def_config(JEDI_) !PHS: GET CONFIG FOR JEDI
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil
@@ -912,12 +911,6 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
     INTEGER  :: nsoil
-    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
-    ! PHS: to use prescribed root depth from jsbach at the beginning of 
-    LOGICAL                      :: lspinup_jedi
-    TYPE(t_datetime), POINTER    :: inidate
-    INTEGER                      :: iniyear
-    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
     iblk  = options%iblk
@@ -944,7 +937,6 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
-    dsl4jsb_Get_config(JEDI_) !PHS: GET CONFIG FOR JEDI
     ltpe_open = .FALSE.
     ltpe_closed = .FALSE.
     IF (model%config%tpe_scheme == 'open')   ltpe_open = .TRUE.
@@ -977,14 +969,8 @@ CONTAINS
       !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
       ! As jedi has different rooting depth for each PGS, the root_depth at veg level needed to be recalculated each time. 
     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
-      inidate => get_time_experiment_start()
-      iniyear = get_year(inidate)
-      CALL deallocateDatetime(inidate)
-      lspinup_jedi = dsl4jsb_Config(JEDI_)%l_spinup_jedi
-      IF ( .NOT. lspinup_jedi .OR. get_year(options%current_datetime) > iniyear + 2 ) THEN
           root_depth     = jedi_root_depth
           root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))
-      END IF
     END IF
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
 
@@ -1290,9 +1276,9 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-    CALL get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root   (:) )
-    CALL get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_fc(:) )
-    CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_pwp(:))
+    CALL get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root   (:),'w_soil_root' )
+    CALL get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_fc(:), 'w_soil_root_fc' )
+    CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_soil_root_pwp(:),'w_soil_root_pwp')
 
     ! Calculate water stress factor
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function

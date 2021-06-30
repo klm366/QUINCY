@@ -30,6 +30,10 @@ MODULE mo_jedi_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_jedi_config
     LOGICAL  :: l_spinup_jedi
+    REAL(wp)                    :: jedi_AutoRes_Q10 
+    REAL(wp)                    :: jedi_biomass_memory 
+    REAL(wp)                    :: jedi_woody_root_coe
+    REAL(wp)                    :: jedi_fine_root_coe  
   CONTAINS
      PROCEDURE :: Init => Init_jedi_config
   END type t_jedi_config
@@ -45,21 +49,28 @@ CONTAINS
   SUBROUTINE Init_jedi_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-
+    USE mo_util,              ONLY: real2string
     CLASS(t_jedi_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
     LOGICAL                     :: single_tile_output
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: l_spinup_jedi
+    REAL(wp)                    :: jedi_AutoRes_Q10 
+    REAL(wp)                    :: jedi_biomass_memory 
+    REAL(wp)                    :: jedi_woody_root_coe
+    REAL(wp)                    :: jedi_fine_root_coe  
 
-    NAMELIST /jsb_jedi_nml/      &
+    NAMELIST /jsb_jedi_nml/        &
          active,                   &
          single_tile_output,       &
          ic_filename,              &
          bc_filename,              &
-         l_spinup_jedi
-
+         l_spinup_jedi,            &
+         jedi_AutoRes_Q10,         &
+         jedi_biomass_memory,      &
+         jedi_woody_root_coe,      &
+         jedi_fine_root_coe
     INTEGER :: nml_handler, nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_jedi_config'
@@ -72,7 +83,10 @@ CONTAINS
     bc_filename            = 'bc_land_carbon.nc'
     ic_filename            = 'ic_land_carbon.nc'
     l_spinup_jedi          = .FALSE.
-
+    jedi_AutoRes_Q10       = 1.6_wp
+    jedi_biomass_memory    = 3650._wp
+    jedi_woody_root_coe    = 2250._wp
+    jedi_fine_root_coe     = 550._wp
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -87,6 +101,15 @@ CONTAINS
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%l_spinup_jedi          = l_spinup_jedi
+    config%jedi_AutoRes_Q10       = jedi_AutoRes_Q10
+    config%jedi_biomass_memory    = jedi_biomass_memory
+    config%jedi_woody_root_coe    = jedi_woody_root_coe
+    config%jedi_fine_root_coe     = jedi_fine_root_coe
+
+    CALL message(TRIM(routine), 'jedi_AutoRes_Q10    = '//TRIM(real2string(jedi_AutoRes_Q10))   )
+    CALL message(TRIM(routine), 'jedi_biomass_memory = '//TRIM(real2string(jedi_biomass_memory)))
+    CALL message(TRIM(routine), 'jedi_woody_root_coe = '//TRIM(real2string(jedi_woody_root_coe)))
+    CALL message(TRIM(routine), 'jedi_fine_root_coe  = '//TRIM(real2string(jedi_fine_root_coe)) )
 
   END SUBROUTINE Init_jedi_config
 

@@ -199,17 +199,22 @@ CONTAINS
     ! 
     INTEGER                      :: iniyear
     LOGICAL                      :: lspinup_jedi
-  
+     
     !REAL(wp), parameter  :: rootshoot_opt     = 3.58462104_wp ! median value of root-shoot ratio 50th percentile
     REAL(wp), parameter  :: rootshoot_opt     = 8.473583644190947_wp ! median value of root-shoot ratio 75th percentile
     REAL(wp), parameter  :: c_CN_woody       = 0.00303_wp * (12.01_wp / 14.0067_wp)  ! molC/molN Ratio for Woody Tissue
     REAL(wp), parameter  :: c_sapwood        = 0.05_wp
     REAL(wp), parameter  :: c_Res_N          = 0.218_wp * ( 14.0067_wp / 12.01_wp )  !! specific respiration in molC/molN/d
+    REAL(wp)             :: AutoRes_Q10
+    REAL(wp)             :: biomass_memory 
+    REAL(wp)             :: woody_root_coe
+    REAL(wp)             :: fine_root_coe
+    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
+
     REAL(wp), PARAMETER  :: Q10              = 1.8_wp          ! Empirical parameter for temperature dependence of
                                                                !   heterotrophic respiration rate. This value is 
                                                                !   taken from JB4.
 
-    ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
     
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
@@ -404,9 +409,16 @@ CONTAINS
                                                            'update_tradeoff: First time step of new year')
     
     iniyear = get_year_at_experiment_start()
-    lspinup_jedi = dsl4jsb_Config(JEDI_)%l_spinup_jedi
-    
-    IF ((get_year(options%current_datetime) .LE. iniyear + 2 ) .AND. lspinup_jedi ) THEN    !  PHS: initial carbon
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    ! PHS:: Read in parameter from namelist
+    !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+    lspinup_jedi    = dsl4jsb_Config(JEDI_)%l_spinup_jedi
+    AutoRes_Q10     = dsl4jsb_Config(JEDI_)%jedi_AutoRes_Q10 
+    biomass_memory  = dsl4jsb_Config(JEDI_)%jedi_biomass_memory  
+    woody_root_coe  = dsl4jsb_Config(JEDI_)%jedi_woody_root_coe  
+    fine_root_coe   = dsl4jsb_Config(JEDI_)%jedi_fine_root_coe  
+
+    IF ((get_year(options%current_datetime) .LE. iniyear + 1 ) .AND. lspinup_jedi ) THEN    !  PHS: initial carbon
       ff_npp = 0._wp
       Flg_senesc = 0._wp
       Flg_die = 0._wp
@@ -414,14 +426,14 @@ CONTAINS
     END IF     !  PHS: initial carbon
     
     seed_depth_sl = jedi_soil_depth_to_layers_1d(  SPREAD(0.05_wp, NCOPIES=nc, DIM=1)  , soil_w%dz(:))         ! Jedi assumes germination of seed depends on the first 50mm of soil wetness
-    CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:),  soil_depth_sl(:,:), seed_depth_sl(:,:),     seed_maxmoist(:))    
-    CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), jedi_root_depth_sl(:,:), root_maxmoist(:))
+    CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:),  soil_depth_sl(:,:), seed_depth_sl(:,:),     seed_maxmoist(:), 'seed_maxmoist')    
+    CALL get_water_in_root_zone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), soil_depth_sl(:,:), jedi_root_depth_sl(:,:), root_maxmoist(:), 'root_maxmoist')
 
-    CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:))
-    CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), jedi_root_depth_sl(:,:), w_soil_column_jedi(:))
+    CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), seed_depth_sl(:,:), w_soil_column_seed(:), 'w_soil_column_seed')
+    CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), jedi_root_depth_sl(:,:), w_soil_column_jedi(:), 'w_soil_column_jedi')
       
     alpha_jedi(:)          = jedi_water_stress_factor( w_soil_column_jedi(:),      root_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)
-    alpha_jedi_seed(:) = jedi_water_stress_factor( w_soil_column_seed(:), seed_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
+    alpha_jedi_seed(:)     = jedi_water_stress_factor( w_soil_column_seed(:),      seed_maxmoist(:),  dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract)            
     
     ! 2019.11.27 PHS: still at the stage of testing "water stress" 
     WHERE (c_leaves .gt. 0._wp)  
@@ -482,22 +494,18 @@ CONTAINS
       MaintRes = c_sapwood * c_CN_woody * ( c_stem + c_csroot ) + &
         &        dsl4jsb_Lctlib_param(NitroStatus) * dsl4jsb_Lctlib_param(JeDiSLA) * &
         &             ( c_leaves + c_fnroot )  !NNN
-      MaintRes = MaintRes  * c_Res_N    * ( 1.6_wp ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi-DGM uses 1.6 for Q10 value
+      MaintRes = MaintRes  * c_Res_N    * ( AutoRes_Q10 ** ( ( temp_yDayMean - tmelt - 20._wp ) / 10._wp) ) ! JeDi-DGM uses 1.6 for Q10 value
     
       MaintRes = MaintRes / sec_per_day ! The maintanence respiration is daily computed in JeDi.
       MaintRes_yDayMean   = MaintRes
        
       temp_sum = t_air
        
-      !PHS 05.08.2019 Tend
-      !PHS  I think I made mistake for calculating ff_dTdt 
-      !ff_dTdt            = ( ff_T_30d - ff_T_30d_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- dtime / (30._wp* 86400._wp ))  )) + &
-      !  &                  EXP(- dtime / (30._wp* 86400._wp ))  * ff_dTdt  
       ff_dTdt            = ( ff_T_30d - ff_T_30d_yDayMean ) / ( 1._wp /  ( 1._wp - EXP(- 86400._wp / (30._wp* 86400._wp ))  )) + &
         &                  EXP(- 86400._wp / (30._wp* 86400._wp ))  * ff_dTdt   
       ff_T_30d_yDayMean = ff_T_30d
 
-      IF ( .NOT. lspinup_jedi .OR. get_year(options%current_datetime) > iniyear + 2 ) THEN
+      IF ( .NOT. lspinup_jedi .OR. get_year(options%current_datetime) > iniyear + 1 ) THEN
         CALL calc_Ctradeoff( &
           & GPP_yDayMean,                                & ! in
           ! JeDi plant trait parameter comes in now <<<<<<<<<<<
@@ -520,6 +528,8 @@ CONTAINS
           & dsl4jsb_Lctlib_param(LandcoverClass),        & ! in
           ! JeDi plant trait parameter comes in now >>>>>>>>>>>
           & lspinup_jedi,                                & ! in 
+          & woody_root_coe,                              & !in
+          & fine_root_coe,                               & !in
           & iniyear,                                     & ! in
           & get_year(options%current_datetime),          & ! in
           & timesteps_per_day(dtime),                    & ! in
@@ -560,8 +570,8 @@ CONTAINS
       
       jedi_root_depth_sl = jedi_soil_depth_to_layers_1d( jedi_root_depth, soil_w%dz(:) )   
 
-      pseudo_c_total  =  c_total / ( 1._wp / (1._wp-EXP(- 86400._wp / (3650._wp* 86400._wp )))) + &
-        &                            pseudo_c_total * EXP(- 86400._wp / (3650._wp* 86400._wp ))
+      pseudo_c_total  =  c_total / ( 1._wp / (1._wp-EXP(- 86400._wp / (biomass_memory * 86400._wp )))) + &
+        &                            pseudo_c_total * EXP(- 86400._wp / (biomass_memory * 86400._wp ))
 
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------

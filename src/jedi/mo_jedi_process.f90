@@ -104,6 +104,8 @@ CONTAINS
     & LandcoverClass,             & !in
     ! JeDi plant trait parameters >>>>>>>>>>
     & lspinup_jedi,               & !in 
+    & woody_root_coe,             & !in
+    & fine_root_coe,              & !in
     & iniyear,                    & ! in
     & currentyear,                & !in
     & time_steps_per_day,         & ! in
@@ -162,6 +164,8 @@ CONTAINS
     INTEGER,  INTENT(in) :: currentyear  
     INTEGER,  INTENT(in) :: time_steps_per_day
     LOGICAL,  INTENT(IN) :: lspinup_jedi
+    REAL(wp), INTENT(IN) :: woody_root_coe
+    REAL(wp), INTENT(IN) :: fine_root_coe
     REAL(wp), INTENT(inout) :: one_counter
     !
     ! JeDi carbon allocation 
@@ -331,8 +335,9 @@ CONTAINS
 
         A_seed = Flg_grow * Flg_seed * Allo2Reproduc
         ! PHS:: 14.08.2020 try without turnover for storage ! 
-        IF (( currentyear >= iniyear + 50 ) .AND. c_storage > 0._wp ) zLoss_storage = c_storage / c_tau_storage 
-      
+        IF ( .NOT. lspinup_jedi .OR. currentyear >= iniyear + 50 ) THEN 
+          IF ( c_storage >  0._wp ) zLoss_storage = c_storage / c_tau_storage 
+        END IF      
         c_storage = c_storage + NPP - zLoss_storage
         
         zAlloc = MAX(0._wp,c_storage)  !  To make sure that no negative c_storage distributed to the pools
@@ -403,7 +408,9 @@ CONTAINS
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
 
         Flg_senesc = 0._wp
-        IF ( ( currentyear >= iniyear + 50 ) .AND. ff_npp < 0._wp .AND. NPP < 0._wp ) Flg_senesc = 1.0_wp - Flg_grow   ! See remarks below.
+        IF ( .NOT. lspinup_jedi .OR. currentyear >= iniyear + 50 ) THEN 
+          IF ( ff_npp < 0._wp .AND. NPP < 0._wp ) Flg_senesc = 1.0_wp - Flg_grow   ! See remarks below.
+         END IF
         ! No idea why the flag for senescence is using:  1 - flag_grow  
         ! I took the calculation from JeDi.
         ! I guess senescence happens, when: (1) Non-growing condition (2) NPP<0, which may suggest that plants spend many energy respiring
@@ -445,9 +452,11 @@ CONTAINS
         NPP_act_yDayMean = ( GPP_yDayMean * sec_per_day  - AutoRes ) / (  sec_per_day )
 
         IF ( LandcoverClass == 3) THEN     
-          root_depth = sqrt( c_csroot * 2250._wp * 12.01_wp ) * 0.001_wp
+         ! root_depth = sqrt( c_csroot * 2250._wp * 12.01_wp ) * 0.001_wp
+         root_depth = sqrt( c_csroot * woody_root_coe * 12.01_wp ) * 0.001_wp
         ELSE IF (LandcoverClass == 4) THEN
-          root_depth = sqrt( c_fnroot * 550._wp * 12.01_wp ) * 0.001_wp
+         ! root_depth = sqrt( c_fnroot * 550._wp * 12.01_wp ) * 0.001_wp
+          root_depth = sqrt( c_fnroot * fine_root_coe * 12.01_wp ) * 0.001_wp
         END IF
 
         GrowthResp = GrowthResp / sec_per_day 

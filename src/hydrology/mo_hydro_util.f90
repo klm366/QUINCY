@@ -77,15 +77,15 @@ CONTAINS
 
 
 
-  SUBROUTINE get_water_in_root_zone_2d(ws, dz, dz_root, ws_root)
+  SUBROUTINE get_water_in_root_zone_2d(ws, dz, dz_root, ws_root, caller)
 
     REAL(wp), INTENT(in) :: &
       & ws     (:,:),       &        !< Water content of soil layers
       & dz     (:,:),       &        !< Thicknesses of soil layers
       & dz_root(:,:)                 !< Thicknesses of root layers
-
+    CHARACTER(*), INTENT(in), OPTIONAL :: caller
     REAL(wp), INTENT(inout) :: ws_root(SIZE(ws,1))  !< Water content in root zone
-
+    
     REAL(wp) ::                       &
       & bottom     (SIZE(ws     ,1)), & !< Cumulative depth of soil down to a layer (bottom depth of layer)
       & bottom_m1  (SIZE(ws_root,1)), & !< Cumulative depth of soil down to previous layer
@@ -105,7 +105,12 @@ CONTAINS
       root_depth(j) = SUM(dz_root(j,:))
       IF (root_depth(j) > bottom(j) + EPSILON(1._wp)) THEN
         !$claw remove
-        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
+        !CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
+        IF (PRESENT(caller)) THEN
+          CALL finish(TRIM(routine), 'Root zone larger than soil depth ('//TRIM(caller)//').')
+        ELSE
+          CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
+        END IF
         !$claw end remove
       ELSE
         bottom(j)    = 0._wp
