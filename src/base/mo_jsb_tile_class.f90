@@ -24,7 +24,8 @@ MODULE mo_jsb_tile_class
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,       ONLY: t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
 
 #ifdef _OPENACC
   USE openacc
@@ -94,6 +95,8 @@ MODULE mo_jsb_tile_class
     CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
+    INTEGER                                :: numberOfConservedQuanTypes = 0  ! number of types in use on the tile 
+    TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) ! list of conserved quantities sort by type
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
     TYPE(t_jsb_memory_p),       POINTER    :: mem(:)
     ! The next three pointers basically repeat what's already in the base type, but they save time-consuming "SELECT TYPE"s
@@ -129,11 +132,12 @@ MODULE mo_jsb_tile_class
     !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    PROCEDURE                              :: Has_conserved_quantities
     !
     PROCEDURE                              :: Cache_GPU_pointers
     !
     PROCEDURE(Init_interface),           DEFERRED :: Init
-    PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars, Count_conserved_quantities, Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
     PROCEDURE(Handler_interface),        DEFERRED :: Handler
@@ -1165,6 +1169,16 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Could not find next sibling tile')
 
   END FUNCTION Get_next_sibling_tile
+
+  ! If conserved quantities were collected for this tile
+  FUNCTION Has_conserved_quantities(this) RESULT(return_value)
+
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: this
+    LOGICAL                   :: return_value
+
+    return_value = this%numberOfConservedQuanTypes /= 0
+
+  END FUNCTION Has_conserved_quantities  
 
   LOGICAL FUNCTION Is_last_process_tile(this, process_id)
 
