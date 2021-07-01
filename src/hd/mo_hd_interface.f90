@@ -87,6 +87,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), POINTER       :: box_tile, lake_tile, land_tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
@@ -96,6 +97,8 @@ CONTAINS
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
     dsl4jsb_Def_memory(HYDRO_)
+
+    TYPE(t_hydro_memory), POINTER :: lake_hydro__mem, land_hydro__mem
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: runoff
@@ -110,11 +113,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: nres_baseflow
     dsl4jsb_Real2D_onChunk :: ret_riverflow
     dsl4jsb_Real2D_onChunk :: nres_riverflow
+    dsl4jsb_Real2D_onChunk :: basin_mask
+    dsl4jsb_Real2D_onChunk :: lake_inflow
     dsl4jsb_Real3D_onChunk :: overlflow_res
     dsl4jsb_Real3D_onChunk :: baseflow_res
     dsl4jsb_Real3D_onChunk :: riverflow_res
 
     REAL(wp), POINTER :: area(:)
+    REAL(wp), POINTER :: lake_runoff(:)
+    REAL(wp), POINTER :: land_runoff(:)
+    REAL(wp), POINTER :: lake_fract(:)
+    REAL(wp), POINTER :: land_fract(:)
 
     REAL(wp), DIMENSION(options%nc) :: &
       & tile_fract, &
@@ -153,11 +162,22 @@ CONTAINS
     ! Configuration parameters from the namelist
     routing_scheme    = dsl4jsb_Config(HD_)%routing_scheme
 
+    CALL model%Get_top_tile(box_tile)
+    lake_tile => box_tile%first_child_tile
+    land_tile => lake_tile%next_sibling_tile
+
     ! Get reference to variables in memory
     !
     dsl4jsb_Get_memory(HD_)
     !dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
+    SELECT TYPE (mm => lake_tile%mem(hydro_)%p); TYPE IS (t_hydro_memory); lake_hydro__mem => mm; END SELECT
+    SELECT TYPE (mm => land_tile%mem(hydro_)%p); TYPE IS (t_hydro_memory); land_hydro__mem => mm; END SELECT
+
+    lake_runoff => lake_hydro__mem%runoff%ptr(ics:ice,iblk)
+    land_runoff => land_hydro__mem%runoff%ptr(ics:ice,iblk)
+    lake_fract => lake_tile%fract(ics:ice,iblk)
+    land_fract => land_tile%fract(ics:ice,iblk)
 
     area => grid %area (ics:ice, iblk)
 
@@ -173,6 +193,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HD_, nres_baseflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_riverflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_riverflow)   ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, lake_inflow)       ! in
     dsl4jsb_Get_var3D_onChunk(HD_, overlflow_res)    ! inout
     dsl4jsb_Get_var3D_onChunk(HD_, baseflow_res)     ! inout
     dsl4jsb_Get_var3D_onChunk(HD_, riverflow_res)    ! inout
@@ -184,7 +206,12 @@ CONTAINS
     CASE ('full')
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
-      inflow(:) = runoff(:) * tile_fract(:) * area / rhoh2o
+      WHERE (basin_mask(:) == 1._wp)
+        lake_inflow(:) = lake_runoff(:) * lake_fract(:) * area / rhoh2o
+        inflow(:)      = land_runoff(:) * land_fract(:) * area / rhoh2o
+      ELSEWHERE
+        inflow(:) = runoff(:) * tile_fract(:) * area / rhoh2o
+      END WHERE
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
       inflow(:) = drainage(:) * tile_fract(:) * area / rhoh2o
@@ -264,8 +291,10 @@ CONTAINS
       & discharge,             &
       & discharge_ocean,       &
       & internal_drain,        &
+      & lake_drain,            &
       & lake_storage,          &
       & lake_outflow,          &
+      & lake_inflow,           &
       & lake_height,           &
       & lake_area,             &
       & lake_height_max,       &
@@ -286,6 +315,7 @@ CONTAINS
       & global_outflow,         &
       & global_outflow_resid,   &
       & global_internal_drain,  &
+      & global_lake_drain,      &
       & global_discharge_ocean, &
       & sum_weights,            &
       & dyn_min,                &
@@ -347,8 +377,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, hd_mask)          ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_drain)       ! in
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_inflow)      ! in
     dsl4jsb_Get_var2D_onDomain(HD_, lake_storage)     ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_inflow)      ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, lake_height)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_area)        ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_height_max)  ! IN
@@ -396,8 +429,9 @@ CONTAINS
       discharge(:,:) = 0._wp
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
+      lake_drain(:,:) = 0._wp
 
-      global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:))*in_domain(:,:))
+      global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:)+lake_inflow(:,:))*in_domain(:,:))
 
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
@@ -435,29 +469,34 @@ CONTAINS
       ! END DO
 
       WHERE (hd_mask(:,:) == 0._wp)
-        ! ocean inflow cells
+        ! ocean inflow cells [m3/s]
         discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         discharge_ocean(:,:) = discharge(:,:)
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp)
-        ! internal drainage cells
+        ! internal drainage cells [m3/s]
         discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         internal_drain(:,:) = discharge(:,:)
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 3._wp)
-        lake_storage(:,:) = ( outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:) ) * steplen
+        ! lake water drained into internal lake [m3/s]
+        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) +discharge(:,:)
+        lake_drain(:,:) = discharge(:,:)
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
       END WHERE
-
+      lake_drain(:,:) = lake_drain(:,:) + lake_inflow(:,:) 
+      ! lake water storage [m3]
+      lake_storage(:,:) = lake_storage(:,:) + lake_drain(:,:) * steplen
 
       ! update dynamic lake water flow between lake grid cells
       lake_outflow(:,:) = 0._wp
+      lake_inflow(:,:)  = 0._wp   
       ! block index (blk)
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
@@ -510,6 +549,7 @@ CONTAINS
       global_outflow_resid   = 0._wp
       global_discharge       = global_sum_array(discharge(:,:)*in_domain(:,:))
       global_internal_drain  = global_sum_array(internal_drain(:,:)*in_domain(:,:))
+      global_lake_drain      = global_sum_array(lake_drain(:,:)*in_domain(:,:))
       global_discharge_ocean = global_sum_array(discharge_ocean(:,:)*in_domain(:,:))
 
       IF (debug_hd) THEN
@@ -525,8 +565,10 @@ CONTAINS
         CALL message (routine, message_text)
         WRITE (message_text,*) 'internal drainage      : ', global_internal_drain, ' m3/s'
         CALL message (routine, message_text)
+        WRITE (message_text,*) 'lake drainage          : ', global_lake_drain, ' m3/s'
+        CALL message (routine, message_text)
         WRITE (message_text,*) 'Water budget error     : ', &
-          & global_outflow - global_outflow_resid - global_discharge - global_discharge_ocean - global_internal_drain, ' m3/s'
+          & global_outflow - global_outflow_resid - global_discharge - global_discharge_ocean - global_internal_drain - global_lake_drain, ' m3/s'
         CALL message (routine, message_text)
       END IF
 

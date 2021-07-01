@@ -63,6 +63,8 @@ MODULE mo_hd_memory_class
       alpha           , &  !< parameter to describe lake volume-height relation
       beta            , &  !< parameter to describe lake volume-area relation
       basin_mask      , &  !< lake basin grid points flagged as 1 else 0 
+      lake_inflow     , &  !< lake inflow from runoff (precipitation minus evaporation) [m^3/s]
+      lake_drain      , &  !< lake inflow from runoff and discharge into lake storage [m^3/s]
       water_budget    , &
       water_budget_old, &
       water_flux      , &
@@ -298,13 +300,29 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'basin_mask', mem%basin_mask,                                      &
+    CALL mem%Add_var( 'basin_mask', mem%basin_mask,                          &
       & hgrid, surface,                                                      &
-      & t_cf('basin_mask', 'none', 'lake basin grid point flagged'),          &
+      & t_cf('basin_mask', 'none', 'lake basin grid point flagged'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+     CALL mem%Add_var( 'lake_inflow', mem%lake_inflow,                       &
+      & hgrid, surface,                                                      &
+      & t_cf('lake_inflow', 'm3/s', 'lake inflow from runoff'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'lake_drain', mem%lake_drain,                         &
+      & hgrid, surface,                                                      &
+      & t_cf('lake_drain', 'm3/s', 'lake inflow from runoff and discharge'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'outflow_resid', mem%outflow_resid,                          &
       & hgrid, surface,                                                                       &
