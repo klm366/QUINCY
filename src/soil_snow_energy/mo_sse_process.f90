@@ -529,15 +529,15 @@ CONTAINS
 
         IF (l_supercool) THEN
           !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_0 counter=ser_counter
-          liquid_max(:,:) = Get_liquid_max( &
-            & t_soil(:,:)    , &
-            & ws_max(:,:)    , &
-            & matrix_pot(:,:), &
-            & bclapp(:,:)      &
+          liquid_max(1:nidx,1:nsoil) = Get_liquid_max( &
+            & t_soil    (1:nidx,1:nsoil), &
+            & ws_max    (1:nidx,1:nsoil), &
+            & matrix_pot(1:nidx,1:nsoil), &
+            & bclapp    (1:nidx,1:nsoil)  &
             & )
         ELSE
           !$claw expand parallel update
-          liquid_max(:,:) = 0._wp
+          liquid_max(1:nidx,1:nsoil) = 0._wp
         END IF
 
         !$claw acc data present(frozen,melt,ws,ice,t_soil,heat_cap,liquid_max)
