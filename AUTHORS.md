@@ -1,5 +1,5 @@
 ---
-title: ICON-Land/JSBACH4 Authors
+title: Authors
 ---
 ##Authors
 

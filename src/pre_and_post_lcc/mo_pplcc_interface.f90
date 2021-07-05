@@ -151,7 +151,7 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: conversion_factor
 
-    INTEGER  :: iblk, ics, ice, nc, cqtID, cqtInd, cqvarInd
+    INTEGER  :: iblk, ics, ice, nc, cqt_id, i_cqt, i_cq_var
     REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_pre_lcc'
 
@@ -186,14 +186,14 @@ CONTAINS
     IF( tile%Has_conserved_quantities()) THEN
       
       ! Iterate over all cq types and their vars and convert
-      DO cqtInd = 1,tile%numberOfConservedQuanTypes
+      DO i_cqt = 1,tile%nr_of_cqts
 
         ! conversion of m2 tile to m2 box is required for several types of conserved quantities
         CALL tile%Get_fraction(ics, ice, iblk, fract=conversion_factor(:))
 
         ! conversion depends on the cq type
-        cqtID = tile%conserved_quantities(cqtInd)%p%type_id
-        SELECT CASE (cqtID)
+        cqt_id = tile%conserved_quantities(i_cqt)%p%type_id
+        SELECT CASE (cqt_id)
           CASE (LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE)
 
             ! in the current implementation of jsb4 carbon variables are only available on the pft tiles
@@ -226,24 +226,24 @@ CONTAINS
             !>
             !> Assertion: for each CQT a conversion needs to be specified in pplcc_pre_lcc 
             !> 
-            CALL finish(TRIM(routine), 'Conversion factors unspecified for '//Get_cqt_name(cqtID))
+            CALL finish(TRIM(routine), 'Conversion factors unspecified for '//Get_cqt_name(cqt_id))
         END SELECT
           
         ! Convert all variables of this type
-        DO cqvarInd=1,tile%conserved_quantities(cqtInd)%p%no_of_vars
+        DO i_cq_var=1,tile%conserved_quantities(i_cqt)%p%no_of_vars
           ! Assertion: variable needs to have the unit expected for this type
-          thisUnit = tile%conserved_quantities(cqtInd)%p%consQuanVars2D(cqvarInd)%p%unit
+          thisUnit = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%unit
           IF (.NOT. TRIM(thisUnit) .EQ. expectedUnit) THEN
             CALL finish(TRIM(routine), 'Violation of assertion: variable does not have the expected unit ' &
               & // expectedUnit // ' but '// trim(thisUnit))
           ENDIF
 
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), '..... and var '// &
-            & TRIM(tile%conserved_quantities(cqtInd)%p%consQuanVars2D(cqvarInd)%p%name))
+            & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name))
 
           !JN-TODO: make a function in a new process module? -> DSL?!
-          tile%conserved_quantities(cqtInd)%p%consQuanVars2D(cqvarInd)%p%ptr2d(ics:ice,iblk) &
-            & = tile%conserved_quantities(cqtInd)%p%consQuanVars2D(cqvarInd)%p%ptr2d(ics:ice,iblk) &
+          tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+            & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
             &   * conversion_factor(:)
 
           ! for bookkeeping I would have wanted to change the unit, but seems not to be intended to be changed
@@ -278,7 +278,7 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: conversion_factor
 
-    INTEGER  :: iblk, ics, ice, nc, cqtID, cqtInd, cqvarInd
+    INTEGER  :: iblk, ics, ice, nc, i_cqt, i_cq_var, cqt_id
     REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_post_lcc'
 
@@ -310,14 +310,14 @@ CONTAINS
     IF( tile%Has_conserved_quantities()) THEN
 
       ! Iterate over all cq types and their vars and convert and change unit
-      DO cqtInd = 1,tile%numberOfConservedQuanTypes
+      DO i_cqt = 1,tile%nr_of_cqts
       ! current tile fraction is required for several types of conserved quantities
         CALL tile%Get_fraction(ics, ice, iblk, fract=conversion_factor(:))
 
         ! conversion depends on the cq type
-        cqtID = tile%conserved_quantities(cqtInd)%p%type_id
+        cqt_id = tile%conserved_quantities(i_cqt)%p%type_id
 
-        SELECT CASE (cqtID)
+        SELECT CASE (cqt_id)
           CASE (LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE)
 
             ! in the current implementation of jsb4 carbon variables are only available on the pft tiles
@@ -345,23 +345,23 @@ CONTAINS
             !>
             !> Assertion: for each CQT a conversion needs to be specified in pplcc_post_lcc 
             !> 
-            CALL finish(TRIM(routine), 'Conversion factors unspecified for '//Get_cqt_name(cqtID))
+            CALL finish(TRIM(routine), 'Conversion factors unspecified for '//Get_cqt_name(cqt_id))
         END SELECT
         
         ! Convert all variables of this type
-        DO cqvarInd=1,tile%conserved_quantities(cqtInd)%p%no_of_vars
+        DO i_cq_var=1,tile%conserved_quantities(i_cqt)%p%no_of_vars
 
           IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), '..... and var '// &
-            & TRIM(tile%conserved_quantities(cqtInd)%p%consQuanVars2D(cqvarInd)%p%name))
+            & TRIM(tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%name))
 
           !JN-TODO: make a function in new process module?
           ! only do the conversion where the conversion factor is not zero
           WHERE(conversion_factor(:) > 0.0)
-            tile%conserved_quantities(cqtInd)%p%consQuanVars2D(cqvarInd)%p%ptr2d(ics:ice,iblk) &
-              & = tile%conserved_quantities(cqtInd)%p%consQuanVars2D(cqvarInd)%p%ptr2d(ics:ice,iblk) &
+            tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
+              & = tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) &
               &   / conversion_factor(:)
           ELSEWHERE
-            tile%conserved_quantities(cqtInd)%p%consQuanVars2D(cqvarInd)%p%ptr2d(ics:ice,iblk) = 0.0
+            tile%conserved_quantities(i_cqt)%p%cq_vars_2D(i_cq_var)%p%ptr2d(ics:ice,iblk) = 0.0
           ENDWHERE
 
         ENDDO
