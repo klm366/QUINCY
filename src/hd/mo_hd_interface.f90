@@ -378,7 +378,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, lake_drain)       ! in
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_inflow)      ! in
     dsl4jsb_Get_var2D_onDomain(HD_, lake_storage)     ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_inflow)      ! IN
@@ -470,26 +469,24 @@ CONTAINS
 
       WHERE (hd_mask(:,:) == 0._wp)
         ! ocean inflow cells [m3/s]
-        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
-        discharge_ocean(:,:) = discharge(:,:)
+        discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp)
         ! internal drainage cells [m3/s]
-        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
-        internal_drain(:,:) = discharge(:,:)
+        internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 3._wp)
         ! lake water drained into internal lake [m3/s]
-        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) +discharge(:,:)
-        lake_drain(:,:) = discharge(:,:)
+        lake_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
       END WHERE
+      ! drainage at lake sink points and runoff above lake
       lake_drain(:,:) = lake_drain(:,:) + lake_inflow(:,:) 
       ! lake water storage [m3]
       lake_storage(:,:) = lake_storage(:,:) + lake_drain(:,:) * steplen
@@ -655,6 +652,7 @@ CONTAINS
       !& outflow_resid   , &
       & discharge       , &
       & discharge_ocean , &
+      & lake_drain      , &
       & water_budget    , &
       & water_budget_old, &
       & water_error     , &
@@ -729,6 +727,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, water_budget_old)   ! out
     dsl4jsb_Get_var2D_onDomain(HD_, water_flux)         ! out
     dsl4jsb_Get_var2D_onDomain(HD_, water_error)        ! out
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_drain)         ! in
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma, nblks))
@@ -755,7 +754,7 @@ CONTAINS
       &   SUM(overlflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in overland flow reservoirs
       & + SUM(baseflow_res (:,:,:), DIM=2) * in_domain(:,:) & !< water in baseflow reservoir
       & + SUM(riverflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in riverflow reservoirs
-      & + discharge(:,:) * in_domain(:,:) * steplen                              !< river discharge [m3/s -> m3]
+      & + discharge(:,:) * in_domain(:,:) * steplen           !< river discharge [m3/s -> m3]
     global_water_budget = global_sum_array(water_budget(:,:))
 
     IF (debug_hd) THEN
@@ -781,7 +780,8 @@ CONTAINS
     water_flux(:,:) = &
       &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
       & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
-      & - discharge_ocean(:,:) * in_domain(:,:)                                     !< discharge to the ocean
+      & - discharge_ocean(:,:) * in_domain(:,:)                                   & !< discharge to the ocean
+      & - lake_drain     (:,:) * in_domain(:,:)                                     !< discharge to the lakes
     global_water_flux = global_sum_array(water_flux(:,:))
 
     IF (debug_hd) THEN
