@@ -78,15 +78,15 @@ CONTAINS
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_C13)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_C14)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  net_assimilation)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  net_assimilation_boc)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  maint_respiration_leaf)
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  gross_assimilation_cl)
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  net_assimilation_cl)
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  maint_respiration_leaf_cl)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation)              ! out 
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_C13)          ! out 
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_C14)          ! out 
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  net_assimilation)                ! out 
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  net_assimilation_boc)            ! out 
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  maint_respiration_leaf)          ! out 
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  gross_assimilation_cl)           ! out 
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  net_assimilation_cl)             ! out 
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  maint_respiration_leaf_cl)       ! out 
 
 
 
@@ -187,34 +187,34 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
-    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                   ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)        ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)        ! in
     ! ASSIMI_
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, daytime_counter)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime_dacc)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc)
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc)
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                      ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                  ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)                  ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)                      ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, soa_tsoa_mavg)                 ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa_tphen_mavg)           ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg)       ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tfrac_mavg)       ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tfrac_mavg)       ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_tcnl_mavg)        ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)        ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)           ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)            ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, daytime_counter)               ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime)              ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime)          ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime)          ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime_dacc)         ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime_dacc)     ! out
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime_dacc)     ! out
     ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                 ! in
 
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)

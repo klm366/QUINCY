@@ -68,8 +68,8 @@ CONTAINS
     INTEGER                               :: no_omp_thread                    !< number of open mp thread (for task options)
     LOGICAL,  DIMENSION(options%nc)       :: l_day                            !< day/night (calc as in RAD_)
     REAL(wp)                              :: lctlib_g1                        !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
-    REAL(wp), DIMENSION(options%nc)       :: hlp1, hlp2, hlp3, &          !< dummy variables
-                                             tmp_steplen_times_wind           !< dummy variables
+    REAL(wp), DIMENSION(options%nc)       :: hlp1, hlp2, hlp3                 !< dummy variables
+    REAL(wp), DIMENSION(options%nc)       :: tmp_steplen_times_wind           !< dummy variable
     INTEGER                               :: iblk, ics, ice, nc               !< dimensions
     REAL(wp)                              :: steplen                          !< step length
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
@@ -170,7 +170,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_C14)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)                 ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                             ! out
+    dsl4jsb_Get_var2D_onChunk(A2L_, ga)                             ! out    ! not aggregated at the moment
     ! ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation_C13)      ! out
@@ -283,17 +283,17 @@ CONTAINS
         & fn_et_cl(:,icanopy)                                     , &
         & fn_rub_cl(:,icanopy)                                    , &
         & fn_pepc_cl(:,icanopy)                                   , &
-        & lai_cl(:,icanopy)                                       , & ! used for: IF statement whether this routine may run or not
-        & leaf_nitrogen_cl(:,icanopy)                             , &
+        & lai_cl(:,icanopy)                                       , & ! in - used for: IF statement whether this routine may run or not
+        & leaf_nitrogen_cl(:,icanopy)                             , & ! in
         & t_jmax_opt_mavg(:)                                      , & ! in
         & gross_assimilation_cl(:,icanopy)                        , & ! out
-        & net_assimilation_cl(:,icanopy)                          , &
-        & maint_respiration_leaf_cl(:,icanopy)                    , &
-        & canopy_cond_cl(:,icanopy)                               , &
-        & co2_conc_leaf_cl(:,icanopy)                             , &
-        & hlp1(:)                                                 , & 
-        & hlp2(:)                                                 , & 
-        & hlp3(:)                                                   ) ! out
+        & net_assimilation_cl(:,icanopy)                          , & ! out
+        & maint_respiration_leaf_cl(:,icanopy)                    , & ! out
+        & canopy_cond_cl(:,icanopy)                               , & ! out
+        & co2_conc_leaf_cl(:,icanopy)                             , & ! out
+        & hlp1(:)                                                 , & ! out  (output not needed here)
+        & hlp2(:)                                                 , & ! out  (output not needed here)
+        & hlp3(:)                                                 )   ! out  (output not needed here)
 
       ! gross_assimilation incl. C13 & C14
       gross_assimilation(:) = gross_assimilation(:) + gross_assimilation_cl(:,icanopy) * lai_cl(:,icanopy)
@@ -345,6 +345,7 @@ CONTAINS
     ENDDO ! DO icanopy = 1,ncanopy
 
     !>3.0 update mean canopy CO2 concentration in the leaf
+    !>  was accumulated from the CO2 concentration per canopy layer above ('co2_conc_leaf_cl(:,icanopy) * lai_cl(:,icanopy)')
     !>
     WHERE(lai(:) > eps8) 
       co2_conc_leaf(:) = co2_conc_leaf(:) / lai(:)
@@ -366,14 +367,14 @@ CONTAINS
   !>
   !>  according to Friend & Kiang 2005, J Climate
   !>  accounts for temperature acclimation of JMAX according to Friend, 2010 J Exp Bot
-  ELEMENTAL SUBROUTINE calc_photosynthesis( gmin                , &   ! lctlib
+  ELEMENTAL SUBROUTINE calc_photosynthesis( gmin                , &
                                             g0                  , &
                                             g1                  , &
                                             t_jmax_omega        , &
                                             ps_pathway          , &
-                                            canopy_cond_scheme  , &   ! ASSIMI_ config
-                                            l_day               , &   ! in
-                                            temp                , &   ! in
+                                            canopy_cond_scheme  , &
+                                            l_day               , &
+                                            temp                , &
                                             press_srf           , &
                                             co2_mixing_ratio    , &
                                             ga                  , &
@@ -393,7 +394,7 @@ CONTAINS
                                             lai_cl              , &   ! used for: IF statement whether this routine may run or not
                                             leaf_nitrogen_cl    , &
                                             t_jmax_opt          , &
-                                            ag_cl               , &   ! out
+                                            ag_cl               , &
                                             an_cl               , &
                                             maint_resp_cl       , &
                                             gs_cl               , &
