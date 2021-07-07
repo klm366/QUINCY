@@ -768,7 +768,7 @@ CONTAINS
       DO i=1,no_children
         SELECT TYPE (current)
         CLASS IS (t_jsb_tile_abstract)
-          CALL current%Get_fraction(ics, ice, iblk, fract=this%fractions(ics:ice,iblk,i))
+          CALL current%Get_fraction_1d(ics, ice, iblk, fract=this%fractions(ics:ice,iblk,i))
         END SELECT
         current => current%next_sibling
       END DO
@@ -812,12 +812,12 @@ CONTAINS
       DO i=1,no_children
         SELECT TYPE (current)
         CLASS IS (t_jsb_tile_abstract)
-          CALL current%Get_fraction(fract=this%fractions(:,:,i))
+          CALL current%Get_fraction_2d(fract=this%fractions(:,:,i))
         END SELECT
         current => current%next_sibling
       END DO
 
-      !$acc update device( this%fractions(ics:ice,iblk,:) )
+      !$acc update device( this%fractions(:,:,:) )
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
@@ -879,7 +879,7 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
-    !$acc parallel default(none) present(this, tile_ptrs2d_cache, var)
+    !$acc parallel default(none) present(this, tile_ptrs2d_cache, var) private(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       !$acc loop gang vector
@@ -894,6 +894,7 @@ CONTAINS
       END DO
 
       icount = 0
+      ichild = 0
       !$acc loop seq
       DO i=1,no_children
         IF ( var%child_idx(i) > 0 ) THEN
@@ -943,7 +944,7 @@ CONTAINS
           END IF
         END DO
       ELSE
-        CALL finish(routine, 'This should not happen (icount=0)!')
+        CALL STOP routine//': This should not happen (icount=0)!'
       END IF
 
     END IF
@@ -1001,7 +1002,7 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
-    !$acc parallel default(none) present(this, tile_ptrs3d_cache, var)
+    !$acc parallel default(none) present(this, tile_ptrs3d_cache, var) private(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
 
@@ -1020,6 +1021,7 @@ CONTAINS
         this%fract_sum(j,iblk) = 0._wp
       END DO
       icount = 0
+      ichild = 0
       !$acc loop seq
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
@@ -1072,7 +1074,7 @@ CONTAINS
             END IF
           END DO
         ELSE
-          CALL finish(routine, 'This should not happen (icount=0)!')
+          CALL STOP routine//': This should not happen (icount=0)!'
         END IF
       END DO
 

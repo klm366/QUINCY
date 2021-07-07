@@ -191,6 +191,8 @@ CONTAINS
     dsl4jsb_Get_config(TURB_)
     dsl4jsb_Get_config(SEB_)
 
+    !$claw acc data create(rough_veg_star, rough_bare_star, rough_snow_star)
+
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -215,6 +217,7 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_0 tile_name=tile%name
       rough_bare_star(:) = 1._wp  / LOG(config_blending_height / config_rough_bare)**2
       rough_snow_star(:) = 1._wp  / LOG(config_blending_height / config_rough_snow)**2
+      !$claw end expand
 
       IF (tile%contains_vegetation .AND. tile%lcts(1)%lib_id /= 0) THEN  ! vegetated PFT tile
 
@@ -261,24 +264,25 @@ CONTAINS
       ELSE IF (tile%contains_vegetation) THEN ! vegetated tile in a run without PFTs, e.g. jsbach_lite
 
         ! We don't have PFTs so use rough_m from ini file
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_11 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_7 tile_name=tile%name
         rough_h_star(:) = (1._wp - fract_snow_soil(:)) * 1._wp / LOG(config_blending_height / MIN(1._wp, rough_m(:)))**2 &
           &               +        fract_snow_soil(:)  * rough_snow_star(:)
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_8 tile_name=tile%name
         rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
-        !$claw end expand
   
       ELSE  ! bare tile
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_7 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_9 tile_name=tile%name
         rough_m_star(:) = rough_bare_star(:)
         ! Modify roughness length heat for non-vegetated part by snow cover
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_8 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_10 tile_name=tile%name
         rough_h_star(:) = (1._wp - fract_snow_soil(:)) * rough_bare_star(:) + fract_snow_soil(:) * rough_snow_star(:)
       END IF  ! vegetated or bare tile
 
       IF (tile%lcts(1)%lib_id /= 1 .OR. .NOT. tile%contains_vegetation) THEN
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_10 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_11 tile_name=tile%name
         rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
       END IF
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_12 tile_name=tile%name
       rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
 
     ELSE IF (tile%contains_lake) THEN
@@ -286,17 +290,19 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_memory(SEB_)
         dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! IN
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_12 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_13 tile_name=tile%name
         rough_m_star(:) =            fract_lice(:)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
           &               + (1._wp - fract_lice(:)) / (LOG(config_blending_height / config_rough_water) ** 2)
       ELSE
-        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_13 tile_name=tile%name
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_14 tile_name=tile%name
         rough_m_star(:) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
       END IF
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_15 tile_name=tile%name
       rough_h_star(:) = rough_m_star(:)
 
-      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_14 tile_name=tile%name
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_16 tile_name=tile%name
       rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_17 tile_name=tile%name
       rough_h(:) = rough_m(:)
 
     ELSE
@@ -304,8 +310,10 @@ CONTAINS
     END IF
 
     ! Limit roughness length for heat by 1 m (see below Eq.5.6 in ECHAM5 manual)
-    ! !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_15 tile_name=tile%name
+    ! !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_18 tile_name=tile%name
     ! rough_h(:) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(:))))
+
+    !$claw acc end data
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -370,6 +378,7 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_turb_aggregate_roughness_expand_1 tile_name=tile%name
     rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
     rough_h(:) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(:))) / config_roughness_momentum_to_heat
+    !$claw end expand
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
