@@ -944,7 +944,7 @@ CONTAINS
           END IF
         END DO
       ELSE
-        CALL STOP routine//': This should not happen (icount=0)!'
+        STOP 'Aggregate_weighted_by_fract_2d: This should not happen (icount=0)!'
       END IF
 
     END IF
@@ -1074,7 +1074,7 @@ CONTAINS
             END IF
           END DO
         ELSE
-          CALL STOP routine//': This should not happen (icount=0)!'
+          STOP 'Aggregate_weighted_by_fract_3d: This should not happen (icount=0)!'
         END IF
       END DO
 
