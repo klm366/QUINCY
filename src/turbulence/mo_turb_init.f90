@@ -156,20 +156,22 @@ CONTAINS
 
     ! Initialize parameters
     !
-    ! rough_m from ini file is not used in update_roughness, it's computed there. However, the atmosphere
-    ! also reads this variable from this file and uses it to compute the turbulent exchange parameters for
+    ! rough_m from ini file is not used in update_roughness, it's computed there (except for jsbach_lite). However,
+    ! the atmosphere also reads this variable from this file and uses it to compute the turbulent exchange parameters for
     ! the first time step which are then passed to JSBACH.
     ! In the standalone model, these exchange parameters are computed in mo_forcing using rough_m and then
     ! passed to the first call of JSBACH. Therefore, we need rough_m from the ini file for the standalone model.
-    IF (jsbach_runs_standalone()) THEN
+    ! We also need rough_m for runs without PFTs, e.g. jsbach_lite.
+    IF (jsbach_runs_standalone() .OR. tile%lcts(1)%lib_id == 0) THEN
 
       IF (debug_on()) CALL message(TRIM(routine), &
           'Initializing turb memory for tile '//TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
       ! Surface roughness length
       dsl4jsb_var2D_onDomain(TURB_,rough_m) = turb_init_vars%rough_m
+      dsl4jsb_var2D_onDomain(TURB_,rough_m_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / turb_init_vars%rough_m)**2
 
-      !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m))
+      !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star))
 
     END IF
 
