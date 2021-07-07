@@ -574,6 +574,8 @@ CONTAINS
 
     !$ACC END DATA
 
+    !$claw acc end data
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_roughness
