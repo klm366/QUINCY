@@ -1753,7 +1753,10 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
 #ifdef __QUINCY_NO_JSB__
 #else
+    ! Get pools
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,            veg_pool)
+    ! associate element-variables with chunk
+    CALL veg_pool%Associate_chunk_var_ptr(ics, ice, iblk)
 #endif
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
     ! ----------------------------------------------------------------------------------------------------- !

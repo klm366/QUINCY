@@ -265,6 +265,16 @@ CONTAINS
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_total_biomass,   veg_total_biomass)
     dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_pool,              sb_pool)
     dsl4jsb_Get_pool(SB_,  sb_main_pool%sb_mycorrhiza_export, sb_mycorrhiza_export)
+    ! associate element-variables with chunk
+    CALL veg_pool%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_growth%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_litterfall%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_exudation%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_establishment%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_reserve_use%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_total_biomass%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_pool%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_mycorrhiza_export%Associate_chunk_var_ptr(ics, ice, iblk)
 #endif
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! in

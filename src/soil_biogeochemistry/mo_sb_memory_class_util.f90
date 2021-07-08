@@ -1652,6 +1652,7 @@ CONTAINS
 !! #################################################################################################################################
 
   USE mo_kind,                   ONLY: wp
+  USE mo_jsb_control,            ONLY: debug_on
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
@@ -1693,6 +1694,7 @@ CONTAINS
     PROCEDURE :: Get_element_name_by_id     => t_sb_elements_pool_get_element_name_by_id
     PROCEDURE :: Init                       => t_sb_elements_pool_init
     PROCEDURE :: Init_op_ov_hlp             => t_sb_elements_pool_op_ov_hlp_init             ! init hlp object for operator overload
+    PROCEDURE :: Associate_chunk_var_ptr    => t_sb_elements_pool_associate_chunk_variable_pointers
     PROCEDURE :: Associate_domain_var_ptr   => t_sb_elements_pool_associate_domain_variable_pointers
     PROCEDURE :: Set_to_scalar_on_chunk     => t_sb_elements_pool_set_all_elements_to_scalar_value_on_chunk  ! e.g., set all to zero
     !! operator overload
@@ -1792,6 +1794,7 @@ CONTAINS
     PROCEDURE :: Get_element_name_by_id     => t_sb_components_pool_get_element_name_by_id
     PROCEDURE :: Init                       => t_sb_components_pool_init
     PROCEDURE :: Init_op_ov_hlp             => t_sb_components_pool_op_ov_hlp_create_init     ! create and init hlp object for operator overload
+    PROCEDURE :: Associate_chunk_var_ptr    => t_sb_components_pool_associate_chunk_variable_pointers
     PROCEDURE :: Associate_domain_var_ptr   => t_sb_components_pool_associate_domain_variable_pointers
     PROCEDURE :: Set_to_scalar_on_chunk     => t_sb_components_pool_set_all_elements_to_scalar_value_on_chunk  ! e.g., set all to zero
     !! operator overload
@@ -2095,6 +2098,63 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE t_sb_elements_pool_op_ov_hlp_init
+
+  !-----------------------------------------------------------------------------------------------------
+  !> set element-variables pointers to the chunk pointer ptr3d(ics:ice,:,iblk) in the element list this%element_list(i)%p
+  !> t_sb_elements_pool
+  !> this needs to be called for the SB_ pools used in the task routines (when working ON_CHUNK)
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE t_sb_elements_pool_associate_chunk_variable_pointers(this, ics, ice, iblk)
+
+    CLASS(t_sb_elements_pool),  INTENT(inout)   :: this
+    INTEGER,                    INTENT(in)      :: ics          !< chunk start
+    INTEGER,                    INTENT(in)      :: ice          !< chunk end
+    INTEGER,                    INTENT(in)      :: iblk         !< block number
+
+    TYPE(t_subset)              :: sub    ! ON_CHUNK / ON_DOMAIN information
+    INTEGER                     :: i      ! looping
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_sb_elements_pool_associate_chunk_variable_pointers'
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Set element-variables pointers to the chunk.')
+
+    sub = this%Get_subset()
+
+    ! test working ON_CHUNK
+    IF (sub%type == ON_DOMAIN) THEN
+      CALL finish(routine, ' May be called only in task rouines, i.e., when working ON_CHUNK.')
+    END IF
+
+    ! loop over elements in element_list(:) of this element pool
+    ! associate REAL element vectors with %ptr2d(ics:ice,:,iblk)
+    IF (ALLOCATED(this%element_list)) THEN
+      DO i = 1,SIZE(this%element_list)
+        SELECT TYPE (element => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real3d)
+          SELECT CASE(element%element_id)
+          CASE (ELEM_C)
+            IF (ASSOCIATED(this%carbon)) NULLIFY(this%carbon)
+            this%carbon     => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_N)
+            IF (ASSOCIATED(this%nitrogen)) NULLIFY(this%nitrogen)
+            this%nitrogen   => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_P)
+            IF (ASSOCIATED(this%phosphorus)) NULLIFY(this%phosphorus)
+            this%phosphorus => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_C13)
+            IF (ASSOCIATED(this%carbon13)) NULLIFY(this%carbon13)
+            this%carbon13   => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_C14)
+            IF (ASSOCIATED(this%carbon14)) NULLIFY(this%carbon14)
+            this%carbon14   => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_N15)
+            IF (ASSOCIATED(this%nitrogen15)) NULLIFY(this%nitrogen15)
+            this%nitrogen15 => element%ptr3d(ics:ice, :, iblk)
+          END SELECT
+        END SELECT
+      END DO
+    END IF
+
+  END SUBROUTINE t_sb_elements_pool_associate_chunk_variable_pointers
 
   !-----------------------------------------------------------------------------------------------------
   !> set element-variables pointers to the domain pointer ptr3d(:,:,:) in the element list this%element_list(i)%p
@@ -2446,6 +2506,75 @@ CONTAINS
     NULLIFY(sb_elements_pool)
 
   END FUNCTION Create_sb_components_pool
+
+  !-----------------------------------------------------------------------------------------------------
+  !> set element-variables pointers to the chunk pointer ptr3d(ics:ice,:,iblk) in the element list this%element_list(i)%p
+  !> t_sb_components_pool
+  !> this needs to be called for the SB_ pools used in the task routines (when working ON_CHUNK)
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE t_sb_components_pool_associate_chunk_variable_pointers(this, ics, ice, iblk)
+
+    CLASS(t_sb_components_pool),  INTENT(inout)   :: this
+    INTEGER,                      INTENT(in)      :: ics          !< chunk start
+    INTEGER,                      INTENT(in)      :: ice          !< chunk end
+    INTEGER,                      INTENT(in)      :: iblk         !< block number
+
+    TYPE(t_subset)              :: sub    ! ON_CHUNK / ON_DOMAIN information
+    INTEGER                     :: i      ! looping
+    CHARACTER(len=*), PARAMETER :: routine = modname//':t_sb_components_pool_associate_chunk_variable_pointers'
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Set element-variables pointers to the chunk.')
+
+    sub = this%Get_subset()
+
+    ! test working ON_CHUNK
+    IF (sub%type == ON_DOMAIN) THEN
+      CALL finish(routine, ' May be called only in task rouines, i.e., when working ON_CHUNK.')
+    END IF
+
+    ! loop over elements in element_list(:) of this element pool
+    ! associate REAL element vectors with %ptr3d(ics:ice,:,iblk)
+    IF (ALLOCATED(this%element_list)) THEN
+      DO i = 1,SIZE(this%element_list)
+        SELECT TYPE (element => this%element_list(i)%p)
+        CLASS IS (t_jsb_var_real3d)
+          SELECT CASE(element%element_id)
+          CASE (ELEM_C)
+            IF (ASSOCIATED(this%carbon)) NULLIFY(this%carbon)
+            this%carbon     => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_N)
+            IF (ASSOCIATED(this%nitrogen)) NULLIFY(this%nitrogen)
+            this%nitrogen   => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_P)
+            IF (ASSOCIATED(this%phosphorus)) NULLIFY(this%phosphorus)
+            this%phosphorus => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_C13)
+            IF (ASSOCIATED(this%carbon13)) NULLIFY(this%carbon13)
+            this%carbon13   => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_C14)
+            IF (ASSOCIATED(this%carbon14)) NULLIFY(this%carbon14)
+            this%carbon14   => element%ptr3d(ics:ice, :, iblk)
+          CASE (ELEM_N15)
+            IF (ASSOCIATED(this%nitrogen15)) NULLIFY(this%nitrogen15)
+            this%nitrogen15 => element%ptr3d(ics:ice, :, iblk)
+          END SELECT
+        END SELECT
+      END DO
+    END IF
+
+    ! associate pointers for all element pools of this components pool
+    CALL this%dom%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%dom_assoc%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%soluable_litter%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%polymeric_litter%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%woody_litter%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%fungi%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%mycorrhiza%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%microbial%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%residue%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL this%residue_assoc%Associate_chunk_var_ptr(ics, ice, iblk)    
+
+  END SUBROUTINE t_sb_components_pool_associate_chunk_variable_pointers
 
   !-----------------------------------------------------------------------------------------------------
   !> set element-variables pointers to the domain pointer ptr3d(:,:) in the element list this%element_list(i)%p

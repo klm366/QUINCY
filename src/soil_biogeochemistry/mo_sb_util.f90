@@ -192,6 +192,11 @@ CONTAINS
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_formation,         sb_formation)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_transport,         sb_transport)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_mycorrhiza_export, sb_mycorrhiza_export)
+    ! associate element-variables with chunk
+    CALL sb_loss%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_formation%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_transport%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_mycorrhiza_export%Associate_chunk_var_ptr(ics, ice, iblk)
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! SB_ 2D

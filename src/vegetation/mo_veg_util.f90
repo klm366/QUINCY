@@ -151,6 +151,12 @@ CONTAINS
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,     veg_exudation)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment, veg_establishment)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_reserve_use,   veg_reserve_use)
+    ! associate element-variables with chunk
+    CALL veg_growth%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_litterfall%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_exudation%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_establishment%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_reserve_use%Associate_chunk_var_ptr(ics, ice, iblk)
 #endif
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
@@ -470,8 +476,12 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
 #ifdef __QUINCY_NO_JSB__
 #else
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,       veg_exudation)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,            veg_pool)
+    ! Get pools
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,          veg_pool)
+    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,     veg_exudation)
+    ! associate element-variables with chunk
+    CALL veg_pool%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_exudation%Associate_chunk_var_ptr(ics, ice, iblk)
 #endif
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
     ! ----------------------------------------------------------------------------------------------------- !

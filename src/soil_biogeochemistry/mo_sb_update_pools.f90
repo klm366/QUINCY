@@ -118,12 +118,20 @@ CONTAINS
 
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
+    ! Get pools
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_pool,               sb_pool)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_formation,          sb_formation)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_loss,               sb_loss)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_transport,          sb_transport)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_delta_pools,        sb_delta_pools)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_mycorrhiza_export,  sb_mycorrhiza_export)
+    ! associate element-variables with chunk
+    CALL sb_pool%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_formation%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_loss%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_transport%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_delta_pools%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_mycorrhiza_export%Associate_chunk_var_ptr(ics, ice, iblk)
 
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out

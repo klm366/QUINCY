@@ -138,6 +138,10 @@ CONTAINS
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,          veg_pool)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,        veg_growth)
     dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
+    ! associate element-variables with chunk
+    CALL veg_pool%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_growth%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL veg_litterfall%Associate_chunk_var_ptr(ics, ice, iblk)
 #endif
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)             ! in
