@@ -1998,74 +1998,26 @@ CONTAINS
     !> carbon
     IF (One_of(ELEM_C, element_list_loc) > 0) THEN
       CALL this%Add_element('carbon', 'C', ELEM_C, dim=3)
-      i = this%Find_element_position(ELEM_C)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%carbon     => selector%ptrm1
-          this%domain_c   => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> nitrogen
     IF (One_of(ELEM_N, element_list_loc) > 0) THEN
       CALL this%Add_element('nitrogen', 'N', ELEM_N, dim=3)
-      i = this%Find_element_position(ELEM_N)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%nitrogen   => selector%ptrm1
-          this%domain_n   => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> phosphorus
     IF (One_of(ELEM_P, element_list_loc) > 0) THEN
       CALL this%Add_element('phosphorus', 'P', ELEM_P, dim=3)
-      i = this%Find_element_position(ELEM_P)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%phosphorus => selector%ptrm1
-          this%domain_p   => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> carbon13
     IF (One_of(ELEM_C13, element_list_loc) > 0) THEN
       CALL this%Add_element('carbon13', 'C13', ELEM_C13, dim=3)
-      i = this%Find_element_position(ELEM_C13)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%carbon13   => selector%ptrm1
-          this%domain_c13 => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> carbon14
     IF (One_of(ELEM_C14, element_list_loc) > 0) THEN
       CALL this%Add_element('carbon14', 'C14', ELEM_C14, dim=3)
-      i = this%Find_element_position(ELEM_C14)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%carbon14   => selector%ptrm1
-          this%domain_c14 => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> nitrogen15
     IF (One_of(ELEM_N15, element_list_loc) > 0) THEN
       CALL this%Add_element('nitrogen15', 'N15', ELEM_N15, dim=3)
-      i = this%Find_element_position(ELEM_N15)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%nitrogen15 => selector%ptrm1
-          this%domain_n15 => selector%ptr3d
-        END SELECT
-      END IF
     END IF
 
   END SUBROUTINE t_sb_elements_pool_init
@@ -2104,29 +2056,41 @@ CONTAINS
       ! NOT checking elements; simply assuming all 'all_elements(:)' are used 
       ! [simply to improve runtime by avoiding: 'IF (One_of(ELEM_C, all_elements(:)) > 0) THEN']
       ALLOCATE(this%op_ov_hlp_2d_c(nc,nvgrid))
+      IF (ASSOCIATED(this%carbon))     NULLIFY(this%carbon)
       this%carbon     => this%op_ov_hlp_2d_c
       ALLOCATE(this%op_ov_hlp_2d_n(nc,nvgrid))
+      IF (ASSOCIATED(this%nitrogen))   NULLIFY(this%nitrogen)
       this%nitrogen   => this%op_ov_hlp_2d_n
       ALLOCATE(this%op_ov_hlp_2d_p(nc,nvgrid))
+      IF (ASSOCIATED(this%phosphorus)) NULLIFY(this%phosphorus)
       this%phosphorus => this%op_ov_hlp_2d_p
       ALLOCATE(this%op_ov_hlp_2d_c13(nc,nvgrid))
+      IF (ASSOCIATED(this%carbon13))   NULLIFY(this%carbon13)
       this%carbon13   => this%op_ov_hlp_2d_c13
       ALLOCATE(this%op_ov_hlp_2d_c14(nc,nvgrid))
+      IF (ASSOCIATED(this%carbon14))   NULLIFY(this%carbon14)
       this%carbon14   => this%op_ov_hlp_2d_c14
       ALLOCATE(this%op_ov_hlp_2d_n15(nc,nvgrid))
+      IF (ASSOCIATED(this%nitrogen15)) NULLIFY(this%nitrogen15)
       this%nitrogen15 => this%op_ov_hlp_2d_n15
     ELSE
       ALLOCATE(this%op_ov_hlp_3d_c(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_c))   NULLIFY(this%domain_c)
       this%domain_c   => this%op_ov_hlp_3d_c
       ALLOCATE(this%op_ov_hlp_3d_n(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_n))   NULLIFY(this%domain_n)
       this%domain_n   => this%op_ov_hlp_3d_n
       ALLOCATE(this%op_ov_hlp_3d_p(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_p))   NULLIFY(this%domain_p)
       this%domain_p   => this%op_ov_hlp_3d_p
       ALLOCATE(this%op_ov_hlp_3d_c13(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_c13)) NULLIFY(this%domain_c13)
       this%domain_c13 => this%op_ov_hlp_3d_c13
       ALLOCATE(this%op_ov_hlp_3d_c14(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_c14)) NULLIFY(this%domain_c14)
       this%domain_c14 => this%op_ov_hlp_3d_c14
       ALLOCATE(this%op_ov_hlp_3d_n15(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_n15)) NULLIFY(this%domain_n15)
       this%domain_n15 => this%op_ov_hlp_3d_n15
     ENDIF
 
@@ -2250,74 +2214,26 @@ CONTAINS
     !> carbon
     IF (One_of(ELEM_C, element_list_loc) > 0) THEN
       CALL this%Add_element('carbon', 'C', ELEM_C, dim=3)
-      i = this%Find_element_position(ELEM_C)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%carbon     => selector%ptrm1
-          this%domain_c   => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> nitrogen
     IF (One_of(ELEM_N, element_list_loc) > 0) THEN
       CALL this%Add_element('nitrogen', 'N', ELEM_N, dim=3)
-      i = this%Find_element_position(ELEM_N)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%nitrogen   => selector%ptrm1
-          this%domain_n   => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> phosphorus
     IF (One_of(ELEM_P, element_list_loc) > 0) THEN
       CALL this%Add_element('phosphorus', 'P', ELEM_P, dim=3)
-      i = this%Find_element_position(ELEM_P)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%phosphorus => selector%ptrm1
-          this%domain_p   => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> carbon13
     IF (One_of(ELEM_C13, element_list_loc) > 0) THEN
       CALL this%Add_element('carbon13', 'C13', ELEM_C13, dim=3)
-      i = this%Find_element_position(ELEM_C13)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%carbon13   => selector%ptrm1
-          this%domain_c13 => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> carbon14
     IF (One_of(ELEM_C14, element_list_loc) > 0) THEN
       CALL this%Add_element('carbon14', 'C14', ELEM_C14, dim=3)
-      i = this%Find_element_position(ELEM_C14)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%carbon14   => selector%ptrm1
-          this%domain_c14 => selector%ptr3d
-        END SELECT
-      END IF
     END IF
     !> nitrogen15
     IF (One_of(ELEM_N15, element_list_loc) > 0) THEN
       CALL this%Add_element('nitrogen15', 'N15', ELEM_N15, dim=3)
-      i = this%Find_element_position(ELEM_N15)
-      IF (i > 0) THEN
-        SELECT TYPE (selector => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real3d)
-          this%nitrogen15 => selector%ptrm1
-          this%domain_n15 => selector%ptr3d
-        END SELECT
-      END IF
     END IF
 
   END SUBROUTINE t_sb_components_pool_init
@@ -2359,29 +2275,41 @@ CONTAINS
       ! NOT checking elements; simply assuming all 'all_elements(:)' are used 
       ! [simply to improve runtime by avoiding: 'IF (One_of(ELEM_C, all_elements(:)) > 0) THEN']
       ALLOCATE(this%op_ov_hlp_2d_c(nc,nvgrid))
+      IF (ASSOCIATED(this%carbon))     NULLIFY(this%carbon)
       this%carbon     => this%op_ov_hlp_2d_c
       ALLOCATE(this%op_ov_hlp_2d_n(nc,nvgrid))
+      IF (ASSOCIATED(this%nitrogen))   NULLIFY(this%nitrogen)
       this%nitrogen   => this%op_ov_hlp_2d_n
       ALLOCATE(this%op_ov_hlp_2d_p(nc,nvgrid))
+      IF (ASSOCIATED(this%phosphorus)) NULLIFY(this%phosphorus)
       this%phosphorus => this%op_ov_hlp_2d_p
       ALLOCATE(this%op_ov_hlp_2d_c13(nc,nvgrid))
+      IF (ASSOCIATED(this%carbon13))   NULLIFY(this%carbon13)
       this%carbon13   => this%op_ov_hlp_2d_c13
       ALLOCATE(this%op_ov_hlp_2d_c14(nc,nvgrid))
+      IF (ASSOCIATED(this%carbon14))   NULLIFY(this%carbon14)
       this%carbon14   => this%op_ov_hlp_2d_c14
       ALLOCATE(this%op_ov_hlp_2d_n15(nc,nvgrid))
+      IF (ASSOCIATED(this%nitrogen15)) NULLIFY(this%nitrogen15)
       this%nitrogen15 => this%op_ov_hlp_2d_n15
     ELSE
       ALLOCATE(this%op_ov_hlp_3d_c(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_c))   NULLIFY(this%domain_c)
       this%domain_c   => this%op_ov_hlp_3d_c
       ALLOCATE(this%op_ov_hlp_3d_n(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_n))   NULLIFY(this%domain_n)
       this%domain_n   => this%op_ov_hlp_3d_n
       ALLOCATE(this%op_ov_hlp_3d_p(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_p))   NULLIFY(this%domain_p)
       this%domain_p   => this%op_ov_hlp_3d_p
       ALLOCATE(this%op_ov_hlp_3d_c13(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_c13)) NULLIFY(this%domain_c13)
       this%domain_c13 => this%op_ov_hlp_3d_c13
       ALLOCATE(this%op_ov_hlp_3d_c14(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_c14)) NULLIFY(this%domain_c14)
       this%domain_c14 => this%op_ov_hlp_3d_c14
       ALLOCATE(this%op_ov_hlp_3d_n15(nc,nvgrid,nb))
+      IF (ASSOCIATED(this%domain_n15)) NULLIFY(this%domain_n15)
       this%domain_n15 => this%op_ov_hlp_3d_n15
     ENDIF
 
