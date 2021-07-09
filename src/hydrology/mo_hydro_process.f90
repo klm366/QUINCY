@@ -402,6 +402,7 @@ CONTAINS
   ! @param [in]      l_ws_max_depend_on_org ws_max re-calculated depending on organic matter
   ! @param [in]      l_correct_ws_from_top  Start soil moisture correction from top level
   ! @param [in]      l_ice_impedance        Account for ice impedance
+  ! @param [in]      l_scool_impedance      Account for impedance by supercooled water
   ! @param [in]      l_diffuse_all_ws       Allow diffusion of supercooed water
   ! @param [in]      l_discount_scool       Supercooled water does not percolate and is not available to plants
   ! @param [in]      l_drain_lat            Allow lateral drainage, i.e. drainage from upper to soil layers
@@ -437,7 +438,7 @@ CONTAINS
     ! in
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
     & l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top,                         &
-    & l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                                          &
+    & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                       &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
     & pot_scool_l,                                                                                               &
@@ -462,7 +463,7 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top, &
-      & l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat
+      & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat
     REAL(wp), INTENT(in), DIMENSION(:,:) ::                         &
       & soil_depth_l, root_depth_l, fract_org_l,                    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l,  &
@@ -674,16 +675,16 @@ CONTAINS
     !    - first half of the water
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_0
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
-         ws_l, drainage, w_soil_overflow)
+      &     ws_l, drainage, w_soil_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
     CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog,                     &
-         l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat, &
-         ws_l, soil_depth_l,                                               &
-         wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l,    &
-         matrix_pot_l, pot_scool_l,                                        &
-         drainage, pore_size_index_l, p_wilt_l, dz,                        &
-         soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
+      &     l_ice_impedance, l_scool_impedance, l_diffuse_all_ws,          &
+      &     l_discount_scool, l_drain_lat, ws_l, soil_depth_l,             &
+      &     wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, &
+      &     matrix_pot_l, pot_scool_l,                                     &
+      &     drainage, pore_size_index_l, p_wilt_l, dz,                     &
+      &     soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
 
     ! update soil moisture according to infiltration
     !    - second half of the water
@@ -707,8 +708,8 @@ CONTAINS
 
   !------------------------------------------------------------------------------------------------
   SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog,                          &
-    & l_ice_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat,             &
-    & ws_l, dsoil,                                                                  &
+    & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_discount_scool,       &
+    & l_drain_lat, ws_l, dsoil,                                                     &
     & wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
     & pot_scool_l, drainage, pore_size_index_l, p_wilt_l, dz, soil_ice_l,           &
     & w_soil_overflow, ltpe_closed, ltpe_open)
@@ -728,6 +729,7 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: ilog                       !
     INTEGER,  INTENT(IN)            :: jllog                      !
     LOGICAL,  INTENT(IN)            :: l_ice_impedance            ! Account for ice impedance
+    LOGICAL,  INTENT(IN)            :: l_scool_impedance          ! Account for impedance by supercooled water
     LOGICAL,  INTENT(IN)            :: l_diffuse_all_ws           ! Calculate soil water diffusion of all
                                                                   !   soil water, including immobile
     LOGICAL,  INTENT(IN)            :: l_discount_scool           ! Supercooled water does not percolate
@@ -860,10 +862,16 @@ CONTAINS
               &                 * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
               &                 * delta_time     ! [m/s] -> [m]
 
-          ELSE
+          ELSE  ! l_ice_impedance
             ! Additionally, when ice is partly blocking the pore space Ksat should be reduced accordingly
-            !  (see e.g. CLM dosumentation)
-            ice_impede(j) = 10._wp**(-6._wp * soil_ice_l(j,i) / (field_cap_l(j,i) + soil_ice_l(j,i)))
+            !  (see e.g. CLM documentation)
+
+            ! pdv > should also supercooled water be considdered to block movement?
+            IF (l_scool_impedance) THEN
+              ice_impede(j) = 10._wp**(-6._wp * (soil_ice_l(j,i) + pot_scool_l(j,i) )/ (field_cap_l(j,i) + soil_ice_l(j,i)))
+            ELSE
+              ice_impede(j) = 10._wp**(-6._wp * soil_ice_l(j,i) / (field_cap_l(j,i) + soil_ice_l(j,i)))
+            END IF
             ws_rel(j,i) = MAX(ws_l(j,i) - ws_immo_l(j,i), 0._wp) / (field_cap_l(j,i) - ws_immo_l(j,i))
             ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
             percolation(j,i) = ice_impede(j) * hyd_cond_sat_l(j,i)*zkredu(i) * SQRT(ws_rel(j,i))           &
@@ -937,6 +945,21 @@ CONTAINS
         END IF
 
         IF (l_drain_lat) THEN
+          IF (l_ice_impedance)THEN
+            ! pdv > should also supercooled water be considerred to block movement?
+            IF (l_scool_impedance) THEN
+              ice_impede(j)= 10._wp**(-6._wp *                                             &
+                              ( (SUM(soil_ice_l(j,i:nsoil)) + SUM(pot_scool_l(j,i:nsoil))) &
+                               /(SUM(field_cap_l(j,i:nsoil)) + SUM(soil_ice_l(j,i:nsoil)))))
+            ELSE
+              ice_impede(j)= 10._wp**(-6._wp *                                             &
+                              (  SUM(soil_ice_l(j,i:nsoil))                                &
+                               /(SUM(field_cap_l(j,i:nsoil)) + SUM(soil_ice_l(j,i:nsoil)))))
+            END IF
+          ELSE
+            ice_impede(j)= 1.0_wp
+          END IF
+
           IF (dsoil(j,i) > 0._wp .AND. soil_below(j)) THEN
 
             ! Drainage is calculated with percolation removed from WS_L
@@ -961,7 +984,7 @@ CONTAINS
                 drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_tmp(j) - ws_crit(j))/delta_time)
               END IF
               ! drainage is limited by the soil moisture within the layer
-              drain_l(j) = MIN(drain_l(j) * delta_time, (ws_tmp(j) - ws_immo_l(j,i)))
+              drain_l(j) = ice_impede(j)*MIN(drain_l(j) * delta_time, (ws_tmp(j) - ws_immo_l(j,i)))
 
               IF (.NOT. ltpe_closed) THEN                ! Not closed terraplanet setup (-> no drainage)
                 ws_l(j,i) = ws_l(j,i) - drain_l(j)       ! remove drainage of the layer from soil moisture

@@ -48,6 +48,7 @@ MODULE mo_hydro_config_class
       & l_ws_max_depend_on_org, & !< ws_max re-calculation (in calc_soil_hydrology) depends on organic soil fraction
       & l_correct_ws_from_top,  & !< Start soil water correction from top layer (instead of equal reduction from all layers)
       & l_ice_impedance,        & !< Account for ice impedance
+      & l_scool_impedance,      & !< Additionally account for impedance by scooled water
       & l_diffuse_all_ws,       & !< Calculate soil water diffusion from all soil water, including immobile
       & l_infil_subzero,        & !< Allow infiltration at soil temperatures below 0°C
       & l_discount_scool,       & !< Supercooled water is neither available to plants nor percolates
@@ -83,8 +84,9 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
     LOGICAL     :: l_hyd_compat420
-    LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top, l_ice_impedance
-    LOGICAL     :: l_diffuse_all_ws, l_discount_scool, l_drain_lat, l_stress_from_all_ws, l_percolation_theory
+    LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top
+    LOGICAL     :: l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_discount_scool
+    LOGICAL     :: l_drain_lat, l_stress_from_all_ws, l_percolation_theory
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -105,6 +107,7 @@ CONTAINS
       & l_ws_max_depend_on_org,     &
       & l_correct_ws_from_top,      &
       & l_ice_impedance,            &
+      & l_scool_impedance,          &
       & l_diffuse_all_ws,           &
       & l_discount_scool,           &
       & l_drain_lat,                &
@@ -142,6 +145,7 @@ CONTAINS
     l_ws_max_depend_on_org = .TRUE.
     l_correct_ws_from_top  = .FALSE.
     l_ice_impedance        = .FALSE.
+    l_scool_impedance      = .FALSE.
     l_diffuse_all_ws       = .TRUE.
     l_discount_scool       = .FALSE.
     l_drain_lat            = .TRUE.
@@ -209,6 +213,11 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_ice_impedance=F. Namelist definition of l_ice_impedance ignored.')
         l_ice_impedance        = .FALSE.
       END IF
+      IF (l_scool_impedance) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_scool_impedance=F. Namelist definition of l_scool_impedance ignored.')
+        l_scool_impedance      = .FALSE.
+      END IF
       IF (.NOT. l_diffuse_all_ws) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_diffuse_all_ws=T. Namelist definition of l_diffuse_all_ws ignored.')
@@ -250,6 +259,14 @@ CONTAINS
     config%l_ice_impedance        = l_ice_impedance
     CALL message(TRIM(routine), &
      & 'Account for ice impedance: '//TRIM(logical2string(l_ice_impedance)))
+    config%l_scool_impedance      = l_scool_impedance
+    IF (l_scool_impedance .AND. .NOT. l_ice_impedance) THEN
+      CALL finish(TRIM(routine), &
+       & 'Impedance by supercooled water (l_scool_impedance) only possible with ice impedance (l_ice_impedance=T).')
+    ELSE
+      CALL message(TRIM(routine), &
+       & 'Account for impedance by supercooled water: '//TRIM(logical2string(l_scool_impedance)))
+    END IF
     config%l_diffuse_all_ws       = l_diffuse_all_ws
     CALL message(TRIM(routine), &
      & 'Calculate diffusion of all water, including supercooled water: '//TRIM(logical2string(l_diffuse_all_ws)))
