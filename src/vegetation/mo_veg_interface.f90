@@ -663,99 +663,16 @@ CONTAINS
   !>
   SUBROUTINE aggregate_time_average_vegetation(tile, options)
 
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-    USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-    dsl4jsb_Use_processes VEG_
-    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_time_average_vegetation'
+    TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! VEG 2D
-    dsl4jsb_Real2D_onChunk      :: daytime_counter
-    dsl4jsb_Real2D_onChunk      :: t_air_daytime_dacc
-    dsl4jsb_Real2D_onChunk      :: press_srf_daytime_dacc
-    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime_dacc
-    dsl4jsb_Real2D_onChunk      :: ga_daytime_dacc
-    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime_dacc
-    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime_dacc
-    dsl4jsb_Real2D_onChunk      :: t_air_daytime
-    dsl4jsb_Real2D_onChunk      :: press_srf_daytime
-    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_daytime
-    dsl4jsb_Real2D_onChunk      :: ga_daytime
-    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_daytime
-    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime
-    dsl4jsb_Real2D_onChunk      :: gpp_tlabile_mavg
-    dsl4jsb_Real2D_onChunk      :: maint_respiration_tlabile_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_req_n_tlabile_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_req_p_tlabile_mavg
-    dsl4jsb_Real2D_onChunk      :: t_air_tphen_mavg
-    dsl4jsb_Real2D_onChunk      :: npp_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
-    dsl4jsb_Real2D_onChunk      :: press_srf_tfrac_mavg
-    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tfrac_mavg
-    dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
-    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
-    dsl4jsb_Real2D_onChunk      :: t_air_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: press_srf_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: fmaint_rate_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_np_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: labile_phosphorus_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: npp_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: n_fixation_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_npp_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: transpiration_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_transpiration_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: dphi_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: labile_carbon_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: labile_nitrogen_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: labile_phosphorus_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: reserve_carbon_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: reserve_nitrogen_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: reserve_phosphorus_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: w_root_lim_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_cn_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_cp_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: growth_np_talloc_mavg
-    dsl4jsb_Real2D_onChunk      :: exudation_c_tmyc_mavg
-    dsl4jsb_Real2D_onChunk      :: leaf2root_troot_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_npp_troot_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_n_pot_troot_mavg
-    dsl4jsb_Real2D_onChunk      :: unit_uptake_p_pot_troot_mavg
-    dsl4jsb_Real2D_onChunk      :: fmaint_rate_troot_mavg
-    dsl4jsb_Real2D_onChunk      :: an_boc_tvegdyn_mavg
-    dsl4jsb_Real2D_onChunk      :: net_growth_tvegdyn_mavg
-    dsl4jsb_Real2D_onChunk      :: lai_tvegdyn_mavg
-    dsl4jsb_Real2D_onChunk      :: t_air_tacclim_mavg
-    dsl4jsb_Real2D_onChunk      :: t_soil_root_tacclim_mavg
-    dsl4jsb_Real2D_onChunk      :: t_air_week_mavg
-    dsl4jsb_Real2D_onChunk      :: t_air_month_mavg
-    dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
-    ! VEG 3D
-    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
-    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
-    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tcnl_mavg_cl
-    dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -763,170 +680,91 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(VEG_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! VEG 2D
-    dsl4jsb_Get_var2D_onChunk(VEG_, daytime_counter)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime_dacc)
-    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime_dacc)
-    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime_dacc)
-    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime_dacc)
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime_dacc)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime_dacc)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_daytime)
-    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime)
-    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_daytime)
-    dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime)
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_daytime)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime)
-    dsl4jsb_Get_var2D_onChunk(VEG_, gpp_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tlabile_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tphen_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_n_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, demand_uptake_p_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_n_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_req_p_tuptake_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, ga_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_n_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_tcnl_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, cost_n_fixation_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, transpiration_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, dphi_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_carbon_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_nitrogen_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, labile_phosphorus_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_carbon_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_nitrogen_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, reserve_phosphorus_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, w_root_lim_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cn_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_cp_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_np_talloc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, exudation_c_tmyc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, leaf2root_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_npp_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_n_pot_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_uptake_p_pot_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_troot_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, an_boc_tvegdyn_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth_tvegdyn_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, lai_tvegdyn_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_tacclim_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_soil_root_tacclim_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_week_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_air_month_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)
-    ! VEG 3D
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)
-
-
+    model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(VEG_)
 
-    dsl4jsb_Aggregate_onChunk(VEG_, daytime_counter        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_air_daytime_dacc         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, press_srf_daytime_dacc         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_daytime_dacc        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, ga_daytime_dacc        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_daytime_dacc         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_jmax_opt_daytime_dacc        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_air_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, press_srf_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_daytime         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, ga_daytime         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_daytime        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_jmax_opt_daytime         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, gpp_tlabile_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, maint_respiration_tlabile_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_n_tlabile_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_p_tlabile_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_air_tphen_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_tuptake_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, demand_uptake_n_tuptake_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, demand_uptake_p_tuptake_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_n_tuptake_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_p_tuptake_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_air_tfrac_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, press_srf_tfrac_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, ga_tfrac_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_air_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, press_srf_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, ga_tcnl_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, uptake_n_tcnl_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fmaint_rate_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_cn_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_np_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, labile_carbon_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, labile_nitrogen_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, labile_phosphorus_tcnl_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, cost_n_fixation_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, npp_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, n_fixation_talloc_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_npp_talloc_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, transpiration_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_transpiration_talloc_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, dphi_talloc_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_n_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_p_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, labile_carbon_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, labile_nitrogen_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, labile_phosphorus_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, reserve_carbon_talloc_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, reserve_nitrogen_talloc_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, reserve_phosphorus_talloc_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, w_root_lim_talloc_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_cn_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_cp_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_np_talloc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, exudation_c_tmyc_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, leaf2root_troot_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_npp_troot_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_n_pot_troot_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_p_pot_troot_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fmaint_rate_troot_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, an_boc_tvegdyn_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, net_growth_tvegdyn_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, lai_tvegdyn_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_air_tacclim_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_soil_root_tacclim_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_air_week_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_air_month_mavg         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, t_jmax_opt_mavg        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl         , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_daytime_cl        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl         , weighted_by_fract)
+    ! VEG_ 2D
+    dsl4jsb_Aggregate_onChunk(VEG_, daytime_counter                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_air_daytime_dacc                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, press_srf_daytime_dacc            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_daytime_dacc     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, ga_daytime_dacc                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_daytime_dacc      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_jmax_opt_daytime_dacc           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_air_daytime                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, press_srf_daytime                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_daytime          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, ga_daytime                        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_daytime           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_jmax_opt_daytime                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, gpp_tlabile_mavg                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, maint_respiration_tlabile_mavg    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_n_tlabile_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_p_tlabile_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_air_tphen_mavg                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_tuptake_mavg                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, demand_uptake_n_tuptake_mavg      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, demand_uptake_p_tuptake_mavg      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_n_tuptake_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_p_tuptake_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_air_tfrac_mavg                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, press_srf_tfrac_mavg              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_tfrac_mavg       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, ga_tfrac_mavg                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_air_tcnl_mavg                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, press_srf_tcnl_mavg               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_tcnl_mavg        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, ga_tcnl_mavg                      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, beta_sinklim_ps_tcnl_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, uptake_n_tcnl_mavg                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fmaint_rate_tcnl_mavg             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_cn_tcnl_mavg               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_np_tcnl_mavg               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_tcnl_mavg                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, labile_carbon_tcnl_mavg           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, labile_nitrogen_tcnl_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, labile_phosphorus_tcnl_mavg       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, cost_n_fixation_talloc_mavg       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, npp_talloc_mavg                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, n_fixation_talloc_mavg            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_npp_talloc_mavg              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, transpiration_talloc_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_transpiration_talloc_mavg    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, dphi_talloc_mavg                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_n_talloc_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_p_talloc_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, labile_carbon_talloc_mavg         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, labile_nitrogen_talloc_mavg       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, labile_phosphorus_talloc_mavg     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, reserve_carbon_talloc_mavg        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, reserve_nitrogen_talloc_mavg      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, reserve_phosphorus_talloc_mavg    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, w_root_lim_talloc_mavg            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_cn_talloc_mavg             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_cp_talloc_mavg             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, growth_np_talloc_mavg             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, exudation_c_tmyc_mavg             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, leaf2root_troot_mavg              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_npp_troot_mavg               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_n_pot_troot_mavg      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_p_pot_troot_mavg      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fmaint_rate_troot_mavg            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, an_boc_tvegdyn_mavg               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, net_growth_tvegdyn_mavg           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, lai_tvegdyn_mavg                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_air_tacclim_mavg                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_soil_root_tacclim_mavg          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_air_week_mavg                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_air_month_mavg                  , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, t_jmax_opt_mavg                   , weighted_by_fract)
+    ! VEG_ 3D
+    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_daytime_cl           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tcnl_mavg_cl         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl        , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
