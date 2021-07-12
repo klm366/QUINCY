@@ -750,7 +750,7 @@ fi
 ## create folder, and copy all files needed for simulation ##
 # postprocessing R scripts
 # namelist
-# lctlib_slm_nlct8.def
+# lctlib_quincy_nlct8.def
 # binary
 mkdir -p ./"$slmModel"
 rm -rf   ./"$slmModel"/*  # delete all in this folder if the folder existed before
@@ -759,7 +759,7 @@ lineCompInfo=$(grep -n "COMP\ \=" "$makeInfoFile" | awk 'BEGIN { FS = ":" } ; {p
 compiler=$(sed -n "$lineCompInfo"p "$makeInfoFile" | awk '{print $3}')
 rsync -a ../r_script/postprocessing_"$slmModel".R   ./"$slmModel"/
 rsync -a ../namelist/namelist.slm                   ./"$slmModel"/
-rsync -a ../../data/lctlib_slm_nlct8.def            ./"$slmModel"/
+rsync -a ../../data/lctlib_quincy_nlct8.def         ./"$slmModel"/
 rsync -a ./../../"$compiler"/bin/land.x             ./"$slmModel"/
 
 

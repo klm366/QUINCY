@@ -94,7 +94,7 @@ fi
 
 ## further variables ##
 slmNamelist="namelist.slm"
-slmLctlib="lctlib_slm_nlct8.def"
+slmLctlib="lctlib_quincy_nlct8.def"
 slmBinary="land.x"
 slmRscript="postprocessing_""$slmModel"".R"           ## just the R-Script for postprocessing output data
 slmRscript4fluxfile="convert_slm2FLUXNET.R"           ## just the R-Script for converting output for FLUXNET 
@@ -418,7 +418,7 @@ checkDirPresent ./output
 checkDirPresent ./postprocessing
 
 mv ./"$slmNamelist"         ./input               #  namelist.slm
-mv ./"$slmLctlib"           ./input               #  usually this would be: lctlib_slm_nlct8.def
+mv ./"$slmLctlib"           ./input               #  usually this would be: lctlib_quincy_nlct8.def
 mv ./*.txt                  ./output              #  the output files SLM created at runtime
 mv ./*.pdf                  ./postprocessing      #  for all SLM models postprocessing is available & executed
 if [ $doParamSensitivitySim == "T" ]; then
