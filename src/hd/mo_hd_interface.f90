@@ -41,7 +41,7 @@ MODULE mo_hd_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_hd, hd_lateral_flow, hd_check_water_budget
+  PUBLIC :: hd_lateral_flow, hd_check_water_budget
 
   PUBLIC :: Register_hd_tasks
 
@@ -51,9 +51,19 @@ MODULE mo_hd_interface
     PROCEDURE, NOPASS :: Aggregate => aggregate_hd
   END TYPE tsk_hd_local_outflow
 
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_dynlake
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_dynlake
+    PROCEDURE, NOPASS :: Aggregate => aggregate_dynlake
+  END TYPE tsk_dynlake
+
   INTERFACE tsk_hd_local_outflow
     PROCEDURE Create_task_hd_local_outflow
   END INTERFACE tsk_hd_local_outflow
+
+  INTERFACE tsk_dynlake
+    PROCEDURE Create_task_dynlake
+  END INTERFACE tsk_dynlake
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_interface'
 
@@ -65,6 +75,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_hd_local_outflow(model_id))
+    CALL this%Register_task(tsk_dynlake(model_id))
 
   END SUBROUTINE Register_hd_tasks
 
@@ -77,6 +88,17 @@ CONTAINS
     CALL return_ptr%Construct(name='hd_local_outflow', process_id=HD_, owner_model_id=model_id)
 
   END FUNCTION Create_task_hd_local_outflow
+
+
+  FUNCTION Create_task_dynlake(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_dynlake::return_ptr)
+    CALL return_ptr%Construct(name='dynlake', process_id=HD_,owner_model_id=model_id)
+
+  END FUNCTION Create_task_dynlake
 
   !------------------------------------------------------------------------------------------------
   SUBROUTINE update_hd(tile, options)
@@ -254,6 +276,163 @@ CONTAINS
     ! Nothing to do because the HD model only runs on the top tile
 
   END SUBROUTINE aggregate_hd
+
+  SUBROUTINE update_dynlake(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    ! Local variables
+    !
+    TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_config(HD_)
+    dsl4jsb_Def_memory(HD_)
+
+    INTEGER  :: jc, blk, n
+    INTEGER  :: jcs, jce, blks, blke
+    INTEGER  :: njc(3), nblk(3)          ! beighbor grid cell block and cell index
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_dynlake'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: &
+      & lake_drain,            &
+      & lake_storage,          &
+      & lake_outflow,          &
+      & lake_height,           &
+      & lake_area,             &
+      & lake_height_max,       &
+      & lake_area_max,         &
+      & lake_volume_max,       &
+      & elev_min,              &
+      & dyn_height,            &
+      & alpha,                 &
+      & beta,                  &
+      & basin_mask
+
+    REAL(wp) ::                 &
+      & dyn_min,                &
+      & lake_flow,              &
+      & steplen
+
+    CHARACTER(len=32) :: &
+      & routing_scheme        ! river routing scheme
+
+    steplen = options%steplen
+
+    model => Get_model(tile%owner_model_id)
+
+    grid => Get_grid(model%grid_id)
+
+    dsl4jsb_Get_config(HD_)
+
+    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting update dynlake')
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(HD_)
+
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_drain)       ! in
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_storage)     ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_height)      ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_area)        ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_height_max)  ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_area_max)    ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_volume_max)  ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, elev_min)         ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, dyn_height)       ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, beta)             ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
+
+    ! Configuration parameters from the namelist
+    routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
+
+    SELECT CASE (TRIM(routing_scheme))
+    CASE ('full')
+
+      ! lake water storage [m3]
+      lake_storage(:,:) = lake_storage(:,:) + lake_drain(:,:) * steplen
+
+      ! update dynamic lake water flow between lake grid cells
+      lake_outflow(:,:) = 0._wp
+      ! block index (blk)
+      blks = grid%get_blk_start()
+      blke = grid%get_blk_end()
+      DO blk = blks, blke
+        ! grid cell index (jc)
+        jcs = grid%get_col_start(blk)
+        jce = grid%get_col_end(blk)
+        DO jc = jcs, jce
+          ! block and cell index of the 3 neighbors aligned to the 3 edges of
+          ! the selected grid cell
+          IF (basin_mask(jc,blk) == 1._wp) THEN
+            njc =  grid%patch%cells%neighbor_idx(jc,blk,:)
+            nblk =  grid%patch%cells%neighbor_blk(jc,blk,:)
+            ! grid cell with lowest elevation: used to determine flow direction
+            dyn_min = MIN( MINVAL(dyn_height(njc,nblk), MASK=(basin_mask(njc,nblk)==1._wp)), dyn_height(jc, blk))
+            DO n = 1, 3
+              IF (dyn_height(njc(n), nblk(n)) == dyn_min) THEN
+                ! water flows into neighbor grid cell with lowest elevation
+                lake_flow = MAX( MIN( ( dyn_height(jc,blk) - dyn_height(njc(n),nblk(n)) )  &
+                                       * lake_area(jc,blk), lake_storage(jc,blk)), 0._wp)  &
+                                       * 0.35/160000._wp
+                lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
+                lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
+              END IF
+            END DO
+          END IF
+        END DO
+      END DO
+      lake_storage(:,:) = lake_storage(:,:) + lake_outflow(:,:) * steplen
+
+      ! update grid cell lake height [m] and area [m3]
+      WHERE (lake_area_max(:,:).GT.0._wp)
+        WHERE (lake_storage(:,:).LE.lake_volume_max(:,:))
+          lake_height(:,:) = lake_height_max(:,:) * ( lake_storage(:,:) / lake_volume_max(:,:) )**alpha(:,:)
+        ELSE WHERE (lake_storage(:,:).GT.lake_volume_max(:,:))
+          lake_height(:,:) = lake_height_max(:,:) + ( lake_storage(:,:) - lake_volume_max(:,:) )/lake_area_max(:,:)
+        END WHERE
+        lake_area(:,:) = lake_area_max(:,:) * MIN( ( lake_storage(:,:) / lake_volume_max(:,:) )**beta(:,:), 1._wp )
+      ELSE WHERE
+        lake_height(:,:) = 0._wp
+        lake_area(:,:) = 0._wp
+      END WHERE
+      dyn_height(:,:) = elev_min(:,:) + lake_height(:,:)
+
+    CASE ('weighted_to_coast')
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    CASE ('zero')
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    CASE DEFAULT
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    END SELECT
+
+  END SUBROUTINE update_dynlake
+
+  SUBROUTINE aggregate_dynlake(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_dynlake' 
+ 
+    CALL message(routine, 'aggregate dynlake task')
+
+  END SUBROUTINE aggregate_dynlake
+
   !------------------------------------------------------------------------------------------------
   SUBROUTINE hd_lateral_flow(tile, options)
   !------------------------------------------------------------------------------------------------
@@ -292,19 +471,7 @@ CONTAINS
       & discharge_ocean,       &
       & internal_drain,        &
       & lake_drain,            &
-      & lake_storage,          &
-      & lake_outflow,          &
-      & lake_inflow,           &
-      & lake_height,           &
-      & lake_area,             &
-      & lake_height_max,       &
-      & lake_area_max,         &
-      & lake_volume_max,       &
-      & elev_min,              &
-      & dyn_height,            &
-      & alpha,                 &
-      & beta,                  &
-      & basin_mask
+      & lake_inflow
 
     dsl4jsb_Real3D_onDomain :: &
       & nidx_upstream,         &
@@ -317,23 +484,14 @@ CONTAINS
       & global_internal_drain,  &
       & global_lake_drain,      &
       & global_discharge_ocean, &
-      & sum_weights,            &
-      & dyn_min,                &
-      & lake_flow
+      & sum_weights
 
     INTEGER  ::         &
       & nproma,         &
       & nblks,          &
-      & blks, blke,     &
-      & jcs, jce
-
-    INTEGER  ::         &
-      & nblk(3),        &
-      & njc(3)       ! beighbor grid cell block and cell index
+      & blks, blke, jcs, jce
 
     REAL(wp), ALLOCATABLE :: cos_lat(:,:) ! Cosines of latitudes of cell centers
-
-    REAL(wp) :: steplen
 
     LOGICAL, POINTER  ::  &
       & is_in_domain    (:,:) ! T: cell in domain (not halo)
@@ -345,10 +503,6 @@ CONTAINS
       & in_domain       (:,:) ! 1: cell in domain, 0: halo cell
 
     LOGICAL  :: debug_hd
-
-    steplen = options%steplen
-
-
 
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
@@ -378,19 +532,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, lake_drain)       ! in
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_storage)     ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_inflow)      ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_height)      ! OUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_area)        ! OUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_height_max)  ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_area_max)    ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_volume_max)  ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, elev_min)         ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, dyn_height)       ! OUT
-    dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, beta)             ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     !dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
@@ -488,57 +630,6 @@ CONTAINS
       END WHERE
       ! drainage at lake sink points and runoff above lake
       lake_drain(:,:) = lake_drain(:,:) + lake_inflow(:,:) 
-      ! lake water storage [m3]
-      lake_storage(:,:) = lake_storage(:,:) + lake_drain(:,:) * steplen
-
-      ! update dynamic lake water flow between lake grid cells
-      lake_outflow(:,:) = 0._wp
-      lake_inflow(:,:)  = 0._wp   
-      ! block index (blk)
-      blks = grid%get_blk_start()
-      blke = grid%get_blk_end()
-      DO blk = blks, blke
-        ! grid cell index (jc)
-        jcs = grid%get_col_start(blk)
-        jce = grid%get_col_end(blk)
-        DO jc = jcs, jce
-          ! block and cell index of the 3 neighbors aligned to the 3 edges of
-          ! the selected grid cell
-          IF (basin_mask(jc,blk) == 1._wp) THEN 
-            njc =  grid%patch%cells%neighbor_idx(jc,blk,:)
-            nblk =  grid%patch%cells%neighbor_blk(jc,blk,:)
-            ! grid cell with lowest elevation: used to determine flow direction
-            dyn_min = MIN( MINVAL(dyn_height(njc,nblk), MASK=(basin_mask(njc,nblk)==1._wp)), dyn_height(jc, blk))
-            !dyn_min = MIN( MINVAL(dyn_height(njc, nblk)), dyn_height(jc, blk))
-            DO n = 1, 3
-              IF (dyn_height(njc(n), nblk(n)) == dyn_min) THEN
-                ! lake water flows into neighbor grid cell with lowest lake water level
-                lake_flow = MAX( MIN( ( dyn_height(jc,blk) - dyn_height(njc(n),nblk(n)) )  &
-                                       * lake_area(jc,blk), lake_storage(jc,blk)), 0._wp)  &
-                                       * 0.35/160000._wp
-                lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
-                lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
-              END IF
-            END DO
-          END IF
-        END DO
-      END DO
-      lake_storage(:,:) = lake_storage(:,:) + lake_outflow(:,:) * steplen
-
-      ! update grid cell lake height [m] and area [m3]
-      WHERE (lake_area_max(:,:).GT.0._wp)
-        WHERE (lake_storage(:,:).LE.lake_volume_max(:,:))
-          lake_height(:,:) = lake_height_max(:,:) * ( lake_storage(:,:) / lake_volume_max(:,:) )**alpha(:,:)
-        ELSE WHERE (lake_storage(:,:).GT.lake_volume_max(:,:))
-          lake_height(:,:) = lake_height_max(:,:) + ( lake_storage(:,:) - lake_volume_max(:,:) )/lake_area_max(:,:)
-        END WHERE
-        lake_area(:,:) = lake_area_max(:,:) * MIN( ( lake_storage(:,:) / lake_volume_max(:,:) )**beta(:,:), 1._wp )
-      ELSE WHERE
-        lake_height(:,:) = 0._wp
-        lake_area(:,:) = 0._wp
-      END WHERE
-      dyn_height(:,:) = elev_min(:,:) + lake_height(:,:)
-
 
       ! global integrals
       ! Switch the next two lines for debugging ... but this only works on one (!) processor, i.e. no halos

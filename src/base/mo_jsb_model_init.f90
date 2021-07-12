@@ -263,6 +263,8 @@ CONTAINS
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
 
+      CALL model%Queue_task(HD_, "dynlake")
+
       ! JN-TODO: disturbances need to be adapted to work on per grid-cell variables to be treated 
       !          alongside the lccs above that change area to enable age-classes to be reintroduced
       ! Disturbances happen on a daily basis and can lead to area changes when running with age-classes
