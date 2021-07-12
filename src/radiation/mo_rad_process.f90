@@ -1443,9 +1443,9 @@ CONTAINS
                                               leaf_nitrogen_cl, &
                                               fn_chl_cl, &
                                               lai_cl, &
-                                              fract_snow_can, &
-                                              albedo, &               ! out
-                                              sw_srf_net, &
+                                              fract_snow_can, &       ! in
+                                              albedo, &               ! inout
+                                              sw_srf_net, &           ! out
                                               rad_srf_net, &
                                               net_radiation, &
                                               fleaf_sunlit_cl, &

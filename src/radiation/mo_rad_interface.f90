@@ -371,8 +371,8 @@ CONTAINS
       !$claw acc end data
 
 
-    !> 2.0 vegetation with use_quincy = .TRUE.
-    !!
+    !>2.0 vegetation with use_quincy = .TRUE.
+    !>
     ELSE IF (tile%is_vegetation .AND. model%config%use_quincy) THEN
 
       dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! in
@@ -382,9 +382,10 @@ CONTAINS
       lw_srf_net(:) = lwnet_from_lwdown(lw_srf_down(:), t(:))
     
     
-    !> 3.0 all but lakes 
-    !! 
-    !! for vegetation only when use_quincy = .FALSE.
+    !>3.0 all but lakes 
+    !> 
+    !>  for vegetation only when use_quincy = .FALSE.
+    !>
     ELSE
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! in
@@ -448,7 +449,8 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    ! these var are calculated by quincy for vegetation tiles
+    ! these var are calculated by quincy for vegetation tiles with 'update_sw_radiation_q_()'
+    ! hence, no aggregation here, if quincy is used
     IF (.NOT. tile%is_vegetation .OR. (tile%is_vegetation .AND. .NOT. model%config%use_quincy)) THEN
       dsl4jsb_Aggregate_onChunk(RAD_, rad_srf_net,    weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, sw_srf_net,     weighted_by_fract)
@@ -1259,12 +1261,9 @@ CONTAINS
 
   END SUBROUTINE aggregate_albedo
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> calculates surface radiation reflection and absorption
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>calculates surface radiation reflection and absorption - quincy
+  !>
   SUBROUTINE update_sw_radiation_q_(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
@@ -1414,47 +1413,47 @@ CONTAINS
     ! ---------------------------
     ! 2D
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)               ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, swvis_srf_net)            ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, swnir_srf_net)            ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, swvis_srf_net)            ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_, swnir_srf_net)            ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_, rad_srf_net)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, net_radiation)            ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_background)           ! in
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis)                  ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir)                  ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis)                  ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir)                  ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)             ! in      ! get from bc_land_phy.nc file; do not calc
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)             ! in      ! get from bc_land_phy.nc file; do not calc
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)              ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)              ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)              ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)              ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_snow)             ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_snow)             ! inout
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_lnd)              ! out     ! set alb_vis_lnd = alb_vis (for consistency with jsb4 update_albedo Task)
-    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)              ! out     ! set alb_nir_lnd = alb_nir (for consistency with jsb4 update_albedo Task)
-    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)            ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_soil)            ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_can)             ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_lnd)              ! inout     ! set alb_vis_lnd = alb_vis (for consistency with jsb4 update_albedo Task)
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)              ! inout     ! set alb_nir_lnd = alb_nir (for consistency with jsb4 update_albedo Task)
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)            ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_soil)            ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_can)             ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_, arad_nir_can)             ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_, appfd)                    ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)            ! out
-    dsl4jsb_Get_var2D_onChunk(RAD_, albedo)                   ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, albedo)                   ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_, snow_age)                 ! in
     ! 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)           ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)           ! out
-    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)       ! out
-    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_vis_cl)       ! out
-    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_vis_cl)      ! out
-    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_nir_cl)       ! out
-    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! out
-    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! out
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_vis_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_vis_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_vis_cl)      ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_nir_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! inout
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)        ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_can)         ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)               ! in
     ! ---------------------------
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)      ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)             ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)       ! out
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)         ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)          ! out
     ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                    ! in
     ! PHENO_ 3D
@@ -1569,88 +1568,67 @@ CONTAINS
    
   END SUBROUTINE update_sw_radiation_q_
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> Implementation of "aggregate": update_radiation task
-  !! 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": update_radiation task
+  !> 
   SUBROUTINE aggregate_sw_radiation_q_(tile, options)
 
-    dsl4jsb_Use_processes RAD_, VEG_
-    ! ---------------------------
-    ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model),        POINTER         :: model
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_sw_radiation_q_'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(VEG_)
-    ! Get local variables from options argument
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sw_radiation_q_'
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
-    ! Get process variables (Set pointers to variables in memory)
+    ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    ! Get process config
-    ! ...
-    ! Get process memories
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(VEG_)
 
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go aggregate
-    ! ------------------------------------------------------------------------------------------------------------
-
-    ! only at tiles that contain vegetation
-    IF (tile%is_vegetation) THEN
-      weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-      dsl4jsb_Aggregate_onChunk(RAD_, sw_srf_net              , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, swvis_srf_net           , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, swnir_srf_net           , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, rad_srf_net             , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, net_radiation           , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis                 , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir                 , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can             , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can             , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow            , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow            , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd             , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd             , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_soil           , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_soil           , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_can            , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_can            , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, appfd                   , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc           , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, albedo                  , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_cl          , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_cl          , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_vis_cl      , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_vis_cl      , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_vis_cl     , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_nir_cl      , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_nir_cl      , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_nir_cl     , weighted_by_fract)
-      ! ---------------------------
-      dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_cl      , weighted_by_fract)
-    END IF
+    ! RAD_ 2D
+    dsl4jsb_Aggregate_onChunk(RAD_, sw_srf_net                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, swvis_srf_net             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, swnir_srf_net             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, rad_srf_net               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, net_radiation             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_soil             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_soil             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_can              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_can              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, appfd                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, albedo                    , weighted_by_fract)
+    ! RAD_ 3D
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_cl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_cl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_vis_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_vis_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_vis_cl       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_nir_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_nir_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_nir_cl       , weighted_by_fract)
+    ! VEG_ 3D
+    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_cl           , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1761,27 +1739,27 @@ CONTAINS
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)               ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in 
     ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
     ! 2D RAD_
-    dsl4jsb_Get_var2D_onChunk(RAD_, daytime_counter) 
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc) 
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)
+    dsl4jsb_Get_var2D_onChunk(RAD_, daytime_counter)                ! inout
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)                  ! in 
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout 
     ! 3D RAD_
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)    ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)    ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)         ! inout 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)         ! inout 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)       ! inout 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)       ! inout 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout 
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
 #define Get_veg_pool
@@ -1896,31 +1874,16 @@ CONTAINS
   !>
   SUBROUTINE aggregate_time_average_radiation(tile, options)
 
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-    USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-    dsl4jsb_Use_processes RAD_
-    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_time_average_radiation'
+    TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(RAD_)
     ! ----------------------------------------------------------------------------------------------------- !
-    ! RAD_ 2D
-    dsl4jsb_Real2D_onChunk      :: daytime_counter
-    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
-    ! RAD_ 3D
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_dacc_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_dacc_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tfrac_mavg_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tfrac_mavg_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_tcnl_mavg_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_tcnl_mavg_cl
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_time_average_radiation'
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -1928,34 +1891,21 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(RAD_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! RAD_ 2D
-    dsl4jsb_Get_var2D_onChunk(RAD_, daytime_counter)
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)
-    ! RAD_ 3D
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)
-
-
+    model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(RAD_)
 
     dsl4jsb_Aggregate_onChunk(RAD_, daytime_counter               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl   , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_daytime_cl        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_daytime_cl        , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl     , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_daytime_cl        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl      , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl     , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -1334,8 +1334,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_fc,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pwp,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_theta,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pot,     weighted_by_fract)
+    IF (model%config%use_quincy) THEN
+      dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_theta,   weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_root_pot,     weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
