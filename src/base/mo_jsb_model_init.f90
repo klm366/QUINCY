@@ -345,7 +345,6 @@ CONTAINS
       !!
       CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")         !! quincy
       CALL model%Queue_task(VEG_,    "reset_veg_fluxes")            !! quincy
-      ! CALL model%Queue_task(SSE_,    "reset_sse_fluxes")            !! quincy - plant model
       CALL model%Queue_task(SB_,     "reset_sb_fluxes")             !! quincy
       
       !------------------------ tasks that can change area (e.g. disturbance & fuel)
@@ -360,10 +359,8 @@ CONTAINS
   
       !!------------------------ tasks that do not change area
       !!
-      ! CALL model%Queue_task(SSE_,    "soil_turbulence")             !! quincy - plant model
       CALL model%Queue_task(RAD_,    "sw_radiation_q_")             !! quincy (sw radiation and albedo)
       CALL model%Queue_task(RAD_,    "surface_radiation")
-      ! CALL model%Queue_task(SSE_,    "sse_physics")                 !! quincy - plant model
       CALL model%Queue_task(PHENO_,  "phenology_q_")                !! quincy
       CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
