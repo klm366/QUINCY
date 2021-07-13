@@ -1,4 +1,22 @@
 !>
+!!  @par Copyright
+!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+!!
+!!    This file is part of the QUINCY model.
+!!    The QUINCY model is free software: you can redistribute it and/or modify
+!!    it under the terms of the GNU General Public License version 3,
+!!    as published by the Free Software Foundation.
+!!
+!!    The QUINCY model is distributed in the hope that it will be useful,
+!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!    GNU General Public License for more details.
+!!
+!!    You should have received a copy of the GNU General Public License
+!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!! 
 !! @brief Contains functions and subroutines to calculate isotope discrimination 
 !!
 !! @author
@@ -47,7 +65,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C13'
 
 
-    IF(ABS(element-isotope) > eps8) THEN
+    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._wp) THEN
        delta = ( isotope / (element-isotope) / PDB_STANDARD_C13 - 1.0_wp ) * 1000._wp
     ELSE
        delta = 0.0_wp
@@ -107,7 +125,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_C14'
 
 
-    IF(element > eps8) THEN
+    IF(element > eps8 .AND. (element * isotope) > 0._wp) THEN
        Delta = (AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * & 
                (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) - 1._wp) * 1000._wp  
     ELSE
@@ -171,7 +189,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_delta_N15'
 
 
-    IF(ABS(element-isotope) > eps8) THEN
+    IF(ABS(element - isotope) > eps8 .AND. (element * isotope) > 0._wp) THEN
        delta = ( isotope / (element-isotope) / ATM_STANDARD_N15 - 1.0_wp ) * 1000._wp
     ELSE
        delta = 0.0_wp
@@ -234,7 +252,7 @@ CONTAINS
      !!
      IF(.NOT.PRESENT(source_isotope2)) THEN 
         ! molar mixing ratio of the source pool
-        IF(source_element - source_isotope > eps8) THEN
+        IF((source_element - source_isotope) > eps8) THEN
            Rsource = source_isotope / ( source_element - source_isotope )
         ELSE 
            Rsource = 0.0_wp

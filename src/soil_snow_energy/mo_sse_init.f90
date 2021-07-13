@@ -16,7 +16,7 @@ MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
+  USE mo_exception,         ONLY: message_text, finish, message
   USE mo_jsb_control,       ONLY: debug_on
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
@@ -64,7 +64,10 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+    TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
+    
+    model => Get_model(tile%owner_model_id)
 
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
       CALL sse_read_init_vars(tile)
@@ -223,6 +226,14 @@ CONTAINS
     !$acc dsl4jsb_var2D_onDomain(SSE_,heat_cond))
     !$acc end data
 
+    ! quincy
+    IF (model%config%use_quincy) THEN
+      ! soil texture - currently simply using default values, no ic/bc from input files
+      dsl4jsb_var3D_onDomain(SSE_, sand_sl) = dsl4jsb_Config(SSE_)%soil_sand
+      dsl4jsb_var3D_onDomain(SSE_, silt_sl) = dsl4jsb_Config(SSE_)%soil_silt
+      dsl4jsb_var3D_onDomain(SSE_, clay_sl) = dsl4jsb_Config(SSE_)%soil_clay
+    END IF
+
   END SUBROUTINE sse_init_bc
 
   SUBROUTINE sse_init_ic(tile)
@@ -279,6 +290,10 @@ CONTAINS
 
   END SUBROUTINE sse_init_ic
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Intialize soil properties - jsbach4
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_soil_properties(tile)
 
     USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min

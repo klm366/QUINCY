@@ -534,87 +534,9 @@ CONTAINS
         CLASS IS (t_jsb_var_real2d)
           CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           element%subset_type = itype
-          IF (this%contains_elem_1d_ptr_to_chunk) THEN
-            SELECT TYPE (pool_elem2d => this)
-            CLASS IS (t_jsb_pool_elem2d)
-              !! set pointer of element variable (REAL vector) to 
-              !! a) part of the domain (ics:ice,iblk) defined by %ptrm1, and b) the full domain %ptr2d(:,:)
-              SELECT CASE(element%element_id)
-              CASE (ELEM_C)
-                IF (ASSOCIATED(pool_elem2d%carbon))   NULLIFY(pool_elem2d%carbon)
-                IF (ASSOCIATED(pool_elem2d%domain_c)) NULLIFY(pool_elem2d%domain_c)
-                pool_elem2d%carbon      => element%ptrm1
-                pool_elem2d%domain_c    => element%ptr2d
-              CASE (ELEM_N)
-                IF (ASSOCIATED(pool_elem2d%nitrogen)) NULLIFY(pool_elem2d%nitrogen)
-                IF (ASSOCIATED(pool_elem2d%domain_n)) NULLIFY(pool_elem2d%domain_n)
-                pool_elem2d%nitrogen    => element%ptrm1
-                pool_elem2d%domain_n    => element%ptr2d
-              CASE (ELEM_P)
-                IF (ASSOCIATED(pool_elem2d%phosphorus)) NULLIFY(pool_elem2d%phosphorus)
-                IF (ASSOCIATED(pool_elem2d%domain_p))   NULLIFY(pool_elem2d%domain_p)
-                pool_elem2d%phosphorus  => element%ptrm1
-                pool_elem2d%domain_p    => element%ptr2d
-              CASE (ELEM_C13)
-                IF (ASSOCIATED(pool_elem2d%carbon13))   NULLIFY(pool_elem2d%carbon13)
-                IF (ASSOCIATED(pool_elem2d%domain_c13)) NULLIFY(pool_elem2d%domain_c13)
-                pool_elem2d%carbon13    => element%ptrm1
-                pool_elem2d%domain_c13  => element%ptr2d
-              CASE (ELEM_C14)
-                IF (ASSOCIATED(pool_elem2d%carbon14))   NULLIFY(pool_elem2d%carbon14)
-                IF (ASSOCIATED(pool_elem2d%domain_c14)) NULLIFY(pool_elem2d%domain_c14)
-                pool_elem2d%carbon14    => element%ptrm1
-                pool_elem2d%domain_c14  => element%ptr2d
-              CASE (ELEM_N15)
-                IF (ASSOCIATED(pool_elem2d%nitrogen15)) NULLIFY(pool_elem2d%nitrogen15)
-                IF (ASSOCIATED(pool_elem2d%domain_n15)) NULLIFY(pool_elem2d%domain_n15)
-                pool_elem2d%nitrogen15  => element%ptrm1
-                pool_elem2d%domain_n15  => element%ptr2d
-              END SELECT
-            END SELECT
-          ENDIF
         CLASS IS (t_jsb_var_real3d)
           CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           element%subset_type = itype
-          IF (this%contains_elem_2d_ptr_to_chunk) THEN
-            SELECT TYPE (pool_elem3d => this)
-            CLASS IS (t_jsb_pool_elem3d)
-              !! set pointer of element variable (REAL vector) to 
-              !! a) part of the domain (ics:ice,1:vgrid,iblk) defined by %ptrm1, and b) the full domain %ptr3d(:,:,:)
-              SELECT CASE(element%element_id)
-              CASE (ELEM_C)
-                IF (ASSOCIATED(pool_elem3d%carbon))   NULLIFY(pool_elem3d%carbon)
-                IF (ASSOCIATED(pool_elem3d%domain_c)) NULLIFY(pool_elem3d%domain_c)
-                pool_elem3d%carbon      => element%ptrm1
-                pool_elem3d%domain_c    => element%ptr3d
-              CASE (ELEM_N)
-                IF (ASSOCIATED(pool_elem3d%nitrogen)) NULLIFY(pool_elem3d%nitrogen)
-                IF (ASSOCIATED(pool_elem3d%domain_n)) NULLIFY(pool_elem3d%domain_n)
-                pool_elem3d%nitrogen    => element%ptrm1
-                pool_elem3d%domain_n    => element%ptr3d
-              CASE (ELEM_P)
-                IF (ASSOCIATED(pool_elem3d%phosphorus)) NULLIFY(pool_elem3d%phosphorus)
-                IF (ASSOCIATED(pool_elem3d%domain_p))   NULLIFY(pool_elem3d%domain_p)
-                pool_elem3d%phosphorus  => element%ptrm1
-                pool_elem3d%domain_p    => element%ptr3d
-              CASE (ELEM_C13)
-                IF (ASSOCIATED(pool_elem3d%carbon13))   NULLIFY(pool_elem3d%carbon13)
-                IF (ASSOCIATED(pool_elem3d%domain_c13)) NULLIFY(pool_elem3d%domain_c13)
-                pool_elem3d%carbon13    => element%ptrm1
-                pool_elem3d%domain_c13  => element%ptr3d
-              CASE (ELEM_C14)
-                IF (ASSOCIATED(pool_elem3d%carbon14))   NULLIFY(pool_elem3d%carbon14)
-                IF (ASSOCIATED(pool_elem3d%domain_c14)) NULLIFY(pool_elem3d%domain_c14)
-                pool_elem3d%carbon14    => element%ptrm1
-                pool_elem3d%domain_c14  => element%ptr3d
-              CASE (ELEM_N15)
-                IF (ASSOCIATED(pool_elem3d%nitrogen15)) NULLIFY(pool_elem3d%nitrogen15)
-                IF (ASSOCIATED(pool_elem3d%domain_n15)) NULLIFY(pool_elem3d%domain_n15)
-                pool_elem3d%nitrogen15  => element%ptrm1
-                pool_elem3d%domain_n15  => element%ptr3d
-              END SELECT
-            END SELECT
-          ENDIF
         END SELECT
       END DO
     END IF

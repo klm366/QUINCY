@@ -61,7 +61,7 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime, eps8
 
     ! Use of pools
-    dsl4jsb_Use_pools(SB_) t_sb_main_pool, t_sb_components_pool, t_sb_elements_pool
+    dsl4jsb_Use_pools(SB_) t_sb_components_pool, t_sb_elements_pool
     
     ! Use of process configurations and memory
     dsl4jsb_Use_config(SB_)
@@ -76,9 +76,9 @@ CONTAINS
     TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb        !< Vertical grid
     INTEGER                                 :: nsoil_sb             !< number of soil layers as used by the SB_ process (see SSE_ config)
-    INTEGER                                 :: iblk, ics, ice, nc
     REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp1
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: hlp10
+    INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
 
     ! Declare process configuration, memory, and pool-structure Pointers
@@ -114,16 +114,24 @@ CONTAINS
     nsoil_sb      =  vgrid_soil_sb%n_levels
 
     ALLOCATE(hlp1(nc, nsoil_sb))
-    ALLOCATE(hlp10(nc, nsoil_sb,1))     ! (nc, vgrid, iblk)
+    ALLOCATE(hlp10(nc, nsoil_sb, 2))  ! 2 is just an arbitrary number used for the nblks dimensions, see below test-code
 
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
+    ! Get pools
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_pool,               sb_pool)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_formation,          sb_formation)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_loss,               sb_loss)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_transport,          sb_transport)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_delta_pools,        sb_delta_pools)
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_mycorrhiza_export,  sb_mycorrhiza_export)
+    ! associate element-variables with chunk
+    CALL sb_pool%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_formation%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_loss%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_transport%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_delta_pools%Associate_chunk_var_ptr(ics, ice, iblk)
+    CALL sb_mycorrhiza_export%Associate_chunk_var_ptr(ics, ice, iblk)
 
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out

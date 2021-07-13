@@ -44,8 +44,13 @@ MODULE mo_atmland_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_interface'
 
+
 CONTAINS
 
+
+  ! ======================================================================================================= !
+  !> update atm2land
+  !>
   SUBROUTINE update_atm2land( &
     & tile, options,          &
     & t_air,                  &
@@ -138,6 +143,10 @@ CONTAINS
       & t_bcoef_ice_ptr,       &
       & q_acoef_ice_ptr,       &
       & q_bcoef_ice_ptr
+    ! quincy
+    dsl4jsb_Real2D_onChunk :: prev_one_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk :: prev_two_cos_zenith_angle
+    
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -250,6 +259,12 @@ CONTAINS
     END IF
     IF (PRESENT(q_bcoef_ice)) THEN
       q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
+    END IF
+
+    ! quincy
+    IF (model%config%use_quincy) THEN
+      prev_one_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
+      prev_two_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
     END IF
 
     !$acc parallel default(present)
@@ -452,8 +467,21 @@ CONTAINS
     END IF
     !$acc end parallel
 
+    ! quincy
+    IF (model%config%use_quincy) THEN
+      IF (.NOT. PRESENT(cos_zenith_angle)) THEN
+        CALL finish(TRIM(routine), 'cos_zenith_angle not present but needed for QUINCY model')
+      END IF
+      prev_two_cos_zenith_angle(:) = prev_one_cos_zenith_angle(:)
+      prev_one_cos_zenith_angle(:) = cos_zenith_angle(:)      
+    END IF
+
   END SUBROUTINE update_atm2land
 
+
+  ! ======================================================================================================= !
+  !> update land2atm
+  !>
   SUBROUTINE update_land2atm(tile, options,                                          &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                             &
     & fact_q_air, fact_qsat_srf, evapopot,                                           &

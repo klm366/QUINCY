@@ -42,8 +42,9 @@ MODULE mo_jsb4_forcing
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string
-  USE mo_physical_constants,     ONLY: tmelt, p0sl_bg, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
-  USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
+  USE mo_physical_constants,     ONLY: p0sl_bg, rdv
+  USE mo_jsb_physical_constants, ONLY: cvdifts, grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
+    & tmelt, rd, amco2, amd, cpd, vtmpc1, cpvd1, ckap, zkappa
   USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
 #ifdef __ICON__
   USE mo_psrad_orbit,            ONLY: inquire_declination
@@ -51,7 +52,8 @@ MODULE mo_jsb4_forcing
     USE mo_orbit,                ONLY: inquire_declination
 #endif
 
-  USE mo_jsb_base,               ONLY: jsbach
+  ! jsb4
+  USE mo_jsb_class,              ONLY: jsbach
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
@@ -113,7 +115,6 @@ MODULE mo_jsb4_forcing
   !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
   REAL(wp), PARAMETER :: cb = 5._wp
   REAL(wp), PARAMETER :: cc = 5._wp
-  REAL(wp), PARAMETER :: ckap = 0.4_wp
 
   CHARACTER(len=*), PARAMETER :: name_of_unit_attribute = 'units'
 !<<<<<<<
@@ -164,6 +165,11 @@ MODULE mo_jsb4_forcing
     REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
     REAL(wp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
     REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
+    ! quincy @TODO  modify the use of the date-information to how this is done with jsbach4
+    INTEGER  :: forcing_year = 0
+    INTEGER  :: forcing_doy  = 0
+    REAL(wp) :: forcing_hour = 0.0_wp
+    ! quincy - end
   END TYPE forcing_options_type
   TYPE(forcing_options_type), SAVE :: forcing_options
 
@@ -1294,7 +1300,7 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: pch(ice,nblks)
 
     INTEGER  :: ic, iblk
-    REAL(wp) :: zcons9, zcons11, zcons12, zkappa, zsigma
+    REAL(wp) :: zcons9, zcons11, zcons12, zsigma
     REAL(wp), DIMENSION(ice):: air_pressure, zdu2, ztvd, ztvir, qsat_surf
     REAL(wp), DIMENSION(ice):: ztvs, zg, zgh, zril, zcons, zchnl, zcfnchl, zcfhl, zscfl, zucfhl
 
@@ -1304,7 +1310,6 @@ CONTAINS
     zcons9 = 3._wp * cb
     zcons11 = 3._wp * cb * cc
     zcons12 = cvdifts * time_step_len * grav / rd
-    zkappa = rd / cpd
 
     drag_srf(:,:) = 0._wp
     t_acoef(:,:)  = 0._wp
@@ -1387,7 +1392,7 @@ CONTAINS
       ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
       !---------------------------------------------------------------------------------------------------------------
       t_acoef(1:ic,iblk) = 0.0_wp
-      t_bcoef(1:ic,iblk) = cpd * (1 + vtmpc2 * qair(1:ic,iblk)) * temp_air(1:ic,iblk) + zgh(1:ic)
+      t_bcoef(1:ic,iblk) = cpd * (1 + cpvd1 * qair(1:ic,iblk)) * temp_air(1:ic,iblk) + zgh(1:ic)
       q_acoef(1:ic,iblk) = 0.0_wp
       q_bcoef(1:ic,iblk) = qair(1:ic,iblk)
 

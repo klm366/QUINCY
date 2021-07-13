@@ -1,15 +1,15 @@
 !>
-!! @brief Contains utility functions
+!! @par Copyright
+!!  This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!!  Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+!! @brief diverse subroutines and functions for tile & forcing variables
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2014-03-17)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
 MODULE mo_util
@@ -22,7 +22,7 @@ MODULE mo_util
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, one_of, toupper, int2string, real2string, logical2string, &
-    &       report_memory_usage
+    &       report_memory_usage, tolower
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -33,14 +33,14 @@ MODULE mo_util
 
 CONTAINS
 
-  !!
-  ! @brief      Compute soil layer depths from (fixed) layer thicknesses and total depth
-  !
-  ! @param      depth    Total soil depth
-  ! @param      dz       Fixed layer thicknesses
-  !
-  ! @return     Layer thicknesses until soil depth
-  !!
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION return the site-specific soil profile as vector of soil-layer thicknesses
+  !! 
+  !! in: soil_depth (until bedrock) and soil-layer thicknesses
+  !! 
+  !! out: site-specific soil-layer thicknesses, soil_depth_sl as 3D variable "dsl4jsb_var3D_onDomain()"
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
     REAL(wp), INTENT(in) :: depth(:,:)
@@ -49,7 +49,6 @@ CONTAINS
 
     REAL(wp) :: bottom, bottom_m1
     INTEGER  :: nsoil, i
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)
@@ -66,13 +65,44 @@ CONTAINS
       END WHERE
       bottom_m1 = bottom_m1 + dz(i)
     END DO
-
+  
   END FUNCTION soil_depth_to_layers_2d
-  !
-  !> Conversion: Lowercase -> Uppercase
-  !
-  !  Copied from ICON module shared/mo_util_string
-  !
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> conversion: uppercase -> lowercase
+  !! 
+  !! implemented based on mo_util:toupper in jsbach4.1
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION tolower(string) RESULT(stringlower)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut    
+    CHARACTER(len=*), INTENT(in) :: string
+    CHARACTER(len=LEN_TRIM(string)) :: stringlower
+    ! ---------------------------
+    ! 0.2 Local
+    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
+    INTEGER :: i
+
+    DO i = 1, LEN_TRIM(string)
+      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
+        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
+      ELSE
+        stringlower(i:i) = string(i:i)
+      ENDIF
+    ENDDO
+  END FUNCTION tolower
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> conversion: lowercase -> uppercase
+  !! 
+  !! Copied from ICON module shared/mo_util_string
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION toupper (lowercase)
     CHARACTER(len=*), INTENT(in) :: lowercase
     CHARACTER(len=LEN_TRIM(lowercase)) :: toupper

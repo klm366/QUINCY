@@ -16,7 +16,7 @@ MODULE mo_sse_interface
 #ifndef __NO_JSBACH__
 
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message, finish
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
@@ -29,12 +29,13 @@ MODULE mo_sse_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_ 
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, VEG_ 
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(VEG_)
 
   IMPLICIT NONE
   PRIVATE
@@ -104,16 +105,31 @@ CONTAINS
 
   END FUNCTION Create_task_soil_and_snow_properties
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Register tasks: SSE_ process
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_sse_tasks(process, model_id)
+
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_class,         ONLY: Get_model
 
     CLASS(t_jsb_process), INTENT(inout) :: process
     INTEGER,              INTENT(in)    :: model_id
+
+    TYPE(t_jsb_model), POINTER :: model
+    
+    model   => Get_model(model_id)
 
     CALL process%Register_task(tsk_soil_and_snow_temp(model_id))
     CALL process%Register_task(tsk_soil_and_snow_properties(model_id))
 
   END SUBROUTINE Register_sse_tasks
 
+  !-----------------------------------------------------------------------------------------------------
+  !> update_soil_and_snow_temperature
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_soiltemp_old
@@ -130,6 +146,7 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(VEG_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -160,10 +177,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: thaw_depth
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
+    dsl4jsb_Real2D_onChunk :: t_soil_root
     dsl4jsb_Real2D_onChunk :: w_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
-
+    ! quincy
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk :: root_fraction_sl
 
     ! Locally allocated vectors
     !
@@ -186,11 +206,14 @@ CONTAINS
     INTEGER :: isnow
 
     LOGICAL  :: lstart
+    INTEGER  :: isoil   ! looping
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     TYPE(t_jsb_vgrid), POINTER :: soil_e, snow_e
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb                ! Vertical grid
     INTEGER                    :: nsoil, nsnow
+    INTEGER                    :: nsoil_sb
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
 
@@ -212,12 +235,17 @@ CONTAINS
       snow_e => Get_vgrid('snow_depth_energy')
       nsnow = snow_e%n_levels
     END IF
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      = vgrid_soil_sb%n_levels
 
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
+    IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
+      dsl4jsb_Get_memory(VEG_)
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)
@@ -255,8 +283,14 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
+    IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
+      dsl4jsb_Get_var2D_onChunk(SSE_,   t_soil_root)          ! out
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
+    IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
+      dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)     ! in
+    END IF
 
     lstart = is_time_experiment_start(options%current_datetime)
 
@@ -507,6 +541,15 @@ CONTAINS
 
     !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
 
+    ! quincy
+    ! diagnose root temperature
+    IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
+      t_soil_root(:) = 0.0_wp
+      DO isoil = 1,nsoil_sb
+        t_soil_root(:) = t_soil_root(:) + root_fraction_sl(:,isoil) * t_soil_sl(:,isoil)
+      ENDDO
+    END IF
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_soil_and_snow_temperature
@@ -557,11 +600,16 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_root,      weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_soil_and_snow_temperature
 
+  !-----------------------------------------------------------------------------------------------------
+  !> update_soil_and_snow_properties
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_and_snow_properties(tile, options)
 
     USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min ! , cs
