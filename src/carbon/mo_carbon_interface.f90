@@ -247,13 +247,13 @@ CONTAINS
                                                       !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
