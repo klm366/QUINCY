@@ -384,8 +384,8 @@ CONTAINS
       & c_ethanol_bg2_lost_avg,     &
       & c_nonsoluble_bg2_lost_avg,  &
       & c_humus_2_lost_avg,         &
-      & c_bg_sum_lost_avg,          & ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
-      & c_ag_sum_1_lost_avg,        & ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
+      & c_bg_sum_lost_avg,          & ! Sum of belowground Yasso pools  [mol(C)/m^2(canopy)]
+      & c_ag_sum_1_lost_avg,        & ! Sum of aboveground green Yasso pools  [mol(C)/m^2(canopy)]
       !
       & NPP_pot_sum_lost_avg,          &
       & GPP_sum_lost_avg,              &
@@ -504,8 +504,8 @@ CONTAINS
       & c_ethanol_bg2,     &
       & c_nonsoluble_bg2,  &
       & c_humus_2,         &
-      & c_bg_sum,          &  ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
-      & c_ag_sum_1,        &  ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
+      & c_bg_sum,          &  ! Sum of belowground Yasso pools  [mol(C)/m^2(canopy)]
+      & c_ag_sum_1,        &  ! Sum of aboveground green Yasso pools  [mol(C)/m^2(canopy)]
       !
       & NPP_pot_sum,          &
       & GPP_sum,              &
@@ -694,8 +694,8 @@ CONTAINS
           & c_nonsoluble_bg2_pfts(nproma, npft, nblks),     &
           & c_humus_2_pfts(nproma, npft, nblks),            &
           !
-          & c_bg_sum_pfts(nproma, npft, nblks),             &   ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
-          & c_ag_sum_1_pfts(nproma, npft, nblks),           &   ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
+          & c_bg_sum_pfts(nproma, npft, nblks),             &   ! Sum of belowground Yasso pools  [mol(C)/m^2(canopy)]
+          & c_ag_sum_1_pfts(nproma, npft, nblks),           &   ! Sum of aboveground green Yasso pools  [mol(C)/m^2(canopy)]
           !
           & NPP_pot_sum_pfts(nproma, npft, nblks),          &
           & GPP_sum_pfts(nproma, npft, nblks),              &
@@ -742,8 +742,8 @@ CONTAINS
           & c_ethanol_bg2_lost_avg(nproma, npft, nblks),     &
           & c_nonsoluble_bg2_lost_avg(nproma, npft, nblks),  &
           & c_humus_2_lost_avg(nproma, npft, nblks),         &
-          & c_bg_sum_lost_avg(nproma, npft, nblks),          &  ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
-          & c_ag_sum_1_lost_avg(nproma, npft, nblks),        &  ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
+          & c_bg_sum_lost_avg(nproma, npft, nblks),          &  ! Sum of belowground Yasso pools  [mol(C)/m^2(canopy)]
+          & c_ag_sum_1_lost_avg(nproma, npft, nblks),        &  ! Sum of aboveground green Yasso pools  [mol(C)/m^2(canopy)]
           !
           & NPP_pot_sum_lost_avg(nproma, npft, nblks),          &
           & GPP_sum_lost_avg(nproma, npft, nblks),              &
