@@ -137,7 +137,9 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Cache_GPU_pointers
     !
     PROCEDURE(Init_interface),           DEFERRED :: Init
-    PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars, Count_conserved_quantities, Collect_conserved_variables
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Count_conserved_quantities
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
     PROCEDURE(Handler_interface),        DEFERRED :: Handler
