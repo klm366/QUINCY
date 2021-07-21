@@ -567,8 +567,11 @@ CONTAINS
                 END IF
               END DO
               CALL tile%Get_fraction(fract=fract_tmp(:,:))
-              tile%lcts(ilct)%fract(:,:) = &
-                & MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
+              WHERE (fract_tmp(:,:) > 0._wp)
+                tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:)
+              ELSE WHERE
+                tile%lcts(ilct)%fract(:,:) = 0._wp
+              END WHERE
             END IF
             child => child%Get_next_sibling_tile()
           END DO
