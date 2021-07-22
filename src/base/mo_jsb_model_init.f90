@@ -841,6 +841,10 @@ CONTAINS
         END IF
       END SELECT
 
+      IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL alcc_init_lcc(tile)
+      END IF
+
       CALL model%Goto_next_tile(tile)
     ENDDO
 
