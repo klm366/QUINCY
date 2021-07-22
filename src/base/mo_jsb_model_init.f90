@@ -192,6 +192,7 @@ CONTAINS
     USE mo_fuel_init,           ONLY: fuel_init
     !USE mo_disturb_init,        ONLY: disturb_init
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
+    USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
 
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
@@ -248,7 +249,13 @@ CONTAINS
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
 
         !***** Add LCC processes between pplcc_pre and pplcc_post *****
-        CALL model%Queue_task(TLCC_, "tlcc")
+        IF (model%processes(TLCC_)%p%config%active) THEN
+          CALL model%Queue_task(TLCC_, "tlcc")
+        END IF
+
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL model%Queue_task(ALCC_, "alcc")
+        END IF
 
         !! Do postprocessing after all LCC tasks were executed!
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
@@ -322,13 +329,6 @@ CONTAINS
           ! time step and jsbach should be also consistent with this.
           ! In the albedo update time step the albedo should be updated after the SEB process, so that also
           ! the SEB remains consistent within this time step.
-      IF (model%processes(ALCC_)%p%config%active) THEN
-        CALL model%Queue_task(ALCC_, "alcc")                ! JN-TODO: this should be moved up to tasks that can change area
-      END IF
-          ! The explanation above for the aldedo accounts also for alcc as it may also changes surface
-          ! properties affecting atmospheric radiation. However, in alcc we do not redistribute the albedos
-          ! of the pfts because they shall not keep their quantity for the gridbox but change with alcc.
-          ! Therefore, the sequence between the alcc and albedo process does not matter.
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     
@@ -656,6 +656,10 @@ CONTAINS
 
       IF (one_of(tile%process_action(TLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL tlcc_init_lcc(tile)
+      END IF
+
+      IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL alcc_init_lcc(tile)
       END IF
 
       CALL model%Goto_next_tile(tile)
