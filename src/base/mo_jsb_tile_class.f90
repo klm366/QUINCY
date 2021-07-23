@@ -757,7 +757,7 @@ CONTAINS
     INTEGER,                                   INTENT(in)    :: ics, ice, iblk
 
     INTEGER :: no_children, i
-    CLASS(t_State), POINTER :: current
+    CLASS(t_jsb_tile_abstract), POINTER :: current
     ! REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator_1d'
@@ -766,13 +766,10 @@ CONTAINS
     ! by looping over children of tile
     IF (ANY(tile%l_fract_children_changed(ics:ice,iblk))) THEN
       no_children = tile%Get_no_of_children()
-      current => tile%first_child
+      current => tile%first_child_tile
       DO i=1,no_children
-        SELECT TYPE (current)
-        CLASS IS (t_jsb_tile_abstract)
-          CALL current%Get_fraction_1d(ics, ice, iblk, fract=this%fractions(ics:ice,iblk,i))
-        END SELECT
-        current => current%next_sibling
+        CALL current%Get_fraction(ics, ice, iblk, fract=this%fractions(ics:ice,iblk,i))
+        current => current%next_sibling_tile
       END DO
 
       !$acc update device( this%fractions(ics:ice,iblk,:) )
@@ -800,7 +797,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
 
     INTEGER :: no_children, i
-    CLASS(t_State), POINTER :: current
+    CLASS(t_jsb_tile_abstract), POINTER :: current
     ! REAL(wp), ALLOCATABLE :: fract(:), fract_sum(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fractions_aggregator_2d'
@@ -810,13 +807,10 @@ CONTAINS
     ! by looping over children of tile
     IF (ANY(tile%l_fract_children_changed(:,:))) THEN
       no_children = tile%Get_no_of_children()
-      current => tile%first_child
+      current => tile%first_child_tile
       DO i=1,no_children
-        SELECT TYPE (current)
-        CLASS IS (t_jsb_tile_abstract)
-          CALL current%Get_fraction_2d(fract=this%fractions(:,:,i))
-        END SELECT
-        current => current%next_sibling
+        CALL current%Get_fraction_2d(fract=this%fractions(:,:,i))
+        current => current%next_sibling_tile
       END DO
 
       !$acc update device( this%fractions(:,:,:) )
