@@ -230,6 +230,7 @@ CONTAINS
     CASE ('full')
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
+      ! use_dynlake = .FALSE.:  basin_mask is set to zero
       WHERE (basin_mask(:) == 1._wp)
         lake_inflow(:) = lake_runoff(:) * lake_fract(:) * area / rhoh2o
         inflow(:)      = land_runoff(:) * land_fract(:) * area / rhoh2o

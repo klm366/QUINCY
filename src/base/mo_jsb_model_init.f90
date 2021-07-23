@@ -259,11 +259,13 @@ CONTAINS
           CALL model%Queue_task(DYNVEG_,"dynveg")
         END IF
 
+        IF (model%config%use_dynlakes) THEN
+          CALL model%Queue_task(HD_, "dynlake")
+        END IF
+
         !! Do postprocessing after all LCC tasks were executed!
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
-
-      CALL model%Queue_task(HD_, "dynlake")
 
       ! JN-TODO: disturbances need to be adapted to work on per grid-cell variables to be treated 
       !          alongside the lccs above that change area to enable age-classes to be reintroduced
