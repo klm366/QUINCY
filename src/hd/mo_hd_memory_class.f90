@@ -51,15 +51,16 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
-      lake_storage    , &  !< lake water volume storage of endorheic lakes [m^3]
+      volume_lake    , &  !< lake water volume storage of endorheic lakes [m^3]
       lake_outflow    , &  !< lake water outflow to neighbor grid cell [m^3/s]
-      lake_height     , &  !< actual lake water height of endorheic lakes [m]
-      lake_area       , &  !< actual lake water height of endorheic lakes [m^2]
-      lake_height_max , &  !< maximum lake water height of endorheic lakes [m]
-      lake_area_max   , &  !< maximum lake water area of endorheic lakes [m^2]
-      lake_volume_max , &  !< maximum lake water volume of endorheic lakes [m^3]
-      elev_min        , &  !< minimum elevation within ICON grid cell [m]
-      dyn_height      , &  !< minimum dynamic height within ICON grid cell [m]
+      height_lake     , &  !< actual lake water height of endorheic lakes [m]
+      area_lake       , &  !< actual lake water area of endorheic lakes [m^2]
+      rel_area_lake   , &  !< relative lake water area 
+      height_lake_max , &  !< maximum lake water height of endorheic lakes [m]
+      area_lake_max   , &  !< maximum lake water area of endorheic lakes [m^2]
+      volume_lake_max , &  !< maximum lake water volume of endorheic lakes [m^3]
+      height_oro_min        , &  !< minimum elevation within ICON grid cell [m]
+      height_dyn      , &  !< minimum dynamic height within ICON grid cell [m]
       alpha           , &  !< parameter to describe lake volume-height relation
       beta            , &  !< parameter to describe lake volume-area relation
       basin_mask      , &  !< lake basin grid points flagged as 1 else 0 
@@ -212,9 +213,9 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'lake_storage', mem%lake_storage,                     &
+     CALL mem%Add_var( 'volume_lake', mem%volume_lake,                     &
       & hgrid, surface,                                                      &
-      & t_cf('lake_storage', 'm3', 'water content of the endorheic lake'),   &
+      & t_cf('volume_lake', 'm3', 'water content of the endorheic lake'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -228,57 +229,65 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'lake_height', mem%lake_height,                       &
+     CALL mem%Add_var( 'height_lake', mem%height_lake,                       &
       & hgrid, surface,                                                      &
-      & t_cf('lake_height', 'm', 'grid cell lake height'),                   &
+      & t_cf('height_lake', 'm', 'grid cell lake height'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      & 
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'lake_area', mem%lake_area,                           &
+     CALL mem%Add_var( 'area_lake', mem%area_lake,                           &
       & hgrid, surface,                                                      &
-      & t_cf('lake_area', 'm2', 'grid cell lake area'),                      &
+      & t_cf('area_lake', 'm2', 'grid cell lake area'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'lake_height_max', mem%lake_height_max,                &
+     CALL mem%Add_var( 'rel_area_lake', mem%rel_area_lake,                   &
       & hgrid, surface,                                                      &
-      & t_cf('lake_height_max', 'm', 'grid cell maxium lake height'),        &
+      & t_cf('rel_area_lake', 'none', 'relative lake area'),                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'height_lake_max', mem%height_lake_max,                &
+      & hgrid, surface,                                                      &
+      & t_cf('height_lake_max', 'm', 'grid cell maxium lake height'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'lake_area_max', mem%lake_area_max,                    &
+    CALL mem%Add_var( 'area_lake_max', mem%area_lake_max,                    &
       & hgrid, surface,                                                      &
-      & t_cf('lake_area_max', 'm2', 'grid cell maxium lake area'),           & 
+      & t_cf('area_lake_max', 'm2', 'grid cell maxium lake area'),           & 
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'lake_volume_max', mem%lake_volume_max,                &
+    CALL mem%Add_var( 'volume_lake_max', mem%volume_lake_max,                &
       & hgrid, surface,                                                      &
-      & t_cf('lake_volume_max', 'm3', 'grid cell maxium lake volume'),       &
+      & t_cf('volume_lake_max', 'm3', 'grid cell maxium lake volume'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'elev_min', mem%elev_min,                              &
+    CALL mem%Add_var( 'height_oro_min', mem%height_oro_min,                              &
       & hgrid, surface,                                                      &
-      & t_cf('elev_min', 'm', 'minimum elevation within grid cell'),         &
+      & t_cf('height_oro_min', 'm', 'minimum elevation within grid cell'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'dyn_height', mem%dyn_height,                          &
+    CALL mem%Add_var( 'height_dyn', mem%height_dyn,                          &
       & hgrid, surface,                                                      &
-      & t_cf('dyn_height', 'm', 'dynamic minimum height in each grid cell'), &
+      & t_cf('height_dyn', 'm', 'dynamic minimum height in each grid cell'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &

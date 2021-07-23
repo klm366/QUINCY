@@ -141,28 +141,30 @@ CONTAINS
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &
         & variable_name='HEIGHT_MAX',                     &
-        & fill_array = dsl4jsb_var_ptr(HD_,lake_height_max))
+        & fill_array = dsl4jsb_var_ptr(HD_,height_lake_max))
 
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &
         & variable_name='VOLUME_MAX',                     &
-        & fill_array = dsl4jsb_var_ptr(HD_,lake_volume_max))
+        & fill_array = dsl4jsb_var_ptr(HD_,volume_lake_max))
 
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &
         & variable_name='AREA_MAX',                     &
-        & fill_array = dsl4jsb_var_ptr(HD_,lake_area_max))
+        & fill_array = dsl4jsb_var_ptr(HD_,area_lake_max))
 
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &
         & variable_name='ALPHA',                     &
         & fill_array = dsl4jsb_var_ptr(HD_,alpha))
 
-      ! maximum grid cell lake height in meter
-      return_pointer => input_file%Read_2d(         &
-        & variable_name='BASIN_MASK',                     &
-        & fill_array = dsl4jsb_var_ptr(HD_,basin_mask))
-
+      IF (model%config%use_dynlakes) THEN
+        ! maximum grid cell lake height in meter
+        return_pointer => input_file%Read_2d(         &
+          & variable_name='BASIN_MASK',                     &
+          & fill_array = dsl4jsb_var_ptr(HD_,basin_mask))
+      ENDIF
+   
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &
         & variable_name='BETA',                     &
@@ -171,7 +173,7 @@ CONTAINS
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &
         & variable_name='ELEV_MIN',                     &
-        & fill_array = dsl4jsb_var_ptr(HD_,elev_min))
+        & fill_array = dsl4jsb_var_ptr(HD_,height_oro_min))
 
       nproma = grid%nproma
       nblks  = grid%nblks

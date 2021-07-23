@@ -141,7 +141,11 @@ CONTAINS
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
         CALL message(TRIM(routine), 'Running terraplanet experiment with scheme '//TRIM(model%config%tpe_scheme))
         IF (model%config%use_lakes) THEN
-          CALL message('    ', '... using lakes')
+          IF (model%config%use_dynlakes) THEN
+            CALL message('    ', '... using dynlakes')
+          ELSE
+            CALL message('    ', '... using lakes')
+          END IF
         ELSE
           CALL message('    ', '... not using lakes')
         END IF

@@ -415,7 +415,7 @@ CONTAINS
     USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
-    USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
+    USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow, lake_lateral_flow
 #endif
 
     dsl4jsb_Use_processes SEB_
@@ -461,6 +461,7 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     CALL model%Get_top_tile(tile)
     CALL hd_lateral_flow(tile, model%options(no_omp_thread))
+    CALL lake_lateral_flow(tile, model%options(no_omp_thread))
     CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
     CALL interface_hd_ocean(tile, model%options(no_omp_thread))

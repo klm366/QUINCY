@@ -31,6 +31,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=30)              :: grid_name
     CHARACTER(len=40)              :: usecase
     LOGICAL                        :: use_lakes
+    LOGICAL                        :: use_dynlakes
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
@@ -82,6 +83,7 @@ CONTAINS
       grid_name
 
     LOGICAL                       :: use_lakes
+    LOGICAL                       :: use_dynlakes
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
     LOGICAL                       :: l_compat401
@@ -94,6 +96,7 @@ CONTAINS
 
     NAMELIST /jsb_model_nml/  &
       use_lakes, &
+      use_dynlakes, &
       use_glacier, &
       use_quincy, &
       l_compat401, &
@@ -114,6 +117,7 @@ CONTAINS
 
     ! Set defaults
     use_lakes                  = .TRUE.
+    use_dynlakes               = .FALSE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
     l_compat401                = .FALSE.
@@ -141,6 +145,7 @@ CONTAINS
     CALL close_nml(nml_handler)
 
     model_config%use_lakes                  = use_lakes
+    model_config%use_dynlakes               = use_dynlakes
     model_config%use_glacier                = use_glacier
     model_config%use_quincy                 = use_quincy
     model_config%l_compat401                = l_compat401
