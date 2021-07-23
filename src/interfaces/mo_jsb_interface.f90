@@ -28,9 +28,9 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear
 
-  dsl4jsb_Use_processes CARBON_
+  dsl4jsb_Use_processes CARBON_, ALCC_
 
   IMPLICIT NONE
   PRIVATE
@@ -371,12 +371,13 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
+    USE mo_alcc_init,           ONLY : read_land_use_data
+
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: dtime
 
     TYPE(t_jsb_model),           POINTER :: model
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
     INTEGER :: no_omp_thread
 
@@ -397,6 +398,11 @@ CONTAINS
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
+
+    !> For the ALCC process land use data has to be read once a year
+    IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
+      CALL read_land_use_data(model_id, current_datetime)
+    ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
