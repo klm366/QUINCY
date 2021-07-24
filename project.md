@@ -6,6 +6,8 @@ website: https://mpimet.mpg.de/en/science/modeling-with-icon/icon-configurations
 email: reiner.schnur@mpimet.mpg.de
 project_dir: .
 src_dir: ./src
+include: ./doc/include
+exclude: cdipio.inc
 page_dir: ./doc/guide
 media_dir: ./doc/media
 output_dir: ./doc/html
