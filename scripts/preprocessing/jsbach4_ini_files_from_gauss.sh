@@ -4,6 +4,8 @@
 # for the land model JSBACH4+ and the ICON atmosphere by interpolating existing files
 # from ECHAM6 on Gaussian grid
 #
+# Authors: Reiner Schnur, Veronika Gayler, Rene Redler, MPI-M
+#
 # Reiner Schnur, MPI-M, 2017-04-10 initial version
 # 
 # Based on scripts from Veronika Gayler, Thomas Raddatz and Marco Giorgetta
@@ -11,22 +13,23 @@
 set -eu
 #_____________________________________________________________________________
 
-# Input Setting
+# Settings
 
 coupled=false      # land sea mask for coupled experiment?
 
-rootdir=/pool/data/ICON/grids/private/rene/mpim
-
 refinement=R02B04
 bisections=4
-atmGridID=0013
-oceGridID=0035    # required for coupled configurations
-revision_ext=r0002 # revision of extpar data
-
-revision=r0001
+atmGridID=0043
+oceGridID=0036    # required for coupled configurations
+revision=r00xx
+revision_ext=r0001
 start_year=1850
-end_year=1852
+end_year=1850
 
+#ggrids="T63"                   # additional gaussian grids for jsbach4 (to run with echam6)
+ggrids=""                       # disable gaussian grids
+
+rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
   mlogin*|mistralpp*)
     basedir=${rootdir}/private/jsbach
@@ -37,12 +40,12 @@ case `hostname` in
     #output_path=/work/mj0060/m212005/data/icon                                           # for local use
     ;;
   *)
-    output_dir=/scratch/local1/m221005/ini_files/jsbach4                                 # for local use
+    output_root=/scratch/local1/m212005/ini_files                          # for local use
     ;;
 esac
 
-cwddir=$(pwd)
-workdir=$(pwd)/workdir
+debug=false             # true/false
+debug_remap_scheme=nn
 
 pool_prepare=/pool/data/JSBACH/prepare/                   # pool directory with data needed for initial file generation
 old_r2b4_amip=false                                       # Temporary: old r2b4_amip grid (true) or new grids (false)
@@ -56,6 +59,10 @@ bisections="0 1 2 3 4 5 6 7 8 9 10 11"
 #ggrids="T63"                            # for testing
 ggrids=""                                # disable gaussian grids
 
+pool_prepare=/pool/data/JSBACH/prepare/                   # pool directory with data needed for initial file generation
+grid_path=${rootdir}/$atmGridID
+
+extpar_path=${rootdir}/${atmGridID}/extpar.2016/$revision_ext
 
 declare -A source_res_dict
 source_res_dict[0]=05 #vg T31
@@ -92,17 +99,6 @@ moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
 
-coupled_grid_file=/pool/data/ICON/grids/private/rene/mpim/${atmGridID}/icon_grid_${atmGridID}_${refinement}_G.nc
-coupled_lsf_file=/pool/data/ICON/grids/private/rene/mpim/${atmGridID}-${oceGridID}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
-# Set hd_file to empty if there's no hd_file for this setup available, yet.
-hd_file=""
-
-debug=false             # true/false
-debug_remap_scheme=nn
-
-dryrun=false  # Process files in workdir, but don't copy them to the destination folder (true/false)
-clean=true    # Delete workdir after finished (true/false)
-
 declare -A sso_dict
 sso_dict[oromea]=topography_c
 sso_dict[oroval]=SSO_OROMIN
@@ -126,10 +122,10 @@ case `hostname` in
     ;;
    *)
     #module load cdo/1.7.2-gccsys       # cdo 1.8.0 has problems with remapcon
-    module load cdo/1.9.2-gccsys
-    module load nco/4.5.2
-    module load netcdf
-    module load nag
+    module load cdo/1.9.7.1-gccsys
+    module load nco/4.7.8-gccsys
+    module load netcdf_c/4.6.1
+    module load nag/6.2
     ;;
 esac
 set -u
@@ -454,7 +450,7 @@ function generate_fractions {
   ${cdo} setvar,fract_veg -ltc,0.5 ${grid_name}_fract_glac.nc ${grid_name}_fract_veg.nc
   ncatted -a long_name,fract_veg,m,c,'Fraction of vegetated tile rel. to land tile' ${grid_name}_fract_veg.nc
   debug_file ${grid_name}_fract_veg.nc
-  ${cdo} setvar,sea -mulc,-1 -subc,1 ${grid_name}_notsea.nc ${grid_name}_sea.nc
+  ${cdo} setvar,sea -setrtoc,-1,0,0 -mulc,-1 -subc,1 ${grid_name}_notsea.nc ${grid_name}_sea.nc
   ncatted -a long_name,sea,m,c,'Fraction of ocean' ${grid_name}_sea.nc
   debug_file ${grid_name}_sea.nc
   ${cdo} setvar,fract_lake -setmisstoc,0 ${grid_name}_lake_remap.nc ${grid_name}_fract_lake.nc
@@ -784,6 +780,7 @@ fi
 
 mkdir -p ${workdir} || true
 cd ${workdir}
+echo "Workdir: ${workdir}"
 rm -rf *
 
 [[ "${old_r2b4_amip}" == "true" ]] && bisections="4"
@@ -791,8 +788,6 @@ rm -rf *
 for bisection in $bisections $ggrids
 do
   [[ $(echo ${bisection} | cut -c1) == T ]] && jsb4icon=false || jsb4icon=true
-  cdo="cdo -s -b F64"
-  #cdo="cdo -b F64"
   if [[ ${jsb4icon} == true ]]; then
     if [[ $bisection -ge 8  ]]
     then
@@ -867,12 +862,12 @@ do
   # svn -r 9561 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
   # svn has been moved to git, thus ...
 
-  # git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
-  git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
+  git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
+  # git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
   cd mpiesm-landveg
   git config core.sparseCheckout true
   echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
-  git checkout 00526c13b                       # corresponds to svn r 9561
+  git checkout 83462fbc
   mv contrib/initial_tarfiles/ ..
   cd ../initial_tarfiles
   rm -rf ../mpiesm-landveg
@@ -1012,6 +1007,4 @@ done
 if [[ ${clean} == "true" ]]
 then
   echo "Cleaning up ..."
-  cd ${cwddir}
   rm -rf ${workdir}
-fi
