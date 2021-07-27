@@ -221,10 +221,11 @@ function generate_land_sea_mask {
   # fi
 
   # Generate lake fractions, making sure that fractional coastal grid points don't contain any lakes
-  # Set small lake fractions below 0.1 to zero
-  ${cdo} setvar,lake -setrtoc,-1,0.0999,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
+  # Set small lake fractions below 0.01 to zero
+  ${cdo} setvar,lake -setrtoc,-1,0.01,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
   ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
-  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc ${temp} ${grid_name}_lake_remap.nc
+  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc \
+	 -setrtoc,-1,0.01,0 ${temp} ${grid_name}_lake_remap.nc
 
   rm ${temp}
 
