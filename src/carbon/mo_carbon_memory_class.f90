@@ -16,24 +16,26 @@ MODULE mo_carbon_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
+  USE mo_util, ONLY: One_of
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
+  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d !, t_jsb_var_real3d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes PHENO_
 
   ! Use process configurations
-  dsl4jsb_Use_config(PHENO_)
+  dsl4jsb_Use_config(PHENO_)    ! needed for l_forestRegrowth
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_carbon_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 110
+  INTEGER, PARAMETER :: max_no_of_vars = 155
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
@@ -257,7 +259,7 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
-    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(PHENO_)    ! needed for l_forestRegrowth
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid     ! Horizontal grid
@@ -273,6 +275,7 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
+    
 
     dsl4jsb_Get_config(PHENO_)
 
