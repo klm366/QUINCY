@@ -459,14 +459,14 @@ CONTAINS
       global_discharge = global_sum_array(discharge(:,:) * in_domain(:,:))
 
       ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
-      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) == 1._wp)
+      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) > 0.5_wp)  ! coast_ocean is either 0. or 1.
       sum_weights = global_sum_array(coast_ocean(:,:) * cos_lat(:,:) * in_domain(:,:))
-      WHERE (coast_ocean(:,:) == 1._wp)
+      WHERE (coast_ocean(:,:) > 0.5_wp)
         discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
       ELSEWHERE
         discharge_ocean(:,:) = 0._wp
       END WHERE
-      discharge(:,:) = 0._wp
+      ! discharge(:,:) = 0._wp
 
     CASE ('zero')
 

@@ -51,8 +51,9 @@ CONTAINS
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
 
+    INTEGER, POINTER ::         &
+      & cell_sea_land_mask(:,:)
     REAL(wp), POINTER ::         &
-      & cell_sea_land_mask(:,:), &
       & return_pointer   (:,:),  &   !< temporary pointer
       & return_pointer3d (:,:,:)     !< temporary pointer
 
@@ -175,7 +176,7 @@ CONTAINS
       input_file = jsb_netcdf_open_input(TRIM(grid%filename), model%id)
 
       ! coastal ocean cells
-      cell_sea_land_mask => input_file%Read_2d( &
+      cell_sea_land_mask => input_file%Read_2d_int( &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD_, coast_ocean) = &
         & MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
