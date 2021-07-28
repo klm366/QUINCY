@@ -19,7 +19,7 @@ MODULE mo_jsb_time
   USE mo_exception,      ONLY: message, message_text, finish
   USE mo_jsb_time_iface, ONLY: t_datetime, deallocateDatetime, get_time_next, &
                                get_date_components, get_time_start, &
-                               get_time_dt, is_time_experiment_start, is_time_restart, &
+                               get_time_dt, is_time_experiment_start, get_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
                                is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
 
@@ -28,14 +28,12 @@ MODULE mo_jsb_time
 
 !!$  PUBLIC :: init_jsb_time
   PUBLIC :: init_time
-  PUBLIC :: update_time_at_beginloop, update_time_at_endloop
   PUBLIC :: t_datetime, deallocateDatetime, get_time_next
-  PUBLIC :: get_date_components, get_time_start, get_time_dt, &
-            is_time_experiment_start, is_time_restart, &
+  PUBLIC :: get_date_components, get_time_start, get_time_experiment_start, get_time_dt, &
+            is_time_experiment_start, is_time_restart, is_time_ltrig_rad_m1, &
             get_year_length, get_month_length, get_day_length, get_year_day
-  PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, is_time_ltrig_rad_m1, &
-            get_year, get_month, &
-            get_day, get_secs_of_day
+  PUBLIC :: is_newday, is_newmonth, is_newyear, get_year_at_model_start, get_year_at_experiment_start, &
+            get_year, get_month, get_day, get_secs_of_day
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
   PUBLIC :: timestep_in_days, timesteps_per_day
@@ -73,14 +71,15 @@ CONTAINS
     IF (.NOT. time_initialized) THEN
       CALL message(TRIM(routine), 'Initializing JSBACH time')
 
-      ! TBD: remove #ifdef
+      ! TODO: remove #ifdef
 #ifdef __ICON__
       IF (PRESENT(restart_jsbach)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
-      IF (PRESENT(namelist_filename)) THEN
-        CALL read_time_namelist(TRIM(namelist_filename))
-      END IF
+      IF (PRESENT(namelist_filename)) CONTINUE ! avoid compiler warnings about dummy arguments not being used
+      ! IF (PRESENT(namelist_filename)) THEN                   ! present only for standalone model
+      !   CALL read_time_namelist(TRIM(namelist_filename))     ! already done from mo_util_jsbach.f90 in icon
+      ! END IF
 #else
-      IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN
+      IF (PRESENT(namelist_filename) .AND. PRESENT(restart_jsbach)) THEN  ! present only for standalone model
         CALL read_time_namelist(TRIM(namelist_filename), restart_jsbach)
       END IF
 #endif
@@ -113,28 +112,6 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE init_time
-
-  SUBROUTINE update_time_at_beginloop(istep, is_standalone)
-
-    USE mo_jsb_time_iface, ONLY: start_timestep
-
-    INTEGER, INTENT(in) :: istep
-    LOGICAL, INTENT(in) :: is_standalone
-
-    IF (is_standalone) CALL start_timestep(istep)
-
-  END SUBROUTINE update_time_at_beginloop
-
-  SUBROUTINE update_time_at_endloop(istep, is_standalone)
-
-    USE mo_jsb_time_iface, ONLY: finish_timestep
-
-    INTEGER, INTENT(in) :: istep
-    LOGICAL, INTENT(in) :: is_standalone
-
-    IF (is_standalone) CALL finish_timestep(istep)
-
-  END SUBROUTINE update_time_at_endloop
 
   LOGICAL FUNCTION is_newday(current, dt)
 
@@ -265,6 +242,20 @@ CONTAINS
 
   END FUNCTION get_year_at_model_start
 
+  INTEGER FUNCTION get_year_at_experiment_start()
+
+    TYPE(t_datetime), POINTER :: temp_date
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_year_at_experiment_start'
+
+    IF (.NOT. time_initialized) &
+      CALL finish(TRIM(routine), 'Time not initialized yet.')
+
+    temp_date => get_time_experiment_start()
+    get_year_at_experiment_start = get_year(temp_date)
+    CALL deallocateDatetime(temp_date)
+
+  END FUNCTION get_year_at_experiment_start
 
   REAL(wp) FUNCTION timestep_in_days(dt, model_id) ! EXPRESS the time step in days (as fraction of day)
 
