@@ -211,11 +211,14 @@ function generate_land_sea_mask {
   ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 -ifthen ${grid_name}_notsea.nc -gec,0.9 ${temp} ${grid_name}_glac_remap.nc
 
   # Adjust land sea mask with glacier fraction
-  if [[ ${coupled} != "true" ]]
-  then
-    ${cdo} setvar,notsea -ifthenelse -ltc,0.5 ${grid_name}_glac_remap.nc ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc ${temp}
-    mv ${temp} ${grid_name}_notsea.nc
-  fi
+  # Commented this out again since the land-sea mask (at least in coupled experiments) comes from the ocean and should
+  # not be changed afterwards. However, this is not totally correct since JSBACH assumes that glacier fractions (and therefore
+  # land fraction with glacier) are either 0 or 1. To be consistent, this should be taken care of ... TBD
+  #if [[ ${coupled} != "true" ]]
+  # then
+  #   ${cdo} setvar,notsea -ifthenelse -ltc,0.5 ${grid_name}_glac_remap.nc ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc ${temp}
+  #   mv ${temp} ${grid_name}_notsea.nc
+  # fi
 
   # Generate lake fractions, making sure that fractional coastal grid points don't contain any lakes
   # Set small lake fractions below 0.1 to zero
