@@ -96,20 +96,20 @@ MODULE mo_rad_memory_class
       & par,                  & ! sw_par_down from atmosphere in [W/m^2]
       & par_down_mol,         & ! Downward PAR flux in mol(photons)/(m^2 s) but only for current time step/"delta_time"
       & faPAR,                & ! fraction of PAR absorbed by the canopy and per leaf area
-      & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
-      & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
+      ! & par_down_mol_nacc,    & ! incoming PAR accumulated (over output timestep) in mol(photons)/(m^2)
+      ! & par_down_mol_tavg,    & ! incoming PAR (mean value over output timestep) [MOL PHOTONS/M^2 S]
       & soil_reflectivity_par,& ! Soil reflectivity in the PAR region but only for current time step/"delta_time"
-      & fract_par_direct,     & ! Fraction of direct PAR
-      & apar_nacc
+      & fract_par_direct        ! Fraction of direct PAR
+      ! & apar_nacc
 
     TYPE(t_jsb_var_real3d) :: & ! alt: (nland, ncanopy, ntiles)
       & lai_cl,               & ! LAI per canopy layer; preliminarily, should later be put to another process...
       & faPAR_cl,             & ! Absorbed PAR per canopy layer and per leaf area [fraction of irradiance]
                                 ! As fraction of incoming radiation at the top of the canopy layers (=1).
-      & apar_per_lai_cl,      & ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime.
+      & apar_per_lai_cl         ! Absorbed PAR per canopy layer LAI (lai_cl). Only for current time step/dtime.
                                 ! [(absorbed photons) / (m^2(leaf area) * s)]
-      & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
-      & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)
+      ! & apar_per_lai_cl_nacc, & ! PAR absorbed by the canopy accumulated (over output timestep) in mol(photons)/m^2
+      ! & apar_per_lai_cl_tavg    ! PAR absorbed by the canopy (mean value over output timestep)  in mol(photons)/(m^2 * s)
 
     !
     ! Additional variables for LAKE lct_type
@@ -345,10 +345,11 @@ CONTAINS
 
       !$acc enter data pcreate(mem%alb_vis_can,mem%alb_nir_can,mem%snow_age, &
       !$acc mem%sky_view_fract,mem%sky_view_fract_stem,mem%par, &
-      !$acc mem%par_down_mol,mem%faPAR,mem%par_down_mol_nacc,mem%lai_cl, &
-      !$acc mem%par_down_mol_tavg,mem%soil_reflectivity_par,mem%fract_par_direct, &
-      !$acc mem%faPAR_cl,mem%apar_per_lai_cl,mem%apar_per_lai_cl_nacc, &
-      !$acc mem%apar_per_lai_cl_tavg,mem%apar_nacc)
+      !$acc mem%par_down_mol,mem%faPAR,mem%lai_cl, &
+      !$acc mem%soil_reflectivity_par,mem%fract_par_direct, &
+      !$acc mem%faPAR_cl,mem%apar_per_lai_cl)
+      !! !$acc mem%par_down_mol_tavg,mem%apar_per_lai_cl_tavg, &
+      !! !$acc mem%par_down_mol_nacc,mem%apar_nacc,mem%apar_per_lai_cl_nacc)
 
       CALL jsb_add_var( mem, 'alb_vis_can', mem%alb_vis_can,                 &
         & hgrid, surface,                                                    &
@@ -413,19 +414,19 @@ CONTAINS
         & output_level=BASIC,                                                &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-      CALL jsb_add_var( mem, 'par_down_mol_nacc', mem%par_down_mol_nacc,     &
-        & hgrid, surface,                                                    &
-        & t_cf('Incoming PAR accumulated (over output timestep)', '', ''),   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp )
+      ! CALL jsb_add_var( mem, 'par_down_mol_nacc', mem%par_down_mol_nacc,     &
+      !   & hgrid, surface,                                                    &
+      !   & t_cf('Incoming PAR accumulated (over output timestep)', '', ''),   &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      !   & prefix, suffix,                                                    &
+      !   & lrestart=.TRUE., initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'par_down_mol_tavg', mem%par_down_mol_tavg,     &
-        & hgrid, surface,                                                    &
-        & t_cf('Incoming PAR (mean value over output timestep)', '', ''),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
+      ! CALL jsb_add_var( mem, 'par_down_mol_tavg', mem%par_down_mol_tavg,     &
+      !   & hgrid, surface,                                                    &
+      !   & t_cf('Incoming PAR (mean value over output timestep)', '', ''),    &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      !   & prefix, suffix,                                                    &
+      !   & lrestart=.FALSE., initval_r=0.0_wp ) ! R: initval =0
 
       CALL jsb_add_var( mem, 'soil_reflectivity_par', mem%soil_reflectivity_par, &
         & hgrid, surface,                                                        &
@@ -462,33 +463,34 @@ CONTAINS
          & prefix, suffix,                                                    &
          & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
-       CALL jsb_add_var( mem, 'apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,           &
-         & hgrid, canopy_layer,                                                           &
-         & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
-         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-         & prefix, suffix,                                                                &
-         & lrestart=.FALSE., initval_r=0.0_wp )
+      !  CALL jsb_add_var( mem, 'apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,           &
+      !    & hgrid, canopy_layer,                                                           &
+      !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
+      !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+      !    & prefix, suffix,                                                                &
+      !    & lrestart=.TRUE., initval_r=0.0_wp )
 
-       CALL jsb_add_var( mem, 'apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,          &
-         & hgrid, canopy_layer,                                                          &
-         & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
-         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
-         & prefix, suffix,                                                               &
-         & lrestart=.FALSE., initval_r=0.0_wp )
+      !  CALL jsb_add_var( mem, 'apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,          &
+      !    & hgrid, canopy_layer,                                                          &
+      !    & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
+      !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+      !    & prefix, suffix,                                                               &
+      !    & lrestart=.FALSE., initval_r=0.0_wp )
 
-       CALL jsb_add_var( mem, 'apar_nacc', mem%apar_nacc,                                 &
-         & hgrid, surface,                                                                &
-         & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
-         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-         & prefix, suffix,                                                                &
-         & lrestart=.FALSE., initval_r=0.0_wp )
+      !  CALL jsb_add_var( mem, 'apar_nacc', mem%apar_nacc,                                 &
+      !    & hgrid, surface,                                                                &
+      !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
+      !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+      !    & prefix, suffix,                                                                &
+      !    & lrestart=.TRUE., initval_r=0.0_wp )
 
       !$acc update device(mem%alb_vis_can,mem%alb_nir_can,mem%snow_age, &
       !$acc mem%sky_view_fract,mem%sky_view_fract_stem,mem%par, &
-      !$acc mem%par_down_mol,mem%faPAR,mem%par_down_mol_nacc,mem%lai_cl, &
-      !$acc mem%par_down_mol_tavg,mem%soil_reflectivity_par,mem%fract_par_direct, &
-      !$acc mem%faPAR_cl,mem%apar_per_lai_cl,mem%apar_per_lai_cl_nacc, &
-      !$acc mem%apar_per_lai_cl_tavg,mem%apar_nacc)
+      !$acc mem%par_down_mol,mem%faPAR,mem%lai_cl, &
+      !$acc mem%soil_reflectivity_par,mem%fract_par_direct, &
+      !$acc mem%faPAR_cl,mem%apar_per_lai_cl)
+      !! !$acc mem%par_down_mol_tavg,mem%apar_per_lai_cl_tavg, &
+      !! !$acc mem%par_down_mol_nacc,mem%apar_per_lai_cl_nacc,mem%apar_nacc)
     END IF
 
     ! Additional variables for lakes
