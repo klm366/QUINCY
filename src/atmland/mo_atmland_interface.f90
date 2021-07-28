@@ -145,37 +145,97 @@ CONTAINS
 
     dsl4jsb_Get_memory(A2L_)
 
-    t_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, t_air)
-    q_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, q_air)
-    rain_ptr              => dsl4jsb_var2D_onChunk(A2L_, rain)
-    snow_ptr              => dsl4jsb_var2D_onChunk(A2L_, snow)
-    wind_air_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_air)
-    wind_10m_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_10m)
-    lw_srf_down_ptr       => dsl4jsb_var2D_onChunk(A2L_, lw_srf_down)
-    swvis_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swvis_srf_down)
-    swnir_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swnir_srf_down)
-    swpar_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swpar_srf_down)
-    fract_par_diffuse_ptr => dsl4jsb_var2D_onChunk(A2L_, fract_par_diffuse)
-    press_srf_ptr         => dsl4jsb_var2D_onChunk(A2L_, press_srf)
-    drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
-    t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
-    t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
-    q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
-    q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
-    pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
-    cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
-    CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
-    CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
-    drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
-    drag_ice_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_ice)
-    t_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_wtr)
-    t_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_wtr)
-    q_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_wtr)
-    q_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_wtr)
-    t_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_ice)
-    t_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_ice)
-    q_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_ice)
-    q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
+    IF (PRESENT(t_air)) THEN
+      t_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, t_air)
+    END IF
+    IF (PRESENT(q_air)) THEN
+      q_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, q_air)
+    END IF
+    IF(PRESENT(rain)) THEN
+      rain_ptr              => dsl4jsb_var2D_onChunk(A2L_, rain)
+    END IF
+    IF (PRESENT(snow)) THEN
+      snow_ptr              => dsl4jsb_var2D_onChunk(A2L_, snow)
+    END IF
+    IF (PRESENT(wind_air)) THEN
+      wind_air_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_air)
+    END IF
+    IF (PRESENT(wind_10m)) THEN
+      wind_10m_ptr          => dsl4jsb_var2D_onChunk(A2L_, wind_10m)
+    END IF
+    IF (PRESENT(lw_srf_down)) THEN
+      lw_srf_down_ptr       => dsl4jsb_var2D_onChunk(A2L_, lw_srf_down)
+    END IF
+    IF (PRESENT(swvis_srf_down)) THEN
+      swvis_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swvis_srf_down)
+    END IF
+    IF(PRESENT(swnir_srf_down)) THEN
+      swnir_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swnir_srf_down)
+    END IF
+    IF (PRESENT(swpar_srf_down)) THEN
+      swpar_srf_down_ptr    => dsl4jsb_var2D_onChunk(A2L_, swpar_srf_down)
+    END IF
+    IF (PRESENT(fract_par_diffuse)) THEN
+      fract_par_diffuse_ptr => dsl4jsb_var2D_onChunk(A2L_, fract_par_diffuse)
+    END IF
+    IF (PRESENT(press_srf)) THEN
+      press_srf_ptr         => dsl4jsb_var2D_onChunk(A2L_, press_srf)
+    END IF
+    IF(PRESENT(drag_srf)) THEN
+      drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
+    END IF
+    IF (PRESENT(t_acoef)) THEN
+      t_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_acoef)
+    END IF
+    IF (PRESENT(t_bcoef)) THEN
+      t_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, t_bcoef)
+    END IF
+    IF (PRESENT(q_acoef)) THEN
+      q_acoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_acoef)
+    END IF
+    IF (PRESENT(q_bcoef)) THEN
+      q_bcoef_ptr           => dsl4jsb_var2D_onChunk(A2L_, q_bcoef)
+    END IF
+    IF (PRESENT(pch)) THEN
+      pch_ptr               => dsl4jsb_var2D_onChunk(A2L_, pch)
+    END IF
+    IF (PRESENT(cos_zenith_angle)) THEN
+      cos_zenith_angle_ptr  => dsl4jsb_var2D_onChunk(A2L_, cos_zenith_angle)
+    END IF
+    IF (PRESENT(CO2_air)) THEN
+      CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
+      CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
+    END IF
+    IF (PRESENT(drag_wtr)) THEN
+      drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
+    END IF
+    IF (PRESENT(drag_ice)) THEN
+      drag_ice_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_ice)
+    END IF
+    IF (PRESENT(t_acoef_wtr)) THEN
+      t_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_wtr)
+    END IF
+    IF (PRESENT(t_bcoef_wtr)) THEN
+      t_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_wtr)
+    END IF
+    IF (PRESENT(q_acoef_wtr)) THEN
+      q_acoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_wtr)
+    END IF
+    IF (PRESENT(q_bcoef_wtr)) THEN
+      q_bcoef_wtr_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_wtr)
+    END IF
+    IF (PRESENT(t_acoef_ice)) THEN
+      t_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_acoef_ice)
+    END IF
+    IF (PRESENT(t_bcoef_ice)) THEN
+      t_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, t_bcoef_ice)
+    END IF
+    IF (PRESENT(q_acoef_ice)) THEN
+      q_acoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_acoef_ice)
+    END IF
+    IF (PRESENT(q_bcoef_ice)) THEN
+      q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
+    END IF
 
     !$acc parallel default(present)
 
