@@ -8,6 +8,11 @@
 !! First version in mo_srf_memory_class.f90 by Reiner Schnur (2013-04-04)
 !! Separated out the surface energy balance part by Reiner Schnur (2016-03-21)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_seb_memory_class
 #ifndef __NO_JSBACH__
 

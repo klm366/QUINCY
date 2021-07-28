@@ -8,6 +8,10 @@
 !! First version by Rainer Schneck (2015-09-29)
 !! Julia Nabel (2018-01-10): l_forestRegrowth flag
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 
 MODULE mo_pheno_init
 #ifndef __NO_JSBACH__

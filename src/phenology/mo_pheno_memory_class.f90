@@ -8,6 +8,11 @@
 !! First version by Rainer Schneck (2015-09-09)
 !! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth
 !!                          (derive maxLAI from biomass via allometric relationships)
+!!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
 
 MODULE mo_pheno_memory_class
 #ifndef __NO_JSBACH__
