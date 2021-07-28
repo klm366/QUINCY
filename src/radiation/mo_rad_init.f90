@@ -140,6 +140,12 @@ CONTAINS
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd) = AlbedoNirInitial
     END IF
 
+    !$acc update device(dsl4jsb_var2D_onDomain(RAD_,alb_vis), &
+    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_nir), &
+    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_vis_lnd), &
+    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_nir_lnd), &
+    !$acc dsl4jsb_var2D_onDomain(RAD_,alb_background))
+
     ! soil albedo
     IF (tile%contains_soil) THEN
       return_pointer => input_file%Read_2d( &
@@ -153,8 +159,13 @@ CONTAINS
         & fill_array = dsl4jsb_var_ptr(RAD_, alb_nir_soil))
       dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil) = &
         MERGE(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), 0._wp, dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil) >= 0._wp)
+      !$acc update device(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil))
     END IF
 
+    ! Note: If use_alb_canopy=FALSE and PFTs are used, alb_vis_can and alb_nir_can will be different on the tiles
+    !       where the rad process runs (PFTs => values from lctlib) and the parent tiles (values from ini file). These
+    !       two variables are not aggregated at the moment and should therefore only be used on the tiles where the
+    !       rad process runs! (TODO)
     IF (tile%contains_vegetation) THEN
       ! Get canopy albedo
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
@@ -175,6 +186,7 @@ CONTAINS
       ELSE
         dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
       END IF
+      !$acc update device(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
 
       ! The albedo of snow on canopy:
       ! R: In the model the albedo of snow is weighted with albedo_age_weight between two albedo schemes (age and temperature).

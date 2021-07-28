@@ -96,9 +96,44 @@ CONTAINS
 
     dsl4jsb_Def_memory(A2L_)
 
-    INTEGER ::  iblk, ics, ice
+    INTEGER ::  iblk, ics, ice, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
+
+    dsl4jsb_Real2D_onChunk ::  &
+      & t_air_ptr, &
+      & q_air_ptr, & 
+      & rain_ptr, &
+      & snow_ptr, &
+      & wind_air_ptr, &
+      & wind_10m_ptr, &
+      & lw_srf_down_ptr, &
+      & swvis_srf_down_ptr, &
+      & swnir_srf_down_ptr, &
+      & swpar_srf_down_ptr, &
+      & fract_par_diffuse_ptr, &
+      & press_srf_ptr, &
+      & drag_srf_ptr, &
+      & t_acoef_ptr, &
+      & t_bcoef_ptr, &
+      & q_acoef_ptr, &
+      & q_bcoef_ptr, &
+      & pch_ptr, &
+      & cos_zenith_angle_ptr, &
+      & CO2_air_ptr, &
+      & CO2_air_mol_ptr, &
+      & drag_wtr_ptr, &
+      & drag_ice_ptr, &
+      & t_acoef_wtr_ptr, &
+      & t_bcoef_wtr_ptr, &
+      & q_acoef_wtr_ptr, &
+      & q_bcoef_wtr_ptr, &
+      & t_acoef_ice_ptr, &
+      & t_bcoef_ice_ptr, &
+      & q_acoef_ice_ptr, &
+      & q_bcoef_ice_ptr
+
+
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -110,43 +145,282 @@ CONTAINS
 
     dsl4jsb_Get_memory(A2L_)
 
-    IF (PRESENT(t_air))             dsl4jsb_var2D_onChunk(A2L_,t_air)             = t_air             (:)
-    IF (PRESENT(q_air))             dsl4jsb_var2D_onChunk(A2L_,q_air)             = q_air             (:)
-    IF (PRESENT(rain))              dsl4jsb_var2D_onChunk(A2L_,rain)              = rain              (:)
-    IF (PRESENT(snow))              dsl4jsb_var2D_onChunk(A2L_,snow)              = snow              (:)
-    IF (PRESENT(wind_air))          dsl4jsb_var2D_onChunk(A2L_,wind_air)          = wind_air          (:)
-    IF (PRESENT(wind_10m))          dsl4jsb_var2D_onChunk(A2L_,wind_10m)          = wind_10m          (:)
-    IF (PRESENT(lw_srf_down))       dsl4jsb_var2D_onChunk(A2L_,lw_srf_down)       = lw_srf_down       (:)
-    IF (PRESENT(swvis_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)    = swvis_srf_down    (:)
-    IF (PRESENT(swnir_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)    = swnir_srf_down    (:)
-    IF (PRESENT(swpar_srf_down))    dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)    = swpar_srf_down    (:)
-    IF (PRESENT(fract_par_diffuse))  dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse)  = fract_par_diffuse  (:)
-    IF (PRESENT(press_srf))         dsl4jsb_var2D_onChunk(A2L_,press_srf)         = press_srf         (:)
-    IF (PRESENT(drag_srf))          dsl4jsb_var2D_onChunk(A2L_,drag_srf)          = drag_srf          (:)
-    IF (PRESENT(t_acoef))           dsl4jsb_var2D_onChunk(A2L_,t_acoef)           = t_acoef           (:)
-    IF (PRESENT(t_bcoef))           dsl4jsb_var2D_onChunk(A2L_,t_bcoef)           = t_bcoef           (:)
-    IF (PRESENT(q_acoef))           dsl4jsb_var2D_onChunk(A2L_,q_acoef)           = q_acoef           (:)
-    IF (PRESENT(q_bcoef))           dsl4jsb_var2D_onChunk(A2L_,q_bcoef)           = q_bcoef           (:)
-    IF (PRESENT(pch))               dsl4jsb_var2D_onChunk(A2L_,pch)               = pch               (:)
-    IF (PRESENT(cos_zenith_angle))  dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle)  = cos_zenith_angle  (:)
+    IF (PRESENT(t_air)) THEN
+      t_air_ptr => dsl4jsb_var2D_onChunk(A2L_,t_air)
+      !$acc data present(t_air_ptr, t_air)
+      !$acc parallel loop
+      DO i = ics, ice
+        t_air_ptr(i) = t_air(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(q_air)) THEN
+      q_air_ptr => dsl4jsb_var2D_onChunk(A2L_,q_air)
+      !$acc data present(q_air_ptr, q_air)
+      !$acc parallel loop
+      DO i = ics, ice
+        q_air_ptr(i) = q_air(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(rain)) THEN
+      rain_ptr => dsl4jsb_var2D_onChunk(A2L_,rain)
+      !$acc data present(rain_ptr, rain)
+      !$acc parallel loop
+      DO i = ics, ice
+        rain_ptr(i)= rain(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(snow)) THEN
+      snow_ptr => dsl4jsb_var2D_onChunk(A2L_,snow)
+      !$acc data present(snow_ptr, snow)
+      !$acc parallel loop
+      DO i = ics, ice
+        snow_ptr(i) = snow(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(wind_air)) THEN
+      wind_air_ptr => dsl4jsb_var2D_onChunk(A2L_,wind_air)
+      !$acc data present(wind_air_ptr, wind_air)
+      !$acc parallel loop
+      DO i = ics, ice
+        wind_air_ptr(i) = wind_air(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(wind_10m)) THEN
+      wind_10m_ptr => dsl4jsb_var2D_onChunk(A2L_,wind_10m)
+      !$acc data present(wind_10m_ptr, wind_10m)
+      !$acc parallel loop
+      DO i = ics, ice
+        wind_10m_ptr(i) = wind_10m(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(lw_srf_down)) THEN
+      lw_srf_down_ptr => dsl4jsb_var2D_onChunk(A2L_,lw_srf_down)
+      !$acc data present(lw_srf_down_ptr, lw_srf_down)
+      !$acc parallel loop
+      DO i = ics, ice
+        lw_srf_down_ptr(i) = lw_srf_down(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(swvis_srf_down)) THEN
+      swvis_srf_down_ptr => dsl4jsb_var2D_onChunk(A2L_,swvis_srf_down)
+      !$acc data present(swvis_srf_down_ptr, swvis_srf_down)
+      !$acc parallel loop
+      DO i = ics, ice
+        swvis_srf_down_ptr(i) = swvis_srf_down(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(swnir_srf_down)) THEN
+      swnir_srf_down_ptr => dsl4jsb_var2D_onChunk(A2L_,swnir_srf_down)
+      !$acc data present(swnir_srf_down_ptr, swnir_srf_down)
+      !$acc parallel loop
+      DO i = ics, ice
+        swnir_srf_down_ptr(i) = swnir_srf_down(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(swpar_srf_down)) THEN
+      swpar_srf_down_ptr => dsl4jsb_var2D_onChunk(A2L_,swpar_srf_down)
+      !$acc data present(swpar_srf_down_ptr, swpar_srf_down)
+      !$acc parallel loop
+      DO i = ics, ice
+        swpar_srf_down_ptr(i) = swpar_srf_down(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(fract_par_diffuse)) THEN
+      fract_par_diffuse_ptr => dsl4jsb_var2D_onChunk(A2L_,fract_par_diffuse)
+      !$acc data present(fract_par_diffuse_ptr, fract_par_diffuse)
+      !$acc parallel loop
+      DO i = ics, ice
+        fract_par_diffuse_ptr(i)  = fract_par_diffuse(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(press_srf)) THEN
+      press_srf_ptr => dsl4jsb_var2D_onChunk(A2L_,press_srf)
+      !$acc data present(press_srf_ptr, press_srf)
+      !$acc parallel loop
+      DO i = ics, ice
+        press_srf_ptr(i) = press_srf(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(drag_srf)) THEN
+      drag_srf_ptr => dsl4jsb_var2D_onChunk(A2L_,drag_srf)
+      !$acc data present(drag_srf_ptr, drag_srf)
+      !$acc parallel loop
+      DO i = ics, ice
+        drag_srf_ptr(i) = drag_srf(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(t_acoef)) THEN
+      t_acoef_ptr => dsl4jsb_var2D_onChunk(A2L_,t_acoef)
+      !$acc data present(t_acoef_ptr, t_acoef)
+      !$acc parallel loop
+      DO i = ics, ice
+        t_acoef_ptr(i) = t_acoef(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(t_bcoef)) THEN
+      t_bcoef_ptr => dsl4jsb_var2D_onChunk(A2L_,t_bcoef)
+      !$acc data present(t_bcoef_ptr, t_bcoef)
+      !$acc parallel loop
+      DO i = ics, ice
+        t_bcoef_ptr(i) = t_bcoef(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(q_acoef)) THEN
+      q_acoef_ptr => dsl4jsb_var2D_onChunk(A2L_,q_acoef)
+      !$acc data present(q_acoef_ptr, q_acoef)
+      !$acc parallel loop
+      DO i = ics, ice
+        q_acoef_ptr(i) = q_acoef(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(q_bcoef)) THEN
+      q_bcoef_ptr => dsl4jsb_var2D_onChunk(A2L_,q_bcoef)
+      !$acc data present(q_bcoef_ptr, q_bcoef)
+      !$acc parallel loop
+      DO i = ics, ice
+        q_bcoef_ptr(i) = q_bcoef(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(pch)) THEN
+      pch_ptr => dsl4jsb_var2D_onChunk(A2L_,pch)
+      !$acc data present(pch_ptr, pch)
+      !$acc parallel loop
+      DO i = ics, ice
+        pch_ptr(i) = pch(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(cos_zenith_angle)) THEN
+      cos_zenith_angle_ptr => dsl4jsb_var2D_onChunk(A2L_,cos_zenith_angle)
+      !$acc data present(cos_zenith_angle_ptr, cos_zenith_angle)
+      !$acc parallel loop
+      DO i = ics, ice
+        cos_zenith_angle_ptr(i) = cos_zenith_angle(i)
+      END DO
+      !$acc end data
+    END IF
     IF (PRESENT(CO2_air)) THEN
-      dsl4jsb_var2D_onChunk(A2L_, CO2_air) = CO2_air(:)
-      ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
-      dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol) = CO2_air(:) * molarMassDryAir / molarMassCO2
+      CO2_air_ptr => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
+      CO2_air_mol_ptr => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
+      !$acc data present(CO2_air_ptr, CO2_air_mol_ptr, CO2_air)
+      !$acc parallel loop
+      DO i = ics, ice
+        CO2_air_ptr(i) = CO2_air(i)
+        ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
+        CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
+      END DO
+      !$acc end data
     END IF
 
     IF (tile%contains_lake) THEN
 
-      IF (PRESENT(drag_wtr))        dsl4jsb_var2D_onChunk(A2L_,drag_wtr)          = drag_wtr          (:)
-      IF (PRESENT(drag_ice))        dsl4jsb_var2D_onChunk(A2L_,drag_ice)          = drag_ice          (:)
-      IF (PRESENT(t_acoef_wtr))     dsl4jsb_var2D_onChunk(A2L_,t_acoef_wtr)       = t_acoef_wtr       (:)
-      IF (PRESENT(t_bcoef_wtr))     dsl4jsb_var2D_onChunk(A2L_,t_bcoef_wtr)       = t_bcoef_wtr       (:)
-      IF (PRESENT(q_acoef_wtr))     dsl4jsb_var2D_onChunk(A2L_,q_acoef_wtr)       = q_acoef_wtr       (:)
-      IF (PRESENT(q_bcoef_wtr))     dsl4jsb_var2D_onChunk(A2L_,q_bcoef_wtr)       = q_bcoef_wtr       (:)
-      IF (PRESENT(t_acoef_ice))     dsl4jsb_var2D_onChunk(A2L_,t_acoef_ice)       = t_acoef_ice       (:)
-      IF (PRESENT(t_bcoef_ice))     dsl4jsb_var2D_onChunk(A2L_,t_bcoef_ice)       = t_bcoef_ice       (:)
-      IF (PRESENT(q_acoef_ice))     dsl4jsb_var2D_onChunk(A2L_,q_acoef_ice)       = q_acoef_ice       (:)
-      IF (PRESENT(q_bcoef_ice))     dsl4jsb_var2D_onChunk(A2L_,q_bcoef_ice)       = q_bcoef_ice       (:)
+      IF (PRESENT(drag_wtr)) THEN
+        drag_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,drag_wtr)
+        !$acc data present(drag_wtr_ptr, drag_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          drag_wtr_ptr(i) = drag_wtr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(drag_ice)) THEN
+        drag_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,drag_ice)
+        !$acc data present(drag_ice_ptr, drag_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          drag_ice_ptr(i) = drag_ice(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(t_acoef_wtr)) THEN
+        t_acoef_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,t_acoef_wtr)
+        !$acc data present(t_acoef_wtr_ptr, t_acoef_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_acoef_wtr_ptr(i) = t_acoef_wtr(i)
+        END DO
+        !$acc end data
+        END IF
+      IF (PRESENT(t_bcoef_wtr)) THEN
+        t_bcoef_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,t_bcoef_wtr)
+        !$acc data present(t_bcoef_wtr_ptr, t_bcoef_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_bcoef_wtr_ptr(i) = t_bcoef_wtr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(q_acoef_wtr)) THEN
+        q_acoef_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,q_acoef_wtr)
+        !$acc data present(q_acoef_wtr_ptr, q_acoef_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_acoef_wtr_ptr(i) = q_acoef_wtr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(q_bcoef_wtr)) THEN
+        q_bcoef_wtr_ptr => dsl4jsb_var2D_onChunk(A2L_,q_bcoef_wtr)
+        !$acc data present(q_bcoef_wtr_ptr, q_bcoef_wtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(t_acoef_ice)) THEN
+        t_acoef_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,t_acoef_ice)
+        !$acc data present(t_acoef_ice_ptr, t_acoef_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_acoef_ice_ptr(i) = t_acoef_ice(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(t_bcoef_ice)) THEN
+        t_bcoef_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,t_bcoef_ice)
+        !$acc data present(t_bcoef_ice_ptr, t_bcoef_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_bcoef_ice_ptr(i) = t_bcoef_ice(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(q_acoef_ice)) THEN
+        q_acoef_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,q_acoef_ice)
+        !$acc data present(q_acoef_ice_ptr, q_acoef_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_acoef_ice_ptr(i) = q_acoef_ice(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(q_bcoef_ice)) THEN
+        q_bcoef_ice_ptr => dsl4jsb_var2D_onChunk(A2L_,q_bcoef_ice)
+        !$acc data present(q_bcoef_ice_ptr, q_bcoef_ice)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
+        END DO
+        !$acc end data
+      END IF
 
     END IF
 
@@ -196,6 +470,44 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
 
+    dsl4jsb_Real2D_onChunk :: &
+      & t_filt_ptr, &
+      & t_eff_ptr, &
+      & qsat_star_ptr, &
+      & s_star_ptr, &
+      & fact_q_air_ptr, &
+      & fact_qsat_srf_ptr, &
+      & evapopot_ptr, &
+      & evapotrans_lnd_ptr, &
+      & latent_hflx_lnd_ptr, &
+      & sensible_hflx_lnd_ptr, &
+      & forc_hflx_ptr, &
+      & heat_cap_old_ptr, &
+      & rough_h_ptr, &
+      & rough_m_ptr, &
+      & q_snocpymlt_ptr, &
+      & alb_vis_lnd_ptr, &
+      & alb_nir_lnd_ptr, &
+      & cflux_npp_2_atm_ta_ptr, &
+      & cflux_soilresp_2_atm_ta_ptr, &
+      & cflux_herb_2_atm_ta_ptr, &
+      & t_lwtr_ptr, &
+      & t_lice_ptr, &
+      & qsat_lwtr_ptr, &
+      & qsat_lice_ptr, &
+      & s_lwtr_ptr, &
+      & s_lice_ptr, &
+      & evapo_wtr_ptr, &
+      & latent_hflx_wtr_ptr, &
+      & sensible_hflx_wtr_ptr, &
+      & evapo_ice_ptr, &
+      & latent_hflx_ice_ptr, &
+      & fract_lice_ptr, &
+      & albedo_lwtr_ptr, &
+      & albedo_lice_ptr, &
+      & sensible_hflx_ice_ptr, &
+      & fract_ptr
+
     ! avoid compiler warnings about dummy arguments not being used
     IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
     IF (PRESENT(alb_nir_dir_wtr)) CONTINUE
@@ -229,6 +541,9 @@ CONTAINS
       DO i=1,SIZE(tile%lcts)
         IF (tile%lcts(i)%id == LAKE_TYPE) EXIT
       END DO
+
+      !$acc data pcreate(fact_lake, fact_land, fract_ptr)
+      
       fact_lake(:) = tile%lcts(i)%fract(ics:ice,iblk)
       fact_land(:) = 1._wp - fact_lake(:)
       WHERE (fact_lake(:) > 0._wp)
@@ -241,113 +556,653 @@ CONTAINS
       ELSE WHERE
         fact_land(:) = 1._wp
       END WHERE
+      !$acc update device(fact_land, fact_lake)
+     
 
-      IF (PRESENT(t_srf))         t_srf(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_filt)
-      IF (PRESENT(t_eff_srf))     t_eff_srf(:)        =                dsl4jsb_var2D_onChunk(SEB_,   t_eff)
-      IF (PRESENT(qsat_srf))      qsat_srf(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_star)
-      IF (PRESENT(s_srf))         s_srf(:)            =                dsl4jsb_var2D_onChunk(SEB_,   s_star)
-      IF (PRESENT(fact_q_air))    fact_q_air(:)       =                dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
-      IF (PRESENT(fact_qsat_srf)) fact_qsat_srf(:)    =                dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
-      IF (PRESENT(evapopot))      evapopot(:)         =                dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
-      IF (PRESENT(evapotrans))    evapotrans(:)       = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
-      IF (PRESENT(latent_hflx))   latent_hflx(:)      = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
-      IF (PRESENT(sensible_hflx)) sensible_hflx(:)    = fact_land(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
-      IF (PRESENT(grnd_hflx))     grnd_hflx(:)        =                dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used
-      IF (PRESENT(grnd_hcap))     grnd_hcap(:)        =                dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old) ! in atm yet and
+      IF (PRESENT(t_srf)) THEN
+        t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t_filt)
+        !$acc data present(t_srf, t_filt_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_srf(i) = t_filt_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(t_eff_srf)) THEN
+        t_eff_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_eff)
+        !$acc data present(t_eff_srf, t_eff_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_eff_srf(i) = t_eff_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(qsat_srf)) THEN
+        qsat_star_ptr => dsl4jsb_var2D_onChunk(SEB_,   qsat_star)
+        !$acc data present(qsat_srf, qsat_star_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          qsat_srf(i) = qsat_star_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(s_srf)) THEN
+        s_star_ptr => dsl4jsb_var2D_onChunk(SEB_,   s_star)
+        !$acc data present(s_srf, s_star_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          s_srf(i) = s_star_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(fact_q_air)) THEN
+        fact_q_air_ptr => dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
+        !$acc data present(fact_q_air, fact_q_air_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          fact_q_air(i) = fact_q_air_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(fact_qsat_srf)) THEN
+        fact_qsat_srf_ptr => dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
+        !$acc data present(fact_qsat_srf, fact_qsat_srf_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          fact_qsat_srf(i) = fact_qsat_srf_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(evapopot)) THEN
+        evapopot_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
+        !$acc data present(evapopot, evapopot_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          evapopot(i) = evapopot_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(evapotrans)) THEN
+        evapotrans_lnd_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
+        !$acc data present(fact_land, evapotrans)
+        !$acc parallel loop
+        DO i = ics, ice
+          evapotrans(i) = fact_land(i) * evapotrans_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(latent_hflx)) THEN
+        latent_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
+        !$acc data present(latent_hflx, latent_hflx_lnd_ptr, fact_land)
+        !$acc parallel loop
+        DO i = ics, ice
+          latent_hflx(i) = fact_land(i) * latent_hflx_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(sensible_hflx)) THEN
+        sensible_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
+        !$acc data present(sensible_hflx, fact_land, sensible_hflx_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          sensible_hflx(i) = fact_land(i) * sensible_hflx_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(grnd_hflx)) THEN
+        forc_hflx_ptr => dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used
+        !$acc data present(grnd_hflx, forc_hflx_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          grnd_hflx(i) = forc_hflx_ptr(i)            
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(grnd_hcap)) THEN
+        heat_cap_old_ptr => dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old)
+        !$acc data present(grnd_hcap, heat_cap_old_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          grnd_hcap(i) = heat_cap_old_ptr(i)
+        END DO
+        !$acc end data
                                                                                                                    ! not computed
                                                                                                                    ! for lake
-      IF (PRESENT(rough_h_srf))   rough_h_srf(:)      =                dsl4jsb_var2D_onChunk(TURB_,  rough_h)
-      IF (PRESENT(rough_m_srf))   rough_m_srf(:)      =                dsl4jsb_var2D_onChunk(TURB_,  rough_m)
-      IF (PRESENT(q_snocpymlt))   q_snocpymlt(:)      = fact_land(:) * dsl4jsb_var2D_onChunk(HYDRO_, q_snocpymlt)
-      IF (PRESENT(alb_vis_dir))   alb_vis_dir(:)      =                dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
-      IF (PRESENT(alb_vis_dif))   alb_vis_dif(:)      =                dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
-      IF (PRESENT(alb_nir_dir))   alb_nir_dir(:)      =                dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
-      IF (PRESENT(alb_nir_dif))   alb_nir_dif(:)      =                dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+      END IF
+      IF (PRESENT(rough_h_srf)) THEN
+        rough_h_ptr => dsl4jsb_var2D_onChunk(TURB_,  rough_h)
+        !$acc data present(rough_h_srf, rough_h_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+        rough_h_srf(i) = rough_h_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(rough_m_srf)) THEN
+        rough_m_ptr => dsl4jsb_var2D_onChunk(TURB_,  rough_m)
+        !$acc data present(rough_m_ptr, rough_m_srf)
+        !$acc parallel loop
+        DO i = ics, ice
+          rough_m_srf(i) = rough_m_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(q_snocpymlt)) THEN
+        q_snocpymlt_ptr => dsl4jsb_var2D_onChunk(HYDRO_, q_snocpymlt)
+        !$acc data present(q_snocpymlt, q_snocpymlt_ptr, fact_land)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_snocpymlt(i) = fact_land(i) * q_snocpymlt_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(alb_vis_dir)) THEN
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis_lnd)  ! TODO
+        !$acc data present(alb_vis_lnd_ptr, alb_vis_dir)
+        !$acc parallel loop
+        DO i = ics, ice
+          alb_vis_dir(i) = alb_vis_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(alb_vis_dif)) THEN
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
+        !$acc data present(alb_vis_dif, alb_vis_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          alb_vis_dif(i) = alb_vis_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(alb_nir_dir)) THEN
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+        !$acc data present(alb_nir_dir, alb_nir_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          alb_nir_dir(i) = alb_nir_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(alb_nir_dif)) THEN
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)
+        !$acc data present(alb_nir_dif, alb_nir_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          alb_nir_dif(i)      = alb_nir_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+
+
       IF (PRESENT(CO2_flux)) THEN
         IF (tile%Is_process_active(CARBON_)) THEN
-                                  CO2_flux(:)         = fact_land(:) *                              &
-          &                             (   dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)       &
-          &                               + dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)  &
-          &                               + dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta) &
-          &                             )
+          cflux_npp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)
+          cflux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)
+          cflux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta)
+          !$acc data present(CO2_flux, fact_land, cflux_npp_2_atm_ta_ptr, cflux_soilresp_2_atm_ta_ptr, cflux_herb_2_atm_ta_ptr)
+          !$acc parallel loop
+          DO i = ics, ice
+            CO2_flux(i) = fact_land(i) *            &
+              & (   cflux_npp_2_atm_ta_ptr(i)       &
+              &   + cflux_soilresp_2_atm_ta_ptr(i)  &
+              &   + cflux_herb_2_atm_ta_ptr(i)      &
+              & )
+          END DO
+          !$acc end data
         ELSE
-                                  CO2_flux(:)         = 0._wp
+          !$acc kernels default(present)
+          CO2_flux(:)         = 0._wp
+          !$acc end kernels
         END IF
       END IF
 
-      IF (PRESENT(t_lwtr))            t_lwtr(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lwtr)
-      IF (PRESENT(qsat_lwtr))         qsat_lwtr(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lwtr)
-      IF (PRESENT(s_lwtr))            s_lwtr(:)            =                dsl4jsb_var2D_onChunk(SEB_,   s_wtr)
-      IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = fact_lake(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_wtr)
-      IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_wtr)
-      IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_wtr)
-      IF (PRESENT(albedo_lwtr))       albedo_lwtr(:)       =                dsl4jsb_var2D_onChunk(RAD_,   albedo_lwtr)
-      IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    =                dsl4jsb_var2D_onChunk(SEB_,   fract_lice)
+      IF (PRESENT(t_lwtr)) THEN
+        t_lwtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_lwtr)
+        !$acc data present(t_lwtr_ptr, t_lwtr)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_lwtr(i) = t_lwtr_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(qsat_lwtr)) THEN
+        qsat_lwtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   qsat_lwtr)
+        !$acc data present(qsat_lwtr, qsat_lwtr_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          qsat_lwtr(i) = qsat_lwtr_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(s_lwtr)) THEN
+        s_lwtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   s_lwtr)
+        !$acc data present(s_lwtr, s_lwtr_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          s_lwtr(i) = s_lwtr_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(evapo_wtr)) THEN
+        evapo_wtr_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapo_wtr)
+        !$acc data present(evapo_wtr, evapo_wtr_ptr, fact_lake)
+        !$acc parallel loop
+        DO i = ics, ice
+          evapo_wtr(i) = fact_lake(i) * evapo_wtr_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(latent_hflx_wtr)) THEN
+        latent_hflx_wtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_wtr)
+        !$acc data present(latent_hflx_wtr, latent_hflx_wtr_ptr, fact_lake)
+        !$acc parallel loop
+        DO i = ics, ice
+          latent_hflx_wtr(i)   = fact_lake(i) * latent_hflx_wtr_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(sensible_hflx_wtr)) THEN
+        sensible_hflx_wtr_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_wtr)
+        !$acc data present(sensible_hflx_wtr, sensible_hflx_wtr_ptr, fact_lake)
+        !$acc parallel loop
+        DO i = ics, ice
+          sensible_hflx_wtr(i) = fact_lake(i) * sensible_hflx_wtr_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(albedo_lwtr)) THEN
+        albedo_lwtr_ptr => dsl4jsb_var2D_onChunk(RAD_,   albedo_lwtr)
+        !$acc data present(albedo_lwtr, albedo_lwtr_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          albedo_lwtr(i) = albedo_lwtr_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(ice_fract_lake)) THEN
+        fract_lice_ptr => dsl4jsb_var2D_onChunk(SEB_,   fract_lice)
+        !$acc data present(ice_fract_lake, fract_lice_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          ice_fract_lake(i) = fract_lice_ptr(i)
+        END DO
+        !$acc end data
+      END IF
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        IF (PRESENT(t_lice))            t_lice(:)            =                dsl4jsb_var2D_onChunk(SEB_,   t_lice)
-        IF (PRESENT(qsat_lice))         qsat_lice(:)         =                dsl4jsb_var2D_onChunk(SEB_,   qsat_lice)
-        IF (PRESENT(s_lice))            s_lice(:)            =                dsl4jsb_var2D_onChunk(SEB_,   s_ice)
-        IF (PRESENT(evapo_ice))         evapo_ice(:)         = fact_lake(:) * dsl4jsb_var2D_onChunk(HYDRO_, evapo_ice)
-        IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_ice)
-        IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) = fact_lake(:) * dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_ice)
-        IF (PRESENT(albedo_lice))       albedo_lice(:)       =                dsl4jsb_var2D_onChunk(RAD_,   albedo_lice)
+        IF (PRESENT(t_lice)) THEN
+          t_lice_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_lice)
+          !$acc data present(t_lice, t_lice_ptr)
+          !$acc parallel loop
+          DO i = ics, ice
+            t_lice(i) = t_lice_ptr(i)
+          END DO
+          !$acc end data
+        END IF
+        IF (PRESENT(qsat_lice)) THEN
+          qsat_lice_ptr => dsl4jsb_var2D_onChunk(SEB_,   qsat_lice)
+          !$acc data present(qsat_lice, qsat_lice_ptr)
+          !$acc parallel loop
+          DO i = ics, ice
+            qsat_lice(i) = qsat_lice_ptr(i)
+          END DO
+          !$acc end data
+        END IF
+        IF (PRESENT(s_lice)) THEN
+          s_lice_ptr => dsl4jsb_var2D_onChunk(SEB_,   s_lice)
+          !$acc data present(s_lice, s_lice_ptr)
+          !$acc parallel loop
+          DO i = ics, ice
+            s_lice(i) = s_lice_ptr(i)
+          END DO
+          !$acc end data
+        END IF
+        IF (PRESENT(evapo_ice)) THEN
+          evapo_ice_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapo_ice)
+          !$acc data present(evapo_ice_ptr, evapo_ice, fact_lake)
+          !$acc parallel loop
+          DO i = ics, ice
+            evapo_ice(i) = fact_lake(i) * evapo_ice_ptr(i)
+          END DO
+          !$acc end data
+        END IF
+        IF (PRESENT(latent_hflx_ice)) THEN
+          latent_hflx_ice_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_ice)
+          !$acc data present(latent_hflx_ice, latent_hflx_ice_ptr, fact_lake)
+          !$acc parallel loop
+          DO i = ics, ice
+            latent_hflx_ice(i) = fact_lake(i) * latent_hflx_ice_ptr(i)
+          END DO
+          !$acc end data
+        END IF
+        IF (PRESENT(sensible_hflx_ice)) THEN
+          sensible_hflx_ice_ptr  => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_ice)
+          !$acc data present(sensible_hflx_ice_ptr, sensible_hflx_ice, fact_lake)
+          !$acc parallel loop
+          DO i = ics, ice
+            sensible_hflx_ice(i) = fact_lake(i) * sensible_hflx_ice_ptr(i)
+          END DO
+          !$acc end data
+        END IF
+        IF (PRESENT(albedo_lice)) THEN
+          albedo_lice_ptr => dsl4jsb_var2D_onChunk(RAD_,   albedo_lice)
+          !$acc data present(albedo_lice, albedo_lice_ptr)
+          !$acc parallel loop
+          DO i = ics, ice
+            albedo_lice(i) = albedo_lice_ptr(i)
+          END DO
+          !$acc end data
+        END IF
       ELSE
-        IF (PRESENT(t_lice))            t_lice(:)            =                273.15_wp
-        IF (PRESENT(qsat_lice))         qsat_lice(:)         =                0.0075_wp
-        IF (PRESENT(s_lice))            s_lice(:)            =                2.9E5_wp
-        IF (PRESENT(evapo_ice))         evapo_ice(:)         =                0._wp
-        IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   =                0._wp
-        IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) =                0._wp
-        IF (PRESENT(albedo_lice))       albedo_lice(:)       =                0._wp
+        IF (PRESENT(t_lice)) THEN
+          !$acc kernels default(present)
+          t_lice(:)             = 273.15_wp
+          !$acc end kernels
+        END IF
+        IF (PRESENT(qsat_lice)) THEN
+          !$acc kernels default(present)
+          qsat_lice(:)          = 0.0075_wp
+          !$acc end kernels
+        END IF
+        IF (PRESENT(s_lice)) THEN
+          !$acc kernels default(present)
+          s_lice(:)             = 2.9E5_wp
+          !$acc end kernels
+        END IF
+        IF (PRESENT(evapo_ice)) THEN
+          !$acc kernels default(present)
+          evapo_ice(:)          = 0._wp
+          !$acc end kernels
+        END IF
+        IF (PRESENT(latent_hflx_ice)) THEN
+          !$acc kernels default(present)
+          latent_hflx_ice(:)    = 0._wp
+          !$acc end kernels
+        END IF
+        IF (PRESENT(sensible_hflx_ice)) THEN
+          !$acc kernels default(present)
+          sensible_hflx_ice(:)  = 0._wp
+          !$acc end kernels
+        END IF
+        IF (PRESENT(albedo_lice)) THEN
+          !$acc kernels default(present)
+          albedo_lice(:)        = 0._wp
+          !$acc end kernels
+        END IF
       END IF
+
+      !$acc end data
 
     ELSE
 
-      IF (PRESENT(t_srf))           t_srf(:)            = dsl4jsb_var2D_onChunk(SEB_,   t_filt)
-      IF (PRESENT(t_eff_srf))       t_eff_srf(:)        = dsl4jsb_var2D_onChunk(SEB_,   t_eff)
-      IF (PRESENT(qsat_srf))        qsat_srf(:)         = dsl4jsb_var2D_onChunk(SEB_,   qsat_star)
-      IF (PRESENT(s_srf))           s_srf(:)            = dsl4jsb_var2D_onChunk(SEB_,   s_star)
-      IF (PRESENT(fact_q_air))      fact_q_air(:)       = dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
-      IF (PRESENT(fact_qsat_srf))   fact_qsat_srf(:)    = dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
-      IF (PRESENT(evapopot))        evapopot(:)         = dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
-      IF (PRESENT(evapotrans))      evapotrans(:)       = dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
-      IF (PRESENT(latent_hflx))     latent_hflx(:)      = dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
-      IF (PRESENT(sensible_hflx))   sensible_hflx(:)    = dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
-      IF (PRESENT(grnd_hflx))       grnd_hflx(:)        = dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet,
-      IF (PRESENT(grnd_hcap))       grnd_hcap(:)        = dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old) ! and not computed for lake
-      IF (PRESENT(rough_h_srf))     rough_h_srf(:)      = dsl4jsb_var2D_onChunk(TURB_,  rough_h)
-      IF (PRESENT(rough_m_srf))     rough_m_srf(:)      = dsl4jsb_var2D_onChunk(TURB_,  rough_m)
-      IF (PRESENT(q_snocpymlt))     q_snocpymlt(:)      = dsl4jsb_var2D_onChunk(HYDRO_, q_snocpymlt)
-      IF (PRESENT(alb_vis_dir))     alb_vis_dir(:)      = dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
-      IF (PRESENT(alb_vis_dif))     alb_vis_dif(:)      = dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
-      IF (PRESENT(alb_nir_dir))     alb_nir_dir(:)      = dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
-      IF (PRESENT(alb_nir_dif))     alb_nir_dif(:)      = dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+      IF (PRESENT(t_srf)) THEN
+        t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_filt)
+        !$acc data present(t_filt_ptr, t_srf)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_srf(i) = t_filt_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(t_eff_srf)) THEN
+        t_eff_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_eff)
+        !$acc data present(t_eff_srf, t_eff_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          t_eff_srf(i) = t_eff_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(qsat_srf)) THEN
+        qsat_star_ptr => dsl4jsb_var2D_onChunk(SEB_,   qsat_star)
+        !$acc data present(qsat_srf, qsat_star_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          qsat_srf(i)         = qsat_star_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(s_srf)) THEN
+        s_star_ptr => dsl4jsb_var2D_onChunk(SEB_,   s_star)
+        !$acc data present(s_star_ptr,s_srf)
+        !$acc parallel loop
+        DO i = ics, ice
+          s_srf(i)            = s_star_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(fact_q_air)) THEN
+        fact_q_air_ptr => dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
+        !$acc data present(fact_q_air, fact_q_air_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          fact_q_air(i)       = fact_q_air_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(fact_qsat_srf)) THEN
+        fact_qsat_srf_ptr => dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
+        !$acc data present(fact_qsat_srf, fact_qsat_srf_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          fact_qsat_srf(i) = fact_qsat_srf_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(evapopot)) THEN
+        evapopot_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
+        !$acc data present(evapopot, evapopot_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          evapopot(i) = evapopot_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(evapotrans)) THEN
+        evapotrans_lnd_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
+        !$acc data present(evapotrans, evapotrans_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          evapotrans(i)= evapotrans_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(latent_hflx)) THEN
+        latent_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
+        !$acc data present(latent_hflx, latent_hflx_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          latent_hflx(i) = latent_hflx_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(sensible_hflx)) THEN
+        sensible_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
+        !$acc data present(sensible_hflx, sensible_hflx_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          sensible_hflx(i)    = sensible_hflx_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(grnd_hflx)) THEN
+        forc_hflx_ptr => dsl4jsb_var2D_onChunk(SEB_,   forc_hflx)    ! TODO Not used in atm yet,
+        !$acc data present(grnd_hflx, forc_hflx_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          grnd_hflx(i) = forc_hflx_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(grnd_hcap)) THEN
+        heat_cap_old_ptr => dsl4jsb_var2D_onChunk(SEB_,   heat_cap_old) ! and not computed for lake
+        !$acc data present(grnd_hcap, heat_cap_old_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          grnd_hcap(i)        = heat_cap_old_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(rough_h_srf)) THEN
+        rough_h_ptr => dsl4jsb_var2D_onChunk(TURB_,  rough_h)
+        !$acc data present(rough_h_srf, rough_h_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          rough_h_srf(i) = rough_h_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(rough_m_srf)) THEN
+        rough_m_ptr => dsl4jsb_var2D_onChunk(TURB_,  rough_m)
+        !$acc data present(rough_m_srf, rough_m_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          rough_m_srf(i)      = rough_m_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(q_snocpymlt)) THEN
+        q_snocpymlt_ptr => dsl4jsb_var2D_onChunk(HYDRO_, q_snocpymlt)
+        !$acc data present(q_snocpymlt, q_snocpymlt_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          q_snocpymlt(i)      = q_snocpymlt(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(alb_vis_dir)) THEN
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
+       !$acc data present(alb_vis_lnd_ptr, alb_vis_dir)
+       !$acc parallel loop
+       DO i = ics, ice
+         alb_vis_dir(i) = alb_vis_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(alb_vis_dif)) THEN
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
+        !$acc data present(alb_vis_dif, alb_vis_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          alb_vis_dif(i) = alb_vis_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(alb_nir_dir)) THEN
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+        !$acc data present(alb_nir_dir, alb_nir_lnd_ptr)
+        !$acc parallel loop
+        DO i = ics, ice
+          alb_nir_dir(i) = alb_nir_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(alb_nir_dif)) THEN
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+        !$acc data present(alb_nir_dif)
+        !$acc parallel loop
+        DO i = ics, ice
+          alb_nir_dif(i) = alb_nir_lnd_ptr(i)
+        END DO
+        !$acc end data
+      END IF
       IF (PRESENT(CO2_flux)) THEN
         IF (tile%Is_process_active(CARBON_)) THEN
-                                  CO2_flux(:)           =                                             &
-          &                               (   dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)       &
-          &                                 + dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)  &
-          &                                 + dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta) &
-          &                               )
+          cflux_npp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)
+          cflux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)
+          cflux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta)
+          !$acc data present(CO2_flux, cflux_npp_2_atm_ta_ptr, cflux_soilresp_2_atm_ta_ptr, cflux_herb_2_atm_ta_ptr)
+          !$acc parallel loop
+          DO i = ics, ice
+            CO2_flux(i) =                          &
+              & (   cflux_npp_2_atm_ta_ptr(i)      &
+              &   + cflux_soilresp_2_atm_ta_ptr(i) &
+              &   + cflux_herb_2_atm_ta_ptr(i)     &
+              & )
+          END DO
+          !$acc end data
         ELSE
+          !$acc kernels default(present)
                                     CO2_flux(:)         = 0._wp
+          !$acc end kernels
         END IF
       END IF
 
-      IF (PRESENT(t_lwtr))            t_lwtr(:)            = 0._wp                                   ! Temporary
-      IF (PRESENT(t_lice))            t_lice(:)            = 0._wp                                   ! Temporary
-      IF (PRESENT(qsat_lwtr))         qsat_lwtr(:)         = 0._wp
-      IF (PRESENT(qsat_lice))         qsat_lice(:)         = 0._wp
-      IF (PRESENT(evapo_wtr))         evapo_wtr(:)         = 0._wp
-      IF (PRESENT(latent_hflx_wtr))   latent_hflx_wtr(:)   = 0._wp
-      IF (PRESENT(sensible_hflx_wtr)) sensible_hflx_wtr(:) = 0._wp
-      IF (PRESENT(evapo_ice))         evapo_ice(:)         = 0._wp
-      IF (PRESENT(latent_hflx_ice))   latent_hflx_ice(:)   = 0._wp
-      IF (PRESENT(sensible_hflx_ice)) sensible_hflx_ice(:) = 0._wp
-      IF (PRESENT(ice_fract_lake))    ice_fract_lake(:)    = 0._wp                                   ! Temporary
-      IF (PRESENT(albedo_lwtr))       albedo_lwtr(:)       = 0.07_wp
-      IF (PRESENT(albedo_lice))       albedo_lice(:)       = 0.55_wp
+      IF (PRESENT(t_lwtr)) THEN 
+        !$acc kernels default(present)
+        t_lwtr(:)            = 0._wp                                   ! Temporary
+        !$acc end kernels
+      END IF
+      IF (PRESENT(t_lice)) THEN 
+        !$acc kernels default(present)
+        t_lice(:)            = 0._wp                                   ! Temporary
+        !$acc end kernels
+      END IF
+      IF (PRESENT(qsat_lwtr)) THEN 
+        !$acc kernels default(present)
+        qsat_lwtr(:)         = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(qsat_lice)) THEN 
+        !$acc kernels default(present)
+        qsat_lice(:)         = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(s_lwtr)) THEN 
+        !$acc kernels default(present)
+        s_lwtr(:)            = 0._wp                                   ! Temporary
+        !$acc end kernels
+      END IF
+      IF (PRESENT(s_lice)) THEN 
+        !$acc kernels default(present)
+        s_lice(:)            = 0._wp                                   ! Temporary
+        !$acc end kernels
+      END IF
+      IF (PRESENT(evapo_wtr)) THEN 
+        !$acc kernels default(present)
+        evapo_wtr(:)         = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(latent_hflx_wtr)) THEN
+        !$acc kernels default(present) 
+        latent_hflx_wtr(:)   = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(sensible_hflx_wtr)) THEN
+        !$acc kernels default(present)
+        sensible_hflx_wtr(:) = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(evapo_ice)) THEN 
+        !$acc kernels default(present)
+        evapo_ice(:)         = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(latent_hflx_ice)) THEN
+        !$acc kernels default(present)
+        latent_hflx_ice(:)   = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(sensible_hflx_ice)) THEN
+        !$acc kernels default(present)
+        sensible_hflx_ice(:) = 0._wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(ice_fract_lake)) THEN 
+        !$acc kernels default(present)
+        ice_fract_lake(:)    = 0._wp                                   ! Temporary
+        !$acc end kernels
+      END IF
+      IF (PRESENT(albedo_lwtr)) THEN
+        !$acc kernels default(present)
+        albedo_lwtr(:)       = 0.07_wp
+        !$acc end kernels
+      END IF
+      IF (PRESENT(albedo_lice)) THEN 
+        !$acc kernels default(present)
+        albedo_lice(:)       = 0.55_wp
+        !$acc end kernels
+      END IF
     END IF
 
   END SUBROUTINE update_land2atm

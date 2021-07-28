@@ -158,11 +158,21 @@ CONTAINS
     !canopy_layer => Get_vgrid('canopy_layer')
 
     dsl4jsb_Get_config(PHENO_)
+    
+    !$acc enter data pcreate(mem)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  )                                       &
       & .AND. .NOT. ASSOCIATED(mem%lai%ptr)) THEN
+
+      ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
+      ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
+      !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
+      !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
+  
+      !$acc enter data pcreate(mem%lai,mem%fract_fpc,mem%fract_fpc_max,      &
+      !$acc mem%fract_forest,mem%veg_fract_correction)
 
       CALL jsb_add_var( mem, 'lai', mem%lai,                                   &
         & hgrid, surface,                                                      &
@@ -171,9 +181,6 @@ CONTAINS
         & prefix, suffix,                                                      &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
-
-      ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
-      ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
 
       CALL jsb_add_var( mem, 'fract_fpc', mem%fract_fpc,                       &
         & hgrid, surface,                                                      &
@@ -209,6 +216,14 @@ CONTAINS
         & initval_r=0.0_wp )
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
+
+        !$acc enter data pcreate(mem%growth_phase_SG,mem%growth_phase_EG,      &
+        !$acc mem%growth_phase_CRP,mem%days_since_growth_begin_EG,             &
+        !$acc mem%days_since_growth_begin_SG,mem%previous_day_NPP_pot_rate_ca, &
+        !$acc mem%number_of_individuals,mem%biomass_per_individual,            &
+        !$acc mem%cconservation_allom,mem%maxLAI_allom,mem%day_NPP_sum,        &
+        !$acc mem%heat_sum_EG,mem%heat_sum_SG,mem%heat_sum_CRP,                &
+        !$acc mem%heat_sum_winter,mem%chill_days_SG,mem%chill_days_EG)
 
         CALL jsb_add_var( mem,'growth_phase_sg', mem%growth_phase_SG,          &
           & hgrid, surface,                                                    &
