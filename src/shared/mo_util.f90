@@ -15,12 +15,14 @@
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: message
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_depth_to_layers_2d, one_of, toupper, int2string, real2string, logical2string
+  PUBLIC :: soil_depth_to_layers_2d, one_of, toupper, int2string, real2string, logical2string, &
+    &       report_memory_usage
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -171,6 +173,29 @@ CONTAINS
     END IF
     !
   END FUNCTION logical2string
+
+  SUBROUTINE report_memory_usage()
+
+    INTEGER           :: size=0, resident=0, share=0, text=0, lib=0, data=0, dt=0, oom_score=0
+    INTEGER           :: ierr=0
+
+    OPEN(unit=1, file='/proc/self/statm', form='formatted', status='OLD', action='READ', iostat=ierr)
+    READ(unit=1, fmt=*, iostat=ierr) size, resident, share, text, lib, data, dt
+    CLOSE(unit=1)
+    OPEN(unit=1, file='/proc/self/oom_score', form='formatted', status='OLD', action='READ', iostat=ierr)
+    READ(unit=1, fmt=*, iostat=ierr) oom_score
+    CLOSE(unit=1)
+
+    IF (ierr < 0) THEN
+      CALL message('', 'Problem reading /proc/self/statm')
+    ELSE
+      CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
+        &                             ' resident='//TRIM(int2string(resident))// &
+        &                             ' data='//TRIM(int2string(data))// &
+        &                             ' oom_score='//TRIM(int2string(oom_score)))
+    END IF
+
+  END SUBROUTINE report_memory_usage
 
 #endif
 END MODULE mo_util
