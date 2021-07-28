@@ -34,12 +34,12 @@ MODULE mo_jsb_control
   PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
   PUBLIC :: max_no_of_models
 
-  LOGICAL :: is_standalone
-  LOGICAL :: restart_jsbach
-  CHARACTER(len=99) :: model_base_dir
-  INTEGER :: debug_level
-  INTEGER :: debug_memory_level
-  INTEGER :: timer_level
+  LOGICAL,           SAVE :: is_standalone
+  LOGICAL,           SAVE :: restart_jsbach
+  CHARACTER(len=99), SAVE :: model_base_dir
+  INTEGER,           SAVE :: debug_level
+  INTEGER,           SAVE :: debug_memory_level
+  INTEGER,           SAVE :: timer_level
 
   TYPE t_jsb_model_nml
     INTEGER            :: model_id = 0
@@ -51,9 +51,10 @@ MODULE mo_jsb_control
 
   INTEGER, PARAMETER    :: max_no_of_models = 10
   INTEGER :: no_of_models = 0
-  TYPE(t_jsb_model_nml) :: jsb_models_nml(max_no_of_models)
+  TYPE(t_jsb_model_nml), SAVE :: jsb_models_nml(max_no_of_models)
 
-  INTEGER, DIMENSION(max_no_of_models) :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
+  INTEGER, SAVE, DIMENSION(max_no_of_models) :: &
+    & timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg
 
   CHARACTER(len=filename_max) :: master_namelist_filename = 'jsbach_master.namelist'
 
