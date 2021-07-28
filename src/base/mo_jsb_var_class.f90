@@ -22,7 +22,16 @@ MODULE mo_jsb_var_class
   END ENUM
 
   TYPE, ABSTRACT :: t_jsb_var
-    REAL(wp), ALLOCATABLE      :: field(:,:,:,:,:)
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr2d(:,:) => NULL()
+    REAL(wp), POINTER &
+#ifdef HAVE_FC_ATTRIBUTE_CONTIGUOUS
+      , CONTIGUOUS &
+#endif
+      :: ptr3d(:,:,:) => NULL()
     CHARACTER(len=VARNAME_LEN) :: name                      ! Name of variable
     CHARACTER(len=VARNAME_LEN) :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     INTEGER                    :: type                      ! REAL2D / REAL3D
@@ -91,8 +100,7 @@ CONTAINS
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
-    IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
-    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
+    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
 
   END SUBROUTINE finalize_jsb_var_real2d
 
@@ -107,8 +115,7 @@ CONTAINS
     IF (ALLOCATED(this%owner_tile_path)) DEALLOCATE(this%owner_tile_path)
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
-    IF (ASSOCIATED(this%ptr)) NULLIFY(this%ptr)
-    IF (ALLOCATED(this%field)) DEALLOCATE(this%field)
+    IF (ASSOCIATED(this%ptr)) DEALLOCATE(this%ptr)
 
   END SUBROUTINE finalize_jsb_var_real3d
 
