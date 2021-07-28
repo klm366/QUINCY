@@ -600,6 +600,7 @@ CONTAINS
         & lstart,                         & !< in
         & dtime,                          & !< in
         & dsl4jsb_Config(SSE_)%l_dynsnow, & !< in
+        & dsl4jsb_Config(HYDRO_)%snow_depth_max, & !< in
         & t_unfilt(:),                    & !< in
         & wind_10m(:),                    & !< in
         & t_air(:),                       & !< in
