@@ -519,13 +519,13 @@ CONTAINS
   !! @param[in]     options Additional run-time parameters.
   SUBROUTINE aggregate_surface_fluxes(tile, options)
 
-    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_fluxes'
