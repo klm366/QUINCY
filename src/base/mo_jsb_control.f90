@@ -21,6 +21,7 @@ MODULE mo_jsb_control
   USE mo_timer,     ONLY: new_timer
 
   USE mo_jsb_time_iface, ONLY: l_timer_host !< timers on in host model?
+  USE mo_jsb_io_iface,   ONLY: ldebugio
 
   IMPLICIT NONE
   PRIVATE
@@ -38,6 +39,7 @@ MODULE mo_jsb_control
   LOGICAL,           SAVE :: restart_jsbach
   CHARACTER(len=99), SAVE :: model_base_dir
   INTEGER,           SAVE :: debug_level
+  INTEGER,           SAVE :: debug_io
   INTEGER,           SAVE :: debug_memory_level
   INTEGER,           SAVE :: timer_level
 
@@ -140,6 +142,7 @@ CONTAINS
       model_base_dir,          &
       timer_level,             &
       debug_level,             &
+      debug_io,                &
       debug_memory_level
 
     NAMELIST /jsb_model_nml/   &
@@ -155,6 +158,7 @@ CONTAINS
     model_base_dir     = '.'
     timer_level        = 0
     debug_level        = 0
+    debug_io           = 0
     debug_memory_level = 0
 
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -176,6 +180,8 @@ CONTAINS
     IF (no_of_models > max_no_of_models) THEN
       CALL finish(routine, 'no_of_models > max_no_of_models')
     ENDIF
+
+    ldebugio = debug_io > 0
 
     ! Now read namelists again and set parameters
     ! Note: no_of_models needs to be known here (therfore extra loop above) in order to test for a valid model_id below
