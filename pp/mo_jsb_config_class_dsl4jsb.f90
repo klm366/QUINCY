@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/base/mo_jsb_config_class.f90
-!    with md5 hash: 6f1b490e43843ef96f43f2bd7e40dcc3
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_config_class.f90
+! with md5 hash: 6f1b490e43843ef96f43f2bd7e40dcc3
 !
 !>
 !! @brief Contains structures and methods for JSBACH model config

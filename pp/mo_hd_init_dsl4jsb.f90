@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/hd/mo_hd_init.f90
-!    with md5 hash: 370ee52661a93f367f1be24a8b4275fb
+! This file was automatically generated from JSBACH source file:
+!    src/hd/mo_hd_init.f90
+! with md5 hash: 370ee52661a93f367f1be24a8b4275fb
 !
 !>
 !! @brief Initialization of the the hd memory.

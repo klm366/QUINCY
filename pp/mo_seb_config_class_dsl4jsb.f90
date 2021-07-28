@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/srf_energy_bal/mo_seb_config_class.f90
-!    with md5 hash: cd424a7162257b080d5dcadb0603e3af
+! This file was automatically generated from JSBACH source file:
+!    src/srf_energy_bal/mo_seb_config_class.f90
+! with md5 hash: cd424a7162257b080d5dcadb0603e3af
 !
 !>
 !! @brief Contains structures and methods for seb config

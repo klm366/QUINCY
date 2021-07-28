@@ -223,11 +223,6 @@ CONTAINS
   INTEGER :: claw_induction_23
   INTEGER :: claw_induction_24
   INTEGER :: claw_induction_25
-  INTEGER :: claw_induction_26
-  INTEGER :: claw_induction_27
-  INTEGER :: claw_induction_28
-  INTEGER :: claw_induction_29
-  INTEGER :: claw_induction_30
 
   model => get_model ( tile % owner_model_id )
   soil_e => get_vgrid ("soil_depth_energy" )
@@ -253,55 +248,34 @@ CONTAINS
   vol_heat_cap_snow => sse__mem % vol_heat_cap_snow % ptr ( : , : )
   heat_cond_snow => sse__mem % heat_cond_snow % ptr ( : , : )
   IF ( tile % is_glacier ) THEN
-!$acc data present(vol_heat_cap_sl(:,:,:))
+!$acc data present(heat_cond_sl(:,:,:),vol_heat_cap_sl(:,:,:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_16 = 1 , size ( vol_heat_cap_sl , 1 )
-    DO claw_induction_17 = 1 , size ( vol_heat_cap_sl , 2 )
-     DO claw_induction_18 = 1 , size ( vol_heat_cap_sl , 3 )
-      vol_heat_cap_sl ( claw_induction_16 , claw_induction_17 ,&
-       claw_induction_18 ) = vol_hcap_ice
+   DO claw_induction_0 = 1 , size ( vol_heat_cap_sl , 1 )
+    DO claw_induction_1 = 1 , size ( vol_heat_cap_sl , 2 )
+     DO claw_induction_2 = 1 , size ( vol_heat_cap_sl , 3 )
+      vol_heat_cap_sl ( claw_induction_0 , claw_induction_1 , claw_induction_2&
+       ) = vol_hcap_ice
+      heat_cond_sl ( claw_induction_0 , claw_induction_1 , claw_induction_2 )&
+       = hcond_ice
      END DO
     END DO
    END DO
 !$acc end parallel
 !$acc end data
-!$acc data present(heat_cond_sl(:,:,:))
+!$acc data present(heat_cond_snow(:,:),vol_heat_cap_snow(:,:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_13 = 1 , size ( heat_cond_sl , 1 )
-    DO claw_induction_14 = 1 , size ( heat_cond_sl , 2 )
-     DO claw_induction_15 = 1 , size ( heat_cond_sl , 3 )
-      heat_cond_sl ( claw_induction_13 , claw_induction_14 , claw_induction_15&
-       ) = hcond_ice
-     END DO
+   DO claw_induction_3 = 1 , size ( vol_heat_cap_snow , 1 )
+    DO claw_induction_4 = 1 , size ( vol_heat_cap_snow , 2 )
+     vol_heat_cap_snow ( claw_induction_3 , claw_induction_4 ) = vol_hcap_snow
+     heat_cond_snow ( claw_induction_3 , claw_induction_4 ) = hcond_snow
     END DO
    END DO
 !$acc end parallel
 !$acc end data
-!$cla$w end expand
-!$acc data present(vol_heat_cap_snow(:,:))
-!$acc parallel
-!$acc loop gang vector
-   DO claw_induction_11 = 1 , size ( vol_heat_cap_snow , 1 )
-    DO claw_induction_12 = 1 , size ( vol_heat_cap_snow , 2 )
-     vol_heat_cap_snow ( claw_induction_11 , claw_induction_12 ) =&
-      vol_hcap_snow
-    END DO
-   END DO
-!$acc end parallel
-!$acc end data
-!$acc data present(heat_cond_snow(:,:))
-!$acc parallel
-!$acc loop gang vector
-   DO claw_induction_9 = 1 , size ( heat_cond_snow , 1 )
-    DO claw_induction_10 = 1 , size ( heat_cond_snow , 2 )
-     heat_cond_snow ( claw_induction_9 , claw_induction_10 ) = hcond_snow
-    END DO
-   END DO
-!$acc end parallel
-!$acc end data
-!$cla$w end expand
+!$acc update host(vol_heat_cap_sl, heat_cond_sl, vol_heat_cap_snow, &
+!$acc heat_cond_snow)
    RETURN
   END IF
   w_soil_sl => hydro__mem % w_soil_sl % ptr ( : , : , : )
@@ -321,11 +295,11 @@ CONTAINS
 !$acc data present(fract_org_sl(:,:,:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_6 = 1 , size ( fract_org_sl , 1 )
-    DO claw_induction_7 = 1 , size ( fract_org_sl , 2 )
-     DO claw_induction_8 = 1 , size ( fract_org_sl , 3 )
-      fract_org_sl ( claw_induction_6 , claw_induction_7 , claw_induction_8 )&
-       = 0._wp
+   DO claw_induction_11 = 1 , size ( fract_org_sl , 1 )
+    DO claw_induction_12 = 1 , size ( fract_org_sl , 2 )
+     DO claw_induction_13 = 1 , size ( fract_org_sl , 3 )
+      fract_org_sl ( claw_induction_11 , claw_induction_12 , claw_induction_13&
+       ) = 0._wp
      END DO
     END DO
    END DO
@@ -372,19 +346,20 @@ CONTAINS
 !$acc ,vol_heat_cap_sl(:,:,:),fract_org_sl(:,:,:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_3 = 1 , size ( vol_heat_cap_sl , 1 )
-    DO claw_induction_4 = 1 , size ( vol_heat_cap_sl , 2 )
-     DO claw_induction_5 = 1 , size ( vol_heat_cap_sl , 3 )
-      vol_heat_cap_sl ( claw_induction_3 , claw_induction_4 , claw_induction_5&
-       ) = calc_vol_heat_capacity ( vol_heat_cap_tmp ( claw_induction_3 ,&
-       claw_induction_4 , claw_induction_5 ) , vol_porosity_sl (&
-       claw_induction_3 , claw_induction_4 , claw_induction_5 ) , fract_org_sl&
-       ( claw_induction_3 , claw_induction_4 , claw_induction_5 ) ,&
-       fract_water ( claw_induction_3 , claw_induction_4 , claw_induction_5 )&
-       , fract_ice ( claw_induction_3 , claw_induction_4 , claw_induction_5 )&
-       , soil_depth_sl ( claw_induction_3 , claw_induction_4 ,&
-       claw_induction_5 ) , soil_e_dz_tmp ( claw_induction_3 ,&
-       claw_induction_4 , claw_induction_5 ) )
+   DO claw_induction_8 = 1 , size ( vol_heat_cap_sl , 1 )
+    DO claw_induction_9 = 1 , size ( vol_heat_cap_sl , 2 )
+     DO claw_induction_10 = 1 , size ( vol_heat_cap_sl , 3 )
+      vol_heat_cap_sl ( claw_induction_8 , claw_induction_9 ,&
+       claw_induction_10 ) = calc_vol_heat_capacity ( vol_heat_cap_tmp (&
+       claw_induction_8 , claw_induction_9 , claw_induction_10 ) ,&
+       vol_porosity_sl ( claw_induction_8 , claw_induction_9 ,&
+       claw_induction_10 ) , fract_org_sl ( claw_induction_8 ,&
+       claw_induction_9 , claw_induction_10 ) , fract_water ( claw_induction_8&
+       , claw_induction_9 , claw_induction_10 ) , fract_ice ( claw_induction_8&
+       , claw_induction_9 , claw_induction_10 ) , soil_depth_sl (&
+       claw_induction_8 , claw_induction_9 , claw_induction_10 ) ,&
+       soil_e_dz_tmp ( claw_induction_8 , claw_induction_9 , claw_induction_10&
+       ) )
      END DO
     END DO
    END DO
@@ -403,9 +378,9 @@ CONTAINS
      END DO
     END DO
    END DO
-!$acc update host(vol_heat_cap_sl)
 !$acc end data
   END IF
+!$acc update host(vol_heat_cap_sl)
   IF ( sse__conf % l_heat_cond_dyn ) THEN
 !$acc data &
 !$acc present(w_soil_sl(:,:,:),vol_porosity_sl(:,:,:),soil_e_dz_tmp(:,:,:) &
@@ -413,25 +388,26 @@ CONTAINS
 !$acc ,heat_cond_sl(:,:,:),vol_field_cap_sl(:,:,:),fract_org_sl(:,:,:))
 !$acc parallel
 !$acc loop gang vector
-   DO claw_induction_0 = 1 , size ( heat_cond_sl , 1 )
-    DO claw_induction_1 = 1 , size ( heat_cond_sl , 2 )
-     DO claw_induction_2 = 1 , size ( heat_cond_sl , 3 )
-      heat_cond_sl ( claw_induction_0 , claw_induction_1 , claw_induction_2 )&
-       = calc_thermal_conductivity ( heat_cond_tmp ( claw_induction_0 ,&
-       claw_induction_1 , claw_induction_2 ) , w_soil_sl ( claw_induction_0 ,&
-       claw_induction_1 , claw_induction_2 ) , w_ice_sl ( claw_induction_0 ,&
-       claw_induction_1 , claw_induction_2 ) , vol_porosity_sl (&
-       claw_induction_0 , claw_induction_1 , claw_induction_2 ) ,&
-       vol_field_cap_sl ( claw_induction_0 , claw_induction_1 ,&
-       claw_induction_2 ) , fract_org_sl ( claw_induction_0 , claw_induction_1&
-       , claw_induction_2 ) , soil_depth_sl ( claw_induction_0 ,&
-       claw_induction_1 , claw_induction_2 ) , soil_e_dz_tmp (&
-       claw_induction_0 , claw_induction_1 , claw_induction_2 ) )
+   DO claw_induction_5 = 1 , size ( heat_cond_sl , 1 )
+    DO claw_induction_6 = 1 , size ( heat_cond_sl , 2 )
+     DO claw_induction_7 = 1 , size ( heat_cond_sl , 3 )
+      heat_cond_sl ( claw_induction_5 , claw_induction_6 , claw_induction_7 )&
+       = calc_thermal_conductivity ( heat_cond_tmp ( claw_induction_5 ,&
+       claw_induction_6 , claw_induction_7 ) , w_soil_sl ( claw_induction_5 ,&
+       claw_induction_6 , claw_induction_7 ) , w_ice_sl ( claw_induction_5 ,&
+       claw_induction_6 , claw_induction_7 ) , vol_porosity_sl (&
+       claw_induction_5 , claw_induction_6 , claw_induction_7 ) ,&
+       vol_field_cap_sl ( claw_induction_5 , claw_induction_6 ,&
+       claw_induction_7 ) , fract_org_sl ( claw_induction_5 , claw_induction_6&
+       , claw_induction_7 ) , soil_depth_sl ( claw_induction_5 ,&
+       claw_induction_6 , claw_induction_7 ) , soil_e_dz_tmp (&
+       claw_induction_5 , claw_induction_6 , claw_induction_7 ) )
      END DO
     END DO
    END DO
 !$acc end parallel
 !$acc end data
+!$acc update host(heat_cond_sl)
   ELSE
 !$acc data present(heat_cond_sl,heat_cond)
 !$acc update device(heat_cond)
@@ -455,9 +431,9 @@ CONTAINS
 !$acc data present(vol_heat_cap_snow(:,:))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_29 = 1 , size ( vol_heat_cap_snow , 1 )
-     DO claw_induction_30 = 1 , size ( vol_heat_cap_snow , 2 )
-      vol_heat_cap_snow ( claw_induction_29 , claw_induction_30 ) = 634500._wp
+    DO claw_induction_24 = 1 , size ( vol_heat_cap_snow , 1 )
+     DO claw_induction_25 = 1 , size ( vol_heat_cap_snow , 2 )
+      vol_heat_cap_snow ( claw_induction_24 , claw_induction_25 ) = 634500._wp
      END DO
     END DO
 !$acc end parallel
@@ -465,9 +441,9 @@ CONTAINS
 !$acc data present(heat_cond_snow(:,:))
 !$acc parallel
 !$acc loop gang vector
-    DO claw_induction_27 = 1 , size ( heat_cond_snow , 1 )
-     DO claw_induction_28 = 1 , size ( heat_cond_snow , 2 )
-      heat_cond_snow ( claw_induction_27 , claw_induction_28 ) = 0.31_wp
+    DO claw_induction_22 = 1 , size ( heat_cond_snow , 1 )
+     DO claw_induction_23 = 1 , size ( heat_cond_snow , 2 )
+      heat_cond_snow ( claw_induction_22 , claw_induction_23 ) = 0.31_wp
      END DO
     END DO
 !$acc end parallel
@@ -478,9 +454,9 @@ CONTAINS
 !$acc data present(vol_heat_cap_snow(:,:))
 !$acc parallel
 !$acc loop gang vector
-     DO claw_induction_25 = 1 , size ( vol_heat_cap_snow , 1 )
-      DO claw_induction_26 = 1 , size ( vol_heat_cap_snow , 2 )
-       vol_heat_cap_snow ( claw_induction_25 , claw_induction_26 ) = ci *&
+     DO claw_induction_20 = 1 , size ( vol_heat_cap_snow , 1 )
+      DO claw_induction_21 = 1 , size ( vol_heat_cap_snow , 2 )
+       vol_heat_cap_snow ( claw_induction_20 , claw_induction_21 ) = ci *&
         dens_snow_min
       END DO
      END DO
@@ -489,9 +465,9 @@ CONTAINS
 !$acc data present(heat_cond_snow(:,:))
 !$acc parallel
 !$acc loop gang vector
-     DO claw_induction_23 = 1 , size ( heat_cond_snow , 1 )
-      DO claw_induction_24 = 1 , size ( heat_cond_snow , 2 )
-       heat_cond_snow ( claw_induction_23 , claw_induction_24 ) = 2.5e-6_wp *&
+     DO claw_induction_18 = 1 , size ( heat_cond_snow , 1 )
+      DO claw_induction_19 = 1 , size ( heat_cond_snow , 2 )
+       heat_cond_snow ( claw_induction_18 , claw_induction_19 ) = 2.5e-6_wp *&
         dens_snow_min ** ( 2._wp ) - 0.123e-3_wp * dens_snow_min + 0.024_wp
       END DO
      END DO
@@ -502,9 +478,9 @@ CONTAINS
 !$acc data present(vol_heat_cap_snow(:,:))
 !$acc parallel
 !$acc loop gang vector
-     DO claw_induction_21 = 1 , size ( vol_heat_cap_snow , 1 )
-      DO claw_induction_22 = 1 , size ( vol_heat_cap_snow , 2 )
-       vol_heat_cap_snow ( claw_induction_21 , claw_induction_22 ) =&
+     DO claw_induction_16 = 1 , size ( vol_heat_cap_snow , 1 )
+      DO claw_induction_17 = 1 , size ( vol_heat_cap_snow , 2 )
+       vol_heat_cap_snow ( claw_induction_16 , claw_induction_17 ) =&
         vol_hcap_snow
       END DO
      END DO
@@ -513,9 +489,9 @@ CONTAINS
 !$acc data present(heat_cond_snow(:,:))
 !$acc parallel
 !$acc loop gang vector
-     DO claw_induction_19 = 1 , size ( heat_cond_snow , 1 )
-      DO claw_induction_20 = 1 , size ( heat_cond_snow , 2 )
-       heat_cond_snow ( claw_induction_19 , claw_induction_20 ) = hcond_snow
+     DO claw_induction_14 = 1 , size ( heat_cond_snow , 1 )
+      DO claw_induction_15 = 1 , size ( heat_cond_snow , 2 )
+       heat_cond_snow ( claw_induction_14 , claw_induction_15 ) = hcond_snow
       END DO
      END DO
 !$acc end parallel
@@ -523,6 +499,7 @@ CONTAINS
 !$cla$w end expand
     END IF
    END IF
+!$acc update host(vol_heat_cap_snow, heat_cond_snow)
   END IF
 !$ACC exit data delete(soil_e_dz_tmp,vol_heat_cap_tmp,heat_cond_tmp)
   DEALLOCATE ( soil_e_dz_tmp , vol_heat_cap_tmp , heat_cond_tmp )

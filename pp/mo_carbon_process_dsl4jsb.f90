@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/carbon/mo_carbon_process.f90
-!    with md5 hash: 03e65c0d4e536ba62715eb6c30fe92dc
+! This file was automatically generated from JSBACH source file:
+!    src/carbon/mo_carbon_process.f90
+! with md5 hash: 03e65c0d4e536ba62715eb6c30fe92dc
 !
 !>
 !! @brief Contains the routines for the carbon processes

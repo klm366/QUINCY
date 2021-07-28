@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/drivers/jsb4_driver.f90
-!    with md5 hash: 3cebb29bc7249277034fe85a5c4a02ed
+! This file was automatically generated from JSBACH source file:
+!    src/drivers/jsb4_driver.f90
+! with md5 hash: 3cebb29bc7249277034fe85a5c4a02ed
 !
 !>
 !! @brief Contains the driver for jsbach standalone -> currently only and explicitly for use with Echam

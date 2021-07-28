@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/soil_snow_energy/mo_sse_constants.f90
-!    with md5 hash: 80b3d580f1ce62ca4f8de3b10c548736
+! This file was automatically generated from JSBACH source file:
+!    src/soil_snow_energy/mo_sse_constants.f90
+! with md5 hash: 80b3d580f1ce62ca4f8de3b10c548736
 !
 !>
 !! @brief Contains constants for the soil and snow energy process

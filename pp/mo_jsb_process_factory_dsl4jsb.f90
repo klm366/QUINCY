@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/base/mo_jsb_process_factory.f90
-!    with md5 hash: 04c8ca945764cf6da9e9248aacd7c421
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_process_factory.f90
+! with md5 hash: 0e2831e8d3cc5c4b048977ab4057d8bf
 !
 !>
 !! @brief Contains process factory.
@@ -202,7 +202,10 @@ CONTAINS
       return_ptr%max_no_of_vars = max_no_of_fuel_vars
     END SELECT
 
+    !$acc enter data create(return_ptr)
+
     ALLOCATE(return_ptr%vars(return_ptr%max_no_of_vars))
+    !$acc enter data create(return_ptr%vars)
 
   END FUNCTION Create_process_memory
 

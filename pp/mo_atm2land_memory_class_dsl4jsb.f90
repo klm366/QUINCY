@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/atmland/mo_atm2land_memory_class.f90
-!    with md5 hash: 756cd68e0992cc26db2d47eea3560593
+! This file was automatically generated from JSBACH source file:
+!    src/atmland/mo_atm2land_memory_class.f90
+! with md5 hash: 9bfd23f4e3421ba45994c1f4c2fbac2f
 !
 !>
 !! @brief Contains types for the atmosphere-land interface memory.
@@ -104,6 +104,8 @@ CONTAINS
 
     hgrid => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
+
+    !! !$acc enter data create(mem)
 
     CALL jsb_add_var( mem, 't_air', mem%t_air,       &
       & hgrid, surface,                                                      &

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/hd/mo_interface_hd_ocean.f90
-!    with md5 hash: 8e3def578add629017559ec0fd4b9add
+! This file was automatically generated from JSBACH source file:
+!    src/hd/mo_interface_hd_ocean.f90
+! with md5 hash: 8e3def578add629017559ec0fd4b9add
 !
 !>
 !! @brief Interface between HD and the ocean, through a coupler

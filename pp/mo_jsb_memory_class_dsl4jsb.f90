@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/base/mo_jsb_memory_class.f90
-!    with md5 hash: e9894b7f4802521eeb0dfd94dd733692
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_memory_class.f90
+! with md5 hash: e9894b7f4802521eeb0dfd94dd733692
 !
 !>
 !! @brief Contains the class and methods for the JSBACH memory structure

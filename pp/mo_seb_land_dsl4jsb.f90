@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/srf_energy_bal/mo_seb_land.f90
-!    with md5 hash: 27dba4c2180bcae046e27dbe5002be8f
+! This file was automatically generated from JSBACH source file:
+!    src/srf_energy_bal/mo_seb_land.f90
+! with md5 hash: 27dba4c2180bcae046e27dbe5002be8f
 !
 !>
 !! @brief Contains the routines for the surface energy balance on LAND lct_type.

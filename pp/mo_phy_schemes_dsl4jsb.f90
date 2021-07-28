@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/shared/mo_phy_schemes.f90
-!    with md5 hash: ab6e4dd63ad71b1823d437783532d99f
+! This file was automatically generated from JSBACH source file:
+!    src/shared/mo_phy_schemes.f90
+! with md5 hash: ab6e4dd63ad71b1823d437783532d99f
 !
 !>
 !! @brief Contains some functions for physcial schemes

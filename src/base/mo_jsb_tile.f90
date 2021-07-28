@@ -29,7 +29,7 @@ MODULE mo_jsb_tile
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task !, t_jsb_task_msg
 
 #ifdef _OPENACC
-  use openacc
+  USE openacc
 #define __acc_attach(ptr) CALL acc_attach(ptr)  
 #else
 #define __acc_attach(ptr)
@@ -279,6 +279,7 @@ CONTAINS
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
+    !$acc enter data create(this%mem)
 
     ! Loop over all processes and initialize memory for this tile
     DO iproc=1,max_no_of_processes
@@ -303,6 +304,7 @@ CONTAINS
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => this%parent_tile%mem(iproc)%p
         this%mem(iproc)%p%in_var_groups = in_var_groups
+        __acc_attach(this%mem(iproc)%p)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//&
           &                             ' on tile '//TRIM(this%name)//' to parent')
@@ -311,12 +313,9 @@ CONTAINS
         child_no = this%path(this%level)
         ! this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc)
-        IF (ASSOCIATED(this%parent_tile)) THEN
-          IF (.NOT. ASSOCIATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) &
-            & ALLOCATE(this%parent_tile%mem(iproc)%p%children(this%parent_tile%Get_no_of_children()))
-          this%parent_tile%mem(iproc)%p%children(child_no)%p => tmp_ptr
-        END IF
+        __acc_attach(tmp_ptr)
         this%mem(iproc)%p => tmp_ptr
+        __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%id = iproc
         this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
         this%mem(iproc)%p%grid_id = this%grid_id
@@ -327,17 +326,31 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%no_of_children = no_of_children
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
+        !$acc update device(this%mem(iproc)%p)
+        !$acc enter data create(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
+        !$acc update device(this%mem(iproc)%p%vars)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
+
+        IF (ASSOCIATED(this%parent_tile)) THEN
+          IF (.NOT. ASSOCIATED(this%parent_tile%mem(iproc)%p%children) .AND. this%parent_tile%Get_no_of_children() > 0) THEN
+            ALLOCATE(this%parent_tile%mem(iproc)%p%children(this%parent_tile%Get_no_of_children()))
+            !$acc enter data create(this%parent_tile%mem(iproc)%p%children)
+          END IF
+          this%parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
+          !$acc update device(this%parent_tile%mem(iproc)%p%children(child_no)%p)
+          __acc_attach(this%parent_tile%mem(iproc)%p%children(child_no)%p)
+        END IF
 
       END IF
 
     END DO
+    !$acc update device(this%mem)
 
     hgrid   => Get_grid(this%grid_id)
     surface => Get_vgrid('surface')
@@ -360,7 +373,7 @@ CONTAINS
       varlist_name_loc = TRIM(varlist_name)
     END IF
 
-    !$acc enter data create(this%fract,this%fract_max,this%fract_old,this%fract_max_old)
+    !$acc enter data copyin(this)
 
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
@@ -371,7 +384,6 @@ CONTAINS
       & initval_r=0.0_wp, isteptype=isteptype)
 
     CALL this%Set_fract_ptr(tmp_fract)
-    __acc_attach(this%fract)
     NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
@@ -382,7 +394,6 @@ CONTAINS
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_ptr(tmp_fract)
-    __acc_attach(this%fract_max)
     NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_old', tmp_fract,                                 &
@@ -393,7 +404,6 @@ CONTAINS
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_old_ptr(tmp_fract)
-    __acc_attach(this%fract_old)
     NULLIFY(tmp_fract)
 
     CALL jsb_add_var(varlist_name_loc, 'fract_max_old', tmp_fract,                         &
@@ -404,7 +414,6 @@ CONTAINS
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                      &
       & initval_r=0.0_wp, isteptype=isteptype)
     CALL this%Set_fract_max_old_ptr(tmp_fract)
-    __acc_attach(this%fract_max_old)
     NULLIFY(tmp_fract)
 
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
@@ -498,8 +507,10 @@ CONTAINS
     END IF
 
     ! Loop over lcts of this tile and add variables for fractions for each lct
+    !$acc enter data create(this%lcts)
     DO ilct=1,SIZE(this%lcts)
 
+      !! !$acc enter data create(this%lcts(ilct)%fract)
       CALL jsb_add_var(varlist_name_loc, 'fract_'//TRIM(this%lcts(ilct)%name), this%lcts(ilct)%fract,             &
         & hgrid, surface,                                                                                         &
         & t_cf('lct_fraction', '',                                                                                &
@@ -507,6 +518,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
         & initval_r=0.0_wp, isteptype=isteptype)
+      __acc_attach(this%lcts(ilct)%fract)
 
     END DO
 
@@ -552,6 +564,8 @@ CONTAINS
               mem%vars(i)%p%child_idx(child_no) = 0
             END IF
           END DO
+          !$acc enter data copyin(mem%vars(i)%p%child_idx)
+          ! __acc_attach(mem%vars(i)%p%child_idx)
         END IF
       END DO
 

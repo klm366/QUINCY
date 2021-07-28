@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/base/mo_hsm_class.f90
-!    with md5 hash: c4b0dbaaf067d6c723dc2fcb428f4122
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_hsm_class.f90
+! with md5 hash: c4b0dbaaf067d6c723dc2fcb428f4122
 !
 !>
 !! @brief Definition of Hierarchical State Machine.

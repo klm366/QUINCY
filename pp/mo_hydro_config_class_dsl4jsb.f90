@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/hydrology/mo_hydro_config_class.f90
-!    with md5 hash: 65752f7c2fb4e1eedfc4741f926bc981
+! This file was automatically generated from JSBACH source file:
+!    src/hydrology/mo_hydro_config_class.f90
+! with md5 hash: 65752f7c2fb4e1eedfc4741f926bc981
 !
 !>
 !! @brief Contains structures and methods for hydrology config

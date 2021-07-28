@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/disturbance/mo_fuel_memory_class.f90
-!    with md5 hash: 45bb2dd8b00627a35878ed2457da3a49
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_fuel_memory_class.f90
+! with md5 hash: 8314ae08cc926630e9091c885c9092af
 !
 !>
 !! @brief Contains the memory class for the fuel process.
@@ -75,8 +75,6 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    IF (.NOT. ASSOCIATED(mem%fuel%ptr)) THEN
-
       CALL jsb_add_var( mem, 'fuel', mem%fuel,                                                                      &
         & hgrid, surface,                                                                                           &
         & t_cf('fuel', 'mol(C)/m^2 (potential vegetation)', 'Amount of carbon fuel for burned area calculations.'), &
@@ -84,9 +82,6 @@ CONTAINS
         & prefix, suffix,                                                                                           &
         & output_level=BASIC,                                                                                       &
         & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
-
-    END IF
-
 
   END SUBROUTINE Init_fuel_memory
 

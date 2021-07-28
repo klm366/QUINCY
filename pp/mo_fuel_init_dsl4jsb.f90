@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/disturbance/mo_fuel_init.f90
-!    with md5 hash: 7c37bc43d869b4aaa7821e20ba3a5768
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_fuel_init.f90
+! with md5 hash: 7c37bc43d869b4aaa7821e20ba3a5768
 !
 !>
 !! @brief Initialization of the fuel memory.

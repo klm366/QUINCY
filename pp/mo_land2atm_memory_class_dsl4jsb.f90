@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/atmland/mo_land2atm_memory_class.f90
-!    with md5 hash: 76f5ff133593dee14677076f2971e12a
+! This file was automatically generated from JSBACH source file:
+!    src/atmland/mo_land2atm_memory_class.f90
+! with md5 hash: 76f5ff133593dee14677076f2971e12a
 !
 !>
 !! @brief Contains types for the atmosphere-land interface memory.

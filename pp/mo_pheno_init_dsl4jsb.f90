@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/phenology/mo_pheno_init.f90
-!    with md5 hash: e74cb3756f078fc832e0353dff5b0244
+! This file was automatically generated from JSBACH source file:
+!    src/phenology/mo_pheno_init.f90
+! with md5 hash: e74cb3756f078fc832e0353dff5b0244
 !
 !>
 !! @brief Initialization of the the phenology memory.

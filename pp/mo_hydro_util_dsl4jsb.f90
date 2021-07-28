@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/hydrology/mo_hydro_util.f90
-!    with md5 hash: 2a132d684093f66ad21a15aba0816060
+! This file was automatically generated from JSBACH source file:
+!    src/hydrology/mo_hydro_util.f90
+! with md5 hash: 90c0cd06775090802c52864a862a135e
 !
 !>
 !! @brief Contains utilities for the hydrology process
@@ -29,7 +29,7 @@ MODULE mo_hydro_util
   PUBLIC :: get_water_in_root_zone
 
   INTERFACE get_water_in_root_zone
-    MODULE PROCEDURE get_water_in_root_zone_1d
+    !MODULE PROCEDURE get_water_in_root_zone_1d
     MODULE PROCEDURE get_water_in_root_zone_2d
   END INTERFACE
 
@@ -37,7 +37,7 @@ MODULE mo_hydro_util
 
 CONTAINS
 
-  FUNCTION get_water_in_root_zone_1d(ws, dz, dz_root) RESULT(ws_root)
+  SUBROUTINE get_water_in_root_zone_1d(ws, dz, dz_root, ws_root)
 
     REAL(wp), INTENT(in) :: &
       & ws     (:),       &        !< Water content of soil layers
@@ -78,17 +78,18 @@ CONTAINS
       END DO
     END IF
 
-  END FUNCTION get_water_in_root_zone_1d
+  END SUBROUTINE get_water_in_root_zone_1d
 
 
 
-  FUNCTION get_water_in_root_zone_2d(ws, dz, dz_root) RESULT(ws_root)
+  SUBROUTINE get_water_in_root_zone_2d(ws, dz, dz_root, ws_root)
 
     REAL(wp), INTENT(in) :: &
       & ws     (:,:),       &        !< Water content of soil layers
       & dz     (:,:),       &        !< Thicknesses of soil layers
       & dz_root(:,:)                 !< Thicknesses of root layers
-    REAL(wp) :: ws_root(SIZE(ws,1))  !< Water content in root zone
+
+    REAL(wp), INTENT(inout) :: ws_root(SIZE(ws,1))  !< Water content in root zone
 
     REAL(wp) ::                       &
       & bottom     (SIZE(ws     ,1)), & !< Cumulative depth of soil down to a layer (bottom depth of layer)
@@ -99,10 +100,11 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_water_in_root_zone_2d'
 
-    !$claw acc routine seq
-
     n  = SIZE(dz,2)       ! Number of soil layers
 
+    !$claw acc data present(ws, dz, dz_root, ws_root) create(bottom, bottom_m1, root_depth)
+    !$claw acc parallel default(none)
+    !$claw acc loop gang vector
     DO j = 1, SIZE(ws, 1)
       bottom (j)    = SUM(dz (j,:))
       root_depth(j) = SUM(dz_root(j,:))
@@ -114,6 +116,8 @@ CONTAINS
         bottom(j)    = 0._wp
         bottom_m1(j) = 0._wp
         ws_root  (j) = 0._wp
+
+        !$claw acc loop seq
         DO i=1,n
           bottom(j)    = bottom(j) + dz(j,i)
           IF (root_depth(j) >= bottom(j)) THEN                ! Root zone extends to below current layer
@@ -125,8 +129,10 @@ CONTAINS
         END DO
       END IF
     END DO
+    !$claw acc end parallel
+    !$claw acc end data
 
-  END FUNCTION get_water_in_root_zone_2d
+  END SUBROUTINE get_water_in_root_zone_2d
 
 #endif
 END MODULE mo_hydro_util

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/phenology/mo_pheno_interface.f90
-!    with md5 hash: 58f18826a2b08c4b4b16f7cc9f0bd520
+! This file was automatically generated from JSBACH source file:
+!    src/phenology/mo_pheno_interface.f90
+! with md5 hash: 5fbf451b6c9126464f568218eb8f127e
 !
 !>
 !! @brief Contains the interfaces to the phenlogy processes
@@ -406,8 +406,8 @@ CONTAINS
     IF (l_newday) THEN
       !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_0 tile_name=tile%name
       previous_day_NPP_pot_rate_ca(:) = day_NPP_sum(:)/86400._wp
+      !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_1 tile_name=tile%name
       day_NPP_sum(:) = 0._wp
-      !$claw end expand
     END IF
 
     ! JN 10.01.18
@@ -668,6 +668,7 @@ CONTAINS
     lai_mon(1:,0:) => pheno__mem%lai_mon (ics:ice, iblk, :) ! in
 
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
+    !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_climatology_expand_1 tile_name=tile%name
     lai(:) = REAL(wgt1,wp) * lai_mon(:,nmw1) + REAL(wgt2,wp) * lai_mon(:,nmw2)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -755,7 +756,7 @@ CONTAINS
     REAL(wp), POINTER, DIMENSION(:) :: lai
     REAL(wp), POINTER, DIMENSION(:) :: fract_fpc
     REAL(wp), POINTER, DIMENSION(:) :: fract_fpc_max
-    ! REAL(wp), POINTER      :: fract_fpc_mon(:,:)
+    REAL(wp), POINTER      :: fract_fpc_mon(:,:)
 
 
     INTEGER  :: iblk, ics, ice
@@ -793,12 +794,10 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_1 tile_name=tile%name
         fract_fpc(:) = get_foliage_projected_cover(fract_fpc_max(:), lai(:), 1._wp)
       ELSE
-        ! fract_fpc_mon(1:,0:) => pheno__mem%fract_fpc_mon (ics:ice, iblk, :) ! in
+        fract_fpc_mon(1:,0:) => pheno__mem%fract_fpc_mon (ics:ice, iblk, :) ! in
         CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-        ! fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_2 tile_name=tile%name
-        fract_fpc(:) = REAL(wgt1,wp) * pheno__mem%fract_fpc_mon(:,iblk,nmw1) + &
-          &            REAL(wgt2,wp) * pheno__mem%fract_fpc_mon(:,iblk,nmw2)
+        fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
       END IF
     ELSE        
       ! We have PFTs and %scheme /= climatology

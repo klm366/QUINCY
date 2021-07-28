@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/base/mo_jsb_vertical_axes.f90
-!    with md5 hash: 45db60721484530a0fe5d44780bcdcb1
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_vertical_axes.f90
+! with md5 hash: 45db60721484530a0fe5d44780bcdcb1
 !
 !>
 !! @brief Contains JSBACH vertical axes structure and methods

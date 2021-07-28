@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/disturbance/mo_fuel_process.f90
-!    with md5 hash: 6090a0f75ecc9d92cc087788bca52730
+! This file was automatically generated from JSBACH source file:
+!    src/disturbance/mo_fuel_process.f90
+! with md5 hash: 6090a0f75ecc9d92cc087788bca52730
 !
 !>
 !! @brief Contains the routines for the fuel processes

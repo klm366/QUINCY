@@ -1107,7 +1107,6 @@ CONTAINS
  SUBROUTINE update_water_stress ( tile , options )
   USE mo_hydro_process , ONLY: get_water_stress_factor
   USE mo_hydro_util , ONLY: get_water_in_root_zone
-  USE mo_phy_schemes , ONLY: qsat
 
   CLASS ( t_jsb_tile_abstract ) , INTENT(INOUT) :: tile
   TYPE ( t_jsb_task_options ) , INTENT(IN) :: options
@@ -1167,18 +1166,12 @@ CONTAINS
   water_stress => hydro__mem % water_stress % ptr ( ics : ice , iblk )
   config_w_soil_crit_fract = hydro__conf % w_soil_crit_fract
   config_w_soil_wilt_fract = hydro__conf % w_soil_wilt_fract
-!$acc data present(w_soil_root, w_soil_sl, soil_depth_sl, root_depth_sl, &
-!$acc w_soil_root_fc, w_soil_fc_sl, w_soil_root_pwp, w_soil_pwp_sl, w_soil_pwp_sl)
-!$acc update host(w_soil_sl, soil_depth_sl, root_depth_sl, w_soil_fc_sl, &
-!$acc w_soil_pwp_sl)
-  w_soil_root ( : ) = get_water_in_root_zone ( w_soil_sl ( : , : ) ,&
-   soil_depth_sl ( : , : ) , root_depth_sl ( : , : ) )
-  w_soil_root_fc ( : ) = get_water_in_root_zone ( w_soil_fc_sl ( : , : ) ,&
-   soil_depth_sl ( : , : ) , root_depth_sl ( : , : ) )
-  w_soil_root_pwp ( : ) = get_water_in_root_zone ( w_soil_pwp_sl ( : , : ) ,&
-   soil_depth_sl ( : , : ) , root_depth_sl ( : , : ) )
-!$acc update device(w_soil_root,w_soil_root_fc,w_soil_root_pwp) ! computed on cpu
-!$acc end data
+  CALL get_water_in_root_zone ( w_soil_sl ( : , : ) , soil_depth_sl ( : , : )&
+   , root_depth_sl ( : , : ) , w_soil_root ( : ) )
+  CALL get_water_in_root_zone ( w_soil_fc_sl ( : , : ) , soil_depth_sl ( : , :&
+   ) , root_depth_sl ( : , : ) , w_soil_root_fc ( : ) )
+  CALL get_water_in_root_zone ( w_soil_pwp_sl ( : , : ) , soil_depth_sl ( : ,&
+   : ) , root_depth_sl ( : , : ) , w_soil_root_pwp ( : ) )
 !$acc data present(w_soil_column(:),max_moist(:),water_stress(:))
 !$acc parallel
 !$acc loop gang vector
@@ -1234,13 +1227,11 @@ CONTAINS
  END SUBROUTINE aggregate_water_stress
 
  SUBROUTINE update_canopy_cond_stressed ( tile , options )
-  USE mo_hydro_process , ONLY: get_canopy_conductance ,&
-   get_water_stress_factor
+  USE mo_hydro_process , ONLY: get_canopy_conductance
   USE mo_phy_schemes , ONLY: qsat
 
   CLASS ( t_jsb_tile_abstract ) , INTENT(INOUT) :: tile
   TYPE ( t_jsb_task_options ) , INTENT(IN) :: options
-  TYPE ( t_jsb_model ) , POINTER :: model
   TYPE ( t_seb_memory ) , POINTER :: seb__mem
   TYPE ( t_a2l_memory ) , POINTER :: a2l__mem
   TYPE ( t_hydro_memory ) , POINTER :: hydro__mem
@@ -1271,7 +1262,6 @@ CONTAINS
    CALL message ( trim ("mo_hydro_interface" //":update_canopy_cond_stressed"&
     ) ,"Starting on tile " // trim ( tile % name ) //" ..." )
   END IF
-  model => get_model ( tile % owner_model_id )
   SELECT TYPE ( mm => tile % mem ( seb_ ) % p )
   TYPE IS ( t_seb_memory )
    seb__mem => mm
@@ -1354,7 +1344,6 @@ CONTAINS
 
  SUBROUTINE update_evaporation ( tile , options )
   USE mo_phy_schemes , ONLY: q_effective , heat_transfer_coef
-  USE mo_jsb_physical_constants , ONLY: grav , cvdifts
 
   CLASS ( t_jsb_tile_abstract ) , INTENT(INOUT) :: tile
   TYPE ( t_jsb_task_options ) , INTENT(IN) :: options
@@ -1955,6 +1944,8 @@ INTEGER, SAVE :: task_counter = 1
   INTEGER :: iblk
   INTEGER :: ics
   INTEGER :: ice
+  INTEGER :: nc
+  INTEGER :: i
   REAL ( KIND= wp ) :: dtime
   CHARACTER ( LEN= * ) , PARAMETER :: routine ="mo_hydro_interface" //&
   ":update_water_balance"
@@ -1967,6 +1958,7 @@ INTEGER, SAVE :: task_counter = 1
   iblk = options % iblk
   ics = options % ics
   ice = options % ice
+  nc = options % nc
   dtime = options % dtime
   IF ( debug_on ( ) .AND. iblk == 1 ) THEN
    CALL message ( trim ("mo_hydro_interface" //":update_water_balance" ) ,&
@@ -1997,9 +1989,11 @@ INTEGER, SAVE :: task_counter = 1
   water_flux => hydro__mem % water_flux % ptr ( ics : ice , iblk )
   water_content => hydro__mem % water_content % ptr ( ics : ice , iblk )
   water_budget => hydro__mem % water_budget % ptr ( ics : ice , iblk )
-!$acc data create(tile_fract, water_content_new)
-  CALL tile % get_fraction ( ics , ice , iblk , fract = tile_fract ( : ) )
-!$acc update device(tile_fract)
+!$acc data create(tile, tile%fract, tile_fract, water_content_new)
+!$acc parallel loop gang vector
+  DO i = 1 , nc , 1
+   tile_fract ( i ) = tile % fract ( ics - 1 + i , iblk )
+  END DO
 !$acc data &
 !$acc present(snow(:),tile_fract(:),drainage(:),rain(:),runoff(:),area(:) &
 !$acc ,water_flux(:),evapotrans(:))

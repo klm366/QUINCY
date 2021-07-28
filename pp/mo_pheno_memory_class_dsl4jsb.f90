@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/phenology/mo_pheno_memory_class.f90
-!    with md5 hash: 11cec7933bbf448e736f89924b858ff2
+! This file was automatically generated from JSBACH source file:
+!    src/phenology/mo_pheno_memory_class.f90
+! with md5 hash: 9d9b265eaa6d1ba0f665e53ca8491211
 !
 !>
 !! @brief Contains the memory class for phenology.
@@ -164,20 +164,18 @@ CONTAINS
 
     SELECT TYPE (cc => model%processes(pheno_)%p%config); TYPE IS (t_pheno_config) ; pheno__conf => cc ; END SELECT
     
-    !$acc enter data pcreate(mem)
+    !! !$acc enter data pcreate(mem)
 
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
-      &  )                                       &
-      & .AND. .NOT. ASSOCIATED(mem%lai%ptr)) THEN
+      &  ) ) THEN
 
-      ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
-      ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
-      !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
-      !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
-  
-      !$acc enter data pcreate(mem%lai,mem%fract_fpc,mem%fract_fpc_max,      &
-      !$acc mem%fract_forest,mem%veg_fract_correction)
+      ! IF (TRIM(pheno__conf%scheme) == 'climatology') THEN   ! TODO
+        ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
+        ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
+        !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
+        !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
+      ! END IF
 
       CALL jsb_add_var( mem, 'lai', mem%lai,                                   &
         & hgrid, surface,                                                      &
@@ -221,14 +219,6 @@ CONTAINS
         & initval_r=0.0_wp )
 
       IF (TRIM(pheno__conf%scheme) == 'logrop') THEN
-
-        !$acc enter data pcreate(mem%growth_phase_SG,mem%growth_phase_EG,      &
-        !$acc mem%growth_phase_CRP,mem%days_since_growth_begin_EG,             &
-        !$acc mem%days_since_growth_begin_SG,mem%previous_day_NPP_pot_rate_ca, &
-        !$acc mem%number_of_individuals,mem%biomass_per_individual,            &
-        !$acc mem%cconservation_allom,mem%maxLAI_allom,mem%day_NPP_sum,        &
-        !$acc mem%heat_sum_EG,mem%heat_sum_SG,mem%heat_sum_CRP,                &
-        !$acc mem%heat_sum_winter,mem%chill_days_SG,mem%chill_days_EG)
 
         CALL jsb_add_var( mem,'growth_phase_sg', mem%growth_phase_SG,          &
           & hgrid, surface,                                                    &

@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/base/mo_jsb_io.f90
-!    with md5 hash: b653fdd647135e622bb88a417493d93f
+! This file was automatically generated from JSBACH source file:
+!    src/base/mo_jsb_io.f90
+! with md5 hash: b653fdd647135e622bb88a417493d93f
 !
 MODULE mo_jsb_io
 #ifndef __NO_JSBACH__

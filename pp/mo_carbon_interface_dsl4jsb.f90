@@ -1,7 +1,7 @@
 !
-! This file was automatically generated from:
-!    /scratch/snx3000/rschnur/icon-rc-testing-plus-mc8.test/externals/jsbach/src/carbon/mo_carbon_interface.f90
-!    with md5 hash: bc9974fe32f3a4c05a211911dbdf469b
+! This file was automatically generated from JSBACH source file:
+!    src/carbon/mo_carbon_interface.f90
+! with md5 hash: bc9974fe32f3a4c05a211911dbdf469b
 !
 !>
 !! @brief Contains the interfaces to the carbon process
