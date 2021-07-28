@@ -35,8 +35,6 @@ MODULE mo_jsb_grid_class
 
   PUBLIC :: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
   PUBLIC :: new_grid, delete_grid, new_vgrid, delete_vgrid
-  PUBLIC :: get_nblks, get_nproma !, t_jsb_subset
-  PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
 
   TYPE t_jsb_grid
     INTEGER                       :: id = 0
@@ -60,18 +58,18 @@ MODULE mo_jsb_grid_class
     TYPE(t_patch), POINTER        :: patch => NULL()
     INTEGER                       :: host_patch_id
   CONTAINS
+    PROCEDURE :: Get_nblks
+    PROCEDURE :: Get_nproma
+    PROCEDURE :: Get_blk_start
+    PROCEDURE :: Get_blk_end
+    PROCEDURE :: Get_col_start
+    PROCEDURE :: Get_col_end
     PROCEDURE :: Print             => Print_grid
   END TYPE t_jsb_grid
 
   TYPE t_jsb_grid_ptr
     TYPE(t_jsb_grid), POINTER :: p => NULL()
   END TYPE t_jsb_grid_ptr
-
-  ! TYPE t_jsb_subset
-  !   INTEGER :: block
-  !   INTEGER :: start_index
-  !   INTEGER :: end_index
-  ! END TYPE t_jsb_subset
 
   TYPE t_jsb_vgrid
     INTEGER ::           id           = 0
@@ -277,9 +275,9 @@ CONTAINS
   INTEGER FUNCTION get_nblks(self)
 
 #ifdef HAVE_F2003
-    TYPE(t_jsb_grid), POINTER, INTENT(in) :: self
+    CLASS(t_jsb_grid), INTENT(in) :: self
 #else
-    TYPE(t_jsb_grid), POINTER             :: self
+    CLASS(t_jsb_grid)             :: self
 #endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_nblks'
@@ -291,9 +289,9 @@ CONTAINS
   INTEGER FUNCTION get_nproma(self)
 
 #ifdef HAVE_F2003
-    TYPE(t_jsb_grid), POINTER, INTENT(in) :: self
+    CLASS(t_jsb_grid), INTENT(in) :: self
 #else
-    TYPE(t_jsb_grid), POINTER             :: self
+    CLASS(t_jsb_grid)             :: self
 #endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_nproma'
@@ -306,7 +304,7 @@ CONTAINS
 
     USE mo_jsb_domain_iface, ONLY: get_blk_start_domain => get_blk_start
 
-    TYPE(t_jsb_grid), INTENT(in) :: grid
+    CLASS(t_jsb_grid), INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_start'
 
@@ -318,7 +316,7 @@ CONTAINS
 
     USE mo_jsb_domain_iface, ONLY: get_blk_end_domain => get_blk_end
 
-    TYPE(t_jsb_grid), INTENT(in) :: grid
+    CLASS(t_jsb_grid), INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_end'
 
@@ -326,12 +324,12 @@ CONTAINS
 
   END FUNCTION get_blk_end
 
-  INTEGER FUNCTION get_col_start(iblk, grid)
+  INTEGER FUNCTION get_col_start(grid, iblk)
 
     USE mo_jsb_domain_iface, ONLY: get_col_start_domain => get_col_start
 
+    CLASS(t_jsb_grid), INTENT(in) :: grid
     INTEGER,          INTENT(in) :: iblk
-    TYPE(t_jsb_grid), INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_start'
 
@@ -339,12 +337,12 @@ CONTAINS
 
   END FUNCTION get_col_start
 
-  INTEGER FUNCTION get_col_end(iblk, grid)
+  INTEGER FUNCTION get_col_end(grid, iblk)
 
     USE mo_jsb_domain_iface, ONLY: get_col_end_domain => get_col_end
 
+    CLASS(t_jsb_grid), INTENT(in) :: grid
     INTEGER,          INTENT(in) :: iblk
-    TYPE(t_jsb_grid), INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_end'
 
