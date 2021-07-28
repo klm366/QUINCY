@@ -969,13 +969,14 @@ CONTAINS
       IF (.NOT. ltpe_closed) THEN
         WHERE (dsoil(:,i+1) <= 0._wp)       ! bedrock below
           drainage(:) = drainage(:) + percolation(:,i)
+          percolation(:,i) = 0._wp
         END WHERE
       ELSE  ! TPE closed case
         WHERE (dsoil(:,i+1) <= 0._wp)       ! bedrock below
           w_soil_overflow(:) = w_soil_overflow(:) + percolation(:,i)
+          percolation(:,i) = 0._wp
         END WHERE
       END IF
-      percolation(:,i) = 0._wp
     END DO
 
     ! Percolation overflow is not allowed from layers below the surface layer.
