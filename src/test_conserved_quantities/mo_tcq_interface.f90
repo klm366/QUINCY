@@ -29,12 +29,11 @@ MODULE mo_tcq_interface
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model    
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -108,21 +107,15 @@ CONTAINS
   !
   SUBROUTINE update_tcq(tile, options)
 
-    USE mo_jsb_parallel,      ONLY: Get_omp_thread
-    USE mo_jsb_time,          ONLY: is_newday
-
     IMPLICIT NONE
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), POINTER :: current_tile
     TYPE(t_jsb_model), POINTER          :: model
 
-    INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: dtime
-    REAL(wp), DIMENSION(options%nc) :: moved_fract, current_fract
+    INTEGER  :: iblk, ics, ice
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_tcq'
 
     ! Declare pointers for process configuration and memory
@@ -148,8 +141,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
-    dtime   = options%dtime
     
     model => Get_model(tile%owner_model_id)
 
@@ -193,7 +184,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(TCQ_)
+    !dsl4jsb_Def_config(TCQ_)
     dsl4jsb_Def_memory(TCQ_)
 
     TYPE(t_jsb_model),       POINTER :: model
@@ -202,7 +193,6 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice
     REAL(wp) :: new_sum(options%nc)
-    !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_tcq'
     
     dsl4jsb_Real2D_onChunk ::  old_sum
@@ -222,7 +212,6 @@ CONTAINS
     
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(TCQ_)
     dsl4jsb_Get_memory(TCQ_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -260,14 +249,13 @@ CONTAINS
   SUBROUTINE tcq_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
     USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_jsb_lcc_class,       ONLY: transfer_from_active_to_passive_var_onChunk
     USE mo_tcq_constants,       ONLY: tcq_potential_active_vars, tcq_required_passive_vars
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
-        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var 
+        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: tile !< tile for which the relocation is be conducted
     INTEGER,                    INTENT(in)    :: i_tile !< index of the tile in lcc structure
     TYPE(t_jsb_task_options),   INTENT(IN)    :: options !< run-time parameters
