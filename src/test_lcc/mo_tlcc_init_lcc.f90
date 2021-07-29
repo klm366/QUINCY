@@ -31,9 +31,9 @@ MODULE mo_tlcc_init_lcc
   CHARACTER(len=*), PARAMETER :: modname = 'mo_tlcc_init_lcc_class'
   CHARACTER(len=*), PARAMETER :: procname = 'tlcc'
   
-  INTEGER, PARAMETER :: numberOfActiveCQTs = 1 
-  INTEGER, PARAMETER :: numberOfPassiveCQTs = 1
-  INTEGER, PARAMETER :: numberOfInvolvedChildTiles = 5
+  INTEGER, PARAMETER :: nr_of_active_cqts = 1 
+  INTEGER, PARAMETER :: nr_of_passive_cqts = 1
+  INTEGER, PARAMETER :: nr_of_involved_descendant_tiles = 5
 
 CONTAINS
 
@@ -46,20 +46,20 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER :: activeCQTs(numberOfActiveCQTs)
-    INTEGER :: passiveCQTs(numberOfPassiveCQTs)
-    CHARACTER(len=SHORT_NAME_LEN) :: involved_child_tiles(numberOfInvolvedChildTiles)
+    INTEGER :: active_cqts(nr_of_active_cqts)
+    INTEGER :: passive_cqts(nr_of_passive_cqts)
+    CHARACTER(len=SHORT_NAME_LEN) :: involved_child_tiles(nr_of_involved_descendant_tiles)
     ! -------------------------------------------------------------------------------------------------- !
     
     ! JN-TODO: reconsider what to define here and how
     IF (.NOT. tile%name .EQ. 'veg') RETURN
 
-    activeCQTs = (/ LIVE_CARBON_CQ_TYPE /)
-    passiveCQTs = (/ DEAD_CARBON_CQ_TYPE /)
+    active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
+    passive_cqts = (/ DEAD_CARBON_CQ_TYPE /)
 
     involved_child_tiles = (/ 'pft03', 'pft04' , 'pft05', 'pft06', 'pft11' /)
 
-    CALL init_lcc(procname, tile, activeCQTs, passiveCQTs, involved_child_tiles)
+    CALL init_lcc(procname, tile, active_cqts, passive_cqts, involved_child_tiles)
 
   END SUBROUTINE tlcc_init_lcc
 
