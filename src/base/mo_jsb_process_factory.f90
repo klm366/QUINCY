@@ -30,6 +30,9 @@ MODULE mo_jsb_process_factory
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
+  USE mo_pplcc_memory_class,   ONLY: t_pplcc_memory
+  USE mo_tlcc_memory_class,    ONLY: t_tlcc_memory
+  USE mo_tcq_memory_class,     ONLY: t_tcq_memory  
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
 #ifndef __NO_JSBACH_HD__
@@ -59,13 +62,20 @@ MODULE mo_jsb_process_factory
   USE mo_disturb_config_class,  ONLY: t_disturb_config
   USE mo_fuel_interface,        ONLY: Register_fuel_tasks
   USE mo_fuel_config_class,     ONLY: t_fuel_config
+  USE mo_pplcc_interface,       ONLY: Register_pplcc_tasks
+  USE mo_pplcc_config_class,    ONLY: t_pplcc_config
+  USE mo_tlcc_interface,        ONLY: Register_tlcc_tasks
+  USE mo_tlcc_config_class,     ONLY: t_tlcc_config
+  USE mo_tcq_interface,         ONLY: Register_tcq_tasks
+  USE mo_tcq_config_class,      ONLY: t_tcq_config
   USE mo_alcc_interface,        ONLY: Register_alcc_tasks
   USE mo_alcc_config_class,     ONLY: t_alcc_config
   USE mo_veg_interface,         ONLY: Register_veg_tasks
   USE mo_veg_config_class,      ONLY: t_veg_config
 
   USE mo_jsb_process_class, ONLY: &
-    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, ALCC_, VEG_
+    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
+    & PPLCC_, TLCC_, TCQ_, ALCC_, VEG_
 
   IMPLICIT NONE
   PRIVATE
@@ -128,6 +138,17 @@ CONTAINS
     CASE (FUEL_)
       CALL Register_fuel_tasks(return_ptr, model_id)
       ALLOCATE(t_fuel_config::return_ptr%config)
+    CASE (PPLCC_)
+      CALL Register_pplcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_pplcc_config::return_ptr%config)
+    CASE (TLCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_tlcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_tlcc_config::return_ptr%config)
+    CASE (TCQ_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_tcq_tasks(return_ptr, model_id)
+      ALLOCATE(t_tcq_config::return_ptr%config)
     CASE (ALCC_)
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_alcc_tasks(return_ptr, model_id)
@@ -159,6 +180,9 @@ CONTAINS
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
+    USE mo_pplcc_memory_class,   ONLY: max_no_of_pplcc_vars => max_no_of_vars
+    USE mo_tlcc_memory_class,    ONLY: max_no_of_tlcc_vars => max_no_of_vars
+    USE mo_tcq_memory_class,     ONLY: max_no_of_tcq_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
@@ -210,6 +234,15 @@ CONTAINS
     CASE (FUEL_)
       ALLOCATE(t_fuel_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_fuel_vars
+    CASE (PPLCC_)
+      ALLOCATE(t_pplcc_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_pplcc_vars
+    CASE (TLCC_)
+      ALLOCATE(t_tlcc_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_tlcc_vars
+    CASE (TCQ_)
+      ALLOCATE(t_tcq_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_tcq_vars
     CASE (ALCC_)
       ALLOCATE(t_alcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_alcc_vars

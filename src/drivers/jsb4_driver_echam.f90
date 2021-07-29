@@ -44,10 +44,11 @@ PROGRAM jsb4_driver
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
-  USE mo_exception,          ONLY: message, message_text
+  USE mo_exception,          ONLY: message, message_text, finish
   USE mo_kind,               ONLY: wp
   USE mo_jsb_math_constants, ONLY: deg2rad
   USE mo_orbit,              ONLY: orbit_kepler, orbit_vsop87
+  USE mo_util,               ONLY : int2string
 
 !>>> TODO? echam:
   ! parallelisation
@@ -231,6 +232,12 @@ PROGRAM jsb4_driver
   WRITE(message_text, '(A,I5,I5,I5)') 'nproma, npromz, nblks = ', nproma, npromz, nblks
   CALL message('jsb4_driver', message_text)
   CALL message('', '')
+
+  IF ( npromz .NE. nproma ) THEN
+    CALL finish(TRIM(progname), &
+      & 'Violation of assertion: for standalone in echam environment it is assumed that nlon=nproma=npromz, but nproma: '&
+      & //int2string(nproma) //' and npromz: '//int2string(npromz)  )
+  ENDIF
 
   ! forcing
   ALLOCATE(t_air_K(nproma, nblks))
