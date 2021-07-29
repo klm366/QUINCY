@@ -259,16 +259,9 @@ CONTAINS
       & c_humus_2_pfts,            &
       & c_bg_sum_pfts,             &
       & c_ag_sum_1_pfts,           &
-      & c_litter_green_ag_pfts,    &
-      & c_litter_green_bg_pfts,    &
-      & c_litter_wood_ag_pfts,     &
-      & c_litter_wood_bg_pfts,     &
       !
       & NPP_pot_sum_pfts,          &
       & GPP_sum_pfts,              &
-      & alpha_pfts,                &
-      & alpha_sum_pfts,            &
-      & alpha_yDayMean_pfts,       &
       & soil_respiration_pfts,     &
       & NPP_flux_correction_pfts,  &
       & NPP_pot_yDayMean_pfts,     &
@@ -393,16 +386,9 @@ CONTAINS
       & c_humus_2_lost_avg,         &
       & c_bg_sum_lost_avg,          & ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
       & c_ag_sum_1_lost_avg,        & ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
-      & c_litter_green_ag_lost_avg, &
-      & c_litter_green_bg_lost_avg, &
-      & c_litter_wood_ag_lost_avg,  &
-      & c_litter_wood_bg_lost_avg,  &
       !
       & NPP_pot_sum_lost_avg,          &
       & GPP_sum_lost_avg,              &
-      & alpha_lost_avg,                &
-      & alpha_sum_lost_avg,            &
-      & alpha_yDayMean_lost_avg,       &
       & soil_respiration_lost_avg,     &
       & NPP_flux_correction_lost_avg,  &
       & NPP_pot_yDayMean_lost_avg,     &
@@ -520,16 +506,9 @@ CONTAINS
       & c_humus_2,         &
       & c_bg_sum,          &  ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
       & c_ag_sum_1,        &  ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
-      & c_litter_green_ag, &
-      & c_litter_green_bg, &
-      & c_litter_wood_ag,  &
-      & c_litter_wood_bg,  &
       !
       & NPP_pot_sum,          &
       & GPP_sum,              &
-      & alpha,                &
-      & alpha_sum,            &
-      & alpha_yDayMean,       &
       & soil_respiration,     &
       & NPP_flux_correction,  &
       & NPP_pot_yDayMean,     &
@@ -717,16 +696,9 @@ CONTAINS
           !
           & c_bg_sum_pfts(nproma, npft, nblks),             &   ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
           & c_ag_sum_1_pfts(nproma, npft, nblks),           &   ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
-          & c_litter_green_ag_pfts(nproma, npft, nblks),    &
-          & c_litter_green_bg_pfts(nproma, npft, nblks),    &
-          & c_litter_wood_ag_pfts(nproma, npft, nblks),     &
-          & c_litter_wood_bg_pfts(nproma, npft, nblks),     &
           !
           & NPP_pot_sum_pfts(nproma, npft, nblks),          &
           & GPP_sum_pfts(nproma, npft, nblks),              &
-          & alpha_pfts(nproma, npft, nblks),                &
-          & alpha_sum_pfts(nproma, npft, nblks),            &
-          & alpha_yDayMean_pfts(nproma, npft, nblks),       &
           & soil_respiration_pfts(nproma, npft, nblks),     &
           & NPP_flux_correction_pfts(nproma, npft, nblks),  &
           & NPP_pot_yDayMean_pfts(nproma, npft, nblks),     &
@@ -772,16 +744,9 @@ CONTAINS
           & c_humus_2_lost_avg(nproma, npft, nblks),         &
           & c_bg_sum_lost_avg(nproma, npft, nblks),          &  ! Sum of belowground Yasso pools  [mol(C)^2/m(canopy)]
           & c_ag_sum_1_lost_avg(nproma, npft, nblks),        &  ! Sum of aboveground green Yasso pools  [mol(C)^2/m(canopy)]
-          & c_litter_green_ag_lost_avg(nproma, npft, nblks),    &
-          & c_litter_green_bg_lost_avg(nproma, npft, nblks),    &
-          & c_litter_wood_ag_lost_avg(nproma, npft, nblks),     &
-          & c_litter_wood_bg_lost_avg(nproma, npft, nblks),     &
           !
           & NPP_pot_sum_lost_avg(nproma, npft, nblks),          &
           & GPP_sum_lost_avg(nproma, npft, nblks),              &
-          & alpha_lost_avg(nproma, npft, nblks),                &
-          & alpha_sum_lost_avg(nproma, npft, nblks),            &
-          & alpha_yDayMean_lost_avg(nproma, npft, nblks),       &
           & soil_respiration_lost_avg(nproma, npft, nblks),     &
           & NPP_flux_correction_lost_avg(nproma, npft, nblks),  &
           & NPP_pot_yDayMean_lost_avg(nproma, npft, nblks),     &
@@ -1074,10 +1039,6 @@ CONTAINS
               c_reserve         => carbon__mem%c_reserve%ptr(:,:)         ! inout
               c_woods           => carbon__mem%c_woods%ptr(:,:)           ! inout
               c_crop_harvest    => carbon__mem%c_crop_harvest%ptr(:,:)    ! inout
-              c_litter_green_ag => carbon__mem%c_litter_green_ag%ptr(:,:) ! inout
-              c_litter_green_bg => carbon__mem%c_litter_green_bg%ptr(:,:) ! inout
-              c_litter_wood_ag  => carbon__mem%c_litter_wood_ag %ptr(:,:) ! inout
-              c_litter_wood_bg  => carbon__mem%c_litter_wood_bg %ptr(:,:) ! inout
               ! size class 1
               c_acid_ag1        => carbon__mem%c_acid_ag1%ptr(:,:)        ! inout
               c_water_ag1       => carbon__mem%c_water_ag1%ptr(:,:)       ! inout
@@ -1100,16 +1061,9 @@ CONTAINS
               c_humus_2         => carbon__mem%c_humus_2%ptr(:,:)         ! inout
               c_bg_sum          => carbon__mem%c_bg_sum%ptr(:,:)          ! inout
               c_ag_sum_1        => carbon__mem%c_ag_sum_1%ptr(:,:)        ! inout
-              c_litter_green_ag => carbon__mem%c_litter_green_ag%ptr(:,:) ! inout
-              c_litter_green_bg => carbon__mem%c_litter_green_bg%ptr(:,:) ! inout
-              c_litter_wood_ag  => carbon__mem%c_litter_wood_ag%ptr(:,:)  ! inout
-              c_litter_wood_bg  => carbon__mem%c_litter_wood_bg%ptr(:,:)  ! inout
               !
               NPP_pot_sum          => carbon__mem%NPP_pot_sum%ptr(:,:)    ! inout
               GPP_sum              => carbon__mem%GPP_sum%ptr(:,:)        ! inout
-              alpha                => carbon__mem%alpha%ptr(:,:)          ! inout
-              alpha_sum            => carbon__mem%alpha_sum%ptr(:,:)      ! inout
-              alpha_yDayMean       => carbon__mem%alpha_yDayMean%ptr(:,:) ! inout
               soil_respiration     => carbon__mem%soil_respiration%ptr(:,:)    ! inout
               NPP_flux_correction  => carbon__mem%NPP_flux_correction%ptr(:,:) ! inout
               NPP_pot_yDayMean     => carbon__mem%NPP_pot_yDayMean%ptr(:,:)    ! inout
@@ -1133,10 +1087,6 @@ CONTAINS
               c_reserve         => carbon__mem%c_reserve_ta%ptr(:,:)         ! inout
               c_woods           => carbon__mem%c_woods_ta%ptr(:,:)           ! inout
               c_crop_harvest    => carbon__mem%c_crop_harvest_ta%ptr(:,:)    ! inout
-              c_litter_green_ag => carbon__mem%c_litter_green_ag_ta%ptr(:,:) ! inout
-              c_litter_green_bg => carbon__mem%c_litter_green_bg_ta%ptr(:,:) ! inout
-              c_litter_wood_ag  => carbon__mem%c_litter_wood_ag_ta%ptr(:,:)  ! inout
-              c_litter_wood_bg  => carbon__mem%c_litter_wood_bg_ta%ptr(:,:)  ! inout
               ! size class 1
               c_acid_ag1        => carbon__mem%c_acid_ag1_ta%ptr(:,:)        ! inout
               c_water_ag1       => carbon__mem%c_water_ag1_ta%ptr(:,:)       ! inout
@@ -1159,16 +1109,9 @@ CONTAINS
               c_humus_2         => carbon__mem%c_humus_2_ta%ptr(:,:)         ! inout
               c_bg_sum          => carbon__mem%c_bg_sum%ptr(:,:)             ! inout *
               c_ag_sum_1        => carbon__mem%c_ag_sum_1%ptr(:,:)           ! inout *
-              c_litter_green_ag => carbon__mem%c_litter_green_ag_ta%ptr(:,:) ! inout
-              c_litter_green_bg => carbon__mem%c_litter_green_bg_ta%ptr(:,:) ! inout
-              c_litter_wood_ag  => carbon__mem%c_litter_wood_ag_ta%ptr(:,:)  ! inout
-              c_litter_wood_bg  => carbon__mem%c_litter_wood_bg_ta%ptr(:,:)  ! inout
               !
               NPP_pot_sum          => carbon__mem%NPP_pot_sum%ptr(:,:)       ! inout
               GPP_sum              => carbon__mem%GPP_sum%ptr(:,:)           ! inout *
-              alpha                => carbon__mem%alpha%ptr(:,:)             ! inout *
-              alpha_sum            => carbon__mem%alpha_sum%ptr(:,:)         ! inout *
-              alpha_yDayMean       => carbon__mem%alpha_yDayMean%ptr(:,:)    ! inout *
               soil_respiration     => carbon__mem%soil_respiration_ta%ptr(:,:)     ! inout
               NPP_flux_correction  => carbon__mem%NPP_flux_correction_ta%ptr(:,:)  ! inout
               NPP_pot_yDayMean     => carbon__mem%NPP_pot_yDayMean_ta%ptr(:,:)     ! inout
@@ -1215,16 +1158,9 @@ CONTAINS
             c_humus_2_pfts(:,ipft,:)         = c_humus_2(:,:)
             c_bg_sum_pfts(:,ipft,:)          = c_bg_sum(:,:)
             c_ag_sum_1_pfts(:,ipft,:)        = c_ag_sum_1(:,:)
-            c_litter_green_ag_pfts(:,ipft,:) = c_litter_green_ag(:,:)
-            c_litter_green_bg_pfts(:,ipft,:) = c_litter_green_bg(:,:)
-            c_litter_wood_ag_pfts(:,ipft,:)  = c_litter_wood_ag(:,:)
-            c_litter_wood_bg_pfts(:,ipft,:)  = c_litter_wood_bg(:,:)
             !
             NPP_pot_sum_pfts(:,ipft,:)          = NPP_pot_sum(:,:)
             GPP_sum_pfts(:,ipft,:)              = GPP_sum(:,:)
-            alpha_pfts(:,ipft,:)                = alpha(:,:)
-            alpha_sum_pfts(:,ipft,:)            = alpha_sum(:,:)
-            alpha_yDayMean_pfts(:,ipft,:)       = alpha_yDayMean(:,:)
             soil_respiration_pfts(:,ipft,:)     = soil_respiration(:,:)
             NPP_flux_correction_pfts(:,ipft,:)  = NPP_flux_correction(:,:)
             NPP_pot_yDayMean_pfts(:,ipft,:)     = NPP_pot_yDayMean(:,:)
@@ -1296,25 +1232,11 @@ CONTAINS
           c_bg_sum_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
           dummy(:,:) = SUM(c_ag_sum_1_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)        / fract_lost_sum(:,:)
           c_ag_sum_1_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
-          dummy(:,:) = SUM(c_litter_green_ag_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2) / fract_lost_sum(:,:)
-          c_litter_green_ag_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
-          dummy(:,:) = SUM(c_litter_green_bg_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2) / fract_lost_sum(:,:)
-          c_litter_green_bg_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
-          dummy(:,:) = SUM(c_litter_wood_ag_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)  / fract_lost_sum(:,:)
-          c_litter_wood_ag_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
-          dummy(:,:) = SUM(c_litter_wood_bg_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)  / fract_lost_sum(:,:)
-          c_litter_wood_bg_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
           !
           dummy(:,:) = SUM(NPP_pot_sum_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)       / fract_lost_sum(:,:)
           NPP_pot_sum_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
           dummy(:,:) = SUM(GPP_sum_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)           / fract_lost_sum(:,:)
           GPP_sum_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
-          dummy(:,:) = SUM(alpha_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)             / fract_lost_sum(:,:)
-          alpha_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
-          dummy(:,:) = SUM(alpha_sum_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)         / fract_lost_sum(:,:)
-          alpha_sum_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
-          dummy(:,:) = SUM(alpha_yDayMean_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)    / fract_lost_sum(:,:)
-          alpha_yDayMean_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
           dummy(:,:) = SUM(soil_respiration_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2)  / fract_lost_sum(:,:)
           soil_respiration_lost_avg(:,:,:)= SPREAD( dummy(:,:), DIM=2, NCOPIES=npft )
           dummy(:,:) = SUM(NPP_flux_correction_pfts(:,:,:) * d_fract_shrink_pfts(:,:,:), DIM=2) / fract_lost_sum(:,:)
@@ -1391,16 +1313,9 @@ CONTAINS
             & c_humus_2_lost_avg                      = c_humus_2_lost_avg(:,:,:),           &
             & c_bg_sum_lost_avg                       = c_bg_sum_lost_avg(:,:,:),            &
             & c_ag_sum_1_lost_avg                     = c_ag_sum_1_lost_avg(:,:,:),          &
-            & c_litter_green_ag_lost_avg              = c_litter_green_ag_lost_avg(:,:,:),   &
-            & c_litter_green_bg_lost_avg              = c_litter_green_bg_lost_avg(:,:,:),   &
-            & c_litter_wood_ag_lost_avg               = c_litter_wood_ag_lost_avg(:,:,:),    &
-            & c_litter_wood_bg_lost_avg               = c_litter_wood_bg_lost_avg(:,:,:),    &
             !
             & NPP_pot_sum_lost_avg                    = NPP_pot_sum_lost_avg(:,:,:),         &
             & GPP_sum_lost_avg                        = GPP_sum_lost_avg(:,:,:),             &
-            & alpha_lost_avg                          = alpha_lost_avg(:,:,:),               &
-            & alpha_sum_lost_avg                      = alpha_sum_lost_avg(:,:,:),           &
-            & alpha_yDayMean_lost_avg                 = alpha_yDayMean_lost_avg(:,:,:),      &
             & soil_respiration_lost_avg               = soil_respiration_lost_avg(:,:,:),    &
             & NPP_flux_correction_lost_avg            = NPP_flux_correction_lost_avg(:,:,:), &
             & NPP_pot_yDayMean_lost_avg               = NPP_pot_yDayMean_lost_avg(:,:,:),    &
@@ -1429,11 +1344,8 @@ CONTAINS
             & c_ethanol_bg2_ = c_ethanol_bg2_pfts(:,:,:), c_nonsoluble_bg2_ = c_nonsoluble_bg2_pfts(:,:,:),           &
             & c_humus_1_ = c_humus_1_pfts(:,:,:), c_humus_2_ = c_humus_2_pfts(:,:,:),                                 &
             & c_bg_sum_ = c_bg_sum_pfts(:,:,:), c_ag_sum_1_ = c_ag_sum_1_pfts(:,:,:),                                 &
-            & c_litter_green_ag_ = c_litter_green_ag_pfts(:,:,:), c_litter_green_bg_ = c_litter_green_bg_pfts(:,:,:), &
-            & c_litter_wood_ag_ =  c_litter_wood_ag_pfts(:,:,:), c_litter_wood_bg_ = c_litter_wood_bg_pfts(:,:,:),    &
             !
             & NPP_pot_sum_         = NPP_pot_sum_pfts(:,:,:),               GPP_sum_    = GPP_sum_pfts(:,:,:),               &
-            & alpha_ = alpha_pfts(:,:,:),  alpha_sum_ = alpha_sum_pfts(:,:,:), alpha_yDayMean_ = alpha_yDayMean_pfts(:,:,:), &
             & soil_respiration_    = soil_respiration_pfts(:,:,:),                                                           &
             & NPP_flux_correction_ = NPP_flux_correction_pfts(:,:,:), NPP_pot_yDayMean_ = NPP_pot_yDayMean_pfts(:,:,:),      &
             & NPP_act_yDayMean_    = NPP_act_yDayMean_pfts(:,:,:),          excess_NPP_ = excess_NPP_pfts(:,:,:),            &
@@ -1503,10 +1415,6 @@ CONTAINS
               carbon__mem%c_reserve%ptr(:,:) = c_reserve_pfts(:,ipft,:)
               carbon__mem%c_woods%ptr(:,:)   = c_woods_pfts(:,ipft,:)
               carbon__mem%c_crop_harvest%ptr(:,:)    = c_crop_harvest_pfts(:,ipft,:)
-              carbon__mem%c_litter_green_ag%ptr(:,:) = c_litter_green_ag_pfts(:,ipft,:)
-              carbon__mem%c_litter_green_bg%ptr(:,:) = c_litter_green_bg_pfts(:,ipft,:)
-              carbon__mem%c_litter_wood_ag %ptr(:,:) = c_litter_wood_ag_pfts(:,ipft,:)
-              carbon__mem%c_litter_wood_bg %ptr(:,:) = c_litter_wood_bg_pfts(:,ipft,:)
               ! size class 1
               carbon__mem%c_acid_ag1%ptr(:,:)        = c_acid_ag1_pfts(:,ipft,:)
               carbon__mem%c_water_ag1%ptr(:,:)       = c_water_ag1_pfts(:,ipft,:)
@@ -1529,16 +1437,9 @@ CONTAINS
               carbon__mem%c_humus_2%ptr(:,:)         = c_humus_2_pfts(:,ipft,:)
               carbon__mem%c_bg_sum%ptr(:,:)          = c_bg_sum_pfts(:,ipft,:)
               carbon__mem%c_ag_sum_1%ptr(:,:)        = c_ag_sum_1_pfts(:,ipft,:)
-              carbon__mem%c_litter_green_ag%ptr(:,:) = c_litter_green_ag_pfts(:,ipft,:)
-              carbon__mem%c_litter_green_bg%ptr(:,:) = c_litter_green_bg_pfts(:,ipft,:)
-              carbon__mem%c_litter_wood_ag%ptr(:,:)  = c_litter_wood_ag_pfts(:,ipft,:)
-              carbon__mem%c_litter_wood_bg%ptr(:,:)  = c_litter_wood_bg_pfts(:,ipft,:)
               !
               carbon__mem%NPP_pot_sum%ptr(:,:)          = NPP_pot_sum_pfts(:,ipft,:)
               carbon__mem%GPP_sum%ptr(:,:)              = GPP_sum_pfts(:,ipft,:)
-              carbon__mem%alpha%ptr(:,:)                = alpha_pfts(:,ipft,:)
-              carbon__mem%alpha_sum%ptr(:,:)            = alpha_sum_pfts(:,ipft,:)
-              carbon__mem%alpha_yDayMean%ptr(:,:)       = alpha_yDayMean_pfts(:,ipft,:)
               carbon__mem%soil_respiration%ptr(:,:)     = soil_respiration_pfts(:,ipft,:)
               carbon__mem%NPP_flux_correction%ptr(:,:)  = NPP_flux_correction_pfts(:,ipft,:)
               carbon__mem%NPP_pot_yDayMean%ptr(:,:)     = NPP_pot_yDayMean_pfts(:,ipft,:)
@@ -1561,10 +1462,6 @@ CONTAINS
               carbon__mem%c_reserve_ta%ptr(:,:)         = c_reserve_pfts(:,ipft,:)
               carbon__mem%c_woods_ta%ptr(:,:)           = c_woods_pfts(:,ipft,:)
               carbon__mem%c_crop_harvest_ta%ptr(:,:)    = c_crop_harvest_pfts(:,ipft,:)
-              carbon__mem%c_litter_green_ag_ta%ptr(:,:) = c_litter_green_ag_pfts(:,ipft,:)
-              carbon__mem%c_litter_green_bg_ta%ptr(:,:) = c_litter_green_bg_pfts(:,ipft,:)
-              carbon__mem%c_litter_wood_ag_ta%ptr(:,:)  = c_litter_wood_ag_pfts(:,ipft,:)
-              carbon__mem%c_litter_wood_bg_ta%ptr(:,:)  = c_litter_wood_bg_pfts(:,ipft,:)
               !SIZE CLASS 1
               carbon__mem%c_acid_ag1_ta%ptr(:,:)        = c_acid_ag1_pfts(:,ipft,:)
               carbon__mem%c_water_ag1_ta%ptr(:,:)       = c_water_ag1_pfts(:,ipft,:)
@@ -1587,10 +1484,6 @@ CONTAINS
               carbon__mem%c_humus_2_ta%ptr(:,:)         = c_humus_2_pfts(:,ipft,:)
               ! no _ta var: carbon__mem%c_bg_sum_ta%ptr(:,:)         = c_bg_sum_pfts(:,ipft,:)
               ! no _ta var: carbon__mem%c_ag_sum_1_ta%ptr(:,:)       = c_ag_sum_1_pfts(:,ipft,:)
-              carbon__mem%c_litter_green_ag_ta%ptr(:,:) = c_litter_green_ag_pfts(:,ipft,:)
-              carbon__mem%c_litter_green_bg_ta%ptr(:,:) = c_litter_green_bg_pfts(:,ipft,:)
-              carbon__mem%c_litter_wood_ag_ta%ptr(:,:)  = c_litter_wood_ag_pfts(:,ipft,:)
-              carbon__mem%c_litter_wood_bg_ta%ptr(:,:)  = c_litter_wood_bg_pfts(:,ipft,:)
               !
               ! no _ta var: carbon__mem%NPP_pot_sum_ta%ptr(:,:)          = NPP_pot_sum_pfts(:,ipft,:)
               ! no _ta var: carbon__mem%GPP_sum_ta%ptr(:,:)              = GPP_sum_pfts(:,ipft,:)
@@ -2336,8 +2229,7 @@ CONTAINS
           & c_ethanol_ag1_pfts, c_nonsoluble_ag1_pfts, c_acid_bg1_pfts, c_water_bg1_pfts, c_ethanol_bg1_pfts,                     &
           & c_nonsoluble_bg1_pfts, c_humus_1_pfts, c_acid_ag2_pfts, c_water_ag2_pfts, c_ethanol_ag2_pfts, c_nonsoluble_ag2_pfts,  &
           & c_acid_bg2_pfts, c_water_bg2_pfts, c_ethanol_bg2_pfts, c_nonsoluble_bg2_pfts, c_humus_2_pfts, c_bg_sum_pfts,          &
-          & c_ag_sum_1_pfts, c_litter_green_ag_pfts, c_litter_green_bg_pfts, c_litter_wood_ag_pfts, c_litter_wood_bg_pfts,        &
-          & NPP_pot_sum_pfts, GPP_sum_pfts, alpha_pfts, alpha_sum_pfts, alpha_yDayMean_pfts, soil_respiration_pfts,               &
+          & c_ag_sum_1_pfts, NPP_pot_sum_pfts, GPP_sum_pfts, soil_respiration_pfts,                                               &
           & NPP_flux_correction_pfts, NPP_pot_yDayMean_pfts, NPP_act_yDayMean_pfts, excess_NPP_pfts, GPP_yDayMean_pfts,           &
           & root_exudates_pfts, cflux_c_green_2_herb_pfts, cflux_herb_2_littergreen_pfts, cflux_herb_2_atm_pfts,                  &
           & cflux_dist_greenreserve_2_soil_pfts, cflux_dist_woods_2_soil_pfts, cflux_fire_all_2_atm_pfts, current_max_green_pfts, &
@@ -2346,9 +2238,8 @@ CONTAINS
           & c_water_ag1_lost_avg, c_ethanol_ag1_lost_avg, c_nonsoluble_ag1_lost_avg, c_acid_bg1_lost_avg, c_water_bg1_lost_avg,   &
           & c_ethanol_bg1_lost_avg, c_nonsoluble_bg1_lost_avg, c_humus_1_lost_avg, c_acid_ag2_lost_avg, c_water_ag2_lost_avg,     &
           & c_ethanol_ag2_lost_avg, c_nonsoluble_ag2_lost_avg, c_acid_bg2_lost_avg, c_water_bg2_lost_avg, c_ethanol_bg2_lost_avg, &
-          & c_nonsoluble_bg2_lost_avg, c_humus_2_lost_avg, c_bg_sum_lost_avg, c_ag_sum_1_lost_avg, c_litter_green_ag_lost_avg,    &
-          & c_litter_green_bg_lost_avg, c_litter_wood_ag_lost_avg, c_litter_wood_bg_lost_avg,                                     &
-          & NPP_pot_sum_lost_avg, GPP_sum_lost_avg, alpha_lost_avg, alpha_sum_lost_avg, alpha_yDayMean_lost_avg,                  &
+          & c_nonsoluble_bg2_lost_avg, c_humus_2_lost_avg, c_bg_sum_lost_avg, c_ag_sum_1_lost_avg,                                &
+          & NPP_pot_sum_lost_avg, GPP_sum_lost_avg,                                                                               &
           & soil_respiration_lost_avg, NPP_flux_correction_lost_avg, NPP_pot_yDayMean_lost_avg, NPP_act_yDayMean_lost_avg,        &
           & excess_NPP_lost_avg, GPP_yDayMean_lost_avg, root_exudates_lost_avg, cflux_c_green_2_herb_lost_avg,                    &
           & cflux_herb_2_littergreen_lost_avg, cflux_herb_2_atm_lost_avg,  cflux_dist_greenreserve_2_soil_lost_avg,               &
@@ -2506,16 +2397,9 @@ CONTAINS
           dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2,         weighted_by_fract)
           dsl4jsb_Aggregate_onChunk(CARBON_,  c_bg_sum,          weighted_by_fract)
           dsl4jsb_Aggregate_onChunk(CARBON_,  c_ag_sum_1,        weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  c_litter_green_ag, weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  c_litter_green_bg, weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  c_litter_wood_ag,  weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  c_litter_wood_bg,  weighted_by_fract)
           !
           dsl4jsb_Aggregate_onChunk(CARBON_,  NPP_pot_sum,          weighted_by_fract)
           dsl4jsb_Aggregate_onChunk(CARBON_,  GPP_sum,              weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  alpha,                weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  alpha_sum,            weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  alpha_yDayMean,       weighted_by_fract)
           dsl4jsb_Aggregate_onChunk(CARBON_,  soil_respiration,     weighted_by_fract)
           dsl4jsb_Aggregate_onChunk(CARBON_,  NPP_flux_correction,  weighted_by_fract)
           dsl4jsb_Aggregate_onChunk(CARBON_,  NPP_pot_yDayMean,     weighted_by_fract)
@@ -2559,10 +2443,6 @@ CONTAINS
           dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,         weighted_by_fract)
           !dsl4jsb_Aggregate_onChunk(CARBON_,  c_bg_sum_ta,          weighted_by_fract)
           !dsl4jsb_Aggregate_onChunk(CARBON_,  c_ag_sum_1_ta,        weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  c_litter_green_ag_ta, weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  c_litter_green_bg_ta, weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  c_litter_wood_ag_ta,  weighted_by_fract)
-          dsl4jsb_Aggregate_onChunk(CARBON_,  c_litter_wood_bg_ta,  weighted_by_fract)
           !
           !dsl4jsb_Aggregate_onChunk(CARBON_,  NPP_pot_sum_ta,          weighted_by_fract)
           !dsl4jsb_Aggregate_onChunk(CARBON_,  GPP_sum_ta,              weighted_by_fract)

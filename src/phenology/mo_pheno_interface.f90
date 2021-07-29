@@ -351,10 +351,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: chill_days_SG
     dsl4jsb_Real2D_onChunk :: chill_days_EG
     dsl4jsb_Real2D_onChunk :: lai
+    dsl4jsb_Real2D_onChunk :: lai_ta
     dsl4jsb_Real2D_onChunk :: day_NPP_sum
     dsl4jsb_Real2D_onChunk :: previous_day_temp_min
     dsl4jsb_Real2D_onChunk :: previous_day_temp_max
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
+    dsl4jsb_Real2D_onChunk :: veg_fract_correction
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
@@ -367,7 +370,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: number_of_individuals
     dsl4jsb_Real2D_onChunk :: biomass_per_individual
     dsl4jsb_Real2D_onChunk :: maxLAI_allom
-    dsl4jsb_Real2D_onChunk :: veg_fract_correction
 
     dsl4jsb_Real2D_onChunk :: cconservation_allom
 
@@ -433,7 +435,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_,    number_of_individuals)   ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    biomass_per_individual)  ! inout
       dsl4jsb_Get_var2D_onChunk(PHENO_,    maxLAI_allom)            ! inout
-      dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! inout
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    cconservation_allom)     ! inout
 
@@ -449,7 +450,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_max)  ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      pseudo_soil_temp)       ! in
 
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)          ! in
+
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                    ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)   ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_SG)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_EG)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    heat_sum_CRP)           ! inout
@@ -467,6 +471,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
 
     ! ---------------------------
     ! Go
@@ -720,6 +725,10 @@ CONTAINS
          & )
     END IF
 
+    ! Calculated LAI relative to the tile area
+    lai_ta(:) = lai(:) * veg_fract_correction(:) * fract_fpc_max(:)
+
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
     !$claw acc end data
@@ -817,6 +826,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta, weighted_by_fract)
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       IF (is_newyear(options%current_datetime, options%dtime)) THEN
