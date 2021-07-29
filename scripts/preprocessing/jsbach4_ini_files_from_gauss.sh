@@ -4,6 +4,8 @@
 # for the land model JSBACH4+ and the ICON atmosphere by interpolating existing files
 # from ECHAM6 on Gaussian grid
 #
+# Authors: Reiner Schnur, Veronika Gayler, Rene Redler, MPI-M
+#
 # Reiner Schnur, MPI-M, 2017-04-10 initial version
 # 
 # Based on scripts from Veronika Gayler, Thomas Raddatz and Marco Giorgetta
@@ -11,53 +13,61 @@
 set -eu
 #_____________________________________________________________________________
 
-# Input Setting
+# Settings
 
 coupled=false      # land sea mask for coupled experiment?
 
-rootdir=/pool/data/ICON/grids/private/rene/mpim
-
 refinement=R02B04
 bisections=4
-atmGridID=0013
-oceGridID=0035    # required for coupled configurations
-revision_ext=r0002 # revision of extpar data
-
-revision=r0001
+atmGridID=0043
+oceGridID=0036    # required for coupled configurations
+revision=r00xx
+revision_ext=r0001
 start_year=1850
-end_year=1852
+end_year=1850
 
+#ggrids="T63"                   # additional gaussian grids for jsbach4 (to run with echam6)
+ggrids=""                       # disable gaussian grids
+
+rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
   mlogin*|mistralpp*)
-    if [[ ${coupled} == "true" ]]
-    then
-      #output_dir=${rootdir}/$atmGridID-$oceGridID/land/$revision
-      output_dir=/pool/data/ICON/grids/private/jsbach/mpim/$atmGridID-$oceGridID/land/$revision
-    else
-      #output_dir=${rootdir}/$atmGridID/land/$revision
-      output_dir=/pool/data/ICON/grids/private/jsbach/mpim/$atmGridID/land/$revision
-    fi
+    output_root=/pool/data/ICON/grids/public/mpim
+    #output_root=/pool/data/ICON/grids/private/jsbach/mpim
+    #output_root=/work/mj0060/m212005/ini_files
     ;;
   *)
-    output_dir=/scratch/local1/m221005/ini_files/jsbach4                                 # for local use
+    output_root=/scratch/local1/m212005/ini_files                          # for local use
     ;;
 esac
 
-cwddir=$(pwd)
-workdir=$(pwd)/workdir
+debug=false             # true/false
+debug_remap_scheme=nn
+
+dryrun=false  # Process files in workdir, but don't copy them to the destination folder (true/false)
+clean=true    # Delete workdir after finished (true/false)
+
+# Currently, only 0 or 11 possible
+npfts_list="0 11"
+
+cdo="cdo -s -b F64 -W"
+
+#_____________________________________________________________________________
+
+[[ ${coupled} == "true" ]] && grid_label=$atmGridID-$oceGridID || grid_label=$atmGridID
+output_dir=${output_root}/${grid_label}/land/$revision
+
+workdir=${output_root}/workdir
+
+coupled_grid_file=${rootdir}/${atmGridID}/icon_grid_${atmGridID}_${refinement}_G.nc
+coupled_lsf_file=${rootdir}/${atmGridID}-${oceGridID}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
+# Set hd_file to empty if there's no hd_file for this setup available, yet.
+hd_file=""
 
 pool_prepare=/pool/data/JSBACH/prepare/                   # pool directory with data needed for initial file generation
-if [[ ${coupled} == "true" ]]
-then
-  grid_path=/pool/data/ICON/grids/private/rene/mpim/$atmGridID-$oceGridID
-else
-  grid_path=/pool/data/ICON/grids/private/rene/mpim/$atmGridID
-fi
+grid_path=${rootdir}/$atmGridID
 
-#ggrids="T31 T63 T127"                   # additional gaussian grids for jsbach4 (to run with echam6)
-#ggrids="T63"                            # for testing
-ggrids=""                                # disable gaussian grids
-
+extpar_path=${rootdir}/${atmGridID}/extpar.2016/$revision_ext
 
 declare -A source_res_dict
 source_res_dict[0]=T31
@@ -73,13 +83,6 @@ source_res_dict[9]=T255
 source_res_dict[10]=T255
 source_res_dict[11]=T255
 
-extpar_path=${rootdir}/${atmGridID}/extpar.2016/$revision_ext
-
-mkdir -p $extpar_path
-
-# Currently, only 0 or 11 possible
-npfts_list="0 11"
-
 year=${start_year}
 
 #input_root=/pool/data/JSBACH/input
@@ -92,17 +95,6 @@ soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_condu
 moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
-
-coupled_grid_file=/pool/data/ICON/grids/private/rene/mpim/${atmGridID}/icon_grid_${atmGridID}_${refinement}_G.nc
-coupled_lsf_file=/pool/data/ICON/grids/private/rene/mpim/${atmGridID}-${oceGridID}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
-# Set hd_file to empty if there's no hd_file for this setup available, yet.
-hd_file=""
-
-debug=false             # true/false
-debug_remap_scheme=nn
-
-dryrun=false  # Process files in workdir, but don't copy them to the destination folder (true/false)
-clean=true    # Delete workdir after finished (true/false)
 
 declare -A sso_dict
 sso_dict[oromea]=topography_c
@@ -127,10 +119,10 @@ case `hostname` in
     ;;
    *)
     #module load cdo/1.7.2-gccsys       # cdo 1.8.0 has problems with remapcon
-    module load cdo/1.9.2-gccsys
-    module load nco/4.5.2
-    module load netcdf
-    module load nag
+    module load cdo/1.9.7.1-gccsys
+    module load nco/4.7.8-gccsys
+    module load netcdf_c/4.6.1
+    module load nag/6.2
     ;;
 esac
 set -u
@@ -208,16 +200,9 @@ function generate_land_sea_mask {
   then
     ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
   else
-    temp2=$(mktemp -u --tmpdir=.)
-    # Note: blend out some grid boxes which are land in FR_LAND_TOPO
-    ${cdo} setgrid,${icon_grid_file} -setname,notsea -setrtoc,-1,0.2,0 -setrtoc,0.999,1.1,1 -selvar,FR_LAND_TOPO  \
-           ${extpar_file} ${grid_name}_notsea.nc
-    # Correct FR_LAND_TOPO for ocean points around the Caspian Sea
-    ${cdo} ifthenc,1 -masklonlatbox,42.5,56.25,44.0,50.5 ${grid_name}_notsea.nc ${temp}
-    ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${grid_name}_notsea.nc ${temp2}
-    ${cdo} ifthenc,1 -masklonlatbox,43.5,56.25,34.5,44.0 ${temp2} ${temp} 
-    ${cdo} ifthenelse -setmisstoc,0 ${temp} ${temp} ${temp2} ${grid_name}_notsea.nc
-    rm ${temp2}
+    # Note: blend out some grid boxes which are land in FR_LAND_TOPO by masking with cell_sea_land_mask
+    ${cdo} setgrid,${icon_grid_file} -selvar,FR_LAND_TOPO ${extpar_file} ${temp}
+    ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -ifthen -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_notsea.nc
     ncatted -a long_name,notsea,m,c,'Fraction of land+lake+glacier' ${grid_name}_notsea.nc
   fi
 
@@ -229,17 +214,18 @@ function generate_land_sea_mask {
   # Commented this out again since the land-sea mask (at least in coupled experiments) comes from the ocean and should
   # not be changed afterwards. However, this is not totally correct since JSBACH assumes that glacier fractions (and therefore
   # land fraction with glacier) are either 0 or 1. To be consistent, this should be taken care of ... TBD
-  if [[ ${coupled} != "true" ]]
-   then
-     ${cdo} setvar,notsea -ifthenelse -ltc,0.5 ${grid_name}_glac_remap.nc ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc ${temp}
-     mv ${temp} ${grid_name}_notsea.nc
-   fi
+  #if [[ ${coupled} != "true" ]]
+  # then
+  #   ${cdo} setvar,notsea -ifthenelse -ltc,0.5 ${grid_name}_glac_remap.nc ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc ${temp}
+  #   mv ${temp} ${grid_name}_notsea.nc
+  # fi
 
   # Generate lake fractions, making sure that fractional coastal grid points don't contain any lakes
-  # Set small lake fractions below 0.1 to zero
-  ${cdo} setvar,lake -setrtoc,-1,0.0999,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
+  # Set small lake fractions below 0.01 to zero
+  ${cdo} setvar,lake -setrtoc,-1,0.01,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
   ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
-  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc ${temp} ${grid_name}_lake_remap.nc
+  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc \
+	 -setrtoc,-1,0.01,0 ${temp} ${grid_name}_lake_remap.nc
 
   rm ${temp}
 
@@ -431,7 +417,7 @@ function generate_fractions {
   ${cdo} setvar,fract_veg -ltc,0.5 ${grid_name}_fract_glac.nc ${grid_name}_fract_veg.nc
   ncatted -a long_name,fract_veg,m,c,'Fraction of vegetated tile rel. to land tile' ${grid_name}_fract_veg.nc
   debug_file ${grid_name}_fract_veg.nc
-  ${cdo} setvar,sea -mulc,-1 -subc,1 ${grid_name}_notsea.nc ${grid_name}_sea.nc
+  ${cdo} setvar,sea -setrtoc,-1,0,0 -mulc,-1 -subc,1 ${grid_name}_notsea.nc ${grid_name}_sea.nc
   ncatted -a long_name,sea,m,c,'Fraction of ocean' ${grid_name}_sea.nc
   debug_file ${grid_name}_sea.nc
   ${cdo} setvar,fract_lake -setmisstoc,0 ${grid_name}_lake_remap.nc ${grid_name}_fract_lake.nc
@@ -761,13 +747,12 @@ function debug_file {
 #
 mkdir -p ${workdir} || true
 cd ${workdir}
+echo "Workdir: ${workdir}"
 rm -rf *
 
 for bisection in $bisections $ggrids
 do
   [[ $(echo ${bisection} | cut -c1) == T ]] && jsb4icon=false || jsb4icon=true
-  cdo="cdo -s -b F64"
-  #cdo="cdo -b F64"
   if [[ ${jsb4icon} == true ]]; then
     if [[ $bisection -ge 8  ]]
     then
@@ -834,12 +819,12 @@ do
   # svn -r 9561 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
   # svn has been moved to git, thus ...
 
-  # git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
-  git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
+  git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
+  # git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
   cd mpiesm-landveg
   git config core.sparseCheckout true
   echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
-  git checkout 00526c13b                       # corresponds to svn r 9561
+  git checkout 83462fbc
   mv contrib/initial_tarfiles/ ..
   cd ../initial_tarfiles
   rm -rf ../mpiesm-landveg
@@ -899,9 +884,11 @@ do
 
   generate_output_files
 
-  echo output directory ${output_dir}
-
-  mkdir -p ${output_dir}
+  if [[ ${dryrun} != "true" ]]
+  then
+    echo output directory ${output_dir}
+    mkdir -p ${output_dir}
+  fi
 
   if [[ ${dryrun} != "true" ]]
   then
@@ -978,7 +965,6 @@ done
 if [[ ${clean} == "true" ]]
 then
   echo "Cleaning up ..."
-  cd ${cwddir}
   rm -rf ${workdir}
 fi
 
