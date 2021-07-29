@@ -54,7 +54,7 @@ MODULE mo_hydro_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_hydro_tasks !,t_hydro_process
+  PUBLIC :: Register_hydro_tasks, global_hydrology_diagnostics
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_interface'
 
@@ -2129,6 +2129,131 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_water_balance
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Global land mean hydrology output
+  !!
+  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_hydrology_diagnostics(tile)
+#ifndef __ICON__
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
+    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
+#else
+
+    USE mo_sync,                  ONLY: global_sum_array
+    USE mo_jsb_grid,              ONLY: Get_grid
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_hydrology_diagnostics'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: trans
+    dsl4jsb_Real2D_onDomain :: evapotrans
+    dsl4jsb_Real2D_onDomain :: water_content
+    dsl4jsb_Real2D_onDomain :: discharge_ocean
+    dsl4jsb_Real2D_onDomain :: w_soil_rel
+    dsl4jsb_Real2D_onDomain :: fract_snow
+    dsl4jsb_Real2D_onDomain :: w_snow
+
+    REAL(wp), POINTER       :: trans_gmean(:)
+    REAL(wp), POINTER       :: evapotrans_gmean(:)
+    REAL(wp), POINTER       :: water_content_gsum(:)
+    REAL(wp), POINTER       :: discharge_ocean_gsum(:)
+    REAL(wp), POINTER       :: w_soil_rel_gmean(:)
+    REAL(wp), POINTER       :: fract_snow_gsum(:)
+    REAL(wp), POINTER       :: w_snow_gsum(:)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  :: scaling (:,:)
+    REAL(wp)               :: global_land_area
+
+
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  trans)                      ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  evapotrans)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  water_content)              ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  discharge_ocean)            ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_soil_rel)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  fract_snow)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_snow)                     ! in
+
+
+    trans_gmean          => HYDRO__mem%trans_gmean%ptr(:)           ! out
+    evapotrans_gmean     => HYDRO__mem%evapotrans_gmean%ptr(:)      ! out
+    water_content_gsum   => HYDRO__mem%water_content_gsum%ptr(:)    ! out
+    discharge_ocean_gsum => HYDRO__mem%discharge_ocean_gsum%ptr(:)  ! out
+    w_soil_rel_gmean     => HYDRO__mem%w_soil_rel_gmean%ptr(:)      ! out
+    fract_snow_gsum      => HYDRO__mem%fract_snow_gsum%ptr(:)       ! out
+    w_snow_gsum          => HYDRO__mem%w_snow_gsum%ptr(:)           ! out
+
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    ! Domain Mask - to mask all halo cells for global sums (otherwise these
+    ! cells are counted twice)
+    ALLOCATE (in_domain(grid%nproma,grid%nblks))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSEWHERE
+      in_domain = 0._wp
+    END WHERE
+
+    ALLOCATE (scaling(grid%nproma,grid%nblks))
+
+    ! Calculate 1d global land variables, if requested for output
+    global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+    scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+    IF (HYDRO__mem%trans_gmean%is_in_output)           &
+      &  trans_gmean          = global_sum_array(trans(:,:)           * scaling(:,:)) / global_land_area
+    IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
+      &  evapotrans_gmean     = global_sum_array(evapotrans(:,:)      * scaling(:,:)) / global_land_area
+    ! Unit transformation from [m3] to [km3]: 1.e-9
+    IF (HYDRO__mem%water_content_gsum%is_in_output)    &
+      &  water_content_gsum   = global_sum_array(water_content(:,:)   * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
+    ! Unit transformation from [m3/s] to [Sv] (1 Sv = 1.e6 m3/s)
+    IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
+      &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * in_domain(:,:)) * 1.e-6_wp
+    IF (HYDRO__mem%w_soil_rel_gmean%is_in_output)      &
+      &  w_soil_rel_gmean     = global_sum_array(w_soil_rel(:,:)      * scaling(:,:)) / global_land_area
+    ! Unit transformation from [m2] to [Mio km2]: 1.e-12
+    IF (HYDRO__mem%fract_snow_gsum%is_in_output)       &
+      &  fract_snow_gsum      = global_sum_array(fract_snow(:,:)      * scaling(:,:)) * 1.e-12_wp
+    ! Unit transformation from [m water equivalent](= [t]) to [Gt]: 1.e-9
+    IF (HYDRO__mem%w_snow_gsum%is_in_output)           &
+      &  w_snow_gsum          = global_sum_array(w_snow(:,:)          * scaling(:,:)) * 1.e-9_wp
+
+    DEALLOCATE (scaling, in_domain)
+#endif
+  END SUBROUTINE global_hydrology_diagnostics
 
 #endif
 END MODULE mo_hydro_interface
