@@ -71,6 +71,7 @@ MODULE mo_jsb_model_class
     ! PROCEDURE :: Process_message
     ! Extensions:
     PROCEDURE :: Configure_processes => Configure_model_processes
+    PROCEDURE :: Do_fractions_change => Any_process_changes_fractions
     PROCEDURE :: Get_shortname       => Get_model_shortname
     PROCEDURE :: Get_top_tile
     PROCEDURE :: Goto_next_tile
@@ -190,6 +191,25 @@ CONTAINS
     END DO
 
   END SUBROUTINE Configure_model_processes
+
+  FUNCTION Any_process_changes_fractions(this) RESULT(l_fractions_change)
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+    LOGICAL                           :: l_fractions_change
+
+    INTEGER :: iproc
+
+    l_fractions_change = .FALSE.
+    DO iproc=1,SIZE(this%processes)
+      IF (ASSOCIATED(this%processes(iproc)%p)) THEN
+        IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
+          l_fractions_change = .TRUE.
+          EXIT
+        END IF
+      END IF
+    END DO
+
+  END FUNCTION Any_process_changes_fractions
 
 !!$  FUNCTION Get_process_configs(this) RESULT(return_ptr)
 !!$
