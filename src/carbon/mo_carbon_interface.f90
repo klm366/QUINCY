@@ -397,6 +397,8 @@ CONTAINS
     IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%current_datetime, dtime) ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
+    lstart = is_time_experiment_start(options%current_datetime)
+
     ! Initializations
     cflux_npp_2_atm_yday_ta  = 0._wp
     cflux_npp_2_atm_ta       = 0._wp
@@ -447,8 +449,6 @@ CONTAINS
     !    in HYDRO and here just load it from there...
     precip_total  = rain + snow  ! Precipitation rate [kg/(m^2 s)]
     pseudo_precip = precip_total * N_pseudo_precip  +  F_pseudo_precip * pseudo_precip
-
-    lstart = is_time_experiment_start(options%current_datetime)
 
     ! All per tile variables need to be re-calculated in case they are written to output
     CALL recalc_per_tile_vars(tile, options,                                      &
