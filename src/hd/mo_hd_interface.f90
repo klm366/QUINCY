@@ -399,14 +399,15 @@ CONTAINS
 
       WHERE (hd_mask(:,:) == 0._wp)
         ! ocean inflow cells
-        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
-        discharge_ocean(:,:) = discharge(:,:)
         discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp)
         ! internal drainage cells
-        internal_drain(:,:) = discharge(:,:)
+        internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        outflow_runoff(:,:) = 0._wp
+        outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
       END WHERE
 
