@@ -414,7 +414,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: hcap_grnd
     dsl4jsb_Real2D_onChunk :: evapotrans
-    dsl4jsb_Real2D_onChunk :: trans
+    dsl4jsb_Real2D_onChunk :: transpiration
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapo_snow
     dsl4jsb_Real2D_onChunk :: snowmelt
@@ -525,7 +525,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)   ! out
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   w_snow_can)    ! inout
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   trans)         ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration) ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)           ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max) ! in
       END IF
@@ -590,7 +590,7 @@ CONTAINS
     ELSE
       IF (tile%is_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
-        trans_tmp(:) = trans(:)
+        trans_tmp(:) = transpiration(:)
       ELSE
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_9 tile_name=tile%name
         trans_tmp(:) = 0._wp
@@ -888,7 +888,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
-    dsl4jsb_Real3D_onChunk :: t_soil
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
@@ -947,7 +947,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
 
-    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil)     ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -980,10 +980,10 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
-      &                                t_soil        (:,1), &
+      &                                t_soil_sl     (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, trans             ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ), &
       ! inout
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sl         ), &
@@ -1501,7 +1501,7 @@ CONTAINS
       & evapo_ice, &
       & evapopot,       &
       & evapotrans, &
-      & trans
+      & transpiration
 
     ! Locally allocated vectors
     !
@@ -1598,7 +1598,7 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_lnd)           ! out
       IF (tile%contains_vegetation) THEN
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,    trans)               ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    transpiration)          ! out
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
@@ -1616,7 +1616,7 @@ CONTAINS
       !$claw end expand
       IF (tile%contains_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_6 tile_name=tile%name
-        trans(:)              = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
+        transpiration(:)    = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
       END IF
 
     ELSE
@@ -1669,7 +1669,7 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapopot,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, trans,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, transpiration,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_lnd,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_wtr,          weighted_by_fract)
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
@@ -2160,7 +2160,7 @@ CONTAINS
 
     ! Pointers to variables in memory
 
-    dsl4jsb_Real2D_onDomain :: trans
+    dsl4jsb_Real2D_onDomain :: transpiration
     dsl4jsb_Real2D_onDomain :: evapotrans
     dsl4jsb_Real2D_onDomain :: water_content
     dsl4jsb_Real2D_onDomain :: discharge_ocean
@@ -2188,7 +2188,7 @@ CONTAINS
 
 
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,  trans)                      ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  transpiration)              ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  evapotrans)                 ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  water_content)              ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  discharge_ocean)            ! in
@@ -2233,7 +2233,7 @@ CONTAINS
     global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
     scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
     IF (HYDRO__mem%trans_gmean%is_in_output)           &
-      &  trans_gmean          = global_sum_array(trans(:,:)           * scaling(:,:)) / global_land_area
+      &  trans_gmean          = global_sum_array(transpiration(:,:)   * scaling(:,:)) / global_land_area
     IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
       &  evapotrans_gmean     = global_sum_array(evapotrans(:,:)      * scaling(:,:)) / global_land_area
     ! Unit transformation from [m3] to [km3]: 1.e-9

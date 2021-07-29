@@ -140,7 +140,7 @@ MODULE mo_hydro_memory_class
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
-      & trans                   !< Transpiration
+      & transpiration           !< Transpiration
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -835,7 +835,7 @@ CONTAINS
           & initval_r=0.0_wp )
       END IF
 
-      CALL mem%Add_var( 'trans', mem%trans,                                          &
+      CALL mem%Add_var( 'transpiration', mem%transpiration,                          &
         & hgrid, surface,                                                            &
         & t_cf('surface_transpiration', 'kg m-2 s-1', 'Transpiration from surface'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
