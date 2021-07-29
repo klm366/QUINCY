@@ -160,7 +160,7 @@ MODULE mo_carbon_memory_class
       c_water_bg1_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
       c_ethanol_bg1_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
       c_nonsoluble_bg1_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      c_humus_1_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
+      c_humus_1_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile area)]
      !SIZE CLASS 2
       c_acid_ag2_ta,            & ! Yasso above ground litter-pool for acid soluble litter [mol(C)/m^2(tile area)]
       c_water_ag2_ta,           & ! Yasso above ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
@@ -170,7 +170,7 @@ MODULE mo_carbon_memory_class
       c_water_bg2_ta,           & ! Yasso below ground litter-pool for water soluble litter [mol(C)/m^2(tile area)]
       c_ethanol_bg2_ta,         & ! Yasso below ground litter-pool for ethanol soluble litter [mol(C)/m^2(tile area)]
       c_nonsoluble_bg2_ta,      & ! Yasso below ground litter-pool for non-soluble litter [mol(C)/m^2(tile area)]
-      c_humus_2_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)^2/m(tile area)]
+      c_humus_2_ta,             & ! Yasso below ground litter-pool for slow C compartment [mol(C)/m^2(tile area)]
 
   !JN: vars for analytically equilibrating YASSO humus pools outside of jsb4 simulations (compare jsb3 svn ref 9652)
       c_decomp_humus_1_sum_ta,  & ! annual cflux sum of humus decomposed in YASSO (leaf) [mol(C)/m^2(tile area)]
@@ -180,11 +180,11 @@ MODULE mo_carbon_memory_class
 
       !
       ! diagnostic carbon sums
-      c_sum_veg_ta,             & ! Sum of all vegetation carbon pools [mol(C)^2/m(tile area)]
-      c_sum_litter_ag_ta,       & ! Sum of all above ground litter carbon pools [mol(C)^2/m(tile area)]
-      c_sum_litter_bg_ta,       & ! Sum of all below ground litter carbon pools [mol(C)^2/m(tile area)]
-      c_sum_humus_ta,           & ! Sum of all soil / humus carbon pools [mol(C)^2/m(tile area)]
-      c_sum_natural_ta,         & ! Sum of all natural carbon pools [mol(C)^2/m(tile area)]
+      c_sum_veg_ta,             & ! Sum of all vegetation carbon pools [mol(C)/m^2(tile area)]
+      c_sum_litter_ag_ta,       & ! Sum of all above ground litter carbon pools [mol(C)/m^2(tile area)]
+      c_sum_litter_bg_ta,       & ! Sum of all below ground litter carbon pools [mol(C)/m^2(tile area)]
+      c_sum_humus_ta,           & ! Sum of all soil / humus carbon pools [mol(C)/m^2(tile area)]
+      c_sum_natural_ta,         & ! Sum of all natural carbon pools [mol(C)/m^2(tile area)]
       !
       !@todo: NPP_pot_sum_ta, GPP_sum_ta, LAI_yyDayMean_ta and LAI_yDayMean_ta are never calculated
 !      NPP_pot_sum_ta,                    & ! used to accumulated NPP-Rate over a day
