@@ -17,6 +17,8 @@
 MODULE mo_alcc_init_lcc
 #ifndef __NO_JSBACH__
 
+  USE mo_exception,           ONLY: message
+  USE mo_jsb_control,         ONLY: debug_on
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
   USE mo_jsb_lcc,             ONLY: init_lcc
@@ -44,6 +46,8 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     ! -------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':alcc_init_lcc'
+
     CLASS(t_jsb_tile_abstract),  POINTER :: current_tile
     INTEGER :: active_cqts(nr_of_active_cqts)
     INTEGER :: passive_cqts(nr_of_passive_cqts)
@@ -54,6 +58,8 @@ CONTAINS
     
     ! JN-TODO: reconsider what to define here and how
     IF (.NOT. tile%name .EQ. 'veg') RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
     passive_cqts = (/ PRODUCT_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE /)
