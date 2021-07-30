@@ -201,7 +201,7 @@ function generate_land_sea_mask {
   echo "Generating land sea mask ..."
   if [[ ${coupled} == "true" ]]
   then
-    ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${coupled_grid_file} ${coupled_lsf_file} ${grid_name}_notsea.nc
+    ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${coupled_grid_file} -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
   else
     if [[ "${old_r2b4_amip}" != "true" ]]; then
       # Note: blend out some grid boxes which are land in FR_LAND_TOPO
