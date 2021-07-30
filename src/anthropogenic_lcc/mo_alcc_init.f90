@@ -177,11 +177,10 @@ CONTAINS
         ! Read this years pft-fraction from map file
         IF (debug_on()) CALL message(TRIM(routine), '...reading annual cover_fract maps for '//TRIM(current_tile%name))
         WRITE(varname_within_file,'(a,a)') "fract_", TRIM(current_tile%name)
-        
+
         ptr_2D => input_file%Read_2d(variable_name=TRIM(varname_within_file), &
           & fill_array = cf_current_year(:,i_tile,:) )
         !-- end: rewritten remainder from Rainer Schnecks alcc implementation
-        DEALLOCATE(ptr_2D)
 
         ! potentially correct read values (if relative fracts in map, else cf_correction has been set to 1.0_wp)
         cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
@@ -207,12 +206,13 @@ CONTAINS
     CALL input_file%Close()
 
     DEALLOCATE(cf_correction)
+    DEALLOCATE(ptr_2D)
 
-    ! Assert: sum of absolute fractions needs to be <1
-    IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + EPSILON(1._wp))) THEN
+    ! Assert: sum of absolute fractions needs to be <=1
+    IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + 1.E-11_wp)) THEN
       CALL finish(TRIM(routine), &
       & 'Violation of assertion: PFT fractions derived from '//TRIM(filename_land_use_data) &
-      & //' sum to >1. Please check.') 
+      & //' sum to > 1.0_wp + 1e-11. Please check.') 
     ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
