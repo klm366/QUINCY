@@ -18,14 +18,9 @@ MODULE mo_tcq_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
 
   USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_class,         ONLY: get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_time,          ONLY: get_time_dt
-  USE mo_jsb_control,       ONLY: debug_on
 
   dsl4jsb_Use_processes TCQ_
   dsl4jsb_Use_memory(TCQ_)

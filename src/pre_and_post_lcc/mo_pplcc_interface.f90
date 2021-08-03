@@ -34,7 +34,7 @@ MODULE mo_pplcc_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model    
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
+  !USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
@@ -137,7 +137,6 @@ CONTAINS
   !
   SUBROUTINE update_pplcc_pre_lcc(tile, options)
 
-    USE mo_jsb_parallel,      ONLY: Get_omp_thread
     USE mo_jsb_time,          ONLY: is_newday
     USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
 
@@ -151,7 +150,7 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: conversion_factor
 
-    INTEGER  :: iblk, ics, ice, nc, cqt_id, i_cqt, i_cq_var
+    INTEGER  :: iblk, ics, ice, cqt_id, i_cqt, i_cq_var
     REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_pre_lcc'
 
@@ -170,7 +169,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     dtime   = options%dtime
     
     model => Get_model(tile%owner_model_id)
@@ -216,7 +214,6 @@ CONTAINS
             dsl4jsb_Get_memory(PHENO_)       
             ! and get required variables on this tile 
             dsl4jsb_Get_var2D_onChunk(PHENO_, veg_fract_correction)    ! in
-            ! JN-TODO: what exactly is fract_fpc_max, and is this still required with absolute fracts per box?
             dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)           ! in
 
             conversion_factor(:) = conversion_factor(:) * veg_fract_correction(:) * fract_fpc_max(:)
@@ -264,7 +261,6 @@ CONTAINS
   !
   SUBROUTINE update_pplcc_post_lcc(tile, options)
 
-    USE mo_jsb_parallel,      ONLY: Get_omp_thread
     USE mo_jsb_time,          ONLY: is_newday
     USE mo_jsb_cqt_class,     ONLY: Get_cqt_name, LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
 
@@ -278,7 +274,7 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: conversion_factor
 
-    INTEGER  :: iblk, ics, ice, nc, i_cqt, i_cq_var, cqt_id
+    INTEGER  :: iblk, ics, ice, i_cqt, i_cq_var, cqt_id
     REAL(wp) :: dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_pplcc_post_lcc'
 
@@ -294,7 +290,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
     dtime   = options%dtime
     
     model => Get_model(tile%owner_model_id)

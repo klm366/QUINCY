@@ -35,7 +35,7 @@ MODULE mo_jsb_lcc_class
   !> Type used to enclose pointers and values for each conserved quantity with active or passive relocation 
   TYPE :: t_jsb_lcc_var
     CHARACTER(len=VARNAME_LEN)    :: name             !< Name of the variable
-!    INTEGER :: type_id = -1     !< one of the CQ_TYPEs ( mo_jsb_cqt_class ) -- JN-TODO: required -> currently in encompassing type...
+!    INTEGER :: type_id = -1     !< one of the CQ_TYPEs ( mo_jsb_cqt_class ) -- JN-TODO: required -> also in encompassing type...
     TYPE(t_jsb_var_p), ALLOCATABLE :: var_on_tile(:)  !< Pointer to the var on each tile involved in the encompassing lcc process
     REAL(wp), ALLOCATABLE :: relocate_this(:,:,:)     !< One array (on domain) per tile
   END TYPE t_jsb_lcc_var
@@ -92,8 +92,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':transfer_from_active_to_passive_var_onChunk'
 
-    INTEGER :: i_active, i_passive, nc, ics, ice, iblk
-    LOGICAL :: is_active, is_passive
+    INTEGER :: i_active, i_passive, ics, ice, iblk
     ! -------------------------------------------------------------------------------------------------- !
 
     IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
@@ -117,7 +116,6 @@ CONTAINS
         & // ' is not a passive var in lcc structure for ' // lcc_relocations%name )
     ENDIF
 
-    nc = options%nc
     ics = options%ics
     ice = options%ice
     iblk = options%iblk
@@ -147,10 +145,9 @@ CONTAINS
         !< active vars from which the matter shall be collected
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':collect_matter_of_active_vars_onChunk'
-    INTEGER :: i, i_active, nc, ics, ice, iblk
+    INTEGER :: i, i_active, ics, ice, iblk
     ! -------------------------------------------------------------------------------------------------- !
 
-    nc = options%nc
     ics = options%ics
     ice = options%ice
     iblk = options%iblk

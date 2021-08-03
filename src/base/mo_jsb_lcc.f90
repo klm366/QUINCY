@@ -228,11 +228,13 @@ CONTAINS
 
         DO i_cqt = 1, child%nr_of_cqts
           IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == active_cqts(:) )) THEN
-            CALL collect_pointers_for_cqs(i_cqt, i_tile, i_active_this_tile, &
-              & TRIM(involved_child_tiles(1)), child%conserved_quantities, lcc_relocations%active_vars, 'active')
+            CALL collect_pointers_for_cqs(i_cqt, i_tile, i_active_this_tile, child%name, &
+              & TRIM(involved_child_tiles(1)), child%conserved_quantities, &
+              & lcc_relocations%active_vars, lcc_relocations%nr_of_active_vars, 'active')
           ELSEIF(ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
-            CALL collect_pointers_for_cqs(i_cqt, i_tile, i_passive_this_tile, &
-              & TRIM(involved_child_tiles(1)), child%conserved_quantities, lcc_relocations%passive_vars, 'passive')
+            CALL collect_pointers_for_cqs(i_cqt, i_tile, i_passive_this_tile, child%name, &
+              & TRIM(involved_child_tiles(1)), child%conserved_quantities, &
+              & lcc_relocations%passive_vars, lcc_relocations%nr_of_passive_vars, 'passive')
           ENDIF
         ENDDO 
 
@@ -369,23 +371,23 @@ CONTAINS
     !>
     !> Assertion: initial area size and number of tiles need to suit 
     !>
-    IF ((SIZE(initial_area,DIM=1) /= nr_of_tiles) .OR. (SIZE(initial_area,DIM=2) /= nc)) THEN
+    IF ((SIZE(initial_area,DIM=2) /= nr_of_tiles) .OR. (SIZE(initial_area,DIM=1) /= nc)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area array has unexpected size. Please check!')
     ENDIF
 
     ! Collect initial areas of all involved tiles
-    current_tile => tile%first_child_tile
+    current_tile => tile%Get_first_child_tile()
     i_tile = 0
     DO WHILE (ASSOCIATED(current_tile))
-      IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN !JN-TODO: does this work or TRIM and DO loop?
+      IF (one_of(current_tile%name, lcc_relocations%tile_names) > 0) THEN 
         i_tile = i_tile + 1
         
         CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
 
-        initial_area(i_tile, :) = current_fract(:)
+        initial_area(:, i_tile) = current_fract(:)
       ENDIF
 
-      current_tile => current_tile%next_sibling_tile
+      current_tile => current_tile%Get_next_sibling_tile()
     ENDDO
 
     ! reset relocation arrays
@@ -426,8 +428,8 @@ CONTAINS
     !>
     !> Assertion: dimensions of lost_area and initial_area need to match
     !>
-    IF ((SIZE(lost_area,DIM=1) /= nr_of_tiles) .OR. (SIZE(initial_area,DIM=1) /= nr_of_tiles) &
-      & .OR. (SIZE(lost_area,DIM=2) /= nc) .OR. (SIZE(initial_area,DIM=2) /= nc)) THEN
+    IF ((SIZE(lost_area,DIM=2) /= nr_of_tiles) .OR. (SIZE(initial_area,DIM=2) /= nr_of_tiles) &
+      & .OR. (SIZE(lost_area,DIM=1) /= nc) .OR. (SIZE(initial_area,DIM=1) /= nc)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area arrays have unexpected size. Please check!')
     ENDIF
     !>
@@ -485,12 +487,12 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
 
     nr_of_tiles = lcc_relocations%nr_of_tiles
-    gained_area_sum = SUM(gained_area(:, :), DIM=1)
+    gained_area_sum = SUM(gained_area(:, :), DIM=2)
 
     !>
     !> Assertion: dimensions of gained_area need to be tiles x nc
     !>
-    IF ((SIZE(gained_area,DIM=1) /= nr_of_tiles) .OR. (SIZE(gained_area,DIM=2) /= nc)) THEN
+    IF ((SIZE(gained_area,DIM=2) /= nr_of_tiles) .OR. (SIZE(gained_area,DIM=1) /= nc)) THEN
       CALL finish(TRIM(routine), 'Violation of assertion: Area array has unexpected size. Please check!')
     ENDIF
     !>
@@ -511,10 +513,10 @@ CONTAINS
       ! Matter from passive variables is proportionally distributed to these passive variables on extending tiles
       passive_var_sum = SUM(lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk), DIM=2)
       DO i_tile = 1,nr_of_tiles
-        WHERE(gained_area(i_tile, :) > 0.0_wp)
+        WHERE(gained_area(:, i_tile) > 0.0_wp)
           lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
             & = lcc_relocations%passive_vars(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
-            & + passive_var_sum(:) * (gained_area(i_tile,:) / gained_area_sum(:))
+            & + passive_var_sum(:) * (gained_area(:, i_tile) / gained_area_sum(:))
         END WHERE
       ENDDO
       lcc_relocations%passive_vars(i_var)%p%relocate_this(ics:ice,:,iblk) = 0.0_wp
@@ -530,7 +532,6 @@ CONTAINS
   SUBROUTINE transfer_active_to_passive_onChunk(lcc_relocations, tile, i_tile, options)
     USE mo_tcq_interface,       ONLY: tcq_transfer_from_active_to_passive_vars_onChunk
     USE mo_carbon_interface,    ONLY: carbon_transfer_from_active_to_passive_vars_onChunk
-    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
@@ -544,10 +545,9 @@ CONTAINS
 
     CHARACTER(len=:), ALLOCATABLE :: this_proc_name
     INTEGER :: i_proc, i_var, proc_id
-    INTEGER :: nc, ics, ice, iblk
+    INTEGER :: ics, ice, iblk
     LOGICAL :: has_non_zero_active_var
     ! -------------------------------------------------------------------------------------------------- !
-    nc = options%nc
     ics = options%ics
     ice = options%ice
     iblk = options%iblk
@@ -636,27 +636,29 @@ CONTAINS
   !
   !> Helper: collect pointers for cqts upon lcc init
   !
-  SUBROUTINE collect_pointers_for_cqs(i_cqt, i_tile, i_var_this_tile, first_involved_child, &
-    & conserved_quantities, var_list, this_case)
+  SUBROUTINE collect_pointers_for_cqs(i_cqt, i_tile, i_var_this_tile, this_tile_name, &
+    & first_involved_child_name, conserved_quantities, var_list, nr_of_vars, this_case)
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER,                INTENT(in)    :: i_cqt, i_tile
     INTEGER,                INTENT(inout) :: i_var_this_tile
-    CHARACTER(len=*),       INTENT(in)    :: first_involved_child
+    CHARACTER(len=*),       INTENT(in)    :: this_tile_name
+    CHARACTER(len=*),       INTENT(in)    :: first_involved_child_name
     TYPE(t_jsb_consQuan_p), INTENT(inout) :: conserved_quantities(:)
     TYPE(t_jsb_lcc_var_p),  INTENT(inout) :: var_list(:)
+    INTEGER,                INTENT(in)    :: nr_of_vars
     CHARACTER(len=*),       INTENT(in)    :: this_case
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER :: nr_of_vars, i_var, i
+    INTEGER :: nr_of_vars_on_cq, i_var, i
     LOGICAL :: has_searched_var
     CHARACTER(len=VARNAME_LEN) :: thisName
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':collect_pointers_for_cqs'
     ! -------------------------------------------------------------------------------------------------- !
 
-    nr_of_vars = conserved_quantities(i_cqt)%p%no_of_vars
-    DO i_var = 1,nr_of_vars
+    nr_of_vars_on_cq = conserved_quantities(i_cqt)%p%no_of_vars
+    DO i_var = 1,nr_of_vars_on_cq
       i_var_this_tile = i_var_this_tile + 1
 
       thisName = conserved_quantities(i_cqt)%p%cq_vars_2D(i_var)%p%name
@@ -672,8 +674,8 @@ CONTAINS
       IF (.NOT. has_searched_var) THEN
         CALL finish(TRIM(routine), &
           & 'Violation of assertion: Conceptually each tile needs to contain the same active and passive vars. ' &
-          & //this_case //' var ' // TRIM(thisName) // ' does not exist on tile ' &
-          & // first_involved_child //'. Please check.' )
+          & //this_case //' var ' // TRIM(thisName) // ' of tile ' // TRIM(this_tile_name) // &
+          & ' does not exist on tile ' // first_involved_child_name //'. Please check.' )
       ENDIF
     ENDDO
 
@@ -695,22 +697,21 @@ CONTAINS
     INTEGER,                    INTENT(in)    :: nr_of_tiles, nr_of_vars
     TYPE(t_jsb_lcc_var_p),      INTENT(inout) :: var_list(:)
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER :: ics, ice, nc, iblk, i_var, i_tile
+    INTEGER :: ics, ice, iblk, i_var, i_tile
     REAL(wp) :: to_be_transferred(options%nc)
     ! -------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
 
     DO i_var = 1,nr_of_vars
       DO i_tile = 1,nr_of_tiles
         to_be_transferred(:) = 0.0_wp
-        WHERE(lost_area(i_tile, :) > 0.0_wp)
+        WHERE(lost_area(:, i_tile) > 0.0_wp)
           ! collect to be transferred matter
           to_be_transferred(:) = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
-            &   * (lost_area(i_tile, :) / initial_area(i_tile,:))
+            &   * (lost_area(:, i_tile) / initial_area(:, i_tile))
           var_list(i_var)%p%relocate_this(ics:ice,i_tile,iblk) = to_be_transferred(:)
           ! and subtract it 
           var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &

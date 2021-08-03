@@ -27,12 +27,11 @@ MODULE mo_tlcc_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model    
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes TLCC_, PPLCC_, TCQ_, CARBON_
+  dsl4jsb_Use_processes TLCC_, PPLCC_ !, TCQ_
 
   IMPLICIT NONE
   PRIVATE
@@ -92,7 +91,6 @@ CONTAINS
   !
   SUBROUTINE update_tlcc(tile, options)
 
-    USE mo_jsb_parallel,      ONLY: Get_omp_thread
     USE mo_jsb_time,          ONLY: is_newday
     USE mo_jsb_process_class, ONLY: Get_process_id
     USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, transfer_from_active_to_passive_var_onChunk
@@ -107,7 +105,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_tlcc'
     LOGICAL, PARAMETER :: allAtOnce = .FALSE.
 
-    CLASS(t_jsb_tile_abstract), POINTER :: current_tile, last_involved_tile
+    CLASS(t_jsb_tile_abstract), POINTER :: current_tile !, last_involved_tile
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
 
@@ -116,7 +114,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
     REAL(wp), DIMENSION(options%nc) :: moved_fract, current_fract
 
-    CHARACTER(len=VARNAME_LEN) :: active_var_name, passive_var_name, current_source, current_sink
+    CHARACTER(len=VARNAME_LEN) :: current_source, current_sink !,active_var_name, passive_var_name
 
     CHARACTER(len=VARNAME_LEN) :: source_tile(2)
     CHARACTER(len=VARNAME_LEN) :: sink_tile(2)
@@ -163,9 +161,9 @@ CONTAINS
     ENDIF
 
     ! Allocate area vectors
-    ALLOCATE(initial_area(nr_of_tiles,nc))
-    ALLOCATE(lost_area(nr_of_tiles,nc))
-    ALLOCATE(gained_area(nr_of_tiles,nc))
+    ALLOCATE(initial_area(nc, nr_of_tiles))
+    ALLOCATE(lost_area(nc, nr_of_tiles))
+    ALLOCATE(gained_area(nc, nr_of_tiles))
     initial_area(:,:) = 0.0_wp
     lost_area(:,:) = 0.0_wp
     gained_area(:,:) = 0.0_wp
@@ -198,7 +196,7 @@ CONTAINS
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
       ! Move actual area and collect lost and gained area of involved tiles
-      current_tile => tile%first_child_tile
+      current_tile => tile%Get_first_child_tile()
       moved_fract(:) = 0.0_wp
       IF (.NOT. allAtOnce) THEN
         lost_area(:,:) = 0.0_wp
@@ -235,27 +233,27 @@ CONTAINS
           IF (is_source) THEN
             CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
             WHERE (current_fract(:) .GT. 0.00015_wp)
-              lost_area(i_tile, :) = 0.00015_wp
+              lost_area(:, i_tile) = 0.00015_wp
               moved_fract(:) = moved_fract(:) + 0.00015_wp
             END WHERE 
 
-            current_fract(:) = current_fract(:) - lost_area(i_tile, :)
+            current_fract(:) = current_fract(:) - lost_area(:, i_tile)
             CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
 
           ELSEIF(is_sink) THEN
-            gained_area(i_tile, :) = moved_fract(:) * shift_fract
+            gained_area(:, i_tile) = moved_fract(:) * shift_fract
 
             CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-            current_fract(:) = current_fract(:) + gained_area(i_tile, :)
+            current_fract(:) = current_fract(:) + gained_area(:, i_tile)
             CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
 
             moved_fract(:) = moved_fract(:) * remaining_fract
           ENDIF
 
-          last_involved_tile => current_tile
+          !last_involved_tile => current_tile
         ENDIF
 
-        current_tile => current_tile%next_sibling_tile
+        current_tile => current_tile%Get_next_sibling_tile()
       END DO
 
       !>
@@ -275,7 +273,7 @@ CONTAINS
       !   active_var_name = 'a_veg_c_tcq'
       !   passive_var_name = 'a_dead_c_tcq'
       !
-      !   current_tile => tile%first_child_tile
+      !   current_tile => tile%Get_first_child_tile()
       !   i_tile = 0
       !   DO WHILE (ASSOCIATED(current_tile))
       !     IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
@@ -283,25 +281,25 @@ CONTAINS
       !       CALL transfer_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, active_var_name, passive_var_name)
       !     ENDIF
       !   ENDIF
-      !   current_tile => current_tile%next_sibling_tile
+      !   current_tile => current_tile%Get_next_sibling_tile()
       ! ENDDO
 
       !>
       !>     4.b and finally by calling the more general transfer_active_to_passive_onChunk lcc routine where calls to
       !>         process specific relocation routines can be specified
       !>
-      current_tile => tile%first_child_tile
+      current_tile => tile%Get_first_child_tile()
       i_tile = 0
       DO WHILE (ASSOCIATED(current_tile))
         IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
           i_tile = i_tile + 1
-          IF (ANY(lost_area(i_tile,:) > 0.0_wp)) THEN
+          IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
             CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
           ENDIF
-          last_involved_tile => current_tile
+          !last_involved_tile => current_tile
         ENDIF
 
-        current_tile => current_tile%next_sibling_tile
+        current_tile => current_tile%Get_next_sibling_tile()
       ENDDO
 
       !>
@@ -329,16 +327,13 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_tlcc'
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
     iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
     

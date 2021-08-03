@@ -19,9 +19,8 @@ MODULE mo_tlcc_init_lcc
 
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
-  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc
   USE mo_jsb_lcc,             ONLY: init_lcc
-  USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
+  USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -57,7 +56,7 @@ CONTAINS
     active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
     passive_cqts = (/ DEAD_CARBON_CQ_TYPE /)
 
-    involved_child_tiles = (/ 'pft03', 'pft04' , 'pft05', 'pft06', 'pft11' /)
+    involved_child_tiles = [character(len=SHORT_NAME_LEN) :: 'pft03', 'pft04' , 'pft05', 'pft06', 'pft11' ]
 
     CALL init_lcc(procname, tile, active_cqts, passive_cqts, involved_child_tiles)
 
