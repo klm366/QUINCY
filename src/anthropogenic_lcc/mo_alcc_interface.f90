@@ -18,7 +18,7 @@ MODULE mo_alcc_interface
 
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
+  USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model    
@@ -126,16 +126,16 @@ CONTAINS
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
-    ics     = options%ice
+    ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    
+
     model => Get_model(tile%owner_model_id)
     process_id = Get_process_id(procname)
 
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current_year)
-    
+
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(alcc_)) RETURN
 
@@ -189,33 +189,35 @@ CONTAINS
     i_tile = 0
     DO WHILE (ASSOCIATED(current_tile))
 
-        ! Area movements are only possible among child tiles listed in the lcc structure!
-        IF (one_of(current_tile%name, lcc_relocations%tile_names) > 0) THEN
-          i_tile = i_tile + 1
+      ! Area movements are only possible among child tiles listed in the lcc structure!
+      IF (one_of(current_tile%name, lcc_relocations%tile_names) > 0) THEN
+        i_tile = i_tile + 1
 
-          cf_diff(:) = cf_current_year(:, i_tile) - initial_area(:, i_tile)
-          WHERE(cf_diff(:) > 0.0_wp)
-            gained_area(:, i_tile) = cf_diff(:)
-          ELSEWHERE
-            lost_area(:, i_tile) = -1.0_wp * cf_diff(:)
-          END WHERE
-          CALL current_tile%Set_fraction(ics, ice, iblk, fract=cf_current_year(:, i_tile))
-        ELSE
-          ! In mo_alcc_init read_land_use_data assumes that all child tiles of the veg tile 
-          ! are part of the lcc structure
-          CALL finish(TRIM(routine), 'Violation of assertion: child tile of veg tile(' //TRIM(current_tile%name) &
-            & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.') 
-        ENDIF
+        cf_diff(:) = cf_current_year(:, i_tile) - initial_area(:, i_tile)
+        WHERE(cf_diff(:) > 0.0_wp)
+          gained_area(:, i_tile) = cf_diff(:)
+        ELSEWHERE
+          lost_area(:, i_tile) = -1.0_wp * cf_diff(:)
+        END WHERE
+        CALL current_tile%Set_fraction(ics, ice, iblk, fract=cf_current_year(:, i_tile))
+      ELSE
+        ! In mo_alcc_init read_land_use_data assumes that all child tiles of the veg tile 
+        ! are part of the lcc structure
+        CALL finish(TRIM(routine), 'Violation of assertion: child tile of veg tile(' //TRIM(current_tile%name) &
+          & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.') 
+      ENDIF
 
-         current_tile => current_tile%Get_next_sibling_tile()
-       END DO
+        current_tile => current_tile%Get_next_sibling_tile()
+      END DO
 
       !>
       !>     Assert: sum of gained area should equal sum of lost area 
       !>
       cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2) 
-      IF (ANY( cf_diff > EPSILON(1._wp))) THEN
-        CALL finish(TRIM(routine), 'Violation of assertion: gained area does not equal lost area! Please check.') 
+      IF (ANY( cf_diff > 1.E-11_wp)) THEN
+        WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check. ' &
+          & // 'Max difference of: ', MAXVAL(cf_diff)
+        CALL finish(TRIM(routine), TRIM(message_text))
       ENDIF
        
       !>
