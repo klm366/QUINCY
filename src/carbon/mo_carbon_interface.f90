@@ -450,7 +450,7 @@ CONTAINS
       c_into_humus_2_sum =  0._wp
     ENDIF
 
-    IF( is_newyear(options%current_datetime,dtime) .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
+    IF( new_year .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
       c_decomp_humus_1_sum =  0._wp
       c_decomp_humus_2_sum =  0._wp
       c_into_humus_1_sum =  0._wp
@@ -799,6 +799,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta, weighted_by_fract)
 
     ! variables for NLCC process
+    dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
+
+    ! variables for DYNVEG
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
 

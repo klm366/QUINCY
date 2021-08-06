@@ -419,4 +419,3 @@ CONTAINS
 
   END SUBROUTINE Init_assimi_memory
 
-#endif
