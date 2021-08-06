@@ -240,7 +240,8 @@ CONTAINS
     IF (.NOT. model%config%use_quincy) THEN
       ! Note: JN changed the order of the processes
       ! - processes potentially changing the area of a tile are conducted first in the timestep.
-      ! - but the task npp_buffer is performed even before to provide already updated multi annual average NPP to DYNVEG at the beginning of a year
+      ! - the task npp_buffer is performed even before to provide already updated multi annual average
+      !   NPP to DYNVEG at the beginning of a year
       ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
       !   considerations
   

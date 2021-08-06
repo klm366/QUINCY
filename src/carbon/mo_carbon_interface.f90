@@ -597,12 +597,12 @@ CONTAINS
         & c_into_humus_2_sum    = c_into_humus_2_sum                  & ! out
         & )
 
-      ! determine annual maximum content of green pool for DYNVEG 
+      ! determine annual maximum content of green pool for DYNVEG
       IF (new_year) THEN
          max_green_bio = c_green
       ELSEIF (new_day) THEN
          max_green_bio = MAX(max_green_bio, c_green)
-      ENDIF  
+      ENDIF
 
 
       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.

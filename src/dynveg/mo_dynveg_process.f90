@@ -225,7 +225,7 @@ CONTAINS
 ! input
     INTEGER,  INTENT(in)  :: nidx            ! vector length
     INTEGER,  INTENT(in)  :: ntiles          ! number of tiles (different land cover type mosaics per gridcell)
-    LOGICAL,  INTENT(in)  :: is_dynamic(:,:) ! 
+    LOGICAL,  INTENT(in)  :: is_dynamic(:,:) !
     LOGICAL,  INTENT(in)  :: is_woody(:,:)   !
     REAL(wp), INTENT(in)  :: act_fpc(:,:)    ! actual fpc in dynveg
     REAL(wp), INTENT(in)  :: bare_fpc(:)     ! dynveg bare soil fraction
@@ -296,7 +296,7 @@ CONTAINS
 ! applied. This results in an imbalance between actual cover_fractions and the ones the dynamic vegetation calculates for
 ! instantanous establishement of crops and pasture (cover_fract_inst).
 ! The final cover_fractions are based on cover_fract_inst with the exception, that the forest fraction is based on the forest
-! fraction after land use transitions (cover_fract entering the routine), and only the natural change in cover_fractions in 
+! fraction after land use transitions (cover_fract entering the routine), and only the natural change in cover_fractions in
 ! the direction to reduce the inbalance is taken into account (see below).
 !
 ! input
@@ -317,7 +317,7 @@ CONTAINS
     INTEGER   :: i, itile
     REAL(wp)  :: nwoody(nidx)                   ! number of woody PFTs (as REAL)
     REAL(wp)  :: nexcluded(nidx)                ! number of non-dynamic PFTs (crops, pastures)
-    REAL(wp)  :: cover_fract_inst(nidx,ntiles)  ! cover fractions that would result from an instantanous implementation of 
+    REAL(wp)  :: cover_fract_inst(nidx,ntiles)  ! cover fractions that would result from an instantanous implementation of
                                                 ! land use change and vegetation dynamics
     REAL(wp)  :: excluded_fract(nidx)           ! fraction of the vegetated part of the grid box not considered for vegetation
                                                 ! dynamics (e.g. agricultural areas)
@@ -348,7 +348,7 @@ CONTAINS
        ENDDO
     ENDDO
 
-    !-- Sum up cover fractions and of woody types, grasses, pasture etc. The fractions (cover_fract) were last updated by 
+    !-- Sum up cover fractions and of woody types, grasses, pasture etc. The fractions (cover_fract) were last updated by
     !   last years land use change, and do not yet include current vegetation dynamics.
     sum_woody_fract(:) = 0._wp
     sum_grass_fract(:) = 0._wp
@@ -380,7 +380,7 @@ CONTAINS
        END DO
     END DO
 
-    !-- Calculate the woody fraction resulting from last years potential vegetation assuming an instantanous 
+    !-- Calculate the woody fraction resulting from last years potential vegetation assuming an instantanous
     !   establishment of crops and pastures
     CALL calc_cover_fract_inst(nidx, ntiles, is_woody(:,:), is_dynamic(:,:), is_pasture(:,:), is_crop(:,:), &
                                cover_fract_pot_previous_year(:,:), cover_fract(:,:), cover_fract_inst(:,:))
@@ -393,7 +393,7 @@ CONTAINS
        END DO
     END DO
 
-    !-- Calculate the woody fraction resulting from current potential vegetation assuming an instantanous 
+    !-- Calculate the woody fraction resulting from current potential vegetation assuming an instantanous
     !   establishment of crops and pastures
     CALL calc_cover_fract_inst(nidx, ntiles, is_woody(:,:), is_dynamic(:,:), is_pasture(:,:), is_crop(:,:), &
                                cover_fract_pot(:,:), cover_fract(:,:), cover_fract_inst(:,:))
@@ -522,7 +522,7 @@ CONTAINS
     REAL(wp)          :: sum_act_fpc(nidx)
     REAL(wp)          :: sum_grass_fpc(nidx)
     INTEGER           :: n_grass_pft(nidx)
-      
+
 !------------------------------------------------------------------------------
 
     sum_green_bio(:) = 0._wp
@@ -564,8 +564,8 @@ CONTAINS
        END DO
     END DO
 
-    WHERE (sum_act_fpc(:) > EPSILON(1._wp)) 
-       sum_green_bio(:) = sum_green_bio(:) / sum_act_fpc(:) 
+    WHERE (sum_act_fpc(:) > EPSILON(1._wp))
+       sum_green_bio(:) = sum_green_bio(:) / sum_act_fpc(:)
     END WHERE
     IF (init_running_means) THEN
        sum_green_bio_memory(:) = sum_green_bio(:)
@@ -612,15 +612,17 @@ CONTAINS
     REAL(wp)    :: non_woody_fpc(nidx)
     REAL(wp)    :: woody_estab_fpc(nidx)
     REAL(wp)    :: theta, veg_inc, tau_pft
-    REAL(wp), PARAMETER  ::  min_dist_woody = 0.002_wp / 365._wp !! mortality of woody plants (not caused by fire/windthrow, but by other unresolved processes)
-    REAL(wp), PARAMETER  ::  grass_mortality = 0.01_wp / 365._wp !! grass mortality (not caused by fire, but by other unresolved processes)
+    REAL(wp), PARAMETER  ::  min_dist_woody = 0.002_wp / 365._wp !! mortality of woody plants (not caused by fire/windthrow,
+                                                                 !! but by other unresolved processes)
+    REAL(wp), PARAMETER  ::  grass_mortality = 0.01_wp / 365._wp !! grass mortality (not caused by fire, but by other
+                                                                 !! unresolved processes)
     REAL(wp), PARAMETER  ::  tau_Cpool_woods_to_tau_pft = 1._wp
-  
+
     ! initialisations
 
     act_fpc_previous_day(:,:) = act_fpc(:,:)
     non_woody_fpc(:) = bare_fpc(:)
-    
+
     DO itile = 1,ntiles
        DO i = 1,nidx
 !!$ TR          IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) burned_local(i,itile) = 3.e-5_wp
@@ -724,7 +726,7 @@ CONTAINS
     END DO
 
     !-- calculation of bare soil fraction
-    
+
     bare_fpc(:) = MAX(0._wp,1._wp - total_act_fpc(:))
 
   END SUBROUTINE fpc_daily
@@ -768,15 +770,15 @@ CONTAINS
        END DO
        IF (ABS(1._wp - sum_fpc(i)) > 3._wp * EPSILON(1._wp)) just_return = .false.
     END DO
-    
+
     IF (just_return) RETURN
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine),'Attention: act_fpc is rescaled!')
 
     ! sum act_fpc and bare_fpc
     sum_fpc(:) = bare_fpc(:)
     nsparce(:) = 0
-    
+
     DO i = 1,nidx
        DO itile = 1,ntiles
           IF (is_dynamic(i,itile)) THEN
@@ -959,7 +961,7 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
 !
     INTEGER,  INTENT(in)  :: nidx               ! vector length
     INTEGER,  INTENT(in)  :: ntiles             ! number of tiles
-    LOGICAL,  INTENT(in)  :: is_dynamic(:,:)    ! mask for land surface treated by jsbach 
+    LOGICAL,  INTENT(in)  :: is_dynamic(:,:)    ! mask for land surface treated by jsbach
 !
 ! !IN- and OUTPUT PARAMETERS:
 ! 

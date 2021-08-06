@@ -1,22 +1,3 @@
-! ===============================================================================================================================
-! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
-! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
-! === ... <DATE>                    with the present date in YYYY-MM-DD format, e.g. "2016-04-30"                             ===
-! === ... <PROCESS_NAME_UPPER_CASE> with your process name, e.g. "ALBEDO"                                                     ===
-! === ... <PROCESS_NAME_LOWER_CASE> with your process name, e.g. "albedo"                                                     ===
-! === ... <TASK>                    with the name of a task of the process, e.g. "snow_albedo"                                ===
-! === ... <EXPLANATIION_OF_PROCESS> with a short explanation line, e.g.                                                       ===
-! ===     "computes the surface temperature from latent and sensible heat flux, net radiation and below ground sensible heat" ===
-! ===                                                                                                                         ===
-! === Then go through the code line by line to adapt it to your needs:                                                        ===
-! === !X marks lines with examples (e.g:), templates (if necessary:) and implementations points (Implementation:) that you    ===
-! === have to adapt to your process.                                                                                          ===
-! ===                                                                                                                         ===
-! === Finally delete this header.                                                                                             ===
-! ===============================================================================================================================
-
-
-
 !>
 !! @brief Contains the interfaces to the dynveg process
 !!
@@ -36,7 +17,7 @@ MODULE mo_dynveg_interface
 
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
-  
+
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
@@ -44,7 +25,7 @@ MODULE mo_dynveg_interface
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -66,27 +47,21 @@ MODULE mo_dynveg_interface
   dsl4jsb_Use_memory(DISTURB_)
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
-  
+  ! Module variables
+
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_dynveg_tasks !, t_dynveg_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_dynveg_interface'
-  
-  !> Type definition for <PROCESS_NAME_LOWER_CASE> process
-!   TYPE, EXTENDS(t_jsb_process) :: t_<PROCESS_NAME_LOWER_CASE>_process
-!   CONTAINS
-!     PROCEDURE :: Register_tasks => Register_<PROCESS_NAME_LOWER_CASE>_tasks        !< Registers tasks for <PROCESS_NAME_LOWER_CASE> process
-!   END TYPE t_<PROCESS_NAME_LOWER_CASE>_process
-  
+
   !> Type definition for dynveg task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_dynveg
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_dynveg     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_dynveg  !< Aggregates computed task variables
   END TYPE tsk_dynveg
-  
+
   !> Constructor interface for dynveg task
   INTERFACE tsk_dynveg
     PROCEDURE Create_task_dynveg                        !< Constructor function for task
@@ -96,7 +71,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !! Constructors for tasks
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for dynveg task
   !!
@@ -112,12 +87,12 @@ CONTAINS
     CALL return_ptr%Construct(name='dynveg', process_id=DYNVEG_, owner_model_id=model_id)
 
   END FUNCTION Create_task_dynveg
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for dynveg process
   !!
-  !! @param[in,out] this      Instance of dynveg process class  
-  !! @param[in]     model_id  Model id  
+  !! @param[in,out] this      Instance of dynveg process class
+  !! @param[in]     model_id  Model id
   !!
   SUBROUTINE Register_dynveg_tasks(this, model_id)
 
@@ -223,7 +198,7 @@ CONTAINS
     nc      = options%nc
     dtime   = options%dtime
     !X if necessary: steplen = options%steplen
-    
+
     ! If process is not active on this tile, do nothing
     !IF (.NOT. tile%Is_process_active(DYNVEG)) RETURN
 
@@ -403,7 +378,7 @@ CONTAINS
           CALL pheno__mem%HandDown_var_real2d(ics, ice, iblk, no_children, pheno__mem%fract_fpc_max, fract_fpc_max)
        ENDIF ! not lstart
     ENDIF ! new_year
-   
+
     ! daily calculations
     IF (new_day) THEN
        CALL fpc_daily(nc, no_children, accelerate_dynveg, is_woody(:,:), is_dynamic(:,:), tau_c_woods(:,:), &
@@ -422,15 +397,15 @@ CONTAINS
     DEALLOCATE(cover_fract_sum)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_dynveg
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "dynveg"
-  !! 
-  !! @param[in,out] tile    Tile for which routine is executed.  
-  !! @param[in]     options Additional run-time parameters.  
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
   !!
   SUBROUTINE aggregate_dynveg(tile, options)
 
@@ -443,7 +418,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_dynveg'
-    
+
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
@@ -451,25 +426,16 @@ CONTAINS
     nc   = options%nc
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)    
+    model => Get_model(tile%owner_model_id)
     !X Implementation: Start your process scheme here...
-    
-    
+
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_dynveg
 
-  
-  ! ================================================================================================================================
-  !>
-  !! @brief Another task for "<PROCESS_NAME_LOWER_CASE>"
-  !!
-  !! @param[in]     options Additional run-time parameters.  
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !  ....
-  
 #endif
 END MODULE mo_dynveg_interface
