@@ -17,12 +17,9 @@
 MODULE mo_tlcc_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
-
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   IMPLICIT NONE
   PRIVATE
@@ -45,7 +42,7 @@ CONTAINS
   SUBROUTINE Init_tlcc_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
+    USE mo_jsb_io,            ONLY: tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 

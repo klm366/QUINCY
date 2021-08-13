@@ -293,7 +293,7 @@ CONTAINS
 
     ! Declare local variables
     TYPE(t_jsb_model), POINTER   :: model
-    LOGICAL                      :: lstart
+    LOGICAL                      :: lstart, new_day, new_year
     INTEGER                      :: iblk, ics, ice
     REAL(wp)                     :: dtime
     TYPE(t_subset)               :: subset
@@ -358,7 +358,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1  ! Yasso below ground litter-pool for non-soluble litter
                                                       ! [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_humus_1         ! Yasso below ground litter-pool for slow C compartment
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     !SIZE CLASS 2
     dsl4jsb_Real2D_onChunk ::  c_acid_ag2        ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
@@ -377,16 +377,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2  ! Yasso below ground litter-pool for non-soluble litter
                                                       !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_humus_2         ! Yasso below ground litter-pool for slow C compartment
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
@@ -443,6 +443,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_air                       ! Atmosphere temperature (lowest layer) in Kelvin!
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
+
+    ! variables needed for DYNVEG
+    dsl4jsb_Real2D_onChunk :: max_green_bio
+    dsl4jsb_Real2D_onChunk :: sla
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
@@ -548,6 +552,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
+    ! variables needed for DYNVEG
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  max_green_bio)
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)
+
     dsl4jsb_Get_pool(CARBON_, my_pools, my_pools)
     ! subset = pheno__mem%LAI%Get_subset()
     ! print*,'AAA ', subset%ics, subset%ice, subset%iblk
@@ -565,16 +573,21 @@ CONTAINS
     ! print*,'EEE ', soil_pool%var_list(1)%p%name
     ! temp(:,:) = carbon__mem%root_exudates + carbon__mem%excess_NPP
     ! carbon__mem%soil_respiration = carbon__mem%root_exudates + carbon__mem%excess_NPP
+
     ! ---------------------------
     ! Go
 
+    ! dynveg a.k.a. vegetation_lcc
+    lstart   = is_time_experiment_start(options%current_datetime)
+    new_day  = is_newday(options%current_datetime, dtime)
+    new_year = is_newyear(options%current_datetime, dtime)
+
     ! Put a comment on the screen...
-    IF (debug_on() .AND. iblk==1 .AND. is_newday(options%current_datetime, dtime)  ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. new_day  ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new day')
-    IF (debug_on() .AND. iblk==1 .AND. is_newyear(options%current_datetime, dtime) ) CALL message(TRIM(routine), &
+    IF (debug_on() .AND. iblk==1 .AND. new_year ) CALL message(TRIM(routine), &
                                                            'update_C_NPP_pot_allocation: First time step of new year')
 
-    lstart = is_time_experiment_start(options%current_datetime)
 
     ! Initializations
     cflux_npp_2_atm_yday_ta  = 0._wp
@@ -582,7 +595,7 @@ CONTAINS
     cflux_soilresp_2_atm_ta  = 0._wp
     cflux_herb_2_atm_ta = 0._wp
 
-    IF( is_newyear(options%current_datetime,dtime) .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
+    IF( new_year .OR. lstart) THEN ! reset annual sums if newyear or if just started exp
       c_decomp_humus_1_sum =  0._wp
       c_decomp_humus_2_sum =  0._wp
       c_into_humus_1_sum =  0._wp
@@ -645,7 +658,7 @@ CONTAINS
       & cflux_c_green_2_herb = cflux_c_green_2_herb(:), cflux_herb_2_atm = cflux_herb_2_atm(:), &
       & NPP_act_yDayMean = NPP_act_yDayMean(:), NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
-    IF( .NOT. is_newday(options%current_datetime,dtime) .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
+    IF( .NOT. new_day .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
       LAI_sum          = LAI_sum          + LAI
@@ -763,6 +776,14 @@ CONTAINS
         & c_into_humus_2_sum    = c_into_humus_2_sum                  & ! out
         & )
 
+      ! determine annual maximum content of green pool for DYNVEG
+      IF (new_year) THEN
+         max_green_bio = c_green
+      ELSEIF (new_day) THEN
+         max_green_bio = MAX(max_green_bio, c_green)
+      ENDIF
+
+
       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
       !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
       !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
@@ -841,6 +862,9 @@ CONTAINS
     ! Calculate diagnostic carbon sums
     CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:),            &
       & c_sum_veg_ta(:), c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
+
+    ! write lct information on variable to make it available on pft-tiles via function collect_var for DYNVEG
+    sla(:) = REAL(dsl4jsb_Lctlib_param(specificLeafArea_C))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -940,6 +964,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_soilresp_2_atm_ta,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_yday_ta,  weighted_by_fract)
+
+    ! variables for DYNVEG
+    dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

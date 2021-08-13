@@ -76,7 +76,6 @@ CONTAINS
     CALL sse_init_bc(tile)
     CALL sse_init_ic(tile)
 
-    ! TODO This is not correct if sse runs on veg tile!
     IF (tile%Is_last_process_tile(SSE_)) THEN
       CALL sse_finalize_init_vars()
     END IF

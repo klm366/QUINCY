@@ -787,12 +787,12 @@ CONTAINS
     REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
     REAL(wp) :: t_soil_upper_layer(nidx)                  !< t_soil_sl(:,1)
 
-    !$claw acc data create(zmid,z1,zd1,zdz1,zdz2)
+    !$claw acc data create(zmid,z1,zd1,zdz1,zdz2,t_soil_upper_layer)
 
-
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_0
     t_soil_upper_layer(:) = t_soil_sl(:,1)
 
-    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_0 
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_1
     grnd_hflx(:) = 0._wp
     hcap_grnd(:) = 0._wp
     t_soil_top(:) = t_srf_unfilt(:)
@@ -823,7 +823,7 @@ CONTAINS
     !$claw acc end data
 
     ! mid of two uppermost soil layers
-    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_1
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_2
     zmid(:,nsnow+1) = zmid(:,nsnow) + 0.5_wp * (dz(:,nsnow) + dz_soil(1))
     zmid(:,nsnow+2) = zmid(:,nsnow+1) + 0.5_wp * (dz_soil(1) + dz_soil(2))
     zd1(:,nsnow) = 1._wp / (zmid(:,nsnow+1) - zmid(:,nsnow))

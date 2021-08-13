@@ -178,6 +178,7 @@ CONTAINS
     TYPE(t_jsb_vgrid),  POINTER :: surface, canopy_layer        ! Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
     INTEGER                     :: table
+    TYPE(t_grib2)               :: grib2_desc
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model        => Get_model(model_id)
@@ -216,10 +217,17 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      ! setting for: fract_fpc
+      IF (TRIM(mem%owner_tile_name) == 'veg') THEN
+        grib2_desc = t_grib2(2,0,228, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
+      
       CALL mem%Add_var( 'fract_fpc', mem%fract_fpc,                            &
         & hgrid, surface,                                                      &
         & t_cf('foliage_projected_cover', '', ''),                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -421,10 +429,17 @@ CONTAINS
       ! variables used with jsbach4 & quincy
       ! jsbach4 init
       IF (.NOT. model%config%use_quincy) THEN
+        ! setting for: lai
+        IF (TRIM(mem%owner_tile_name) == 'box') THEN
+          grib2_desc = t_grib2(2,0,28, grib_bits)
+        ELSE
+          grib2_desc = t_grib2(255, 255, 255, grib_bits)
+        END IF
+      
         CALL mem%Add_var( 'lai', mem%lai,                                        &
           & hgrid, surface,                                                      &
           & t_cf('leaf_area_index', '', ''),                                     &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & t_grib1(table, 255, grib_bits), grib2_desc,                          &
           & prefix, suffix,                                                      &
           & loutput=.TRUE., output_level=BASIC,                                  &
           & initval_r=0.0_wp )
@@ -449,11 +464,19 @@ CONTAINS
         ! ------------------------------------------------------------------------------------------------- !
         ! variables used with jsbach4 & quincy
         ! quincy init
+        
+        ! setting for: lai
+        IF (TRIM(mem%owner_tile_name) == 'box') THEN
+          grib2_desc = t_grib2(2,0,28, grib_bits)
+        ELSE
+          grib2_desc = t_grib2(255, 255, 255, grib_bits)
+        END IF
+        
         CALL mem%Add_var('lai', mem%lai, &
           & hgrid, surface, &
           & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
           & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
+          & grib2_desc, &
           & prefix, suffix, &
           & loutput = .TRUE., &
           & lrestart = .TRUE., &

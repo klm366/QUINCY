@@ -47,7 +47,19 @@ MODULE mo_assimi_memory_class
       dark_respiration_ca,        & ! Dark respiration of leaf at each time step
                                     ! [mol(co2) / (m^2(canopy ground) * s) ]  (mean value)
       dark_respiration,           & ! see above but here on tile area
-      NPP_pot_rate_ca               ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) * s)]
+      NPP_pot_rate_ca,            & ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) * s)]
+      seconds_year,               & ! seconds till beginning of the current year
+      NPP_sum_year,               & ! Net primary production sum of the current year
+      NPP_mean_5year,             & ! Net primary production running average for 5 years
+      land_cover_class,           & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+      bclimit_min_cold_mmtemp,    & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+      bclimit_max_cold_mmtemp,    & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+      bclimit_max_warm_mmtemp,    & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+      bclimit_min_temprange,      & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+      bclimit_min_gdd,            & ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+
+      tau_c_woods                   ! preliminary, to pass lct information on pft-tiles to a process running on the veg-tile
+
 
 !                                         CO2_conc_leaf,                  & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
 !                                         CO2_conc_leaf_acc,              & ! CO2 concentration inside leaf [MOL(CO2)/MOL(AIR)]
@@ -254,6 +266,87 @@ CONTAINS
       & prefix, suffix,                                                                   &
       & output_level=BASIC,                                                               &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      
+    CALL mem%Add_var('seconds_year', mem%seconds_year,                                    &
+      & hgrid, surface,                                                                   &
+      & t_cf('seconds_year', 'sum of seconds in year', 'time sum year'),                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('npp_sum_year', mem%NPP_sum_year,                                    &
+      & hgrid, surface,                                                                   &
+      & t_cf('NPP_sum_year', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_sum_year'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.TRUE., initval_r=1.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('npp_mean_5year', mem%NPP_mean_5year,                                &
+      & hgrid, surface,                                                                   &
+      & t_cf('NPP_mean_5year', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_mean_5year'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.TRUE., initval_r=-1000.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('land_cover_class', mem%land_cover_class,                            &
+      & hgrid, surface,                                                                   &
+      & t_cf('land_cover_class', '', 'land_cover_class'),                                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('bclimit_min_cold_mmtemp', mem%bclimit_min_cold_mmtemp,              &
+      & hgrid, surface,                                                                   &
+      & t_cf('bclimit_min_cold_mmtemp', '', 'bclimit_min_cold_mmtemp'),                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('bclimit_max_cold_mmtemp', mem%bclimit_max_cold_mmtemp,              &
+      & hgrid, surface,                                                                   &
+      & t_cf('bclimit_max_cold_mmtemp', '', 'bclimit_max_cold_mmtemp'),                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('bclimit_max_warm_mmtemp', mem%bclimit_max_warm_mmtemp,              &
+      & hgrid, surface,                                                                   &
+      & t_cf('bclimit_max_warm_mmtemp', '', 'bclimit_max_warm_mmtemp'),                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('bclimit_min_temprange', mem%bclimit_min_temprange,                  &
+      & hgrid, surface,                                                                   &
+      & t_cf('bclimit_min_temprange', '', 'bclimit_min_temprange'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('bclimit_min_gdd', mem%bclimit_min_gdd,                              &
+      & hgrid, surface,                                                                   &
+      & t_cf('bclimit_min_gdd', '', 'bclimit_min_gdd'),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var('tau_c_woods', mem%tau_c_woods,                                      &
+      & hgrid, surface,                                                                   &
+      & t_cf('tau_c_woods', '', 'tau_c_woods'),                                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & output_level=BASIC,                                                               &
+      & lrestart=.FALSE., initval_r=10000.0_wp, l_aggregate_all=.TRUE. )
+      
     CALL mem%Add_var('scaling_fact_cl', mem%assimi_scaling_fact_cl,        &
       & hgrid, canopy_layer,                                               &
       & t_cf('assimi_scaling_fact_cl', '-',                                &

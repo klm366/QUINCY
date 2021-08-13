@@ -24,7 +24,6 @@ if hash ford 2>/dev/null; then
   mkdir pp_temp$$
   python3 scripts/dsl4jsb/dsl4jsb.py -n -d src -t pp_temp$$ -k
   ford $no_search $quiet -d pp_temp$$ ${FORD_MD}
-  find $output_dir -type f -name '*.html' -exec sed -i '/github.com\/cmacmackin/s/cmacmackin/Fortran-FOSS-Programmers/' '{}' \;
   find $output_dir -type f -name '*.html' -exec sed -i 's/was developed by/is currently developed by/' '{}' \;
   rm -rf pp_temp$$
 else

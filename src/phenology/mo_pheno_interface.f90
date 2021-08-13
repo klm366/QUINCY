@@ -688,6 +688,7 @@ CONTAINS
     END IF
 
     ! Calculated LAI relative to the tile area
+    !$claw expand parallel update savepoint=ser_jsb_pheno_update_phenology_logrop_expand_4 tile_name=tile%name
     lai_ta(:) = lai(:) * veg_fract_correction(:) * fract_fpc_max(:)
 
 

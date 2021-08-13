@@ -185,30 +185,24 @@ CONTAINS
   END SUBROUTINE rad_read_init_vars
 
   SUBROUTINE rad_init_bc(tile)
-    !-----------------------------------------------------------------------
-    !  ARGUMENTS
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    !-----------------------------------------------------------------------
-    !  LOCAL VARIABLES
-    !TYPE(t_jsb_model),       POINTER :: model
-    dsl4jsb_Def_memory(RAD_)
+    ! TYPE(t_jsb_model), POINTER :: model
+
+    ! dsl4jsb_Def_memory(RAD_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
 
-    !model => get_model(tile%owner_model_id)
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
-    !-----------------------------------------------------------------------
-    ! CONTENT
+    ! model => get_model(tile%owner_model_id)
 
-    ! Get radiation memory of the tile
-    dsl4jsb_Get_memory(RAD_)
+    ! dsl4jsb_Get_memory(RAD_)
 
-    IF (.NOT. ASSOCIATED(rad__mem)) RETURN
+    ! IF (debug_on()) CALL message(routine, 'Setting  radiation boundary conditions for tile '//TRIM(tile%name))
 
-    IF (debug_on()) CALL message(routine, 'Setting  radiation boundary conditions for tile '//TRIM(tile%name))
-
-    ! R: nothing to do in the moment ...
+    ! nothing to do in the moment ...
 
   END SUBROUTINE rad_init_bc
 
@@ -228,15 +222,12 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+
     model => get_model(tile%owner_model_id)
 
-    ! Get radiation memory of the tile
     dsl4jsb_Get_memory(RAD_)
-
-    ! Get radiation config
     dsl4jsb_Get_config(RAD_)
-
-    IF (.NOT. dsl4jsb_Config(RAD_)%active) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing radiation memory for tile '//TRIM(tile%name))
 
