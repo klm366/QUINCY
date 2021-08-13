@@ -284,7 +284,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-    CLASS(t_jsb_tile_abstract), POINTER       :: fract_tile
+    CLASS(t_jsb_tile_abstract), POINTER       :: box_tile, lake_tile, land_tile, fract_tile
 
     ! Local variables
     !
@@ -302,13 +302,11 @@ CONTAINS
       & beta,                  &
       & basin_mask,            & 
       & volume_lake,          &
-      & area_lake,             &
-      & rel_area_lake
+      & area_lake
 
     REAL(wp), POINTER :: area(:)
-!    REAL(wp), POINTER :: area_lake_changes(:)
-!    REAL(wp), POINTER :: land_area_changes(:)
-!    REAL(wp), POINTER :: tmp_fract(:)
+    REAL(wp), POINTER :: lake_fract(:)
+    REAL(wp), POINTER :: land_fract(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_dynlake'
 
@@ -318,6 +316,10 @@ CONTAINS
     INTEGER  :: no_omp_thread
 
     REAL(wp) :: steplen
+
+    REAL(wp), DIMENSION(options%nc) :: &
+      & fract_lake_changes,            &
+      & fract_land_changes
 
     no_omp_thread = Get_omp_thread()
 
@@ -329,7 +331,6 @@ CONTAINS
 
     IF (ASSOCIATED(tile%parent)) &
       & CALL finish(TRIM(routine), 'HD model works on root tile only!')
-
 
     model => Get_model(tile%owner_model_id)
 
@@ -354,11 +355,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HD_, volume_lake_max)  ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, beta)             ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! IN
-    dsl4jsb_Get_var2D_onChunk(HD_, volume_lake)     ! IN
+    dsl4jsb_Get_var2D_onChunk(HD_, volume_lake)      ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, area_lake)        ! OUT
-    dsl4jsb_Get_var2D_onChunk(HD_, rel_area_lake)    ! OUT
 
-    area => grid %area (ics:ice, iblk)
+    CALL model%Get_top_tile(box_tile)
+    lake_fract => box_tile%first_child_tile%fract(ics:ice,iblk)
+    land_fract => lake_tile%first_child_tile%next_sibling_tile%fract(ics:ice,iblk)
+    area => grid%area (ics:ice, iblk)
 
     ! Configuration parameters from the namelist
     routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
@@ -373,27 +376,20 @@ CONTAINS
         area_lake(:) = 0._wp
       END WHERE
 
-      ! lake and land fraction changes [%]
-
       ! update lake fraction [%]
-      !WHERE (basin_mask(:,:) == 1._wp)
-      !ELSE WHERE
-      !END WHERE
-
+      WHERE (basin_mask(:) == 1._wp)
+        ! lake and land fraction changes [%]
+        fract_lake_changes(:) = lake_fract(:) ! (        area_lake(:)/area) !/ lake_fract(:)
+        fract_land_changes(:) = lake_fract(:) ! (1._wp - area_lake(:)/area) !/ land_fract(:)
+      ELSE WHERE
+        fract_lake_changes(:) = 1._wp
+        fract_land_changes(:) = 1._wp
+      END WHERE
 
       ! update fractions of lake tile, land tile and their children
       CALL model%Get_top_tile(fract_tile)
       IF (ASSOCIATED(fract_tile%parent)) CALL finish(routine, 'Should only run on box tile!')
-      CALL do_stuff_on_tree(fract_tile, iblk)    !, maybe some arguments)
-
-        ! adjust fraction for lake, land and all children
-        !IF(fract_tile%is_lake) THEN
-        !  CALL fract_tile%Get_fraction(fract=tmp_fract(:,:))
-        !  tmp_fract(:,:) = tmp_fract(:,:) * area_lake_changes(:,:) 
-        !ELSE
-        !  tmp_fract(:,:) = tmp_fract(:,:) * land_area_changes(:,:)
-        !ENDIF
-        !CALL fract_tile%Set_fraction(fract=tmp_fract(:,:))
+      CALL do_stuff_on_tree(fract_tile, options, iblk, ics, ice, fract_lake_changes, fract_land_changes) 
 
     CASE ('weighted_to_coast')
       WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
@@ -423,28 +419,40 @@ CONTAINS
   END SUBROUTINE aggregate_dynlake
 
 
-  RECURSIVE SUBROUTINE do_stuff_on_tree(cur, iblk)  !, maybe some arguments)
+  RECURSIVE SUBROUTINE do_stuff_on_tree(cur, options, iblk, ics, ice, lake_changes, land_changes) 
 
     CLASS(t_jsb_tile_abstract), POINTER :: cur
-    INTEGER, INTENT(in) :: iblk
-!    ..., INTENT(in) :: maybe some arguments
-
     CLASS(t_jsb_tile_abstract), POINTER :: child
+
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    INTEGER, INTENT(in) :: iblk, ics, ice
     INTEGER :: i
 
-    ! Ich vermute, auf box willst du nichts machen:
+    REAL(wp),INTENT(in) :: lake_changes(:)          !< lake fraction changes
+    REAL(wp),INTENT(in) :: land_changes(:)          !< lake fraction changes
+    REAL(wp)            :: fract(options%nc)        !< fraction
+
+    ! skipt box tile
     IF (TRIM(cur%name) /= 'box') THEN
 
       IF (iblk==1) CALL message('Dynlake at:', TRIM(cur%name))
 
-      ! Do stuff on tile cur, maybe using the additional arguments ....
+      ! adjust fraction for lake, land and all children
+      IF(cur%is_lake) THEN
+        CALL cur%Get_fraction(ics, ice, iblk, fract=fract(:))
+        fract(:) = fract(:) * lake_changes(:)
+      ELSE
+        fract(:) = fract(:) * land_changes(:)
+      ENDIF
+      CALL cur%Set_fraction(ics, ice, iblk, fract=fract(:))
 
     END IF
 
     IF (cur%Has_children()) THEN
       child => cur%first_child_tile
       DO i=1,cur%Get_no_of_children()
-        CALL do_stuff_on_tree(child, iblk)  !, maybe some arguments)
+        CALL do_stuff_on_tree(child, options, iblk, ics, ice, lake_changes, land_changes)
         child => child%next_sibling_tile
       END DO
     END IF
@@ -762,7 +770,6 @@ CONTAINS
       & alpha,                 &
       & basin_mask,            &
       & volume_lake,          &
-      & lake_outflow,          &
       & height_lake,           &
       & area_lake,             &
       & height_dyn
@@ -770,14 +777,24 @@ CONTAINS
     REAL(wp) ::                &
       & dyn_min,               &
       & lake_flow,             &
+      & global_lake_volume_budget,      &  ! water budget of current step
+      & global_lake_volume_budget_ref,  &  ! water budget of previous step
+      & global_lake_volume_error,       &  ! water budget change within the time step
       & steplen
 
     INTEGER  :: jc, jcs, jce       ! grid cells
     INTEGER  :: blk, blks, blke    ! blocks
     INTEGER  :: njc(3), nblk(3), n ! beighbor grid cell block and cell index
+    INTEGER :: nproma, nblks
 
     CHARACTER(len=32) :: &
       & routing_scheme        ! river routing scheme
+
+    LOGICAL,  POINTER ::    &
+      & is_in_domain (:,:)      ! T: cell in domain (not halo)
+
+    REAL(wp), ALLOCATABLE  ::  &
+      & in_domain  (:,:) ! 1: cell in domain, 0: halo cell
 
     LOGICAL  :: debug_hd
 
@@ -785,7 +802,10 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     grid  => Get_grid(model%grid_id)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask  (:,:)
 
+    nproma  = grid%nproma
+    nblks   = grid%nblks
     steplen = options%steplen
 
     dsl4jsb_Get_config(HD_)
@@ -805,11 +825,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, height_lake_max)  ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, area_lake_max)    ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake_max)  ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, height_oro_min)         ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, height_oro_min)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)     ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, area_lake)        ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_dyn)       ! OUT
@@ -818,11 +837,21 @@ CONTAINS
     routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
     debug_hd       = dsl4jsb_Config(HD_)%debug_hd
 
+    ! Mask out all halo cells for the global sums (otherwise these cells are
+    ! counted twice)
+    ALLOCATE (in_domain(nproma, nblks))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSE WHERE
+      in_domain = 0._wp
+    END WHERE
+
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
 
       ! lake water storage [m3]
       volume_lake(:,:) = volume_lake(:,:) + lake_drain(:,:) * steplen
+      global_lake_volume_budget_ref = global_sum_array(volume_lake(:,:)*in_domain)
 
       ! update grid cell lake height [m] and dynamic height [m]
       WHERE (basin_mask(:,:)==1._wp)
@@ -837,7 +866,6 @@ CONTAINS
       height_dyn(:,:) = height_oro_min(:,:) + height_lake(:,:)
 
       ! update dynamic lake water flow between lake grid cells
-      lake_outflow(:,:) = 0._wp
       ! block index (blk)
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
@@ -856,18 +884,34 @@ CONTAINS
             DO n = 1, 3
               IF (height_dyn(njc(n), nblk(n)) == dyn_min) THEN
                 ! water flows into neighbor grid cell with lowest elevation
-                lake_flow = MAX( MIN( ( height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)) )  &
-                                       * area_lake(jc,blk), volume_lake(jc,blk)), 0._wp)  &
-                                       * 0.35/160000._wp
-                lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
-                lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
+                height_lake_diff = height_lake(jc,blk) - height_dyn(jc,blk) - height_dyn(njc(n),nblk(n))
+                IF (height_lake_diff.LE.height_lake_max(jc,blk))
+                  volume_lake_diff = volume_lake(jc,blk) - volume_lake_max(jc,blk) * &
+                                    (height_lake_diff / volume_lake_max(jc,blk)) &
+                                     ** (1._wp/alpha(jc,blk))
+                IF (height_lake_diff.GT.height_lake_max(jc,blk))
+                  volume_lake_diff = volume_lake(jc,blk) - volume_lake_max(jc,blk) + &
+                                    (height_lake_diff - height_lake_max(jc,blk)) &
+                                    / area_lake_max(jc,blk)
+                END WHERE
+                lake_flow = MAX(volume_lake_diff, 0._wp) * 0.35/160000._wp
+                volume_lake(jc , blk) = volume_lake(jc, blk) - lake_flow * steplen
+                volume_lake(njc(n), nblk(n)) = volume_lake(njc(n), nblk(n)) + lake_flow * steplen
               END IF
             END DO
           END IF
         END DO
       END DO
-      volume_lake(:,:) = volume_lake(:,:) + lake_outflow(:,:) * steplen
 
+      global_lake_volume_budget = global_sum_array(volume_lake(:,:)*in_domain)
+      global_lake_volume_error = global_lake_volume_budget - global_lake_volume_budget_ref
+
+      IF (ABS(global_lake_volume_error) > 10._wp*EPSILON(1._wp)) THEN
+        WRITE (message_text,*) 'Lake water conservation problem: budget imbalance: ', &
+             global_lake_volume_error,' m3'
+        CALL finish (TRIM(routine), message_text)
+      END IF
+      
     CASE ('weighted_to_coast')
       WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
       CALL finish(TRIM(routine), message_text)

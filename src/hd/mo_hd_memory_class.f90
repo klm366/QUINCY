@@ -55,7 +55,6 @@ MODULE mo_hd_memory_class
       lake_outflow    , &  !< lake water outflow to neighbor grid cell [m^3/s]
       height_lake     , &  !< actual lake water height of endorheic lakes [m]
       area_lake       , &  !< actual lake water area of endorheic lakes [m^2]
-      rel_area_lake   , &  !< relative lake water area 
       height_lake_max , &  !< maximum lake water height of endorheic lakes [m]
       area_lake_max   , &  !< maximum lake water area of endorheic lakes [m^2]
       volume_lake_max , &  !< maximum lake water volume of endorheic lakes [m^3]
@@ -240,14 +239,6 @@ CONTAINS
      CALL mem%Add_var( 'area_lake', mem%area_lake,                           &
       & hgrid, surface,                                                      &
       & t_cf('area_lake', 'm2', 'grid cell lake area'),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
-
-     CALL mem%Add_var( 'rel_area_lake', mem%rel_area_lake,                   &
-      & hgrid, surface,                                                      &
-      & t_cf('rel_area_lake', 'none', 'relative lake area'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
