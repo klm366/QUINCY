@@ -770,6 +770,7 @@ CONTAINS
       & alpha,                 &
       & basin_mask,            &
       & volume_lake,          &
+      & lake_outflow,          &
       & height_lake,           &
       & area_lake,             &
       & height_dyn
@@ -829,6 +830,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, area_lake)        ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_dyn)       ! OUT
@@ -867,6 +869,7 @@ CONTAINS
 
       ! update dynamic lake water flow between lake grid cells
       ! block index (blk)
+      lake_outflow(:,:) = 0._wp
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
       DO blk = blks, blke
@@ -884,24 +887,22 @@ CONTAINS
             DO n = 1, 3
               IF (height_dyn(njc(n), nblk(n)) == dyn_min) THEN
                 ! water flows into neighbor grid cell with lowest elevation
-                height_lake_diff = height_lake(jc,blk) - height_dyn(jc,blk) - height_dyn(njc(n),nblk(n))
-                IF (height_lake_diff.LE.height_lake_max(jc,blk))
-                  volume_lake_diff = volume_lake(jc,blk) - volume_lake_max(jc,blk) * &
-                                    (height_lake_diff / volume_lake_max(jc,blk)) &
-                                     ** (1._wp/alpha(jc,blk))
-                IF (height_lake_diff.GT.height_lake_max(jc,blk))
-                  volume_lake_diff = volume_lake(jc,blk) - volume_lake_max(jc,blk) + &
-                                    (height_lake_diff - height_lake_max(jc,blk)) &
-                                    / area_lake_max(jc,blk)
-                END WHERE
-                lake_flow = MAX(volume_lake_diff, 0._wp) * 0.35/160000._wp
-                volume_lake(jc , blk) = volume_lake(jc, blk) - lake_flow * steplen
-                volume_lake(njc(n), nblk(n)) = volume_lake(njc(n), nblk(n)) + lake_flow * steplen
+                lake_flow = MAX( MIN( ( height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)) )  &
+                                       * area_lake(jc,blk), volume_lake(jc,blk)), 0._wp)  &
+                                       * 0.35/160000._wp
+                lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
+                lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
+                lake_flow = MAX( MIN( ( height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)) )  &
+                                       * area_lake(jc,blk), volume_lake(jc,blk)), 0._wp)  &
+                                       * 0.35/160000._wp
+                lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
+                lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
               END IF
             END DO
           END IF
         END DO
       END DO
+      volume_lake(:,:) = volume_lake(:,:) + lake_outflow(:,:) * steplen
 
       global_lake_volume_budget = global_sum_array(volume_lake(:,:)*in_domain)
       global_lake_volume_error = global_lake_volume_budget - global_lake_volume_budget_ref
