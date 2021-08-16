@@ -216,16 +216,16 @@ CONTAINS
 
     ! As the 1d variables are only intended as diagnostic output variables (monitoring), the corresponding
     ! stream elements only need to be added, if the variables are actually defined as output variables.
-    IF (.NOT. var%is_in_output .AND. .NOT. var%is_in_restart) RETURN
-
-    CALL add_var_list_element_r1d(                                                            &
-      this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
-      cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
-      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
-      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
-      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
-      verbose=verbose)
+    IF (.NOT. var%is_in_output .AND. .NOT. var%is_in_restart) THEN
+      CALL add_var_list_element_r1d(                                                            &
+        this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
+        cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
+        ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
+        loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+        initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
+        lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
+        verbose=verbose)
+    END IF
 
     var%ptr => var%ptr1d
     var%name = TRIM(name)
