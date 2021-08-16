@@ -35,7 +35,7 @@ PROGRAM jsb4_driver
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(HYDRO_)
 
-  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing
+  USE mo_jsb4_forcing,       ONLY: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing
 
   ! Currently from adapter
   USE mo_jsb_grid_iface,     ONLY: get_lat, get_lon
@@ -44,10 +44,11 @@ PROGRAM jsb4_driver
   USE mo_jsb_test,           ONLY: read_interface_vars, read_interface_variables
 
   ! Seems to be available in both ICON and ECHAM
-  USE mo_exception,          ONLY: message, message_text
+  USE mo_exception,          ONLY: message, message_text, finish
   USE mo_kind,               ONLY: wp
   USE mo_jsb_math_constants, ONLY: deg2rad
   USE mo_orbit,              ONLY: orbit_kepler, orbit_vsop87
+  USE mo_util,               ONLY : int2string
 
 !>>> TODO? echam:
   ! parallelisation
@@ -56,9 +57,9 @@ PROGRAM jsb4_driver
 
   ! io
   USE mo_io,               ONLY: write_streams, IO_read_streams
-  USE mo_filename,         ONLY: out_filetype
+  USE mo_filename,         ONLY: out_filetype, rerun_filetype, NETCDF, NETCDF2,  NETCDF4
   USE mo_netcdf,           ONLY: nf_check, nf_close, add_dim, SURFACE
-  USE mo_memory_base,      ONLY: default_output, NETCDF
+  USE mo_memory_base,      ONLY: default_output
   USE mo_output,           ONLY: open_output_streams, close_output_streams, out_streams, init_output
   USE mo_decomposition,    ONLY: local_decomposition
 
@@ -84,7 +85,7 @@ PROGRAM jsb4_driver
   REAL(wp):: zwtime, zutime, zstime, zrtime
 
   INTEGER:: nml_handler, read_status, f_unit, status, iblk, nproma, npromz, nblks, ncid, model_id, ics, ice
-  TYPE(t_datetime)          :: current_datetime, next_datetime
+  TYPE(t_datetime)          :: current_datetime
   TYPE(t_datetime), POINTER :: current_datetime_ptr => NULL(), next_datetime_ptr => NULL()
 
   !! Variables of namelist jsb_parallel_nml
@@ -168,7 +169,8 @@ PROGRAM jsb4_driver
 
   model_id = 1
   default_output = .TRUE.
-  out_filetype = NETCDF
+  out_filetype = NETCDF4
+  rerun_filetype = NETCDF4
 
   ! Start MPI
   CALL p_start
@@ -231,6 +233,12 @@ PROGRAM jsb4_driver
   CALL message('jsb4_driver', message_text)
   CALL message('', '')
 
+  IF ( npromz .NE. nproma ) THEN
+    CALL finish(TRIM(progname), &
+      & 'Violation of assertion: for standalone in echam environment it is assumed that nlon=nproma=npromz, but nproma: '&
+      & //int2string(nproma) //' and npromz: '//int2string(npromz)  )
+  ENDIF
+
   ! forcing
   ALLOCATE(t_air_K(nproma, nblks))
   ALLOCATE(q_air(nproma, nblks))
@@ -282,7 +290,7 @@ PROGRAM jsb4_driver
   ALLOCATE(CO2_flux(nproma))
 
   IF (.NOT. read_interface_vars) THEN
-    CALL init_forcing(model_id)
+    CALL init_forcing(model_id, delta_time, time_step_len)
 
     !TODO: get from grid? but how to name such a function get_lon_from_grid?
     !      and if, shouldn't then also get_nproma should be called get_nproma_from_grid?
@@ -467,6 +475,10 @@ PROGRAM jsb4_driver
     CALL nf_check(nf_close(ncid))
   ENDIF
 
+  CALL close_output_streams
+  CALL message('INFO','Closed output streams')
+
+  CALL finalize_external_forcing()
   CALL jsbach_finalize()
 
   IF (timer_on()) CALL cleanup_timer

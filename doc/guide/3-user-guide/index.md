@@ -1,5 +1,5 @@
 ---
-title: ICON-Land/JSBACH User Guide
+title: User Guide
 ---
 
 @todo Nothing here, yet.

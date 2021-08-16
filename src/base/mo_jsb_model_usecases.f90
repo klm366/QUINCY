@@ -19,7 +19,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-                                    FUEL_, ALCC_, VEG_
+                                    FUEL_, ALCC_, DYNVEG_, VEG_, PPLCC_, TLCC_, TCQ_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -165,6 +165,10 @@ CONTAINS
     END IF
 #endif
 
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
+    END IF
+
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
@@ -198,6 +202,10 @@ CONTAINS
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
           !
+          IF (model%processes(DYNVEG_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(DYNVEG_, ON_TILE_, AGGREGATE_)
+          END IF
+          !
           ! use_quincy: 
         !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
         !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
@@ -209,6 +217,10 @@ CONTAINS
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
         ENDIF
+
+        IF (model%processes(TLCC_)%p%config%active) THEN
+          CALL veg_tile%Set_process_action(TLCC_, ON_TILE_, AGGREGATE_)
+        END IF
 
           ! R: TBD: DISTURB_ ist kein Task von CARBON_,
           !         da es die cover fractions der pfts verändert und nur als Nebeneffekt auch die C-Pools
@@ -238,6 +250,9 @@ CONTAINS
           !
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
+          END IF
+          IF (model%processes(TCQ_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(TCQ_, ON_LEAFS_, AGGREGATE_)
           END IF
           IF (model%processes(FUEL_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)

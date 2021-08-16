@@ -578,7 +578,7 @@ CONTAINS
       !$acc data pcreate(fract_ptr) present(tile%lcts)
       fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)    ! Lake fraction
 
-      !$acc data present(fact_land, fact_lake, fract_ptr)
+      !$acc data present(fract_ptr)
       !$acc parallel loop
       DO i=1,nc
         fact_lake(i) = fract_ptr(i)                    ! Lake fraction
@@ -594,6 +594,7 @@ CONTAINS
           fact_land(i) = 1._wp
         END IF
       END DO
+      !$acc end data
       !$acc end data
 
     ELSE    ! without lakes
@@ -1037,6 +1038,8 @@ CONTAINS
         !$acc end kernels
       END IF
     END IF
+
+    !$acc end data
 
   END SUBROUTINE update_land2atm
 

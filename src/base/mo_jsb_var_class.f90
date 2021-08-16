@@ -58,6 +58,8 @@ MODULE mo_jsb_var_class
     REAL(dp)                      :: missval
     LOGICAL                       :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                                ! of those where variable doesn't exist
+    LOGICAL                       :: is_conserved_quan = .FALSE. ! Whether variable carries a to-be-conserved quantity
+    INTEGER                       :: cons_quan_type_id = -1    ! id identifying the type of the conserved quantity
     LOGICAL                       :: is_in_output  = .FALSE.   ! Whether variable is requested to be written to output
     LOGICAL                       :: is_in_restart = .FALSE.   ! Whether variable is requested to be written to restart file
   CONTAINS

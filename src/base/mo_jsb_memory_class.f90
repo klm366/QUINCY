@@ -25,6 +25,7 @@ MODULE mo_jsb_memory_class
 #endif
     &                             add_var_list_element_r2d, add_var_list_element_r3d, &
     &                             Get_var_group_name, VARNAME_LEN
+  USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
   USE mo_jsb_varlist_iface, ONLY: is_variable_in_output
   USE mo_jsb_var_class,     ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d, &
     &                             REAL1D, REAL2D, REAL3D
@@ -60,7 +61,7 @@ MODULE mo_jsb_memory_class
     TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()
     CLASS(t_jsb_memory) , POINTER :: parent => NULL()
     INTEGER, ALLOCATABLE :: owner_tile_path(:)
-    CHARACTER(len=10)    :: owner_tile_name
+    CHARACTER(len=SHORT_NAME_LEN) :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
     INTEGER :: no_of_vars = 0
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
@@ -76,11 +77,11 @@ MODULE mo_jsb_memory_class
     GENERIC                                      :: Add_var => &
                                                     t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, t_jsb_memory_add_var_r3d
     PROCEDURE                                    :: Get_var_position
-    PROCEDURE                                    :: Collect_var_real2d  ! Collect var from its child tiles
+    PROCEDURE, PUBLIC                            :: Collect_var_real2d  ! Collect var from its child tiles
                                                                         ! R: Note, we do not want to keep a "var collection" in the memory
                                                                         !    because we already have all child values in the memory.
-    PROCEDURE                                    :: Collect_var_real3d  ! Collect var from its child tiles
-    PROCEDURE                                    :: HandDown_var_real2d ! Hand back var to child tiles
+    PROCEDURE, PUBLIC                            :: Collect_var_real3d  ! Collect var from its child tiles
+    PROCEDURE, PUBLIC                            :: HandDown_var_real2d ! Hand back var to child tiles
     PROCEDURE                                    :: Average_over_children_real2d ! Average var over the child tiles
   END TYPE t_jsb_memory
 
@@ -203,16 +204,6 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
-    __acc_attach(var%ptr1d)
-    !$acc update device(var%ptr1d)
-    var%ptr => var%ptr1d
-    __acc_attach(var%ptr)
-    var%name = TRIM(name)
-    var%full_name = TRIM(name_loc)
-    var%unit = TRIM(cf%units)
-    var%type = REAL1D
-    var%missval = missval_r_loc
-    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
     IF (loutput_loc) THEN
       IF (mem%in_var_groups) THEN
         var%is_in_output = is_variable_in_output(var%full_name, groups(:))
@@ -221,8 +212,29 @@ CONTAINS
       END IF
     END IF
     var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default, even though
-                                ! the monitoring variables are not needed in resatart files
+                                ! the monitoring variables are not needed in restart files
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+
+    ! As the 1d variables are only intended as diagnostic output variables (monitoring), the corresponding
+    ! stream elements only need to be added, if the variables are actually defined as output variables.
+    IF (.NOT. var%is_in_output .AND. .NOT. var%is_in_restart) THEN
+      CALL add_var_list_element_r1d(                                                            &
+        this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
+        cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
+        ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
+        loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+        initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
+        lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
+        verbose=verbose)
+    END IF
+
+    var%ptr => var%ptr1d
+    var%name = TRIM(name)
+    var%full_name = TRIM(name_loc)
+    var%unit = TRIM(cf%units)
+    var%type = REAL1D
+    var%missval = missval_r_loc
+    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
@@ -238,25 +250,18 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    ! As the 1d variables are only intended as diagnostic output variables (monitoring), the corresponding
-    ! stream elements only need to be added, if the variables are actually defined as output variables.
-    IF (var%is_in_output .OR. var%is_in_restart) THEN
-      CALL add_var_list_element_r1d(                                                            &
-        this_list, TRIM(name_loc), var%ptr, GRID_LONLAT, vgrid%ZaxisID,                         &
-        cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
-        ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
-        loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
-        initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
-        lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
-        verbose=verbose)
-    END IF
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr1d)
+    __acc_attach(var%ptr1d)
+    __acc_attach(var%ptr)
+
 #endif
 
   END SUBROUTINE t_jsb_memory_add_var_r1d
 
   SUBROUTINE t_jsb_memory_add_var_r2d(mem, name, var,       &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,             &
-    loutput, lcontainer,                                        &
+    loutput, lcontainer, l_conserve_quan, cons_quan_type_id,    &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r, l_aggregate_all,              &
     output_level, verbose                                       &
@@ -275,6 +280,8 @@ CONTAINS
     CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
+    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -358,11 +365,8 @@ CONTAINS
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
       verbose=verbose)
-    __acc_attach(var%ptr2d)
 
-    !$acc update device(var%ptr2d)
     var%ptr => var%ptr2d
-    __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
@@ -380,6 +384,9 @@ CONTAINS
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
   
+    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
+    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
+
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
 
@@ -394,11 +401,17 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr2d)
+    __acc_attach(var%ptr2d)
+    __acc_attach(var%ptr)
+
   END SUBROUTINE t_jsb_memory_add_var_r2d
 
   SUBROUTINE t_jsb_memory_add_var_r3d(mem, name, var,        &
     hgrid, vgrid, cf, grib1, grib2, prefix, suffix,              &
     extra_dim_n, loutput, lcontainer,                            &
+    l_conserve_quan, cons_quan_type_id,                          &
     lrestart, lrestart_cont, initval_r, isteptype,               &
     resetval_r, lmiss, missval_r, l_aggregate_all,               &
     output_level, verbose                                        &
@@ -417,6 +430,8 @@ CONTAINS
     INTEGER,              INTENT(in), OPTIONAL :: extra_dim_n         ! Extra (third) dimension (not levels)
     LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
     LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
+    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
     LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
     REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
@@ -516,11 +531,8 @@ CONTAINS
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
-    __acc_attach(var%ptr3d)
 
-    !$acc update device(var%ptr3d)
     var%ptr => var%ptr3d
-    __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
@@ -538,6 +550,8 @@ CONTAINS
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
+    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
+    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
@@ -552,6 +566,11 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
+
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr3d)
+    __acc_attach(var%ptr3d)
+    __acc_attach(var%ptr)
 
   END SUBROUTINE t_jsb_memory_add_var_r3d
 
