@@ -26,7 +26,7 @@
 !! First version by Reiner Schnur (2013-04-04)
 !! Integrated into SLM by Jan Engel (20160823) using JSBACH4:git
 !!
-MODULE mo_atm2land_memory_class
+MODULE mo_a2l_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
@@ -42,16 +42,16 @@ MODULE mo_atm2land_memory_class
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_atm2land_memory, max_no_of_vars
+  PUBLIC :: t_a2l_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 60
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> Type definition for atm2land_memory
+  !> Type definition for a2l_memory
   !! 
   !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_memory) :: t_atm2land_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
     TYPE(t_jsb_var_real2d) :: &
                               t_air                 , &  !< 2m air temperature [K] 
@@ -85,7 +85,7 @@ MODULE mo_atm2land_memory_class
                               co2_mixing_ratio_C13  , &  !< surface air 13co2 mixing ratio [ppm]
                               co2_mixing_ratio_C14       !< surface air 14co2 mixing ratio [scaled]
                               
-    ! ga    @todo  ga in t_atm2land_memory is a variable from SLM, which may be moved elsewhere
+    ! ga    @todo  ga in t_a2l_memory is a variable from SLM, which may be moved elsewhere
     TYPE(t_jsb_var_real2d) :: &
                               ga                         !> aerodynamic conductance [m s-1]
 
@@ -117,10 +117,10 @@ MODULE mo_atm2land_memory_class
                               prev_two_cos_zenith_angle         !< cos_zenith_angle of the before previous timestep [unitless]
 
   CONTAINS
-    PROCEDURE :: Init => Init_atm2land_memory
-  END TYPE t_atm2land_memory
+    PROCEDURE :: Init => Init_a2l_memory
+  END TYPE t_a2l_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_atm2land_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_a2l_memory_class'
 
 CONTAINS
 
@@ -129,7 +129,7 @@ CONTAINS
   !!
   !! 
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE Init_atm2land_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
+  SUBROUTINE Init_a2l_memory(mem, prefix, suffix, lct_ids, model_id) ! jsbach4
 
     USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2   ! , TSTEP_CONSTANT, tables
@@ -143,7 +143,7 @@ CONTAINS
     USE mo_isotope_util,      ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
     USE mo_atmland_util,      ONLY: calc_spec_humidity_sat
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_atm2land_memory),  INTENT(inout), TARGET :: mem
+    CLASS(t_a2l_memory),       INTENT(inout), TARGET :: mem
     CHARACTER(len=*),          INTENT(in)            :: prefix          !> process name
     CHARACTER(len=*),          INTENT(in)            :: suffix          !> tile name
     INTEGER,                   INTENT(in)            :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
@@ -170,7 +170,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER                    :: table
-    CHARACTER(len=*),PARAMETER :: routine = TRIM(modname)//':Init_atm2land_memory'
+    CHARACTER(len=*),PARAMETER :: routine = TRIM(modname)//':Init_a2l_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)     *quincytemp
@@ -626,7 +626,7 @@ CONTAINS
       & initval_r = 0.0_wp)
 
 
-  END SUBROUTINE Init_atm2land_memory
+  END SUBROUTINE Init_a2l_memory
 
 #endif
-END MODULE mo_atm2land_memory_class
+END MODULE mo_a2l_memory_class

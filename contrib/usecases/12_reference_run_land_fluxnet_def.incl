@@ -26,7 +26,7 @@
 # 
 
 
-experimentalID="12_refrun_land_fluxnet"
+experimentalID="12_land_model_static_fluxnet2"
 slmModel="land"
 
 forcingDataSet="fluxnet"

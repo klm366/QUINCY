@@ -23,6 +23,8 @@
 # 
 # the options included here are only the ones that are modified compared to the current default prep_run_slm.sh 
 # 
+# use the io_perform queue
+# 
 
 
 sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
@@ -30,6 +32,8 @@ flag_sb_prescribe_po4="F"       # set po4solute to a constant value
 
 biomass_alloc_scheme="dynamic"    # fixed dynamic optimal
 leaf_stoichom_scheme="dynamic"    # fixed dynamic optimal
+
+flag_dynamic_roots="T"            # F = fixed root fractions across soil layers, no changes after init (default), T = dynamic root fractions across soil layers
 
 soil_depth=9.5                  # meter (5.7 to 9.5)
 nsoil_layer=15                   # number of soil layers (default for SLM land: 5 | for SLM soil only available forcing: 15 | generally: min 5 & max 20)
@@ -39,3 +43,5 @@ flag_read_dC13="T"              # either use forcing dC13 or the prescribed defa
 flag_read_DC14="T"              # either use forcing DC14 or the prescribed default value
 n_deposition_scheme="dynamic"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="dynamic"      # options: none constant dynamic (p_srf_down)
+
+queue="io_perform"

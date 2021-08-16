@@ -49,7 +49,7 @@ MODULE mo_sse_interface
   ! Use of process memories (t_PROC_memory)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(RAD_)
-  dsl4jsb_Use_memory_A2L_ 
+  dsl4jsb_Use_memory(A2L_) 
   
 
   IMPLICIT NONE
@@ -274,7 +274,7 @@ CONTAINS
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
-    dsl4jsb_Def_memory_A2L_ 
+    dsl4jsb_Def_memory(A2L_) 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -293,7 +293,7 @@ CONTAINS
     dsl4jsb_Get_config(SSE_)
     ! Get process memories
     dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory_A2L_ 
+    dsl4jsb_Get_memory(A2L_) 
 
 
     ! ------------------------------------------------------------------------------------------------------------
@@ -344,7 +344,7 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(RAD_)
-    dsl4jsb_Def_memory_A2L_ 
+    dsl4jsb_Def_memory(A2L_) 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -364,7 +364,7 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory_A2L_ 
+    dsl4jsb_Get_memory(A2L_) 
 
 
     ! ------------------------------------------------------------------------------------------------------------

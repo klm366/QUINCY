@@ -69,7 +69,7 @@ CONTAINS
     !
 
     ! Use of process memories
-    dsl4jsb_Use_memory_A2L_ 
+    dsl4jsb_Use_memory(A2L_) 
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
@@ -88,7 +88,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory_A2L_ 
+    dsl4jsb_Def_memory(A2L_) 
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
@@ -127,7 +127,7 @@ CONTAINS
     ! Get process config
     !
     ! Get process memories
-    dsl4jsb_Get_memory_A2L_ 
+    dsl4jsb_Get_memory(A2L_) 
     dsl4jsb_Get_memory(VEG_)            ! veg__mem => veg_memory
     dsl4jsb_Get_memory(PHENO_)          ! pheno__mem => pheno_memory
     dsl4jsb_Get_memory(ASSIMI_)

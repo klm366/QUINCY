@@ -152,10 +152,6 @@ CONTAINS
          fname = 'soilpoolPhysics_lay'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
          lun=lun+1
-         ! soilpoolOrg
-         fname = 'soilpoolOrg'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
-         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
-         lun=lun+1
          ! soilpoolInOrg
          fname = 'soilpoolInOrg'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
          OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
@@ -183,6 +179,16 @@ CONTAINS
         fname = 'veg_canopy'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
         OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
         lun=lun+1
+    END SELECT
+
+    !! land & plant & soil
+    !! (simple_0d, simple_1d, jsm)
+    SELECT CASE(TRIM(model%config%slm_model_name))
+    CASE('land','plant','soil')
+      ! soilpoolOrg
+      fname = 'soilpoolOrg'//'_'//TRIM(spinup_id)//TRIM(output_interval_pool)//'.txt'
+      OPEN (UNIT=lun, FILE=fname, ACTION="write", STATUS="unknown")
+      lun=lun+1
     END SELECT
     
 
@@ -327,11 +333,6 @@ CONTAINS
          ! soilpoolPhysics_lay  [m, K]( output per soil_layer for two SSE_ variables )
          WRITE(lun,'(3a)') 'Time ',TRIM(p1str), TRIM(p2str)
          lun=lun+1
-         ! soilpoolOrg [mol / m2]
-         WRITE(lun,'(3a)') 'Time MetLitterC MetLitterN MetLitterP StrLitterC StrLitterN StrLitterP', &
-                           ' WodLitterC WodLitterN WodLitterP',&
-                           ' FastC FastN FastP SlowC SlowN SlowP MycC MycN MycP'
-         lun=lun+1
          ! soilpoolInOrg [mol / m2]
          WRITE(lun,'(a)') 'Time MineralAssocNH4 MineralNH4 MineralNO3 MineralP NOY N2O N2'
          lun=lun+1
@@ -363,6 +364,21 @@ CONTAINS
         lun=lun+1
     END SELECT
 
+    !! land & plant & soil
+    !! (simple_0d, simple_1d, jsm)
+    SELECT CASE(slm_model_name)
+    CASE('land','plant','soil')
+      ! soilpoolOrg [mol / m2]
+      WRITE(lun,'(7a)') &
+        & 'Time ', &
+        & 'poolC_dom poolC_domAs poolC_solLitter poolC_polLitter poolC_wooLitter ', &
+        & 'poolC_fungi poolC_myco poolC_mic poolC_res poolC_resAs ', &
+        & 'poolN_dom poolN_domAs poolN_solLitter poolN_polLitter poolN_wooLitter ', &
+        & 'poolN_fungi poolN_myco poolN_mic poolN_res poolN_resAs ', &
+        & 'poolP_dom poolP_domAs poolP_solLitter poolP_polLitter poolP_wooLitter ', &
+        & 'poolP_fungi poolP_myco poolP_mic poolP_res poolP_resAs'
+      lun=lun+1
+    END SELECT
 
     !! land & soil
     !! detailed data per layer only for simple_1d and jsm
@@ -938,27 +954,6 @@ CONTAINS
               ! soilpoolPhysics_lay (max of 20 soil layers)
               write(lun,'(41F16.6)') time_d, w_soil_sl(ipoi,:), t_soil_sl(ipoi,:)
               lun=lun+1
-              ! soilpoolOrg
-              write(lun,'(30F16.6)') time_d, &
-                                     SUM(sb_pool%soluable_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))      , & 
-                                     SUM(sb_pool%soluable_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))    , & 
-                                     SUM(sb_pool%soluable_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))  , & 
-                                     SUM(sb_pool%polymeric_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))     , & 
-                                     SUM(sb_pool%polymeric_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))   , & 
-                                     SUM(sb_pool%polymeric_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:)) , & 
-                                     SUM(sb_pool%woody_litter%carbon(ipoi,:)*soil_depth_sl(ipoi,:))         , & 
-                                     SUM(sb_pool%woody_litter%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))       , & 
-                                     SUM(sb_pool%woody_litter%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))     , & 
-                                     SUM(sb_pool%microbial%carbon(ipoi,:)*soil_depth_sl(ipoi,:))            , & 
-                                     SUM(sb_pool%microbial%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))          , & 
-                                     SUM(sb_pool%microbial%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))        , & 
-                                     SUM(sb_pool%residue%carbon(ipoi,:)*soil_depth_sl(ipoi,:))              , & 
-                                     SUM(sb_pool%residue%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))            , & 
-                                     SUM(sb_pool%residue%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))          , & 
-                                     SUM(sb_pool%mycorrhiza%carbon(ipoi,:)*soil_depth_sl(ipoi,:))           , &
-                                     SUM(sb_pool%mycorrhiza%nitrogen(ipoi,:)*soil_depth_sl(ipoi,:))         , &
-                                     SUM(sb_pool%mycorrhiza%phosphorus(ipoi,:)*soil_depth_sl(ipoi,:))       
-              lun=lun+1
               ! soilpoolInOrg
               write(lun,'(30F16.6)') time_d, &
                                      SUM(nh4_assoc(ipoi,:)*soil_depth_sl(ipoi,:))                       , & 
@@ -1126,6 +1121,52 @@ CONTAINS
           lun=lun+1
         ENDIF
     END SELECT  ! select land/plant & canopy
+
+
+    !! land & plant & soil
+    !! 
+    SELECT CASE(TRIM(model%config%slm_model_name))
+    CASE('land','plant','soil')
+      ! output T/F
+      IF (l_land_plant_canopy_out .OR. l_soil_output) THEN 
+        ! soilpoolOrg
+        write(lun,'(31F24.8)') time_d, &
+          ! C
+          & SUM(sb_pool%dom%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%dom_assoc%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%soluable_litter%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%polymeric_litter%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%woody_litter%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%fungi%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%mycorrhiza%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%microbial%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%residue%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%residue_assoc%carbon(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          ! N
+          & SUM(sb_pool%dom%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%dom_assoc%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%soluable_litter%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%polymeric_litter%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%woody_litter%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%fungi%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%mycorrhiza%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%microbial%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%residue%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%residue_assoc%nitrogen(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          ! P
+          & SUM(sb_pool%dom%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%dom_assoc%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%soluable_litter%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%polymeric_litter%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%woody_litter%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%fungi%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%mycorrhiza%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%microbial%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%residue%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:)), &
+          & SUM(sb_pool%residue_assoc%phosphorus(ipoi,:) * soil_depth_sl(ipoi,:))
+        lun=lun+1
+      ENDIF
+    END SELECT  ! select land/plant/soil
 
 
     !! land & soil
@@ -1519,12 +1560,22 @@ CONTAINS
     SELECT CASE(slm_model_name)
       CASE('land','plant') ! additional to CASE('land')
         ! vegfluxN [mol N / m2 / interval]
-        WRITE(lun,'(3a)') 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN ', &
-                          'FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15 GrowthN ', &
-                          'Growth_sapwood_N Growth_sapwood_dN15'
+        WRITE(lun,'(7a)') &
+          & 'Time Uptake_NH4 Uptake_NO3 RecyclingN ReserveUseN ', &
+          & 'FixationN Fixation_dN15 Uptake_NH4_dN15 Uptake_NO3_dN15 GrowthN ', &
+          & 'Growth_sapwood_dN15 ', &
+          & 'GrowthN_leaf GrowthN_froot GrowthN_croot GrowthN_swood GrowthN_hwood ', &
+          & 'GrowthN_labile GrowthN_reserve GrowthN_fruit GrowthN_sbed ', &
+          & 'LitterfN_leaf LitterfN_froot LitterfN_croot LitterfN_swood LitterfN_hwood ', &
+          & 'LitterfN_labile LitterfN_reserve LitterfN_fruit LitterfN_sbed'
         lun=lun+1
         ! vegfluxP [mol P / m2 / interval]
-        WRITE(lun,'(a)') 'Time Uptake_PO4 RecyclingP ReserveUseP GrowthP Growth_sapwood_P'
+        WRITE(lun,'(5a)') &
+          & 'Time Uptake_PO4 RecyclingP ReserveUseP GrowthP ', &
+          & 'GrowthP_leaf GrowthP_froot GrowthP_croot GrowthP_swood GrowthP_hwood ', &
+          & 'GrowthP_labile GrowthP_reserve GrowthP_fruit GrowthP_sbed ', &
+          & 'LitterfP_leaf LitterfP_froot LitterfP_croot LitterfP_swood LitterfP_hwood ', &
+          & 'LitterfP_labile LitterfP_reserve LitterfP_fruit LitterfP_sbed'
         lun=lun+1
     END SELECT
 
@@ -1534,8 +1585,12 @@ CONTAINS
     SELECT CASE(slm_model_name)
       CASE('land','plant','canopy')
         ! vegfluxC [mol C / m2 / interval]
-        WRITE(lun,'(2a)') 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC GrowthC ', &
-                          'Growth_sapwood_C'
+        WRITE(lun,'(5a)') &
+          & 'Time GPP GrowthResp MaintResp NTransformResp NFixationResp NPP ReserveUseC RootExudationC GrowthC ', &
+          & 'GrowthC_leaf GrowthC_froot GrowthC_croot GrowthC_swood GrowthC_hwood ', &
+          & 'GrowthC_labile GrowthC_reserve GrowthC_fruit GrowthC_sbed ', &
+          & 'LitterfC_leaf LitterfC_froot LitterfC_croot LitterfC_swood LitterfC_hwood ', &
+          & 'LitterfC_labile LitterfC_reserve LitterfC_fruit LitterfC_sbed'
         lun=lun+1 
         ! vegfluxdC13DC14
         WRITE(lun,'(2a)') 'Time GPP_dC13 GrowthResp_dC13 MaintResp_dC13 Growth_sapwood_dC13 ', &
@@ -1592,6 +1647,7 @@ CONTAINS
             p2str=''
             p3str=''
             p4str=''
+            p5str=''
             DO isoil = 1, nsoil_sb
               IF(isoil<10) THEN 
                 WRITE(layerstr,'(I1)') isoil
@@ -1602,8 +1658,9 @@ CONTAINS
               WRITE(p2str,'(a)') TRIM(p2str)//' HetRespirationC13_L'//TRIM(layerstr)
               WRITE(p3str,'(a)') TRIM(p3str)//' HetRespirationC14_L'//TRIM(layerstr)
               WRITE(p4str,'(a)') TRIM(p4str)//' Transport_DOC_L'//TRIM(layerstr)
+              WRITE(p5str,'(a)') TRIM(p5str)//' Root_Respiration_L'//TRIM(layerstr)
             END DO
-            WRITE(lun,'(5a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str)
+            WRITE(lun,'(6a)') 'Time ',TRIM(p1str),TRIM(p2str),TRIM(p3str),TRIM(p4str),TRIM(p5str)
             lun=lun+1
             ! soilfluxN_lay [mol N /m3 /interval]
             p1str=''
@@ -1732,12 +1789,12 @@ CONTAINS
     dsl4jsb_Use_config(SB_)
 
     ! Use of process memories
-    dsl4jsb_Use_memory_A2L_ 
+    dsl4jsb_Use_memory(A2L_) 
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
     dsl4slm_Use_memory_a_sb
-    USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_reserve_use, veg_growth
+    USE mo_veg_memory_class,      ONLY: veg_litterfall, veg_exudation, veg_reserve_use, veg_growth, veg_pool
     USE mo_sb_memory_class,       ONLY: sb_transport, sb_mycorrhiza_export, sb_delta_pools
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
@@ -1767,7 +1824,7 @@ CONTAINS
     REAL(wp), SAVE                        :: maint_resp_acc      = 0.0_wp   
     REAL(wp), SAVE                        :: n_transform_resp_acc = 0.0_wp   
     REAL(wp), SAVE                        :: n_fixation_resp_acc = 0.0_wp 
-    REAL(wp), SAVE                        :: exudationC_acc      = 0.0_wp  
+    REAL(wp), SAVE                        :: exudation_c_acc     = 0.0_wp  
     REAL(wp), SAVE                        :: npp_acc             = 0.0_wp   
     REAL(wp), SAVE                        :: res_use_c_acc       = 0.0_wp   
     REAL(wp), SAVE                        :: gpp_C13_acc         = 0.0_wp
@@ -1808,15 +1865,67 @@ CONTAINS
     REAL(wp), SAVE                        :: qg_acc              = 0.0_wp
     REAL(wp), SAVE                        :: albedo_acc          = 0.0_wp
     REAL(wp), SAVE                        :: appfd_acc           = 0.0_wp
-    REAL(wp), SAVE                        :: growth_c_acc        = 0.0_wp
-    REAL(wp), SAVE                        :: growth_n_acc        = 0.0_wp
-    REAL(wp), SAVE                        :: growth_p_acc        = 0.0_wp
-    REAL(wp), SAVE                        :: growth_wood_c_acc   = 0.0_wp
-    REAL(wp), SAVE                        :: growth_wood_n_acc   = 0.0_wp
-    REAL(wp), SAVE                        :: growth_wood_p_acc   = 0.0_wp
-    REAL(wp), SAVE                        :: growth_wood_c13_acc = 0.0_wp
-    REAL(wp), SAVE                        :: growth_wood_c14_acc = 0.0_wp
-    REAL(wp), SAVE                        :: growth_wood_n15_acc = 0.0_wp
+    ! veg_growth veg_litterfall fluxes CNP
+    REAL(wp), SAVE                        :: growth_c_acc        = 0.0_wp   ! sum of all tissues, but seed_bed
+    REAL(wp), SAVE                        :: growth_n_acc        = 0.0_wp   ! sum of all tissues, but seed_bed
+    REAL(wp), SAVE                        :: growth_p_acc        = 0.0_wp   ! sum of all tissues, but seed_bed
+    REAL(wp), SAVE    :: veg_growth_leaf_c_acc                  = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_fine_root_c_acc             = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_coarse_root_c_acc           = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_sap_wood_c_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_heart_wood_c_acc            = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_labile_c_acc                = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_reserve_c_acc               = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_fruit_c_acc                 = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_seed_bed_c_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_leaf_n_acc                  = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_fine_root_n_acc             = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_coarse_root_n_acc           = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_sap_wood_n_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_heart_wood_n_acc            = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_labile_n_acc                = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_reserve_n_acc               = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_fruit_n_acc                 = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_seed_bed_n_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_leaf_p_acc                  = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_fine_root_p_acc             = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_coarse_root_p_acc           = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_sap_wood_p_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_heart_wood_p_acc            = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_labile_p_acc                = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_reserve_p_acc               = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_fruit_p_acc                 = 0.0_wp
+    REAL(wp), SAVE    :: veg_growth_seed_bed_p_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_leaf_c_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_fine_root_c_acc         = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_coarse_root_c_acc       = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_sap_wood_c_acc          = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_heart_wood_c_acc        = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_labile_c_acc            = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_reserve_c_acc           = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_fruit_c_acc             = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_seed_bed_c_acc          = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_leaf_n_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_fine_root_n_acc         = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_coarse_root_n_acc       = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_sap_wood_n_acc          = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_heart_wood_n_acc        = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_labile_n_acc            = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_reserve_n_acc           = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_fruit_n_acc             = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_seed_bed_n_acc          = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_leaf_p_acc              = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_fine_root_p_acc         = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_coarse_root_p_acc       = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_sap_wood_p_acc          = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_heart_wood_p_acc        = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_labile_p_acc            = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_reserve_p_acc           = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_fruit_p_acc             = 0.0_wp
+    REAL(wp), SAVE    :: veg_litterfall_seed_bed_p_acc          = 0.0_wp
+    REAL(wp), SAVE                        :: growth_swood_c13_acc = 0.0_wp
+    REAL(wp), SAVE                        :: growth_swood_c14_acc = 0.0_wp
+    REAL(wp), SAVE                        :: growth_swood_n15_acc = 0.0_wp
     ! soil - local accumulation variables (partly also used for land output)
     REAL(wp), SAVE                        :: litterfallC_acc     = 0.0_wp
     REAL(wp), SAVE                        :: litterfallC13_acc   = 0.0_wp
@@ -1896,6 +2005,7 @@ CONTAINS
                                              het_respiration_c13_lay_acc = 0.0_wp   , &
                                              het_respiration_c14_lay_acc = 0.0_wp   , &
                                              transport_DOC_lay_acc = 0.0_wp         , &
+                                             root_respiration_lay_acc = 0.0_wp      , &
                                              ! N
                                              net_mineral_nh4_lay_acc = 0.0_wp       , &
                                              plant_uptake_nh4_lay_acc = 0.0_wp      , &
@@ -1935,14 +2045,15 @@ CONTAINS
     REAL(wp)                              :: hlp1
     REAL(wp)                              :: dC13gpp, dC13rg, dC13rm, dC13wgr, dC13litterfall, dC13het_resp, dC13leaching
     REAL(wp)                              :: dC13atm
-    REAL(wp), SAVE                        :: dtime_one = 1.0_wp         !< just 1.0, but might get modified below
+    REAL(wp)                              :: dtime_one
+    REAL(wp)                              :: f_veg_flux_output
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':write_output_flux'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_memory_A2L_ 
+    dsl4jsb_Def_memory(A2L_) 
     dsl4jsb_Def_memory(ASSIMI_)                !     TYPE(t_assimi_memory), POINTER :: assimi__mem
     dsl4jsb_Def_memory(VEG_)                   !     TYPE(t_veg_memory),    POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                   !     TYPE(t_rad_memory),    POINTER :: rad__mem
@@ -1989,9 +2100,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: appfd
     dsl4jsb_Real2D_onChunk      :: alb_vis
     dsl4jsb_Real2D_onChunk      :: alb_nir
-    ! VEG_
+    ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: growth_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate_root
     dsl4jsb_Real2D_onChunk      :: n_transform_respiration
     dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
     dsl4jsb_Real2D_onChunk      :: npp
@@ -2014,6 +2126,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     dsl4jsb_Real2D_onChunk      :: interception 
     dsl4jsb_Real2D_onChunk      :: pet 
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk      :: root_fraction_sl
     ! SB_ 2D
     dsl4jsb_Real2D_onChunk      :: total_flux_carbon
     dsl4jsb_Real2D_onChunk      :: total_flux_nitrogen
@@ -2098,7 +2212,7 @@ CONTAINS
     ! Get process config
     dsl4jsb_Get_config(SB_)
     ! Get process memories
-    dsl4jsb_Get_memory_A2L_ 
+    dsl4jsb_Get_memory(A2L_) 
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
@@ -2148,8 +2262,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis)
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir)
     ! ---------------------------
+    ! VEG_ 2D
     dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
+    dsl4jsb_Get_var2D_onChunk(VEG_, fmaint_rate_root)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, npp)
@@ -2170,6 +2286,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
     dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
+    ! VEG_ 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, root_fraction_sl)
     ! ---------------------------
     ! SB_ 2D
     dsl4jsb_Get_var2D_onChunk(SB_,  total_flux_carbon)    
@@ -2244,6 +2362,7 @@ CONTAINS
 #define Get_veg_exudation
 #define Get_veg_reserve_use
 #define Get_veg_growth
+#define Get_veg_pool
 #define Get_sb_transport
 #define Get_sb_mycorrhiza_export
 #define Get_sb_delta_pools
@@ -2252,6 +2371,7 @@ CONTAINS
 #undef Get_veg_exudation
 #undef Get_veg_reserve_use
 #undef Get_veg_growth
+#undef Get_veg_pool
 #undef Get_sb_transport
 #undef Get_sb_mycorrhiza_export
 #undef Get_sb_delta_pools
@@ -2270,6 +2390,8 @@ CONTAINS
     ELSE
       dtime_one = dtime / 1000000.0_wp   ! interval > one timestep
     END IF
+    ! veg_flux output factor [veg_flux * f_veg_flux_output]
+    f_veg_flux_output = dtime_one * 1000000._wp / dtime
 
     !< 2.0  output
     !! 
@@ -2298,7 +2420,7 @@ CONTAINS
              maint_resp_acc       = maint_resp_acc        + maint_respiration(ipoi)         * dtime_one
              n_transform_resp_acc = n_transform_resp_acc  + n_transform_respiration(ipoi)   * dtime_one
              n_fixation_resp_acc  = n_fixation_resp_acc   + n_fixation_respiration(ipoi)    * dtime_one
-             exudationC_acc       = exudationC_acc        + veg_exudation%carbon(ipoi)      * dtime_one *1000000._wp/dtime      
+             exudation_c_acc      = exudation_c_acc       + veg_exudation%carbon(ipoi)      * dtime_one *1000000._wp/dtime      
              npp_acc              = npp_acc               + npp(ipoi)                       * dtime_one
              res_use_c_acc        = res_use_c_acc         + veg_reserve_use%carbon(ipoi)    * dtime_one *1000000._wp/dtime
              growth_c_acc         = growth_c_acc          + (veg_growth%leaf%carbon(ipoi)        + & 
@@ -2309,9 +2431,118 @@ CONTAINS
                                                              veg_growth%labile%carbon(ipoi)      + & 
                                                              veg_growth%reserve%carbon(ipoi)     + & 
                                                              veg_growth%fruit%carbon(ipoi)) * dtime_one *1000000._wp/dtime
-             growth_wood_c_acc    = growth_wood_c_acc     + veg_growth%sap_wood%carbon(ipoi) * dtime_one *1000000._wp/dtime
-             growth_wood_c13_acc  = growth_wood_c13_acc   + veg_growth%sap_wood%carbon13(ipoi) * dtime_one *1000000._wp/dtime
-             growth_wood_c14_acc  = growth_wood_c14_acc   + veg_growth%sap_wood%carbon14(ipoi) * dtime_one *1000000._wp/dtime
+             growth_swood_c13_acc = growth_swood_c13_acc  + veg_growth%sap_wood%carbon13(ipoi) * dtime_one *1000000._wp/dtime
+             growth_swood_c14_acc = growth_swood_c14_acc  + veg_growth%sap_wood%carbon14(ipoi) * dtime_one *1000000._wp/dtime
+             
+             veg_growth_leaf_c_acc            = veg_growth_leaf_c_acc            &
+                                                & + veg_growth%leaf%carbon(ipoi) * f_veg_flux_output
+             veg_growth_fine_root_c_acc       = veg_growth_fine_root_c_acc       &
+                                                & + veg_growth%fine_root%carbon(ipoi) * f_veg_flux_output
+             veg_growth_coarse_root_c_acc     = veg_growth_coarse_root_c_acc     &
+                                                & + veg_growth%coarse_root%carbon(ipoi) * f_veg_flux_output
+             veg_growth_sap_wood_c_acc        = veg_growth_sap_wood_c_acc        &
+                                                & + veg_growth%sap_wood%carbon(ipoi) * f_veg_flux_output
+             veg_growth_heart_wood_c_acc      = veg_growth_heart_wood_c_acc      &
+                                                & + veg_growth%heart_wood%carbon(ipoi) * f_veg_flux_output
+             veg_growth_labile_c_acc          = veg_growth_labile_c_acc          &
+                                                & + veg_growth%labile%carbon(ipoi) * f_veg_flux_output
+             veg_growth_reserve_c_acc         = veg_growth_reserve_c_acc         &
+                                                & + veg_growth%reserve%carbon(ipoi) * f_veg_flux_output
+             veg_growth_fruit_c_acc           = veg_growth_fruit_c_acc           &
+                                                & + veg_growth%fruit%carbon(ipoi) * f_veg_flux_output
+             veg_growth_seed_bed_c_acc        = veg_growth_seed_bed_c_acc        &
+                                                & + veg_growth%seed_bed%carbon(ipoi) * f_veg_flux_output
+             veg_growth_leaf_n_acc            = veg_growth_leaf_n_acc            &
+                                                & + veg_growth%leaf%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_fine_root_n_acc       = veg_growth_fine_root_n_acc       &
+                                                & + veg_growth%fine_root%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_coarse_root_n_acc     = veg_growth_coarse_root_n_acc     &
+                                                & + veg_growth%coarse_root%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_sap_wood_n_acc        = veg_growth_sap_wood_n_acc        &
+                                                & + veg_growth%sap_wood%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_heart_wood_n_acc      = veg_growth_heart_wood_n_acc      &
+                                                & + veg_growth%heart_wood%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_labile_n_acc          = veg_growth_labile_n_acc          &
+                                                & + veg_growth%labile%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_reserve_n_acc         = veg_growth_reserve_n_acc         &
+                                                & + veg_growth%reserve%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_fruit_n_acc           = veg_growth_fruit_n_acc           &
+                                                & + veg_growth%fruit%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_seed_bed_n_acc        = veg_growth_seed_bed_n_acc        &
+                                                & + veg_growth%seed_bed%nitrogen(ipoi) * f_veg_flux_output
+             veg_growth_leaf_p_acc            = veg_growth_leaf_p_acc            &
+                                                & + veg_growth%leaf%phosphorus(ipoi) * f_veg_flux_output
+             veg_growth_fine_root_p_acc       = veg_growth_fine_root_p_acc       &
+                                                & + veg_growth%fine_root%phosphorus(ipoi) * f_veg_flux_output
+             veg_growth_coarse_root_p_acc     = veg_growth_coarse_root_p_acc     &
+                                                & + veg_growth%coarse_root%phosphorus(ipoi) * f_veg_flux_output
+             veg_growth_sap_wood_p_acc        = veg_growth_sap_wood_p_acc        &
+                                                & + veg_growth%sap_wood%phosphorus(ipoi) * f_veg_flux_output
+             veg_growth_heart_wood_p_acc      = veg_growth_heart_wood_p_acc      &
+                                                & + veg_growth%heart_wood%phosphorus(ipoi) * f_veg_flux_output
+             veg_growth_labile_p_acc          = veg_growth_labile_p_acc          &
+                                                & + veg_growth%labile%phosphorus(ipoi) * f_veg_flux_output
+             veg_growth_reserve_p_acc         = veg_growth_reserve_p_acc         &
+                                                & + veg_growth%reserve%phosphorus(ipoi) * f_veg_flux_output
+             veg_growth_fruit_p_acc           = veg_growth_fruit_p_acc           &
+                                                & + veg_growth%fruit%phosphorus(ipoi) * f_veg_flux_output
+             veg_growth_seed_bed_p_acc        = veg_growth_seed_bed_p_acc        &
+                                                & + veg_growth%seed_bed%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_leaf_c_acc        = veg_litterfall_leaf_c_acc        &
+                                                & + veg_litterfall%leaf%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_fine_root_c_acc   = veg_litterfall_fine_root_c_acc   &
+                                                & + veg_litterfall%fine_root%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_coarse_root_c_acc = veg_litterfall_coarse_root_c_acc &
+                                                & + veg_litterfall%coarse_root%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_sap_wood_c_acc    = veg_litterfall_sap_wood_c_acc    &
+                                                & + veg_litterfall%sap_wood%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_heart_wood_c_acc  = veg_litterfall_heart_wood_c_acc  &
+                                                & + veg_litterfall%heart_wood%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_labile_c_acc      = veg_litterfall_labile_c_acc      &
+                                                & + veg_litterfall%labile%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_reserve_c_acc     = veg_litterfall_reserve_c_acc     &
+                                                & + veg_litterfall%reserve%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_fruit_c_acc       = veg_litterfall_fruit_c_acc       &
+                                                & + veg_litterfall%fruit%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_seed_bed_c_acc    = veg_litterfall_seed_bed_c_acc    &
+                                                & + veg_litterfall%seed_bed%carbon(ipoi) * f_veg_flux_output
+             veg_litterfall_leaf_n_acc        = veg_litterfall_leaf_n_acc        &
+                                                & + veg_litterfall%leaf%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_fine_root_n_acc   = veg_litterfall_fine_root_n_acc   &
+                                                & + veg_litterfall%fine_root%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_coarse_root_n_acc = veg_litterfall_coarse_root_n_acc &
+                                                & + veg_litterfall%coarse_root%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_sap_wood_n_acc    = veg_litterfall_sap_wood_n_acc    &
+                                                & + veg_litterfall%sap_wood%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_heart_wood_n_acc  = veg_litterfall_heart_wood_n_acc  &
+                                                & + veg_litterfall%heart_wood%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_labile_n_acc      = veg_litterfall_labile_n_acc      &
+                                                & + veg_litterfall%labile%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_reserve_n_acc     = veg_litterfall_reserve_n_acc     &
+                                                & + veg_litterfall%reserve%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_fruit_n_acc       = veg_litterfall_fruit_n_acc       &
+                                                & + veg_litterfall%fruit%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_seed_bed_n_acc    = veg_litterfall_seed_bed_n_acc    &
+                                                & + veg_litterfall%seed_bed%nitrogen(ipoi) * f_veg_flux_output
+             veg_litterfall_leaf_p_acc        = veg_litterfall_leaf_p_acc        &
+                                                & + veg_litterfall%leaf%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_fine_root_p_acc   = veg_litterfall_fine_root_p_acc   &
+                                                & + veg_litterfall%fine_root%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_coarse_root_p_acc = veg_litterfall_coarse_root_p_acc &
+                                                & + veg_litterfall%coarse_root%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_sap_wood_p_acc    = veg_litterfall_sap_wood_p_acc    &
+                                                & + veg_litterfall%sap_wood%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_heart_wood_p_acc  = veg_litterfall_heart_wood_p_acc  &
+                                                & + veg_litterfall%heart_wood%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_labile_p_acc      = veg_litterfall_labile_p_acc      &
+                                                & + veg_litterfall%labile%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_reserve_p_acc     = veg_litterfall_reserve_p_acc     &
+                                                & + veg_litterfall%reserve%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_fruit_p_acc       = veg_litterfall_fruit_p_acc       &
+                                                & + veg_litterfall%fruit%phosphorus(ipoi) * f_veg_flux_output
+             veg_litterfall_seed_bed_p_acc    = veg_litterfall_seed_bed_p_acc    &
+                                                & + veg_litterfall%seed_bed%phosphorus(ipoi) * f_veg_flux_output
+             
              gpp_C13_acc          = gpp_C13_acc           + gross_assimilation_C13(ipoi)    * dtime_one
              growth_resp_C13_acc  = growth_resp_C13_acc   + growth_respiration_c13(ipoi)    * dtime_one
              maint_resp_C13_acc   = maint_resp_C13_acc    + maint_respiration_c13(ipoi)     * dtime_one
@@ -2336,8 +2567,7 @@ CONTAINS
                                                              veg_growth%labile%nitrogen(ipoi)      + & 
                                                              veg_growth%reserve%nitrogen(ipoi)     + & 
                                                              veg_growth%fruit%nitrogen(ipoi)) * dtime_one *1000000._wp/dtime
-             growth_wood_n_acc    = growth_wood_n_acc     + veg_growth%sap_wood%nitrogen(ipoi) * dtime_one *1000000._wp/dtime
-             growth_wood_n15_acc  = growth_wood_n15_acc   + veg_growth%sap_wood%nitrogen15(ipoi) * dtime_one *1000000._wp/dtime
+             growth_swood_n15_acc = growth_swood_n15_acc  + veg_growth%sap_wood%nitrogen15(ipoi) * dtime_one *1000000._wp/dtime
              uptake_po4_acc       = uptake_po4_acc        + uptake_po4(ipoi)                * dtime_one
              recycling_p_acc      = recycling_p_acc       + (recycling_leaf_p(ipoi) + recycling_fine_root_p(ipoi) + &
                                                              recycling_heart_wood_p(ipoi))  * dtime_one *1000000._wp/dtime
@@ -2349,7 +2579,6 @@ CONTAINS
                                                              veg_growth%labile%phosphorus(ipoi)      + & 
                                                              veg_growth%reserve%phosphorus(ipoi)     + & 
                                                              veg_growth%fruit%phosphorus(ipoi)) * dtime_one *1000000._wp/dtime     
-             growth_wood_p_acc    = growth_wood_p_acc     + veg_growth%sap_wood%phosphorus(ipoi) * dtime_one *1000000._wp/dtime
              res_use_p_acc        = res_use_p_acc         + veg_reserve_use%phosphorus(ipoi)  * dtime_one *1000000._wp/dtime
              IF(output_interval_flux < 1.0_wp) THEN  ! if interval == timestep (output_interval_flux is smaller 1.0 only for timestep interval)
                 precip_acc       = precip_acc        + (rain(ipoi) + snow(ipoi))  
@@ -2436,17 +2665,38 @@ CONTAINS
                SELECT CASE(TRIM(model%config%slm_model_name))
                  CASE('land','plant')
                    ! vegfluxN
-                   write(lun,'(12F18.6)') time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc   , & 
-                                          res_use_n_acc, n_fixation_acc, & 
-                                          calc_delta_N15(n_fixation_acc,n_fixation_n15_acc), &
-                                          calc_delta_N15(uptake_nh4_acc,uptake_nh4_n15_acc), &
-                                          calc_delta_N15(uptake_no3_acc,uptake_no3_n15_acc), &
-                                          growth_n_acc, growth_wood_n_acc, &
-                                          calc_delta_N15(growth_wood_n_acc, growth_wood_n15_acc)
-
+                   write(lun,'(30F24.8)') &
+                     & time_d, uptake_nh4_acc, uptake_no3_acc, recycling_n_acc, & 
+                     & res_use_n_acc, n_fixation_acc, & 
+                     & calc_delta_N15(n_fixation_acc, n_fixation_n15_acc), &
+                     & calc_delta_N15(uptake_nh4_acc, uptake_nh4_n15_acc), &
+                     & calc_delta_N15(uptake_no3_acc, uptake_no3_n15_acc), &
+                     & growth_n_acc, &
+                     & calc_delta_N15(veg_growth_sap_wood_n_acc, growth_swood_n15_acc), &
+                     & veg_growth_leaf_n_acc, veg_growth_fine_root_n_acc, &
+                     & veg_growth_coarse_root_n_acc, veg_growth_sap_wood_n_acc, &
+                     & veg_growth_heart_wood_n_acc, veg_growth_labile_n_acc, &
+                     & veg_growth_reserve_n_acc, veg_growth_fruit_n_acc, &
+                     & veg_growth_seed_bed_n_acc, &
+                     & veg_litterfall_leaf_n_acc, veg_litterfall_fine_root_n_acc, &
+                     & veg_litterfall_coarse_root_n_acc, veg_litterfall_sap_wood_n_acc, &
+                     & veg_litterfall_heart_wood_n_acc, veg_litterfall_labile_n_acc, &
+                     & veg_litterfall_reserve_n_acc, veg_litterfall_fruit_n_acc, &
+                     & veg_litterfall_seed_bed_n_acc
                    lun=lun+1
                    ! vegfluxP
-                   write(lun,'(6F18.6)') time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc, growth_p_acc, growth_wood_p_acc
+                   write(lun,'(25F24.8)') &
+                     & time_d, uptake_po4_acc, recycling_p_acc, res_use_p_acc, growth_p_acc, &
+                     & veg_growth_leaf_p_acc, veg_growth_fine_root_p_acc, &
+                     & veg_growth_coarse_root_p_acc, veg_growth_sap_wood_p_acc, &
+                     & veg_growth_heart_wood_p_acc, veg_growth_labile_p_acc, &
+                     & veg_growth_reserve_p_acc, veg_growth_fruit_p_acc, &
+                     & veg_growth_seed_bed_p_acc, &
+                     & veg_litterfall_leaf_p_acc, veg_litterfall_fine_root_p_acc, &
+                     & veg_litterfall_coarse_root_p_acc, veg_litterfall_sap_wood_p_acc, &
+                     & veg_litterfall_heart_wood_p_acc, veg_litterfall_labile_p_acc, &
+                     & veg_litterfall_reserve_p_acc, veg_litterfall_fruit_p_acc, &
+                     & veg_litterfall_seed_bed_p_acc
                    lun=lun+1
                END SELECT
 
@@ -2456,20 +2706,31 @@ CONTAINS
                SELECT CASE(TRIM(model%config%slm_model_name))
                  CASE('land','plant','canopy')
                    ! vegfluxC
-                   write(lun,'(11F18.6)') time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
-                                          n_transform_resp_acc,n_fixation_resp_acc         , & 
-                                          npp_acc, res_use_c_acc, exudationC_acc, growth_c_acc, growth_wood_c_acc
+                   write(lun,'(30F24.8)') &
+                     & time_d, gpp_acc, growth_resp_acc, maint_resp_acc , &
+                     & n_transform_resp_acc,n_fixation_resp_acc         , & 
+                     & npp_acc, res_use_c_acc, exudation_c_acc, growth_c_acc, &
+                     & veg_growth_leaf_c_acc, veg_growth_fine_root_c_acc, &
+                     & veg_growth_coarse_root_c_acc, veg_growth_sap_wood_c_acc, &
+                     & veg_growth_heart_wood_c_acc, veg_growth_labile_c_acc, &
+                     & veg_growth_reserve_c_acc, veg_growth_fruit_c_acc, &
+                     & veg_growth_seed_bed_c_acc, &
+                     & veg_litterfall_leaf_c_acc, veg_litterfall_fine_root_c_acc, &
+                     & veg_litterfall_coarse_root_c_acc, veg_litterfall_sap_wood_c_acc, &
+                     & veg_litterfall_heart_wood_c_acc, veg_litterfall_labile_c_acc, &
+                     & veg_litterfall_reserve_c_acc, veg_litterfall_fruit_c_acc, &
+                     & veg_litterfall_seed_bed_c_acc
                    lun=lun+1
                    ! vegfluxdC13DC14
                    dC13gpp = calc_delta_C13(gpp_acc,gpp_C13_acc)
                    dC13rg  = calc_delta_C13(growth_resp_acc,growth_resp_C13_acc)
                    dC13rm  = calc_delta_C13(maint_resp_acc,maint_resp_C13_acc) 
-                   dC13wgr = calc_delta_C13(growth_wood_c_acc, growth_wood_c13_acc)
+                   dC13wgr = calc_delta_C13(veg_growth_sap_wood_c_acc, growth_swood_c13_acc)
                    write(lun,'(9F18.6)') time_d, dC13gpp, dC13rg, dC13rm, dC13wgr                   , & 
                                          calc_delta_C14(gpp_acc,gpp_C14_acc,dC13gpp)                , & 
                                          calc_delta_C14(growth_resp_acc,growth_resp_C14_acc,dC13rg) , & 
                                          calc_delta_C14(maint_resp_acc,maint_resp_C14_acc,dC13rm)   , &
-                                         calc_delta_C14(growth_wood_c_acc, growth_wood_c14_acc, growth_wood_c13_acc)
+                                         calc_delta_C14(veg_growth_sap_wood_c_acc, growth_swood_c14_acc, growth_swood_c13_acc)
                    lun=lun+1
                    ! vegfluxH2O
                    write(lun,'(12F18.8)') time_d, precip_acc, pet_acc, evaporation_acc, interception_acc, & 
@@ -2516,13 +2777,66 @@ CONTAINS
              maint_resp_acc             = 0.0_wp
              n_transform_resp_acc       = 0.0_wp
              n_fixation_resp_acc        = 0.0_wp
-             exudationC_acc             = 0.0_wp
+             exudation_c_acc            = 0.0_wp
              npp_acc                    = 0.0_wp
              res_use_c_acc              = 0.0_wp
              growth_c_acc               = 0.0_wp
-             growth_wood_c_acc          = 0.0_wp
-             growth_wood_c13_acc        = 0.0_wp
-             growth_wood_c14_acc        = 0.0_wp
+             growth_swood_c13_acc       = 0.0_wp
+             growth_swood_c14_acc       = 0.0_wp
+             veg_growth_leaf_c_acc              = 0.0_wp
+             veg_growth_fine_root_c_acc         = 0.0_wp
+             veg_growth_coarse_root_c_acc       = 0.0_wp
+             veg_growth_sap_wood_c_acc          = 0.0_wp
+             veg_growth_heart_wood_c_acc        = 0.0_wp
+             veg_growth_labile_c_acc            = 0.0_wp
+             veg_growth_reserve_c_acc           = 0.0_wp
+             veg_growth_fruit_c_acc             = 0.0_wp
+             veg_growth_seed_bed_c_acc          = 0.0_wp
+             veg_growth_leaf_n_acc              = 0.0_wp
+             veg_growth_fine_root_n_acc         = 0.0_wp
+             veg_growth_coarse_root_n_acc       = 0.0_wp
+             veg_growth_sap_wood_n_acc          = 0.0_wp
+             veg_growth_heart_wood_n_acc        = 0.0_wp
+             veg_growth_labile_n_acc            = 0.0_wp
+             veg_growth_reserve_n_acc           = 0.0_wp
+             veg_growth_fruit_n_acc             = 0.0_wp
+             veg_growth_seed_bed_n_acc          = 0.0_wp
+             veg_growth_leaf_p_acc              = 0.0_wp
+             veg_growth_fine_root_p_acc         = 0.0_wp
+             veg_growth_coarse_root_p_acc       = 0.0_wp
+             veg_growth_sap_wood_p_acc          = 0.0_wp
+             veg_growth_heart_wood_p_acc        = 0.0_wp
+             veg_growth_labile_p_acc            = 0.0_wp
+             veg_growth_reserve_p_acc           = 0.0_wp
+             veg_growth_fruit_p_acc             = 0.0_wp
+             veg_growth_seed_bed_p_acc          = 0.0_wp
+             veg_litterfall_leaf_c_acc          = 0.0_wp
+             veg_litterfall_fine_root_c_acc     = 0.0_wp
+             veg_litterfall_coarse_root_c_acc   = 0.0_wp
+             veg_litterfall_sap_wood_c_acc      = 0.0_wp
+             veg_litterfall_heart_wood_c_acc    = 0.0_wp
+             veg_litterfall_labile_c_acc        = 0.0_wp
+             veg_litterfall_reserve_c_acc       = 0.0_wp
+             veg_litterfall_fruit_c_acc         = 0.0_wp
+             veg_litterfall_seed_bed_c_acc      = 0.0_wp
+             veg_litterfall_leaf_n_acc          = 0.0_wp
+             veg_litterfall_fine_root_n_acc     = 0.0_wp
+             veg_litterfall_coarse_root_n_acc   = 0.0_wp
+             veg_litterfall_sap_wood_n_acc      = 0.0_wp
+             veg_litterfall_heart_wood_n_acc    = 0.0_wp
+             veg_litterfall_labile_n_acc        = 0.0_wp
+             veg_litterfall_reserve_n_acc       = 0.0_wp
+             veg_litterfall_fruit_n_acc         = 0.0_wp
+             veg_litterfall_seed_bed_n_acc      = 0.0_wp
+             veg_litterfall_leaf_p_acc          = 0.0_wp
+             veg_litterfall_fine_root_p_acc     = 0.0_wp
+             veg_litterfall_coarse_root_p_acc   = 0.0_wp
+             veg_litterfall_sap_wood_p_acc      = 0.0_wp
+             veg_litterfall_heart_wood_p_acc    = 0.0_wp
+             veg_litterfall_labile_p_acc        = 0.0_wp
+             veg_litterfall_reserve_p_acc       = 0.0_wp
+             veg_litterfall_fruit_p_acc         = 0.0_wp
+             veg_litterfall_seed_bed_p_acc      = 0.0_wp             
              gpp_C13_acc                = 0.0_wp
              growth_resp_C13_acc        = 0.0_wp
              maint_resp_C13_acc         = 0.0_wp
@@ -2532,15 +2846,13 @@ CONTAINS
              recycling_n_acc            = 0.0_wp
              res_use_n_acc              = 0.0_wp
              growth_n_acc               = 0.0_wp
-             growth_wood_n_acc          = 0.0_wp
-             growth_wood_n15_acc        = 0.0_wp
+             growth_swood_n15_acc       = 0.0_wp
              n_fixation_acc             = 0.0_wp
              n_fixation_n15_acc         = 0.0_wp
              uptake_po4_acc             = 0.0_wp
              recycling_p_acc            = 0.0_wp
              res_use_p_acc              = 0.0_wp
              growth_p_acc               = 0.0_wp
-             growth_wood_p_acc          = 0.0_wp
              precip_acc                 = 0.0_wp
              evaporation_acc            = 0.0_wp
              interception_acc           = 0.0_wp
@@ -2758,6 +3070,10 @@ CONTAINS
           transport_DOC_lay_acc(1:nsoil_sb)       = transport_DOC_lay_acc(1:nsoil_sb) + &
                                                     sb_transport%dom%carbon(ipoi,:) * &
                                                     1000000.0_wp * dtime_one/dtime
+          root_respiration_lay_acc(1:nsoil_sb)    = root_respiration_lay_acc(1:nsoil_sb) + &
+                                                    fmaint_rate_root(ipoi) * &
+                                                    (veg_pool%fine_root%nitrogen(ipoi) + veg_pool%coarse_root%nitrogen(ipoi)) * &
+                                                    root_fraction_sl(ipoi,:) / soil_depth_sl(ipoi,:) * dtime_one
           ! N
           net_mineral_nh4_lay_acc(1:nsoil_sb)     = net_mineral_nh4_lay_acc(1:nsoil_sb) + &
                                                     net_mineralisation_nh4(ipoi,:) * dtime_one
@@ -2834,12 +3150,13 @@ CONTAINS
           IF(l_flux_output_interval) THEN
 
             ! soilfluxC_lay
-            write(lun,'(101F20.10)') time_d, &
+            write(lun,'(121F20.10)') time_d, &
               het_respiration_lay_acc(1:nsoil_sb), & 
               calc_delta_C13(het_respiration_lay_acc(1:nsoil_sb),het_respiration_c13_lay_acc(1:nsoil_sb)), & 
               calc_delta_C14(het_respiration_lay_acc(1:nsoil_sb),het_respiration_c14_lay_acc(1:nsoil_sb), &
               calc_delta_C13(het_respiration_lay_acc(1:nsoil_sb),het_respiration_c13_lay_acc(1:nsoil_sb))), &
-              transport_DOC_lay_acc(1:nsoil_sb)
+              transport_DOC_lay_acc(1:nsoil_sb), &
+              root_respiration_lay_acc(1:nsoil_sb)
             lun = lun + 1
             ! soilfluxN_lay
             write(lun,'(341F20.10)') time_d, &
@@ -2946,6 +3263,7 @@ CONTAINS
         het_respiration_c13_lay_acc(1:nsoil_sb)     = 0.0_wp
         het_respiration_c14_lay_acc(1:nsoil_sb)     = 0.0_wp
         transport_DOC_lay_acc(1:nsoil_sb)           = 0.0_wp
+        root_respiration_lay_acc(1:nsoil_sb)        = 0.0_wp
         ! N
         net_mineral_nh4_lay_acc(1:nsoil_sb)         = 0.0_wp
         plant_uptake_nh4_lay_acc(1:nsoil_sb)        = 0.0_wp
@@ -2990,6 +3308,7 @@ CONTAINS
 #define Passback_veg_exudation
 #define Passback_veg_reserve_use
 #define Passback_veg_growth
+#define Passback_veg_pool
 #define Passback_sb_transport
 #define Passback_sb_mycorrhiza_export
 #define Passback_sb_delta_pools
@@ -2998,6 +3317,7 @@ CONTAINS
 #undef Passback_veg_exudation
 #undef Passback_veg_reserve_use
 #undef Passback_veg_growth
+#undef Passback_veg_pool
 #undef Passback_sb_transport
 #undef Passback_sb_mycorrhiza_export
 #undef Passback_sb_delta_pools
@@ -3168,7 +3488,7 @@ CONTAINS
     USE mo_isotope_util,          ONLY: calc_delta_C13,calc_delta_C14,calc_delta_N15
 
     ! Use of process memories
-    dsl4jsb_Use_memory_A2L_ 
+    dsl4jsb_Use_memory(A2L_) 
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,        ONLY: veg_pool, veg_litterfall
@@ -3196,7 +3516,7 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory_A2L_ 
+    dsl4jsb_Def_memory(A2L_) 
     dsl4jsb_Def_memory(VEG_)                        ! TYPE(t_veg_memory),     POINTER :: veg__mem
     dsl4jsb_Def_memory(SSE_)                        ! TYPE(t_sse_memory),    POINTER :: sse__mem
     ! Declare pointers to variables in memory
@@ -3231,7 +3551,7 @@ CONTAINS
     ! Get process config
 !    dsl4jsb_Get_config(xx_)
     ! Get process memories
-    dsl4jsb_Get_memory_A2L_ 
+    dsl4jsb_Get_memory(A2L_) 
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SSE_)                         
     ! Get process variables (Set pointers to variables in memory)

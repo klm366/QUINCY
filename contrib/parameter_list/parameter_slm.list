@@ -126,6 +126,10 @@
   k_sat_ct=NAN
   k_sat_dt=NAN
   kdiff_sat_max=NAN
+  f_psensi_soil_sand=NAN
+  f_psensi_soil_silt=NAN
+  f_psensi_soil_awc_prescribe=NAN
+  f_psensi_bulk_density=NAN
 /
 &VEGETATION_CTL
   fresp_growth=NAN
@@ -406,6 +410,12 @@
   k_slow_som_cn=NAN
   k_fast_som_np=NAN
   k_slow_som_np=NAN
+  f_psensi_soil_p_depth=NAN
+  f_psensi_soil_p_labile=NAN
+  f_psensi_soil_p_slow=NAN
+  f_psensi_soil_p_occluded=NAN
+  f_psensi_soil_p_primary=NAN
+  f_psensi_qmax_org_fine_particle=NAN
 /
 &LCTLIB_PFT1_CTL
   sla_p1=NAN

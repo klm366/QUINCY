@@ -295,6 +295,17 @@ MODULE mo_sb_constants
     def_sb_pool_microbial_necromass  , &      ! microbial necromass
     def_sb_pool_dom                           ! DOM
 
+  ! constants used as factor for multiplication with namelist parameters (sse_config) when "parameter sensitivity" is enabled
+  ! see sb_config & mo_quincy_set_parameters:Modify_quincy_namelist_parameter
+  REAL(wp) :: & 
+    f_psensi_soil_p_depth, &
+    f_psensi_soil_p_labile, &
+    f_psensi_soil_p_slow, &
+    f_psensi_soil_p_occluded, &
+    f_psensi_soil_p_primary, &
+    f_psensi_qmax_org_fine_particle
+
+
    !! only temporarily, mol / m2 !! @TODO
    REAL(wp), SAVE :: & 
       nh4_solute_prescribe, no3_solute_prescribe, po4_solute_prescribe, po4_solute_min
@@ -573,6 +584,15 @@ CONTAINS
     def_sb_pool_microbial_biomass     = 30.0_wp         ! Yu et al. 2020, GMD
     def_sb_pool_microbial_necromass   = 150.0_wp        ! Yu et al. 2020, GMD
     def_sb_pool_dom                   = 1.0_wp          ! Yu et al. 2020, GMD
+
+    ! constants used as factor for multiplication with namelist parameters (sse_config) when "parameter sensitivity" is enabled
+    f_psensi_soil_p_depth             = 1.0_wp
+    f_psensi_soil_p_labile            = 1.0_wp
+    f_psensi_soil_p_slow              = 1.0_wp
+    f_psensi_soil_p_occluded          = 1.0_wp
+    f_psensi_soil_p_primary           = 1.0_wp
+    f_psensi_qmax_org_fine_particle   = 1.0_wp
+
 
     !! BLARPP only temporarily, mol / m2 !!  @TODO
     nh4_solute_prescribe = 0.05_wp

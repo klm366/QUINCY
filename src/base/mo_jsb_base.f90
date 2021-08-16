@@ -180,7 +180,7 @@ CONTAINS
     !> 2.0 parameter modification for parameter sensitivity analysis
     !! 
     IF (model%config%set_parameter_values_from_file) THEN
-      CALL parameters_slm_from_file%set_param(model%config%set_parameter_values_proportional)
+      CALL parameters_slm_from_file%set_param(model)
     ENDIF
 
   END SUBROUTINE quincy_proc_parameter_init
@@ -218,8 +218,8 @@ CONTAINS
 
     !< 1.0 read lctlib
     !! 
-    model%lctlib => Read_lctlib('lctlib_slm_nlct8.def')
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_slm_nlct8.def')
+    model%lctlib => Read_lctlib('lctlib_quincy_nlct8.def')
+    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_quincy_nlct8.def')
 
 
     !> 2.0 lcltib-parameter modification for parameter sensitivity analysis

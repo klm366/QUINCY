@@ -132,7 +132,7 @@ CONTAINS
     INTEGER                   , INTENT(in)    :: ics, ice, nc, iblk             !< info on block, chunk and soil layer number
     INTEGER                   , INTENT(in)    :: timestep                       !< timestep; first timestep of static simulation and simulation after transient spinup is 1
     REAL(wp)                  , INTENT(in)    :: time                           !< current time in days (not timestep !)
-    REAL(wp), OPTIONAL        , INTENT(out)   :: &                 !! these are all variables from atm2land_memory; with assumed shape VAR(1:nc)
+    REAL(wp), OPTIONAL        , INTENT(out)   :: &                 !! these are all variables from a2l memory; with assumed shape VAR(1:nc)
                                       t_air(:)              , &    !< ..
                                       q_air(:)              , &    !< ..
                                       rain(:)               , &    !< ..
