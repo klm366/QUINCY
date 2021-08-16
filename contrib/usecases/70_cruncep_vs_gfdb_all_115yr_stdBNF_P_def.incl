@@ -43,7 +43,7 @@ spinupLengthGFDB=500
 ##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
+sb_model_scheme="simple_1d"     # simple_1d jsm 
 sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
@@ -86,7 +86,6 @@ transient_spinup_years=500            # default 500; overall years of spinup rep
 transient_simulation_start_year=1901  # default 1901; simulation start with forcing at this year and ends after simulation_length_number
 output_interval_pool_spinup="yearly"    # none weekly monthly yearly (only for transient forcingMode; if you'd need timestep or daily please talk to Jan or Sönke)
 output_interval_flux_spinup="yearly"    # none weekly monthly yearly (only for transient forcingMode; if you'd need timestep or daily please talk to Jan or Sönke)
-flag_transientSim_CO2const="F"        # T (True) or F (False): if TRUE the first value of CO2 (dC13 DC14) from 1901 is used as constant for the full simulation after spinup (i.e. no variation in CO2 dC13 DC14)
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
@@ -96,5 +95,6 @@ flag_read_dC13="T"              # either use forcing dC13 or the prescribed defa
 flag_read_DC14="T"              # either use forcing DC14 or the prescribed default value
 n_deposition_scheme="dynamic"   # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="dynamic"   # options: none constant dynamic (p_srf_down)
+flag_forcing_co2_const="F"      # T (True) or F (False): if TRUE the avrg CO2 value of the first simulation year is used as constant for the full simulation, i.e., no variation in CO2 dC13 DC14
 
 queue="io_perform"              # io_perform selects only the new INTEL3 nodes: lshosts

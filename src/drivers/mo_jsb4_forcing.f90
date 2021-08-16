@@ -57,16 +57,11 @@ MODULE mo_jsb4_forcing
     INTEGER           :: transient_spinup_end_year
     INTEGER           :: transient_spinup_years
     INTEGER           :: transient_simulation_start_year
-    LOGICAL           :: flag_transient_sim_co2_const
+    LOGICAL           :: flag_forcing_co2_const
 
     ! calculated
     INTEGER           :: transient_spinup_timesteps_all     !< number of timesteps for spinup with forcing_mode=='transient': calculated from transient_spinup_years
     INTEGER           :: transient_spinup_timesteps_repeat  !< number of timesteps of the forcing period repeatedly simulated for spinup
-
-    ! saved at runtime
-    REAL(wp)          :: co2_mixing_ratio_1st_timestep
-    REAL(wp)          :: co2_dC13_1st_timestep
-    REAL(wp)          :: co2_DC14_1st_timestep
 
     ! read from forcing files
     INTEGER           :: forcing_year
@@ -115,7 +110,7 @@ CONTAINS
     INTEGER                             :: transient_spinup_end_year
     INTEGER                             :: transient_spinup_years
     INTEGER                             :: transient_simulation_start_year
-    LOGICAL                             :: flag_transient_sim_co2_const
+    LOGICAL                             :: flag_forcing_co2_const
 
     NAMELIST /jsb_forcing_ctl/                          & 
                       n_deposition_scheme             , &
@@ -129,7 +124,7 @@ CONTAINS
                       transient_spinup_end_year       , &
                       transient_spinup_years          , &
                       transient_simulation_start_year , &
-                      flag_transient_sim_co2_const
+                      flag_forcing_co2_const
 
 
     ! variables for reading model-options from namelist
@@ -155,7 +150,7 @@ CONTAINS
     transient_spinup_end_year           = 1930
     transient_spinup_years              = 500
     transient_simulation_start_year     = 1901
-    flag_transient_sim_co2_const        = .FALSE.
+    flag_forcing_co2_const              = .FALSE.
 
     ! read the namelist
     ! 
@@ -194,7 +189,7 @@ CONTAINS
     forcing_options%transient_spinup_end_year         = transient_spinup_end_year
     forcing_options%transient_spinup_years            = transient_spinup_years
     forcing_options%transient_simulation_start_year   = transient_simulation_start_year
-    forcing_options%flag_transient_sim_co2_const      = flag_transient_sim_co2_const
+    forcing_options%flag_forcing_co2_const            = flag_forcing_co2_const
 
     !> 2.0 Modify .. Configure ..
     !! 

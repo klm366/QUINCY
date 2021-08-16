@@ -111,7 +111,7 @@ CONTAINS
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_phys_constants,    ONLY: molar_mass_N, molar_mass_P, grav
-    USE mo_jsb_math_constants,    ONLY: one_day, eps8
+    USE mo_jsb_math_constants,    ONLY: one_day, one_year, dtime, eps8, eps4
     USE mo_jsb4_forcing,          ONLY: forcing_options
     USE mo_isotope_util,          ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, calc_delta_C13, calc_delta_C14, &
                                         calc_mixing_ratio_N15N14
@@ -122,6 +122,7 @@ CONTAINS
     ! Use of process memories
     dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
+    dsl4jsb_Use_memory(A2L_)
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,      ONLY: veg_pool, veg_litterfall
 
@@ -212,24 +213,26 @@ CONTAINS
                      percolation_sl_r, &
                      root_fraction_sl_r
     ! other local variables
-    INTEGER                   :: stat          ! status of I/O (https://software.intel.com/en-us/node/691976)
-    INTEGER                   :: lun           ! logical unit number for file input stream, see '2.0 read data'
-    REAL(wp), DIMENSION(nc)   :: sw_toa_down   ! potential radiation at the top of the atmosphere
-    REAL(wp), DIMENSION(nc)   :: hlp1          ! dummy variable 
-    REAL(wp)                  :: year          ! dummy variable
-    REAL(wp)                  :: hour          ! dummy variable
-    REAL(wp)                  :: time_hlp      ! dummy variable for soil forcing
-    REAL(wp), SAVE            :: day                    ! read input dummy variable - save value
-    REAL(wp)                  :: doy_old, &             ! check for new year (column 2 in input file would change from 365 -> 1)
-                                 doy_new
-    INTEGER                   :: nlevel_veg   = -1      ! number of levels at the Z-Axis (canopy layer)
-    INTEGER                   :: isoil, ichunk
+    INTEGER                   :: stat                           !< status of I/O (https://software.intel.com/en-us/node/691976)
+    INTEGER                   :: lun                            !< logical unit number for file input stream, see '2.0 read data'
+    REAL(wp), DIMENSION(nc)   :: sw_toa_down                    !< potential radiation at the top of the atmosphere
+    REAL(wp), DIMENSION(nc)   :: hlp1                           !< dummy variable 
+    REAL(wp)                  :: year                           !< dummy variable
+    REAL(wp)                  :: hour                           !< dummy variable
+    REAL(wp)                  :: time_hlp                       !< dummy variable for soil forcing
+    REAL(wp), SAVE            :: day                            !< read input dummy variable - save value
+    REAL(wp)                  :: doy_old                        !< check for new year (column 2 in input file would change from 365 -> 1)
+    REAL(wp)                  :: doy_new                        !< check for new year (column 2 in input file would change from 365 -> 1)
+    INTEGER                   :: nlevel_veg   = -1              !< number of levels at the Z-Axis (canopy layer)
+    INTEGER                   :: isoil, ic                      !< looping over soil layers or chunk
+    LOGICAL, DIMENSION(nc)    :: l_timestep_first_year_passed   !< is TRUE for the timestep after the 1st simulation year has passed
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_forcing'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
+    dsl4jsb_Def_memory(A2L_)
     ! Declare pointers to variables in memory
     ! VEG_ 2D
     dsl4jsb_Real2D_onChunk      :: f_n_demand
@@ -240,6 +243,20 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: t_soil_sl
     dsl4jsb_Real3D_onChunk      :: w_soil_sl
     dsl4jsb_Real3D_onChunk      :: percolation_sl
+    ! A2L_
+    dsl4jsb_Real2D_onChunk      :: nhx_deposition_acc
+    dsl4jsb_Real2D_onChunk      :: nhy_deposition_acc
+    dsl4jsb_Real2D_onChunk      :: p_deposition_acc
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_acc
+    dsl4jsb_Real2D_onChunk      :: co2_dC13_acc
+    dsl4jsb_Real2D_onChunk      :: co2_DC14_acc
+    dsl4jsb_Real2D_onChunk      :: const_input_timestep_counter
+    dsl4jsb_Real2D_onChunk      :: nhx_deposition_const
+    dsl4jsb_Real2D_onChunk      :: nhy_deposition_const
+    dsl4jsb_Real2D_onChunk      :: p_deposition_const
+    dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_const
+    dsl4jsb_Real2D_onChunk      :: co2_dC13_const
+    dsl4jsb_Real2D_onChunk      :: co2_DC14_const
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
 !    IF (.NOT. tile%Is_process_active(xx_)) RETURN
@@ -256,6 +273,7 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
+    dsl4jsb_Get_memory(A2L_)
     ! Allocate local allocatable variables (deallocate below at the end of this routine)    
     ALLOCATE(t_soil_sl_r(nsoil_sb))
     ALLOCATE(w_soil_sl_r(nsoil_sb))
@@ -269,6 +287,20 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(SSE_, percolation_sl)
+    ! A2L_
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition_acc)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhy_deposition_acc)
+    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition_acc)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_acc)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_dC13_acc)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_DC14_acc)
+    dsl4jsb_Get_var2D_onChunk(A2L_, const_input_timestep_counter)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhx_deposition_const)
+    dsl4jsb_Get_var2D_onChunk(A2L_, nhy_deposition_const)
+    dsl4jsb_Get_var2D_onChunk(A2L_, p_deposition_const)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio_const)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_dC13_const)
+    dsl4jsb_Get_var2D_onChunk(A2L_, co2_DC14_const)
     ! Get process memory pool structures
     dsl4slm_get_vegpool_var(pool,fine_root,carbon)
 #define Get_veg_litterfall
@@ -334,17 +366,16 @@ CONTAINS
     SELECT CASE(TRIM(model%config%slm_model_name))
     CASE('land','plant','canopy')
 
-      !> 1.0 orbital parameters
-      !!
-      !! "declination" is a parameter from mo_atmland_constants and is calculated here as output paramater, though, not used here in this module
+      !>1.0 orbital parameters
+      !>
+      ! "declination" is a parameter from mo_atmland_constants and is calculated here as output paramater, though, not used here in this module
       CALL update_orbital_parameters(time, declination, sw_toa_down(:))  ! mo_atmland_util
 
-
-      !> 2.0 read data
-      !!
-      !! read line by line from file until file end and start again at beginning of file \n
-      !! if model%config%flag_climate_forcing_one_year = TRUE then 
-      !!        read only the data of the 1st year of climate forcing and start again at beginning of file
+      !>2.0 read forcing data
+      !>
+      ! read line by line from file until file end and start again at beginning of file \n
+      ! if model%config%flag_climate_forcing_one_year = TRUE then 
+      !        read only the data of the 1st year of climate forcing and start again at beginning of file
 
       ! day of the year: previous time step
       doy_old = day 
@@ -369,7 +400,8 @@ CONTAINS
       END IF
 
       ! if transient forcing_mode is enabled, the climate forcing file may be re-read at line 1 when:
-      ! a) the spinup forcing period ends and restarts at start-year, and b) the spinup has finished
+      !  a) the spinup forcing period ends and restarts at start-year, and 
+      !  b) the spinup has finished
       IF(model%config%l_transient_spinup_rewind_forcing) THEN
         stat = -1
       END IF
@@ -386,21 +418,62 @@ CONTAINS
                        nhx_deposition_r, noy_deposition_r, p_deposition_r 
       END IF
 
-      !> 3.0 parameter units are re-scaled
-      !!
+      !>3.0 forcing input units are re-scaled
+      !>
       q_air_r     = q_air_r     / 1000._wp
       press_srf_r = press_srf_r * 100._wp
       rain_r      = rain_r      / one_day
       snow_r      = snow_r      / one_day
 
-      !> 4.0 forcing timing data and actual forcing values
-      !!
+      !>4.0 save forcing timing data
+      !>
       forcing_options%forcing_year  = NINT(year)
       forcing_options%forcing_doy   = NINT(day)
       forcing_options%forcing_hour  = hour
 
-      !> 5.0 update forcing variables based on 'read data'
-      !!
+      !> 4.1 increase the counter counting the 1st year of the simulation (used for constant N/P/CO2 schemes)
+      !>  and set 'l_timestep_first_year_passed' TRUE only at the timestep after the 1st simulation year has passed
+      !>
+      l_timestep_first_year_passed(:) = .FALSE.
+      DO ic = 1, nc
+        ! only if the counter variable has a positive value
+        ! it is set to '-1' at the timestep after the 1st year of the simulation has passed
+        IF (const_input_timestep_counter(ic) > -eps4) THEN
+          const_input_timestep_counter(ic) = const_input_timestep_counter(ic) + 1.0_wp
+          ! at the timestep after the 1st simulation year has passed
+          IF (const_input_timestep_counter(ic) > (one_year * one_day / dtime)) THEN
+            const_input_timestep_counter(ic) = -1._wp
+            l_timestep_first_year_passed(ic) = .TRUE.
+          END IF
+        END IF
+      END DO
+
+      !> 4.2 accumulate forcing variables for which a "constant" scheme exists
+      !>  and calc the "constant" value at the timestep after the 1st year of the simulation has passed
+      DO ic = 1, nc
+        ! only if the counter variable has a positive value
+        ! it is set to '-1' at the timestep after the 1st year of the simulation has passed
+        IF (const_input_timestep_counter(ic) > -eps4) THEN
+          co2_mixing_ratio_acc(ic)    = co2_mixing_ratio_acc(ic) + co2_mixing_ratio_r
+          co2_dC13_acc(ic)            = co2_dC13_acc(ic)         + co2_dC13_r
+          co2_DC14_acc(ic)            = co2_DC14_acc(ic)         + co2_DC14_r
+          nhx_deposition_acc(ic)      = nhx_deposition_acc(ic)   + nhx_deposition_r
+          nhy_deposition_acc(ic)      = nhy_deposition_acc(ic)   + noy_deposition_r
+          p_deposition_acc(ic)        = p_deposition_acc(ic)     + p_deposition_r
+        END IF
+        ! at the timestep after the 1st simulation year has passed
+        IF (l_timestep_first_year_passed(ic)) THEN
+          co2_mixing_ratio_const(ic)  = co2_mixing_ratio_acc(ic) / (one_year * one_day / dtime)
+          co2_dC13_const(ic)          = co2_dC13_acc(ic)         / (one_year * one_day / dtime)
+          co2_DC14_const(ic)          = co2_DC14_acc(ic)         / (one_year * one_day / dtime)
+          nhx_deposition_const(ic)    = nhx_deposition_acc(ic)   / (one_year * one_day / dtime)
+          nhy_deposition_const(ic)    = nhy_deposition_acc(ic)   / (one_year * one_day / dtime)
+          p_deposition_const(ic)      = p_deposition_acc(ic)     / (one_year * one_day / dtime)
+        END IF
+      END DO
+
+      !>5.0 update forcing variables from the above 'read data'
+      !>
       t_air(:)                = t_air_r
       q_air(:)                = q_air_r
       rain(:)                 = rain_r
@@ -408,70 +481,119 @@ CONTAINS
       wind_air(:)             = wind_air_r
       wind_10m(:)             = wind_air_r
       press_srf(:)            = press_srf_r
-
       lw_srf_down(:)          = lw_srf_down_r
-      cos_zenith_angle(:)     = calc_solar_angle(hgrid%lat(1,1), hgrid%lon(1,1), time) 
+      cos_zenith_angle(:)     = calc_solar_angle(hgrid%lat(1,1), hgrid%lon(1,1), time)      ! @TODO  make working globally
       swnir_srf_down(:)       = (1._wp - frac_vis_swtot_srf ) * swvis_srf_down_r 
       swvis_srf_down(:)       = frac_vis_swtot_srf * swvis_srf_down_r 
       swpar_srf_down(:)       = frac_par_swvis_srf * swvis_srf_down(:)
       swpar_fdiffuse(:)       = calc_sw_fdiffuse(swnir_srf_down(:) + swvis_srf_down(:), sw_toa_down(:), cos_zenith_angle(:)) ! elemental function: calc_sw_fdiffuse()
       
-      !! CO2
-      ! save the values of the first timestep 
-      IF (timestep == 1) THEN
-        forcing_options%co2_mixing_ratio_1st_timestep = co2_mixing_ratio_r
-        forcing_options%co2_dC13_1st_timestep         = co2_dC13_r
-        forcing_options%co2_DC14_1st_timestep         = co2_DC14_r
-      ENDIF
-      ! if CO2 is constant during simulation: overwrite the forcing values with the value read at the first timestep
-      ! (note: '.AND. .NOT. model%config%l_transient_spinup' mean 'and l_transient_spinup is false', i.e., after spinup)
-      IF (forcing_options%flag_transient_sim_co2_const .AND. .NOT. model%config%l_transient_spinup) THEN
-        co2_mixing_ratio_r  = forcing_options%co2_mixing_ratio_1st_timestep    
-        co2_dC13_r          = forcing_options%co2_dC13_1st_timestep
-        co2_DC14_r          = forcing_options%co2_DC14_1st_timestep
-      ENDIF
-      ! pass CO2 value, either the one from file or the one from 1st timestep
-      co2_mixing_ratio(:)     = co2_mixing_ratio_r      
-      ! calc dC13 and DC14, using either a) the CO2 from file or the CO2 from 1st timestep, or b) the default dC13 & DC14 values
-      IF (forcing_options%flag_read_dC13 .OR. &
-          (forcing_options%flag_transient_sim_co2_const .AND. .NOT. model%config%l_transient_spinup)) THEN
-        hlp1(:)               = calc_mixing_ratio_C13C12(co2_dC13_r)
-      ELSE
-        hlp1(:)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
-      END IF
-      co2_mixing_ratio_C13(:) = co2_mixing_ratio(:) / (1._wp + 1._wp/hlp1(:))
-      IF (forcing_options%flag_read_DC14 .OR. &
-          (forcing_options%flag_transient_sim_co2_const .AND. .NOT. model%config%l_transient_spinup)) THEN
-        hlp1(:)               = calc_mixing_ratio_C14C(co2_dC13_r, co2_DC14_r)
-      ELSE
-        hlp1(:)               = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
-      END IF
-      co2_mixing_ratio_C14(:) = hlp1(:) * co2_mixing_ratio(:) 
+      !> 5.1 update CO2 & dC13 & DC14 forcing data
+      !>
+      DO ic = 1, nc
+        ! CO2
+        ! if constant CO2 forcing is enabled and the first simulation year has passed
+        IF (forcing_options%flag_forcing_co2_const .AND. const_input_timestep_counter(ic) < -eps4) THEN
+          co2_mixing_ratio(ic)   = co2_mixing_ratio_const(ic)
+        ELSE
+          co2_mixing_ratio(ic)   = co2_mixing_ratio_r      
+        END IF
+        ! dC13
+        ! if dC13 forcing input is used
+        IF (forcing_options%flag_read_dC13) THEN
+          ! if constant CO2 forcing is enabled and the first simulation year has passed
+          IF (forcing_options%flag_forcing_co2_const .AND. const_input_timestep_counter(ic) < -eps4) THEN
+            hlp1(ic)             = calc_mixing_ratio_C13C12(co2_dC13_const(ic))
+          ELSE
+            hlp1(ic)             = calc_mixing_ratio_C13C12(co2_dC13_r)
+          END IF
+        ELSE
+          hlp1(ic)               = calc_mixing_ratio_C13C12(def_co2_deltaC13)
+        END IF
+        co2_mixing_ratio_C13(ic) = co2_mixing_ratio(ic) / (1._wp + 1._wp / hlp1(ic))
+        ! DC14
+        ! if DC14 forcing input is used
+        IF (forcing_options%flag_read_DC14) THEN
+          ! if constant CO2 forcing is enabled and the first simulation year has passed
+          IF (forcing_options%flag_forcing_co2_const .AND. const_input_timestep_counter(ic) < -eps4) THEN
+            hlp1(ic)             = calc_mixing_ratio_C14C(co2_dC13_const(ic), co2_DC14_const(ic))
+          ELSE
+            hlp1(ic)             = calc_mixing_ratio_C14C(co2_dC13_r, co2_DC14_r)
+          END IF
+        ELSE
+          hlp1(ic)               = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14)
+        END IF
+        co2_mixing_ratio_C14(ic) = hlp1(ic) * co2_mixing_ratio(ic)
+      END DO
 
-      !! N deposition
+      !> 5.2 update N deposition forcing data
+      !>
       SELECT CASE (TRIM(forcing_options%n_deposition_scheme))
-        CASE ("none")
-          nhx_deposition(:)   = 0.0_wp
-          noy_deposition(:)   = 0.0_wp
-        CASE ("constant")
-          nhx_deposition(:)   = def_n_deposition / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-          noy_deposition(:)   = def_n_deposition / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-        CASE ("dynamic")
-          nhx_deposition(:)   = nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-          noy_deposition(:)   = noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+      CASE ("none")
+        nhx_deposition(:)   = 0.0_wp
+        noy_deposition(:)   = 0.0_wp
+      CASE ("constant")
+        DO ic = 1, nc
+          ! if the first simulation year has passed
+          IF (const_input_timestep_counter(ic) < -eps4) THEN
+            nhx_deposition(ic)  = nhx_deposition_const(ic) / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+            noy_deposition(ic)  = nhy_deposition_const(ic) / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+          ELSE
+            nhx_deposition(ic)  = nhx_deposition_r         / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+            noy_deposition(ic)  = noy_deposition_r         / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+          END IF
+        END DO
+      CASE ("dynamic")
+        nhx_deposition(:)   = nhx_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+        noy_deposition(:)   = noy_deposition_r / molar_mass_N * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
       ENDSELECT
-      nhx_n15_deposition(:)   = nhx_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-      noy_n15_deposition(:)   = noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+      nhx_n15_deposition(:) = nhx_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+      noy_n15_deposition(:) = noy_deposition(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
 
-      !! P deposition
+      !> 5.3 update P deposition forcing data
+      !>
       SELECT CASE (TRIM(forcing_options%p_deposition_scheme))
-        CASE ("none")
-          p_deposition(:)     = 0.0_wp
-        CASE ("constant")
-          p_deposition(:)     = def_p_deposition / molar_mass_P * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
-        CASE ("dynamic")
-          p_deposition(:)     = p_deposition_r / molar_mass_P * 1000.0_wp / one_day      ! mg/m2/day -> mumol/m2/sec
+      CASE ("none")
+        p_deposition(:) = 0.0_wp
+      CASE ("constant")
+        DO ic = 1, nc
+          ! if the first simulation year has passed
+          IF (const_input_timestep_counter(ic) < -eps4) THEN
+            p_deposition(ic)  = p_deposition_const(ic) / molar_mass_P * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+          ELSE
+            p_deposition(ic)  = p_deposition_r         / molar_mass_P * 1000.0_wp / one_day    ! mg/m2/day -> mumol/m2/sec
+          END IF
+        END DO
+      CASE ("dynamic")
+        p_deposition(:) = p_deposition_r / molar_mass_P * 1000.0_wp / one_day      ! mg/m2/day -> mumol/m2/sec
       ENDSELECT
+
+      !>6.0 feedback about using constant forcing values
+      !>
+      DO ic = 1, nc
+        IF (l_timestep_first_year_passed(ic)) THEN
+          print*, "  "
+          print*, " the 1st simulation year has passed (ic:", ic, ")"
+          print*, " constant forcing values are used now for: "
+          IF (forcing_options%flag_forcing_co2_const) THEN
+            print*, "  co2_mixing_ratio", co2_mixing_ratio(ic)
+            IF (forcing_options%flag_read_dC13) THEN
+              print*, "  co2_mixing_ratio_C13", co2_mixing_ratio_C13(ic)
+            END IF
+            IF (forcing_options%flag_read_DC14) THEN
+              print*, "  co2_mixing_ratio_C14", co2_mixing_ratio_C14(ic)
+            END IF
+          END IF
+          IF (TRIM(forcing_options%n_deposition_scheme) == "constant") THEN
+            print*, "  nhx_deposition", nhx_deposition(ic)
+            print*, "  noy_deposition", noy_deposition(ic)
+          END IF
+          IF (TRIM(forcing_options%p_deposition_scheme) == "constant") THEN
+            print*, "  p_deposition", p_deposition(ic)
+          END IF
+          print*, "  "
+        END IF
+      END DO
 
       !! For lakes
       ! currently no values read from file or calculated, just zet to zero
@@ -486,8 +608,6 @@ CONTAINS
       ! t_bcoef_ice(:)     =         t_bcoef_ice(:)    
       ! q_acoef_ice(:)     =         q_acoef_ice(:)    
       ! q_bcoef_ice(:)     =         q_bcoef_ice(:)    
-
-
 
     !! #############################################################################################
     !! SOIL

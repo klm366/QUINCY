@@ -116,6 +116,24 @@ MODULE mo_a2l_memory_class
                               prev_one_cos_zenith_angle   , &   !< cos_zenith_angle of the previous timestep [unitless]
                               prev_two_cos_zenith_angle         !< cos_zenith_angle of the before previous timestep [unitless]
 
+    ! For calculation of constant input values (add values over the 1st year, calc avrg, and use this as input for teh rest of the simulation)
+    TYPE(t_jsb_var_real2d) :: &
+      & nhx_deposition_acc, &             !< accumulate (simply add) input value of nhx_deposition [mumol m-2 sec-1]
+      & nhy_deposition_acc, &             !< accumulate (simply add) input value of nhy_deposition [mumol m-2 sec-1]
+      & p_deposition_acc, &               !< accumulate (simply add) input value of p_deposition [mumol m-2 sec-1]
+      & co2_mixing_ratio_acc, &           !< accumulate (simply add) input value of co2_mixing_ratio [ppm]
+      & co2_dC13_acc, &                   !< accumulate (simply add) input value of co2_dC13 [ppm]
+      & co2_DC14_acc, &                   !< accumulate (simply add) input value of co2_DC14 [scaled]
+      & const_input_timestep_counter      !< count number of timesteps since simulation start [unitless]
+
+    TYPE(t_jsb_var_real2d) :: &
+      & nhx_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhx_deposition [mumol m-2 sec-1]
+      & nhy_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhy_deposition [mumol m-2 sec-1]
+      & p_deposition_const, &             !< constant value (avrg of 1st year of input value) of p_deposition [mumol m-2 sec-1]
+      & co2_mixing_ratio_const, &         !< constant value (avrg of 1st year of input value) of co2_mixing_ratio [ppm]
+      & co2_dC13_const, &                 !< constant value (avrg of 1st year of input value) of co2_dC13 [ppm]
+      & co2_DC14_const                    !< constant value (avrg of 1st year of input value) of co2_DC14 [scaled]
+
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
   END TYPE t_a2l_memory
@@ -625,6 +643,135 @@ CONTAINS
       & lrestart = .TRUE., &
       & initval_r = 0.0_wp)
 
+    CALL mem%Add_var('nhx_deposition_acc', mem%nhx_deposition_acc, &
+      & hgrid, surface, &
+      & t_cf('nhx_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of nhx_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('nhy_deposition_acc', mem%nhy_deposition_acc, &
+      & hgrid, surface, &
+      & t_cf('nhy_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of nhy_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('p_deposition_acc', mem%p_deposition_acc, &
+      & hgrid, surface, &
+      & t_cf('p_deposition_acc', 'mumol m-2 sec-1', 'accumulate input value of p_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('co2_mixing_ratio_acc', mem%co2_mixing_ratio_acc, &
+      & hgrid, surface, &
+      & t_cf('co2_mixing_ratio_acc', 'ppm', 'accumulate input value of co2_mixing_ratio'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('co2_dC13_acc', mem%co2_dC13_acc, &
+      & hgrid, surface, &
+      & t_cf('co2_dC13_acc', 'ppm', 'accumulate input value of co2_dC13'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('co2_DC14_acc', mem%co2_DC14_acc, &
+      & hgrid, surface, &
+      & t_cf('co2_DC14_acc', 'scaled', 'accumulate input value of co2_DC14'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('const_input_timestep_counter', mem%const_input_timestep_counter, &
+      & hgrid, surface, &
+      & t_cf('const_input_timestep_counter', 'unitless', 'count number of timesteps since simulation start'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('nhx_deposition_const', mem%nhx_deposition_const, &
+      & hgrid, surface, &
+      & t_cf('nhx_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of nhx_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('nhy_deposition_const', mem%nhy_deposition_const, &
+      & hgrid, surface, &
+      & t_cf('nhy_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of nhy_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('p_deposition_const', mem%p_deposition_const, &
+      & hgrid, surface, &
+      & t_cf('p_deposition_const', 'mumol m-2 sec-1', 'avrg of 1st year input of p_deposition'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('co2_mixing_ratio_const', mem%co2_mixing_ratio_const, &
+      & hgrid, surface, &
+      & t_cf('co2_mixing_ratio_const', 'ppm', 'avrg of 1st year input of co2_mixing_ratio'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('co2_dC13_const', mem%co2_dC13_const, &
+      & hgrid, surface, &
+      & t_cf('co2_dC13_const', 'ppm', 'avrg of 1st year input of co2_dC13'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
+
+    CALL mem%Add_var('co2_DC14_const', mem%co2_DC14_const, &
+      & hgrid, surface, &
+      & t_cf('co2_DC14_const', 'scaled', 'avrg of 1st year input of co2_DC14'), &
+      & t_grib1(table, 255, grib_bits), &
+      & t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
+      & loutput = .FALSE., &
+      & lrestart = .TRUE., &
+      & initval_r = 0.0_wp)
 
   END SUBROUTINE Init_a2l_memory
 

@@ -15,7 +15,7 @@
 ##    You should have received a copy of the GNU General Public License
 ##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 
-# default SLM usecase: 04_autotestrun_100yr_debug_s1d_def
+# default SLM usecase: 04_autotestrun_100yr_debug_jsm_def
 # 
 # used by the script: ./contrib/additional_scripts/automated_slm_testrun.sh
 # for automated test runs of SLM
@@ -30,7 +30,7 @@ fluxnetTypeTransientTimestepOutput="F"
 compareSimCRUNCEPvsGFDB="F"
 paramSensitivitySim="F"
 
-sb_model_scheme="simple_1d"
+sb_model_scheme="jsm"
 flag_sb_prescribe_po4="T"
 biomass_alloc_scheme="dynamic"
 leaf_stoichom_scheme="dynamic"

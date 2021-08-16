@@ -32,7 +32,7 @@ MODULE mo_sb_constants
   IMPLICIT NONE
   PUBLIC
 
-  ! turnover times (mostly for simple model) 
+  ! turnover times (mostly for simple_1d model) 
   REAL(wp), SAVE :: & 
       tau_soluable_litter, &    !< turnover time of soluable litter [s]
       tau_metabolic_litter, &   !< turnover time of metabolic litter pool [s]
@@ -72,8 +72,8 @@ MODULE mo_sb_constants
       k_desorpt_det, &              !< 
       k_adsorpt_nh4, &              !< slow adsorption rate (from soluble Pi to sorbed Pi) of PO4, [kg soil mol-1 P s-1]
       k_desorpt_nh4, &              !< fast desorption rate (from NH4assoc to NH4solute) of nh4, [s-1]
-      k_desorpt_po4, &              !< Slow desorption rate (between sorbed Pi and labile Pi) of PO4, [s-1], simple model
-      k_adsorpt_po4, &              !< Slow adsorption rate (between sorbed Pi and labile Pi) of PO4, [s-1], simple model
+      k_desorpt_po4, &              !< Slow desorption rate (between sorbed Pi and labile Pi) of PO4, [s-1], simple_1d model
+      k_adsorpt_po4, &              !< Slow adsorption rate (between sorbed Pi and labile Pi) of PO4, [s-1], simple_1d model
       k_adsorpt_f_po4, &            !< fast adsorption rate (from soluble Pi to labile Pi) of PO4, [kg soil mol-1 P s-1]
       k_desorpt_f_po4               !< fast desorption rate (from labile Pi to soluble Pi) of PO4, [s-1]
 
@@ -87,7 +87,7 @@ MODULE mo_sb_constants
       microbial_cue_max, &       !< maximum microbial carbon-use efficiency
       microbial_cue_min          !< minimum microbial carbon-use efficiency
 
-  ! fast and slow parameters for simple SB model
+  ! fast and slow parameters for simple_1d SB model
   REAL(wp), SAVE :: &
       k_fast_som_cn_max, &       !< maximum microbial C:N [mol/mol]
       k_fast_som_cn_min, &       !< minimum microbial C:N [mol/mol]
@@ -162,7 +162,7 @@ MODULE mo_sb_constants
       organic_cn, &              !< molar ratio of C:N of mycorrhizal export to plants (amino acids)
       f_tau_myc                  !< increase of tau_slow in case of saprotrophic/priming macorrhizae to get similar tau_slow
 
-  ! nutrient uptake kinetics & ECA approach: simple model
+  ! nutrient uptake kinetics & ECA approach: simple_1d model
   REAL(wp), SAVE :: & 
       km1_up_nh4, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
       km1_up_no3, &             !< low-affinity parameter for plant and mycorrhizal uptake [m3/mol]
@@ -238,7 +238,7 @@ MODULE mo_sb_constants
       f_denit_noy, &             !< fraction of denitrification lost as NOy [--]
       f_denit_n2o                !< fraction of denitrification lost as N2O [--]
 
-  ! Simple-model fixed loss and simple leaching parameterisation
+  ! simple_1d model fixed loss and simple_1d leaching parameterisation
   REAL(wp), SAVE :: &
       floss_nmin, &              !< fractional loss of N per unit N mineralisation 
       fnit_nmin, &               !< fractional nitrification per unit N mineralisation 
@@ -269,7 +269,7 @@ MODULE mo_sb_constants
       km_dip_biochem_po4, &         !< Half-saturation solute P concentration for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
       km_pc_biochem_po4, &          !< Half-saturation SOM P:C ratio for PO4 biochemical mineralization, MM kinetics-alike
       km_rootc_biochem_po4, &       !< Half-saturation root C biomass for PO4 biochemical mineralization [mol C m-3], MM kinetics-alike
-      km_rootc_weath_po4, &         !< Half-saturation root C biomass for PO4 weathering [mol C m-3], simple-1d
+      km_rootc_weath_po4, &         !< Half-saturation root C biomass for PO4 weathering [mol C m-3], simple_1d
       km_root_enzyme_weath_po4, &   !< Half-saturation root enzyme C for PO4 weathering [mol C m-3], jsm
       biomin_thres_pc               !< Threshold P:C ratio for biomineralisation
 
@@ -286,7 +286,7 @@ MODULE mo_sb_constants
   ! sb_pool default init values
   REAL(wp), SAVE :: &
     def_sb_pool_metabol_litter       , &      ! metabolic litter
-    def_sb_pool_simple_struct_litter , &      ! structural litter, simple_0d and simple_1d soil model
+    def_sb_pool_simple_struct_litter , &      ! structural litter, simple_1d soil model
     def_sb_pool_jsm_struct_litter    , &      ! structural litter, JSM
     def_sb_pool_woody_litter         , &      ! woody litter
     def_sb_pool_fast_som             , &      ! fast SOM
@@ -365,9 +365,9 @@ CONTAINS
     k_desorpt_det             = 153.957_wp / one_year / one_day / 1000._wp                  ! Bernhard 20180913
     k_adsorpt_nh4             = 0.0_wp                                                      ! not activated yet
     k_desorpt_nh4             = 0.022_wp / 30.0_wp / one_day                                ! assumed to be the same as po4 desorption rate
-    k_adsorpt_po4             = 0.022_wp * 8._wp / 9._wp / 30.0_wp / one_day                ! [s-1], simple model, Yang et al. 2014, corrected for the global average,
+    k_adsorpt_po4             = 0.022_wp * 8._wp / 9._wp / 30.0_wp / one_day                ! [s-1], simple_1d model, Yang et al. 2014, corrected for the global average,
                                                                                             ! assuming labile and slow P in equilibrium (Yang et al. 2013)
-    k_desorpt_po4             = 0.022_wp / 30.0_wp / one_day                                ! [s-1], simple model, Yang et al. 2014 * 100
+    k_desorpt_po4             = 0.022_wp / 30.0_wp / one_day                                ! [s-1], simple_1d model, Yang et al. 2014 * 100
     k_adsorpt_f_po4           = 12.9_wp / 3600._wp                                          ! [m3 mol-1 P s-1], based on Van der Zee et al. 1989
     k_desorpt_f_po4           = 0.14_wp / 3600._wp / 10._wp                                 ! [s-1], Van der Zee et al. 1989
 
@@ -380,7 +380,7 @@ CONTAINS
     microbial_cue_max       = 0.6_wp                                 ! Manzoni et al. 2008
     microbial_cue_min       = 0.3_wp                                 ! Manzoni et al. 2008
 
-    ! fast and slow parameters for simple SB model
+    ! fast and slow parameters for simple_1d SB model
     k_fast_som_cn_max       = 13._wp * molar_mass_N / molar_mass_C   ! Manzoni et al. 2008, slightly tighter than than (was 13)
     k_fast_som_cn_min       = 5._wp * molar_mass_N / molar_mass_C    ! Manzoni et al. 2008
     f_fast_som_cn           = 51000.0_wp                             ! calibrated to correspond to CENTURY (minimum reached at 2gN/m2)
@@ -451,7 +451,7 @@ CONTAINS
     organic_cn              = 3.0_wp * molar_mass_N / molar_mass_C    ! 
     f_tau_myc               = 5.0_wp                                  ! 
 
-    ! nutrient uptake kinetics & ECA approach: simple model
+    ! nutrient uptake kinetics & ECA approach: simple_1d model
     km1_up_nh4 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
     km2_up_nh4 = 1.0_wp                    ! Kronzucker et al. 1996, Plant Physiology
     km1_up_no3 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
@@ -529,10 +529,10 @@ CONTAINS
     lambda_anvf               = 1.3_wp                                  ! fitted from Zaehle et al. 2011, NatGeo 
     k_anvf                    = 3.0_wp                                  ! fitted from Zaehle et al. 2011, NatGeo
 
-    ! Simple-model fixed loss and simple leaching parameterisation
+    ! simple_1d model fixed loss and simple_1d leaching parameterisation
     floss_nmin            = 0.05_wp                                 ! ???
     fnit_nmin             = 0.1_wp                                  ! ???
-    ! simple leaching
+    ! simple_1d leaching
     fleach_nh4            = 0.1_wp                                  ! ???
     fleach_po4            = 0.001_wp                                ! ???
     soil_n_threshold_bnf  = 0.05_wp                                 ! ???
