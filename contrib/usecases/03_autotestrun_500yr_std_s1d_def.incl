@@ -15,7 +15,7 @@
 ##    You should have received a copy of the GNU General Public License
 ##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
 
-# default SLM usecase: 05_autotestrun_500yr_std_s1d_def
+# default SLM usecase: 03_autotestrun_500yr_std_s1d_def
 # 
 # used by the script: ./contrib/additional_scripts/automated_slm_testrun.sh
 # for automated test runs of SLM

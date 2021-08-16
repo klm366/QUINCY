@@ -130,7 +130,7 @@ usecase=""
 ##>> namelist.slm options <<############################################################################
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
+sb_model_scheme="simple_1d"     # simple_1d jsm 
 sb_nloss_scheme="dynamic"       # none fixed dynamic
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
@@ -187,18 +187,17 @@ transient_spinup_years=500            # default 500; overall years of spinup rep
 transient_simulation_start_year=1901  # default 1901; simulation start with forcing at this year and ends after simulation_length_number
 output_interval_pool_spinup="none"    # none daily weekly monthly yearly (only for transient forcingMode; if you'd need timestep please talk to Jan or Sönke)
 output_interval_flux_spinup="none"    # none daily weekly monthly yearly (only for transient forcingMode; if you'd need timestep please talk to Jan or Sönke)
-flag_transientSim_CO2const="F"        # T (True) or F (False): if TRUE the first value of CO2 (dC13 DC14) from 1901 is used as constant for the full simulation after spinup (i.e. no variation in CO2 dC13 DC14)
 
 # forcing input
 flag_oneYearForcing="F"         # T (True) or F (False): whether to use (repeatedly) only the 1st year of the climate forcing input file
 soil_awc_prescribe=300.0        # float !
 useSiteSpecificAWC="F"          # T (True) or F (False) [large caps] -> set "T" to use AWC as in site-list file (soil_awc_prescribe is used otherwise)
 soil_theta_prescribe=1.0        # float !
-flag_read_dC13="F"              # either use forcing dC13 or the prescribed default value
-flag_read_DC14="F"              # either use forcing DC14 or the prescribed default value
+flag_read_dC13="F"              # T (True) or F (False): if TRUE use forcing dC13, otherwise the prescribed default value
+flag_read_DC14="F"              # T (True) or F (False): if TRUE use forcing DC14, otherwise the prescribed default value
 n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
 p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
-
+flag_forcing_co2_const="F"      # T (True) or F (False): if TRUE the avrg CO2 value of the first simulation year is used as constant for the full simulation, i.e., no variation in CO2 dC13 DC14
 
 ##>> details about the HPC, if unsure stick with the defaults <<################################
 queue="all"                  # available queues: all BTM io mpi_large io_perform (for information on the queues run at pc026/27/28: bqueues -l; io_perform selects only the new INTEL3 nodes: lshosts)
@@ -316,12 +315,8 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     ;;
   "s")
     case "$OPTARG" in
-    "s0d")
-      echo "   sb_model_scheme=simple_0d (only one soil layer)"
-      sb_model_scheme="simple_0d"
-      ;;
     "s1d")
-      echo "   sb_model_scheme=simple_1d (multiple soil layers)"
+      echo "   sb_model_scheme=simple_1d (multiple soil layers) [default]"
       sb_model_scheme="simple_1d"
       ;;
     "jsm")
@@ -448,7 +443,6 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       land plant soil canopy"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
-    echo "       s0d: simple_0d"
     echo "       s1d: simple_1d"
     echo "       jsm: jsm"
     echo " -y set simulation length"
@@ -597,7 +591,7 @@ validateSBNLossScheme="none fixed dynamic"
 validateBiomassAllocScheme="fixed dynamic optimal"
 validateLeafStoichomScheme="fixed dynamic optimal"
 validateVegDynamicsScheme="none population cohort"
-validateSBModelScheme="simple_0d simple_1d jsm"
+validateSBModelScheme="simple_1d jsm"
 validateQueue="all io BTM mpi_large io_perform short"
 validateEmailNotification="yes no"
 validateFlags="F T"
@@ -731,7 +725,7 @@ validateUserConfigValues "$output_interval_pool" "$validateOutputInterval" "outp
 validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "output_interval_flux"
 validateUserConfigValues "$output_interval_pool_spinup" "$validateOutputIntervalSpinup" "output_interval_pool_spinup"
 validateUserConfigValues "$output_interval_flux_spinup" "$validateOutputIntervalSpinup" "output_interval_flux_spinup"
-validateUserConfigValues "$flag_transientSim_CO2const" "$validateFlags" "flag_transientSim_CO2const"
+validateUserConfigValues "$flag_forcing_co2_const" "$validateFlags" "flag_forcing_co2_const"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
 validateUserConfigValues "$flag_read_dC13" "$validateFlags" "flag_read_dC13"
 validateUserConfigValues "$flag_read_DC14" "$validateFlags" "flag_read_DC14"
@@ -2014,18 +2008,6 @@ if [ $flag_optimal_Nfraction == T ]
   else
     changeNamelistValue flag_optimal_Nfraction ".FALSE."
 fi
-if [ $flag_read_dC13 == T ]
-  then
-    changeNamelistValue flag_read_dC13 ".TRUE."
-  else
-    changeNamelistValue flag_read_dC13 ".FALSE."
-fi
-if [ $flag_read_DC14 == T ]
-  then
-    changeNamelistValue flag_read_DC14 ".TRUE."
-  else
-    changeNamelistValue flag_read_DC14 ".FALSE."
-fi
 if [ $flag_sb_jsm_transport == T ]
   then
     changeNamelistValue flag_sb_jsm_transport ".TRUE."
@@ -2044,17 +2026,29 @@ if [ $flag_sb_jsm_OM_sorption == T ]
   else
     changeNamelistValue flag_sb_jsm_OM_sorption ".FALSE."
 fi
-if [ $flag_transientSim_CO2const == T ]
+if [ $flag_forcing_co2_const == T ]
   then
-    changeNamelistValue flag_transient_sim_co2_const ".TRUE."
+    changeNamelistValue flag_forcing_co2_const ".TRUE."
   else
-    changeNamelistValue flag_transient_sim_co2_const ".FALSE."
+    changeNamelistValue flag_forcing_co2_const ".FALSE."
 fi
 if [ $flag_oneYearForcing == T ]
   then
     changeNamelistValue flag_climate_forcing_one_year ".TRUE."
   else
     changeNamelistValue flag_climate_forcing_one_year ".FALSE."
+fi
+if [ $flag_read_dC13 == T ]
+  then
+    changeNamelistValue flag_read_dC13 ".TRUE."
+  else
+    changeNamelistValue flag_read_dC13 ".FALSE."
+fi
+if [ $flag_read_DC14 == T ]
+  then
+    changeNamelistValue flag_read_DC14 ".TRUE."
+  else
+    changeNamelistValue flag_read_DC14 ".FALSE."
 fi
 changeNamelistValue simulation_length_number "$simulation_length_number"
 changeNamelistValue output_interval_pool "$output_interval_pool"

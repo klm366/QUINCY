@@ -72,6 +72,7 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
   ! default values of model forcing for model testing:
+  !  @TODO some of the 'default values of model forcing' might not be used (and can be removed ?)
   REAL(wp),SAVE :: def_t_air                   !< temperature in deg K
   REAL(wp),SAVE :: def_vpd                     !< vpd in Pa
   REAL(wp),SAVE :: def_rh                      !< relative humidity in fractions

@@ -849,7 +849,7 @@ CONTAINS
     ENDWHERE
     w_soil_pot_sl(:,:) = saxtonA(:,:) * (hlp1_2d(:,:) ** saxtonB(:,:))
 
-    !> 3.4 Diagnostic fraction of water mass lost from the soil colum per second, for SB simple_0d module 
+    !> 3.4 Diagnostic fraction of water mass lost from the soil colum per second
     !!
     WHERE(w_soil_root_old(:) > eps8)
        drainage_fraction(:) = drainage(:) / 1000._wp / w_soil_root_old(:)

@@ -475,11 +475,10 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    !> 1.0 Set values of soil profile variables to allow switching between simple_0d and simple1d in the 
+    !> 1.0 Set values of soil profile variables to allow switching between simple1d in the 
     !!     following routines 
     !! 
     CALL calc_vertical_profile(nc, nsoil_sb, &
-                               TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                soil_depth_sl(:,:), &
                                bulk_dens_sl(:,:), &
                                w_soil_sl(:,:), &
@@ -621,7 +620,6 @@ CONTAINS
                                                                denitrification_n2(:,:))
 
        CALL calc_inorganic_transport_rate(nc, nsoil_sb, &
-                                          TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                           soil_depth_sl(:,:), &
                                           drainage_fraction(:), &
                                           percolation_sl(:,:), &
@@ -663,21 +661,20 @@ CONTAINS
 
     ENDIF  ! IF(TRIM(dsl4jsb_Config(SB_)%sb_nloss_scheme)=='dynamic')
 
-    !> 2.6 transport due to bioturbation
-    !! this routine is also called from update_sb_jsm
-    IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme)=='simple_1d')THEN
-       k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_sb, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
-       CALL calc_bioturbation_transport_wrapper(nc, nsoil_sb, k_bioturb(:,:), soil_depth_sl(:,:), &
-                                                sb_pool%soluable_litter, sb_pool%polymeric_litter, & 
-                                                sb_pool%microbial, sb_pool%residue, &
-                                                nh4_assoc, nh4_n15_assoc, & 
-                                                po4_assoc_fast, po4_assoc_slow, po4_occluded, &
-                                                sb_transport%soluable_litter, sb_transport%polymeric_litter, &
-                                                sb_transport%microbial, sb_transport%residue, &
-                                                transport_nh4_assoc(:,:), transport_nh4_n15_assoc(:,:), &
-                                                transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), & 
-                                                transport_po4_occluded(:,:))
-    ENDIF
+    !>2.6 transport due to bioturbation
+    !> this routine is also called from update_sb_jsm
+    !>
+    k_bioturb(:,:) = calc_bioturbation_rate(nc, nsoil_sb, soil_depth_sl(:,:), bulk_dens_corr_sl(:,:), root_fraction_sl(:,:))
+    CALL calc_bioturbation_transport_wrapper(nc, nsoil_sb, k_bioturb(:,:), soil_depth_sl(:,:), &
+                                             sb_pool%soluable_litter, sb_pool%polymeric_litter, & 
+                                             sb_pool%microbial, sb_pool%residue, &
+                                             nh4_assoc, nh4_n15_assoc, & 
+                                             po4_assoc_fast, po4_assoc_slow, po4_occluded, &
+                                             sb_transport%soluable_litter, sb_transport%polymeric_litter, &
+                                             sb_transport%microbial, sb_transport%residue, &
+                                             transport_nh4_assoc(:,:), transport_nh4_n15_assoc(:,:), &
+                                             transport_po4_assoc_fast(:,:), transport_po4_assoc_slow(:,:), & 
+                                             transport_po4_occluded(:,:))
 
     !> 2.7 Calculate the potential PO4 flux rate: biomineralisation, weathering, slow sorption, occlusion 
     !!
@@ -761,9 +758,10 @@ CONTAINS
                                                                  denitrification_n2o(:,:))
     ENDIF
 
-    !> 3.3 update n15 for inorganic fluxes 
-    !! here the function is called for the simple soil-model: flux rates in [mol/m3/timestep]
-    !! (JSM is using the same function but uses flux rates in [µmol/m3/s]; unit conversion is applied within the routine)
+    !>3.3 update n15 for inorganic fluxes 
+    !> here the function is called for the simple_1d soil-model: flux rates in [mol/m3/timestep]
+    !> (JSM is using the same function but uses flux rates in [µmol/m3/s]; unit conversion is applied within the routine)
+    !>
     CALL calc_sb_inorganic_n15_fluxes(nc, nsoil_sb, &                               ! in
                                       TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
                                       nh4_solute(:,:), &
@@ -1048,7 +1046,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   ! Sub Task to update_sb_simple_model
   !
   !-----------------------------------------------------------------------------------------------------
-  !> Routine to provide soil profile values for "simple_0d" and "simple_1d" (1 and many soil layers)
+  !> Routine to provide soil profile values for "simple_1d"
   !!
   !! For the 0D model, all processes happen only in the first layer of the soil \n
   !! therefore the soil temperature and moisture modifiers are aggregated 
@@ -1062,7 +1060,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_vertical_profile( nc, &                               ! in 
                                     nsoil_sb, & 
-                                    sb_model_scheme, &
                                     soil_depth_sl, &
                                     bulk_dens_sl, &
                                     w_soil_sl, &
@@ -1126,7 +1123,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! 0.1 InOut
     INTEGER,                                     INTENT(in)  :: nc, &                        !< dimensions
                                                                 nsoil_sb
-    CHARACTER(len=*),                            INTENT(in)  :: sb_model_scheme              !< from sb config
     REAL(wp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [µmol m-2 s-1]
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
@@ -1183,136 +1179,38 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                 anaerobic_volume_fraction_act!< actual anaerobic volume fraction
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(nc)         :: root_depth_avg, &       !< average rooting depth [m]
-                                       rtm_hsc_act, rmm_hsc_act, & 
-                                       rtm_sorption_act, rmm_sorption_act, &
-                                       rtm_desorption_act, rmm_desorption_act
-    INTEGER                         :: isoil                !< loop over nsoil_sb
     CHARACTER(len=*), PARAMETER     :: routine = TRIM(modname)//':calc_vertical_profile'
 
+    !> 1.0 ...
+    !>
+    root_fraction_act_sl(:,:) = root_fraction_sl(:,:)
+    km1_uptake_nh4_act(:,:) = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:))
+    km1_uptake_no3_act(:,:) = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:))
+    km1_uptake_po4_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km2_uptake_nh4_act(:,:) = km2_up_nh4 * rtm_hsc(:,:) * rmm_hsc(:,:)
+    km2_uptake_no3_act(:,:) = km2_up_no3 * rtm_hsc(:,:) * rmm_hsc(:,:)
+    km2_uptake_po4_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
+    km_uptake_org_act(:,:)  = km_up_org  * rtm_hsc(:,:) * rmm_hsc(:,:)
+    km_mic_uptake_nh4_act(:,:) = km_mic_uptake_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:))
+    km_mic_uptake_no3_act(:,:) = km_mic_uptake_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:))
+    km_dip_biochem_po4_act(:,:) = km_dip_biochem_po4 * rtm_hsc(:,:) * rmm_hsc(:,:)
+    km_denitrification_c_act(:,:) = km_denitrification_c
+    km_denitrification_no3_act(:,:) = km_denitrification_no3
+    apparent_fast_som_cn(:,:) = MAX(k_fast_som_cn_max - f_fast_som_cn * nh4_solute(:,:) / bulk_dens_sl(:,:), k_fast_som_cn_min)
 
-
-    !> 1.0 Case of 0d model
-    !!
-    IF(sb_model_scheme == 'simple_0d') THEN
-      root_fraction_act_sl(:,1)          = 1.0_wp
-      root_fraction_act_sl(:,2:nsoil_sb) = 0.0_wp
-      ! set to default values to avoid division by zero below (2:nsoil_sb are unused in 0D)
-      km1_uptake_nh4_act(:,:) = km1_up_nh4 
-      km1_uptake_no3_act(:,:) = km1_up_no3
-      km1_uptake_po4_act(:,:) = km1_up_po4
-      km2_uptake_nh4_act(:,:) = km2_up_nh4
-      km2_uptake_no3_act(:,:) = km2_up_no3
-      km2_uptake_po4_act(:,:) = km2_up_po4
-      km_uptake_org_act(:,:)  = km_up_org
-      km_mic_uptake_nh4_act(:,:) = km_mic_uptake_nh4
-      km_mic_uptake_no3_act(:,:) = km_mic_uptake_no3
-      km_dip_biochem_po4_act (:,:) = km_dip_biochem_po4
-      km_denitrification_c_act(:,:) = km_denitrification_c
-      km_denitrification_no3_act(:,:) = km_denitrification_no3
-      root_depth_avg(:) = SUM(root_fraction_sl(:,:) * soil_depth_sl(:,:), DIM=2)
-      WHERE(root_depth_avg(:) > eps8) 
-         km1_uptake_nh4_act(:,1) = km1_up_nh4 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
-         km1_uptake_no3_act(:,1) = km1_up_no3 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
-         km1_uptake_po4_act(:,1) = km1_up_po4 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:) / &
-                                   1000._wp / (w_soil_sl(:,1) / soil_depth_sl(:,1))
-         km2_uptake_nh4_act(:,1) = km2_up_nh4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
-         km2_uptake_no3_act(:,1) = km2_up_no3 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
-         km2_uptake_po4_act(:,1) = km2_up_po4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:) * &
-                                   1000._wp * (w_soil_sl(:,1) / soil_depth_sl(:,1))
-         km_uptake_org_act(:,1)  = km_up_org * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
-         km_mic_uptake_nh4_act(:,1) = km_mic_uptake_nh4 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
-         km_mic_uptake_no3_act(:,1) = km_mic_uptake_no3 / (rtm_hsc(:,1) * rmm_hsc(:,1)) * soil_depth_sl(:,1) / root_depth_avg(:)
-         km_dip_biochem_po4_act(:,1) = km_dip_biochem_po4 * rtm_hsc(:,1) * rmm_hsc(:,1) / soil_depth_sl(:,1) * root_depth_avg(:)
-         km_denitrification_c_act(:,1) = km_denitrification_c / soil_depth_sl(:,1) * root_depth_avg(:)
-         km_denitrification_no3_act(:,1) = km_denitrification_no3 / soil_depth_sl(:,1) * root_depth_avg(:)
-      ENDWHERE
-      apparent_fast_som_cn(:,:) = k_fast_som_cn_max
-      apparent_fast_som_cn(:,1) = MAX(k_fast_som_cn_max - f_fast_som_cn * nh4_solute(:,1) * soil_depth_sl(:,1) / &
-                                      root_depth_avg(:) / bulk_dens_sl(:,1), k_fast_som_cn_min)
-
-      rtm_decomposition_act(:,:) = 0.0_wp 
-      rmm_decomposition_act(:,:) = 0.0_wp 
-      rtm_plant_uptake_act(:,:) = 0.0_wp 
-      rmm_plant_uptake_act(:,:) = 0.0_wp 
-      rtm_nitrification_act(:,:) = 0.0_wp 
-      rmm_nitrification_act(:,:) = 0.0_wp 
-      rtm_denitrification_act(:,:) = 0.0_wp 
-      rtm_gasdiffusion_act(:,:) = 0.0_wp 
-      rmm_gasdiffusion_act(:,:) = 0.0_wp 
-      anaerobic_volume_fraction_act(:,:) = 0.0_wp 
-      rtm_hsc_act(:) = 0.0_wp 
-      rmm_hsc_act(:) = 0.0_wp 
-      rtm_sorption_act(:) = 0.0_wp 
-      rmm_sorption_act(:) = 0.0_wp
-      rtm_desorption_act(:) = 0.0_wp 
-      rmm_desorption_act(:) = 0.0_wp
-      vmax_weath_mineral_act_sl(:,:) = 0.0_wp 
-      k_adsorpt_po4_act(:,:) = 0.0_wp 
-      k_desorpt_po4_act(:,:) = 0.0_wp 
-      DO isoil = 1,nsoil_sb
-         rtm_decomposition_act(:,1) = rtm_decomposition_act(:,1) + & 
-                                         rtm_decomposition(:,isoil) * root_fraction_sl(:,isoil)
-         rmm_decomposition_act(:,1) = rmm_decomposition_act(:,1) + & 
-                                         rmm_decomposition(:,isoil) * root_fraction_sl(:,isoil)
-         rtm_plant_uptake_act(:,1) = rtm_plant_uptake_act(:,1) + & 
-                                         rtm_plant_uptake(:,isoil) * root_fraction_sl(:,isoil)
-         rmm_plant_uptake_act(:,1) = rmm_plant_uptake_act(:,1) + & 
-                                         rmm_plant_uptake(:,isoil) * root_fraction_sl(:,isoil)
-         rtm_nitrification_act(:,1) = rtm_nitrification_act(:,1) + & 
-                                         rtm_nitrification(:,isoil) * root_fraction_sl(:,isoil)
-         rmm_nitrification_act(:,1) = rmm_nitrification_act(:,1) + & 
-                                         rmm_nitrification(:,isoil) * root_fraction_sl(:,isoil)
-         rtm_denitrification_act(:,1) = rtm_denitrification_act(:,1) + & 
-                                         rtm_denitrification(:,isoil) * root_fraction_sl(:,isoil)
-         rtm_gasdiffusion_act(:,1) = rtm_gasdiffusion_act(:,1) + & 
-                                         rtm_gasdiffusion(:,isoil) * root_fraction_sl(:,isoil)
-         rmm_gasdiffusion_act(:,1) = rmm_gasdiffusion_act(:,1) + & 
-                                         rmm_gasdiffusion(:,isoil) * root_fraction_sl(:,isoil)
-         anaerobic_volume_fraction_act(:,1) = anaerobic_volume_fraction_act(:,1) + & 
-                                         anaerobic_volume_fraction_sl(:,isoil) * root_fraction_sl(:,isoil)
-         rtm_hsc_act(:)        = rtm_hsc_act(:) + rtm_hsc(:,isoil) * root_fraction_sl(:,isoil)
-         rmm_hsc_act(:)        = rmm_hsc_act(:) + rmm_hsc(:,isoil) * root_fraction_sl(:,isoil)
-         rtm_sorption_act(:)   = rtm_sorption_act(:) + rtm_sorption(:,isoil) * root_fraction_sl(:,isoil) 
-         rmm_sorption_act(:)   = rmm_sorption_act(:) + rmm_sorption(:,isoil) * root_fraction_sl(:,isoil) 
-         rtm_desorption_act(:) = rtm_desorption_act(:) + rtm_desorption(:,isoil) * root_fraction_sl(:,isoil) 
-         rmm_desorption_act(:) = rmm_desorption_act(:) + rmm_desorption(:,isoil) * root_fraction_sl(:,isoil) 
-      ENDDO
-      vmax_weath_mineral_act_sl(:,1) = rtm_hsc_act(:) / rmm_hsc_act(:) * vmax_weath_mineral_sl(:,1)
-      k_adsorpt_po4_act(:,1) = rtm_sorption_act(:) * k_adsorpt_po4
-      k_desorpt_po4_act(:,1) = rtm_desorption_act(:) * k_desorpt_po4
-    !> 2.0 Case of 1d model, simply copy values
-    !!
-    ELSE 
-      root_fraction_act_sl(:,:) = root_fraction_sl(:,:)
-      km1_uptake_nh4_act(:,:) = km1_up_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:))
-      km1_uptake_no3_act(:,:) = km1_up_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:))
-      km1_uptake_po4_act(:,:) = km1_up_po4 / (rtm_hsc(:,:) * rmm_hsc(:,:)) / 1000._wp / (w_soil_sl(:,:) / soil_depth_sl(:,:))
-      km2_uptake_nh4_act(:,:) = km2_up_nh4 * rtm_hsc(:,:) * rmm_hsc(:,:)
-      km2_uptake_no3_act(:,:) = km2_up_no3 * rtm_hsc(:,:) * rmm_hsc(:,:)
-      km2_uptake_po4_act(:,:) = km2_up_po4 * rtm_hsc(:,:) * rmm_hsc(:,:) * 1000._wp * (w_soil_sl(:,:) / soil_depth_sl(:,:))
-      km_uptake_org_act(:,:)  = km_up_org  * rtm_hsc(:,:) * rmm_hsc(:,:)
-      km_mic_uptake_nh4_act(:,:) = km_mic_uptake_nh4 / (rtm_hsc(:,:) * rmm_hsc(:,:))
-      km_mic_uptake_no3_act(:,:) = km_mic_uptake_no3 / (rtm_hsc(:,:) * rmm_hsc(:,:))
-      km_dip_biochem_po4_act(:,:) = km_dip_biochem_po4 * rtm_hsc(:,:) * rmm_hsc(:,:)
-      km_denitrification_c_act(:,:) = km_denitrification_c
-      km_denitrification_no3_act(:,:) = km_denitrification_no3
-      apparent_fast_som_cn(:,:) = MAX(k_fast_som_cn_max - f_fast_som_cn * nh4_solute(:,:) / bulk_dens_sl(:,:), k_fast_som_cn_min)
-
-      rtm_decomposition_act(:,:) = rtm_decomposition(:,:)
-      rmm_decomposition_act(:,:) = rmm_decomposition(:,:) 
-      rtm_plant_uptake_act(:,:) = rtm_plant_uptake(:,:)
-      rmm_plant_uptake_act(:,:) = rmm_plant_uptake(:,:) 
-      rtm_nitrification_act(:,:) = rtm_nitrification(:,:)
-      rmm_nitrification_act(:,:) = rmm_nitrification(:,:) 
-      rtm_denitrification_act(:,:) = rtm_denitrification(:,:)
-      rtm_gasdiffusion_act(:,:) = rtm_gasdiffusion(:,:)
-      rmm_gasdiffusion_act(:,:) = rmm_gasdiffusion(:,:) 
-      vmax_weath_mineral_act_sl(:,:) = rtm_hsc(:,:) / rmm_hsc(:,:) * vmax_weath_mineral_sl(:,:)
-      k_adsorpt_po4_act(:,:) = rtm_sorption(:,:) * k_adsorpt_po4
-      k_desorpt_po4_act(:,:) = rtm_desorption(:,:) * k_desorpt_po4
-      anaerobic_volume_fraction_act(:,:) = anaerobic_volume_fraction_sl(:,:) 
-    ENDIF
+    rtm_decomposition_act(:,:) = rtm_decomposition(:,:)
+    rmm_decomposition_act(:,:) = rmm_decomposition(:,:) 
+    rtm_plant_uptake_act(:,:) = rtm_plant_uptake(:,:)
+    rmm_plant_uptake_act(:,:) = rmm_plant_uptake(:,:) 
+    rtm_nitrification_act(:,:) = rtm_nitrification(:,:)
+    rmm_nitrification_act(:,:) = rmm_nitrification(:,:) 
+    rtm_denitrification_act(:,:) = rtm_denitrification(:,:)
+    rtm_gasdiffusion_act(:,:) = rtm_gasdiffusion(:,:)
+    rmm_gasdiffusion_act(:,:) = rmm_gasdiffusion(:,:) 
+    vmax_weath_mineral_act_sl(:,:) = rtm_hsc(:,:) / rmm_hsc(:,:) * vmax_weath_mineral_sl(:,:)
+    k_adsorpt_po4_act(:,:) = rtm_sorption(:,:) * k_adsorpt_po4
+    k_desorpt_po4_act(:,:) = rtm_desorption(:,:) * k_desorpt_po4
+    anaerobic_volume_fraction_act(:,:) = anaerobic_volume_fraction_sl(:,:) 
 
     p_deposition_act(:,:) = 0.0_wp
     p_deposition_act(:,1) = p_deposition(:) / 1.e6_wp / soil_depth_sl(:,1) * dtime
@@ -1649,7 +1547,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_inorganic_transport_rate(nc, &                              ! in
                                            nsoil_sb, &
-                                           sb_model_scheme, &
                                            soil_depth_sl, &
                                            drainage_fraction, &
                                            percolation_sl, &
@@ -1697,7 +1594,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! 0.1 InOut
     INTEGER,                                          INTENT(in)  :: nc, &                              !< dimensions
                                                                      nsoil_sb
-    CHARACTER(len=*),                                 INTENT(in)  :: sb_model_scheme                    !< type of sb model scheme: simple_0d / simple_1d 
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)  :: soil_depth_sl                      !< soil layer depth [m]
     REAL(wp), DIMENSION(nc),                          INTENT(in)  :: drainage_fraction                  !< fraction of water lost for 0d model [s-1]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)  :: percolation_sl, &                  !< fraction of water lost for 1d model [s-1]
@@ -1742,38 +1638,20 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
 
 
-    !> 1.0. Leaching rate
-    !!
-    IF(sb_model_scheme == 'simple_0d')THEN
-       ! For the 0D soil model, loss is proportional to the fractional waterloss of the soil column
-       ! reduction of layer concentration in mol m-3 timestep-1
-       transport_nh4_solute(:,1)     = -nh4_solute(:,1) * drainage_fraction(:) * dtime
-       transport_nh4_n15_solute(:,1) = -nh4_n15_solute(:,1) * drainage_fraction(:) * dtime
-       transport_no3_solute(:,1)     = -no3_solute(:,1) * drainage_fraction(:) * dtime
-       transport_no3_n15_solute(:,1) = -no3_n15_solute(:,1) * drainage_fraction(:) * dtime
-       transport_po4_solute(:,1)     = -po4_solute(:,1) * drainage_fraction(:) * dtime
-
-       ! record leaching losses as [mol m-2 timestep-1] 
-       leaching_nh4_solute(:)     = -transport_nh4_solute(:,1) * soil_depth_sl(:,1)
-       leaching_nh4_n15_solute(:) = -transport_nh4_n15_solute(:,1) * soil_depth_sl(:,1)
-       leaching_no3_solute(:)     = -transport_no3_solute(:,1) * soil_depth_sl(:,1)
-       leaching_no3_n15_solute(:) = -transport_no3_n15_solute(:,1) * soil_depth_sl(:,1)
-       leaching_po4_solute(:)     = -transport_po4_solute(:,1) * soil_depth_sl(:,1)
-
-    ELSE 
-       ! For the 1D scheme with multiple soil hydrology layers, use adjection-diffusion scheme of JSM
-       ! reduction of layer concentration in mol m-3 timestep-1, leaching rate in mol m-2 timestep-1
-       CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        nh4_solute(:,:), transport_nh4_solute(:,:), leaching_nh4_solute(:))
-       CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        nh4_n15_solute(:,:), transport_nh4_n15_solute(:,:), leaching_nh4_n15_solute(:))
-       CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        no3_solute(:,:), transport_no3_solute(:,:), leaching_no3_solute(:))
-       CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        no3_n15_solute(:,:), transport_no3_n15_solute(:,:), leaching_no3_n15_solute(:))
-       CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
-                                        po4_solute(:,:), transport_po4_solute(:,:), leaching_po4_solute(:))
-    ENDIF
+    !>1.0. Leaching rate
+    !>
+    ! For the 1D scheme with multiple soil hydrology layers, use adjection-diffusion scheme of JSM
+    ! reduction of layer concentration in mol m-3 timestep-1, leaching rate in mol m-2 timestep-1
+    CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                     nh4_solute(:,:), transport_nh4_solute(:,:), leaching_nh4_solute(:))
+    CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                     nh4_n15_solute(:,:), transport_nh4_n15_solute(:,:), leaching_nh4_n15_solute(:))
+    CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                     no3_solute(:,:), transport_no3_solute(:,:), leaching_no3_solute(:))
+    CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                     no3_n15_solute(:,:), transport_no3_n15_solute(:,:), leaching_no3_n15_solute(:))
+    CALL calc_liquid_phase_transport(nc, nsoil_sb, percolation_sl(:,:), soil_depth_sl(:,:), &
+                                     po4_solute(:,:), transport_po4_solute(:,:), leaching_po4_solute(:))
   
     !> 2.0 gaseous loss of NOy, N2O, and N2, for now following Xu-Ri and Prentice 2008, 
     !!thus ignoring any actual gas-transport and instead assume that from each layer a certain fraction excapes directly to the atmosphere.
@@ -2463,7 +2341,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
     INTEGER,                            INTENT(in)    :: nc, &                       !< dimensions
                                                          nsoil_sb
-    CHARACTER(len=*),                   INTENT(in)    :: sb_model_scheme             !< simple_0d / simple_1d / jsm from sb config
+    CHARACTER(len=*),                   INTENT(in)    :: sb_model_scheme             !< simple_1d / jsm from sb config
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: nh4_solute, &               !< soil solute NH4 concentration [mol m-3]
                                                          nh4_n15_solute, &           !< soil solute 15NH4 concentration [mol m-3]
                                                          no3_solute, &               !< soil solute NO3 concentration [mol m-3]

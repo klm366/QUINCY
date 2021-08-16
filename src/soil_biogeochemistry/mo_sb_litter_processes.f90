@@ -341,7 +341,7 @@ CONTAINS
            fn_soluable_coarse_root(:) * veg_litterfall%coarse_root%nitrogen15(:) ) * & 
            root_fraction_act_sl(:,isoil) / soil_depth_sl(:,isoil) 
 
-       IF (sb_model_scheme/="jsm") THEN
+       IF (sb_model_scheme == "simple_1d") THEN
           sb_formation%polymeric_litter%carbon(:,isoil)    = sb_formation%polymeric_litter%carbon(:,isoil) + & 
              ((1.0_wp - fc_soluable_fine_root(:))  * veg_litterfall%fine_root%carbon(:)     + &
               (1.0_wp - fc_soluable_coarse_root(:)) * veg_litterfall%coarse_root%carbon(:) ) * & 
