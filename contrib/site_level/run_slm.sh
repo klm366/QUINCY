@@ -94,7 +94,7 @@ fi
 
 ## further variables ##
 slmNamelist="namelist.slm"
-slmLctlib="lctlib_slm_nlct8.def"
+slmLctlib="lctlib_quincy_nlct8.def"
 slmBinary="land.x"
 slmRscript="postprocessing_""$slmModel"".R"           ## just the R-Script for postprocessing output data
 slmRscript4fluxfile="convert_slm2FLUXNET.R"           ## just the R-Script for converting output for FLUXNET 
@@ -378,57 +378,6 @@ fi
 ## sync all data with the filesystem ##
 sleep 5s && sync
 
-
-#############################################################################################
-## move the job dir to the local /scratch at the HPC node and work from there              ##
-#############################################################################################
-## test how much space is left on the local /scratch of the node
-scratchSpace=$(df /scratch/ | grep "scratch" | awk '{print $4}')
-# get the name of the node
-nodeName=$(uname -n)
-echo "simulation runs at node: ""$nodeName"
-# assume a QUINCY job might take max 4 GB space (for an u82 job 3 GB are used), calc the overall min space needed
-# default is 32 GB (8 jobs at all queue nodes) [1 GB = 1 B * 1028 * 1028]
-minSpace="34000000"
-# 512 GB at access io1 io2 io3 where 128 jobs can run
-if [ "$nodeName" == "access" ] || [ "$nodeName" == "io1" ] || [ "$nodeName" == "io2" ] || [ "$nodeName" == "io3" ]; then
-  minSpace="544000000"
-# 192 GB at io4-6 where 48 jobs can run
-elif [ "$nodeName" == "io4" ] || [ "$nodeName" == "io5" ] || [ "$nodeName" == "io6" ]; then
-  minSpace="204000000"
-# 128 GB at master where 32 jobs can run
-elif [ "$nodeName" == "master" ]; then
-  minSpace="136000000"
-# 80 GB at iof-ioj where 20 jobs can run
-elif [ "$nodeName" == "iof" ] || [ "$nodeName" == "iog" ] || [ "$nodeName" == "ioh" ] || [ "$nodeName" == "ioi" ] || [ "$nodeName" == "ioj" ]; then
-  minSpace="85000000"
-# 64 GB at io7-ioe where 16 jobs can run
-elif [ "$nodeName" == "io7" ] || [ "$nodeName" == "io8" ] || [ "$nodeName" == "io9" ] || [ "$nodeName" == "ioa" ] || [ "$nodeName" == "iob" ] || [ "$nodeName" == "ioc" ] || [ "$nodeName" == "iod" ] || [ "$nodeName" == "ioe" ]; then
-  minSpace="68000000"
-fi
-
-localScratch="FALSE"
-if [ "$scratchSpace" -gt "$minSpace" ]
- then
-  localScratch="TRUE"
-  echo "running the simulation at the local /scratch of the node"
-  echo " "
-
-  ## working in the scratch folder at the node
-  mkdir -p /scratch/"$username"
-  mkdir -p /scratch/"$username"/"$jobName""$jobIndex""$siteName"
-  rm -rf   /scratch/"$username"/"$jobName""$jobIndex""$siteName"/*     # remove any files just in the unlikely case the folder did already exist 
-  cd       /scratch/"$username"/"$jobName""$jobIndex""$siteName"
-
-  ## copy all files (but not the folder) here
-  cp -r   "$jobFold"* ./ 
-  ## make sure all folders and files are copied to local scratch
-  sleep 10s && sync
-  ## remove all copied files from network/scratch
-  rm -rf  "$jobFold"*
-fi
-
-
 ## get start-time of simulation
 startTime=$(date -u +%F_%X_%Z)
 
@@ -440,7 +389,7 @@ finishTime=$(date -u +%F_%X_%Z)
 sleep 2
 
 ## run the postprocessing R Script ##
-Rscript ./"$slmRscript"
+Rscript --vanilla ./"$slmRscript"
 sync
 
 # run fluxnet-type site-set model/data comparison diagnostics scripts
@@ -469,7 +418,7 @@ checkDirPresent ./output
 checkDirPresent ./postprocessing
 
 mv ./"$slmNamelist"         ./input               #  namelist.slm
-mv ./"$slmLctlib"           ./input               #  usually this would be: lctlib_slm_nlct8.def
+mv ./"$slmLctlib"           ./input               #  usually this would be: lctlib_quincy_nlct8.def
 mv ./*.txt                  ./output              #  the output files SLM created at runtime
 mv ./*.pdf                  ./postprocessing      #  for all SLM models postprocessing is available & executed
 if [ $doParamSensitivitySim == "T" ]; then
@@ -492,20 +441,5 @@ echo "  "                                 >> "$jobOutFold"start_finish_sim_time.
 
 ## sync all written data with file system ##
 sync
-
-## cd back into the network/scratch & copy data there
-## if 
-if [ "$localScratch" == "TRUE" ]
- then
-  cd "$jobFold"
-  cp -r   /scratch/"$username"/"$jobName""$jobIndex""$siteName"/* ./
-  sync         # sync the copied data, so that it is actually written to the harddrive
-  sleep 2      # an extra layer of security to ensure the data has been copied before removing job-folder from local scratch
-  # remove job-folder from local scratch
-  rm -rf  /scratch/"$username"/"$jobName""$jobIndex""$siteName"
- else
-  echo " Did not run the simulation at the local /scratch of the node because there was not enough space available!"
-  echo " "
-fi
 
 ## end run_slm.sh ##

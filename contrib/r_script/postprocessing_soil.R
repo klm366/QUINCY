@@ -62,30 +62,100 @@ print("Creating: soil_model_plots.pdf")
 # loop over all output files
 for (i in 1:nOutFiles) {
   # only output files that do not contain layer information
-  if(!grepl("_lay",flist[i])) {
+  if(!grepl("_lay", flist[i])) {
     print(paste('   reading',flist[i]))
     # get size of the file and run 'plot()' only for files < 3 GB
     fsize <- file.info(flist[i])[1,1]  # in Byte
     fsize <- fsize / 1000 / 1000       # in MB
     if (fsize < 3000.0){
-      dat=read.table(flist[i],header=T,sep="")
-      nvar=dim(dat)[2]
-      # number of columns with variables, excluding the 1st row "Time"
-      effColNum <- ncol(dat) -1 
-      mat=matrix(seq(1,2*round(effColNum/2)+2,1),nrow=round(effColNum/2)+1,ncol=2,byrow=T) 
-      layout(mat)
-      par(mai=c(0.4,0.5,0.14,0),oma=c(0.1,0.1,0.1,0.1)) # oma = outer margins
+      dat  <- read.table(flist[i], header=T, sep="")
+      nvar <- ncol(dat)
+      # x-axis label
       xAxis <- tstep_pool
       if(grepl("flux",flist[i])) {
         xAxis <- tstep_flux
       }
-      for (v in 2:nvar) {
-        if(!all(is.na(dat[,v]))){
-          plot(dat[,v],ylab=colnames(dat)[v],type='l',xlab=xAxis, tck=0.03, mgp=c(1.5, 0.2, 0))
-          # plot a brown horizontal line at 0 for sb_massBalance only
-          if(grepl("sb_massBalance",flist[i])) abline(h=0,col="sienna",lty=1,lwd=0.4)
+      # specific layout settings for some output files
+      if (grepl("soilpoolOrg", flist[i])){
+        # test number of columns
+        if (nvar != 31){
+          print(" soilpoolOrg number of output variables has changed, != 30, please adapt postprocessing scripts")
+          quit(save = "no", status = 1)
         }
-      }
+        # plot C/N/P values at an extra page each
+        plotCol <- c(2,11)
+        for (nSet in 1:3){
+          # define layout of plots at the page
+          effColNum <- 10
+          mat       <- matrix(seq(1,2*round(effColNum/2)+2,1), nrow=round(effColNum/2)+1, ncol=2,byrow=T) 
+          layout(mat)
+          par(mai=c(0.4,0.5,0.14,0), oma=c(0.1,0.1,0.1,0.1)) # oma = outer margins
+          # loop over columns (output variables) except "Time"
+          for (v in plotCol[1]:plotCol[2]) {
+            if(!all(is.na(dat[,v]))){
+              plot(dat[,v],ylab=colnames(dat)[v],type='l',xlab=xAxis, tck=0.03, mgp=c(1.5, 0.2, 0))
+              if (v == min(plotCol[1]:plotCol[2])) mtext(flist[i], cex=0.8, side=3, line=0.04, adj=0)
+            }
+          }
+          plotCol <- plotCol + 10
+        } # loop nSet      
+        remove(plotCol)
+      } else if (grepl("vegfluxC", flist[i]) || grepl("vegfluxN", flist[i]) || grepl("vegfluxP", flist[i])){
+        # test number of columns
+        # plot GrowthC & LitterfC values at an extra page each        
+        if (grepl("vegfluxC", flist[i])){
+          if (nvar != 28){
+            print(" vegfluxC number of output variables has changed, != 28, please adapt postprocessing scripts")
+            quit(save = "no", status = 1)
+          }
+          plotCol <- c(2,10,11,19,20,28)
+        } else if (grepl("vegfluxN", flist[i])){
+          if (nvar != 29){
+            print(" vegfluxN number of output variables has changed, != 29, please adapt postprocessing scripts")
+            quit(save = "no", status = 1)
+          }
+          plotCol <- c(2,11,12,20,21,29)
+        } else if (grepl("vegfluxP", flist[i])){
+          if (nvar != 23){
+            print(" vegfluxP number of output variables has changed, != 23, please adapt postprocessing scripts")
+            quit(save = "no", status = 1)
+          }
+          plotCol <- c(2,5,6,14,15,23)
+        }
+        # plotColSet, determine the column numbers from plotCol
+        plotColSet <- c(1,2)
+        for (nSet in 1:3){
+          # define layout of plots at the page
+          effColNum <- length(plotCol[plotColSet[1]]:plotCol[plotColSet[2]])
+          mat       <- matrix(seq(1,2*round(effColNum/2)+2,1), nrow=round(effColNum/2)+1, ncol=2,byrow=T) 
+          layout(mat)
+          par(mai=c(0.4,0.5,0.14,0), oma=c(0.1,0.1,0.1,0.1)) # oma = outer margins
+          # loop over columns (output variables) except "Time"
+          for (v in plotCol[plotColSet[1]]:plotCol[plotColSet[2]]) {
+            if(!all(is.na(dat[,v]))){
+              plot(dat[,v],ylab=colnames(dat)[v],type='l',xlab=xAxis, tck=0.03, mgp=c(1.5, 0.2, 0))
+              if (v == min(plotCol[plotColSet[1]]:plotCol[plotColSet[2]])) mtext(flist[i], cex=0.8, side=3, line=0.04, adj=0)
+            }
+          }
+          plotColSet <- plotColSet + 2
+        } # loop nSet      
+        remove(plotColSet)
+      } else{
+        # define layout of plots at the page
+        effColNum <- length(2:nvar)
+        mat       <- matrix(seq(1,2*round(effColNum/2)+2,1), nrow=round(effColNum/2)+1, ncol=2,byrow=T) 
+        layout(mat)
+        par(mai=c(0.4,0.5,0.14,0), oma=c(0.1,0.1,0.1,0.1)) # oma = outer margins
+        # loop over columns (output variables) except "Time"
+        for (v in 2:nvar) {
+          if(!all(is.na(dat[,v]))){
+            plot(dat[,v],ylab=colnames(dat)[v],type='l',xlab=xAxis, tck=0.03, mgp=c(1.5, 0.2, 0))
+            # plot a brown horizontal line at 0 for sb_massBalance only
+            if(grepl("sb_massBalance",flist[i])) abline(h=0,col="sienna",lty=1,lwd=0.4)
+            if (v == 2) mtext(flist[i], cex=0.8, side=3, line=0.04, adj=0)
+          }
+        }
+      } # default plotting
     # if file is > 2 GB
     } else{
       print(paste0("  Skipping ", flist[i], " because it is larger than 2 GB (", fsize," MB)."))

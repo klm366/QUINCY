@@ -21,13 +21,6 @@
 
 #define dsl4jsb_Use_processes USE mo_jsb_process_class, ONLY: 
 
-#define dsl4jsb_Use_memory_A2L_  USE mo_atm2land_memory_class, ONLY: t_atm2land_memory
-#define dsl4jsb_Use_memory_L2A_  USE mo_land2atm_memory_class, ONLY: t_land2atm_memory
-#define dsl4jsb_Def_memory_A2L_  TYPE(t_atm2land_memory), POINTER :: A2L__mem
-#define dsl4jsb_Def_memory_L2A_  TYPE(t_land2atm_memory), POINTER :: L2A__mem
-#define dsl4jsb_Get_memory_A2L_  SELECT TYPE (mm => tile%mem(A2L_)%p) ; TYPE IS( t_atm2land_memory ) ; A2L__mem => mm ; END SELECT
-#define dsl4jsb_Get_memory_L2A_  SELECT TYPE (mm => tile%mem(L2A_)%p) ; TYPE IS( t_land2atm_memory ) ; L2A__mem => mm ; END SELECT
-
 #define dsl4jsb_Use_memory(PROC) USE CONCATENATE3(mo_,PROC,memory_class), ONLY: CONCATENATE3(t_,PROC,memory)
 #define dsl4jsb_Def_memory(PROC) TYPE(CONCATENATE3(t_,PROC,memory)), POINTER :: CONCATENATE2(PROC,_mem)
 #define dsl4jsb_Get_memory(PROC) SELECT TYPE (mm => tile%mem(PROC)%p) ; TYPE IS( CONCATENATE3(t_,PROC,memor)y) ; CONCATENATE2(PROC,_mem => mm ; END SELECT)

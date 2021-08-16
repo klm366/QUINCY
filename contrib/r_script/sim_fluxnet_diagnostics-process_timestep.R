@@ -356,35 +356,36 @@ print(" Data from all sites in this folder collected & mean + sd calculated.")
 print(" Some calculations for isotopes.")
 
 # hack for simple
-soil_org_isotope_mean<-array(NA,c(nsite,6))
-colnames(soil_org_isotope_mean)<-c('Litter_dC13','Litter_DC14','Litter_dN15','SOM_dC13','SOM_DC14','SOM_dN15')
-soil_org_isotope_std<-soil_org_isotope_mean
+soil_org_isotopeHeader          <- c('Litter_dC13', 'Litter_DC14', 'Litter_dN15', 'SOM_dC13', 'SOM_DC14', 'SOM_dN15')
+soil_org_isotope_mean           <- array(NA, c(nsite, length(soil_org_isotopeHeader)))
+colnames(soil_org_isotope_mean) <- soil_org_isotopeHeader
+soil_org_isotope_std            <- soil_org_isotope_mean
 
-pool_mean<-data.frame(cnp_soilpool_mean)
-pool_std<-data.frame(cnp_soilpool_std)
-iso_mean<-data.frame(c13c14n15_soilpool_mean)
-iso_std<-data.frame(c13c14n15_soilpool_std)
-soil_org_isotope_mean[,1]<-((iso_mean$MetLitterdC13*pool_mean$MetLitterC+
-                             iso_mean$StrLitterdC13*pool_mean$StrLitterC+
-                             iso_mean$WodLitterdC13*pool_mean$WodLitterC)/
-                            (pool_mean$MetLitterC+pool_mean$StrLitterC+pool_mean$WodLitterC))
-soil_org_isotope_mean[,2]<-((iso_mean$MetLitterDC14*pool_mean$MetLitterC+
-                             iso_mean$StrLitterDC14*pool_mean$StrLitterC+
-                             iso_mean$WodLitterDC14*pool_mean$WodLitterC)/
-                            (pool_mean$MetLitterC+pool_mean$StrLitterC+pool_mean$WodLitterC))
-soil_org_isotope_mean[,3]<-((iso_mean$MetLitterdN15*pool_mean$MetLitterN+
-                             iso_mean$StrLitterdN15*pool_mean$StrLitterN+
-                             iso_mean$WodLitterN15*pool_mean$WodLitterN)/
-                            (pool_mean$MetLitterN+pool_mean$StrLitterN+pool_mean$WodLitterN))
-soil_org_isotope_mean[,4]<-((iso_mean$FastdC13*pool_mean$FastC+
-                             iso_mean$SlowdC13*pool_mean$SlowC)/
-                            (pool_mean$FastC+pool_mean$SlowC))
-soil_org_isotope_mean[,5]<-((iso_mean$FastDC14*pool_mean$FastC+
-                             iso_mean$SlowDC14*pool_mean$SlowC)/
-                            (pool_mean$FastC+pool_mean$SlowC))
-soil_org_isotope_mean[,6]<-((iso_mean$FastdN15*pool_mean$FastN+
-                             iso_mean$SlowdN15*pool_mean$SlowN)/
-                            (pool_mean$FastN+pool_mean$SlowN))
+pool_mean <- data.frame(cnp_soilpool_mean)
+pool_std  <- data.frame(cnp_soilpool_std)
+iso_mean  <- data.frame(c13c14n15_soilpool_mean)
+iso_std   <- data.frame(c13c14n15_soilpool_std)
+soil_org_isotope_mean[,1] <- ((iso_mean$MetLitterdC13 * pool_mean$poolC_solLitter +
+                               iso_mean$StrLitterdC13 * pool_mean$poolC_polLitter +
+                               iso_mean$WodLitterdC13 * pool_mean$poolC_wooLitter) /
+                              (pool_mean$poolC_solLitter + pool_mean$poolC_polLitter + pool_mean$poolC_wooLitter))
+soil_org_isotope_mean[,2] <- ((iso_mean$MetLitterDC14 * pool_mean$poolC_solLitter +
+                               iso_mean$StrLitterDC14 * pool_mean$poolC_polLitter +
+                               iso_mean$WodLitterDC14 * pool_mean$poolC_wooLitter) /
+                              (pool_mean$poolC_solLitter + pool_mean$poolC_polLitter + pool_mean$poolC_wooLitter))
+soil_org_isotope_mean[,3] <- ((iso_mean$MetLitterdN15 * pool_mean$poolN_solLitter +
+                               iso_mean$StrLitterdN15 * pool_mean$poolN_polLitter +
+                               iso_mean$WodLitterN15  * pool_mean$poolN_wooLitter) /
+                              (pool_mean$poolN_solLitter + pool_mean$poolN_polLitter + pool_mean$poolN_wooLitter))
+soil_org_isotope_mean[,4] <- ((iso_mean$FastdC13   * pool_mean$poolC_mic +
+                               iso_mean$SlowdC13   * pool_mean$poolC_res) /
+                              (pool_mean$poolC_mic + pool_mean$poolC_res))
+soil_org_isotope_mean[,5] <- ((iso_mean$FastDC14   * pool_mean$poolC_mic +
+                               iso_mean$SlowDC14   * pool_mean$poolC_res) /
+                              (pool_mean$poolC_mic + pool_mean$poolC_res))
+soil_org_isotope_mean[,6] <- ((iso_mean$FastdN15   * pool_mean$poolN_mic +
+                               iso_mean$SlowdN15   * pool_mean$poolN_res) /
+                              (pool_mean$poolN_mic + pool_mean$poolN_res))
 
 print(" Write data into files slm_site_mean.csv and slm_site_sd.csv.")
 
@@ -417,12 +418,12 @@ varBarPlot <- c(
                 "Total_vegPool_C"           , # Total_C
                 "Total_vegPool_N"           , # Total_N
                 "Total_vegPool_P"           , # Total_P
-                "Total_litterPool_C"        , # MetLitterC + StrLitterC + WodLitterC
-                "Total_litterPool_N"        , # MetLitterN + StrLitterN + WodLitterN
-                "Total_litterPool_P"        , # MetLitterP + StrLitterP + WodLitterP
-                "Total_SoilOrgPool_C"       , # FastC      + SlowC      + MycC
-                "Total_SoilOrgPool_N"       , # FastN      + SlowN      + MycN
-                "Total_SoilOrgPool_P"       , # FastP      + SlowP      + MycP
+                "Total_litterPool_C"        , # poolC_solLitter + poolC_polLitter + poolC_wooLitter
+                "Total_litterPool_N"        , # poolN_solLitter + poolN_polLitter + poolN_wooLitter
+                "Total_litterPool_P"        , # poolP_solLitter + poolP_polLitter + poolP_wooLitter
+                "Total_SoilOrgPool_C"       , # poolC_mic      + poolC_res      + poolC_myco
+                "Total_SoilOrgPool_N"       , # poolN_mic      + poolN_res      + poolN_myco
+                "Total_SoilOrgPool_P"       , # poolP_mic      + poolP_res      + poolP_myco
                 "Total_SoilInorgPool_N"     , # MineralNH4 MineralNO3 NOY N2O N2
                 "Total_SoilInorgPool_P"     , # MineralP
                 
@@ -521,13 +522,13 @@ colnames(addVal) <- aggVar
 addVal$Total_vegPool_C        <- mVal$Total_C
 addVal$Total_vegPool_N        <- mVal$Total_N
 addVal$Total_vegPool_P        <- mVal$Total_P
-addVal$Total_litterPool_C     <- mVal$MetLitterC     + mVal$StrLitterC     + mVal$WodLitterC
-addVal$Total_litterPool_N     <- mVal$MetLitterN     + mVal$StrLitterN     + mVal$WodLitterN
-addVal$Total_litterPool_P     <- mVal$MetLitterP     + mVal$StrLitterP     + mVal$WodLitterP
-addVal$Total_SoilOrgPool_C    <- mVal$FastC          + mVal$SlowC          + mVal$MycC
-addVal$Total_SoilOrgPool_N    <- mVal$FastN          + mVal$SlowN          + mVal$MycN
-addVal$Total_SoilOrgPool_P    <- mVal$FastP          + mVal$SlowP          + mVal$MycP
-addVal$Total_SoilInorgPool_N  <- mVal$MineralNH4     + mVal$MineralNO3     + mVal$NOY   + mVal$N2O   + mVal$N2
+addVal$Total_litterPool_C     <- mVal$poolC_solLitter   + mVal$poolC_polLitter    + mVal$poolC_wooLitter
+addVal$Total_litterPool_N     <- mVal$poolN_solLitter   + mVal$poolN_polLitter    + mVal$poolN_wooLitter
+addVal$Total_litterPool_P     <- mVal$poolP_solLitter   + mVal$poolP_polLitter    + mVal$poolP_wooLitter
+addVal$Total_SoilOrgPool_C    <- mVal$poolC_mic         + mVal$poolC_res          + mVal$poolC_myco
+addVal$Total_SoilOrgPool_N    <- mVal$poolN_mic         + mVal$poolN_res          + mVal$poolN_myco
+addVal$Total_SoilOrgPool_P    <- mVal$poolP_mic         + mVal$poolP_res          + mVal$poolP_myco
+addVal$Total_SoilInorgPool_N  <- mVal$MineralNH4        + mVal$MineralNO3         + mVal$NOY   + mVal$N2O   + mVal$N2
 addVal$Total_SoilInorgPool_P  <- mVal$MineralP
 addVal$Ngasloss               <- mVal$Emission_NOY   + mVal$Emission_N2O   + mVal$Emission_N2
 addVal$Nleachingloss          <- mVal$LeachingNH4    + mVal$LeachingNO3    + mVal$LeachingDOM_N

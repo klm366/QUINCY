@@ -65,7 +65,8 @@ CONTAINS
     ! ..
 
     ! Use of process memories
-    dsl4jsb_Use_memory_A2L_ 
+    dsl4jsb_Use_memory(A2L_) 
+    dsl4jsb_Use_memory(L2A_) 
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,      ONLY: t_sse_memory
@@ -90,7 +91,8 @@ CONTAINS
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
-    dsl4jsb_Def_memory_A2L_ 
+    dsl4jsb_Def_memory(A2L_) 
+    dsl4jsb_Def_memory(L2A_) 
     dsl4jsb_Def_memory(ASSIMI_)                     !     TYPE(t_assimi_memory),   POINTER :: assimi__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
@@ -111,6 +113,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: ga
     dsl4jsb_Real2D_onChunk                :: pch 
     dsl4jsb_Real2D_onChunk                :: drag_srf
+    ! L2A_
+    dsl4jsb_Real2D_onChunk                :: fact_q_air 
+    dsl4jsb_Real2D_onChunk                :: fact_qsat_srf
     ! SSE_ 2D
     dsl4jsb_Real2D_onChunk                :: t_srf_old
     dsl4jsb_Real2D_onChunk                :: zril_old
@@ -180,7 +185,8 @@ CONTAINS
     ! Get process config
     ! ..
     ! Get process memories
-    dsl4jsb_Get_memory_A2L_ 
+    dsl4jsb_Get_memory(A2L_) 
+    dsl4jsb_Get_memory(L2A_) 
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SSE_)
@@ -200,6 +206,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)                   ! inout
     dsl4jsb_Get_var2D_onChunk(A2L_, pch)                  ! inout
     dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)             ! inout
+    ! ---------------------------
+    ! L2A_ 2D
+    dsl4jsb_Get_var2D_onChunk(L2A_, fact_q_air)           ! inout
+    dsl4jsb_Get_var2D_onChunk(L2A_, fact_qsat_srf)        ! inout
     ! ---------------------------
     ! SSE_ 2D
     dsl4jsb_Get_var2D_onChunk(SSE_, t_srf_old)            ! inout
@@ -260,6 +270,10 @@ CONTAINS
     !!
     rel_hum(:) = MIN(1.0_wp, (w_soil_sl(:,1) - w_soil_pwp_sl(:,1)) / (w_soil_fc_sl(:,1) - w_soil_pwp_sl(:,1)))
 
+    !> 2.0 surface fractions for JSBACH energy balance
+    !! 
+
+
     !> 2.0 Calculate surface energy budget
     !!
     CALL calc_surface_energy_balance(nc, nsoil_sb, &
@@ -270,6 +284,7 @@ CONTAINS
                                      press_srf(:),wind_10m(:), & 
                                      height(:),lai(:),w_skin(:),canopy_cond(:),rel_hum(:),& 
                                      soil_depth_sl(:,:),heat_capa_sl(:,:),therm_cond_sl(:,:),bulk_dens_sl(:,:), &
+                                     fact_q_air(:), fact_qsat_srf(:), &                             ! inout
                                      ga(:),drag_srf(:),pch(:), &                                    ! inout
                                      ground_heat_flx_old(:),zril_old(:),t_srf_old(:), &             ! inout
                                      pet(:),evaporation(:),interception(:),transpiration(:), &      ! inout
@@ -316,6 +331,7 @@ CONTAINS
                                          press_srf,wind_10m, & 
                                          height,lai,w_skin,canopy_cond,rel_hum,& 
                                          soil_depth_sl,heat_capa_sl,therm_cond_sl,bulk_dens_sl, &
+                                         fact_q_air,fact_qsat_srf, &                                                ! inout
                                          ga,drag_srf,pch, &                                                         ! inout
                                          ground_heat_flx_old,zril_old,t_srf_old, &                                  ! inout
                                          pet,evaporation,interception,transpiration, &                              ! inout
@@ -325,9 +341,9 @@ CONTAINS
     USE mo_atmland_constants,         ONLY: min_wind, max_wind 
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_sse_constants,             ONLY: w_skin_max
-    USE mo_sse_update_turbulence,     ONLY: calc_filtered_drag_coefficient
-    USE mo_jsb_phys_constants,        ONLY: r_gas_dryair, LatentHeatVaporization, stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
-    USE mo_phy_schemes,               ONLY: heat_transfer_coef, surface_dry_static_energy
+    USE mo_jsb_phys_constants,        ONLY: r_gas_dryair, LatentHeatSublimation, LatentHeatVaporization, &
+                                            stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
+    USE mo_phy_schemes,               ONLY: heat_transfer_coef, q_effective, surface_dry_static_energy
     
 
     IMPLICIT NONE
@@ -358,6 +374,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: ground_heat_flx_old, & !< ground heat flux from previous time step [W/m2]
                                                                        t_srf_old, &           !< previous timestep's surface temperature 
                                                                        zril_old, &            !< previous timestep's Reynolds number 
+                                                                       fact_q_air, &          !< 
+                                                                       fact_qsat_srf, &       !< 
                                                                        ga, &                  !< aerodynamic conductance [m/s] 
                                                                        drag_srf, &            !< surface drag coefficient (JSBACH-style!)
                                                                        pch, &                 !< heat exchange parameter (JSBACH-style!)
@@ -381,8 +399,11 @@ CONTAINS
     REAL(wp), DIMENSION(nc,nsoil_sb)              :: ground_heat_flx_sl              !< soil temperature [K]
     ! LOGICAL, DIMENSION(nc)                        :: info_catch_t_jump    ! for debug/ write out temperature jumps larger 15 K
     ! INTEGER, SAVE                                 :: timesteps_help = 0   ! for debug/ write out temperature jumps larger 15 K
-    ! REAL(wp), DIMENSION(nc)                       :: dQdT,s_old,t2s_conv,heat_tcoef, s_star, q_sat_star
-    ! REAL(wp), DIMENSION(nc)                       :: q_air_eff,q_sat_srf_eff,evapotranspiration
+    REAL(wp), DIMENSION(nc)                       :: dQdT,s_old,t2s_conv,s_star, q_sat_star
+    REAL(wp), DIMENSION(nc)                       :: q_air_eff,q_sat_srf_eff,evapotranspiration
+    REAL(wp), DIMENSION(nc)                       :: fract_snow,fract_water,fract_fpc,fact_qsat_trans_srf
+    REAL(wp), DIMENSION(nc)                       :: evaporation_snow,evaporation_bare
+
     INTEGER                                       :: isoil, it   ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_surface_energy_balance'
 
@@ -394,133 +415,121 @@ CONTAINS
 
     !> 1.0 calculate surface characteristic given old surface state 
     !!    
-    q_sat(:)      = calc_spec_humidity_sat(t_air(:),press_srf(:))
-    q_sat_srf(:)  = calc_spec_humidity_sat(t_soil_sl(:,1),press_srf(:))
-    wind_air(:)   = MIN(MAX(wind_10m(:), min_wind), max_wind)           ! vectorization does provide correct results (tested gfortran)
+    q_sat(:)      = calc_spec_humidity_sat(t_air(:), press_srf(:))
+    q_sat_srf(:)  = calc_spec_humidity_sat(t_soil_sl(:,1), press_srf(:))
+    wind_air(:)   = MIN(MAX(wind_10m(:), min_wind), max_wind)     
+
+    !> 1.1 Calculate heat transfer coefficient
+    !!
+    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
     
-    !> 1.1 net radiation flux at the surface
+    !> 1.2 net radiation flux at the surface
     !!
     net_radiation(:) = sw_srf_net(:) + lw_srf_down(:) - stbo * zemiss_def * t_soil_sl(:,1)**4._wp  
+    pet(:)           = -1._wp * heat_tcoef(:) * (q_air(:) - q_sat_srf(:))
 
-!! JSBACH4 style... needs proper integration of wet surfaces
-!!    !> 1.4 Compute sensitivity of surface saturation specific humidity to temperature
-!!    dQdT(:) = (calc_spec_humidity_sat(t_soil_sl(:,1) + 0.001_wp, press_srf(:)) - q_sat_srf(:)) * 1000._wp
-!!
-!!    !> 1.5 Old dry static energy
-!!    s_old(:) = surface_dry_static_energy( &
-!!      & t_soil_sl(:,1), &
-!!      & q_effective(q_sat_srf(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
-!!    t2s_conv(:) = s_old(:) / t_soil_sl(:,1) 
-!!
-!!
-!!    !> 2.2 Estimate ground flux and update deep soil temperature
-!!    !! working upwards to estimate net transfer implied by previous temperature profile 
-!!    !! (ignores interaction of diffusion with water or ice)
-!!    
-!!    hlp1 = update_surface_temperature(cvdifts*steplen,t2s_conv(:),dQdT(:), & 
-!!                                      t_acoef(:),t_bcoef(:), &
-!!                                      q_acoef,q_bcoef(:), & 
-!!                                      s_old(:), &
-!!                                      q_sat_srf, &
-!!                                      net_radiation,ground_heat_flx, & 
-!!                                      heat_tcoef(:), &
-!!                                      fact_q_air(:),fact_qsat_srf(:),fract_snow(:), & 
-!!                                      heat_capa_sl(:,1)*bulk_dens_sl(:,1)*soil_depth_sl(:,1)) 
-!!
-!!    ! time-filtering as in JSBACH3
-!!    s_star = 1._wp/cvdifts * hlp1 + (1._wp - 1._wp/cvdifts) * s_old(:) 
-!!    q_sat_star = q_sat_srf(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:) 
-!!
-!!    ! Compute sensible heat flux
-!!    sensible_heat_flx(:) = heat_tcoef(:) * (t_bcoef(:) - s_star(:))
-!!
-!!    ! Compute latent heat flux
-!!    q_air_eff = q_effective(0.0_wp,q_air(:),1.0_wp,0.0_wp)
-!!    q_sat_srf_eff = q_effective(q_sat_star(:),q_air(:),fact_qsat_srf(:), fact_q_air(:))
-!!    evapotranspiration = heat_tcoef(:) * (q_air_eff(:) - q_sat_srf_eff(:))
-!!    latent_heat_flx(:) = LatentHeatVaporization * evapotranspiration(:) 
+    !> 1.3 calculate snow and water-saturated fraction of tile
+    !!     following JSBACH4 hydrology 
+    hlp1(:) = 0.0_wp
+    CALL calc_wskin_fractions_veg(dtime, &
+                                  steplen, & 
+                                  w_skin_max * lai(:), &
+                                  0.01_wp, & ! assume almost flat terrain
+                                  pet(:), &
+                                  w_skin, &
+                                  0.0_wp, &     ! jsb4: w_snow_soil
+                                  0.0_wp, &     ! jsb4: w_snow_can
+                                  hlp1(:), &          ! out
+                                  fract_water(:), &   ! out
+                                  fract_snow(:))      ! out
+    fract_fpc = 1.0_wp - EXP(-0.5_wp * lai(:)) 
 
-
-    !> 2.0 solve for surface temperature
-    !! iterate once over surface temperature condition for time filtering
-    DO it = 1,2
-
-      !> 2.1 current heat exchange coefficient (aka drag)
-      !! 
-      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
-  
-      !> 2.2 calulate transpiration (kg / m2 / s)
-      !! T = rho * (qsat - qair ) * Gtot in mm/s 
-      WHERE (canopy_cond(:) > eps8 .AND.(q_sat_srf(:) - q_air(:)) > 0.0_wp)
-         transpiration(:) = press_srf(:) / &
-                            ( r_gas_dryair * t_air(:) ) * (q_sat(:) - q_air(:)) / &
-                            (1._wp / canopy_cond(:) + 1._wp / (heat_tcoef(:) * wind_air(:))) 
-      ELSEWHERE
-         transpiration(:) = 0.0_wp 
-      END WHERE
-  
-      !> 2.3 soil evaporation (kg / m2 / s)
-      !! E = rho * (qsat - qair) * theta * 1/ga_soil (taken as ga_soil(:) = (drag_srf(:)*wind_air(:)) / 10)
-      !! Accounts for the fact that currently ga is calculated for a 12m tall vegetation
-      !! here z= 0.001 and h = 0.01 are assumed)
-      !! Requires a tuning factor of 0.25 to arrive at reasonable levels of maximum evaporation (0.3mm/h)
-      evaporation(:) = 0.25_wp * rel_hum(:) * exp(-0.5*lai(:)) * press_srf(:) / &
-                       ( r_gas_dryair * t_air(:) ) * (q_sat_srf(:) - q_air(:)) / &
-                       ( 1._wp / (0.082_wp * heat_tcoef(:) * wind_air(:)))
-  
-      !> 2.4 calculate interception loss
-      !! 
-      WHERE((w_skin_max * lai(:)) > eps8)
-         ! kg / m2 / s
-         interception(:) = MIN(MAX(press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
-                                   (q_sat_srf(:) - q_air(:)) / ( 1._wp / (heat_tcoef(:) * wind_air(:))) * &
-                                    w_skin(:) / (w_skin_max * lai(:)), & 
-                               0.0), w_skin(:)*1000.0_wp / dtime)
-      ELSEWHERE
-         interception(:) = 0.0_wp
-      ENDWHERE
- 
-      !> 2.45 diagnose potential evaporation (kg / m2 / s)
-      pet(:) = press_srf(:) / ( r_gas_dryair * t_air(:) ) * &
-               (q_sat_srf(:) - q_air(:)) / ( 1._wp / (0.082_wp * heat_tcoef(:) * wind_air(:)))
- 
-      !> 2.5 calculate latent heat flux (W m-2), negative here for JSBACH flux convention 
-      !!
-      latent_heat_flx(:)    = - LatentHeatVaporization * (evaporation(:) + transpiration(:) + interception(:))
-  
-      !> 2.6 calculate sensible heat flux (W m-2), negative here for JSBACH flux convention 
-      !!
-      sensible_heat_flx(:)  = heat_tcoef(:) * & 
-                              (t_bcoef(:) - surface_dry_static_energy(t_soil_sl(:,1), 0.5_wp*q_sat_srf(:)+0.5_wp*q_air(:))) 
-  
-      !> 2.7 Calculate explicit surface temperature 
-      !!
-      t_srf_new(:)          = t_soil_sl(:,1) + &
-                              (net_radiation(:) + sensible_heat_flx(:) + latent_heat_flx(:) + ground_heat_flx_old(:)) /  & 
-                              (heat_capa_sl(:,1) * bulk_dens_sl(:,1) * soil_depth_sl(:,1)) * &
-                              dtime 
-      ! time filtering for the re-calculation of the drag (JSBACH 3)
-      hlp1(:)               = t_srf_old(:) + 0.1_wp * (t_soil_sl(:,1) - 2._wp * t_srf_old(:) + t_srf_new(:))
-  
-      ! recalculate time-filtered drag 
-      IF(it==1) THEN 
-        CALL calc_filtered_drag_coefficient(steplen, &
-                                            t_air(:),q_air(:),wind_air(:),press_srf(:),t_soil_sl(:,1),hlp1(:),&                         
-                                            height(:),zril_old(:),drag_srf(:),pch(:),ga(:))
-      END IF
-    
-    ENDDO  ! DO it = 1,2
-
-
-    !> 3.0 update surface temperature and remember previous value
+    !> 1.4 calculate humidity scaling factors for energy balance calculation 
     !!
-    !! catching temperature changes to be not larger than 15 K
-    !! 
-    t_srf_old(:) = t_soil_sl(:,1)
-    ! t_soil_sl(:,1) = t_srf_new(:)
+    CALL update_humidity_scaling(nc, &
+                                 fract_snow, fract_water, fract_fpc, &
+                                 q_sat_srf, q_air, &
+                                 wind_air, pch, &
+                                 canopy_cond, rel_hum, &
+                                 fact_q_air, fact_qsat_srf, fact_qsat_trans_srf)
 
+    !> 2.0 JSBACH4: update_surface_energy_land
+
+    !> 2.1 Compute sensitivity of surface saturation specific humidity to temperature
+    !!
+    dQdT(:) = (calc_spec_humidity_sat(t_soil_sl(:,1) + 0.001_wp, press_srf(:)) - q_sat_srf(:)) * 1000._wp
+
+    !> 2.2 Old dry static energy
+    !!
+    s_old(:) = surface_dry_static_energy( &
+      & t_soil_sl(:,1), &
+      & q_effective(q_sat_srf(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
+    t2s_conv(:) = s_old(:) / t_soil_sl(:,1) 
+
+    !> 2.3 solve energy balance calculation using implicit formulation (JSBACH4)
+    !!
+    hlp1 = calc_temp_srf_new_implicit(steplen, &
+                                      t2s_conv(:), & 
+                                      t_acoef(:), &
+                                      t_bcoef(:), &
+                                      q_acoef(:), &
+                                      q_bcoef(:), & 
+                                      s_old(:), &
+                                      q_sat_srf(:), &
+                                      dQdT(:), &
+                                      net_radiation(:), &
+                                      ground_heat_flx(:), & 
+                                      heat_tcoef(:), &
+                                      fact_q_air(:), &
+                                      fact_qsat_srf(:), &
+                                      fract_snow(:), & 
+                                      heat_capa_sl(:,1) * bulk_dens_sl(:,1) * soil_depth_sl(:,1)) 
+
+    ! time-filtering as in JSBACH3
+    s_star(:)     = 1._wp / cvdifts * hlp1(:) + (1._wp - 1._wp / cvdifts) * s_old(:) 
+    t_srf_new(:)  = s_star(:) / t2s_conv(:)
+    q_sat_star(:) = q_sat_srf(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:) 
+
+    !> 3.0 calculate water fluxes
+    !!   This is from JSBACH4 hydrology/mo_hydro_interface:update_evaporation
+    q_air_eff(:)          = q_effective(0.0_wp, q_air(:), 1.0_wp, 0.0_wp)
+    q_sat_srf_eff(:)      = q_effective(q_sat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
+    evapotranspiration(:) = heat_tcoef(:) * (q_air_eff(:) - q_sat_srf_eff(:)) 
+    pet(:)                = heat_tcoef(:) * (q_air(:) - q_sat_star(:))
+  
+    !> 3.1 convert to positive fluxes for water module
+    !! needed for QUINCY, but not JSBACH4
+    transpiration(:)    = -1._wp * fact_qsat_trans_srf(:) * pet(:) 
+    interception(:)     = -1._wp * (1._wp - fract_snow(:)) * fract_water(:) * pet(:) 
+    evaporation_snow(:) = -1._wp * fract_snow(:) * pet(:) 
+    ! no dew into stomates or onto canopy
+    WHERE(pet(:) > 0.0_wp)
+       transpiration(:)    = 0.0_wp
+       interception(:)     = 0.0_wp
+       evaporation_snow(:) = 0.0_wp
+    ENDWHERE
+    evaporation_bare(:) = -1._wp * evapotranspiration(:) - transpiration(:) - interception(:) - evaporation_snow(:)
+    ! BPLARR @TODO, as long as there is no snow
+    evaporation = evaporation_bare
+
+    !> 4.0 calculate sensible and latent heat flux
+    !!  from JSBACH4 srf_energy_bal/mo_seb_land:update_surface_fluxes_land
+
+    ! Compute sensible heat flux
+    sensible_heat_flx(:) = heat_tcoef(:) * (t_acoef(:) * s_old(:) + t_bcoef(:) - s_star(:))
+
+    ! Compute latent heat flux
+    latent_heat_flx(:) = LatentHeatVaporization * evapotranspiration(:) + & 
+                         (LatentHeatSublimation - LatentHeatVaporization) * fract_snow(:) * pet(:)
+
+    !> 5.0 update surface temperature and remember previous value
+    !>
+    !>   catching temperature changes to be not larger than 15 K (hardcoded)
+    !>   
     ! timesteps_help = timesteps_help +1    ! uncomment for debug only (also see declaration above)
     ! info_catch_t_jump(:) = .FALSE.        ! uncomment for debug only (also see declaration above)
+    t_srf_old(:) = t_soil_sl(:,1)
+    ! catch 15 K    
     WHERE (ABS(t_soil_sl(:,1) - t_srf_new(:)) > 15.0_wp)
       ! info_catch_t_jump(:) = .TRUE.       ! uncomment for debug only (also see declaration above)
       WHERE (t_soil_sl(:,1) < t_srf_new(:))
@@ -536,9 +545,10 @@ CONTAINS
     !   write(960,'(I14,20F26.8)') timesteps_help, t_srf_old(:), t_srf_new(:) - t_srf_old(:)
     ! END IF
 
-    !> 3.1 calculate ground heat flux and update deep surface temperatures 
+    !> 5.1 calculate ground heat flux and update deep surface temperatures 
     !!
     ground_heat_flx_sl(:,:) = 0.0_wp 
+    ! loop layers 1:(max-1)
     DO isoil = 1,nsoil_sb-1
       WHERE(soil_depth_sl(:,isoil) > eps8)
            ground_heat_flx_sl(:,isoil) = therm_cond_sl(:,isoil) * & 
@@ -548,7 +558,7 @@ CONTAINS
     ENDDO 
     ground_heat_flx(:)     = ground_heat_flx_sl(:,1) 
     ground_heat_flx_old(:) = ground_heat_flx(:)
-
+    ! loop layers 2:max
     DO isoil = 2,nsoil_sb
       WHERE(soil_depth_sl(:,isoil) > eps8)
          t_soil_sl(:,isoil) = t_soil_sl(:,isoil) + &
@@ -660,7 +670,7 @@ CONTAINS
        water_to_skin(:) = 0.0_wp
     ENDWHERE
     water_to_soil(:) = MAX(rain(:) + snow(:) - water_to_skin(:) / dtime * 1000.0_wp, 0._wp)
-    w_skin(:)        = w_skin(:) + water_to_skin(:) - interception(:) * dtime/1000.0_wp
+    w_skin(:)        = MAX(w_skin(:) + water_to_skin(:) - interception(:) * dtime / 1000.0_wp, 0.0_wp)
 
 
     !> 2.0 update soil moisture
@@ -852,95 +862,218 @@ CONTAINS
     !                        (water_to_soil-evaporation-transpiration-drainage-runoff)/1000*dtime,(SUM(w_soil_sl)-SUM(w_soil_sl_old)
   END SUBROUTINE calc_soil_hydrology 
 
-!!  ELEMENTAL FUNCTION calc_surface_temperature(pdt,zcpq,dqsat_srf,t_Acoef,t_Bcoef,q_Acoef,q_Bcoef,dry_static_energy,qsat_srf, &
-!!                                                net_radiation,ground_heat_flx,heat_transfer_coef, & 
-!!                                                cair,csat,snow_cover_fract,heat_capa_srf) RESULT (dry_static_energy_new)
-!!
-!!    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-!!    USE mo_jsb_phys_constants,    ONLY: LatentHeatVaporization,LatentHeatSublimation,cvdifts,stbo,zemiss_def
-!!
-!!    IMPLICIT NONE
-!!    ! ---------------------------
-!!    ! 0.1 In
-!!    REAL(wp), INTENT(in) :: pdt,zcpq,dqsat_srf,t_Acoef, & 
-!!                            t_Bcoef, & 
-!!                            q_Acoef, & 
-!!                            q_Bcoef, & 
-!!                            dry_static_energy, &
-!!                            qsat_srf, &
-!!                            net_radiation, &
-!!                            ground_heat_flx, & 
-!!                            heat_transfer_coef, & 
-!!                            cair, & 
-!!                            csat, & 
-!!                            snow_cover_fract, & 
-!!                            heat_capa_srf
-!!     REAL(wp) :: dry_static_energy_new 
-!!
-!!     REAL(wp) :: zicp, zca, zcs, zcolin,zcohfl,zcoind
-!!
-!!     zicp = 1._wp / zcpq 
-!! 
-!!     zca = LatentHeatSublimation * snow_cover_fract + LatentHeatVaporization * (cair - snow_cover_fract)
-!!     zcs = LatentHeatSublimation * snow_cover_fract + LatentHeatVaporization * (csat - snow_cover_fract)
-!!
-!!     zcolin = heat_capa_srf * zicp + & 
-!!              pdt * (zicp * 4.0_wp * stbo * zemiss_def * ((zicp * dry_static_energy)**3) - &
-!!              heat_transfer_coef * ( zca * q_Acoef - zcs) * zicp * dqsat_srf)
-!!
-!!     zcohfl = -pdt * heat_transfer_coef * (t_Acoef - 1.0_wp)
-!!
-!!     zcoind = pdt * (net_radiation + heat_transfer_coef * t_Bcoef + heat_transfer_coef * &
-!!                 ((zca * q_Acoef - zcs) * qsat_srf + zca * q_Bcoef) + ground_heat_flx)
-!!
-!!     dry_static_energy_new  = (zcolin * dry_static_energy + zcoind) / (zcolin + zcohfl) 
-!!
-!!
-!! END FUNCTION calc_surface_temperature
-!!
-!!    !REAL(wp), DIMENSION(nc) :: fact_qsat_veg,fact_qsat_soil,fact_qsat_trans,fract_fpc,fract_snow,fract_water
-!!    !REAL(wp), DIMENSION(nc) :: fact_qair_veg,fact_qair_soil,fact_qair_trans
-!!    !REAL(wp), DIMENSION(nc) :: fact_qsat_srf,fact_q_air,fact_qsat_trans_srf
-!!    !> 2.0 surface fractions for JSBACH energy balance
-!!    !! 
-!!    fract_snow(:) = 0.0_wp
-!!    fract_water(:) = 0.0_wp
-!!
-!!    !> 2.1 vegetation
-!!    !!    
-!!    WHERE(canopy_cond(:) > eps8 .AND.(q_sat_srf(:) - q_air(:)) > 0.0_wp)
-!!       fact_qsat_veg(:) =  fract_snow(:) + (1._wp - fract_snow(:)) *   &
-!!          (fract_water(:) + ( 1._wp - fract_water(:)) /              &
-!!          (1._wp + pch(:) * MAX(1._wp, wind_10m(:)) / canopy_cond(:)))
-!!       fact_qsat_trans(:) = (1._wp - fract_snow(:)) * &
-!!          (1._wp - fract_water(:)) /                  &
-!!          (1._wp + pch(:) * MAX(1._wp, wind_10m(:)) / canopy_cond(:))
-!!    ELSEWHERE
-!!       fact_qsat_veg(:)   = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
-!!       fact_qsat_trans(:) = 0._wp 
-!!    ENDWHERE
-!!    fract_fpc = exp(-0.5*lai(:)) 
-!!    fact_qair_veg(:) = fact_qsat_veg(:)
-!!
-!!    !> 2.2 soil evaporation
-!!    WHERE (q_sat_srf(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > eps8) 
-!!       fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * &
-!!         & (fract_water(:) + (1._wp - fract_water(:)) * rel_hum(:))
-!!       fact_qair_soil(:) = 1._wp
-!!    ELSEWHERE
-!!       fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
-!!       fact_qair_soil(:) = fact_qsat_soil(:)
-!!    END WHERE
-!!    WHERE (q_air(:) > q_sat_srf(:))
-!!       fact_qsat_soil(:) = 1._wp
-!!       fact_qair_soil(:) = 1._wp
-!!    END WHERE
-!!
-!!    !> totals surface 
-!!    fact_qsat_srf(:) = fract_fpc(:) * fact_qsat_veg(:) + (1._wp - fract_fpc(:)) * fact_qsat_soil(:)
-!!    fact_q_air(:)    = fract_fpc(:) * fact_qair_veg(:) + (1._wp - fract_fpc(:)) * fact_qair_soil(:)
-!!    fact_qsat_trans_srf(:) = fract_fpc(:) * fact_qsat_trans(:)
-!!
-!!
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to calc_surface_energy_balance 
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Routine to calculate snow and wet fraction of a tile 
+  !!  mimicks the JSBACH4 routine calc_wskin_fractions_veg in 
+  !!   hydroloogy/mo_hyrology_interface:calc_wskin_fractions_veg
+  !!
+  !! Calculates scaling factors fract_snow and fract_water 
+  !-----------------------------------------------------------------------------------------------------
+ ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
+    & dtime,                                     & ! in
+    & steplen,                                   & ! in
+    & wsr_max,                                   & ! in
+    & oro_stddev,                                & ! in
+    & evapo_pot,                                 & ! in
+    & w_skin,                                    & ! in
+    & w_snow_soil,                               & ! in
+    & w_snow_can,                                & ! in
+    & fract_snow_can,                            & ! out
+    & fract_water    ,                           & ! out
+    & fract_snow_soil                            & ! out
+    & )
+
+    USE mo_jsb_math_constants,     ONLY: eps8
+    USE mo_jsb_phys_constants,     ONLY: rhoh2o
+
+    REAL(wp), INTENT(in) :: &
+      & dtime,              &
+      & steplen
+    REAL(wp), INTENT(in) :: &
+      & oro_stddev,         &
+      & evapo_pot,          &
+      & wsr_max,            &
+      & w_skin,             &
+      & w_snow_soil,        &
+      & w_snow_can
+    REAL(wp), INTENT(out) :: &
+      & fract_snow_can,      &
+      & fract_water    ,     &
+      & fract_snow_soil
+
+
+    ! Snow fraction on canopy
+    ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
+    IF (wsr_max > eps8) THEN
+      fract_snow_can = MIN(1._wp, w_snow_can / wsr_max)
+      fract_water    = MIN(1._wp, w_skin     / wsr_max)
+    ELSE
+      fract_snow_can = 0._wp
+      fract_water    = 0._wp
+    END IF
+    fract_snow_can = 0._wp
+    fract_snow_soil = 0._wp
+
+    ! Snow fraction on soil
+    fract_snow_soil = MERGE(fract_snow_can, fract_snow_soil, &
+                               fract_snow_soil < EPSILON(1._wp) .AND. fract_snow_can > EPSILON(1._wp))
+
+
+    ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
+    ! snow water content from soil and canopy; same for skin reservoir
+    IF (fract_snow_soil > 0._wp) THEN
+      ! @TODO Shouldn't one take rhoice here insteady of rhoh2o?
+      fract_snow_soil = fract_snow_soil / MAX(1._wp, fract_snow_soil * evapo_pot * dtime &
+        &                                            / (rhoh2o * (w_snow_soil + w_snow_can)) &
+        &                                    )
+    END IF
+    IF (fract_water > eps8 ) THEN
+      fract_water = fract_water    / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime &
+        &                                       / (rhoh2o * MAX(EPSILON(1._wp), w_skin)) &
+        &                                    )
+    END IF
+
+  END SUBROUTINE calc_wskin_fractions_veg
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to calc_surface_energy_balance
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Routine to update humidity scaling for the energy balance calculation 
+  !!  mimicks the JSBACH4 routine update_humidity_scaling in 
+  !!   turbulence/mo_turbulence_interface:update_humidity_scaling  
+  !!
+  !! Calculates scaling factors fact_qair and fact_qsat_srf 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_humidity_scaling(nc, &
+                                     fract_snow, fract_water, fract_fpc, &
+                                     q_sat_srf, q_air, &
+                                     wind_air, pch, &
+                                     canopy_cond, rel_hum, &
+                                     fact_q_air, fact_qsat_srf, fact_qsat_trans_srf)  ! out
+
+    USE mo_jsb_math_constants,       ONLY: eps8
+    
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut 
+    INTEGER, INTENT(in)                  :: nc                     !< dimensions
+    REAL(wp), DIMENSION(nc), INTENT(in)  :: fract_snow,  &         !< surface fraction covered with snow 
+                                            fract_water, &         !< surface fraction covered with water
+                                            fract_fpc,   &         !< surface fraction covered with vegetation
+                                            q_sat_srf,   &         !< surface saturated specific humidity
+                                            q_air,   &             !< near-surface air specific humidity
+                                            wind_air, &            !< wind speed [m/2]
+                                            pch, &                 !<
+                                            canopy_cond, &         !< canopy conductance [m/2]
+                                            rel_hum                !< surface relative humidity
+    REAL(wp), DIMENSION(nc), INTENT(out) :: fact_q_air, &
+                                            fact_qsat_srf, &
+                                            fact_qsat_trans_srf
+                     
+    REAL(wp), DIMENSION(nc) :: fact_qsat_veg,fact_qsat_soil,fact_qsat_trans
+    REAL(wp), DIMENSION(nc) :: fact_qair_veg,fact_qair_soil
+
+    !>1.0 vegetation
+    !>    
+    WHERE(canopy_cond(:) > eps8 .AND.(q_sat_srf(:) - q_air(:)) > 0.0_wp)
+       fact_qsat_veg(:) =  fract_snow(:) + (1._wp - fract_snow(:)) *   &
+          (fract_water(:) + ( 1._wp - fract_water(:)) /              &
+          (1._wp + pch(:) * wind_air(:) / canopy_cond(:)))
+       fact_qsat_trans(:) = (1._wp - fract_snow(:)) * &
+          (1._wp - fract_water(:)) /                  &
+          (1._wp + pch(:) * wind_air(:) / canopy_cond(:))
+    ELSEWHERE
+       fact_qsat_veg(:)   = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
+       fact_qsat_trans(:) = 0._wp 
+    ENDWHERE
+    fact_qair_veg(:) = fact_qsat_veg(:)
+
+    !>2.0 soil evaporation
+    !>
+    WHERE (q_sat_srf(:) * rel_hum(:) > q_air(:) .AND. rel_hum(:) > eps8) 
+       fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * &
+         & (fract_water(:) + (1._wp - fract_water(:)) * rel_hum(:) ) 
+       fact_qair_soil(:) = 1._wp
+    ELSEWHERE
+       fact_qsat_soil(:) = fract_snow(:) + (1._wp - fract_snow(:)) * fract_water(:)
+       fact_qair_soil(:) = fact_qsat_soil(:) 
+    END WHERE
+    WHERE (q_air(:) > q_sat_srf(:))
+       fact_qsat_soil(:) = 1._wp
+       fact_qair_soil(:) = 1._wp
+    END WHERE
+
+    !>3.0 totals surface 
+    !>
+    fact_qsat_srf(:)        = fract_fpc(:) * fact_qsat_veg(:) + (1._wp - fract_fpc(:)) * fact_qsat_soil(:)
+    fact_q_air(:)           = fract_fpc(:) * fact_qair_veg(:) + (1._wp - fract_fpc(:)) * fact_qair_soil(:)
+    fact_qsat_trans_srf(:)  = fract_fpc(:) * fact_qsat_trans(:)
+
+  END SUBROUTINE update_humidity_scaling 
+
+  !-----------------------------------------------------------------------------------------------------
+  ! Sub Task to calc_surface_energy_balance
+  !
+  !-----------------------------------------------------------------------------------------------------
+  !> Routine to calculate new surface dry static energy using JSBACHs implicit formulation 
+  !!  mimicks the routine JSBACH4 surface_temp_implicit 
+  !!   srf_energy_bal/mo_seb_land:update_surface_energy_land:surface_temp_implicit
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  ELEMENTAL FUNCTION calc_temp_srf_new_implicit(steplen,t2s_conv,t_Acoef,t_Bcoef,q_Acoef,q_Bcoef, & 
+                                                  s_old,qsat_srf_old,dQdT, & 
+                                                  net_radiation,ground_heat_flx,heat_transfer_coef, & 
+                                                  cair,csat,snow_cover_fract,heat_capa_srf) RESULT (s_new)
+
+    USE mo_jsb_phys_constants,    ONLY: LatentHeatVaporization, LatentHeatSublimation, cvdifts, stbo, zemiss_def
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 In
+    REAL(wp), INTENT(in) :: steplen, & 
+                            t2s_conv, & 
+                            t_Acoef, & 
+                            t_Bcoef, & 
+                            q_Acoef, & 
+                            q_Bcoef, & 
+                            s_old, &
+                            qsat_srf_old, &
+                            dQdT, &
+                            net_radiation, &
+                            ground_heat_flx, & 
+                            heat_transfer_coef, & 
+                            cair, & 
+                            csat, & 
+                            snow_cover_fract, & 
+                            heat_capa_srf
+     ! out
+     REAL(wp)            :: s_new 
+     ! local
+     REAL(wp) :: pdt, zicp, zca, zcs, zcolin, zcohfl, zcoind
+
+     pdt = cvdifts * steplen
+
+     zicp = 1._wp / t2s_conv 
+ 
+     zca = LatentHeatSublimation * snow_cover_fract + LatentHeatVaporization * (cair - snow_cover_fract)
+     zcs = LatentHeatSublimation * snow_cover_fract + LatentHeatVaporization * (csat - snow_cover_fract)
+
+     zcolin = heat_capa_srf * zicp + & 
+              pdt * (zicp * 4.0_wp * stbo * zemiss_def * ((zicp * s_old) ** 3.0_wp) - &
+              heat_transfer_coef * ( zca * q_Acoef - zcs) * zicp * dQdT)
+
+     zcohfl = -pdt * heat_transfer_coef * (t_Acoef - 1.0_wp)
+
+     zcoind = pdt * (net_radiation + heat_transfer_coef * t_Bcoef + heat_transfer_coef * &
+                 ((zca * q_Acoef - zcs) * qsat_srf_old + zca * q_Bcoef) + ground_heat_flx)
+
+     s_new  = (zcolin * s_old + zcoind) / (zcolin + zcohfl) 
+
+  END FUNCTION calc_temp_srf_new_implicit
 
 END MODULE mo_sse_update_physics

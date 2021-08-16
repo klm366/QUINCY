@@ -40,7 +40,7 @@ slmModel="land"
 ##>> sites <<###########################################################################################
 ## select the site-set:
 # forcing data and site info *list.dat for all site-sets: /Net/Groups/BGI/data/Model/SLM1/input/point/ 
-# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2
+# options: fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 eucface icpfor cgrass panarc
 forcingDataSet="fluxnet"
 # forcing with or without a transient (like spinup) phase before the actual simulation starts
 # options: static transient
@@ -56,6 +56,10 @@ globSites="sub"
 # provide only numbers, such as, "2174" but not "r2174"
 soilForcStatRevNum=""
 soilForcTransRevNum=""
+# site-set specific simulation set-up
+# currently no need to change anything here
+# default: none; options: eucface_trans
+simSiteSetSpecific="none"
 # all sites or just some sites: specify a local custom site list if you want only some sites"
 # T (True) or F (False) [large caps]
 customSiteList="F"
@@ -71,6 +75,7 @@ customSiteListFileName=""
 #           [FACE] "DK-AMB" "OR-ELE"  [MANIP] "ES-MaG" "ES-MaT"  [FERT] "HAR-CON_4" "HAR-HIG_4" "HAR-LOW_4" "HAR-CON_5" "SDA-CON" "SDA-ADD"
 #           [CRAINE] "CRA_01" "CRA_02" "CRA_18"  [PHOTACC] "ARC_01" "MON_02" "STR_01"  [SPP_1685] "BBR" "LUE" "VES"
 #           [CONFIN] "FI-Hyy" "FI-Ken"  [MOCABORS] "US-Ha1"  [MOCAB2] "HUR-FOR" "HUR-GRA"  [SWEDEN] "BER" "STI"  [PLUMBER2] "DE-Hai" "HU-Bug"
+#           [EUCFACE] "EUC_05" "EUC_16"  [ICPFOR] "ICP_004" "ICP_005" "ICP_351"  [CGRASS] "CGE_001" "CGE_002"  [PANARC] "CA-BLK" "US-TOL"
 singleSiteName=""
 
 
@@ -97,7 +102,16 @@ compareSimCRUNCEPvsGFDB="F"
 # forcingMode transient: transient_spinup_years=spinupLengthGFDB  -  does apply only IF $compareSimCRUNCEPvsGFDB == "T"
 spinupLengthGFDB=500
 
-##(3) parameter sensitivity simulations
+##(3) transient simulation with EucFACE site-set
+# spinup and transient simulation for all 12 sites (i.e., scenarios) of the eucface site-set
+# need settings: 'forcingDataSet="eucface"' and 'forcingMode="static"'
+# output info: spinup -> yearly; transient 1700-2011 -> daily; transient 2012-2069 -> timestep
+# when set to "T": all relevant time and output options are set automatically, and simSiteSetSpecific is set to "eucface_trans" (namelist option sim_siteset_specific)
+transientEucFace="F"
+# number of cycling the spinup (1700-1749) before starting the transient simulation (1700-2069)
+spinupCycleTransEucFace=10
+
+##(4) parameter sensitivity simulation
 # you can run a set of sensitivity simulations for one site; T (True) or F (False)
 paramSensitivitySim="F"
 # you can give absolute values ("F") or proportional changes within range [0 < x < 2] ("T")
@@ -161,8 +175,8 @@ sb_adsorp_scheme="eca_part"       # eca_full (vmax of ECA is calc by enzyme abun
 
 # simulation length & output
 simulation_length_number=30       # default years for forcingMode: static = 30 | transient = 115/118/119 [transient: 01.01.1901 -> 31.12.2015/18/19 without spinup!]
-output_interval_pool="weekly"     # timestep daily weekly monthly yearly
-output_interval_flux="weekly"     # timestep daily weekly monthly yearly
+output_interval_pool="weekly"     # options: timestep daily weekly monthly yearly  (one timestep covers 30 minutes)
+output_interval_flux="weekly"     # options: timestep daily weekly monthly yearly  (one timestep covers 30 minutes)
 output_start_first_day_year=1     # 1 to ... [must be lower than or equal with option: output_end_last_day_year]
 output_end_last_day_year=30       # equal with or larger than option: output_start_first_day_year
 
@@ -273,6 +287,22 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     "p2")
       echo "   forcingDataSet=plumber2"
       forcingDataSet="plumber2"
+      ;;
+    "ef")
+      echo "   forcingDataSet=eucface"
+      forcingDataSet="eucface"
+      ;;
+    "ic")
+      echo "   forcingDataSet=icpfor"
+      forcingDataSet="icpfor"
+      ;;
+    "cg")
+      echo "   forcingDataSet=cgrass (CLIMGRASS)"
+      forcingDataSet="cgrass"
+      ;;
+    "pa")
+      echo "   forcingDataSet=panarc (PANARCTIC)"
+      forcingDataSet="panarc"
       ;;
     esac
     ;;
@@ -402,6 +432,10 @@ while getopts ":e:f:c:m:s:r:y:b:z:n:u:h" opt; do
     echo "       m2: MOCAB2 (JSM soil moisture development cruncep site)"
     echo "       sw: SWEDEN (site data from The Swedish Throughfall Monitoring Network)"
     echo "       p2: PLUMBER2 (Fluxnet site collection for MIP)"
+    echo "       ef: EUCFACE (12 scenarios for one EucFACE site covering the yrs 1700-2069)"
+    echo "       ic: ICPFOR (International Co-operative Programme on Assessment and Monitoring of Air Pollution Effects on Forests)"
+    echo "       cg: CGRASS (CLIMGRASS, Manipulative experiment in an alpine grassland, looking at increased temperature, CO2 and drought)"
+    echo "       pa: PANARC (PANARCTIC, northern high-latitude sites with continuous permafrost)"
     echo " -c set the customSiteList"
     echo "    Arguments to -c:"
     echo "       T: using the custom site list"
@@ -547,10 +581,11 @@ fi
 return 0
 }
 # lists to validate against
-validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2"
+validateForcingDataSet="fluxnet fluxnet3 global cruncep face manip fert craine photacc spp1685 confin mocabors mocab2 sweden plumber2 eucface icpfor cgrass panarc"
 validateForcingMode="static transient"
 validateCrunSites="all cue spp"
 validateGlobSites="all sub"
+validateSimSiteSetSpecific="none eucface_trans"
 validateSlmModel="land plant soil canopy"
 validateBNFScheme="none fixed standard optimal resistance unlimited"
 validateMycScheme="no am ecm"
@@ -583,7 +618,7 @@ slmCleanupScriptFilename="cleanup_slm_hpc_run.sh"
 slmNamelistFolder="../namelist/"
 slmNamelistFilename="namelist.slm"
 slmLctlibFolder="../../data/"
-slmLctlibFilename="lctlib_slm_nlct8.def"
+slmLctlibFilename="lctlib_quincy_nlct8.def"
 slmAdditionalDir="../additional_scripts/"
 slmParamFigureFilename="create_parameter_summary_figs.R"    ## this filename is also used/defined in cleanup_slm_hpc_run.sh script
 slmDefOutOverviewFilename="postprocessing_site_overview.R"  ## this filename is also used/defined in cleanup_slm_hpc_run.sh script
@@ -661,6 +696,7 @@ validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDat
 validateUserConfigValues "$forcingMode" "$validateForcingMode" "forcingMode"
 validateUserConfigValues "$crunSites" "$validateCrunSites" "crunSites"
 validateUserConfigValues "$globSites" "$validateGlobSites" "globSites"
+validateUserConfigValues "$simSiteSetSpecific" "$validateSimSiteSetSpecific" "simSiteSetSpecific"
 validateUserConfigValues "$customSiteList" "$validateFlags" "customSiteList"
 validateUserConfigValues "$slmModel" "$validateSlmModel" "slmModel"
 validateUserConfigValues "$queue" "$validateQueue" "queue"
@@ -703,6 +739,20 @@ validateUserConfigValues "$useSiteSpecificAWC" "$validateFlags" "useSiteSpecific
 validateUserConfigValues "$paramSensitivitySim" "$validateFlags" "paramSensitivitySim"
 validateUserConfigValues "$paramChangesProportional" "$validateFlags" "paramChangesProportional"
 validateUserConfigValues "$compareSimCRUNCEPvsGFDB" "$validateFlags" "compareSimCRUNCEPvsGFDB"
+
+## validate length of some options
+## (because namelist options might be defined as 'character' in QUINCY with a specific length)
+nChar=$(echo -n "$slmModel" | wc -m)
+if [ "$nChar" -gt 20 ]; then
+  echo "EXIT! the QUINCY model name is too long (max 20 characters), see mo_jsb_config_class."
+  exit 1
+fi
+nChar=$(echo -n "$simSiteSetSpecific" | wc -m)
+if [ "$nChar" -gt 20 ]; then
+  echo "EXIT! the option used for simSiteSetSpecific is too long (max 20 characters), see mo_jsb_config_class."
+  exit 1
+fi
+unset nChar  # delete helper variable
 
 ## set and create additional basic folders (within the basic simulation folder) ##
 mkdir -p "$simFold"                           # "$bgiScratchUserFold""$jobName""/"  e.g. /Net/Groups/BGI/scratch/""$username""/slm/$jobName/
@@ -773,6 +823,18 @@ case "$forcingDataSet" in
   echo " Info: the PLUMBER2 forcing data is included in the FLUXNET3/ directory"
   siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/FLUXNET3/"
   fluxnetTypeSiteSet="T"
+  ;;
+"eucface")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/EUCFACE/"
+  ;;
+"icpfor")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/ICPFOR/"
+  ;;
+"cgrass")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/CLIMGRASS/"
+  ;;
+"panarc")
+  siteDataFold="/Net/Groups/BGI/data/Model/SLM1/input/point/PANARCTIC/"
   ;;
 esac
 
@@ -1106,6 +1168,31 @@ else
       siteListFileName="plumber2_all_sites_1901-2018_list.dat"
     fi
     ;;
+  "eucface")
+    siteListFileName="eucface_sites_1700-2069_list.dat"
+    echo " "
+    echo " Note: all simulations with the EUCFACE siteset are using the transient forcing 1700-2069 by default."
+    echo " "
+    ;;
+  "icpfor")
+    siteListFileName="icp_all_sites_1901-2019_list.dat"
+    echo " "
+    echo " Note: all simulations with the ICPFOR siteset are using the transient forcing 1901-2019 by default."
+    echo " "
+    ;;
+  "cgrass")
+    siteListFileName="climgrass_all_sites_1901-2019.dat"
+    echo " "
+    echo " Note: all simulations with the CLIMGRASS siteset are using the transient forcing 1901-2019 by default."
+    echo " "
+    ;;
+  "panarc")
+    if [ $forcingMode == "static" ]; then
+      siteListFileName="panarctic_sites_1990-2019_list.dat"
+    else 
+      siteListFileName="panarctic_sites_1901-2019_list.dat"
+    fi
+    ;;
   esac
   siteList="$siteDataFold""$siteListFileName"
 fi
@@ -1321,6 +1408,68 @@ else
   transient_simulation_start_year=1901
 fi
 
+## EucFACE transient simulations
+## this section needs to be below the above "check transient" section as it heavily diverts from the usual transient simulations tested above
+yearTimestepOutStart=0  # for fluxnet diagnostics simulations this variable is set per site in run_slm.sh ("$yearForcStart")
+yearTimestepOutLast=0   # for fluxnet diagnostics simulations this variable is set per site in run_slm.sh ("$yearForcLast")
+if [ "$transientEucFace" == "T" ]; then
+  echo " Applying settings for EucFACE transient simulations."
+  echo " The EucFACE transient simulations will use the infrastructure of the fluxnet diagnostics simulations."
+  # basic tests for consistency
+  if [ "$forcingDataSet" != "eucface" ]; then
+    echo "EXIT! site-set is set to: ""$forcingDataSet"" but needs eucface for EucFACE simulations"
+    exit 1
+  fi
+  if [ "$forcingMode" == "transient" ]; then
+    echo "EXIT!  forcingMode needs to be set to static"
+    exit 1
+  fi
+  if [ "$slmModel" == "soil" ]; then
+    echo "EXIT! does not work with the QUINCY soil model, use QUINCY land instead"
+    exit 1
+  fi
+  if [ "$fluxnetTypeTransientTimestepOutput" == "T" ]; then
+    echo "EXIT! does not work with fluxnetTypeTransientTimestepOutput set to T"
+    exit 1
+  fi
+  if [ "$compareSimCRUNCEPvsGFDB" == "T" ]; then
+    echo "EXIT! does not work with compareSimCRUNCEPvsGFDB set to T"
+    exit 1
+  fi
+  if [ "$simSiteSetSpecific" == "none" ] || [ "$simSiteSetSpecific" == "eucface_trans" ]; then
+    # nothing to do
+    echo -n ""
+  else
+    echo "EXIT! simSiteSetSpecific needs to be set to none or eucface_trans"
+    exit 1
+  fi
+  if [ "$spinupCycleTransEucFace" -lt 1 ]; then
+    echo " The option spinupCycleTransEucFace cannot be lower than 1; setting it to 1 now."
+    spinupCycleTransEucFace=1
+  fi
+  # basic settings
+  simSiteSetSpecific="eucface_trans"
+  forcingMode="transient"
+  # time and output settings
+  # spinup run (1700-1749 repeated x times)
+  transient_spinup_start_year=1700
+  transient_spinup_end_year=1749
+  transient_spinup_years=$((50 * $spinupCycleTransEucFace))
+  transient_simulation_start_year=1700
+  output_interval_pool_spinup="yearly"
+  output_interval_flux_spinup="yearly"
+  # transient simulation (1700-2069; output-period changes from daily to timestep output from 2012 on)
+  simulation_length_number=370
+  output_interval_pool="daily"
+  output_interval_flux="daily"
+  output_start_first_day_year=1
+  output_end_last_day_year=370
+  yearTimestepOutStart=2012   # switching from daily to timestep output at the first timestep of 2012
+  yearTimestepOutLast=2069    # timestep output until the end of 2069
+  echo " Spinup is set to: ""$transient_spinup_years"" years."
+  echo " "
+fi
+
 ## an identifier (additional to siteName) for static and transient forcing files -> passed to run_slm.sh (via config file) ##
 case "$forcingDataSet" in
 "fluxnet")
@@ -1453,8 +1602,33 @@ case "$forcingDataSet" in
     forcingModeFileID="_t_"
   fi
   ;;
+"eucface")
+  # only transient met-forcing is available (no specific ID)
+  forcingModeFileID="_"
+  ;;
+"icpfor")
+  # using only transient met-forcing
+  forcingModeFileID="_t_"
+  ;;
+"cgrass")
+  # using only transient met-forcing
+  forcingModeFileID="_t_"
+  ;;
+"panarc")
+  # land/plant
+  if [ $forcingMode == "static" ]; then
+    forcingModeFileID="_s_"
+  else
+    forcingModeFileID="_t_"
+  fi
+  ;;
 esac
 
+
+############################################################################################################################
+## basic settings for simulations to works                                                                                 ##
+## (includes parameter-sensitivity checks and settings)                                                                   ##
+############################################################################################################################
 
 ## validate experimental ID for alphanumeric only ##
 if [ ! -z $(echo $jobName | tr -d "[:alnum:]" | tr -d "_" | tr -d "-") ]  # if removing alphanum _ - from jobName returns an non-empty string" then exit
@@ -1735,6 +1909,7 @@ return 0                                                         # get return va
 # this namelist is used for all sites
 changeNamelistValue slm_model_name "$slmModel"
 changeNamelistValue forcing_mode "$forcingMode"
+changeNamelistValue sim_siteset_specific "$simSiteSetSpecific"
 changeNamelistValue bnf_scheme "$bnf_scheme" 
 changeNamelistValue n_deposition_scheme "$n_deposition_scheme"
 changeNamelistValue p_deposition_scheme "$p_deposition_scheme"
@@ -1897,6 +2072,12 @@ changeNamelistValue transient_spinup_start_year "$transient_spinup_start_year"
 changeNamelistValue transient_spinup_end_year "$transient_spinup_end_year"
 changeNamelistValue transient_spinup_years "$transient_spinup_years"
 changeNamelistValue transient_simulation_start_year "$transient_simulation_start_year"
+## EucFACE transient simulations
+## set the period for timestep output of transient simulations (for fluxnet diagnostics simulations this is set per site in run_slm.sh)
+if [ "$simSiteSetSpecific" == "eucface_trans" ]; then
+  changeNamelistValue fluxnet_static_forc_start_yr "$yearTimestepOutStart"
+  changeNamelistValue fluxnet_static_forc_last_yr "$yearTimestepOutLast"
+fi
 ## namelist options for soil forcing creation (BASE_CTL):
 ## u01: static, one year, all site-sets
 createSoilForcFlag="F"    # default: F | needed for u08 in run_slm.sh
@@ -1972,12 +2153,12 @@ fi
 ## cleanup temporary files and folders via cleanup_slm_hpc_run.sh               ##
 ##################################################################################
 # this job is pending until the above started $jobName has ended
-# the memory requirement is set to 5GB
+# the memory requirement is set to 30 GB
 sleep 1s  # just some waiting time to avoid any interference with the above started job
 cleanupJobName="$jobName""Cleanup"
 cleanQueue="short"
 # start the job
-bsub -w "ended($jobName)" -q "$cleanQueue" -M "5000000" -R "rusage[mem=5000]" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" "$simFoldDefaultFiles""$slmCleanupScriptFilename" "$jobName" "$array" "$singleSiteName"
+bsub -w "ended($jobName)" -q "$cleanQueue" -M "30000000" -R "rusage[mem=30000]" -J "$cleanupJobName" -o "$simFold"cleanup.eo "$emailSwitch" "$simFoldDefaultFiles""$slmCleanupScriptFilename" "$jobName" "$array" "$singleSiteName"
 
 
 ## end prep_run_slm.sh ##

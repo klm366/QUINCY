@@ -26,7 +26,7 @@
 # 
 
 
-experimentalID="10_refrun_canopy_fluxnet"
+experimentalID="10_canopy_model_static_fluxnet2"
 slmModel="canopy"
 
 forcingDataSet="fluxnet"

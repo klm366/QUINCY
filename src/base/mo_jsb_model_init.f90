@@ -132,7 +132,7 @@ CONTAINS
     INTEGER ,INTENT(in)                       :: model_id
     INTEGER ,INTENT(in)                       :: iblk, nproma         !< block number, number of points per chunk   *slmtmp
     INTEGER ,INTENT(in)                       :: ics, ice, nc         !< first & last & number of points in the chunk the model currently works on  *slmtmp
-    LOGICAL ,INTENT(out)                      :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_atm2land(), update_land2atm()
+    LOGICAL ,INTENT(out)                      :: l_forcing            !< IF .TRUE. THEN update_forcing(), update_a2l(), update_l2a()
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model), POINTER                :: model
@@ -287,7 +287,19 @@ CONTAINS
     timestep_prop_day = dtime/one_day                                 !! proportion of one day that is simulated with one timestep
 
 
-    !> 6.0 Init fluxnet diagnostics simulation state
+    !> 6.0 Init a simulation setup specific for a site-set
+    !! 
+
+    !> 6.1 EucFACE transient simulations
+    !! using the fluxnet diagnostics-simulations infrastructure
+    IF (TRIM(model%config%sim_siteset_specific) == "eucface_trans") THEN
+      model%config%fluxnet_type_transient_timestep_output = .TRUE.
+      PRINT*, TRIM(routine), ' Init EucFACE transient simulations.'
+      PRINT*, TRIM(routine), ' Set fluxnet_type_transient_timestep_output=T; use fluxnet diagnostics infrastructure.'
+    ENDIF
+
+    !> 6.2 Fluxnet diagnostics simulation
+    !! set the state to "active"
     !! states: \n
     !!  0: not a fluxnet diagnostics simulation
     !!  1: fluxnet diagnostics simulation; spinup or output prior to the "last full forcing period" (static output available)

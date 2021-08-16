@@ -76,6 +76,15 @@ MODULE mo_sse_constants
     kdiff_sat_max               !< maximum diffusivity of soil at saturation (m/s)
 
 
+  ! constants used as factor for multiplication with namelist parameters (sse_config) when "parameter sensitivity" is enabled
+  ! see sse_config & mo_quincy_set_parameters:Modify_quincy_namelist_parameter
+  REAL(wp) :: & 
+    f_psensi_soil_sand, &
+    f_psensi_soil_silt, &
+    f_psensi_soil_awc_prescribe, &
+    f_psensi_bulk_density
+
+
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
 
 CONTAINS
@@ -132,6 +141,13 @@ CONTAINS
     k_sat_ct        = 0.097_wp 
     k_sat_dt        = 0.043_wp
     kdiff_sat_max   = 1930.0_wp / 1000.0_wp / 3600._wp ! m/s
+
+
+    ! constants used as factor for multiplication with namelist parameters (sse_config) when "parameter sensitivity" is enabled
+    f_psensi_soil_sand            = 1.0_wp
+    f_psensi_soil_silt            = 1.0_wp
+    f_psensi_soil_awc_prescribe   = 1.0_wp
+    f_psensi_bulk_density         = 1.0_wp
 
   END SUBROUTINE init_sse_constants
 

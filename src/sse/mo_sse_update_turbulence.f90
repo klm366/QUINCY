@@ -35,7 +35,7 @@ MODULE mo_sse_update_turbulence
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: update_soil_turbulence, calc_filtered_drag_coefficient
+  PUBLIC :: update_soil_turbulence
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_update_turbulence'
 
@@ -68,7 +68,8 @@ CONTAINS
     dsl4jsb_Use_config(SSE_)
 
     ! Use of process memories
-    dsl4jsb_Use_memory_A2L_ 
+    dsl4jsb_Use_memory(A2L_) 
+    dsl4jsb_Use_memory(L2A_) 
     dsl4jsb_Use_memory(SSE_)        !  USE mo_sse_memory_class,     ONLY: t_sse_memory
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
 
@@ -84,6 +85,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: ztvd, ztvir, q_sat_surf, ztvs, zg, zgh, zdu2, zril, zcdnl, zchln, & 
                                              zscfl, zucfl, zucfhl, zcons, zcfncl, zcfnchl, zcfml, zcfhl, &
                                              csat, cair, z0m, z0h, zchnl, zlev, wind_air
+    REAL(wp), DIMENSION(options%nc)       :: fract_fpc, blended_height 
     REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
     INTEGER                               :: iblk, ics, ice, nc
     REAL(wp)                              :: steplen
@@ -92,7 +94,8 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_memory_A2L_ 
+    dsl4jsb_Def_memory(A2L_) 
+    dsl4jsb_Def_memory(L2A_) 
     dsl4jsb_Def_memory(SSE_)                        !     TYPE(t_sse_memory),     POINTER :: sse__mem
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     ! Declare pointers to variables in memory
@@ -108,6 +111,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk                :: t_bcoef
     dsl4jsb_Real2D_onChunk                :: q_acoef
     dsl4jsb_Real2D_onChunk                :: q_bcoef
+    ! L2A_
+    dsl4jsb_Real2D_onChunk                :: fact_q_air 
+    dsl4jsb_Real2D_onChunk                :: fact_qsat_srf
     ! SSE_
     dsl4jsb_Real3D_onChunk                :: t_soil_sl
     ! VEG_
@@ -130,7 +136,8 @@ CONTAINS
     ! Get process config
     dsl4jsb_Get_config(SSE_)
     ! Get process memories
-    dsl4jsb_Get_memory_A2L_ 
+    dsl4jsb_Get_memory(A2L_) 
+    dsl4jsb_Get_memory(L2A_) 
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! Get process variables (Set pointers to variables in memory)
@@ -145,10 +152,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, t_bcoef)              ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, q_acoef)              ! out
     dsl4jsb_Get_var2D_onChunk(A2L_, q_bcoef)              ! out
+    ! L2A_ 2D
+    dsl4jsb_Get_var2D_onChunk(L2A_, fact_q_air)           ! in
+    dsl4jsb_Get_var2D_onChunk(L2A_, fact_qsat_srf)        ! in
     ! ---------------------------
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)            ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, height)               ! in
+    dsl4jsb_Get_var2D_onChunk(VEG_, lai)                  ! in
 
 
 
@@ -156,14 +167,19 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
+    ! 0.8 correct height for bare soil effect on roughness
+    ! note: the '* 1.0_wp' for calc of blended_height(:) is the minimum/default height in meter
+    !       using the VEG_ min_height parameter (= 0.1_wp) instead would change simulation results
+    fract_fpc(:)      = 1.0_wp - EXP(- 0.5_wp * lai(:))
+    blended_height(:) = height(:) * fract_fpc(:) + (1._wp - fract_fpc(:)) * 1.0_wp 
 
     ! 0.9 init local variables and constants
     ! Some constants from echam/mo_surface_land.f90
-    csat(:)     = 0.5_wp
-    cair(:)     = 0.5_wp
+    csat(:)     = fact_qsat_srf(:)  
+    cair(:)     = fact_q_air(:)     
     wind_air(:) = MIN(MAX(wind_10m(:),min_wind),max_wind) 
     zlev(:)     = height_wind + 3._wp/10._wp * height(:)
-    z0m(:)      = MAX(height(:) / 10.0_wp,0.1_wp)
+    z0m(:)      = MAX(blended_height(:) / 10.0_wp, 0.1_wp)
     z0h(:)      = z0m(:) / 10.0_wp
 
     ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
@@ -187,7 +203,9 @@ CONTAINS
 
     ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
     ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-    zril(:)       = zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:)+ztvs(:))/2._wp )
+    ! SZ: limited zril to < 1.5 to avoid complete decoupling
+    ! effectively this limits drag to values larger than about 10% of the neutral drag
+    zril(:)       = MIN(zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:) + ztvs(:)) / 2._wp ), 0.5_wp)
 
     CALL calc_drag_coefficient(steplen, &
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
@@ -203,111 +221,8 @@ CONTAINS
 
   END SUBROUTINE update_soil_turbulence
 
-
   !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to mo_sse_update_physics:calc_surface_energy_balance
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> Routine to provide an new estimate of the drag coefficent, given the old (t-1), current (t) and \n
-  !! new (t+1) surface temperature and other surface conditions for t 
-  !!
-  !! Calculates time-filtered drag coefficient 
-  !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_filtered_drag_coefficient( &
-                                            steplen, &
-                                            t_air,q_air,wind_air,press_srf,t_srf,t_srf_new,&                         
-                                            height,zril_old,drag_srf,pch,ga)
-
-    USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_jsb_phys_constants,    ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts, zkappa, vtmpc1
-    USE mo_sse_constants,         ONLY: height_wind
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
-    REAL(wp),                        INTENT(in)    :: steplen                !< step length for this process
-    REAL(wp),                        INTENT(in)    :: t_air, &
-                                                      q_air, &
-                                                      wind_air, &
-                                                      press_srf, &
-                                                      t_srf, &
-                                                      t_srf_new, &
-                                                      height
-    REAL(wp),                        INTENT(inout) :: zril_old 
-    REAL(wp),                        INTENT(out)   :: drag_srf, &
-                                                      pch, &
-                                                      ga
-    ! ---------------------------
-    ! 0.2 Local
-    REAL(wp)                              :: ztvd, ztvir, q_sat_surf, ztvs, ztvs_new, zg, zgh, zdu2, zril, &
-                                             z0m, z0h, csat, cair, zchnl, zlev, zril_initial, zril_update
-    REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
-    REAL(wp)                              :: coef_tm1, coef_t, coef_tp1
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_filtered_drag_coefficient'
-
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
-    ! 0.9 init local variables and constants
-    ! Some constants from echam/mo_surface_land.f90
-    coef_tm1    = 0.5_wp
-    coef_t      = 0.25_wp
-    coef_tp1    = 0.25_wp
-    csat        = 0.5_wp
-    cair        = 0.5_wp
-    zlev        = height_wind + 3._wp/10._wp * height
-    z0m         = MAX(height / 10.0_wp,0.1_wp)
-    z0h         = z0m / 10.0_wp
-
-    ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
-    ! If height_wind is set, then the measurement height + an offset from the average vegetation height
-    ! is used. Otherwise, the code defaults to the half-level of ECHAM's lowest atmospheric layer
-    zg   = zlev * grav 
-    zgh  = zg                          ! height_humidity and height_temperature have to be equal
-    zdu2 = wind_air**2._wp
-
-    ! virtual potential air temperature (see mo_surface_boundary.f90)
-    ! virtual potential air temperature (see mo_surface_boundary.f90)
-    ! according to Saucier, WJ Principles of Meteoroligical Analyses
-    ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
-    ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
-    ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * q_air) ! virtual potential temperature
-    ztvd       = t_air * ( 100000._wp/press_srf)**zkappa * ( 1._wp + vtmpc1 * q_air )
-    ztvir      = t_air * ( 1._wp + vtmpc1 * q_air )
-    ! virtual potential surface temperature
-    q_sat_surf = calc_spec_humidity_sat(t_srf,press_srf)
-    ztvs       = t_srf * ( 100000._wp/press_srf)**zkappa * &
-                 ( 1._wp + vtmpc1 * ( csat * q_sat_surf + ( 1._wp - cair ) * q_air))
-    ! virtual potential surface temperature
-    q_sat_surf = calc_spec_humidity_sat(t_srf_new,press_srf)
-    ztvs_new   = t_srf_new * ( 100000._wp/press_srf)**zkappa * &
-                 ( 1._wp + vtmpc1 * ( csat * q_sat_surf + ( 1._wp - cair ) * q_air))
-
-    ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
-    ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
-    zril_initial = MAX(-5._wp,MIN(5._wp,zg * ( ztvd - ztvs )     / ( zdu2 * (ztvd+ztvs)/2._wp )))
-    zril_update  = MAX(-5._wp,MIN(5._wp,zg * ( ztvd - ztvs_new ) / ( zdu2 * (ztvd+ztvs_new)/2._wp )))
-
-    ! Richrdson number needs to be filtered for offline simulations in order to maintain stability
-    zril = coef_tm1 * zril_old     + &
-           coef_t   * zril_initial + &
-           coef_tp1 * zril_update
-
-    zril_old = zril   
-
-    CALL calc_drag_coefficient(steplen, &
-                               t_air,q_air,wind_air,press_srf, & 
-                               zg,zgh,z0m,z0h,zril, & 
-                               drag_srf,pch,ga)            
-
-  END SUBROUTINE calc_filtered_drag_coefficient
-
-
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task to update_soil_turbulence  &  calc_filtered_drag_coefficient
+  ! Sub Task to update_soil_turbulence
   !
   !-----------------------------------------------------------------------------------------------------
   !> Routine to calculate drag coefficient for a given surface condition and turbulence 
