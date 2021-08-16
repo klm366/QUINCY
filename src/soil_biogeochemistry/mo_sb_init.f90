@@ -64,7 +64,7 @@ CONTAINS
     USE mo_jsb_math_constants,              ONLY: eps4, eps8
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
     USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
-    USE mo_sb_jsm_processes                 ! e.g. calc_bulk_soil_carbon(), convert_s1d_to_s0d_var_soilproperty(), calc_Psorption_parameter()
+    USE mo_sb_jsm_processes                 ! e.g. calc_bulk_soil_carbon(), calc_Psorption_parameter()
     USE mo_sse_util,                        ONLY: calc_qmax_texture
     USE mo_sb_jsm_transport                 ! e.g. calc_bioturbation_rate()
     USE mo_veg_constants,                   ONLY: itree
@@ -328,65 +328,45 @@ CONTAINS
     !------------------------------------------------------------------------------------------------------------------------------
 
     !> 2.0 soil model init
-    !! i)  simple_0d & simple_1d
+    !! i)  simple_1d
     !! ii) JSM
     SELECT CASE(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
        !!==========================================================================================================================
-       !> simple_0d & simple_1d soil models
+       !> simple_1d soil models
        !! a four pool soil biogeochemical model
-       CASE("simple_0d", "simple_1d")
-          !> simple_0d
-          !! 
-          IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
-             sb_pool%soluable_litter%carbon(:,1)  = def_sb_pool_metabol_litter / molar_mass_C / soil_lay_width_sl(:,1)
-             sb_pool%polymeric_litter%carbon(:,1) = def_sb_pool_simple_struct_litter / molar_mass_C / soil_lay_width_sl(:,1)
-             IF(lctlib%growthform==itree) THEN
-                sb_pool%woody_litter%carbon(:,1) = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1)
-             ENDIF
-             sb_pool%microbial%carbon(:,1) = def_sb_pool_fast_som / molar_mass_C / soil_lay_width_sl(:,1)
-             sb_pool%residue%carbon(:,1)   = def_sb_pool_slow_som / molar_mass_C / soil_lay_width_sl(:,1)
+       CASE("simple_1d")
+          sb_pool%soluable_litter%carbon(:,1)  = def_sb_pool_metabol_litter /  molar_mass_C / soil_lay_width_sl(:,1) * &
+                                                 (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
+          sb_pool%polymeric_litter%carbon(:,1) = def_sb_pool_simple_struct_litter / molar_mass_C / soil_lay_width_sl(:,1) * &
+                                                 (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
+          IF(lctlib%growthform==itree) THEN
+            sb_pool%woody_litter%carbon(:,1) = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1)
+          ENDIF
+          sb_pool%microbial%carbon(:,1) = def_sb_pool_fast_som / molar_mass_C / soil_lay_width_sl(:,1) * &
+                                          (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
+          sb_pool%residue%carbon(:,1)   = def_sb_pool_slow_som / molar_mass_C / soil_lay_width_sl(:,1) * & 
+                                          (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
+          DO isoil=2,nsoil_sb
+            sb_pool%soluable_litter%carbon(:,isoil)  = def_sb_pool_metabol_litter /  molar_mass_C / &
+                                                       soil_lay_width_sl(:,isoil) * &
+                                                       (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
+            sb_pool%polymeric_litter%carbon(:,isoil) = def_sb_pool_simple_struct_litter / molar_mass_C / &
+                                                       soil_lay_width_sl(:,isoil) * &
+                                                       (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
+            sb_pool%microbial%carbon(:,isoil)        = def_sb_pool_fast_som / molar_mass_C / soil_lay_width_sl(:,isoil) * &
+                                                       (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
+            sb_pool%residue%carbon(:,isoil)          = def_sb_pool_slow_som / molar_mass_C / soil_lay_width_sl(:,isoil) * & 
+                                                       (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil)
+          ENDDO
+          ! note: this differs on purpose from the calculation in mo_sb_update_pools for the prescribed option
+          !       this is because here I'm trying to ensure that the models are initialised with the same amount of nutrient
+          !       whereas in the prescribed option the target is unlimiting concentrations across the profile. The latter leads
+          !       to more nutrient in the soil column in 1d compared to 0d.
+          DO ichunk = 1,nc
+            nh4_solute(ichunk,:) = nh4_solute_prescribe / soil_lay_depth_ubound_sl(ichunk,nsoil_sb)
+            no3_solute(ichunk,:) = no3_solute_prescribe / soil_lay_depth_ubound_sl(ichunk,nsoil_sb)
+          ENDDO
 
-             nh4_solute(:,1) = nh4_solute_prescribe / soil_lay_width_sl(:,1)
-             no3_solute(:,1) = no3_solute_prescribe / soil_lay_width_sl(:,1)
-
-          !> simple_1d
-          !!
-          ELSE 
-            sb_pool%soluable_litter%carbon(:,1)  = def_sb_pool_metabol_litter /  molar_mass_C / soil_lay_width_sl(:,1) * &
-                                                   (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
-            sb_pool%polymeric_litter%carbon(:,1) = def_sb_pool_simple_struct_litter / molar_mass_C / soil_lay_width_sl(:,1) * &
-                                                   (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
-            IF(lctlib%growthform==itree) THEN
-              sb_pool%woody_litter%carbon(:,1) = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1)
-            ENDIF
-            sb_pool%microbial%carbon(:,1) = def_sb_pool_fast_som / molar_mass_C / soil_lay_width_sl(:,1) * &
-                                            (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
-            sb_pool%residue%carbon(:,1)   = def_sb_pool_slow_som / molar_mass_C / soil_lay_width_sl(:,1) * & 
-                                            (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1)) 
-            DO isoil=2,nsoil_sb
-              sb_pool%soluable_litter%carbon(:,isoil)  = def_sb_pool_metabol_litter /  molar_mass_C / &
-                                                         soil_lay_width_sl(:,isoil) * &
-                                                         (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
-              sb_pool%polymeric_litter%carbon(:,isoil) = def_sb_pool_simple_struct_litter / molar_mass_C / &
-                                                         soil_lay_width_sl(:,isoil) * &
-                                                         (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
-              sb_pool%microbial%carbon(:,isoil)        = def_sb_pool_fast_som / molar_mass_C / soil_lay_width_sl(:,isoil) * &
-                                                         (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil) 
-              sb_pool%residue%carbon(:,isoil)          = def_sb_pool_slow_som / molar_mass_C / soil_lay_width_sl(:,isoil) * & 
-                                                         (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil)
-            ENDDO
-            ! note: this differs on purpose from the calculation in mo_sb_update_pools for the prescribed option
-            !       this is because here I'm trying to ensure that the models are initialised with the same amount of nutrient
-            !       whereas in the prescribed option the target is unlimiting concentrations across the profile. The latter leads
-            !       to more nutrient in the soil column in 1d compared to 0d.
-            DO ichunk = 1,nc
-              nh4_solute(ichunk,:) = nh4_solute_prescribe / soil_lay_depth_ubound_sl(ichunk,nsoil_sb)
-              no3_solute(ichunk,:) = no3_solute_prescribe / soil_lay_depth_ubound_sl(ichunk,nsoil_sb)
-            ENDDO
-          ENDIF  ! simple_0d | simple_1d
-
-          !> simple_0d & simple_1d
-          !! 
           ! inital bulk density and qmax_po4 based on current soil carbon content
           CALL calc_bulk_soil_carbon(nc, nsoil_sb, sb_pool, bulk_soil_carbon_sl, soil_litter_carbon_sl, &
                                         volume_min_sl, TRIM(dsl4jsb_Config(SB_)%sb_model_scheme))
@@ -431,15 +411,6 @@ CONTAINS
           nh4_assoc(:,:)           = qmax_nh4(:,:) * nh4_solute (:,:) / (nh4_solute(:,:) + km_adsorpt_nh4_sl(:,:))
           nh4_n15_assoc(:,:)       = nh4_assoc(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
  
-          IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
-             root_depth_avg(:)     = SUM(root_fraction_sl(:,:) * soil_depth_sl(:,:), DIM=2)
-             arr_hlp6(:)           = SUM(km_adsorpt_nh4_sl(:,:) * root_fraction_sl(:,:), DIM=2) / root_depth_avg(:) 
-             CALL convert_s1d_to_s0d_var_soilproperty(nc, nsoil_sb, soil_depth_sl(:,:), qmax_nh4(:,:))
-
-             nh4_assoc(:,1)        = qmax_nh4(:,1) * nh4_solute(:,1) / (nh4_solute(:,1) + arr_hlp6(:))
-             nh4_n15_assoc(:,1)    = nh4_assoc(:,1) / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
-          ENDIF
-
           ! metabolic litter all other elements
           sb_pool%soluable_litter%nitrogen(:,:)    = sb_pool%soluable_litter%carbon(:,:) / k_init_soluable_litter_cn 
           sb_pool%soluable_litter%phosphorus(:,:)  = sb_pool%soluable_litter%nitrogen(:,:) / k_init_litter_np 
@@ -499,16 +470,6 @@ CONTAINS
             ENDIF
             po4_solute(:,:)     = p_labile(:,:) - po4_assoc_fast(:,:)
             
-            IF(TRIM(dsl4jsb_Config(SB_)%sb_model_scheme) == "simple_0d") THEN
-              CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_assoc_fast)
-              CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_solute)
-              CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_assoc_slow)
-              CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_occluded)
-              CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_primary)
-              CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, qmax_po4)
-              arr_hlp6(:)            = SUM(km_adsorpt_po4_sl(:,:) * root_fraction_sl(:,:), DIM=2) / root_depth_avg(:)
-              km_adsorpt_po4_sl(:,1) = arr_hlp6(:)
-            ENDIF
           !! all sites but the SPP site-set
           ELSE
             ! initialise mineral soil P pools
@@ -770,7 +731,7 @@ CONTAINS
 
        CASE DEFAULT
          CALL finish(routine,'Invalid setting of sb_model_scheme.')
-     END SELECT  ! simple_0d & simple_1d | jsm
+     END SELECT  ! simple_1d | jsm
 
   ! Deallocate local allocatable variables
   DEALLOCATE(p_labile)
@@ -794,7 +755,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !> Intialize soil P pools for all layers from the soil P maps (Yang et al. 2013)
   !! assuming that the soil P pool sizes are correlated with soil weight
   !! 
-  !! also used for simple_0d
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_soil_p_pools(nc, nsoil_sb, soil_lay_depth_center_sl, &
                                sb_model_scheme, sb_adsorp_scheme, flag_sb_double_langmuir, & 
@@ -807,7 +767,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     USE mo_jsb_phys_constants,    ONLY: molar_mass_P
     USE mo_sb_constants           ! e.g.: k1_p_pool_depth_corr, k2_p_pool_depth_corr, k3_p_pool_depth_corr, &
                                   !       k4_p_pool_depth_corr, k_p_pool_depth_corr_min_occlud, p_labile_slow_global_avg
-    USE mo_sb_jsm_processes,      ONLY: calc_fast_po4, convert_s1d_to_s0d_var_soilproperty
+    USE mo_sb_jsm_processes,      ONLY: calc_fast_po4
 
     IMPLICIT NONE
 
@@ -925,26 +885,6 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         po4_solute(:,i)     = arr_hlp1(:,i) - po4_assoc_fast(:,i)
       END DO
     ENDIF
-
-    !> 3.0 simple_0d should represent the first meter from the simple_1d
-    !!
-    IF (sb_model_scheme=='simple_0d') THEN
-      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_assoc_fast)
-      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_solute)
-      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_assoc_slow)
-      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_occluded)
-      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, po4_primary)
-      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, qmax_po4)
-      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, qmax_fast_po4)
-      CALL convert_s1d_to_s0d_var_soilproperty (nc, nsoil_sb, soil_depth_sl, qmax_slow_po4)
-      root_depth_avg(:)      = SUM(root_fraction_sl(:,:) * soil_depth_sl(:,:), DIM=2)
-      hlp1(:)                = SUM(km_po4(:,:) * root_fraction_sl(:,:), DIM=2) / root_depth_avg(:)
-      km_po4(:,1)            = hlp1(:)
-      hlp1(:)                = SUM(km_fast_po4(:,:) * root_fraction_sl(:,:), DIM=2) / root_depth_avg(:)
-      km_fast_po4(:,1)       = hlp1(:)
-      hlp1(:)                = SUM(km_slow_po4(:,:) * root_fraction_sl(:,:), DIM=2) / root_depth_avg(:)
-      km_slow_po4(:,1)       = hlp1(:)
-    END IF
 
   END SUBROUTINE init_soil_p_pools
 

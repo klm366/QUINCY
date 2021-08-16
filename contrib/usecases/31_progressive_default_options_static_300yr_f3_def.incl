@@ -31,7 +31,7 @@
 experimentalID="31_progressive_defaults_static_fluxnet3"
 forcingDataSet="fluxnet3"
 
-sb_model_scheme="simple_1d"     # simple_0d simple_1d jsm 
+sb_model_scheme="simple_1d"     # simple_1d jsm 
 flag_sb_prescribe_po4="F"       # set po4solute to a constant value
 
 biomass_alloc_scheme="dynamic"    # fixed dynamic optimal

@@ -34,13 +34,11 @@ slmModel="land"   # specific QUINCY model [default: "land"]; possible values: la
 
 # flags: T (True) or F (False) [large caps]
 # plant-soil model options
-sb_model_scheme="simple_0d"     # simple_0d simple_1d jsm 
+sb_model_scheme="simple_1d"     # simple_1d jsm 
 sb_nloss_scheme="dynamic"       # none fixed dynamic 
 flag_sb_prescribe_nh4="F"       # set nh4solute to a constant value
 flag_sb_prescribe_no3="F"       # set no3solute to a constant value
 flag_sb_prescribe_po4="T"       # set po4solute to a constant value
-n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
-p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
 
 # BNF & Mycorrhiza
 bnf_scheme="standard"           # none fixed standard optimal resistance unlimited
@@ -102,6 +100,11 @@ siteName="DE-Hai"               # get the Site-ID from the 1st column of the par
                                 #           [ICPFOR] "ICP_004" "ICP_005" "ICP_351"  [CGRASS] "CGE_001" "CGE_002"  [PANARC] "CA-BLK" "US-TOL"
 soil_awc_prescribe=300.0        # float !
 soil_theta_prescribe=1.0        # float !
+flag_read_dC13="F"              # T (True) or F (False): if TRUE use forcing dC13, otherwise the prescribed default value
+flag_read_DC14="F"              # T (True) or F (False): if TRUE use forcing DC14, otherwise the prescribed default value
+n_deposition_scheme="none"      # options: none constant dynamic (nhx_srf_down & noy_srf_down)
+p_deposition_scheme="none"      # options: none constant dynamic (p_srf_down)
+flag_forcing_co2_const="F"      # T (True) or F (False): if TRUE the avrg CO2 value of the first simulation year is used as constant for the full simulation, i.e., no variation in CO2 dC13 DC14
 longitude=0.0                   # float !
 latitude=50.0                   # float !
 
@@ -216,12 +219,8 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     ;;    
   "s")
     case "$OPTARG" in
-    "s0d")
-      echo "   sb_model_scheme=simple_0d (only one soil layer)"
-      sb_model_scheme="simple_0d"
-      ;;
     "s1d")
-      echo "   sb_model_scheme=simple_1d (multiple soil layers)"
+      echo "   sb_model_scheme=simple_1d (multiple soil layers) [default]"
       sb_model_scheme="simple_1d"
       ;;
     "jsm")
@@ -325,7 +324,6 @@ while getopts ":p:m:i:f:s:y:b:z:h" opt; do
     echo "       no: none; using climate.dat file in test_bed folder"
     echo " -s set the soil model"
     echo "    Arguments to -s:"
-    echo "       s0d: simple_0d"
     echo "       s1d: simple_1d"
     echo "       jsm: jsm"    
     echo " -y set simulation length"
@@ -380,7 +378,7 @@ validateNDepositionScheme="none constant dynamic"
 validatePDepositionScheme="none constant dynamic"
 validateCanopyLayerScheme="standard fapar"
 validateCanopyConductanceScheme="medlyn ballberry"
-validateSBModelScheme="simple_0d simple_1d jsm"
+validateSBModelScheme="simple_1d jsm"
 validateSBNLossScheme="none fixed dynamic"
 validateBiomassAllocScheme="fixed dynamic optimal"
 validateLeafStoichomScheme="fixed dynamic optimal"
@@ -400,10 +398,6 @@ validateUserConfigValues "$bnf_scheme" "$validateBNFScheme" "bnf_scheme"
 validateUserConfigValues "$flag_mycorrhiza" "$validateFlags" "flag_mycorrhiza"
 validateUserConfigValues "$flag_mycorrhiza_org" "$validateFlags" "flag_mycorrhiza_org"
 validateUserConfigValues "$flag_mycorrhiza_prim" "$validateFlags" "flag_mycorrhiza_prim"
-validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
-validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
-validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
-validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
 validateUserConfigValues "$canopy_layer_scheme" "$validateCanopyLayerScheme" "canopy_layer_scheme"
 validateUserConfigValues "$canopyConductanceScheme" "$validateCanopyConductanceScheme" "canopyConductanceScheme"
 validateUserConfigValues "$sb_model_scheme" "$validateSBModelScheme" "sb_model_scheme"
@@ -426,6 +420,11 @@ validateUserConfigValues "$output_interval_flux" "$validateOutputInterval" "outp
 validateUserConfigValues "$setPFTAutomatically" "$validateSetPFTAutomatically" "setPFTAutomatically"
 validateUserConfigValues "$plant_functional_type_id" "$validatePlantFunctionalTypeID" "plant_functional_type_id"
 validateUserConfigValues "$flag_oneYearForcing" "$validateFlags" "flag_oneYearForcing"
+validateUserConfigValues "$flag_read_dC13" "$validateFlags" "flag_read_dC13"
+validateUserConfigValues "$flag_read_DC14" "$validateFlags" "flag_read_DC14"
+validateUserConfigValues "$n_deposition_scheme" "$validateNDepositionScheme" "n_deposition_scheme"
+validateUserConfigValues "$p_deposition_scheme" "$validatePDepositionScheme" "p_deposition_scheme"
+validateUserConfigValues "$flag_forcing_co2_const" "$validateFlags" "flag_forcing_co2_const"
 validateUserConfigValues "$forcingDataSet" "$validateForcingDataSet" "forcingDataSet"
 validateUserConfigValues "$crunSites" "$validateCrunSites" "crunSites"
 validateUserConfigValues "$sb_adsorp_scheme" "$validateSb_adsorp_scheme" "sb_adsorp_scheme"
@@ -945,6 +944,24 @@ if [ $flag_oneYearForcing == T ]
     changeNamelistValue flag_climate_forcing_one_year ".TRUE."
   else
     changeNamelistValue flag_climate_forcing_one_year ".FALSE."
+fi
+if [ $flag_read_dC13 == T ]
+  then
+    changeNamelistValue flag_read_dC13 ".TRUE."
+  else
+    changeNamelistValue flag_read_dC13 ".FALSE."
+fi
+if [ $flag_read_DC14 == T ]
+  then
+    changeNamelistValue flag_read_DC14 ".TRUE."
+  else
+    changeNamelistValue flag_read_DC14 ".FALSE."
+fi
+if [ $flag_forcing_co2_const == T ]
+  then
+    changeNamelistValue flag_forcing_co2_const ".TRUE."
+  else
+    changeNamelistValue flag_forcing_co2_const ".FALSE."
 fi
 changeNamelistValue simulation_length_number "$simulation_length_number"
 changeNamelistValue output_interval_pool "$output_interval_pool"

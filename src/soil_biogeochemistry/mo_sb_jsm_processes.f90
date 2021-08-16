@@ -42,7 +42,7 @@ MODULE mo_sb_jsm_processes
             calc_bulk_soil_carbon, calc_bulk_density_correction, calc_qmax_bulk_density_correction, &
             calc_om_sorption, calc_depolymerisation_SESAM, &
             calc_inorganic_uptake, calc_sinking_flux, calc_sourcing_flux_po4, &
-            calc_fast_po4, calc_nitri_denitri_partitioning_rate, convert_s1d_to_s0d_var_soilproperty, &
+            calc_fast_po4, calc_nitri_denitri_partitioning_rate, &
             calc_Psorption_parameter
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_jsm_processes'
@@ -1622,9 +1622,9 @@ CONTAINS
 
     !> 1.1 Only jsm distinguish litter C from SOM C
     !!
-    IF (sb_model_scheme /= 'jsm') THEN
-       bulk_soil_carbon_sl(:,:)   = bulk_soil_carbon_sl(:,:) + soil_litter_carbon_sl(:,:)
-       soil_litter_carbon_sl(:,:) = 0._wp
+    IF (sb_model_scheme == 'simple_1d') THEN
+      bulk_soil_carbon_sl(:,:)   = bulk_soil_carbon_sl(:,:) + soil_litter_carbon_sl(:,:)
+      soil_litter_carbon_sl(:,:) = 0._wp
     ENDIF
 
     !> 2.0 calculate the volume of mineral soil [m3/m3]
@@ -1859,54 +1859,6 @@ CONTAINS
 
   END SUBROUTINE calc_om_sorption 
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Convert simple_1d soil properties to simple_0d, assuming a soil depth of 1 m
-  !! 
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE convert_s1d_to_s0d_var_soilproperty(nc, nsoil_sb, soil_depth_sl, var_1d)
-
-    IMPLICIT NONE
-    INTEGER                         , INTENT(in)     :: nc             !< number of points of the chunk
-    INTEGER                         , INTENT(in)     :: nsoil_sb       !< number of soil layers as used/defined by the var_1d
-    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)     :: soil_depth_sl  !< soil layer depth [m]
-    REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(inout)  :: var_1d         !< soil property variable [mol/m3]
-
-    INTEGER                                          :: isoil
-    REAL(wp), DIMENSION(nc)                          :: soil_depth_0d, hlp1
-    LOGICAL,  DIMENSION(nc)                          :: aflag   
-    CHARACTER(len=*), PARAMETER                      :: routine = TRIM(modname)//':convert_s1d_to_s0d_var_soilproperty'
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-    !> 0.9
-    !! init local variables
-    soil_depth_0d(:) = 1._wp ! soil depth in simple_0d = 1 meter
-    hlp1(:)          = 0._wp
-    aflag(:)         = .TRUE.
-
-    !> 1.0 
-    !! 
-    var_1d(:,1) = var_1d(:,1) * soil_depth_sl(:,1)  
-    DO isoil=2,nsoil_sb
-      WHERE (aflag) 
-        hlp1(:)     = hlp1(:)     + soil_depth_sl(:,isoil)
-        var_1d(:,1) = var_1d(:,1) + var_1d(:,isoil) * soil_depth_sl(:,isoil)
-        WHERE (hlp1(:) > soil_depth_0d(:))
-          var_1d(:,1) = var_1d(:,1) - var_1d(:,isoil) * &
-                        (hlp1(:) - soil_depth_0d(:)) / soil_depth_sl(:,isoil) * soil_depth_sl(:,isoil)
-          aflag(:)    = .FALSE.
-        ENDWHERE
-      ENDWHERE
-      var_1d(:,isoil) = 0._wp
-    END DO
-
-    var_1d(:,1) = var_1d(:,1) / soil_depth_sl(:,1)
-
-  END SUBROUTINE convert_s1d_to_s0d_var_soilproperty
-  
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task called from update_sb_pools & sb_init
   !

@@ -175,13 +175,13 @@ if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
 
   cd ../contrib/site_level/
   
-  # run 100 years fluxnet simulations in debug mode with simple_0d: usecase 02
-  jobNameD="auto_r""$revRepoTrunk""_100yfluxdef_dbg_s0d"
+  # run 100 years fluxnet simulations in debug mode with simple_1d: usecase 02
+  jobNameD="auto_r""$revRepoTrunk""_100yfluxdef_dbg_s1d"
   ./prep_run_slm.sh -u 02 -e "$jobNameD" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameD="exp_""$jobNameD"
   sleep 30s 
-  # run 100 years fluxnet simulations in debug mode with simple_1d: usecase 04
-  jobNameD2="auto_r""$revRepoTrunk""_100yfluxdef_dbg_s1d"
+  # run 100 years fluxnet simulations in debug mode with jsm: usecase 04
+  jobNameD2="auto_r""$revRepoTrunk""_100yfluxdef_dbg_jsm"
   ./prep_run_slm.sh -u 04 -e "$jobNameD2" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameD2="exp_""$jobNameD2"
 
@@ -193,13 +193,13 @@ if [ $revRepoTrunkSrc -gt $localWCopySrc ] || [ "$1" == "ignoreRev" ]
 
   cd ../contrib/site_level/
   
-  # run 500 years fluxnet simulations in standard mode with simple_0d: usecase 03
-  jobNameS="auto_r""$revRepoTrunk""_500yfluxdef_std_s0d"
+  # run 500 years fluxnet simulations in standard mode with simple_1d: usecase 03
+  jobNameS="auto_r""$revRepoTrunk""_500yfluxdef_std_s1d"
   ./prep_run_slm.sh -u 03 -e "$jobNameS" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameS="exp_""$jobNameS"
   sleep 30s 
-  # run 500 years fluxnet simulations in standard mode with simple_1d: usecase 05
-  jobNameS2="auto_r""$revRepoTrunk""_500yfluxdef_std_s1d"
+  # run 500 years fluxnet simulations in standard mode with jsm: usecase 05
+  jobNameS2="auto_r""$revRepoTrunk""_500yfluxdef_std_jsm"
   ./prep_run_slm.sh -u 05 -e "$jobNameS2" -c "$flagCustomSiteList" -n auto_testrun_flux_sites_list.dat
   jobNameS2="exp_""$jobNameS2"
   sleep 30s 
