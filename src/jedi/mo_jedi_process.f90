@@ -106,6 +106,10 @@ CONTAINS
     & lspinup_jedi,               & !in 
     & woody_root_coe,             & !in
     & fine_root_coe,              & !in
+    & leaf_growth_fract,          & !in
+    & fapar_max_tree,             & !in
+    & fapar_max_grass,            & !in
+    & threshold_for_alpha,        & !in
     & iniyear,                    & ! in
     & currentyear,                & !in
     & time_steps_per_day,         & ! in
@@ -166,6 +170,10 @@ CONTAINS
     LOGICAL,  INTENT(IN) :: lspinup_jedi
     REAL(wp), INTENT(IN) :: woody_root_coe
     REAL(wp), INTENT(IN) :: fine_root_coe
+    REAL(wp), INTENT(IN) :: leaf_growth_fract     
+    REAL(wp), INTENT(IN) :: fapar_max_tree      
+    REAL(wp), INTENT(IN) :: fapar_max_grass    
+    REAL(wp), INTENT(IN) :: threshold_for_alpha 
     REAL(wp), INTENT(inout) :: one_counter
     !
     ! JeDi carbon allocation 
@@ -228,8 +236,6 @@ CONTAINS
     REAL(wp), PARAMETER :: c_tau_storage    = 10._wp * 365._wp ! decay of the storage pool (1-year), PHS decided arbitrarily
     REAL(wp), parameter :: cTiny            = 1.E-8_wp        
     
-    REAL(wp), PARAMETER :: leaf_growth_fract = 0.03_wp   
-    REAL(wp), PARAMETER :: fapar_max = 0.96_wp
     REAL(wp) :: allo_max_leaves,zAlloc_leaves_tmp
     
     REAL(wp) :: MaintRes
@@ -280,20 +286,19 @@ CONTAINS
     ELSE 
       Flg_grow_T = 0.0_wp
     END IF
-    
-    IF ( ff_grow_W >= 0.5_wp ) Flg_grow_W = 1.0_wp
-    IF ( ff_grow_G >= 0.5_wp ) Flg_grow_G = 1.0_wp  
+    IF ( ff_grow_W >= threshold_for_alpha ) Flg_grow_W = 1.0_wp
+    IF ( ff_grow_G >= threshold_for_alpha ) Flg_grow_G = 1.0_wp  
     
     Flg_grow   = Flg_grow_T * Flg_grow_W 
     Flg_grow_G = Flg_grow_T * Flg_grow_G
     
-    IF ( Flg_grow_G > 0._wp .AND. one_counter < 1._wp )  THEN
+    IF ( Flg_grow_G > 0.5_wp .AND. one_counter < 0.5_wp )  THEN
       IF ( lspinup_jedi ) THEN        
         c_storage    = 3000
-        one_counter  = one_counter +1
+        one_counter  = one_counter +1._wp
       ELSE
         c_seed       = 0.5_wp
-        one_counter  = one_counter +1
+        one_counter  = one_counter +1._wp
       END IF
     ENDIF
    
@@ -301,90 +306,79 @@ CONTAINS
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Germination condition !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
     !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
     
-    IF ( Flg_die < 1._wp )  THEN  ! If the species is alive
+    IF ( Flg_die < 0.5_wp )  THEN  ! If the species is alive
   
-      flx_germ  = Flg_grow_G * GermFrac * c_seed ! if germination is favorable then carbon flows from seed to storage pool 
+      flx_germ  = Flg_grow_G * GermFrac * c_seed 
       c_storage = c_storage + flx_germ
       c_seed    = c_seed    - flx_germ  
       
-      zLoss_seed = c_seed / c_tau_seed  ! Why the decay of seed is only computed outside the loop?
-      c_seed     = c_seed - zLoss_seed  !  need to think about when the seed will decay maybe only when its after 150 year of simulation or when its not spinup simulation??
+      zLoss_seed = c_seed / c_tau_seed  
+      c_seed     = c_seed - zLoss_seed  
       
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Carbon allocation factors !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
       
-      fract_veg = 1.0_wp  ! Dont know what this control, need to check later  ????????
       
       AG_growth = Flg_grow * Allo2Abground
       BG_growth = Flg_grow * Allo2Blground
       
-      AG_struct = Flg_grow * RelAllo2Abgrd * fract_veg
-      BG_struct = Flg_grow * RelAllo2Blgrd * fract_veg
+      AG_struct = Flg_grow * RelAllo2Abgrd
+      BG_struct = Flg_grow * RelAllo2Blgrd 
       
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-! Carbon allocation !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
       !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
       
-      ! Compute JeDi carbon allocation of different C(tissue) pools
     
       IF ( c_storage > 0._wp ) THEN  
 	      Flg_seed = 0._wp
     
-        IF ( NPP > 0._wp ) Flg_seed = 1.0_wp ! OR NPP_yDayMean ???
+        IF ( NPP > 0._wp ) Flg_seed = 1.0_wp 
 
         A_seed = Flg_grow * Flg_seed * Allo2Reproduc
-        ! PHS:: 14.08.2020 try without turnover for storage ! 
-        IF ( .NOT. lspinup_jedi .OR. currentyear >= iniyear + 50 ) THEN 
-          IF ( c_storage >  0._wp ) zLoss_storage = c_storage / c_tau_storage 
-        END IF      
+        IF ( c_storage >  0._wp ) zLoss_storage = c_storage / c_tau_storage 
+
         c_storage = c_storage + NPP - zLoss_storage
+        zAlloc = MAX(0._wp,c_storage)  
         
-        zAlloc = MAX(0._wp,c_storage)  !  To make sure that no negative c_storage distributed to the pools
-        
-        !PHS: 10.10.2019  I introduce a break to stop rapid growth of leaf
+        !PHS: 10.10.2019  To stop rapid growth of leaf
         ! I define the initial amount of carbon that is added to the leaf pool to be 4g C.
-        ! Afterwards, the maximal allocation to c_leaves can only be 3% c_leaves of the previous day. (leaf_growth_fract)
+        ! Afterwards, the maximal allocation to c_leaves can only be leaf_growth_fract % c_leaves of the previous day. 
         ! Likewise, the other tissues' allocation are constrained by the proportional of the c_leaves allocation.  (adj_fraction)
         IF ( c_leaves <= 4._wp / 12.01_wp )  THEN
           allo_max_leaves = 4._wp / 12.01_wp
         ELSE
           allo_max_leaves = c_leaves * leaf_growth_fract
         END IF
-        !PHS: 9.6.2020 FAPAR limitation on leaf growth
 
-        !IF ( faPAR_prev_noon .LT. fapar_max ) THEN
-        !PHS: 15.7.2020 try to  use different light constraint for grass 
         IF ( LandcoverClass == 3) THEN      
-          IF ( faPAR_prev_noon < fapar_max ) THEN
-            jedi_light_constraint = COS( 0.5_wp * pi * ( (faPAR_prev_noon / fapar_max )**30._wp) )
+          IF ( faPAR_prev_noon < fapar_max_tree ) THEN
+            jedi_light_constraint = COS( 0.5_wp * pi * ( (faPAR_prev_noon / fapar_max_tree )**30._wp) )
           ELSE
             jedi_light_constraint = 0._wp
           END IF
         ELSE IF (LandcoverClass == 4) THEN
-          IF ( faPAR_prev_noon < 0.83_wp ) THEN 
-            jedi_light_constraint = COS( 0.5_wp * pi * ( (faPAR_prev_noon / 0.83_wp )**30._wp) )
+          IF ( faPAR_prev_noon < fapar_max_grass ) THEN 
+            jedi_light_constraint = COS( 0.5_wp * pi * ( (faPAR_prev_noon / fapar_max_grass )**30._wp) )
           ELSE
             jedi_light_constraint = 0._wp
           END IF
         END IF   
-        !ELSE
-            !jedi_light_constraint = 0._wp
-        !END IF
         
+        jedi_light_constraint = MAX(0._wp,jedi_light_constraint)      
+
         zAlloc_leaves_tmp = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves  
-        zAlloc_leaves = MIN( zAlloc_leaves_tmp, allo_max_leaves )  
-        
-        IF (zAlloc_leaves /= 0._wp  ) THEN   ! RS: this is dangerous! TODO
-          adj_fraction = zAlloc_leaves / zAlloc_leaves_tmp
+
+        IF (zAlloc_leaves_tmp > cTiny  ) THEN  
+          adj_fraction = MIN( zAlloc_leaves_tmp, allo_max_leaves )   / zAlloc_leaves_tmp
         ELSE
           adj_fraction  = 1._wp
         END IF
         
-        zAlloc_leaves = zAlloc_leaves * jedi_light_constraint
 
         zAlloc_seed   = zAlloc * A_seed                            * c_GRes_seed   * adj_fraction  * jedi_light_constraint
-        !zAlloc_leaves = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves
+        zAlloc_leaves = zAlloc * AG_growth * ( 1._wp - AG_struct ) * c_GRes_leaves * adj_fraction  * jedi_light_constraint 
         zAlloc_stem   = zAlloc * AG_growth * AG_struct             * c_GRes_wood   * adj_fraction  * jedi_light_constraint
         zAlloc_csroot = zAlloc * BG_growth * BG_struct             * c_GRes_csroot * adj_fraction  * jedi_light_constraint
         zAlloc_fnroot = zAlloc * BG_growth * ( 1._wp - BG_struct ) * c_GRes_fnroot * adj_fraction  * jedi_light_constraint
@@ -408,22 +402,21 @@ CONTAINS
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=! 
 
         Flg_senesc = 0._wp
-        IF ( .NOT. lspinup_jedi .OR. currentyear >= iniyear + 50 ) THEN 
+        IF ( .NOT. lspinup_jedi .OR. currentyear >= iniyear + 30 ) THEN 
           IF ( ff_npp < 0._wp .AND. NPP < 0._wp ) Flg_senesc = 1.0_wp - Flg_grow   ! See remarks below.
          END IF
         ! No idea why the flag for senescence is using:  1 - flag_grow  
         ! I took the calculation from JeDi.
-        ! I guess senescence happens, when: (1) Non-growing condition (2) NPP<0, which may suggest that plants spend many energy respiring
-        !                                   (3) C_storage>0           (4) ff_npp<0 
+        ! I guess senescence happens, when: (1) During non-growing condition (2) NPP<0 (3) ff_npp<0 
         
         tau_stem   = TurnoverStruc
         tau_csroot = TurnoverStruc
         IF (LandcoverClass == 3) THEN     
-          tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc )  ! *             RelSenesAbgd )      !PHS 11.12.2019 play around with the senescence process
-          tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc  ) ! * ( 1._wp -   RelSenesAbgd) )!PHS 11.12.2019 play around with the senescence process
+          tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc )  
+          tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / TurnoverLeaf ) * Flg_senesc  ) 
         ELSE IF (LandcoverClass == 4) THEN  
-          tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / (TurnoverLeaf/2._wp) ) * Flg_senesc )  ! *             RelSenesAbgd )      !PHS 11.12.2019 play around with the senescence process
-          tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / (TurnoverLeaf/2._wp) ) * Flg_senesc  ) ! * ( 1._wp -   RelSenesAbgd) )!PHS 11.12.2019 play around with the senescence process
+          tau_leaves = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / (TurnoverLeaf/2._wp) ) * Flg_senesc )  
+          tau_fnroot = 1._wp / ( (1._wp / TurnoverLeaf ) + ( 1._wp / (TurnoverLeaf/2._wp) ) * Flg_senesc  ) 
         END IF
 
         !=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=!
@@ -452,11 +445,9 @@ CONTAINS
         NPP_act_yDayMean = ( GPP_yDayMean * sec_per_day  - AutoRes ) / (  sec_per_day )
 
         IF ( LandcoverClass == 3) THEN     
-         ! root_depth = sqrt( c_csroot * 2250._wp * 12.01_wp ) * 0.001_wp
-         root_depth = sqrt( c_csroot * woody_root_coe * 12.01_wp ) * 0.001_wp
+          root_depth = sqrt( c_csroot * woody_root_coe * 12.01_wp ) * 0.001_wp
         ELSE IF (LandcoverClass == 4) THEN
-         ! root_depth = sqrt( c_fnroot * 550._wp * 12.01_wp ) * 0.001_wp
-          root_depth = sqrt( c_fnroot * fine_root_coe * 12.01_wp ) * 0.001_wp
+          root_depth = sqrt( c_fnroot * fine_root_coe  * 12.01_wp ) * 0.001_wp
         END IF
 
         GrowthResp = GrowthResp / sec_per_day 
@@ -464,11 +455,11 @@ CONTAINS
 
         IF (  c_storage <= cTiny )  THEN 
           zLoss_leaves = zLoss_leaves + c_leaves
-          zLoss_stem   = zLoss_stem   + c_stem    + c_storage ! I dont know where the dead storage carbon shall go so I first put it into stem letter pool
-          zLoss_csroot = zLoss_csroot + c_csroot  + c_seed ! I dont know where should dead seed carbon go so i put into coarse root's litter pool first
+          zLoss_stem   = zLoss_stem   + c_stem    + c_storage
+          zLoss_csroot = zLoss_csroot + c_csroot  + c_seed 
           zLoss_fnroot = zLoss_fnroot + c_fnroot
             
-          c_storage = 0._wp   ! Should the storage carbon go to some litter pools?
+          c_storage = 0._wp   
           c_seed    = 0._wp
           c_leaves  = 0._wp
           c_stem    = 0._wp

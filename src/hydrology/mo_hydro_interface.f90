@@ -878,13 +878,14 @@ CONTAINS
     USE mo_util,          ONLY: soil_depth_to_layers_2d
     USE mo_jedi_process,  ONLY: jedi_soil_depth_to_layers_1d
     USE mo_hydro_process, ONLY: calc_soil_hydrology
-    USE mo_jsb_time,      ONLY: t_datetime
+    USE mo_jsb_time,      ONLY: t_datetime,get_year_at_experiment_start, get_year
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
     !
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(JEDI_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(JEDI_)
@@ -912,6 +913,10 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
+
+    INTEGER                      :: iniyear
+    LOGICAL                      :: lspinup_jedi
+
 
     iblk  = options%iblk
     ics   = options%ics
@@ -949,10 +954,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
     IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+
       dsl4jsb_Get_memory(JEDI_)
+      dsl4jsb_Get_config(JEDI_)
       dsl4jsb_Get_var2D_onChunk(HYDRO_,root_depth)
       dsl4jsb_Get_var3D_onChunk(HYDRO_,root_depth_sl)
       dsl4jsb_Get_var2D_onChunk(JEDI_,jedi_root_depth)
+
+      iniyear = get_year_at_experiment_start()
+      lspinup_jedi    = dsl4jsb_Config(JEDI_)%l_spinup_jedi
+
     END IF
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil)     ! in
 
@@ -968,10 +979,14 @@ CONTAINS
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
       !PHS 24.07.2020 Compute water stress in CARBON at PFT level. 
       ! As jedi has different rooting depth for each PGS, the root_depth at veg level needed to be recalculated each time. 
-    IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
-          root_depth     = jedi_root_depth
-          root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))
-    END IF
+      IF (TRIM(model%config%usecase) .eq. 'jsbach_jedi' ) THEN
+          IF ((get_year(options%current_datetime) .LE. iniyear + 30 ) .AND. lspinup_jedi ) THEN    !  PHS: initial ROOT DEPTH
+    
+          ELSE
+              root_depth     = jedi_root_depth
+              root_depth_sl = jedi_soil_depth_to_layers_1d( root_depth, soil_w%dz(:))
+          END IF
+      END IF
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
 
     !$claw acc update device(soil_w%dz) ! TODO move if possible

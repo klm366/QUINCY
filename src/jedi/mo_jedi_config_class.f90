@@ -34,6 +34,10 @@ MODULE mo_jedi_config_class
     REAL(wp)                    :: jedi_biomass_memory 
     REAL(wp)                    :: jedi_woody_root_coe
     REAL(wp)                    :: jedi_fine_root_coe  
+    REAL(wp)                    :: leaf_growth_fract  
+    REAL(wp)                    :: fapar_max_tree     
+    REAL(wp)                    :: fapar_max_grass    
+    REAL(wp)                    :: threshold_for_alpha 
   CONTAINS
      PROCEDURE :: Init => Init_jedi_config
   END type t_jedi_config
@@ -60,7 +64,10 @@ CONTAINS
     REAL(wp)                    :: jedi_biomass_memory 
     REAL(wp)                    :: jedi_woody_root_coe
     REAL(wp)                    :: jedi_fine_root_coe  
-
+    REAL(wp)                    :: leaf_growth_fract  
+    REAL(wp)                    :: fapar_max_tree     
+    REAL(wp)                    :: fapar_max_grass    
+    REAL(wp)                    :: threshold_for_alpha 
     NAMELIST /jsb_jedi_nml/        &
          active,                   &
          single_tile_output,       &
@@ -70,7 +77,12 @@ CONTAINS
          jedi_AutoRes_Q10,         &
          jedi_biomass_memory,      &
          jedi_woody_root_coe,      &
-         jedi_fine_root_coe
+         jedi_fine_root_coe,       &
+         leaf_growth_fract,        &
+         fapar_max_tree,           &
+         fapar_max_grass,          &
+         threshold_for_alpha
+
     INTEGER :: nml_handler, nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_jedi_config'
@@ -83,10 +95,15 @@ CONTAINS
     bc_filename            = 'bc_land_carbon.nc'
     ic_filename            = 'ic_land_carbon.nc'
     l_spinup_jedi          = .FALSE.
-    jedi_AutoRes_Q10       = 1.6_wp
+    jedi_AutoRes_Q10       = 2.0_wp
     jedi_biomass_memory    = 3650._wp
     jedi_woody_root_coe    = 2250._wp
     jedi_fine_root_coe     = 550._wp
+    leaf_growth_fract      = 1.2_wp
+    fapar_max_tree         = 0.9_wp
+    fapar_max_grass        = 0.78_wp
+    threshold_for_alpha    = 0.5_wp
+
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -105,11 +122,19 @@ CONTAINS
     config%jedi_biomass_memory    = jedi_biomass_memory
     config%jedi_woody_root_coe    = jedi_woody_root_coe
     config%jedi_fine_root_coe     = jedi_fine_root_coe
+    config%leaf_growth_fract      = leaf_growth_fract
+    config%fapar_max_tree         = fapar_max_tree
+    config%fapar_max_grass        = fapar_max_grass
+    config%threshold_for_alpha    = threshold_for_alpha
 
     CALL message(TRIM(routine), 'jedi_AutoRes_Q10    = '//TRIM(real2string(jedi_AutoRes_Q10))   )
     CALL message(TRIM(routine), 'jedi_biomass_memory = '//TRIM(real2string(jedi_biomass_memory)))
     CALL message(TRIM(routine), 'jedi_woody_root_coe = '//TRIM(real2string(jedi_woody_root_coe)))
     CALL message(TRIM(routine), 'jedi_fine_root_coe  = '//TRIM(real2string(jedi_fine_root_coe)) )
+    CALL message(TRIM(routine), 'leaf_growth_fract   = '//TRIM(real2string(leaf_growth_fract)) )
+    CALL message(TRIM(routine), 'fapar_max_tree      = '//TRIM(real2string(fapar_max_tree)) )
+    CALL message(TRIM(routine), 'fapar_max_grass     = '//TRIM(real2string(fapar_max_grass)) )
+    CALL message(TRIM(routine), 'threshold_for_alpha  = '//TRIM(real2string(threshold_for_alpha)) )
 
   END SUBROUTINE Init_jedi_config
 

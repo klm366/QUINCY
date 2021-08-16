@@ -103,31 +103,35 @@ CONTAINS
     DO j = 1, SIZE(ws, 1)
       bottom (j)    = SUM(dz (j,:))
       root_depth(j) = SUM(dz_root(j,:))
-      IF (root_depth(j) > bottom(j) + EPSILON(1._wp)) THEN
-        !$claw remove
-        !CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-        IF (PRESENT(caller)) THEN
-          CALL finish(TRIM(routine), 'Root zone larger than soil depth ('//TRIM(caller)//').')
-        ELSE
-          CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-        END IF
-        !$claw end remove
-      ELSE
-        bottom(j)    = 0._wp
-        bottom_m1(j) = 0._wp
-        ws_root  (j) = 0._wp
-
-        !$claw acc loop seq
-        DO i=1,n
-          bottom(j)    = bottom(j) + dz(j,i)
-          IF (root_depth(j) >= bottom(j)) THEN                ! Root zone extends to below current layer
-            ws_root(j) = ws_root(j) + ws(j,i)
-          ELSE IF (root_depth(j) > bottom_m1(j)) THEN         ! Root zone above current layer but below previous layer, i.e.
-            ws_root(j) = ws_root(j) + ws(j,i) * (root_depth(j) - bottom_m1(j)) / dz(j,i) ! Root z. partially extends into current layer
+      IF (root_depth(j) > bottom(j)) THEN
+        IF (root_depth(j) > bottom(j) + 2._wp * EPSILON(1._wp)) THEN
+          !$claw remove
+          !CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
+          IF (PRESENT(caller)) THEN
+            CALL finish(TRIM(routine), 'Root zone larger than soil depth ('//TRIM(caller)//').')
+          ELSE
+            CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
           END IF
-          bottom_m1(j) = bottom_m1(j) + dz(j,i)
-        END DO
+          !$claw end remove
+        ELSE
+          root_depth(j) = bottom(j)
+        END IF
       END IF
+
+      bottom(j)    = 0._wp
+      bottom_m1(j) = 0._wp
+      ws_root  (j) = 0._wp
+
+      !$claw acc loop seq
+      DO i=1,n
+        bottom(j)    = bottom(j) + dz(j,i)
+        IF (root_depth(j) >= bottom(j)) THEN                ! Root zone extends to below current layer
+          ws_root(j) = ws_root(j) + ws(j,i)
+        ELSE IF (root_depth(j) > bottom_m1(j)) THEN         ! Root zone above current layer but below previous layer, i.e.
+          ws_root(j) = ws_root(j) + ws(j,i) * (root_depth(j) - bottom_m1(j)) / dz(j,i) ! Root z. partially extends into current layer
+        END IF
+        bottom_m1(j) = bottom_m1(j) + dz(j,i)
+      END DO
     END DO
     !$claw acc end parallel
     !$claw acc end data

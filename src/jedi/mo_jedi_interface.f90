@@ -209,6 +209,10 @@ CONTAINS
     REAL(wp)             :: biomass_memory 
     REAL(wp)             :: woody_root_coe
     REAL(wp)             :: fine_root_coe
+    REAL(wp)             :: leaf_growth_fract  != 1.2_wp   
+    REAL(wp)             :: fapar_max_tree     != 0.81_wp !0.9_wp  !0.96_wp 
+    REAL(wp)             :: fapar_max_grass    != 0.61_wp!0.78_wp  ! 0.83_wp
+    REAL(wp)             :: threshold_for_alpha 
     ! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- 
 
     REAL(wp), PARAMETER  :: Q10              = 1.8_wp          ! Empirical parameter for temperature dependence of
@@ -417,6 +421,11 @@ CONTAINS
     biomass_memory  = dsl4jsb_Config(JEDI_)%jedi_biomass_memory  
     woody_root_coe  = dsl4jsb_Config(JEDI_)%jedi_woody_root_coe  
     fine_root_coe   = dsl4jsb_Config(JEDI_)%jedi_fine_root_coe  
+    leaf_growth_fract = dsl4jsb_Config(JEDI_)%leaf_growth_fract
+    fapar_max_tree    = dsl4jsb_Config(JEDI_)%fapar_max_tree
+    fapar_max_grass   = dsl4jsb_Config(JEDI_)%fapar_max_grass
+    threshold_for_alpha = dsl4jsb_Config(JEDI_)%threshold_for_alpha
+
 
     IF ((get_year(options%current_datetime) .LE. iniyear + 1 ) .AND. lspinup_jedi ) THEN    !  PHS: initial carbon
       ff_npp = 0._wp
@@ -530,6 +539,10 @@ CONTAINS
           & lspinup_jedi,                                & ! in 
           & woody_root_coe,                              & !in
           & fine_root_coe,                               & !in
+          & leaf_growth_fract,                           & !in
+          & fapar_max_tree,                              & !in
+          & fapar_max_grass,                             & !in
+          & threshold_for_alpha,                         & !in
           & iniyear,                                     & ! in
           & get_year(options%current_datetime),          & ! in
           & timesteps_per_day(dtime),                    & ! in

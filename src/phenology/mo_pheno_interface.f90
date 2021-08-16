@@ -36,7 +36,7 @@ MODULE mo_pheno_interface
 
   ! Use of process configurations (t_<process>_config)
   dsl4jsb_Use_config(PHENO_)
-
+  dsl4jsb_Use_config(JEDI_)
   ! Use of process memories (t_<process>_memory)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
@@ -795,7 +795,7 @@ CONTAINS
   SUBROUTINE update_phenology_jedi_phenology(tile,options)
   
     USE mo_pheno_process, ONLY: calc_jedi_phenology
-    USE mo_jsb_time,      ONLY: t_datetime, is_newday, is_time_experiment_start
+    USE mo_jsb_time,      ONLY: t_datetime, is_newday, is_time_experiment_start,get_year_at_experiment_start, get_year
       ! &                         get_time_experiment_start, deallocateDatetime, get_year
     
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -806,15 +806,14 @@ CONTAINS
     ! REAL(wp)                   :: dtime
     !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    
-    LOGICAL                      :: lstart
-    TYPE(t_datetime), POINTER    :: inidate
+    LOGICAL                      :: lspinup_jedi
     INTEGER                      :: iniyear
 
     !-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
    
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(JEDI_)
-    
+    dsl4jsb_Def_config(JEDI_)
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: c_leaves
     
@@ -834,19 +833,23 @@ CONTAINS
 
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(JEDI_)
-
+    dsl4jsb_Get_config(JEDI_)
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)        ! inout
     dsl4jsb_Get_var2D_onChunk(JEDI_,  c_leaves)
 
-    ! inidate => get_time_experiment_start()
-    ! iniyear =  get_year(inidate)
-    ! CALL deallocateDatetime(inidate)
+    iniyear = get_year_at_experiment_start()
+    lspinup_jedi    = dsl4jsb_Config(JEDI_)%l_spinup_jedi
 
-    !CALL calc_jedi_phenology(  & dsl4jsb_Lctlib_param(LandcoverClass),  & !in
+
+    IF ((get_year(options%current_datetime) .LE. iniyear + 30 ) .AND. lspinup_jedi ) THEN    !  PHS: initial carbon
+        lai = 3._wp
+
+    ELSE
+
     CALL calc_jedi_phenology(  dsl4jsb_Lctlib_param(JeDiSLA), &  ! in
                                &  c_leaves,                   &  ! in
                                &  lai                  )         ! inout
-
+    END IF 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_phenology_jedi_phenology
