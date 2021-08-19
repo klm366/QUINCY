@@ -722,7 +722,11 @@ CONTAINS
     CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
                                            0._wp, qmax_org_min_sl(:,:), qmax_org(:,:))
     !! po4                         
-    CALL calc_Psorption_parameter(nc, nsoil_sb, dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
+    ! Correct the first layer Qmax_AlFe_cor with the woody litter
+    Qmax_AlFe_cor(:,1) = Qmax_AlFe_cor(:,1) * 1._wp / ((1._wp - volume_min_sl(:,1)) * &
+                         (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)  + sb_pool%woody_litter%carbon(:,1)) / &
+                         (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)) + volume_min_sl(:,1))
+    CALL calc_Psorption_parameter(dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
                                   clay_sl(:,:), silt_sl(:,:), rmm_sorption(:,:) * 1000._wp, ph_sl(:,:), &
                                   bulk_soil_carbon_sl(:,:), soil_litter_carbon_sl(:,:), sb_pool%woody_litter%carbon(:,:), &
                                   bulk_dens_sl(:,:), volume_min_sl(:,:), po4_solute(:,:), &
