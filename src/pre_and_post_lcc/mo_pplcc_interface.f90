@@ -45,12 +45,12 @@ MODULE mo_pplcc_interface
   !  dsl4jsb_Use_config(PPLCC_)
 
   ! Use of process memories
-!  dsl4jsb_Use_memory(PPLCC_)
+  dsl4jsb_Use_memory(PPLCC_)
   dsl4jsb_Use_memory(PHENO_)  
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_pplcc_tasks
+  PUBLIC :: Register_pplcc_tasks, global_pplcc_diagnostics
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pplcc_interface'
   
@@ -363,9 +363,283 @@ CONTAINS
       ENDDO
     END IF
 
+    IF (tile%name .EQ. 'box') CALL pplcc_fraction_diagnostics(tile, options)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_pplcc_post_lcc
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Post LCC diagnostics of land cover fractions, i.e. aggregation of different land cover types
+  !!
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE pplcc_fraction_diagnostics(tile, options)
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in) :: options  !< Additional run-time parameters
+
+    ! Local variables
+    TYPE(t_jsb_model), POINTER           :: model
+    CLASS(t_jsb_tile_abstract),  POINTER :: ptr_tile, ptr_pft
+    REAL(wp), DIMENSION(options%nc)      :: pft_fract, veg_fract, bare_fract
+    INTEGER                              :: iblk, ics, ice
+    INTEGER                              :: ilct, nlct
+    INTEGER                              :: ipft, npft
+
+    ! Declare process configuration and memory Pointers
+    dsl4jsb_Def_memory(PPLCC_)
+    dsl4jsb_Def_memory(PHENO_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':pplc_fraction_diagnostics'
+
+    ! Pointers to variables in memory
+    !
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
+
+    dsl4jsb_Real2D_onChunk :: tree_fract
+    dsl4jsb_Real2D_onChunk :: shrub_fract
+    dsl4jsb_Real2D_onChunk :: grass_fract
+    dsl4jsb_Real2D_onChunk :: crop_fract
+    dsl4jsb_Real2D_onChunk :: pasture_fract
+    dsl4jsb_Real2D_onChunk :: baresoil_fract
+    dsl4jsb_Real2D_onChunk :: C3pft_fract
+    dsl4jsb_Real2D_onChunk :: C4pft_fract
+
+
+    iblk  = options%iblk
+    ics   = options%ics
+    ice   = options%ice
+
+    dsl4jsb_Get_memory(PPLCC_)
+    dsl4jsb_Get_memory(PHENO_)
+
+    model => Get_model(tile%owner_model_id)
+
+    ! The fraction variables are defined as fractions relative to the grid cell fraction. Thus
+    ! only calculations on the box tile make sense
+    IF (.NOT. tile%name .EQ. 'box') CALL finish(TRIM(routine), 'Should only be called for the box tile')
+
+    ! Get required variables on this tile
+    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)        ! in
+
+    dsl4jsb_Get_var2D_onChunk(PPLCC_, tree_fract)           ! out
+    dsl4jsb_Get_var2D_onChunk(PPLCC_, shrub_fract)          ! out
+    dsl4jsb_Get_var2D_onChunk(PPLCC_, grass_fract)          ! out
+    dsl4jsb_Get_var2D_onChunk(PPLCC_, crop_fract)           ! out
+    dsl4jsb_Get_var2D_onChunk(PPLCC_, pasture_fract)        ! out
+    dsl4jsb_Get_var2D_onChunk(PPLCC_, baresoil_fract)       ! out
+    dsl4jsb_Get_var2D_onChunk(PPLCC_, C3pft_fract)          ! out
+    dsl4jsb_Get_var2D_onChunk(PPLCC_, C4pft_fract)          ! out
+
+    ! Initialization
+    tree_fract     = 0._wp
+    shrub_fract    = 0._wp
+    grass_fract    = 0._wp
+    crop_fract     = 0._wp
+    pasture_fract  = 0._wp
+    baresoil_fract = 0._wp
+    C3pft_fract    = 0._wp
+    C4pft_fract    = 0._wp
+
+
+    ! To get the PFT fractions we first need a pointer to the land tile,
+    ! and from the land tile to the veg tile, which has PFT children
+
+    ! Get pointer to the land tile
+    nlct = tile%Get_no_of_children()
+    DO ilct=1,nlct
+      IF (ilct == 1) THEN
+        ptr_tile => tile%Get_first_child_tile()
+      ELSE
+        ptr_tile => ptr_tile%Get_next_sibling_tile()
+      END IF
+      ! Only the land tile needs to be considered
+      IF (TRIM(ptr_tile%name) == 'land') EXIT
+    END DO
+
+    ! Get pointer to the veg tile
+    nlct = ptr_tile%Get_no_of_children()
+    DO ilct=1,nlct
+      IF (ilct == 1) THEN
+        ptr_tile => ptr_tile%Get_first_child_tile()
+      ELSE
+        ptr_tile => ptr_tile%Get_next_sibling_tile()
+      END IF
+      ! Only the veg tile needs to be considered
+      IF (TRIM(ptr_tile%name) == 'veg') EXIT
+    END DO
+
+    npft = ptr_tile%Get_no_of_children()
+    DO ipft=1,npft
+
+      ! Point to the correct pft
+      IF (ipft == 1) THEN
+        ptr_pft => ptr_tile%Get_first_child_tile()
+      ELSE
+        ptr_pft => ptr_pft%Get_next_sibling_tile()
+      END IF
+
+      ! Get fraction for this PFT
+      CALL ptr_pft%Get_fraction(ics, ice, iblk, fract=pft_fract(:))
+
+      IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%NaturalVegFlag) THEN
+        IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%ForestFlag) THEN
+          tree_fract(:) = tree_fract(:) + pft_fract(:) * fract_fpc_max
+        ELSE IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%GrassFlag) THEN
+          grass_fract(:) = grass_fract(:) + pft_fract(:) * fract_fpc_max
+        ELSE   ! Current lctlib file does not include a shrub flag
+          shrub_fract(:) = shrub_fract(:) + pft_fract(:) * fract_fpc_max
+        END IF
+      ELSE IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%CropFlag) THEN
+        crop_fract(:) = crop_fract(:) + pft_fract(:) * fract_fpc_max
+      ELSE IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%PastureFlag) THEN
+        pasture_fract(:) = pasture_fract(:) + pft_fract(:) * fract_fpc_max
+      END IF
+      IF (model%lctlib(ptr_pft%lcts(1)%lib_id)%C4flag) THEN
+        C4pft_fract(:) = C4pft_fract(:) + pft_fract(:) * fract_fpc_max
+      ELSE
+        C3pft_fract(:) = C3pft_fract(:) + pft_fract(:) * fract_fpc_max
+      END IF
+
+    END DO ! ipft
+
+    ! Fraction of the veg tile
+    CALL ptr_tile%Get_fraction(ics, ice, iblk, fract=veg_fract(:))
+
+    ! Bare land tile
+    ! Note: In the current usecase the land tile does not have a bare soil child, thus
+    !       bare_fract is set to zero.
+    bare_fract(:)=0._wp
+
+    ! Baresoil fraction
+    baresoil_fract(:) = bare_fract(:) + veg_fract(:) * (1._wp-fract_fpc_max(:))
+
+
+  END SUBROUTINE pplcc_fraction_diagnostics
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Global land mean pplcc output, i.e. global mean area of different land cover types
+  !!
+  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_pplcc_diagnostics(tile)
+#ifndef __ICON__
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_pplccl_diagnostics'
+    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
+#else
+
+    USE mo_sync,                  ONLY: global_sum_array
+    USE mo_jsb_grid,              ONLY: Get_grid
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(PPLCC_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_pplcc_diagnostics'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: tree_fract
+    dsl4jsb_Real2D_onDomain :: shrub_fract
+    dsl4jsb_Real2D_onDomain :: grass_fract
+    dsl4jsb_Real2D_onDomain :: crop_fract
+    dsl4jsb_Real2D_onDomain :: pasture_fract
+    dsl4jsb_Real2D_onDomain :: baresoil_fract
+    dsl4jsb_Real2D_onDomain :: C3pft_fract
+    dsl4jsb_Real2D_onDomain :: C4pft_fract
+
+    REAL(wp), POINTER       :: tree_area_gsum(:)
+    REAL(wp), POINTER       :: shrub_area_gsum(:)
+    REAL(wp), POINTER       :: grass_area_gsum(:)
+    REAL(wp), POINTER       :: crop_area_gsum(:)
+    REAL(wp), POINTER       :: pasture_area_gsum(:)
+    REAL(wp), POINTER       :: baresoil_area_gsum(:)
+    REAL(wp), POINTER       :: C3pft_area_gsum(:)
+    REAL(wp), POINTER       :: C4pft_area_gsum(:)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), POINTER      :: area(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  :: scaling (:,:)
+
+
+    dsl4jsb_Get_memory(PPLCC_)
+    dsl4jsb_Get_var2D_onDomain(PPLCC_,  tree_fract)                 ! in
+    dsl4jsb_Get_var2D_onDomain(PPLCC_,  shrub_fract)                ! in
+    dsl4jsb_Get_var2D_onDomain(PPLCC_,  grass_fract)                ! in
+    dsl4jsb_Get_var2D_onDomain(PPLCC_,  crop_fract)                 ! in
+    dsl4jsb_Get_var2D_onDomain(PPLCC_,  pasture_fract)              ! in
+    dsl4jsb_Get_var2D_onDomain(PPLCC_,  baresoil_fract)             ! in
+    dsl4jsb_Get_var2D_onDomain(PPLCC_,  C3pft_fract)                ! in
+    dsl4jsb_Get_var2D_onDomain(PPLCC_,  C4pft_fract)                ! in
+
+
+    tree_area_gsum     => PPLCC__mem%tree_area_gsum%ptr(:)        ! out
+    shrub_area_gsum    => PPLCC__mem%shrub_area_gsum%ptr(:)       ! out
+    grass_area_gsum    => PPLCC__mem%grass_area_gsum%ptr(:)       ! out
+    crop_area_gsum     => PPLCC__mem%crop_area_gsum%ptr(:)        ! out
+    pasture_area_gsum  => PPLCC__mem%pasture_area_gsum%ptr(:)     ! out
+    baresoil_area_gsum => PPLCC__mem%baresoil_area_gsum%ptr(:)    ! out
+    C3pft_area_gsum    => PPLCC__mem%C3pft_area_gsum%ptr(:)       ! out
+    C4pft_area_gsum    => PPLCC__mem%C4pft_area_gsum%ptr(:)       ! out
+
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    ! Domain Mask - to mask all halo cells for global sums (otherwise these
+    ! cells are counted twice)
+    ALLOCATE (in_domain(grid%nproma,grid%nblks))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSEWHERE
+      in_domain = 0._wp
+    END WHERE
+
+    ALLOCATE (scaling(grid%nproma,grid%nblks))
+
+    ! Calculate 1d global land variables, if requested for output
+    ! Unit transformation from [m2] to [Mio km2]: 1.e-12
+    scaling(:,:) = area(:,:) * in_domain(:,:) * 1.e-12_wp
+    IF (PPLCC__mem%tree_area_gsum%is_in_output)     &
+      &  tree_area_gsum       = global_sum_array(tree_fract(:,:)     * scaling(:,:))
+    IF (PPLCC__mem%shrub_area_gsum%is_in_output)    &
+      &  shrub_area_gsum      = global_sum_array(shrub_fract(:,:)    * scaling(:,:))
+    IF (PPLCC__mem%grass_area_gsum%is_in_output)    &
+      &  grass_area_gsum      = global_sum_array(grass_fract(:,:)    * scaling(:,:))
+    IF (PPLCC__mem%crop_area_gsum%is_in_output)     &
+      &  crop_area_gsum       = global_sum_array(crop_fract(:,:)     * scaling(:,:))
+    IF (PPLCC__mem%pasture_area_gsum%is_in_output)  &
+      &  pasture_area_gsum    = global_sum_array(pasture_fract(:,:)  * scaling(:,:))
+    IF (PPLCC__mem%baresoil_area_gsum%is_in_output) &
+      &  baresoil_area_gsum   = global_sum_array(baresoil_fract(:,:) * scaling(:,:))
+    IF (PPLCC__mem%C3pft_area_gsum%is_in_output)    &
+      &  C3pft_area_gsum      = global_sum_array(C3pft_fract(:,:)    * scaling(:,:))
+    IF (PPLCC__mem%C4pft_area_gsum%is_in_output)    &
+      &  C4pft_area_gsum      = global_sum_array(C4pft_fract(:,:)    * scaling(:,:))
+
+    DEALLOCATE (scaling, in_domain)
+#endif
+  END SUBROUTINE global_pplcc_diagnostics
 
 #endif
 END MODULE mo_pplcc_interface
