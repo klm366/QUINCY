@@ -204,6 +204,7 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
+    var%full_name = TRIM(name_loc)
     IF (loutput_loc) THEN
       IF (mem%in_var_groups) THEN
         var%is_in_output = is_variable_in_output(var%full_name, groups(:))
@@ -217,20 +218,19 @@ CONTAINS
 
     ! As the 1d variables are only intended as diagnostic output variables (monitoring), the corresponding
     ! stream elements only need to be added, if the variables are actually defined as output variables.
-    IF (.NOT. var%is_in_output .AND. .NOT. var%is_in_restart) THEN
-      CALL add_var_list_element_r1d(                                                            &
-        this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
-        cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
-        ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
-        loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
-        initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
-        lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
-        verbose=verbose)
-    END IF
+    IF (.NOT. var%is_in_output .AND. .NOT. var%is_in_restart) RETURN
+
+    CALL add_var_list_element_r1d(                                                            &
+      this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
+      cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
+      verbose=verbose)
 
     var%ptr => var%ptr1d
     var%name = TRIM(name)
-    var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL1D
     var%missval = missval_r_loc
