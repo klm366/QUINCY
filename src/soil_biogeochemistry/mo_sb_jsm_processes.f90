@@ -1859,138 +1859,121 @@ CONTAINS
 
   END SUBROUTINE calc_om_sorption 
 
-  !-----------------------------------------------------------------------------------------------------
-  ! Sub Task called from update_sb_pools & sb_init
-  !
-  !-----------------------------------------------------------------------------------------------------
-  !> calculates P sorption parameters, including both single and double Langmuir
-  !! 
-  !!
-  !! Input: soil texture, soil water content, qmax and km for various soil texture
-  !!
-  !! Output: qmax and km (mol P/m3), Qmax_AlFe_cor
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE calc_Psorption_parameter(nc, nsoil_sb, flag_sb_double_langmuir, &
-                                       clay_sl, silt_sl, soil_water, ph_sl, & 
-                                       bulk_soil_carbon_sl, soil_litter_carbon_sl, woody_litter_carbon_sl, &
-                                       bulk_dens_sl, volume_min_sl, po4_solute, &
-                                       qmax_po4_min_sl, qmax_po4_om_sl, qmax_po4, km_adsorpt_po4_sl, &
-                                       qmax_fast_po4, qmax_slow_po4, km_fast_po4, km_slow_po4, Qmax_AlFe_cor)
+  ! ======================================================================================================= !
+  !>calculate P sorption parameters, including both single and double Langmuir
+  !>
+  ELEMENTAL SUBROUTINE calc_Psorption_parameter( &
+    & flag_sb_double_langmuir, &
+    & clay_sl, silt_sl, soil_water, ph_sl, & 
+    & bulk_soil_carbon_sl, soil_litter_carbon_sl, woody_litter_carbon_sl, &
+    & bulk_dens_sl, volume_min_sl, po4_solute, &
+    & qmax_po4_min_sl, qmax_po4_om_sl, qmax_po4, km_adsorpt_po4_sl, &             ! inout
+    & qmax_fast_po4, qmax_slow_po4, km_fast_po4, km_slow_po4, Qmax_AlFe_cor)      ! inout
 
     USE mo_sb_constants,   ONLY: qmax_po4_silt, qmax_po4_sand, qmax_po4_clay, qmax_po4_OM, qmax_po4_mineral, &
-                                 km_adsorpt_silt_po4, km_adsorpt_clay_po4, km_adsorpt_sand_po4, km_adsorpt_OM_po4, &
-                                 km_adsorpt_mineral_po4, km_po4_ph, min_fraction_default_sb
+      & km_adsorpt_silt_po4, km_adsorpt_clay_po4, km_adsorpt_sand_po4, km_adsorpt_OM_po4, &
+      & km_adsorpt_mineral_po4, km_po4_ph, min_fraction_default_sb
     USE mo_sse_util,       ONLY: calc_qmax_texture
     
-    
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut   
-    INTEGER,                                          INTENT(in)    :: nc, &                        !< dimensions
-                                                                       nsoil_sb
-    LOGICAL,                                          INTENT(in)    :: flag_sb_double_langmuir      !< conventional or double Langmuir
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: clay_sl                      !< clay content of soil layer [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: silt_sl                      !< silt content of soil layer [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_water                   !< soil water content of soil layer [L/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: ph_sl                        !< ph of soil layer [-]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: bulk_soil_carbon_sl          !< bulk soil carbon content of soil layer [mol C/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_litter_carbon_sl        !< soil litter carbon content of soil layer [mol C/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: woody_litter_carbon_sl       !< woody litter carbon content of soil layer [mol C/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: bulk_dens_sl                 !< soil bulk density [kg/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: volume_min_sl                !< soil mineral volumetric content [m3/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: po4_solute                   !< soluble P concentration of soil layer [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_po4_min_sl              !< maximium po4 sorption capacity for mineral soil [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_po4_om_sl               !< maximium po4 sorption capacity for OM soil [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_po4                     !< maximium po4 sorption capacity for soil layer [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: km_adsorpt_po4_sl            !< half-saturation po4 concentration [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_fast_po4                !< maximium po4 sorption capacity of fast associated pool [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: qmax_slow_po4                !< maximium po4 sorption capacity of slow associated pool [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: km_fast_po4                  !< half-saturation po4 concentration of fast associated pool [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: km_slow_po4                  !< half-saturation po4 concentration of slow associated pool [mol P/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: Qmax_AlFe_cor                !< qmax correlation factor of Al/Fe content [-]
+    LOGICAL,      INTENT(in)    :: flag_sb_double_langmuir      !< conventional or double Langmuir
+    REAL(wp),     INTENT(in)    :: clay_sl                      !< clay content of soil layer [-]
+    REAL(wp),     INTENT(in)    :: silt_sl                      !< silt content of soil layer [-]
+    REAL(wp),     INTENT(in)    :: soil_water                   !< soil water content of soil layer [L/m3]
+    REAL(wp),     INTENT(in)    :: ph_sl                        !< ph of soil layer [-]
+    REAL(wp),     INTENT(in)    :: bulk_soil_carbon_sl          !< bulk soil carbon content of soil layer [mol C/m3]
+    REAL(wp),     INTENT(in)    :: soil_litter_carbon_sl        !< soil litter carbon content of soil layer [mol C/m3]
+    REAL(wp),     INTENT(in)    :: woody_litter_carbon_sl       !< woody litter carbon content of soil layer [mol C/m3]
+    REAL(wp),     INTENT(in)    :: bulk_dens_sl                 !< soil bulk density [kg/m3]
+    REAL(wp),     INTENT(in)    :: volume_min_sl                !< soil mineral volumetric content [m3/m3]
+    REAL(wp),     INTENT(in)    :: po4_solute                   !< soluble P concentration of soil layer [mol P/m3]
+    REAL(wp),     INTENT(inout) :: qmax_po4_min_sl              !< maximium po4 sorption capacity for mineral soil [mol P/m3]
+    REAL(wp),     INTENT(inout) :: qmax_po4_om_sl               !< maximium po4 sorption capacity for OM soil [mol P/m3]
+    REAL(wp),     INTENT(inout) :: qmax_po4                     !< maximium po4 sorption capacity for soil layer [mol P/m3]
+    REAL(wp),     INTENT(inout) :: km_adsorpt_po4_sl            !< half-saturation po4 concentration [mol P/m3]
+    REAL(wp),     INTENT(inout) :: qmax_fast_po4                !< maximium po4 sorption capacity of fast associated pool [mol P/m3]
+    REAL(wp),     INTENT(inout) :: qmax_slow_po4                !< maximium po4 sorption capacity of slow associated pool [mol P/m3]
+    REAL(wp),     INTENT(inout) :: km_fast_po4                  !< half-saturation po4 concentration of fast associated pool [mol P/m3]
+    REAL(wp),     INTENT(inout) :: km_slow_po4                  !< half-saturation po4 concentration of slow associated pool [mol P/m3]
+    REAL(wp),     INTENT(inout) :: Qmax_AlFe_cor                !< qmax correlation factor of Al/Fe content [-]
 
-    REAL(wp), DIMENSION(nc, nsoil_sb)                :: arr_hlp1, arr_hlp2, arr_hlp3, arr_hlp4, sand_sl
-    INTEGER                                          :: i
-
+    REAL(wp)  :: hlp1, hlp2, hlp3, hlp4
+    REAL(wp)  :: sand_sl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_Psorption_parameter'
     
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
+    !>0.8 initialize local variable
+    !>
+    sand_sl = 1._wp - clay_sl - silt_sl
 
-    !> 0.7 initialize local variable
-    !!
-    sand_sl(:,:) = 1._wp - clay_sl(:,:) - silt_sl(:,:)
+    !>0.9 set zero if lower eps8
+    !>
+    IF (Qmax_AlFe_cor < eps8) THEN
+      Qmax_AlFe_cor = 0._wp
+    END IF
 
-    !> 0.8 Correct the first layer Qmax_AlFe_cor with the woody litter
-    !! 
-    Qmax_AlFe_cor(:,1) = Qmax_AlFe_cor(:,1) * 1._wp / ((1._wp - volume_min_sl(:,1)) * &
-                         (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)  + woody_litter_carbon_sl(:,1)) / &
-                         (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)) + volume_min_sl(:,1))
-    WHERE (Qmax_AlFe_cor(:,:) < eps8) 
-      Qmax_AlFe_cor(:,:) = 0._wp
-    ENDWHERE
-
-    !> 1.0 double-surface Langmuir
-    !!
+    !>1.0 double-surface Langmuir
+    !>
     IF (flag_sb_double_langmuir) THEN
-      !> 1.1 calculate Qmax based on soil texture
-      !! fine soil + sandy soil, mol P /kg soil
-      qmax_po4_min_sl(:,:)       = (calc_qmax_texture(qmax_po4_silt, clay_sl(:,:), silt_sl(:,:)) + & 
-                                    calc_qmax_texture(qmax_po4_sand, 0._wp, sand_sl(:,:))) * &
-                                    Qmax_AlFe_cor 
-      !! soil OM [mol P /kg OM]
-      qmax_po4_om_sl(:,:)        = qmax_po4_OM
-      CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), & 
-                                             qmax_po4_om_sl(:,:), qmax_po4_min_sl(:,:), &
-                                             qmax_po4(:,:), qmax_fast_po4(:,:), qmax_slow_po4(:,:))
-      !! Fe/Al in OM [mol P/m3]
-      arr_hlp1(:,:)              = calc_qmax_texture(qmax_po4_clay, 0._wp, clay_sl(:,:)) * & 
-                                   volume_min_sl(:,:) * bulk_dens_sl(:,:) * Qmax_AlFe_cor
-      !! update qmax_fast_po4 and qmax_po4
-      qmax_fast_po4(:,:)         = qmax_fast_po4(:,:) + arr_hlp1(:,:)
-      qmax_po4(:,:)              = qmax_po4(:,:) + arr_hlp1(:,:)
+      !>  1.1 calculate Qmax based on soil texture
+      !> 
+      ! fine soil + sandy soil [mol P /kg soil]
+      qmax_po4_min_sl = (calc_qmax_texture(qmax_po4_silt, clay_sl, silt_sl) + & 
+        & calc_qmax_texture(qmax_po4_sand, 0._wp, sand_sl)) * Qmax_AlFe_cor 
+      ! soil OM [mol P /kg OM]
+      qmax_po4_om_sl = qmax_po4_OM
+      CALL calc_qmax_bulk_density_correction( &
+        & bulk_soil_carbon_sl, &
+        & volume_min_sl, &
+        & bulk_dens_sl, & 
+        & qmax_po4_om_sl, &
+        & qmax_po4_min_sl, &
+        & qmax_po4, &
+        & qmax_fast_po4, &
+        & qmax_slow_po4)
+      ! Fe/Al in OM [mol P/m3]
+      hlp1 = calc_qmax_texture(qmax_po4_clay, 0._wp, clay_sl) * volume_min_sl * bulk_dens_sl * Qmax_AlFe_cor
+      ! update qmax_fast_po4 and qmax_po4
+      qmax_fast_po4 = qmax_fast_po4 + hlp1
+      qmax_po4      = qmax_po4 + hlp1
 
-      !> calculate km based on soil texture
-      !! km for the OM-Fe/Al pool, fast pool
-      arr_hlp2(:,:)    = qmax_fast_po4 - arr_hlp1                         ! qmax for non-adsorbed Fe/Al [mol P/m3]
-      arr_hlp3(:,:)    = km_po4_ph * ph_sl(:,:) * km_adsorpt_clay_po4     ! km for Fe/Al, mol P/m3
-      arr_hlp4(:,:)    = km_po4_ph * ph_sl(:,:) * km_adsorpt_OM_po4       ! km for OM, mol P/m3
-      km_fast_po4(:,:) = calc_km_qmax_correction(po4_solute, arr_hlp1(:,:),arr_hlp2(:,:), &
-                                                 arr_hlp3(:,:), arr_hlp4(:,:),soil_water(:,:))
+      !>  1.2 calculate km based on soil texture
+      !>
+      ! km for the OM-Fe/Al pool, fast pool
+      hlp2 = qmax_fast_po4 - hlp1                        ! qmax for non-adsorbed Fe/Al [mol P/m3]
+      hlp3 = km_po4_ph * ph_sl * km_adsorpt_clay_po4     ! km for Fe/Al, mol P/m3
+      hlp4 = km_po4_ph * ph_sl * km_adsorpt_OM_po4       ! km for OM, mol P/m3
+      km_fast_po4 = calc_km_qmax_correction(po4_solute, hlp1, hlp2, hlp3, hlp4, soil_water)
+      ! km for the clay-silt-sand pool, slow pool
+      IF (qmax_slow_po4 < eps8) THEN
+        qmax_slow_po4 = 0._wp
+        hlp3        = km_po4_ph * ph_sl * km_adsorpt_silt_po4    ! km for clay/silt [mol P/L]
+        hlp4        = km_po4_ph * ph_sl * km_adsorpt_sand_po4    ! km for sand [mol P/L]
+        km_slow_po4 = MAX(hlp3, hlp4)
+      ELSE
+        hlp1        = qmax_slow_po4 * MIN(calc_qmax_texture(qmax_po4_silt, clay_sl, silt_sl) * & 
+          & Qmax_AlFe_cor / qmax_po4_min_sl, (1._wp - min_fraction_default_sb)) ! qmax for clay/silt
+        hlp2        = qmax_slow_po4 - hlp1                                      ! qmax for sand
+        hlp3        = km_po4_ph * ph_sl * km_adsorpt_silt_po4                   ! km for clay/silt [mol P/L]
+        hlp4        = km_po4_ph * ph_sl * km_adsorpt_sand_po4                   ! km for sand [mol P/L]
+        km_slow_po4 = calc_km_qmax_correction(po4_solute, hlp1, hlp2, hlp3, hlp4, soil_water)
+      END IF
+      ! km for the whole soil layer
+      km_adsorpt_po4_sl = calc_km_qmax_correction( &
+        & po4_solute, qmax_fast_po4,qmax_slow_po4, km_fast_po4, km_slow_po4)
 
-      !! km for the clay-silt-sand pool, slow pool
-      WHERE (qmax_slow_po4(:,:) < eps8) 
-        qmax_slow_po4(:,:) = 0._wp
-        arr_hlp3(:,:)      = km_po4_ph * ph_sl(:,:) * km_adsorpt_silt_po4    ! km for clay/silt [mol P/L]
-        arr_hlp4(:,:)      = km_po4_ph * ph_sl(:,:) * km_adsorpt_sand_po4    ! km for sand [mol P/L]
-        km_slow_po4(:,:)   = MAX(arr_hlp3(:,:), arr_hlp4(:,:))
-      ELSEWHERE
-        arr_hlp1(:,:)      = qmax_slow_po4 * MIN(calc_qmax_texture(qmax_po4_silt, clay_sl(:,:), silt_sl) * & 
-                             Qmax_AlFe_cor / qmax_po4_min_sl(:,:), (1._wp - min_fraction_default_sb))  ! qmax for clay/silt
-        arr_hlp2(:,:)      = qmax_slow_po4 - arr_hlp1                        ! qmax for sand
-        arr_hlp3(:,:)      = km_po4_ph * ph_sl(:,:) * km_adsorpt_silt_po4    ! km for clay/silt [mol P/L]
-        arr_hlp4(:,:)      = km_po4_ph * ph_sl(:,:) * km_adsorpt_sand_po4    ! km for sand [mol P/L]
-        km_slow_po4(:,:)   = calc_km_qmax_correction(po4_solute, arr_hlp1(:,:),arr_hlp2(:,:), &
-                                                     arr_hlp3(:,:), arr_hlp4(:,:),soil_water(:,:))
-      ENDWHERE
-
-      !! km for the whole soil layer
-      km_adsorpt_po4_sl(:,:) = calc_km_qmax_correction(po4_solute, qmax_fast_po4(:,:),qmax_slow_po4(:,:), &
-                               km_fast_po4(:,:), km_slow_po4(:,:))
-    !> 2.0 single-surface Langmuir
-    !! Qmax and km are based on texture and calculated both as the sum of OM and mineral soil
+    !>2.0 single-surface Langmuir
+    !> 
+    ! Qmax and km are based on texture and calculated both as the sum of OM and mineral soil
     ELSE
-      qmax_po4_min_sl(:,:)   = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
-      qmax_po4_om_sl(:,:)    = qmax_po4_min_sl(:,:) * min_fraction_default_sb
-      CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
-                                             qmax_po4_om_sl(:,:), qmax_po4_min_sl(:,:), qmax_po4(:,:), &
-                                             qmax_fast_po4(:,:), qmax_slow_po4(:,:))
-      qmax_po4(:,:)          = qmax_po4(:,:) * soil_water / 1000._wp ! corrected by water content
-      CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl(:,:), volume_min_sl(:,:), bulk_dens_sl(:,:), &
-                                             km_adsorpt_OM_po4, km_adsorpt_mineral_po4, km_adsorpt_po4_sl(:,:), &
-                                             km_fast_po4(:,:), km_slow_po4(:,:))
-    ENDIF
+      qmax_po4_min_sl   = calc_qmax_texture(qmax_po4_mineral, 0.0_wp, 1._wp)
+      qmax_po4_om_sl    = qmax_po4_min_sl * min_fraction_default_sb
+      CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
+                                             qmax_po4_om_sl, qmax_po4_min_sl, qmax_po4, &
+                                             qmax_fast_po4, qmax_slow_po4)
+      qmax_po4          = qmax_po4 * soil_water / 1000._wp ! corrected by water content
+      CALL calc_qmax_bulk_density_correction(bulk_soil_carbon_sl, volume_min_sl, bulk_dens_sl, &
+                                             km_adsorpt_OM_po4, km_adsorpt_mineral_po4, km_adsorpt_po4_sl, &
+                                             km_fast_po4, km_slow_po4)
+    END IF  ! double/single Langmuir
                                        
   END SUBROUTINE calc_Psorption_parameter
 

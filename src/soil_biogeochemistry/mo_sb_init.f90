@@ -382,7 +382,11 @@ CONTAINS
           IF (flag_spp1685) THEN
             CALL init_soil_properties_spp_sites(nc, nsoil_sb, site_ID_spp1685, ph_sl, Qmax_AlFe_cor)
           ENDIF
-          CALL calc_Psorption_parameter(nc, nsoil_sb, dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
+          ! Correct the first layer Qmax_AlFe_cor with the woody litter
+          Qmax_AlFe_cor(:,1) = Qmax_AlFe_cor(:,1) * 1._wp / ((1._wp - volume_min_sl(:,1)) * &
+                               (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)  + sb_pool%woody_litter%carbon(:,1)) / &
+                               (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)) + volume_min_sl(:,1))
+          CALL calc_Psorption_parameter(dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
                                        clay_sl(:,:), silt_sl(:,:), w_soil_sl(:,:) / soil_depth_sl(:,:) * 1000._wp, ph_sl(:,:), &
                                        bulk_soil_carbon_sl(:,:), soil_litter_carbon_sl(:,:), sb_pool%woody_litter%carbon(:,:), &
                                        bulk_dens_sl(:,:), volume_min_sl(:,:), arr_hlp7(:,:), &
@@ -599,7 +603,11 @@ CONTAINS
          IF (flag_spp1685) THEN
            CALL init_soil_properties_spp_sites(nc, nsoil_sb, site_ID_spp1685, ph_sl, Qmax_AlFe_cor)
          ENDIF
-         CALL calc_Psorption_parameter(nc, nsoil_sb, dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
+         ! Correct the first layer Qmax_AlFe_cor with the woody litter
+         Qmax_AlFe_cor(:,1) = Qmax_AlFe_cor(:,1) * 1._wp / ((1._wp - volume_min_sl(:,1)) * &
+                              (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)  + sb_pool%woody_litter%carbon(:,1)) / &
+                              (bulk_soil_carbon_sl(:,1) + soil_litter_carbon_sl(:,1)) + volume_min_sl(:,1))
+         CALL calc_Psorption_parameter(dsl4jsb_Config(SB_)%flag_sb_double_langmuir, &
                                        clay_sl(:,:), silt_sl(:,:), w_soil_sl(:,:) / soil_depth_sl(:,:) * 1000._wp, ph_sl(:,:), &
                                        bulk_soil_carbon_sl(:,:), soil_litter_carbon_sl(:,:), sb_pool%woody_litter%carbon(:,:), &
                                        bulk_dens_sl(:,:), volume_min_sl(:,:), arr_hlp7(:,:), &
