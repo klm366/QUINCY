@@ -32,7 +32,7 @@ CONTAINS
     & canopy_bound_lai,                                   & ! in
     & lai,                                                & ! in
     & lat,                                                & ! in
-    & assimi_scaling_fact_cl                              & ! out
+    & scaling_fact_cl                                     & ! out
     & )
 
     ! Declarations
@@ -49,7 +49,7 @@ CONTAINS
       & lat
 
     REAL(wp), INTENT(out) :: &
-      & assimi_scaling_fact_cl
+      & scaling_fact_cl
     !$claw end model-data  
 
     ! Local variables
@@ -60,7 +60,7 @@ CONTAINS
     !$claw sca
 
     ! initialize local arguments and variables
-    assimi_scaling_fact_cl = 1._wp
+    scaling_fact_cl = 1._wp
 
     ! Cosine of zenith angle at local noon:
     cos_zenith_noon = COS(declination) * COS(deg2rad * lat) +  SIN(declination) * SIN(deg2rad * lat)
@@ -78,7 +78,7 @@ CONTAINS
     IF (lai >= LaiLimit) THEN
       ! R: Note this could be packed into an ELEMENTAL procedure, but I think it would make things only complicated without
       ! improving security
-      assimi_scaling_fact_cl = MAX(1.e-10_wp,EXP( -k12 * canopy_bound_lai * lai)) !! see Eqs. (107), (108) in Knorr
+      scaling_fact_cl = MAX(1.e-10_wp,EXP( -k12 * canopy_bound_lai * lai)) !! see Eqs. (107), (108) in Knorr
     END IF
 
   END SUBROUTINE calc_assimilation_scaling_factors

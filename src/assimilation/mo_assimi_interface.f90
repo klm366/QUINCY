@@ -360,7 +360,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl
+    dsl4jsb_Real3D_onChunk :: scaling_fact_cl
     dsl4jsb_Real2D_onChunk :: lai
 
     ! Get local variables from options argument
@@ -390,8 +390,8 @@ CONTAINS
     grid => Get_grid(model%grid_id)
     lat  => grid%lat(ics:ice, iblk)
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                     ! in
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_, assimi_scaling_fact_cl) ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_,  lai)             ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, scaling_fact_cl) ! out
 
     ! ---------------------------
     ! Go
@@ -406,12 +406,12 @@ CONTAINS
           & canopy_bound_lai(i-1),              & ! input
           & lai(:),                             & ! input
           & lat(:),                             & ! input
-          & assimi_scaling_fact_cl(:,i)         & ! output
+          & scaling_fact_cl(:,i)                & ! output
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
       !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_scaling_factors_expand_0 tile_name=tile%name 
-      assimi_scaling_fact_cl(:,:) = 1._wp
+      scaling_fact_cl(:,:) = 1._wp
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -451,7 +451,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, assimi_scaling_fact_cl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, scaling_fact_cl, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -504,7 +504,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: CO2_air_mol           ! CO2 particle mixing ratio [molCO2/molDryAir]
 
-    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl
+    dsl4jsb_Real3D_onChunk :: scaling_fact_cl
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
 
@@ -537,7 +537,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_unlimited)   ! out
 
@@ -554,7 +554,7 @@ CONTAINS
         & par_down_mol(:),                   & ! in
         & apar_per_lai_cl(:,icanopy),        & ! in
         & CO2_air_mol(:),                    & ! in
-        & assimi_scaling_fact_cl(:,icanopy), & ! in
+        & scaling_fact_cl(:,icanopy),        & ! in
         & canopy_cond_cl(:,icanopy)          & ! out
         & )
     END DO
@@ -796,7 +796,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: dark_respiration_cl
     dsl4jsb_Real2D_onChunk :: dark_respiration
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl ! Input
+    dsl4jsb_Real3D_onChunk :: scaling_fact_cl        ! Input
     dsl4jsb_Real2D_onChunk :: fract_fpc_max          ! in
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl         ! InOut for water limited case here.
     dsl4jsb_Real3D_onChunk :: gross_assimilation_cl  ! Output.
@@ -845,7 +845,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max )          ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! in
 
@@ -883,7 +883,7 @@ CONTAINS
         & par_down_mol(:),                    & ! in
         & apar_per_lai_cl(:,icanopy),         & ! in
         & CO2_air_mol(:),                     & ! in
-        & assimi_scaling_fact_cl(:,icanopy),  & ! in
+        & scaling_fact_cl(:,icanopy),         & ! in
         & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
         & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
         & gross_assimilation_cl(:,icanopy),   & ! out
