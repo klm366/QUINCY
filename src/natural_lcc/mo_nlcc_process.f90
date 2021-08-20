@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the routines for the dynveg processes
+!! @brief Contains the routines for the nlcc processes
 !!
 !! @author
 !!  Thomas Raddatz, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_dynveg_process
+MODULE mo_nlcc_process
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control, ONLY: debug_on
@@ -43,7 +43,7 @@ CONTAINS
   !
   ! ===============================================================================================================================
   !>
-  !! @brief   Compute running averages of climate variables for DYNVEG
+  !! @brief   Compute running averages of climate variables for nlcc
   !!
   !! @par Revision History
   !!   Routine based on the former JSBACH3 routine update_climbuf
@@ -216,7 +216,7 @@ CONTAINS
 
   SUBROUTINE fpc_to_cover_fract_pot (nidx, ntiles, is_dynamic, is_woody, act_fpc, bare_fpc, cover_fract_pot)
 !
-! Convert fractional plant cover (act_fpc) calculated within dynveg to jsbach
+! Convert fractional plant cover (act_fpc) calculated within nlcc to jsbach
 ! cover fractions reflecting natural vegetation, only (cover_fract_pot).
 ! The only difference between act_fpc and cover_fract_pot is caused by bare_fpc,
 ! which is added to the grass cover fractions.
@@ -227,8 +227,8 @@ CONTAINS
     INTEGER,  INTENT(in)  :: ntiles          ! number of tiles (different land cover type mosaics per gridcell)
     LOGICAL,  INTENT(in)  :: is_dynamic(:,:) !
     LOGICAL,  INTENT(in)  :: is_woody(:,:)   !
-    REAL(wp), INTENT(in)  :: act_fpc(:,:)    ! actual fpc in dynveg
-    REAL(wp), INTENT(in)  :: bare_fpc(:)     ! dynveg bare soil fraction
+    REAL(wp), INTENT(in)  :: act_fpc(:,:)    ! actual fpc in nlcc
+    REAL(wp), INTENT(in)  :: bare_fpc(:)     ! nlcc bare soil fraction
 ! output
     REAL(wp), INTENT(out) :: cover_fract_pot(:,:) ! cover fractions if there was only natural vegetation
 
@@ -411,7 +411,7 @@ CONTAINS
     !   an imbalance of the state of the dynamic vegetation and the cover fractions calculated from landuse transitions.
     !   On the other hand, the difference between sum_woody_fract_inst and sum_woody_fract_old show the trend of the woody
     !   fraction caused by vegetation dynamics.
-    !   The idea of this routine is, to allow shifts in forest fractions only if they reduce the imbalance between dynveg
+    !   The idea of this routine is, to allow shifts in forest fractions only if they reduce the imbalance between nlcc
     !   and landuse change.
     DO i = 1,nidx
        IF (sum_woody_fract(i) - sum_woody_fract_old(i) > 0._wp) THEN
@@ -487,7 +487,7 @@ CONTAINS
 
 ! --- desert_fraction --------------------------------------------------------
 
-  SUBROUTINE desert_fraction(nidx, ntiles, init_running_means, accelerate_dynveg, &
+  SUBROUTINE desert_fraction(nidx, ntiles, init_running_means, accelerate_nlcc,   &
                              is_woody, is_dynamic,                                &
                              act_fpc, bare_fpc,                                   &
                              sla, max_green_bio,                                  &
@@ -502,7 +502,7 @@ CONTAINS
     INTEGER,  INTENT(in)  :: nidx              ! vector length
     INTEGER,  INTENT(in)  :: ntiles            ! number of tiles (different land cover type mosaics per gridcell)
     LOGICAL,  INTENT(in)  :: init_running_means! initialisation of sum_green_bio_memory
-    REAL(wp), INTENT(in)  :: accelerate_dynveg ! acceleration factor for vegetation and desert dynamics
+    REAL(wp), INTENT(in)  :: accelerate_nlcc   ! acceleration factor for vegetation and desert dynamics
     LOGICAL,  INTENT(in)  :: is_woody(:,:)     ! flag to label a woody PFT
     LOGICAL,  INTENT(in)  :: is_dynamic(:,:)   ! flag to label PFTs that take part in the natural vegetation dynamics
     REAL(wp), INTENT(in)  :: act_fpc(:,:)      ! actual FPC
@@ -570,8 +570,8 @@ CONTAINS
     IF (init_running_means) THEN
        sum_green_bio_memory(:) = sum_green_bio(:)
     ELSE
-       sum_green_bio_memory(:) = (sum_green_bio_memory(:) * (tau_desert/accelerate_dynveg - 1._wp) + sum_green_bio(:)) &
-                                 / (tau_desert/accelerate_dynveg)
+       sum_green_bio_memory(:) = (sum_green_bio_memory(:) * (tau_desert/accelerate_nlcc - 1._wp) + sum_green_bio(:)) &
+                                 / (tau_desert/accelerate_nlcc)
     END IF
 
     desert_fpc(:) = MIN(1._wp - 2._wp * EPSILON(1._wp),MAX(0._wp,1._wp - sum_green_bio_memory(:)))
@@ -580,7 +580,7 @@ CONTAINS
 
 ! --- fpc_daily ---------------------------------------------------------------------------
 
-  SUBROUTINE fpc_daily(nidx, ntiles, accelerate_dynveg, is_woody, is_dynamic, tau_Cpool_woods,    &
+  SUBROUTINE fpc_daily(nidx, ntiles, accelerate_nlcc, is_woody, is_dynamic, tau_Cpool_woods,    &
                        npp_ave, bio_exist, burned_fract, damaged_fract, pot_fpc, &
                        act_fpc, bare_fpc, fuel)
 
@@ -589,7 +589,7 @@ CONTAINS
 ! input
     INTEGER,         INTENT(in) :: nidx            ! vector length
     INTEGER,         INTENT(in) :: ntiles          ! number of tiles (different land cover type mosaics per gridcell)
-    REAL(wp),        INTENT(in) :: accelerate_dynveg  ! factor to accellerate vegetation and desert dynamics
+    REAL(wp),        INTENT(in) :: accelerate_nlcc ! factor to accellerate vegetation and desert dynamics
     LOGICAL,         INTENT(in) :: is_woody(:,:)
     LOGICAL,         INTENT(in) :: is_dynamic(:,:)
     REAL(wp),        INTENT(in) :: tau_Cpool_woods(:,:) ! lifetime of Cpool_woods [days]
@@ -664,19 +664,19 @@ CONTAINS
       DO itile = 1,ntiles
         tau_pft = tau_Cpool_woods(i,itile) * tau_Cpool_woods_to_tau_pft
         IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) THEN
-          veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) + accelerate_dynveg * &
+          veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) + accelerate_nlcc * &
           ((pot_fpc(i,itile) - act_fpc(i,itile)) / tau_pft &
           - (burned_fract(i,itile) + damaged_fract(i,itile) + min_dist_woody) * act_fpc_previous_day(i,itile))) &
           - act_fpc(i,itile)
         ELSEIF(is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) THEN
           IF (bio_exist(i,itile) > 0.5_wp .AND. npp_ave(i,itile) > EPSILON(1._wp)) THEN
-            veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) - accelerate_dynveg * &
+            veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) - accelerate_nlcc * &
             (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
             grass_mortality * act_fpc(i,itile) - &
             bare_fpc(i) / grass_sum(i) * npp_ave(i,itile) * MAX(act_fpc_min,act_fpc(i,itile)) / tau_pft)) &
             - act_fpc(i,itile)
           ELSE
-            veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) - accelerate_dynveg * &
+            veg_inc = veg_inc + MAX(fract_small,act_fpc(i,itile) - accelerate_nlcc * &
             (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
             act_fpc(i,itile) / tau_pft)) &
             - act_fpc(i,itile)
@@ -688,7 +688,7 @@ CONTAINS
       DO itile = 1,ntiles
         tau_pft = tau_Cpool_woods(i,itile) * tau_Cpool_woods_to_tau_pft
         IF (is_dynamic(i,itile) .AND. is_woody(i,itile)) THEN
-          act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) + accelerate_dynveg * &
+          act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) + accelerate_nlcc * &
             ((theta * pot_fpc(i,itile) - act_fpc(i,itile)) / tau_pft                &
             - (burned_fract(i,itile) + damaged_fract(i,itile) + min_dist_woody) * act_fpc_previous_day(i,itile)))
         ENDIF
@@ -702,12 +702,12 @@ CONTAINS
         tau_pft = tau_Cpool_woods(i,itile) * tau_Cpool_woods_to_tau_pft
         IF (is_dynamic(i,itile) .AND. .NOT. is_woody(i,itile)) THEN
           IF (bio_exist(i,itile) > 0.5_wp .AND. npp_ave(i,itile) > EPSILON(1._wp)) THEN
-            act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) - accelerate_dynveg * &
+            act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) - accelerate_nlcc * &
                (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
                grass_mortality * act_fpc(i,itile) - &
                bare_fpc(i) / grass_sum(i) * npp_ave(i,itile) * MAX(act_fpc_min,act_fpc(i,itile)) / tau_pft))
           ELSE
-            act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) - accelerate_dynveg * &
+            act_fpc(i,itile) = MAX(fract_small,act_fpc(i,itile) - accelerate_nlcc * &
                (burned_fract(i,itile) * act_fpc_previous_day(i,itile) + &
                act_fpc(i,itile) / tau_pft))
           ENDIF
@@ -747,7 +747,7 @@ CONTAINS
     LOGICAL,  INTENT(in)  :: is_dynamic(:,:) ! PFTs taking part in competition
 
 ! inout
-    REAL(wp), INTENT(inout) :: act_fpc(:,:) ! actual fpc in dynveg
+    REAL(wp), INTENT(inout) :: act_fpc(:,:) ! actual fpc in nlcc
     REAL(wp), INTENT(inout) :: bare_fpc(:)  ! fraction of bare ground
 
 ! local variables
@@ -839,7 +839,7 @@ CONTAINS
   SUBROUTINE calc_cover_fract_inst(nidx, ntiles, is_woody, is_dynamic, is_pasture, is_crop, &
                                    cover_fract_pot, cover_fract, cover_fract_inst)
 !
-! convert fractional plant cover calculated within dynveg to jsbach cover fractions
+! convert fractional plant cover calculated within nlcc to jsbach cover fractions
 ! that would result from an instantaneous establishment of crop land and pasture
 ! (pasture is preferrentially established on grasslands)
 !
@@ -1032,4 +1032,4 @@ SUBROUTINE scale_cover_fract (nidx, ntiles, is_dynamic, cover_fract)
   END SUBROUTINE scale_cover_fract
 
 #endif
-END MODULE mo_dynveg_process
+END MODULE mo_nlcc_process

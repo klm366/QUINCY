@@ -794,7 +794,7 @@ CONTAINS
   !
   ! ===============================================================================================================================
   !>
-  !! @brief   Compute running average of NPP for DYNVEG
+  !! @brief   Compute running average of NPP for NLCC process
   !!
   !! @par Revision History
   !!   Routine based on the former JSBACH3 routine update_climbuf

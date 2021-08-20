@@ -20,10 +20,10 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, DYNVEG_, A2L_, VEG_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
-  dsl4jsb_Use_config(DYNVEG_)
+  dsl4jsb_Use_config(NLCC_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -242,11 +242,11 @@ CONTAINS
       ! Note: JN changed the order of the processes
       ! - processes potentially changing the area of a tile are conducted first in the timestep.
       ! - the task npp_buffer is performed even before to provide already updated multi annual average
-      !   NPP to DYNVEG at the beginning of a year
+      !   NPP to the NLCC process at the beginning of a year
       ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
       !   considerations
   
-      IF (model%processes(DYNVEG_)%p%config%active) THEN
+      IF (model%processes(NLCC_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
       END IF
 
@@ -435,7 +435,6 @@ CONTAINS
       !>     2.1 Initialize each tile
       !>
       ! Initialize tile process memories and read tile fractions
-      ! todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
         & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)

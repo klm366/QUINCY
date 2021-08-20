@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the memory class for the dynveg process.
+!! @brief Contains the memory class for the nlcc process.
 !!
 !! @author
 !!  Thomas Raddatz, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_dynveg_memory_class
+MODULE mo_nlcc_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -27,20 +27,20 @@ MODULE mo_dynveg_memory_class
   USE mo_jsb_physical_constants, ONLY: !X e.g: tmelt
 
   ! Use of prcesses in this module
-  dsl4jsb_Use_processes DYNVEG_
+  dsl4jsb_Use_processes NLCC_
 
   ! Use process configurations
-  dsl4jsb_Use_config(DYNVEG_)
+  dsl4jsb_Use_config(NLCC_)
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_dynveg_memory, max_no_of_vars
+  PUBLIC :: t_nlcc_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
   !> Type definition for memory
-  TYPE, EXTENDS(t_jsb_memory) :: t_dynveg_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_nlcc_memory
 
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -73,21 +73,21 @@ MODULE mo_dynveg_memory_class
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]
 
   CONTAINS
-    PROCEDURE :: Init => Init_dynveg_memory
-  END TYPE t_dynveg_memory
+    PROCEDURE :: Init => Init_nlcc_memory
+  END TYPE t_nlcc_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dynveg_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_nlcc_memory_class'
 
 CONTAINS
 
-  SUBROUTINE Init_dynveg_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_nlcc_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_dynveg_memory), INTENT(inout), TARGET :: mem
+    CLASS(t_nlcc_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
@@ -98,7 +98,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface, pft_vgrid           ! Vertical grid
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_dynveg_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_nlcc_memory'
 
     model => Get_model(model_id)
 
@@ -253,7 +253,7 @@ CONTAINS
       & output_level=BASIC,                                                   &
       & initval_r=0.0_wp )
 
-  END SUBROUTINE Init_dynveg_memory
+  END SUBROUTINE Init_nlcc_memory
 
 #endif
-END MODULE mo_dynveg_memory_class
+END MODULE mo_nlcc_memory_class

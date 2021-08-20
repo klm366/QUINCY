@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interfaces to the dynveg process
+!! @brief Contains the interfaces to the nlcc process
 !!
 !! @author
 !!  Thomas Raddatz, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_dynveg_interface
+MODULE mo_nlcc_interface
 #ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
@@ -32,10 +32,10 @@ MODULE mo_dynveg_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes A2L_, PHENO_, ASSIMI_, CARBON_, DYNVEG_, DISTURB_
+  dsl4jsb_Use_processes A2L_, PHENO_, ASSIMI_, CARBON_, NLCC_, DISTURB_
 
   ! Use of process configurations
-  dsl4jsb_Use_config(DYNVEG_)
+  dsl4jsb_Use_config(NLCC_)
 
   ! Use of process memories
 !! TR$  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
@@ -43,7 +43,7 @@ MODULE mo_dynveg_interface
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
-  dsl4jsb_Use_memory(DYNVEG_)
+  dsl4jsb_Use_memory(NLCC_)
   dsl4jsb_Use_memory(DISTURB_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -51,21 +51,21 @@ MODULE mo_dynveg_interface
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_dynveg_tasks !, t_dynveg_process
+  PUBLIC :: Register_nlcc_tasks !, t_nlcc_process
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_dynveg_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_nlcc_interface'
 
-  !> Type definition for dynveg task
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_dynveg
+  !> Type definition for nlcc task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_nlcc
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_dynveg     !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_dynveg  !< Aggregates computed task variables
-  END TYPE tsk_dynveg
+    PROCEDURE, NOPASS :: Integrate => update_nlcc     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_nlcc  !< Aggregates computed task variables
+  END TYPE tsk_nlcc
 
-  !> Constructor interface for dynveg task
-  INTERFACE tsk_dynveg
-    PROCEDURE Create_task_dynveg                        !< Constructor function for task
-  END INTERFACE tsk_dynveg
+  !> Constructor interface for nlcc task
+  INTERFACE tsk_nlcc
+    PROCEDURE Create_task_nlcc                        !< Constructor function for task
+  END INTERFACE tsk_nlcc
 
 CONTAINS
 
@@ -73,47 +73,47 @@ CONTAINS
   !! Constructors for tasks
 
   ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for dynveg task
+  !> Constructor for nlcc task
   !!
   !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "dynveg"
+  !! @return        return_ptr   Instance of process task "nlcc"
   !!
-  FUNCTION Create_task_dynveg(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_nlcc(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_dynveg::return_ptr)
-    CALL return_ptr%Construct(name='dynveg', process_id=DYNVEG_, owner_model_id=model_id)
+    ALLOCATE(tsk_nlcc::return_ptr)
+    CALL return_ptr%Construct(name='nlcc', process_id=NLCC_, owner_model_id=model_id)
 
-  END FUNCTION Create_task_dynveg
+  END FUNCTION Create_task_nlcc
 
   ! -------------------------------------------------------------------------------------------------------
-  !> Register tasks for dynveg process
+  !> Register tasks for nlcc process
   !!
-  !! @param[in,out] this      Instance of dynveg process class
+  !! @param[in,out] this      Instance of nlcc process class
   !! @param[in]     model_id  Model id
   !!
-  SUBROUTINE Register_dynveg_tasks(this, model_id)
+  SUBROUTINE Register_nlcc_tasks(this, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_dynveg(model_id))
+    CALL this%Register_task(tsk_nlcc(model_id))
     
-  END SUBROUTINE Register_dynveg_tasks
+  END SUBROUTINE Register_nlcc_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "dynveg"
-  !! Task "dynveg" <EXPLANATIION_OF_PROCESS>.
+  !! @brief Implementation of "update" for task "nlcc"
+  !! Task "nlcc" <EXPLANATIION_OF_PROCESS>.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE update_dynveg(tile, options)
+  SUBROUTINE update_nlcc(tile, options)
 
-    USE mo_dynveg_process, ONLY: calc_climbuf, bioclim_limits, potential_tree_fpc, fpc_to_cover_fract_pot, &
+    USE mo_nlcc_process,   ONLY: calc_climbuf, bioclim_limits, potential_tree_fpc, fpc_to_cover_fract_pot, &
                                  cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc
     USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday
     USE mo_jsb_grid,       ONLY: Get_grid
@@ -133,7 +133,7 @@ CONTAINS
     INTEGER  :: i, itile
     REAL(wp) :: dtime
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_dynveg'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
     REAL(wp), POINTER  ::  var_collect(:,:)
     LOGICAL, ALLOCATABLE  :: is_woody(:,:)
     LOGICAL, ALLOCATABLE  :: is_grass(:,:)
@@ -153,19 +153,19 @@ CONTAINS
     REAL(wp), POINTER  ::  sla(:,:)
     REAL(wp), POINTER  ::  cover_fract_pot_previous_year(:,:)
     REAL(wp), POINTER  ::  cover_fract_sum(:)
-    REAL(wp), PARAMETER  ::  accelerate_dynveg = 1._wp
+    REAL(wp), PARAMETER  ::  accelerate_nlcc = 1._wp
     REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
 
     ! Declare process memories
-    dsl4jsb_Def_config(DYNVEG_)
-    dsl4jsb_Def_memory(DYNVEG_)
+    dsl4jsb_Def_config(NLCC_)
+    dsl4jsb_Def_memory(NLCC_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(DISTURB_)
 
-    ! Declare pointers to variables in DYNVEG memory
+    ! Declare pointers to variables in nlcc memory
     dsl4jsb_Real2D_onChunk :: seconds_day
     dsl4jsb_Real2D_onChunk :: seconds_month
     dsl4jsb_Real2D_onChunk :: temp_sum_day
@@ -200,16 +200,16 @@ CONTAINS
     !X if necessary: steplen = options%steplen
 
     ! If process is not active on this tile, do nothing
-    !IF (.NOT. tile%Is_process_active(DYNVEG)) RETURN
+    !IF (.NOT. tile%Is_process_active(NLCC_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
 
-    dsl4jsb_Get_config(DYNVEG_)
+    dsl4jsb_Get_config(NLCC_)
 
     ! Get process memories
-    dsl4jsb_Get_memory(DYNVEG_)
+    dsl4jsb_Get_memory(NLCC_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(ASSIMI_)
@@ -264,24 +264,24 @@ CONTAINS
     damaged_fract => disturb__mem%collect_var_real2d(ics, ice, iblk, no_children, disturb__mem%damaged_fract)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,seconds_day)      ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,seconds_month)    ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,temp_sum_day)     ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,temp_sum_month)   ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,min_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,max_mmtemp_of_yr) ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,min_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,max_mmtemp20)     ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,gdd_sum_year)     ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,gdd_prev_year)    ! inout
-    dsl4jsb_Get_var3D_onChunk(DYNVEG_,act_fpc)          ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,bare_fpc)         ! inout
-    dsl4jsb_Get_var3D_onChunk(DYNVEG_,pot_fpc)          ! inout
-    dsl4jsb_Get_var3D_onChunk(DYNVEG_,cover_fract_pot)  ! inout
-    dsl4jsb_Get_var3D_onChunk(DYNVEG_,cover_fract)      ! inout
-    dsl4jsb_Get_var3D_onChunk(DYNVEG_,bio_exist)        ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,sum_green_bio_memory) ! inout
-    dsl4jsb_Get_var2D_onChunk(DYNVEG_,desert_fpc)       ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_day)      ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,seconds_month)    ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_day)     ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,temp_sum_month)   ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp_of_yr) ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp_of_yr) ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,min_mmtemp20)     ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,max_mmtemp20)     ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_sum_year)     ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,gdd_prev_year)    ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,act_fpc)          ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,bare_fpc)         ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,pot_fpc)          ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract_pot)  ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,cover_fract)      ! inout
+    dsl4jsb_Get_var3D_onChunk(NLCC_,bio_exist)        ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,sum_green_bio_memory) ! inout
+    dsl4jsb_Get_var2D_onChunk(NLCC_,desert_fpc)       ! inout
 !!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
 
@@ -321,7 +321,7 @@ CONTAINS
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
 
-    init_running_means = dsl4jsb_Config(DYNVEG_)%init_running_means
+    init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
     init_mmtemp20 = .TRUE.
     IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
     CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &
@@ -366,7 +366,7 @@ CONTAINS
              CALL ptr_tile%Set_fraction(ics, ice, iblk, fract=cover_fract(:,itile) * cover_fract_sum(:))
           END DO ! itile
           ! new desert fraction
-          CALL desert_fraction(nc, no_children, init_running_means, accelerate_dynveg, &
+          CALL desert_fraction(nc, no_children, init_running_means, accelerate_nlcc,   &
                                is_woody(:,:), is_dynamic(:,:),                         &
                                act_fpc(:,:), bare_fpc(:),                              &
                                sla(:,:), max_green_bio(:,:),                           &
@@ -381,7 +381,7 @@ CONTAINS
 
     ! daily calculations
     IF (new_day) THEN
-       CALL fpc_daily(nc, no_children, accelerate_dynveg, is_woody(:,:), is_dynamic(:,:), tau_c_woods(:,:), &
+       CALL fpc_daily(nc, no_children, accelerate_nlcc, is_woody(:,:), is_dynamic(:,:), tau_c_woods(:,:),       &
                       NPP_mean_5year(:,:), bio_exist(:,:), burned_fract(:,:), damaged_fract(:,:), pot_fpc(:,:), &
                       act_fpc(:,:), bare_fpc(:), fuel(:))
     ENDIF
@@ -398,16 +398,16 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE update_dynveg
+  END SUBROUTINE update_nlcc
 
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "dynveg"
+  !! Implementation of "aggregate" for task "nlcc"
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !!
-  SUBROUTINE aggregate_dynveg(tile, options)
+  SUBROUTINE aggregate_nlcc(tile, options)
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -417,7 +417,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER   :: model
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_dynveg'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_nlcc'
 
     ! Get local variables from options argument
     iblk = options%iblk
@@ -435,7 +435,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_dynveg
+  END SUBROUTINE aggregate_nlcc
 
 #endif
-END MODULE mo_dynveg_interface
+END MODULE mo_nlcc_interface
