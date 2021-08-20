@@ -1246,7 +1246,7 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Implementation of NPP buffer
-  !! Task "npp_buffer" calculates multi-annual average of potential  NPP for use in the DYNVEG module
+  !! Task "npp_buffer" calculates multi-annual average of potential  NPP for use in the NLCC process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -1320,7 +1320,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_min_gdd)         ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   tau_c_woods)             ! out
 
-    ! Accumulate NPP_sum_year and update NPP_mean_5year for DYNVEG
+    ! Accumulate NPP_sum_year and update NPP_mean_5year for NLCC
     lstart = is_time_experiment_start(options%current_datetime)
     new_year = is_newyear(options%current_datetime, dtime)
 
@@ -1334,7 +1334,7 @@ CONTAINS
        IF (MINVAL(NPP_mean_5year(:)) >= -999._wp) CALL message(TRIM(routine), 'initialisation of NPP_mean_5year')
     ENDIF
 
-    ! write lct information on variables to make them available on pft-tiles via function collect_var for DYNVEG
+    ! write lct information on variables to make them available on pft-tiles via function collect_var for NLCC
     land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass))
     bclimit_min_cold_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_min_cold_mmtemp))
     bclimit_max_cold_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_max_cold_mmtemp))

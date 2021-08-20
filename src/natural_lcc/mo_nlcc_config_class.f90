@@ -1,16 +1,17 @@
-!> Contains structures and methods for nlcc config
 !>
-!> ICON-Land
-!>
-!> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
-!>
-!> Contact: icon-model.org
-!> Authors: AUTHORS.md
-!> See LICENSES/ for license information
-!> SPDX-License-Identifier: BSD-3-Clause
-!> ---------------------------------------
-!>
+!! @brief Contains structures and methods for nlcc config
+!!
+!! @author
+!!  Thomas Raddatz, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version by Thomas Raddatz (24.03.2020)
+!!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_nlcc_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
@@ -22,17 +23,15 @@ MODULE mo_nlcc_config_class
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables
+  ! Module variables 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_nlcc_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_nlcc_config
     LOGICAL             :: &
-      & init_running_means, &
-      & init_nlcc
-    REAL(wp)            :: &
-      & accelerate_nlcc
+      & init_running_means
+     !X e.g: LOGICAL                     :: use_alb_veg_simple
 
    CONTAINS
      PROCEDURE :: Init => Init_nlcc_config
@@ -45,7 +44,7 @@ CONTAINS
   !> Initialize nlcc process
   !!
   !! @param[inout]     config     Configuration type of process (t_nlcc_config)
-  !!
+  !!  
   SUBROUTINE Init_nlcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -58,16 +57,15 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
-    LOGICAL                     :: init_nlcc
-    REAL(wp)                    :: accelerate_nlcc
 
-    NAMELIST /jsb_nlcc_nml/  &
-      &  active,             &
-      &  ic_filename,        &
-      &  bc_filename,        &
-      &  init_running_means, &
-      &  init_nlcc,          &
-      &  accelerate_nlcc
+    !X e.g: LOGICAL                     :: use_alb_veg_simple
+
+    NAMELIST /jsb_nlcc_nml/      &
+         active,                   &
+         ic_filename,              &
+         bc_filename,              &
+         init_running_means
+         !X e.g: use_<PROCESS_NAME_LOWER_CASE>_veg_simple
 
     INTEGER :: nml_handler, nml_unit, istat, npft, i
 
@@ -80,8 +78,7 @@ CONTAINS
     bc_filename         = 'bc_land_nlcc.nc'
     ic_filename         = 'ic_land_nlcc.nc'
     init_running_means  = .FALSE.
-    init_nlcc           = .FALSE.
-    accelerate_nlcc     = 1._wp
+    !X e.g: use_alb_veg_simple        = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -95,13 +92,7 @@ CONTAINS
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means
     IF (init_running_means) CALL message(TRIM(routine), 'Initializing climate buffer')
-    config%init_nlcc         = init_nlcc
-    IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
-    config%accelerate_nlcc   = accelerate_nlcc
-    IF (accelerate_nlcc /= 1._wp) THEN
-      WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
-      CALL message(TRIM(routine), message_text)
-    END IF
+    !X e.g: config%use_alb_veg_simple        = use_alb_veg_simple
 
     ! Create vertical axis
     npft=11 ! TODO here we can not grab it from tile%no_of_children or mem%no_of_children

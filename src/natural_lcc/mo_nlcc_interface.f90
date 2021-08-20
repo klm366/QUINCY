@@ -1,16 +1,17 @@
-!> Contains the interfaces to the nlcc process
 !>
-!> ICON-Land
-!>
-!> ---------------------------------------
-!> Copyright (C) 2013-2024, MPI-M, MPI-BGC
-!>
-!> Contact: icon-model.org
-!> Authors: AUTHORS.md
-!> See LICENSES/ for license information
-!> SPDX-License-Identifier: BSD-3-Clause
-!> ---------------------------------------
-!>
+!! @brief Contains the interfaces to the nlcc process
+!!
+!! @author
+!!  Thomas Raddatz, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version by Thomas Raddatz (2020-03-25)
+!!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_nlcc_interface
 #ifndef __NO_JSBACH__
 
@@ -99,12 +100,12 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_nlcc(model_id))
-
+    
   END SUBROUTINE Register_nlcc_tasks
 
   ! ================================================================================================================================
   !>
-  !> Implementation of "update" for task "nlcc"
+  !! @brief Implementation of "update" for task "nlcc"
   !! Task "nlcc" <EXPLANATIION_OF_PROCESS>.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
@@ -131,7 +132,6 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, no_children
     INTEGER  :: i, itile
     REAL(wp) :: dtime
-    REAL(wp) :: accelerate_nlcc
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
     REAL(wp), POINTER  ::  var_collect(:,:)
@@ -153,6 +153,7 @@ CONTAINS
     REAL(wp), POINTER  ::  sla(:,:)
     REAL(wp), POINTER  ::  cover_fract_pot_previous_year(:,:)
     REAL(wp), POINTER  ::  cover_fract_sum(:)
+    REAL(wp), PARAMETER  ::  accelerate_nlcc = 1._wp
     REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
 
     ! Declare process memories
@@ -198,8 +199,8 @@ CONTAINS
     dtime   = options%dtime
     !X if necessary: steplen = options%steplen
 
-    ! If process is not to be calculated on this tile, do nothing
-    !IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
+    ! If process is not active on this tile, do nothing
+    !IF (.NOT. tile%Is_process_active(NLCC_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -284,11 +285,7 @@ CONTAINS
 !!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
 
-    IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
-      lstart = .TRUE.
-    ELSE
-      lstart = .FALSE.
-    END IF
+    lstart = is_time_experiment_start(options%current_datetime)
     new_year = is_newyear(options%current_datetime, options%dtime)
     new_month = is_newmonth(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)
@@ -324,7 +321,6 @@ CONTAINS
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
 
-    accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
     init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
     init_mmtemp20 = .TRUE.
     IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
