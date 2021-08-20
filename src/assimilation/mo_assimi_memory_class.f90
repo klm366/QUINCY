@@ -83,7 +83,7 @@ MODULE mo_assimi_memory_class
 !                                         CO2_flux_herbivory_acc,         & ! CO2 flux to the atmosphere from grazing
 !                                         CO2_emission_landcover_change_acc, & ! CO2 flux to the atmosphere from land cover changes
 !                                         CO2_emission_harvest_acc,       & ! CO2 flux to the atmosphere from harvest
-!                                         CO2_flux_dynveg_acc               ! CO2 flux to the atmosphere from vegetation dynamics
+!                                         CO2_flux_nlcc_acc                 ! CO2 flux to the atmosphere from vegetation dynamics
 !                                                                           ! (disturbance?)
 !
 
