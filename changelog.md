@@ -54,8 +54,8 @@ _Release Date: 18 February 2019_
     - if switched on, the MaxLai of pfts with ForestFlag is derived from the available biomass
   - Bug fix in mo_pheno_init.f90
 - Added daily carbon conservation test on box tile
-  - Carbon conservation test for each new day in `start_timestep`
-  - Added calls to `start_timestep` and `finish_timestep` to driver
+  - Carbon conservation test for each new day in `jsbach_start_timestep`
+  - Added calls to `jsbach_start_timestep` and `jsbach_finish_timestep` to driver
   - Corrected unit of fire atm flux `cflux_fire_all_2_atm`
 - Changes to output behaviour
   - Append domain (model) ID to stream names only if more than one domain (model)

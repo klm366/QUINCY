@@ -24,7 +24,7 @@ MODULE mo_pheno_memory_class
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_varlist,            ONLY: BASIC, FULL !, MEDIUM
   !USE mo_jsb_physical_constants, ONLY: tmelt
 
@@ -44,6 +44,7 @@ MODULE mo_pheno_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
     TYPE(t_jsb_var_real2d)           :: &
       & lai,                            & !< Leaf area index
+      & lai_ta,                         & !< Leaf area index relative to the tile area
       & fract_fpc,                      & !< Foliage projected cover of the pft
                                           !  (fraction of ground area occupied by the vertical projection of foliage)
       & fract_fpc_max,                  & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
@@ -108,8 +109,25 @@ MODULE mo_pheno_memory_class
                                           !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                           ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
 
-    REAL(wp), POINTER :: lai_mon(:,:,:)       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
-    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
+    REAL(wp), POINTER :: lai_mon(:,:,:) => NULL()       !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14>    !
+    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL() !< Monthly fpc (per year or climatology) <nproma x nblks x 14>    !
+
+    !! quincy
+    ! used as logical: 0 = FALSE / 1 = TRUE
+    TYPE(t_jsb_var_real2d)          :: &
+                                    growing_season          !< logical to identify whether the plant is in the growing season or not
+
+
+    TYPE(t_jsb_var_real2d)          :: &
+                                    gdd                 , & !< growing degree days above 5°C [K day]
+                                    nd_dormance         , & !< number of days since last growing season [# days]
+                                    lai_max                 !< maximum lai - from site specific lai data [m2 m-2]
+
+    ! Diagnostic land mean phenology e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) ::        &
+      lai_ta_gmean,                  & ! Global Land mean LAI (box tile)
+      fract_fpc_gmean                  ! Global Land mean foliage cover (box tile)
+
 
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
@@ -123,7 +141,6 @@ CONTAINS
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
 
     ! Declarations
-    USE mo_jsb_varlist,       ONLY: jsb_add_var
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -159,6 +176,10 @@ CONTAINS
     !canopy_layer => Get_vgrid('canopy_layer')
 
     dsl4jsb_Get_config(PHENO_)
+
+    !! do not add these variables if use_quincy=.TRUE.
+    !! some of these var are added to memory anyway, as they are needed also for quincy, see below
+    IF (.NOT. model%config%use_quincy) THEN
     
     !! !$acc enter data pcreate(mem)
 
@@ -178,28 +199,36 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-      CALL jsb_add_var( mem, 'lai', mem%lai,                                   &
+      CALL mem%Add_var( 'lai', mem%lai,                                        &
         & hgrid, surface,                                                      &
         & t_cf('leaf_area_index', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
+        & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'lai_ta', mem%lai_ta,                                  &
+        & hgrid, surface,                                                      &
+        & t_cf('leaf_area_index', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (TRIM(mem%owner_tile_name) == 'veg') THEN
         grib2_desc = t_grib2(2,0,228, grib_bits)
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-      CALL jsb_add_var( mem, 'fract_fpc', mem%fract_fpc,                       &
+      CALL mem%Add_var( 'fract_fpc', mem%fract_fpc,                            &
         & hgrid, surface,                                                      &
         & t_cf('foliage_projected_cover', '', ''),                             &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & output_level=BASIC,                                                  &
-        & initval_r=0.0_wp )
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 'fract_fpc_max', mem%fract_fpc_max,               &
+      CALL mem%Add_var( 'fract_fpc_max', mem%fract_fpc_max,                    &
         & hgrid, surface,                                                      &
         & t_cf('maximum_fpc', '', ''),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -207,15 +236,14 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'fract_forest', mem%fract_forest,                 &
+      CALL mem%Add_var( 'fract_forest', mem%fract_forest,                      &
         & hgrid, surface,                                                      &
         & t_cf('forest_fraction', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 'veg_fract_correction', mem%veg_fract_correction, &
+      CALL mem%Add_var( 'veg_fract_correction', mem%veg_fract_correction,      &
         & hgrid, surface,                                                      &
         & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -226,134 +254,134 @@ CONTAINS
 
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
-        CALL jsb_add_var( mem,'growth_phase_sg', mem%growth_phase_SG,          &
+        CALL mem%Add_var('growth_phase_sg', mem%growth_phase_SG,               &
           & hgrid, surface,                                                    &
           & t_cf('growth_phase_SummerGreen', '', ''),                          &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & initval_r=-1.0_wp) ! Start in rest phase for summergreens
 
-        CALL jsb_add_var( mem,'growth_phase_eg', mem%growth_phase_EG,          &
+        CALL mem%Add_var('growth_phase_eg', mem%growth_phase_EG,               &
           & hgrid, surface,                                                    &
           & t_cf('growth_phase_EverGreen', '', ''),                            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & initval_r=1.0_wp ) ! Start in vegetative phase for evergreens
 
-        CALL jsb_add_var( mem,'growth_phase_crp', mem%growth_phase_CRP,        &
+        CALL mem%Add_var('growth_phase_crp', mem%growth_phase_CRP,             &
           & hgrid, surface,                                                    &
           & t_cf('growth_phase_Crop', '', ''),                                 &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & initval_r=-1.0_wp )
 
-        CALL jsb_add_var( mem,'growth_days_eg', mem%days_since_growth_begin_EG, &
+        CALL mem%Add_var('growth_days_eg', mem%days_since_growth_begin_EG,      &
           & hgrid, surface,                                                     &
           & t_cf('days_since_growth_begin_EverGreen', '', ''),                  &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
           & initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem,'growth_days_sg', mem%days_since_growth_begin_SG, &
+        CALL mem%Add_var('growth_days_sg', mem%days_since_growth_begin_SG,      &
           & hgrid, surface,                                                     &
           & t_cf('days_since_growth_begin_SummerGreen', '', ''),                &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
           & prefix, suffix,                                                     &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0.0_wp )
 
-        CALL jsb_add_var( mem,'yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca, &
+        CALL mem%Add_var('yday_npp_pot_rate', mem%previous_day_NPP_pot_rate_ca,      &
           & hgrid, surface,                                                          &
           & t_cf('yday_NPP_pot_rate_ca', 'prev day NPP_pot_rate_ca', ''),            &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
           & prefix, suffix,                                                          &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp )
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp )
 
-        ! CALL jsb_add_var( mem,'laimax_dyn', mem%laiMax_dyn,                    &
+        ! CALL mem%Add_var('laimax_dyn', mem%laiMax_dyn,                         &
         !   & hgrid, surface,                                                    &
         !   & t_cf('laiMax_dyn', '', ''),                                        &
         !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         !   & prefix, suffix,                                                    &
-        !   & loutput=.TRUE., lrestart=.TRUE., initval_r=-1.0_wp)
+        !   & loutput=.FALSE., lrestart=.TRUE., initval_r=-1.0_wp)
 
-        ! CALL jsb_add_var( mem,'year_npp_sum', mem%year_NPP_sum,                 &
+        ! CALL mem%Add_var('year_npp_sum', mem%year_NPP_sum,                      &
         !   & hgrid, surface,                                                     &
         !   & t_cf('year_NPP_sum', '', ''),                                       &
         !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         !   & prefix, suffix,                                                     &
-        !   & loutput=.TRUE., lrestart=.TRUE., initval_r=2.0_wp)
+        !   & loutput=.FALSE., lrestart=.TRUE., initval_r=2.0_wp)
 
-        CALL jsb_add_var( mem,'day_npp_sum', mem%day_NPP_sum,                  &
+        CALL mem%Add_var('day_npp_sum', mem%day_NPP_sum,                       &
           & hgrid, surface,                                                    &
           & t_cf('day_NPP_sum', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
 
-        CALL jsb_add_var( mem,'heat_sum_eg', mem%heat_sum_EG,                  &
+        CALL mem%Add_var('heat_sum_eg', mem%heat_sum_EG,                       &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_EG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-99.0_wp)
 
-        CALL jsb_add_var( mem,'heat_sum_sg', mem%heat_sum_SG,                  &
+        CALL mem%Add_var('heat_sum_sg', mem%heat_sum_SG,                       &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_SG', '', ''),                                       &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-99.0_wp) ! has to be lower than -1
 
-        CALL jsb_add_var( mem,'heat_sum_crp', mem%heat_sum_CRP,                &
+        CALL mem%Add_var('heat_sum_crp', mem%heat_sum_CRP,                     &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_CRP', '', ''),                                      &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=9999.0_wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=9999.0_wp)
 
-        CALL jsb_add_var( mem,'heat_sum_winter', mem%heat_sum_winter,          &
+        CALL mem%Add_var('heat_sum_winter', mem%heat_sum_winter,               &
           & hgrid, surface,                                                    &
           & t_cf('heat_sum_winter', '', ''),                                   &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=-EPSILON(1._wp))
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=-EPSILON(1._wp))
 
-        CALL jsb_add_var( mem,'chill_days_eg', mem%chill_days_EG,              &
+        CALL mem%Add_var('chill_days_eg', mem%chill_days_EG,                   &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_EG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
 
-        CALL jsb_add_var( mem,'chill_days_sg', mem%chill_days_SG,              &
+        CALL mem%Add_var('chill_days_sg', mem%chill_days_SG,                   &
           & hgrid, surface,                                                    &
           & t_cf('chill_days_SG', '', ''),                                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
-          & loutput=.TRUE., lrestart=.TRUE., initval_r=0._wp)
+          & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
 
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-          CALL jsb_add_var( mem,'maxLAI_allom', mem%maxLAI_allom,                &
+          CALL mem%Add_var('maxLAI_allom', mem%maxLAI_allom,                     &
             & hgrid, surface,                                                    &
             & t_cf('maxLAI_allom', 'm^2(leaf)/m^2(ground)', 'maximum LAI according to allometric relationships'),  &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.4_wp)
 
-!@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
-          CALL jsb_add_var( mem,'individuals', mem%number_of_individuals, &
+          !@todo: variables are only relevant for forest pfts - how to constrain memory allocation to forest pfts?
+          CALL mem%Add_var('individuals', mem%number_of_individuals,             &
             & hgrid, surface,                                                    &
             & t_cf('number_of_individuals', 'trees ha-1', 'Number of individuals in last calculation'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=15000.0_wp)
-          CALL jsb_add_var( mem,'biomass_per_ind', mem%biomass_per_individual, &
+          CALL mem%Add_var('biomass_per_ind', mem%biomass_per_individual,        &
             & hgrid, surface,                                                    &
             & t_cf('biomass_per_individual', 'kg/tree', 'Biomass per individual according to allometric relationships'), &
             & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
             & prefix, suffix,                                                    &
             & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
-          CALL jsb_add_var( mem, 'cconservation_allom', mem%cconservation_allom,              &
+          CALL mem%Add_var( 'cconservation_allom', mem%cconservation_allom,             &
             & hgrid, surface,                                                           &
             & t_cf('cconservation_allom', 'mol(C) m-2(canopy)', &
               & 'Test for c conservation on rescaling of c states for allom.'), &
@@ -365,6 +393,112 @@ CONTAINS
 
       END IF
 
+#ifdef __ICON__
+      ! Diagnostic global carbon sums for experiment monitoring
+      !       (1d stream variables are not supported with echam)
+      !
+      IF (TRIM(suffix) == 'box') THEN
+
+        CALL mem%Add_var( 'lai_ta_gmean', mem%lai_ta_gmean,                           &
+          & hgrid, surface,                                                           &
+          & t_cf('lai_ta_gmean', '1', 'Global land mean leaf_area_index'),            &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+          & prefix, suffix,                                                           &
+          & lrestart=.FALSE., initval_r=0.0_wp )
+
+        CALL mem%Add_var( 'fract_fpc_gmean', mem%fract_fpc_gmean,                     &
+          & hgrid, surface,                                                           &
+          & t_cf('fract_fpc_gmean', '1', 'Global land mean foilage projected cover'), &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+          & prefix, suffix,                                                           &
+          & lrestart=.FALSE., initval_r=0.0_wp )
+
+      END IF
+#endif
+
+    END IF  !  VEG / LAND
+    END IF  !  IF(.NOT. use_quincy)
+    
+    !! quincy
+    IF (model%config%use_quincy) THEN
+      IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
+         & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+
+        !! jsbach4 variables, copied from above (with some minor modification for output/restart)
+        !!
+        CALL mem%Add_var('lai', mem%lai,                                         &
+          & hgrid, surface,                                                      &
+          & t_cf('leaf_area_index', '', ''),                                     &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & lrestart=.TRUE.,                                                     &
+          & initval_r=0.0_wp )
+  
+        CALL mem%Add_var('fract_fpc', mem%fract_fpc,                             &
+          & hgrid, surface,                                                      &
+          & t_cf('foliage_projected_cover', '', ''),                             &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & initval_r=0.0_wp )
+  
+        CALL mem%Add_var('fract_fpc_max', mem%fract_fpc_max,                     &
+          & hgrid, surface,                                                      &
+          & t_cf('maximum_fpc', '', ''),                                         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & initval_r=0.0_wp )
+  
+        CALL mem%Add_var('veg_fract_correction', mem%veg_fract_correction,       &
+          & hgrid, surface,                                                      &
+          & t_cf('Correction factor to convert tile to canopy area', '', '') ,   &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & loutput=.TRUE.,                                                      &
+          & lrestart=.TRUE.,                                                     &
+          & initval_r=0.0_wp )
+
+        !! original quincy variables
+        !!
+        CALL mem%Add_var('growing_season', mem%growing_season,                                                   &
+          & hgrid, surface,                                                                                      &
+          & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) !false) ! initvalue
+  
+        CALL mem%Add_var('gdd', mem%gdd,                                                                         &
+          & hgrid, surface,                                                                                      &
+          & t_cf('gdd', 'K days', 'growing degree days above 5 degC'),                                           &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+    
+        CALL mem%Add_var('nd_dormance', mem%nd_dormance,                                                         &
+          & hgrid, surface,                                                                                      &
+          & t_cf('nd_dormance', '# days', 'number of days since last growing season'),                           &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+  
+        CALL mem%Add_var('lai_max', mem%lai_max,                                                                 &
+          & hgrid, surface,                                                                                      &
+          & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'),                                            &
+          & t_grib1(table, 255, grib_bits),                                                                      &
+          & t_grib2(255, 255, 255, grib_bits),                                                                   &
+          & prefix, suffix,                                                                                      &
+          & loutput=.TRUE., lrestart=.TRUE.,                                                                     &
+          & initval_r=0.0_wp) ! initvalue
+  
+      END IF
     END IF
 
   END SUBROUTINE Init_pheno_memory

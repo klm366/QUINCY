@@ -15,8 +15,9 @@
 MODULE mo_jsb_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_io_units,          ONLY: filename_max
-  USE mo_exception,         ONLY: message
+  USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
+  USE mo_io_units,           ONLY: filename_max
+  USE mo_exception,          ONLY: message
 
   IMPLICIT NONE
   PRIVATE
@@ -31,10 +32,13 @@ MODULE mo_jsb_config_class
     CHARACTER(len=40)              :: usecase
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
-    CHARACTER(len=10)              :: tpe_scheme       ! For terraplanet setup: open/closed
-    CHARACTER(len=10)              :: hsm_mode
+    LOGICAL                        :: use_quincy
+    CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
+    CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
     LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
-    CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
+    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
+    LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
+
   END TYPE t_jsb_model_config
 
   ! Abstract type for process configurations
@@ -43,7 +47,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
-    CHARACTER(len=10), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
+    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
   CONTAINS
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
@@ -77,24 +81,28 @@ CONTAINS
       grid_filename,          &
       grid_name
 
-    LOGICAL                     :: use_lakes
-    LOGICAL                     :: use_glacier
-    LOGICAL                     :: l_compat401
-    CHARACTER(len=filename_max) :: fract_filename
-    CHARACTER(len=40)           :: usecase
-    CHARACTER(len=10)           :: tpe_scheme
-    CHARACTER(len=10)           :: hsm_mode
-    CHARACTER(len=10)           :: output_tiles(99)
+    LOGICAL                       :: use_lakes
+    LOGICAL                       :: use_glacier
+    LOGICAL                       :: use_quincy
+    LOGICAL                       :: l_compat401
+    CHARACTER(len=filename_max)   :: fract_filename
+    CHARACTER(len=40)             :: usecase
+    CHARACTER(len=SHORT_NAME_LEN) :: tpe_scheme
+    CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode
+    CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
+    LOGICAL                       :: relative_fractions_in_file
 
     NAMELIST /jsb_model_nml/  &
       use_lakes, &
       use_glacier, &
+      use_quincy, &
       l_compat401, &
       usecase, &
       tpe_scheme, &
       hsm_mode, &
       fract_filename, &
-      output_tiles
+      output_tiles, &
+      relative_fractions_in_file
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
@@ -105,16 +113,18 @@ CONTAINS
     ALLOCATE(model_config)
 
     ! Set defaults
-    use_lakes       = .TRUE.
-    use_glacier     = .TRUE.
-    l_compat401     = .FALSE.
-    grid_filename   = ''
-    grid_name       = ''
-    usecase         = ''
-    tpe_scheme      = ''
-    hsm_mode        = 'simple'
-    fract_filename  = 'bc_land_frac.nc'
-    output_tiles(:) = ''
+    use_lakes                  = .TRUE.
+    use_glacier                = .TRUE.
+    use_quincy                 = .FALSE.
+    l_compat401                = .FALSE.
+    grid_filename              = ''
+    grid_name                  = ''
+    usecase                    = ''
+    tpe_scheme                 = ''
+    hsm_mode                   = 'simple'
+    fract_filename             = 'bc_land_frac.nc'
+    output_tiles(:)            = ''
+    relative_fractions_in_file = .TRUE.
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -130,13 +140,15 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
     CALL close_nml(nml_handler)
 
-    model_config%use_lakes      = use_lakes
-    model_config%use_glacier    = use_glacier
-    model_config%l_compat401    = l_compat401
-    model_config%usecase        = usecase
-    model_config%tpe_scheme     = tpe_scheme
-    model_config%hsm_mode       = hsm_mode
-    model_config%fract_filename = fract_filename
+    model_config%use_lakes                  = use_lakes
+    model_config%use_glacier                = use_glacier
+    model_config%use_quincy                 = use_quincy
+    model_config%l_compat401                = l_compat401
+    model_config%usecase                    = usecase
+    model_config%tpe_scheme                 = tpe_scheme
+    model_config%hsm_mode                   = hsm_mode
+    model_config%fract_filename             = fract_filename
+    model_config%relative_fractions_in_file = relative_fractions_in_file
 
     DO i=1,99
       IF (output_tiles(i) == '') EXIT

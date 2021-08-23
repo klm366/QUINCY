@@ -29,131 +29,200 @@ MODULE mo_jsb_lctlib_class
 
   TYPE t_lctlib_element
      ! --- general parameters ------------------------------------------------------------------------------------------------------
-    INTEGER  :: LctNumber            !! Unique number for each landcover type (1, 2, 3, ..)
-    CHARACTER(LEN=16)  :: LctName    !! Names of landcover types
-    INTEGER  :: LandcoverClass       !! Landcover classes (not to be confused with landcover types!):
-                                                 !! .. 0: Bare soil; 1:Glacier; 2: Lake;
-                                                 !! .. 3: Natural forest; 4: Natural Grassland;
-                                                 !! .. 5: Other natural vegetation; 6: crops; 7: pastures
-    LOGICAL  :: NaturalVegFlag       !! "true" for natural vegetation landcover types, i.e. non-agricultural vegetation
-    LOGICAL  :: ForestFlag           !! "true" for forest landcover types
-    LOGICAL  :: GrassFlag            !! "True" for natural graslands
-    LOGICAL  :: CropFlag             !! "true" for croplands
-    LOGICAL  :: PastureFlag          !! "true" for landcover of type "pasture"
-    LOGICAL  :: LakeFlag             !! "true" for a land surface class that signifies lake or ocean
-    LOGICAL  :: GlacierFlag          !! "true" for a land surface class that signifies glaciers
-    LOGICAL  :: BareSoilFlag         !! "true" if none of the foregoing landcover classes
+    INTEGER  :: LctNumber            !< Unique number for each landcover type (1, 2, 3, ..)
+    CHARACTER(LEN=16)  :: LctName    !< Names of landcover types
+    INTEGER  :: LandcoverClass       !< Landcover classes (not to be confused with landcover types!):
+                                                 !< .. 0: Bare soil; 1:Glacier; 2: Lake;
+                                                 !< .. 3: Natural forest; 4: Natural Grassland;
+                                                 !< .. 5: Other natural vegetation; 6: crops; 7: pastures
+    LOGICAL  :: NaturalVegFlag       !< "true" for natural vegetation landcover types, i.e. non-agricultural vegetation
+    LOGICAL  :: ForestFlag           !< "true" for forest landcover types
+    LOGICAL  :: GrassFlag            !< "True" for natural graslands
+    LOGICAL  :: CropFlag             !< "true" for croplands
+    LOGICAL  :: PastureFlag          !< "true" for landcover of type "pasture"
+    LOGICAL  :: LakeFlag             !< "true" for a land surface class that signifies lake or ocean
+    LOGICAL  :: GlacierFlag          !< "true" for a land surface class that signifies glaciers
+    LOGICAL  :: BareSoilFlag         !< "true" if none of the foregoing landcover classes
 
     ! --- Albedo ------------------------------------------------------------------------------------------------------------------
-    REAL(wp) :: AlbedoSnowVisMin      !! Minimum snow albedo in the visible range
-    REAL(wp) :: AlbedoSnowVisMax      !! Maximum snow albedo in the visible range
-    REAL(wp) :: AlbedoSnowNirMin      !! Minimum snow albedo in the NIR range
-    REAL(wp) :: AlbedoSnowNirMax      !! Maximum snow albedo in the NIR range
-    REAL(wp) :: AlbedoSnowMin         !! Minimum snow albedo
-    REAL(wp) :: AlbedoSnowMax         !! Maximum snow albedo
-    REAL(wp) :: AlbedoCanopyVIS       !! Albedo of the canopy (vegetation) in the visible range
-    REAL(wp) :: AlbedoCanopyNIR       !! Albedo of the canopy (vegetation) in the NIR range
-    REAL(wp) :: AlbedoLitterVis       !! Albedo of the leaf litter in the visible range
-    REAL(wp) :: AlbedoLitterNir       !! Albedo of the leaf litter in the NIR range
+    REAL(wp) :: AlbedoSnowVisMin      !< Minimum snow albedo in the visible range
+    REAL(wp) :: AlbedoSnowVisMax      !< Maximum snow albedo in the visible range
+    REAL(wp) :: AlbedoSnowNirMin      !< Minimum snow albedo in the NIR range
+    REAL(wp) :: AlbedoSnowNirMax      !< Maximum snow albedo in the NIR range
+    REAL(wp) :: AlbedoSnowMin         !< Minimum snow albedo
+    REAL(wp) :: AlbedoSnowMax         !< Maximum snow albedo
+    REAL(wp) :: AlbedoCanopyVIS       !< Albedo of the canopy (vegetation) in the visible range
+    REAL(wp) :: AlbedoCanopyNIR       !< Albedo of the canopy (vegetation) in the NIR range
+    REAL(wp) :: AlbedoLitterVis       !< Albedo of the leaf litter in the visible range
+    REAL(wp) :: AlbedoLitterNir       !< Albedo of the leaf litter in the NIR range
 
     ! --- parameters used by bethy ------------------------------------------------------------------------------------------------
-    LOGICAL  :: NitrogenScalingFlag   !! Indicates, whether nitrogen scaling shall be applied to that vegetation type
-    LOGICAL  :: C4flag                !! Photosynthetic pathway: C4=.true or C3=.false.
-    REAL(wp) :: CarboxRate            !! Maximum carboxilation rate at 25 degrees Celsius [1.E-6 * Mol(CO2)/m^2/s] ...
-                                                  !! ... (Table 2.6 in Knorr)
-    REAL(wp) :: ETransport            !! Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
-                                                  !! ... (Table 2.6 in Knorr)
-    REAL(wp) :: VegHeight             !! Typical height of the vegetation classes [m]
-    REAL(wp) :: VegRoughness          !! Roughness length of the vegetation classes [m]
-    REAL(wp) :: MinVegRoughness       !! Minimal roughness length of the vegetation classes (LAI = 0) [m]
-    REAL(wp) :: MaxVegRoughness       !! Maximal roughness length of the vegetation classes (LAI = LAI_max) [m]
+    LOGICAL  :: NitrogenScalingFlag   !< Indicates, whether nitrogen scaling shall be applied to that vegetation type
+    LOGICAL  :: C4flag                !< Photosynthetic pathway: C4=.true or C3=.false.
+    REAL(wp) :: CarboxRate            !< Maximum carboxilation rate at 25 degrees Celsius [1.E-6 * Mol(CO2)/m^2/s] ...
+                                                  !< ... (Table 2.6 in Knorr)
+    REAL(wp) :: ETransport            !< Maximum electron transport rate at 25 degrees Celsius [1.E-6 * Mol/m^2/s] ...
+                                                  !< ... (Table 2.6 in Knorr)
+    REAL(wp) :: VegHeight             !< Typical height of the vegetation classes [m]
+    REAL(wp) :: VegRoughness          !< Roughness length of the vegetation classes [m]
+    REAL(wp) :: MinVegRoughness       !< Minimal roughness length of the vegetation classes (LAI = 0) [m]
+    REAL(wp) :: MaxVegRoughness       !< Maximal roughness length of the vegetation classes (LAI = LAI_max) [m]
     ! --- Parameters used in LoGroP Phenology scheme --------------------------------------------------------------------------
-    INTEGER  :: PhenologyType         !! Phenology type (only for natural vegetation):
-                                                  !! ... none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
-    REAL(wp) :: MaxLAI                !! Upper LAI boundary for LoGoP-Scheme (phenology) in [m2/m2]
-    REAL(wp) :: specificLeafArea_C    !! Carbon content per leaf area in [mol(Carbon)/m^2(leaf)]
+    INTEGER  :: PhenologyType         !< Phenology type (only for natural vegetation):
+                                                  !< ... none: 0; evergreen: 1; summergreen: 2; raingreen: 3; grasses: 4; crops: 5
+    REAL(wp) :: MaxLAI                !< Upper LAI boundary for LoGoP-Scheme (phenology) in [m2/m2]
+    REAL(wp) :: specificLeafArea_C    !< Carbon content per leaf area in [mol(Carbon)/m^2(leaf)]
 
     ! ++ additional parameters required when l_forestRegrowth = true  --------------------------------------------------------
-    REAL(wp) :: alpha_nr_ind          !! Parameter of self-thinning relationship
-    REAL(wp) :: beta_nr_ind           !! Parameter of self-thinning relationship
-    REAL(wp) :: alpha_leaf            !! Parameter of relationship between total biomass per ind and leaf biomass
-    REAL(wp) :: beta_leaf             !! Parameter of relationship between total biomass per ind and leaf biomass
+    REAL(wp) :: alpha_nr_ind          !< Parameter of self-thinning relationship
+    REAL(wp) :: beta_nr_ind           !< Parameter of self-thinning relationship
+    REAL(wp) :: alpha_leaf            !< Parameter of relationship between total biomass per ind and leaf biomass
+    REAL(wp) :: beta_leaf             !< Parameter of relationship between total biomass per ind and leaf biomass
 
      ! --- Parameters used in Knorr Phenology scheme ---------------------------------------------------------------------------
-    REAL(wp) :: knorr_Tau_w           !! Time before leaf shedding  [days]
-    REAL(wp) :: knorr_T_phi           !! Temperature trigger for leaf growth [deg C]
-    REAL(wp) :: knorr_T_r             !! "Spread" (sigma) of T_phi [deg C]
-    REAL(wp) :: knorr_Day_c           !! Day-length at leaf shedding [hours]
-    REAL(wp) :: knorr_Day_r           !! "Spread" (sigma) of Day_c [hours]
-    REAL(wp) :: knorr_k_l             !! Inverse of leaf longevity [days-1]
-    REAL(wp) :: knorr_leaf_growth_rate !! Initial leaf growth rate [days-1]
-    REAL(wp) :: knorr_max_lai         !! Maximum LAI
+    REAL(wp) :: knorr_Tau_w           !< Time before leaf shedding  [days]
+    REAL(wp) :: knorr_T_phi           !< Temperature trigger for leaf growth [deg C]
+    REAL(wp) :: knorr_T_r             !< "Spread" (sigma) of T_phi [deg C]
+    REAL(wp) :: knorr_Day_c           !< Day-length at leaf shedding [hours]
+    REAL(wp) :: knorr_Day_r           !< "Spread" (sigma) of Day_c [hours]
+    REAL(wp) :: knorr_k_l             !< Inverse of leaf longevity [days-1]
+    REAL(wp) :: knorr_leaf_growth_rate !< Initial leaf growth rate [days-1]
+    REAL(wp) :: knorr_max_lai         !< Maximum LAI
 
     ! --- Parameters used in the carbon balance model -----------------------------------------------------------------------------
-    REAL(wp) :: reserveC2leafC        !! Ratio of opt. C content of the reserve pool to the opt. C content of leaves
-    REAL(wp) :: fract_npp_2_woodPool   !! Maximum fraction of NPP put into the wood pool of the carbon balance model
-    REAL(wp) :: fract_npp_2_reservePool!! Optimal fraction of NPP put into the reserve pool of the carbon balance model
-    REAL(wp) :: fract_npp_2_exudates   !! Optimal fraction of NPP put into the root exudates of the carbon balance model
-    REAL(wp) :: fract_green_2_herbivory!! Fraction of NPP that is grazed by herbivores
-    REAL(wp) :: tau_c_litter_leaf !! Time constant by which leaf litter pool is depreciated  [days]
-    REAL(wp) :: tau_c_litter_wood !! Time constant by which woody litter pool is depreciated  [days]
-    REAL(wp) :: LAI_shed_constant     !!
-    REAL(wp) :: fract_C_litter_green2atmos !! Fraction of heterotrophic loss of green litter pools emitted to the
-                                                      !! .. atmosphere (rest enters slow pool)
-    REAL(wp) :: Max_C_content_woods   !! Maximum carbon content in the woody parts of plants [mol(C)/m^2(canopy)] (for
-                                                  !! .. forests this is closely related to the yield, usually measured in
-                                                  !! .. m^3(wood)/hectar)
-    REAL(wp) :: ClumpinessFactor      !! Factor to calculate vegetation clumpiness:
-                                                  !! Former in JSBACH3:   veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor))
-                                                  !! converting natural PFTs into agricultural PFTs
-    REAL(wp) :: fract_wood_2_onSite    !! Fraction of wood pool to anthropogenically controlled onSite pool wenn
-                                                  !! converting natural PFTs into agricultural PFTs
-    REAL(wp) :: fract_wood_2_paper     !! Fraction of wood pool to paper (intermediately longlived) pool wenn...
-    REAL(wp) :: fract_wood_2_construction !! Fract of wood pool to constructions (e.g. houses, furniture = longlived)
-                                                  !!   pool when converting natural PFTs into agricultural PFTs
+    REAL(wp) :: reserveC2leafC        !< Ratio of opt. C content of the reserve pool to the opt. C content of leaves
+    REAL(wp) :: fract_npp_2_woodPool   !< Maximum fraction of NPP put into the wood pool of the carbon balance model
+    REAL(wp) :: fract_npp_2_reservePool !< Optimal fraction of NPP put into the reserve pool of the carbon balance model
+    REAL(wp) :: fract_npp_2_exudates   !< Optimal fraction of NPP put into the root exudates of the carbon balance model
+    REAL(wp) :: fract_green_2_herbivory !< Fraction of NPP that is grazed by herbivores
+    REAL(wp) :: LAI_shed_constant     !<
+                                                      !< .. atmosphere (rest enters slow pool)
+    REAL(wp) :: Max_C_content_woods   !< Maximum carbon content in the woody parts of plants [mol(C)/m^2(canopy)] (for
+                                                  !< .. forests this is closely related to the yield, usually measured in
+                                                  !< .. m^3(wood)/hectar)
+    REAL(wp) :: ClumpinessFactor      !< Factor to calculate vegetation clumpiness:
+                                                  !< Former in JSBACH3:   veg_ratio=veg_ratio_max*(1-exp(-LAI_max/ClumpinessFactor))
+                                                  !< converting natural PFTs into agricultural PFTs
+    REAL(wp) :: fract_wood_2_onSite    !< Fraction of wood pool to anthropogenically controlled onSite pool wenn
+                                                  !< converting natural PFTs into agricultural PFTs
+    REAL(wp) :: fract_wood_2_paper     !< Fraction of wood pool to paper (intermediately longlived) pool wenn...
+    REAL(wp) :: fract_wood_2_construction !< Fract of wood pool to constructions (e.g. houses, furniture = longlived)
+                                                  !<   pool when converting natural PFTs into agricultural PFTs
 
     ! --- Parameters used in the carbon balance model and the dynamic vegetation --------------------------------------------------
-    REAL(wp) :: tau_c_woods           !! PFT-specific time scale for woody (lignified) plant tissue
+    REAL(wp) :: tau_c_woods           !< PFT-specific time scale for woody (lignified) plant tissue
 
     ! --- Parameters used by the dynamic vegetation -------------------------------------------------------------------------------
-    LOGICAL  :: dynamic_PFT               !! indicates those PFTs which shall take part in the vegetation dynamics
-    LOGICAL  :: woody_PFT                 !! indicates those PFTs which are of woody type (in contrast to grasses)
-    LOGICAL  :: pasture_PFT               !! indicates those PFTs which are pasture
-    REAL(wp) :: bclimit_min_cold_mmtemp   !! PFT-specific minimum coldest monthly mean temperature
-    REAL(wp) :: bclimit_max_cold_mmtemp   !! PFT-specific maximum coldest monthly mean temperature
-    REAL(wp) :: bclimit_max_warm_mmtemp   !! PFT-specific upper limit of warmest-month temperature
-    REAL(wp) :: bclimit_min_temprange     !! PFT-specific 20-year average min warmest - coldest month temperature range
-    REAL(wp) :: bclimit_min_gdd           !! PFT-specific minimum growing degree days (at or above 5 deg C)
+    LOGICAL  :: dynamic_PFT               !< indicates those PFTs which shall take part in the vegetation dynamics
+    LOGICAL  :: woody_PFT                 !< indicates those PFTs which are of woody type (in contrast to grasses)
+    LOGICAL  :: pasture_PFT               !< indicates those PFTs which are pasture
+    REAL(wp) :: bclimit_min_cold_mmtemp   !< PFT-specific minimum coldest monthly mean temperature
+    REAL(wp) :: bclimit_max_cold_mmtemp   !< PFT-specific maximum coldest monthly mean temperature
+    REAL(wp) :: bclimit_max_warm_mmtemp   !< PFT-specific upper limit of warmest-month temperature
+    REAL(wp) :: bclimit_min_temprange     !< PFT-specific 20-year average min warmest - coldest month temperature range
+    REAL(wp) :: bclimit_min_gdd           !< PFT-specific minimum growing degree days (at or above 5 deg C)
 
     ! --- Parameters used in SPITFIRE (mo_disturbance_thonicke.f90) ---------------------------------------------------------------
-    REAL(wp) :: moist_extinction          !! PFT specific moisture of extinction
-    REAL(wp) :: fuel_dens                 !! fuel bulk density
-    REAL(wp) :: flame_length_f            !! f parameter for flame length(scorch height) parameter 45 in lpj
-    REAL(wp) :: crown_length              !! crown length parameter see table 1 in thonicke et al. 2010
-    REAL(wp) :: bark_par1                 !! bark thickness parameter 1 see table 1 and eq. 21 in thonicke et al. 2010
-    REAL(wp) :: bark_par2                 !! bark thickness parameter 2 see table 1 and eq. 21 in thonicke et al. 2010
-    REAL(wp) :: RCK                       !! resistance factor to crown damage, tab1 and eq22 in thonicke et al. 2010
-    REAL(wp) :: mort_prob                 !! mortality probability  see table 1 and eq. 22 in thonicke et al. 2010
+    REAL(wp) :: moist_extinction          !< PFT specific moisture of extinction
+    REAL(wp) :: fuel_dens                 !< fuel bulk density
+    REAL(wp) :: flame_length_f            !< f parameter for flame length(scorch height) parameter 45 in lpj
+    REAL(wp) :: crown_length              !< crown length parameter see table 1 in thonicke et al. 2010
+    REAL(wp) :: bark_par1                 !< bark thickness parameter 1 see table 1 and eq. 21 in thonicke et al. 2010
+    REAL(wp) :: bark_par2                 !< bark thickness parameter 2 see table 1 and eq. 21 in thonicke et al. 2010
+    REAL(wp) :: RCK                       !< resistance factor to crown damage, tab1 and eq22 in thonicke et al. 2010
+    REAL(wp) :: mort_prob                 !< mortality probability  see table 1 and eq. 22 in thonicke et al. 2010
 
     ! --- Parameters for the climate buffer ---------------------------------------------------------------------------------------
-    REAL(wp) :: gdd_base                  !! PFT-specific GDD base
-    REAL(wp) :: upper_tlim                !! PFT-specific base to calculate GDD_upper_tlim
+    REAL(wp) :: gdd_base                  !< PFT-specific GDD base
+    REAL(wp) :: upper_tlim                !< PFT-specific base to calculate GDD_upper_tlim
 
     ! --- Parameters used by the yasso soil carbon model -------------------------------------------------------------------------
-    REAL(wp) :: LitVeg_coef(5)       !! Yasso coefficient for separating litter into chemical pools
-    REAL(wp) :: LeafLit_coef(5)      !! Yasso coefficient for separating leaf litter into chemical pools
-    REAL(wp) :: WoodLit_coef(5)      !! Yasso coefficient for separating woody litter into chemical pools
-    REAL(wp) :: WoodLitterSize       !! Yasso: size of the litter
+    REAL(wp) :: LitVeg_coef(5)       !< Yasso coefficient for separating litter into chemical pools
+    REAL(wp) :: LeafLit_coef(5)      !< Yasso coefficient for separating leaf litter into chemical pools
+    REAL(wp) :: WoodLit_coef(5)      !< Yasso coefficient for separating woody litter into chemical pools
+    REAL(wp) :: WoodLitterSize       !< Yasso: size of the litter
 
     ! --- Other parameters --------------------------------------------------------------------------------------------------------
-    REAL(wp) :: CanopyResistanceMin  !! Minimum canopy resistance (optional, only used in VIC scheme
-                                                 !! and if BETHY is not used)
-    REAL(wp) :: StemArea             !! Area of stems and branches of woody plants
+    REAL(wp) :: CanopyResistanceMin  !< Minimum canopy resistance (optional, only used in VIC scheme
+                                                 !< and if BETHY is not used)
+    REAL(wp) :: StemArea             !< Area of stems and branches of woody plants
+    
+    ! --- QUINCY model parameters (MPI-BGC Jena) ---------------------------------------------------------------------------------
+    INTEGER  :: growthform 
+    INTEGER  :: ps_pathway
+    INTEGER  :: phenology_type
+    REAL(wp) :: sla                 
+    REAL(wp) :: sigma_vis 
+    REAL(wp) :: sigma_nir 
+    REAL(wp) :: omega_clumping 
+    REAL(wp) :: crown_shape_factor 
+    REAL(wp) :: cn_leaf             
+    REAL(wp) :: cn_leaf_min
+    REAL(wp) :: cn_leaf_max
+    REAL(wp) :: np_leaf  
+    REAL(wp) :: np_leaf_min
+    REAL(wp) :: np_leaf_max
+    REAL(wp) :: k0_fn_struc
+    REAL(wp) :: fn_oth_min
+    REAL(wp) :: t_jmax_opt
+    REAL(wp) :: t_jmax_omega
+    REAL(wp) :: g0
+    REAL(wp) :: g1
+    REAL(wp) :: gmin
+
+    ! turnover times
+    REAL(wp) :: tau_leaf          , &
+                tau_fine_root     , &
+                tau_coarse_root   , &
+                tau_branch        , &
+                tau_sap_wood      , &
+                tau_fruit         , &
+                tau_seed_litter   , &
+                tau_seed_est      , &
+                tau_mycorrhiza
+
+    ! N uptake parameters    
+    REAL(wp) :: vmax_uptake_n     , &
+                vmax_uptake_p     , &
+                bnf_base
+
+    ! Vegetation dynamics parameters
+    REAL(wp) :: lambda_est_light  , &
+                k_est_light       , &
+                seed_size
+
+    ! Phenology parameters
+    REAL(wp) :: beta_soil_flush       , &
+                beta_soil_senescence  , &
+                gdd_req_max           , &
+                k_gdd_dormance        , &
+                t_air_senescence      , &
+                min_leaf_age
+
+    ! Allocation paramters
+    REAL(wp) :: frac_sapwood_branch   , &
+                wood_density          , &
+                k_latosa              , &
+                k_crtos               , &
+                k_rtos                , &
+                k2_fruit_alloc        , &
+                allom_k1              , &
+                allom_k2              , &
+                phi_leaf_min          , &
+                k_root                , &
+                k_sapwood             , &
+                c0_allom              , &
+                fstore_target
+
+    ! Soil
+    REAL(wp) :: k_root_dist    
+    ! --- END QUINCY model parameters (MPI-BGC Jena) -----------------------------------------------------------------------------
+    
   END TYPE t_lctlib_element
 
 CONTAINS
 
-  FUNCTION Read_lctlib(lctlib_file_name) RESULT(return_value)
+  FUNCTION Read_lctlib(lctlib_file_name, use_quincy) RESULT(return_value)
     !
     ! Get landcover library, i.e. lookup table for landcover types
     !
@@ -192,7 +261,13 @@ CONTAINS
     !
     USE mo_util_string, ONLY: tolower
 
+    ! USE statements necessary for modifying QUINCY model input values of lctlib parameters
+    USE mo_jsb_math_constants,      ONLY: one_day, one_year
+    USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P, Dwv, Dco2, tmelt 
+    USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, sm2lm_grass, igrass, itree
+
     CHARACTER(len=*), INTENT(in) :: lctlib_file_name
+    LOGICAL,          INTENT(in) :: use_quincy
     TYPE(t_lctlib_element), POINTER    :: return_value(:)
 
     TYPE(t_lctlib_element), ALLOCATABLE :: lctlib(:)
@@ -203,8 +278,8 @@ CONTAINS
     CHARACTER(len=256) :: line
     INTEGER            :: pos_comment, read_status
     INTEGER            :: pos,length
-    CHARACTER(len=2)   :: blank_set = " "//achar(9) !! the blank characters: BLANK and TAB
-    INTEGER,ALLOCATABLE:: itmp(:)                   !! temporary array used for input of logicals
+    CHARACTER(len=2)   :: blank_set = " "//achar(9) !< the blank characters: BLANK and TAB
+    INTEGER,ALLOCATABLE:: itmp(:)                   !< temporary array used for input of logicals
     INTEGER            :: apu  ! THT 30.10.2012
 
     LOGICAL            :: exist_LctNumber              = .FALSE.
@@ -250,11 +325,8 @@ CONTAINS
     LOGICAL            :: exist_fract_npp_2_reservePool = .FALSE.
     LOGICAL            :: exist_fract_npp_2_exudates    = .FALSE.
     LOGICAL            :: exist_fract_green_2_herbivory = .FALSE.
-    LOGICAL            :: exist_tau_c_litter_leaf  = .FALSE.
-    LOGICAL            :: exist_tau_c_litter_wood  = .FALSE.
     LOGICAL            :: exist_tau_c_woods        = .FALSE.
     LOGICAL            :: exist_LAI_shed_constant      = .FALSE.
-    LOGICAL            :: exist_fract_C_litter_green2atmos = .FALSE.
     LOGICAL            :: exist_Max_C_content_woods       = .FALSE.
     LOGICAL            :: exist_ClumpinessFactor          = .FALSE.
     LOGICAL            :: exists_dynamic_PFT              = .FALSE.
@@ -282,6 +354,65 @@ CONTAINS
     LOGICAL            :: exists_woodlit_coef             = .FALSE.
     LOGICAL            :: exists_leaflit_coef             = .FALSE.
     LOGICAL            :: exists_litveg_coef              = .FALSE.
+    ! quincy
+    LOGICAL            :: exists_growthform = .FALSE.
+    LOGICAL            :: exists_ps_pathway = .FALSE.
+    LOGICAL            :: exists_phenology_type = .FALSE.
+    LOGICAL            :: exists_sla = .FALSE.
+    LOGICAL            :: exists_sigma_vis = .FALSE.
+    LOGICAL            :: exists_sigma_nir = .FALSE.
+    LOGICAL            :: exists_omega_clumping = .FALSE.
+    LOGICAL            :: exists_crown_shape_factor = .FALSE.
+    LOGICAL            :: exists_cn_leaf = .FALSE.
+    LOGICAL            :: exists_cn_leaf_min = .FALSE.
+    LOGICAL            :: exists_cn_leaf_max = .FALSE.
+    LOGICAL            :: exists_np_leaf = .FALSE.
+    LOGICAL            :: exists_np_leaf_min = .FALSE.
+    LOGICAL            :: exists_np_leaf_max = .FALSE.
+    LOGICAL            :: exists_k0_fn_struc = .FALSE.
+    LOGICAL            :: exists_fn_oth_min = .FALSE.
+    LOGICAL            :: exists_t_jmax_opt = .FALSE.
+    LOGICAL            :: exists_t_jmax_omega = .FALSE.
+    LOGICAL            :: exists_g0 = .FALSE.
+    LOGICAL            :: exists_g1 = .FALSE.
+    LOGICAL            :: exists_gmin = .FALSE.
+    LOGICAL            :: exists_tau_leaf = .FALSE.
+    LOGICAL            :: exists_tau_fine_root = .FALSE.
+    LOGICAL            :: exists_tau_coarse_root = .FALSE.
+    LOGICAL            :: exists_tau_branch = .FALSE.
+    LOGICAL            :: exists_tau_sap_wood = .FALSE.
+    LOGICAL            :: exists_tau_fruit = .FALSE.
+    LOGICAL            :: exists_tau_seed_litter = .FALSE.
+    LOGICAL            :: exists_tau_seed_est = .FALSE.
+    LOGICAL            :: exists_tau_mycorrhiza = .FALSE.
+    LOGICAL            :: exists_vmax_uptake_n = .FALSE.
+    LOGICAL            :: exists_vmax_uptake_p = .FALSE.
+    LOGICAL            :: exists_bnf_base = .FALSE.
+    LOGICAL            :: exists_lambda_est_light = .FALSE.
+    LOGICAL            :: exists_k_est_light = .FALSE.
+    LOGICAL            :: exists_seed_size = .FALSE.
+    LOGICAL            :: exists_beta_soil_flush = .FALSE.
+    LOGICAL            :: exists_beta_soil_senescence = .FALSE.
+    LOGICAL            :: exists_gdd_req_max = .FALSE.
+    LOGICAL            :: exists_k_gdd_dormance = .FALSE.
+    LOGICAL            :: exists_t_air_senescence = .FALSE.
+    LOGICAL            :: exists_min_leaf_age = .FALSE.
+    LOGICAL            :: exists_frac_sapwood_branch = .FALSE.
+    LOGICAL            :: exists_wood_density = .FALSE.
+    LOGICAL            :: exists_k_latosa = .FALSE.
+    LOGICAL            :: exists_k_crtos = .FALSE.
+    LOGICAL            :: exists_k_rtos = .FALSE.
+    LOGICAL            :: exists_k2_fruit_alloc = .FALSE.
+    LOGICAL            :: exists_allom_k1 = .FALSE.
+    LOGICAL            :: exists_allom_k2 = .FALSE.
+    LOGICAL            :: exists_phi_leaf_min = .FALSE.
+    LOGICAL            :: exists_k_root = .FALSE.
+    LOGICAL            :: exists_k_sapwood = .FALSE.
+    LOGICAL            :: exists_c0_allom = .FALSE.
+    LOGICAL            :: exists_fstore_target = .FALSE.
+    LOGICAL            :: exists_k_root_dist = .FALSE.
+    
+    ! quincy end
     INTEGER            :: i
 
     INTEGER :: nlct, npft
@@ -504,12 +635,6 @@ CONTAINS
           CASE ('fract_green_2_herbivory')                              ! fraction of Green directed to herbivory (see cbalance)
              READ(line(pos:length),*) lctlib(1:nlct)%fract_green_2_herbivory
              exist_fract_green_2_herbivory = .TRUE.
-          CASE ('tau_c_litter_leaf')                           ! Time constant by which leaf litter pool is depreciated  [days]
-             READ(line(pos:length),*) lctlib(1:nlct)%tau_c_litter_leaf
-             exist_tau_c_litter_leaf = .TRUE.
-          CASE ('tau_c_litter_wood')                           ! Time constant by which woody litter pool is depreciated  [days]
-             READ(line(pos:length),*) lctlib(1:nlct)%tau_c_litter_wood
-             exist_tau_c_litter_wood = .TRUE.
           CASE ('tau_c_woods')                              ! PFT-specific time_scale for c_woods (and vegetation dynamics)
              READ(line(pos:length),*) lctlib(1:nlct)%tau_c_woods
              ! Conversion from years to days
@@ -518,9 +643,6 @@ CONTAINS
           CASE ('lai_shed_constant')                               ! Time constant by which leaves are constantly shedded [days-1]
              READ(line(pos:length),*) lctlib(1:nlct)%LAI_shed_constant
              exist_LAI_shed_constant = .TRUE.
-          CASE ('fract_c_litter_green2atmos')                    ! fraction of loss of fast pool emitted to atmosphere (see cbalance)
-             READ(line(pos:length),*) lctlib(1:nlct)%fract_C_litter_green2atmos
-             exist_fract_C_litter_green2atmos = .TRUE.
           CASE ('max_c_content_woods')                          ! Maximum carbon content of wood pool (see cbalance)
              READ(line(pos:length),*) lctlib(1:nlct)%Max_C_content_woods
              exist_Max_C_content_woods = .TRUE.
@@ -604,7 +726,7 @@ CONTAINS
             READ(line(pos:length),*) lctlib(1:nlct)%mort_prob           ! PFT-specific parameter for mortality
              exists_mort_prob = .TRUE.
           CASE ('litveg_coef')                                  ! PFT-specific fractions to seperate total litter into yasso pools
-                                                                        !! (NOT NEEDED!)
+                                                                        ! (NOT NEEDED!)
              READ(line(pos:length),*) lctlib(1:nlct)%LitVeg_coef(1)
              DO apu = 2, 5
                 READ(lctlib_file_unit,'(A256)', IOSTAT=read_status) line
@@ -644,8 +766,192 @@ CONTAINS
              READ(line(pos:length),*) lctlib(1:nlct)%WoodLitterSize
              exists_woodlittersize_coef = .TRUE.
           CASE default
-             ! nothing to do
+            ! nothing to do
           END SELECT
+           ! ------------------------------------------------------------------
+          ! quincy
+          IF (use_quincy) THEN
+            SELECT CASE (TRIM(key))
+            CASE ('growthform')
+              READ(line(pos:length),*) lctlib(1:nlct)%growthform
+              exists_growthform = .TRUE.
+            CASE ('ps_pathway')
+              READ(line(pos:length),*) lctlib(1:nlct)%ps_pathway
+              exists_ps_pathway = .TRUE.
+            CASE ('phenology_type')
+              READ(line(pos:length),*) lctlib(1:nlct)%phenology_type
+              exists_phenology_type = .TRUE.
+            CASE ('sla')
+              READ(line(pos:length),*) lctlib(1:nlct)%sla
+              exists_sla = .TRUE.
+            CASE ('sigma_vis')
+              READ(line(pos:length),*) lctlib(1:nlct)%sigma_vis
+              exists_sigma_vis = .TRUE.
+            CASE ('sigma_nir')
+              READ(line(pos:length),*) lctlib(1:nlct)%sigma_nir
+              exists_sigma_nir = .TRUE.
+            CASE ('omega_clumping')
+              READ(line(pos:length),*) lctlib(1:nlct)%omega_clumping
+              exists_omega_clumping = .TRUE.
+            CASE ('crown_shape_factor')
+              READ(line(pos:length),*) lctlib(1:nlct)%crown_shape_factor
+              exists_crown_shape_factor = .TRUE.
+            CASE ('cn_leaf')
+              READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf
+              exists_cn_leaf = .TRUE.
+            CASE ('cn_leaf_min')
+              READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_min
+              exists_cn_leaf_min = .TRUE.
+            CASE ('cn_leaf_max')
+              READ(line(pos:length),*) lctlib(1:nlct)%cn_leaf_max
+              exists_cn_leaf_max = .TRUE.
+            CASE ('np_leaf')
+              READ(line(pos:length),*) lctlib(1:nlct)%np_leaf
+              exists_np_leaf = .TRUE.
+            CASE ('np_leaf_min')
+              READ(line(pos:length),*) lctlib(1:nlct)%np_leaf_min
+              exists_np_leaf_min = .TRUE.
+            CASE ('np_leaf_max')
+              READ(line(pos:length),*) lctlib(1:nlct)%np_leaf_max
+              exists_np_leaf_max = .TRUE.
+            CASE ('k0_fn_struc')
+              READ(line(pos:length),*) lctlib(1:nlct)%k0_fn_struc
+              exists_k0_fn_struc = .TRUE.
+            CASE ('fn_oth_min')
+              READ(line(pos:length),*) lctlib(1:nlct)%fn_oth_min
+              exists_fn_oth_min = .TRUE.
+            CASE ('t_jmax_opt')
+              READ(line(pos:length),*) lctlib(1:nlct)%t_jmax_opt
+              exists_t_jmax_opt = .TRUE.
+            CASE ('t_jmax_omega')
+              READ(line(pos:length),*) lctlib(1:nlct)%t_jmax_omega
+              exists_t_jmax_omega = .TRUE.
+            CASE ('g0')
+              READ(line(pos:length),*) lctlib(1:nlct)%g0
+              exists_g0 = .TRUE.
+            CASE ('g1')
+              READ(line(pos:length),*) lctlib(1:nlct)%g1
+              exists_g1 = .TRUE.
+            CASE ('gmin')
+              READ(line(pos:length),*) lctlib(1:nlct)%gmin
+              exists_gmin = .TRUE.
+
+            CASE ('tau_leaf')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_leaf
+              exists_tau_leaf = .TRUE.
+            CASE ('tau_fine_root')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_fine_root
+              exists_tau_fine_root = .TRUE.
+            CASE ('tau_coarse_root')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_coarse_root
+              exists_tau_coarse_root = .TRUE.
+            CASE ('tau_branch')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_branch
+              exists_tau_branch = .TRUE.
+            CASE ('tau_sap_wood')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_sap_wood
+              exists_tau_sap_wood = .TRUE.
+            CASE ('tau_fruit')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_fruit
+              exists_tau_fruit = .TRUE.
+            CASE ('tau_seed_litter')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_seed_litter
+              exists_tau_seed_litter = .TRUE.
+            CASE ('tau_seed_est')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_seed_est
+              exists_tau_seed_est = .TRUE.
+            CASE ('tau_mycorrhiza')
+              READ(line(pos:length),*) lctlib(1:nlct)%tau_mycorrhiza
+              exists_tau_mycorrhiza = .TRUE.
+
+            CASE ('vmax_uptake_n')
+              READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_n
+              exists_vmax_uptake_n = .TRUE.
+            CASE ('vmax_uptake_p')
+              READ(line(pos:length),*) lctlib(1:nlct)%vmax_uptake_p
+              exists_vmax_uptake_p = .TRUE.
+            CASE ('bnf_base')
+              READ(line(pos:length),*) lctlib(1:nlct)%bnf_base
+              exists_bnf_base = .TRUE.
+
+            CASE ('lambda_est_light')
+              READ(line(pos:length),*) lctlib(1:nlct)%lambda_est_light
+              exists_lambda_est_light = .TRUE.
+            CASE ('k_est_light')
+              READ(line(pos:length),*) lctlib(1:nlct)%k_est_light
+              exists_k_est_light = .TRUE.
+            CASE ('seed_size')
+              READ(line(pos:length),*) lctlib(1:nlct)%seed_size
+              exists_seed_size = .TRUE.
+
+            CASE ('beta_soil_flush')
+              READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_flush
+              exists_beta_soil_flush = .TRUE.
+            CASE ('beta_soil_senescence')
+              READ(line(pos:length),*) lctlib(1:nlct)%beta_soil_senescence
+              exists_beta_soil_senescence = .TRUE.
+            CASE ('gdd_req_max')
+              READ(line(pos:length),*) lctlib(1:nlct)%gdd_req_max
+              exists_gdd_req_max = .TRUE.
+            CASE ('k_gdd_dormance')
+              READ(line(pos:length),*) lctlib(1:nlct)%k_gdd_dormance
+              exists_k_gdd_dormance = .TRUE.
+            CASE ('t_air_senescence')
+              READ(line(pos:length),*) lctlib(1:nlct)%t_air_senescence
+              exists_t_air_senescence = .TRUE.
+            CASE ('min_leaf_age')
+              READ(line(pos:length),*) lctlib(1:nlct)%min_leaf_age
+              exists_min_leaf_age = .TRUE.
+
+            CASE ('frac_sapwood_branch')
+              READ(line(pos:length),*) lctlib(1:nlct)%frac_sapwood_branch
+              exists_frac_sapwood_branch = .TRUE.
+            CASE ('wood_density')
+              READ(line(pos:length),*) lctlib(1:nlct)%wood_density
+              exists_wood_density = .TRUE.
+            CASE ('k_latosa')
+              READ(line(pos:length),*) lctlib(1:nlct)%k_latosa
+              exists_k_latosa = .TRUE.
+            CASE ('k_crtos')
+              READ(line(pos:length),*) lctlib(1:nlct)%k_crtos
+              exists_k_crtos = .TRUE.
+            CASE ('k_rtos')
+              READ(line(pos:length),*) lctlib(1:nlct)%k_rtos
+              exists_k_rtos = .TRUE.
+            CASE ('k2_fruit_alloc')
+              READ(line(pos:length),*) lctlib(1:nlct)%k2_fruit_alloc
+              exists_k2_fruit_alloc = .TRUE.
+            CASE ('allom_k1')
+              READ(line(pos:length),*) lctlib(1:nlct)%allom_k1
+              exists_allom_k1 = .TRUE.
+            CASE ('allom_k2')
+              READ(line(pos:length),*) lctlib(1:nlct)%allom_k2
+              exists_allom_k2 = .TRUE.
+            CASE ('phi_leaf_min')
+              READ(line(pos:length),*) lctlib(1:nlct)%phi_leaf_min
+              exists_phi_leaf_min = .TRUE.
+            CASE ('k_root')
+              READ(line(pos:length),*) lctlib(1:nlct)%k_root
+              exists_k_root = .TRUE.
+            CASE ('k_sapwood')
+              READ(line(pos:length),*) lctlib(1:nlct)%k_sapwood
+              exists_k_sapwood = .TRUE.
+            CASE ('c0_allom')
+              READ(line(pos:length),*) lctlib(1:nlct)%c0_allom
+              exists_c0_allom = .TRUE.
+            CASE ('fstore_target')
+              READ(line(pos:length),*) lctlib(1:nlct)%fstore_target
+              exists_fstore_target = .TRUE.
+
+            CASE ('k_root_dist')
+              READ(line(pos:length),*) lctlib(1:nlct)%k_root_dist          
+              exists_k_root_dist = .TRUE.
+            CASE default
+              ! nothing to do
+            END SELECT
+         END IF
+        ! quincy end
+        ! ------------------------------------------------------------------
        END DO
        DEALLOCATE(itmp)
 
@@ -740,16 +1046,10 @@ CONTAINS
             CALL finish('init_lctlib','No data for fract_npp_2_exudates found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_fract_green_2_herbivory) &
             CALL finish('init_lctlib','No data for fract_green_2_herbivory found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_tau_c_litter_leaf) &
-            CALL finish('init_lctlib','No data for tau_c_litter_leaf found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_tau_c_litter_wood) &
-            CALL finish('init_lctlib','No data for tau_c_litter_wood found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_tau_c_woods) &
             CALL finish('init_lctlib','No data for tau_c_woods found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_LAI_shed_constant) &
             CALL finish('init_lctlib','No data for LAI_shed_constant found in '//TRIM(lctlib_file_name))
-       IF(.NOT. exist_fract_C_litter_green2atmos) &
-            CALL finish('init_lctlib','No data for fract_C_litter_green2atmos found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_Max_C_content_woods) &
             CALL finish('init_lctlib','No data for Max_C_content_woods found in '//TRIM(lctlib_file_name))
        IF(.NOT. exist_ClumpinessFactor) &
@@ -805,7 +1105,124 @@ CONTAINS
        IF(.NOT. exists_litveg_coef) &
             CALL finish('init_lctlib','No data for LITVEG_COEF found in '//TRIM(lctlib_file_name))
 
-       CLOSE(unit=lctlib_file_unit) !! Closing access to lctlib file
+       ! quincy
+       IF (use_quincy) THEN
+        IF(.NOT. exists_growthform) &
+          CALL finish('init_lctlib','No data for growthform found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_ps_pathway) &
+          CALL finish('init_lctlib','No data for ps_pathway found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_phenology_type) &
+          CALL finish('init_lctlib','No data for phenology_type found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_sla) &
+          CALL finish('init_lctlib','No data for sla found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_sigma_vis) &
+          CALL finish('init_lctlib','No data for sigma_vis found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_sigma_nir) &
+          CALL finish('init_lctlib','No data for sigma_nir found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_omega_clumping) &
+          CALL finish('init_lctlib','No data for omega_clumping found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_crown_shape_factor) &
+          CALL finish('init_lctlib','No data for crown_shape_factor found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_cn_leaf) &
+          CALL finish('init_lctlib','No data for cn_leaf found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_cn_leaf_min) &
+          CALL finish('init_lctlib','No data for cn_leaf_min found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_cn_leaf_max) &
+          CALL finish('init_lctlib','No data for cn_leaf_max found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_np_leaf) &
+          CALL finish('init_lctlib','No data for np_leaf found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_np_leaf_min) &
+          CALL finish('init_lctlib','No data for np_leaf_min found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_np_leaf_max) &
+          CALL finish('init_lctlib','No data for np_leaf_max found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k0_fn_struc) &
+          CALL finish('init_lctlib','No data for k0_fn_struc found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_fn_oth_min) &
+          CALL finish('init_lctlib','No data for fn_oth_min found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_t_jmax_opt) &
+          CALL finish('init_lctlib','No data for t_jmax_opt found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_t_jmax_omega) &
+          CALL finish('init_lctlib','No data for t_jmax_omega found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_g0) &
+          CALL finish('init_lctlib','No data for g0 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_g1) &
+          CALL finish('init_lctlib','No data for g1 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_gmin) &
+          CALL finish('init_lctlib','No data for gmin found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_leaf) &
+          CALL finish('init_lctlib','No data for tau_leaf found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_fine_root) &
+          CALL finish('init_lctlib','No data for tau_fine_root found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_coarse_root) &
+          CALL finish('init_lctlib','No data for tau_coarse_root found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_branch) &
+          CALL finish('init_lctlib','No data for tau_branch found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_sap_wood) &
+          CALL finish('init_lctlib','No data for tau_sap_wood found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_fruit) &
+          CALL finish('init_lctlib','No data for tau_fruit found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_seed_litter) &
+          CALL finish('init_lctlib','No data for tau_seed_litter found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_seed_est) &
+          CALL finish('init_lctlib','No data for tau_seed_est found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_tau_mycorrhiza) &
+          CALL finish('init_lctlib','No data for tau_mycorrhiza found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_vmax_uptake_n) &
+          CALL finish('init_lctlib','No data for vmax_uptake_n found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_vmax_uptake_p) &
+          CALL finish('init_lctlib','No data for vmax_uptake_p found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_bnf_base) &
+          CALL finish('init_lctlib','No data for bnf_base found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_lambda_est_light) &
+          CALL finish('init_lctlib','No data for lambda_est_light found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_est_light) &
+          CALL finish('init_lctlib','No data for k_est_light found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_seed_size) &
+          CALL finish('init_lctlib','No data for seed_size found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_beta_soil_flush) &
+          CALL finish('init_lctlib','No data for beta_soil_flush found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_beta_soil_senescence) &
+          CALL finish('init_lctlib','No data for beta_soil_senescence found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_gdd_req_max) &
+          CALL finish('init_lctlib','No data for gdd_req_max found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_gdd_dormance) &
+          CALL finish('init_lctlib','No data for k_gdd_dormance found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_t_air_senescence) &
+          CALL finish('init_lctlib','No data for t_air_senescence found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_min_leaf_age) &
+          CALL finish('init_lctlib','No data for min_leaf_age found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_frac_sapwood_branch) &
+          CALL finish('init_lctlib','No data for frac_sapwood_branch found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_wood_density) &
+          CALL finish('init_lctlib','No data for wood_density found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_latosa) &
+          CALL finish('init_lctlib','No data for k_latosa found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_crtos) &
+          CALL finish('init_lctlib','No data for k_crtos found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_rtos) &
+          CALL finish('init_lctlib','No data for k_rtos found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k2_fruit_alloc) &
+          CALL finish('init_lctlib','No data for k2_fruit_alloc found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_allom_k1) &
+          CALL finish('init_lctlib','No data for allom_k1 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_allom_k2) &
+          CALL finish('init_lctlib','No data for allom_k2 found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_phi_leaf_min) &
+          CALL finish('init_lctlib','No data for phi_leaf_min found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_root) &
+          CALL finish('init_lctlib','No data for k_root found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_sapwood) &
+          CALL finish('init_lctlib','No data for k_sapwood found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_c0_allom) &
+          CALL finish('init_lctlib','No data for c0_allom found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_fstore_target) &
+          CALL finish('init_lctlib','No data for fstore_target found in '//TRIM(lctlib_file_name))
+        IF(.NOT. exists_k_root_dist) &
+          CALL finish('init_lctlib','No data for k_root_dist found in '//TRIM(lctlib_file_name))
+       END IF
+       ! quincy end
+
+       CLOSE(unit=lctlib_file_unit) ! Closing access to lctlib file
 
        !------------------------------------------------------------------------------------------
        ! kalle, 151004
@@ -817,7 +1234,96 @@ CONTAINS
        END DO
        !------------------------------------------------------------------------------------------
 
-       !! --- translate landcover class information into landcover class flags
+       !------------------------------------------------------------------------------------------
+       !> Modify the input values of some quincy lctlib parameters
+       ! quincy
+       ! the below calculations are applied to vegetation only; the lct = 1 is glacier (and has no values, i.e. is 0, in the quincy lctlib party)!
+
+       IF (use_quincy) THEN
+       ! sla
+         DO i=2,nlct
+             lctlib(i)%sla = 1._wp / carbon_per_dryweight_leaf / 1000.0_wp * molar_mass_C * lctlib(i)%sla
+         END DO
+       ! cn_leaf
+         DO i=2,nlct
+           lctlib(i)%cn_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf
+         END DO
+       ! cn_leaf_min
+         DO i=2,nlct
+           lctlib(i)%cn_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_min
+         END DO
+       ! cn_leaf_max
+         DO i=2,nlct
+           lctlib(i)%cn_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_N / molar_mass_C / lctlib(i)%cn_leaf_max
+         END DO
+       ! np_leaf
+         DO i=2,nlct
+           lctlib(i)%np_leaf = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+                                lctlib(i)%np_leaf
+         END DO
+       ! np_leaf_min
+         DO i=2,nlct
+           lctlib(i)%np_leaf_min = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+                                   lctlib(i)%np_leaf_min
+         END DO
+       ! np_leaf_max
+         DO i=2,nlct
+           lctlib(i)%np_leaf_max = carbon_per_dryweight_leaf * 1000._wp * molar_mass_P / molar_mass_C / lctlib(i)%cn_leaf / &
+                                   lctlib(i)%np_leaf_max
+         END DO
+       ! fn_oth_min
+         DO i=2,nlct
+           lctlib(i)%fn_oth_min = lctlib(i)%k0_fn_struc - 5.0_wp/molar_mass_n * 0.5_wp * 1.e3_wp * 71.4_wp * molar_mass_N / 1.e6_wp
+         END DO
+       ! tau_leaf
+         DO i=2,nlct
+           lctlib(i)%tau_leaf = lctlib(i)%tau_leaf / 12.0_wp
+         END DO
+       ! bnf_base
+         DO i=2,nlct
+          lctlib(i)%bnf_base = lctlib(i)%bnf_base / molar_mass_N / one_day / one_year * 1.e6_wp
+         END DO
+       ! t_air_senescence
+         DO i=2,nlct
+           lctlib(i)%t_air_senescence = lctlib(i)%t_air_senescence + tmelt
+         END DO
+       ! wood_density
+         DO i=2,nlct
+           lctlib(i)%wood_density = lctlib(i)%wood_density * 1.e6_wp/ molar_mass_C
+         END DO
+       ! k_root
+         DO i=2,nlct
+           lctlib(i)%k_root = lctlib(i)%k_root * molar_mass_C * 1.e-10_wp
+         END DO
+       ! k_sapwood
+         DO i=2,nlct
+           lctlib(i)%k_sapwood = 1.e-3_wp * lctlib(i)%k_sapwood
+        END DO
+        ! k_rtos
+        DO i=2,nlct
+           IF(lctlib(i)%growthform /= igrass) THEN
+              lctlib(i)%k_rtos = 1.75_wp * (lctlib(4)%sla * lctlib(i)%wood_density) / lctlib(i)%k_latosa
+              !lctlib(i)%k_rtos = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
+              !     lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density)
+           ELSE
+              lctlib(i)%k_rtos = 0.5_wp / sm2lm_grass
+           END IF
+        END DO
+       ! c0_allom
+         DO i=2,nlct
+           IF(lctlib(i)%growthform == itree) THEN
+             lctlib(i)%c0_allom = SQRT(lctlib(i)%k_root / lctlib(i)%k_sapwood * & 
+                                       lctlib(i)%tau_sap_wood / lctlib(i)%tau_fine_root * lctlib(i)%wood_density) * & 
+                                  lctlib(i)%tau_fine_root / lctlib(i)%tau_sap_wood
+           ELSE
+             lctlib(i)%c0_allom = 0.0_wp
+           END IF
+         END DO
+       END IF
+       ! quincy ------------------------------------------------------------------------------------------
+
+
+       ! --- translate landcover class information into landcover class flags
 
        lctlib(1:nlct)%BareSoilFlag   = .FALSE.
        lctlib(1:nlct)%GlacierFlag    = .FALSE.
@@ -874,7 +1380,7 @@ CONTAINS
 
           END IF
 
-          !! --- check consistency between landcover classes and specifications for the dynamic vegetation
+          ! --- check consistency between landcover classes and specifications for the dynamic vegetation
 
           IF (lctlib(i)%dynamic_pft  .AND. .NOT. lctlib(i)%NaturalVegFlag) THEN
              CALL finish('init_lctlib',&
@@ -951,11 +1457,8 @@ CONTAINS
        CALL p_bcast(lctlib(:)%fract_npp_2_reservePool, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%fract_npp_2_exudates, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%fract_green_2_herbivory, p_io, mpi_comm)
-       CALL p_bcast(lctlib(:)%tau_c_litter_leaf, p_io, mpi_comm)
-       CALL p_bcast(lctlib(:)%tau_c_litter_wood, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%tau_c_woods, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%LAI_shed_constant, p_io, mpi_comm)
-       CALL p_bcast(lctlib(:)%fract_C_litter_green2atmos, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%Max_C_content_woods, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%ClumpinessFactor, p_io, mpi_comm)
        CALL p_bcast(lctlib(:)%dynamic_pft, p_io, mpi_comm)
@@ -985,6 +1488,65 @@ CONTAINS
          CALL p_bcast(lctlib(:)%WoodLit_coef(i), p_io, mpi_comm)
        END DO
        CALL p_bcast(lctlib(:)%WoodLitterSize, p_io, mpi_comm)
+       ! quincy
+       IF (use_quincy) THEN
+        CALL p_bcast(lctlib(:)%growthform, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%ps_pathway, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%phenology_type, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%sla, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%sigma_vis, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%sigma_nir, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%omega_clumping, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%crown_shape_factor, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%cn_leaf, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%cn_leaf_min, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%cn_leaf_max, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%np_leaf, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%np_leaf_min, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%np_leaf_max, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k0_fn_struc, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%fn_oth_min, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%t_jmax_opt, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%t_jmax_omega, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%g0, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%g1, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%gmin, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_leaf, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_fine_root, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_coarse_root, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_branch, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_sap_wood, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_fruit, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_seed_litter, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_seed_est, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%tau_mycorrhiza, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%vmax_uptake_n, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%vmax_uptake_p, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%bnf_base, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%lambda_est_light, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_est_light, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%seed_size, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%beta_soil_flush, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%beta_soil_senescence, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%gdd_req_max, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_gdd_dormance, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%t_air_senescence, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%min_leaf_age, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%frac_sapwood_branch, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%wood_density, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_latosa, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_crtos, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_rtos, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k2_fruit_alloc, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%allom_k1, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%allom_k2, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%phi_leaf_min, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_root, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_sapwood, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%c0_allom, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%fstore_target, p_io, mpi_comm)
+        CALL p_bcast(lctlib(:)%k_root_dist, p_io, mpi_comm)
+      END IF
     END IF
 
     IF(npft>nlct) CALL finish('init_lctlib','npft larger than nlct: '//int2string(npft)//' > '//int2string(nlct))

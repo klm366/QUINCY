@@ -1,16 +1,15 @@
+!> Summary: Contains the interfaces to the HD model
 !>
-!! @brief Contains the interfaces to the HD model
-!!
-!! @author
-!!  Veronika Gayler, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Veronika Gayler (2013-04-20)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> @author
+!>  Veronika Gayler, MPI-M Hamburg
+!>
+!> @par Revision History
+!> First version by Veronika Gayler (2013-04-20)
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
@@ -24,12 +23,12 @@ MODULE mo_hd_interface
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_grid,           ONLY: Get_grid
-  USE mo_jsb_domain_iface,   ONLY: get_blk_start, get_blk_end, get_col_start, get_col_end
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_time,           ONLY: is_time_experiment_start
+  USE mo_jsb_math_constants, ONLY: deg2rad
 
   dsl4jsb_Use_processes HD_, HYDRO_
   dsl4jsb_Use_config(HD_)
@@ -363,11 +362,11 @@ CONTAINS
 
       global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:))*in_domain(:,:))
 
-      blks = get_blk_start(grid%patch)
-      blke = get_blk_end(grid%patch)
+      blks = grid%get_blk_start()
+      blke = grid%get_blk_end()
       DO blk = blks, blke
-        jcs = get_col_start(blk, grid%patch)
-        jce = get_col_end(blk, grid%patch)
+        jcs = grid%get_col_start(blk)
+        jce = grid%get_col_end(blk)
         DO jc = jcs, jce
           ! inflow from grid cells upstream: outflow from runnoff, drainage and riverflow
           DO n = 1, hd__mem%nneigh
@@ -400,11 +399,15 @@ CONTAINS
 
       WHERE (hd_mask(:,:) == 0._wp)
         ! ocean inflow cells
-        discharge_ocean(:,:) = discharge(:,:)
+        discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        outflow_runoff(:,:) = 0._wp
+        outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp)
         ! internal drainage cells
-        internal_drain(:,:) = discharge(:,:)
+        internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
+        outflow_runoff(:,:) = 0._wp
+        outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
       END WHERE
 
@@ -459,7 +462,7 @@ CONTAINS
       global_discharge = global_sum_array(discharge(:,:) * in_domain(:,:))
 
       ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
-      cos_lat(:,:) = MERGE(COS(grid%lat(:,:)), 0._wp, coast_ocean(:,:) > 0.5_wp)  ! coast_ocean is either 0. or 1.
+      cos_lat(:,:) = MERGE(COS(deg2rad * grid%lat(:,:)), 0._wp, coast_ocean(:,:) > 0.5_wp)  ! coast_ocean is either 0. or 1.
       sum_weights = global_sum_array(coast_ocean(:,:) * cos_lat(:,:) * in_domain(:,:))
       WHERE (coast_ocean(:,:) > 0.5_wp)
         discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
@@ -666,7 +669,7 @@ CONTAINS
       CALL message (TRIM(routine),message_text)
     END IF
 
-    IF (is_time_experiment_start()) RETURN
+    IF (is_time_experiment_start(options%current_datetime)) RETURN
 
     ! water conservation test
     !

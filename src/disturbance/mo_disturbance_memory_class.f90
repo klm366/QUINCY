@@ -53,7 +53,7 @@ CONTAINS
 
   SUBROUTINE Init_disturb_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -78,30 +78,30 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    CALL jsb_add_var( mem, 'burned_fract', mem%burned_fract,                            &
+    CALL mem%Add_var( 'burned_fract', mem%burned_fract,                                 &
       & hgrid, surface,                                                                 &
       & t_cf('burned_fract', 'frac', 'Fraction of tile that is burned.'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       & prefix, suffix,                                                                 &
       & output_level=BASIC,                                                             &
-      & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'damaged_fract', mem%damaged_fract,                           &
+    CALL mem%Add_var( 'damaged_fract', mem%damaged_fract,                                &
       & hgrid, surface,                                                                  &
       & t_cf('damaged_fract', 'frac', 'Fraction of tile that is damaged by windbreak.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
       & output_level=BASIC,                                                              &
-      & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'q_air_clim', mem%q_rel_air_climbuf,                                       &
+    CALL mem%Add_var( 'q_air_clim', mem%q_rel_air_climbuf,                                            &
       & hgrid, surface,                                                                               &
       & t_cf('q_rel_air_climbuf', '-', 'Relative humiditiy of lowest air layer smoothed in time.'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
       & prefix, suffix,                                                                               &
       & lrestart=.TRUE., initval_r=50.0_wp ) ! initval taken from JS3; lrestart=true only necessary if we restart within a day
 
-    CALL jsb_add_var( mem, 'q_air_clim_yday', mem%q_rel_air_climbuf_yday,                               &
+    CALL mem%Add_var( 'q_air_clim_yday', mem%q_rel_air_climbuf_yday,                                    &
       & hgrid, surface,                                                                                 &
       & t_cf('q_rel_air_climbuf_yday', '-', 'Relative humiditiy of lowest air layer smoothed in time    &
                                                & at the end of the last day.'),                         &
@@ -110,28 +110,28 @@ CONTAINS
       & output_level=BASIC,                                                                             &
       & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
 
-    CALL jsb_add_var( mem, 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,    &
+    CALL mem%Add_var( 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,         &
       & hgrid, surface,                                                           &
       & t_cf('prev_day_max_wind_10m', '-', 'Previous day maximum wind speed.'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
       & prefix, suffix,                                                           &
       & lrestart=.FALSE., initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'max_wind_10m', mem%max_wind_10m,                                           &
+    CALL mem%Add_var( 'max_wind_10m', mem%max_wind_10m,                                                &
       & hgrid, surface,                                                                                &
       & t_cf('max_wind_10m', '-', 'Maximum wind speed smoothed in time at the end of the last day..'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
       & prefix, suffix,                                                                                &
       & lrestart=.TRUE., initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'max_wind_10m_act', mem%max_wind_10m_act,        &
+    CALL mem%Add_var( 'max_wind_10m_act', mem%max_wind_10m_act,             &
       & hgrid, surface,                                                     &
       & t_cf('max_wind_10m_act', '-', 'This days maximum wind speed.'),     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
-      & lrestart=.FALSE., initval_r=0.0_wp )
+      & lrestart=.TRUE., initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'cconservation_wind', mem%cconservation_wind,    &
+    CALL mem%Add_var( 'cconservation_wind', mem%cconservation_wind,         &
       & hgrid, surface,                                                     &
       & t_cf('cconservation_wind', 'mol(C) m-2(canopy)',                    &
       &   'Test for c conservation on relocation for wind damaged area.'),  &
@@ -139,7 +139,7 @@ CONTAINS
       & prefix, suffix,                                                     &
       & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'cconservation_fire', mem%cconservation_fire,    &
+    CALL mem%Add_var( 'cconservation_fire', mem%cconservation_fire,         &
       & hgrid, surface,                                                     &
       & t_cf('cconservation_fire', 'mol(C) m-2(canopy)',                    &
       &  'Test for c conservation on relocation for burned area.'),         &
