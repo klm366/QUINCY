@@ -45,9 +45,9 @@ MODULE mo_interface_hd_ocean
 CONTAINS
 
 #ifdef YAC_coupling
-  SUBROUTINE jsb_fdef_hd_fields(comp_id, domain_id, cell_point_ids, cell_mask_id)
+  SUBROUTINE jsb_fdef_hd_fields(comp_id, cell_point_ids, cell_mask_id)
 
-    INTEGER, INTENT(in) :: comp_id, domain_id
+    INTEGER, INTENT(in) :: comp_id
     INTEGER, INTENT(in) :: cell_point_ids(:)
     INTEGER, INTENT(in) :: cell_mask_id(:)
 
@@ -56,7 +56,6 @@ CONTAINS
     CALL yac_fdef_field_mask ( &
       & 'river_runoff',        &
       & comp_id,               &
-      & domain_id,             &
       & cell_point_ids,        &
       & cell_mask_id,          &
       & 1,                     &
