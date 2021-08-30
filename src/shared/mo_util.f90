@@ -16,12 +16,12 @@ MODULE mo_util
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message
+  USE mo_exception, ONLY: message, finish
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_depth_to_layers_2d, one_of, toupper, int2string, real2string, logical2string, &
+  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, int2string, real2string, logical2string, &
     &       report_memory_usage
 
   INTERFACE one_of
@@ -68,6 +68,65 @@ CONTAINS
     END DO
 
   END FUNCTION soil_depth_to_layers_2d
+
+  SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth)
+
+    REAL(wp), INTENT(in) :: &
+      & ifs_3d (:,:,:),     &
+      & ifs_depth(:),       &
+      & soil_depth(:)
+    REAL(wp), INTENT(out) :: &
+      & soil_3d(:,:,:)
+
+    REAL(wp) :: ifs(SIZE(ifs_3d,1),0:SIZE(ifs_depth)+1,SIZE(ifs_3d,3)), zifs(0:SIZE(ifs_depth)+1), zsoil(0:SIZE(soil_depth))
+    REAL(wp) :: zwt, zwt_sum
+    INTEGER  :: nsoil_in, nsoil_out, isoil_in, isoil_out
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':ifs2soil'
+
+    nsoil_in  = SIZE(ifs_depth)
+    nsoil_out = SIZE(soil_depth)
+
+    zsoil(1:nsoil_out) = soil_depth(:)
+    zsoil(0)           = 0._wp
+    zifs(1:nsoil_in) = ifs_depth(:)
+    zifs(0)          = 0._wp
+    zifs(nsoil_in+1) = soil_depth(nsoil_out)
+    ifs(:,1:nsoil_in,:) = ifs_3d(:,:,:)
+    ifs(:,0         ,:) = ifs_3d(:,1,:)
+    ifs(:,nsoil_in+1,:) = ifs_3d(:,nsoil_in,:)
+
+    soil_3d(:,:,:) = 0._wp
+
+    DO isoil_out = 1, nsoil_out
+      zwt_sum        = 0._wp
+      DO isoil_in = 1,nsoil_in+1
+        IF (zifs(isoil_in) <= zsoil(isoil_out-1)) THEN
+          ! Do nothing
+          zwt = 0._wp
+        ELSE IF (zifs(isoil_in-1) > zsoil(isoil_out)) THEN
+          ! Do nothing
+          zwt = 0._wp
+        ELSE IF (zifs(isoil_in-1) > zsoil(isoil_out-1) .AND. zifs(isoil_in) <= zsoil(isoil_out)) THEN
+          zwt = 1._wp
+          zwt_sum = zwt_sum + zwt
+          soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) + zwt * ifs(:,isoil_in,:)
+        ELSE IF (zifs(isoil_in) > zsoil(isoil_out-1) .AND. zifs(isoil_in) <= zsoil(isoil_out)) THEN
+          zwt = (zifs(isoil_in) - zsoil(isoil_out-1)) / (zsoil(isoil_out) - zsoil(isoil_out-1))
+          zwt_sum = zwt_sum + zwt
+          soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) + zwt * ifs(:,isoil_in,:)
+        ELSE IF (zifs(isoil_in) > zsoil(isoil_out) .AND. zifs(isoil_in-1) <= zsoil(isoil_out)) THEN
+          zwt = (zsoil(isoil_out) - zifs(isoil_in-1)) / (zsoil(isoil_out) - zsoil(isoil_out-1))
+          zwt_sum = zwt_sum + zwt
+          soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) + zwt * ifs(:,isoil_in,:)
+        END IF
+        ! print*, 'AAA isoil_out, isoil_in, zwt, zwt_sum', isoil_out, isoil_in, zwt, zwt_sum
+      END DO
+      IF (zwt_sum < EPSILON(1._wp)) CALL finish(routine, 'zwt_sum = 0 (should not happen)!')
+      soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) / zwt_sum
+    END DO
+
+  END SUBROUTINE ifs2soil
   !
   !> Conversion: Lowercase -> Uppercase
   !

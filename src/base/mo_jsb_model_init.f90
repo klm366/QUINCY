@@ -178,6 +178,7 @@ CONTAINS
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, &
       &                               t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
+    USE mo_jsb_io_netcdf,       ONLY: jsb_netcdf_open_input
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init
@@ -445,6 +446,9 @@ CONTAINS
       !>
       !>     2.3 Initialize processes on each tile
       !>
+      IF (model%config%init_from_ifs) &
+        & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
+
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL rad_init(tile)
@@ -513,6 +517,8 @@ CONTAINS
       CALL model%Goto_next_tile(tile)
       ! ---------------------------------------------------------------------------------------------- !
     END DO
+
+    IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
 
     ! -------------------------------------------------------------------------------------------------- !
     !>

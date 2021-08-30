@@ -15,17 +15,19 @@
 MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
-  USE mo_jsb_control,       ONLY: debug_on
+  USE mo_kind,               ONLY: wp
+  USE mo_exception,          ONLY: message
+  USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_io,            ONLY: missval
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_class,          ONLY: get_model
+  USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_io,             ONLY: missval
+  USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
+  USE mo_util,               ONLY: int2string
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
@@ -45,10 +47,11 @@ MODULE mo_sse_init
 
   TYPE t_sse_init_vars
     REAL(wp), POINTER ::     &
-      & fao         (:,:  ), &
-      & vol_heat_cap(:,:  ), &
-      & heat_cond   (:,:  ), &
-      & t_srf_mon   (:,:,:)
+      & fao         (:,:  ) => NULL(), &
+      & vol_heat_cap(:,:  ) => NULL(), &
+      & heat_cond   (:,:  ) => NULL(), &
+      & t_srf_mon   (:,:,:) => NULL(), &
+      & ifs_tsoil   (:,:,:) => NULL()
   END TYPE t_sse_init_vars
 
   TYPE(t_sse_init_vars) :: sse_init_vars
@@ -84,9 +87,12 @@ CONTAINS
     DEALLOCATE(                     &
       & sse_init_vars%fao,          &
       & sse_init_vars%vol_heat_cap, &
-      & sse_init_vars%heat_cond,    &
-      & sse_init_vars%t_srf_mon     &
+      & sse_init_vars%heat_cond     &
       & )
+
+    IF (ASSOCIATED(sse_init_vars%t_srf_mon)) DEALLOCATE(sse_init_vars%t_srf_mon)
+
+    IF (ASSOCIATED(sse_init_vars%ifs_tsoil)) DEALLOCATE(sse_init_vars%ifs_tsoil)
 
   END SUBROUTINE sse_finalize_init_vars
       
@@ -103,7 +109,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e
-    INTEGER :: nproma, nblks
+    INTEGER :: nproma, nblks, isoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_read_init_vars'
 
@@ -116,14 +122,21 @@ CONTAINS
     ALLOCATE(                                          &
       & sse_init_vars%fao         (nproma, nblks    ), &
       & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
-      & sse_init_vars%heat_cond   (nproma, nblks    ), &
-      & sse_init_vars%t_srf_mon   (nproma, nblks, 12)  &
+      & sse_init_vars%heat_cond   (nproma, nblks    )  &
       & )
 
     sse_init_vars%fao         (:,:)   = missval
     sse_init_vars%vol_heat_cap(:,:)   = missval
     sse_init_vars%heat_cond   (:,:)   = missval
-    sse_init_vars%t_srf_mon   (:,:,:) = missval
+
+    IF (model%config%init_from_ifs) THEN
+      ALLOCATE(sse_init_vars%ifs_tsoil(nproma,ifs_nsoil,nblks))
+      sse_init_vars%ifs_tsoil(:,:,:) = missval
+    ELSE
+      ALLOCATE(sse_init_vars%t_srf_mon(nproma, nblks, 12))
+      sse_init_vars%t_srf_mon(:,:,:) = missval
+    END IF
+
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
@@ -156,14 +169,26 @@ CONTAINS
 
     CALL input_file%Close()
 
-    input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
+    IF (model%config%init_from_ifs) THEN
 
-    ! Read climatological surface temperature
-    ptr_3D => input_file%Read_2d_time( &
-      & variable_name='surf_temp')
-    sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+      DO isoil=1,ifs_nsoil
+        ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
+          & variable_name='STL'//int2string(isoil))
+        sse_init_vars%ifs_tsoil(:,isoil,:) = ptr_2D(:,:)
+      END DO
 
-    CALL input_file%Close()
+    ELSE
+
+      input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
+
+      ! Read climatological surface temperature
+      ptr_3D => input_file%Read_2d_time( &
+        & variable_name='surf_temp')
+      sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+
+      CALL input_file%Close()
+
+    END IF
 
   END SUBROUTINE sse_read_init_vars
 
@@ -227,6 +252,7 @@ CONTAINS
   SUBROUTINE sse_init_ic(tile)
 
     USE mo_sse_process, ONLY: init_soil_temperature
+    USE mo_util,        ONLY: ifs2soil
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -257,13 +283,20 @@ CONTAINS
 
     ! Soil and surface temperatures
     !
-    DO iblk=1,SIZE(sse_init_vars%t_srf_mon, DIM=2)
-      CALL init_soil_temperature(                   &
-        & soil_e%levels(:),                         &
-        & sse_init_vars%t_srf_mon(:,iblk,1:12),     &
-        & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,iblk),   &
-        & dsl4jsb_var_ptr(SEB_,t)(:,iblk))
-    END DO
+    IF (model%config%init_from_ifs) THEN
+
+      CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:))
+      dsl4jsb_var_ptr(SEB_,t)(:,:) = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
+
+    ELSE
+      DO iblk=1,SIZE(sse_init_vars%t_srf_mon, DIM=2)
+        CALL init_soil_temperature(                   &
+          & soil_e%levels(:),                         &
+          & sse_init_vars%t_srf_mon(:,iblk,1:12),     &
+          & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,iblk),   &
+          & dsl4jsb_var_ptr(SEB_,t)(:,iblk))
+      END DO
+    END IF
     dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
     !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
