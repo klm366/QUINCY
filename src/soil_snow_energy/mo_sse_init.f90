@@ -39,7 +39,7 @@ MODULE mo_sse_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: sse_init
+  PUBLIC :: sse_init, init_soil_properties
 
   REAL(wp), PARAMETER :: &
     & fao_thermal_diff(0:6) = (/7.4e-7_wp ,8.7e-7_wp ,8.0e-7_wp ,7.4e-7_wp ,7.1e-7_wp ,6.7e-7_wp ,-1._wp/), &
@@ -307,16 +307,16 @@ CONTAINS
     !$acc dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
     !$acc end data
 
-    CALL init_soil_properties(tile)
+    ! CALL init_soil_properties(tile)
 
   END SUBROUTINE sse_init_ic
 
   SUBROUTINE init_soil_properties(tile)
 
-    USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min
+    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi, ci, dens_snow_min
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, & ! vol_hcap_snow_min,
       &                                  hcond_ice, hcond_snow !, hcond_snow_min, hcond_org
-    USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity
+    USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -326,6 +326,7 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SEB_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
@@ -335,17 +336,23 @@ CONTAINS
       & heat_cond_snow
     dsl4jsb_Real3D_onDomain :: &
       & soil_depth_sl, &
+      & w_soil_sl, &
+      & w_ice_sl, &
+      & t_soil_sl, &
+      & matrix_pot_sl, &
+      & bclapp_sl, &
       & fract_org_sl, &
       & vol_heat_cap_sl, &
       & heat_cond_sl, &
-      & w_soil_sl, &
-      & w_ice_sl, &
       & vol_porosity_sl, &
       & vol_field_cap_sl
 
     ! Locally allocated vectors
     ! 
     dsl4jsb_Real3D_onDomain :: &
+      & ws_max_sl,             &
+      & liquid_max,            &
+      & heat_cap_sl,           &
       & fract_water,           &
       & fract_ice,             &
       & soil_e_dz_tmp,         & 
@@ -371,6 +378,7 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SEB_)
 
     dsl4jsb_Get_var3D_onDomain(SSE_, vol_heat_cap_sl)
     dsl4jsb_Get_var3D_onDomain(SSE_, heat_cond_sl)
@@ -391,15 +399,60 @@ CONTAINS
       RETURN
     END IF
 
+    dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_ice_sl )
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
-    dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
+
+    nproma = SIZE(vol_heat_cap,1)
+    nblks  = SIZE(vol_heat_cap,2)
+
+    IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
+
+      dsl4jsb_Get_var3D_onDomain(SSE_, t_soil_sl)
+
+      ALLOCATE( &
+        & liquid_max (nproma, nsoil, nblks), &
+        & ws_max_sl  (nproma, nsoil, nblks), &
+        & heat_cap_sl(nproma, nsoil, nblks)  &
+        & )
+      ws_max_sl(:,:,:) = soil_depth_sl(:,:,:) * vol_porosity_sl(:,:,:)
+
+      IF (dsl4jsb_Config(SSE_)%l_supercool) THEN
+        liquid_max(:,:,:) = Get_liquid_max( &
+          & t_soil_sl    (:,:,:), &
+          & ws_max_sl    (:,:,:), &
+          & matrix_pot_sl(:,:,:), &
+          & bclapp_sl    (:,:,:)  &
+          & )
+      ELSE
+        liquid_max(:,:,:) = 0._wp
+      END IF
+
+      w_ice_sl(:,:,:) = 0._wp
+      DO j = 1, nsoil
+        heat_cap_sl(:,j,:) = soil_e%dz(j) * vol_heat_cap(:,:)
+      END DO
+      WHERE (t_soil_sl(:,:,:) < tmelt .AND. w_soil_sl(:,:,:) > liquid_max(:,:,:))
+        w_ice_sl(:,:,:) = MIN(w_soil_sl(:,:,:) - liquid_max(:,:,:),                            &
+          &                   heat_cap_sl(:,:,:) * (tmelt - t_soil_sl(:,:,:)) / (alf * rhoh2o) &
+          &              )
+      END WHERE
+      w_soil_sl(:,:,:) = w_soil_sl(:,:,:) - w_ice_sl(:,:,:)
+      t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + w_ice_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
+      dsl4jsb_var_ptr(SEB_,t)(:,:)        = t_soil_sl(:,1,:)
+      dsl4jsb_var_ptr(SEB_,t_unfilt)(:,:) = t_soil_sl(:,1,:)
+
+      DEALLOCATE(liquid_max, ws_max_sl, heat_cap_sl)
+
+    END IF
+
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
-    nproma = SIZE(heat_cond,1)
-    nblks  = SIZE(heat_cond,2)
+
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
     ELSE

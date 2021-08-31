@@ -181,7 +181,7 @@ CONTAINS
     USE mo_jsb_io_netcdf,       ONLY: jsb_netcdf_open_input
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
-    USE mo_sse_init,            ONLY: sse_init
+    USE mo_sse_init,            ONLY: sse_init, init_soil_properties
     USE mo_hydro_init,          ONLY: hydro_init
     USE mo_rad_init,            ONLY: rad_init
     USE mo_atm2land_init,       ONLY: atm2land_init
@@ -471,13 +471,17 @@ CONTAINS
         CALL veg_init(tile)
       END IF
 
-      ! HYDRO_ needs to be initialized before SSE_
+      IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL sse_init(tile)
+      END IF
+
       IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL hydro_init(tile)
       END IF
 
+      ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
       IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL sse_init(tile)
+        CALL init_soil_properties(tile)
       END IF
 
       IF (one_of(tile%process_action(A2L_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
