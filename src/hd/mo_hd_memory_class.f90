@@ -51,8 +51,9 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
-      volume_lake    , &  !< lake water volume storage of endorheic lakes [m^3]
-      lake_outflow    , &  !< lake water outflow to neighbor grid cell [m^3/s]
+      volume_lake     , &  !< lake water volume storage of endorheic lakes [m^3]
+      inflow_lake     , &  !< lake water outflow to neighbor grid cell [m^3/s]
+      outflow_lake    , &  !< lake water outflow to neighbor grid cell [m^3/s]
       height_lake     , &  !< actual lake water height of endorheic lakes [m]
       area_lake       , &  !< actual lake water area of endorheic lakes [m^2]
       height_lake_max , &  !< maximum lake water height of endorheic lakes [m]
@@ -220,9 +221,17 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'lake_outflow', mem%lake_outflow,                     &
+     CALL mem%Add_var( 'outflow_lake', mem%outflow_lake,                     &
       & hgrid, surface,                                                      &
-      & t_cf('lake_outflow', 'm3/s', 'lake outflow to neighbor grid cell'),  &
+      & t_cf('outflow_lake', 'm3', 'lake outflow to neighbor grid cell'),      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'inflow_lake', mem%inflow_lake,                       &
+      & hgrid, surface,                                                      &
+      & t_cf('inflow_lake', 'm3', 'lake inflow to neighbor grid cell'),      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &

@@ -766,18 +766,23 @@ CONTAINS
       & height_lake_max,       &
       & area_lake_max,         &
       & volume_lake_max,       &
-      & height_oro_min,              &
+      & height_oro_min,        &
       & alpha,                 &
+      & beta,                  &
       & basin_mask,            &
-      & volume_lake,          &
-      & lake_outflow,          &
+      & volume_lake,           &
       & height_lake,           &
       & area_lake,             &
-      & height_dyn
+      & height_dyn,            &
+      & inflow_lake,           &
+      & outflow_lake
 
     REAL(wp) ::                &
       & dyn_min,               &
-      & lake_flow,             &
+      & height_oro_diff,        &
+      & height_lake_down,      &
+      & volume_lake_diff,      &
+      & area_lake_down,        &
       & global_lake_volume_budget,      &  ! water budget of current step
       & global_lake_volume_budget_ref,  &  ! water budget of previous step
       & global_lake_volume_error,       &  ! water budget change within the time step
@@ -828,12 +833,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake_max)  ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, height_oro_min)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, beta)             ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
-    dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, area_lake)        ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_dyn)       ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, inflow_lake)      ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, outflow_lake)     ! OUT
 
     ! Configuration parameters from the namelist
     routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
@@ -869,7 +876,8 @@ CONTAINS
 
       ! update dynamic lake water flow between lake grid cells
       ! block index (blk)
-      lake_outflow(:,:) = 0._wp
+      outflow_lake(jc,blk) = 0._wp
+      inflow_lake(njc(n),nblk(n)) = 0._wp
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
       DO blk = blks, blke
@@ -885,29 +893,37 @@ CONTAINS
             ! grid cell with lowest elevation: used to determine flow direction
             dyn_min = MIN( MINVAL(height_dyn(njc,nblk), MASK=(basin_mask(njc,nblk)==1._wp)), height_dyn(jc, blk))
             DO n = 1, 3
+              ! water flows into neighbor grid cell with lowest elevation
               IF (height_dyn(njc(n), nblk(n)) == dyn_min) THEN
-                ! water flows into neighbor grid cell with lowest elevation
-                lake_flow = MAX( MIN( ( height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)) )  &
-                                       * area_lake(jc,blk), volume_lake(jc,blk)), 0._wp)  &
-                                       * 0.35/160000._wp
-                lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
-                lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
-                lake_flow = MAX( MIN( ( height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)) )  &
-                                       * area_lake(jc,blk), volume_lake(jc,blk)), 0._wp)  &
-                                       * 0.35/160000._wp
-                lake_outflow(jc , blk) = lake_outflow(jc, blk) - lake_flow
-                lake_outflow(njc(n), nblk(n)) = lake_outflow(njc(n), nblk(n)) + lake_flow
+                ! orographic height difference
+                height_oro_diff  = height_oro_min(jc,blk) - height_oro_min(njc(n),nblk(n))
+                ! orography corrected lake height
+                height_lake_down = height_lake(njc(n),nblk(n)) + height_oro_diff
+                ! access lake water volume (hydraulic imbalance) 
+                IF (height_lake_down <= height_lake_max(jc,blk)) THEN
+                  volume_lake_diff = volume_lake(jc,blk) - volume_lake_max(jc,blk)  &
+                                  *  (height_lake_down / height_lake_max(jc,blk))   &
+                                  ** (1._wp/alpha(jc,blk))
+                ELSE
+                  volume_lake_diff = volume_lake(jc,blk) - volume_lake_max(jc,blk)  &
+                                   + area_lake_max(jc,blk) *                        &
+                                     (height_lake_down - height_lake_max(jc,blk)) 
+                ENDIF
+                area_lake_down = area_lake_max(jc,blk) * MIN( ( (volume_lake(jc,blk)-volume_lake_diff) / volume_lake_max(jc,blk) ) ** beta(jc,blk), 1._wp)
+                outflow_lake(jc,blk)        = outflow_lake(jc,blk)        +  area_lake(njc(n),nblk(n)) / (area_lake(njc(n),nblk(n)) + area_lake_down) * volume_lake_diff
+                inflow_lake(njc(n),nblk(n)) = inflow_lake(njc(n),nblk(n)) + area_lake(njc(n),nblk(n)) / (area_lake(njc(n),nblk(n)) + area_lake_down) * volume_lake_diff
               END IF
             END DO
           END IF
         END DO
       END DO
-      volume_lake(:,:) = volume_lake(:,:) + lake_outflow(:,:) * steplen
+      volume_lake(:,:) = volume_lake(:,:) - outflow_lake(:,:) + inflow_lake(:,:)
 
       global_lake_volume_budget = global_sum_array(volume_lake(:,:)*in_domain)
       global_lake_volume_error = global_lake_volume_budget - global_lake_volume_budget_ref
 
-      IF (ABS(global_lake_volume_error) > 10._wp*EPSILON(1._wp)) THEN
+
+      IF (ABS(global_lake_volume_error/global_lake_volume_budget) > 10._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Lake water conservation problem: budget imbalance: ', &
              global_lake_volume_error,' m3'
         CALL finish (TRIM(routine), message_text)
