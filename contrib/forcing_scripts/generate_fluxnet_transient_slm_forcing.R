@@ -58,15 +58,37 @@ site_list        <- allsitename
 allsiteDataYears <- allsiteendyear - allsitestartyear + 1
 
 
-## create array with random years of the site-forcing for 1901-2005 (105 yrs) per site
-## this range of data is not needed by all sites, but the latest year data of a fluxnet sites starts (is available) is 2006
-periodForcingYears         <- 105
+## create array with random years of the site-forcing for the transient forcing per site
+##   >> per site a vector of length 'periodForcingYears' with numbers between 1 and "years of forcing data of this site" is created
+##   >> the 'periodForcingYears' range of data, used to create the transient forcing, is not needed for all sites, but needs to cover the max range of years needed by any site
+periodForcingYears         <- max(allsitestartyear) - 1901                                # should be 105
 randForcingYears           <- array(NA,dim=c(periodForcingYears, length(site_list)))
 colnames(randForcingYears) <- site_list
+# loop over sites
 for (s in 1:length(site_list)){
-  randForcingYears[,s] <- sample(1:allsiteDataYears[s], periodForcingYears, replace=T)
-}
-
+  # sites with less then 3 years of forcing data
+  if (allsiteDataYears[s] < 3){
+    randForcingYears[,s] <- sample(1:allsiteDataYears[s], periodForcingYears, replace=T)
+  # sites with at least 3 years of forcing data
+  } else{
+    # initial year (typically 1901)
+    randForcingYears[1,s] <- sample(1:allsiteDataYears[s], 1)
+    # loop years 2:x
+    for (y in 2:periodForcingYears){
+      # 'do while' - make sure the new sampled year is not identical with the previous year
+      countRepeat <- 1
+      repeat{
+        randForcingYears[y,s] <- sample(1:allsiteDataYears[s], 1)
+        if(randForcingYears[y-1,s] != randForcingYears[y,s]){break}
+        countRepeat <- countRepeat + 1
+        if(countRepeat > 10000){
+          print(paste0("EXIT! - creating a random forcing year sequence fails for site ", s))
+          quit(save = "no", status = 1)
+        }
+      } # repeat
+    } # year loop 2:x
+  } # sites with >= 3 yrs forcing data
+} # site loop
 
 ## create day of year and hour of day and dpm (days per month) default values for output met_forcing files
 doy <- ceiling(seq(1/48,365,1/48))
@@ -93,7 +115,7 @@ for (s in 1:length(site_list)) {
 #for (s in 1:1) {
   print(site_list[s])
   
-  pickyear <- randForcingYears[,s]
+  pickyear <- randForcingYears[,s]  # 'pickyear' is a vector of length 'periodForcingYears' with numbers between 1 and "years of forcing data of this site"
 
   # start/end year and length of actual measured data
   startyear <- allsitestartyear[s]
@@ -195,13 +217,16 @@ for (s in 1:length(site_list)) {
       nstep   <- yTimeSteps
       
       # get actual year, differentiate between "transient period" and the period with actual fluxnet data
+      # fluxnet data
       if(year >= startyear & year <= endyear){
-        climyear <- year-startyear+1  # current loop is: for (year in forcing_startyear:endyear)
+        climyear <- year - startyear + 1        # current loop is: for (year in forcing_startyear:endyear)
+      # transient period
       } else{
-        climyear <- pickyear[ycount]
+        climyear <- pickyear[ycount]            # 'pickyear' is a vector of length 'periodForcingYears' with numbers between 1 and "years of forcing data of this site"
       }
 
       # combine individual variables into one array for output
+      # using 'climyear' to select the forcing data of the actual year
       forcing<-cbind(year_out[1:nstep],doy_out,hod_out,swdown[(1:nstep)+yTimeSteps*(climyear-1)],lwdown[(1:nstep)+yTimeSteps*(climyear-1)],
                      tair[(1:nstep)+yTimeSteps*(climyear-1)],qair[(1:nstep)+yTimeSteps*(climyear-1)],
                      press[(1:nstep)+yTimeSteps*(climyear-1)],rain[(1:nstep)+yTimeSteps*(climyear-1)],
@@ -213,7 +238,7 @@ for (s in 1:length(site_list)) {
                   col.names=FALSE, row.names=FALSE, sep=" ")
 
       # increase year counter
-      ycount<-ycount+1
+      ycount <- ycount + 1
 
       # debug output a the screen
       print(paste0("Created data for site ",site_list[s]," and year ",year," using the fluxnet data from year ",climyear+startyear-1))
@@ -224,6 +249,7 @@ for (s in 1:length(site_list)) {
   }
 } # loop over sites
 
-
+print(" ")
+print("Done!")
 
 ## end ##
