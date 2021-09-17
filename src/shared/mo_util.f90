@@ -69,18 +69,21 @@ CONTAINS
 
   END FUNCTION soil_depth_to_layers_2d
 
-  SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth)
+  SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
 
     REAL(wp), INTENT(in) :: &
       & ifs_3d (:,:,:),     &
       & ifs_depth(:),       &
       & soil_depth(:)
+    REAL(wp), OPTIONAL, INTENT(in) :: &
+      & ifs_sfc(:,:)
+
     REAL(wp), INTENT(out) :: &
       & soil_3d(:,:,:)
 
     REAL(wp) :: ifs(SIZE(ifs_3d,1),0:SIZE(ifs_depth)+1,SIZE(ifs_3d,3)), zifs(0:SIZE(ifs_depth)+1), zsoil(0:SIZE(soil_depth))
     REAL(wp) :: zwt, zwt_sum
-    INTEGER  :: nsoil_in, nsoil_out, isoil_in, isoil_out
+    INTEGER  :: nsoil_in, nsoil_out, isoil_in, isoil_out, ik1
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':ifs2soil'
 
@@ -93,12 +96,22 @@ CONTAINS
     zifs(0)          = 0._wp
     zifs(nsoil_in+1) = soil_depth(nsoil_out)
     ifs(:,1:nsoil_in,:) = ifs_3d(:,:,:)
-    ifs(:,0         ,:) = ifs_3d(:,1,:)
+    IF (PRESENT(ifs_sfc)) THEN
+      ifs(:,0         ,:) = ifs_sfc(:,:)
+    ELSE
+      ifs(:,0         ,:) = ifs_3d(:,1,:)
+    END IF
     ifs(:,nsoil_in+1,:) = ifs_3d(:,nsoil_in,:)
 
     soil_3d(:,:,:) = 0._wp
 
-    DO isoil_out = 1, nsoil_out
+    IF (PRESENT(ifs_sfc)) THEN
+      soil_3d(:,1,:) = ifs_sfc(:,:)
+      ik1 = 2
+    ELSE
+      ik1 = 1
+    END IF
+    DO isoil_out = ik1, nsoil_out
       zwt_sum        = 0._wp
       DO isoil_in = 1,nsoil_in+1
         IF (zifs(isoil_in) <= zsoil(isoil_out-1)) THEN

@@ -55,7 +55,8 @@ MODULE mo_hydro_init
       & root_depth     (:,:) => NULL(), &
       & w_snow_soil    (:,:) => NULL(), &
       & w_soil_sl    (:,:,:) => NULL(), &
-      & ifs_smi_sl   (:,:,:) => NULL()
+      & ifs_smi_sl   (:,:,:) => NULL(), &
+      & ifs_w_snow     (:,:) => NULL()
   END TYPE t_hydro_init_vars
 
   TYPE(t_hydro_init_vars) :: hydro_init_vars
@@ -112,6 +113,7 @@ CONTAINS
 
     IF (ASSOCIATED(hydro_init_vars%w_soil_sl)) DEALLOCATE(hydro_init_vars%w_soil_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl)) DEALLOCATE(hydro_init_vars%ifs_smi_sl)
+    IF (ASSOCIATED(hydro_init_vars%ifs_w_snow)) DEALLOCATE(hydro_init_vars%ifs_w_snow)
 
   END SUBROUTINE hydro_finalize_init_vars
 
@@ -178,6 +180,8 @@ CONTAINS
     IF (model%config%init_from_ifs) THEN
       ALLOCATE(hydro_init_vars%ifs_smi_sl(nproma,ifs_nsoil,nblks))
       hydro_init_vars%ifs_smi_sl(:,:,:) = missval
+      ALLOCATE(hydro_init_vars%ifs_w_snow(nproma,nblks))
+      hydro_init_vars%ifs_w_snow(:,:) = missval
     ELSE
       ALLOCATE(hydro_init_vars%w_soil_sl(nproma, nsoil, nblks))
       hydro_init_vars%w_soil_sl(:,:,:) = missval
@@ -295,6 +299,9 @@ CONTAINS
             & variable_name='SMIL'//int2string(isoil))
           hydro_init_vars%ifs_smi_sl(:,isoil,:) = ptr_2D(:,:)
         END DO
+        ptr_3D => model%config%ifs_input_file%Read_2d_time( &
+          & variable_name='W_SNOW', start_time_step=1, end_time_step=1)
+        hydro_init_vars%ifs_w_snow(:,:) = ptr_3D(:,:,1)
 
       ELSE
 
@@ -513,12 +520,17 @@ CONTAINS
           dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
             &  0.5_wp * (dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) + dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:))
         ELSE WHERE
-          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = MAX(0._wp, &
-            & dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) &
-            &   * (dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:) - dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:)) &
-            & + dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) &
-            & )
+          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
+            & MIN(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl)(:,:,:), &
+            &     MAX(0._wp, &
+            &         dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) &
+            &         * (dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:) - dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:)) &
+            &         + dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) &
+            &        ) &
+            &    )
         END WHERE
+        dsl4jsb_var_ptr(HYDRO_, w_snow_soil)(:,:) = hydro_init_vars%ifs_w_snow(:,:)
+        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)
 
       ELSE
 
