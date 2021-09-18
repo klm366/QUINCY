@@ -850,15 +850,12 @@ CONTAINS
     lspinup_jedi    = dsl4jsb_Config(JEDI_)%l_spinup_jedi
 
 
-    IF ((get_year(options%current_datetime) .LE. iniyear + 30 ) .AND. lspinup_jedi ) THEN    !  PHS: initial carbon
-        lai = 3._wp
 
-    ELSE
 
     CALL calc_jedi_phenology(  dsl4jsb_Lctlib_param(JeDiSLA), &  ! in
                                &  c_leaves,                   &  ! in
                                &  lai                  )         ! inout
-    END IF 
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_phenology_jedi_phenology

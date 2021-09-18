@@ -294,7 +294,7 @@ CONTAINS
     
     IF ( Flg_grow_G > 0.5_wp .AND. one_counter < 0.5_wp )  THEN
       IF ( lspinup_jedi ) THEN        
-        c_storage    = 3000
+        c_storage    = 3000._wp
         one_counter  = one_counter +1._wp
       ELSE
         c_seed       = 0.5_wp
