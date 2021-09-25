@@ -337,7 +337,9 @@ CONTAINS
         IF ( NPP > 0._wp ) Flg_seed = 1.0_wp 
 
         A_seed = Flg_grow * Flg_seed * Allo2Reproduc
-        IF ( c_storage >  0._wp ) zLoss_storage = c_storage / c_tau_storage 
+        IF ( .NOT. lspinup_jedi .OR. currentyear >= iniyear + 50 ) THEN
+          IF ( c_storage >  0._wp ) zLoss_storage = c_storage / c_tau_storage
+        END IF
 
         c_storage = c_storage + NPP - zLoss_storage
         zAlloc = MAX(0._wp,c_storage)  
