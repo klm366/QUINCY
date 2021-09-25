@@ -371,6 +371,9 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
+    USE mo_jsb_time,       ONLY: is_time_restart
+    USE mo_jedi_interface, ONLY: jedi_biomass_to_fract
+
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: dtime
@@ -394,6 +397,22 @@ CONTAINS
     model => Get_model(model_id)
 
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
+
+    IF (TRIM(model%config%usecase) == 'jsbach_jedi' .AND. is_time_restart(current_datetime)) THEN
+      CALL model%Reset_tiles()
+      CALL model%Get_top_tile(tile)
+      IF (.NOT. ASSOCIATED(tile)) &
+        & CALL finish(TRIM(routine), 'Top tile not set')
+
+      DO WHILE (ASSOCIATED(tile))
+        IF (TRIM(tile%name) == 'veg') EXIT
+        CALL model%Goto_next_tile(tile)
+      END DO
+      IF (.NOT. ASSOCIATED(tile)) CALL finish(routine, 'tile "veg" not found')
+      CALL jedi_biomass_to_fract(tile, model%options(no_omp_thread))
+
+      CALL message(routine, 'Computed fractions from biomass after restart')
+    END IF
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
