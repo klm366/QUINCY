@@ -52,6 +52,9 @@ MODULE mo_hd_memory_class
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
       volume_lake     , &  !< lake water volume storage of endorheic lakes [m^3]
+      fract_lake      , &  !< lake fraction of endorheic lakes [-]
+      fract_land_changes    , &  !< lake water volume storage of endorheic lakes [m^3]
+      fract_lake_changes   , &  !< lake water volume storage of endorheic lakes [m^3]
       inflow_lake     , &  !< lake water outflow to neighbor grid cell [m^3/s]
       outflow_lake    , &  !< lake water outflow to neighbor grid cell [m^3/s]
       height_lake     , &  !< actual lake water height of endorheic lakes [m]
@@ -213,17 +216,33 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'volume_lake', mem%volume_lake,                     &
+     CALL mem%Add_var( 'volume_lake', mem%volume_lake,                       &
       & hgrid, surface,                                                      &
-      & t_cf('volume_lake', 'm3', 'water content of the endorheic lake'),   &
+      & t_cf('volume_lake', 'm3', 'water content of the endorheic lake'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
+     CALL mem%Add_var( 'fract_land_changes', mem%fract_land_changes,             &
+      & hgrid, surface,                                                          &
+      & t_cf('fract_land_changes', 'm3', 'water content of the endorheic lake'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+      & prefix, suffix,                                                          &
+      & output_level=BASIC,                                                      &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'fract_lake_changes', mem%fract_lake_changes,             &
+      & hgrid, surface,                                                          &
+      & t_cf('fract_lake_changes', 'm3', 'water content of the endorheic lake'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+      & prefix, suffix,                                                          &
+      & output_level=BASIC,                                                      &
+      & initval_r=0.0_wp )
+
      CALL mem%Add_var( 'outflow_lake', mem%outflow_lake,                     &
       & hgrid, surface,                                                      &
-      & t_cf('outflow_lake', 'm3', 'lake outflow to neighbor grid cell'),      &
+      & t_cf('outflow_lake', 'm3', 'lake outflow to neighbor grid cell'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
