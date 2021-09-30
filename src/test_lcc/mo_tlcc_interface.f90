@@ -27,12 +27,11 @@ MODULE mo_tlcc_interface
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model    
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
-  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes TLCC_, PPLCC_, TCQ_, CARBON_
+  dsl4jsb_Use_processes TLCC_, PPLCC_ !, TCQ_
 
   IMPLICIT NONE
   PRIVATE
@@ -92,12 +91,10 @@ CONTAINS
   !
   SUBROUTINE update_tlcc(tile, options)
 
-    USE mo_jsb_parallel,      ONLY: Get_omp_thread
     USE mo_jsb_time,          ONLY: is_newday
     USE mo_jsb_process_class, ONLY: Get_process_id
-    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc
-    USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, &
-                                    transfer_from_active_to_passive_var
+    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, transfer_from_active_to_passive_var_onChunk
+    USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
 
     IMPLICIT NONE
 
@@ -108,20 +105,22 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_tlcc'
     LOGICAL, PARAMETER :: allAtOnce = .FALSE.
 
-    CLASS(t_jsb_tile_abstract), POINTER :: current_tile
+    CLASS(t_jsb_tile_abstract), POINTER :: current_tile !, last_involved_tile
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
 
-    INTEGER  :: i, i_tile, iblk, ics, ice, nc, process_id, nr_of_tiles
+    INTEGER  :: i, i_tile, iblk, ics, ice, nc, process_id, nr_of_tiles, nr_of_iterations
     REAL(wp) :: dtime
     REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
     REAL(wp), DIMENSION(options%nc) :: moved_fract, current_fract
 
-    CHARACTER(len=VARNAME_LEN) :: active_var_name, passive_var_name, currentSource, currentSink
+    CHARACTER(len=VARNAME_LEN) :: current_source, current_sink !,active_var_name, passive_var_name
 
-    CHARACTER(len=VARNAME_LEN) :: sourceTile(2)
-    CHARACTER(len=VARNAME_LEN) :: sinkTile(2)
+    CHARACTER(len=VARNAME_LEN) :: source_tile(2)
+    CHARACTER(len=VARNAME_LEN) :: sink_tile(2)
 
+    LOGICAL  :: is_source, is_sink
+    REAL(wp) :: shift_fract, remaining_fract
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
@@ -162,9 +161,9 @@ CONTAINS
     ENDIF
 
     ! Allocate area vectors
-    ALLOCATE(initial_area(nr_of_tiles,nc))
-    ALLOCATE(lost_area(nr_of_tiles,nc))
-    ALLOCATE(gained_area(nr_of_tiles,nc))
+    ALLOCATE(initial_area(nc, nr_of_tiles))
+    ALLOCATE(lost_area(nc, nr_of_tiles))
+    ALLOCATE(gained_area(nc, nr_of_tiles))
     initial_area(:,:) = 0.0_wp
     lost_area(:,:) = 0.0_wp
     gained_area(:,:) = 0.0_wp
@@ -178,14 +177,32 @@ CONTAINS
     !>     2.b make an outer loop around init, start, end, dealloc and only move area from one pft to another
     !>         [TR: suggested to permute the order of tiles in the loop]
     !>
+    source_tile = (/ 'pft04', 'pft03' /)
+    sink_tile = (/ 'pft06', 'pft05' /) 
+
     IF (allAtOnce) THEN
+      nr_of_iterations = 1
+    ELSE ! not all at once but in a do loop
+      nr_of_iterations = 2
+    ENDIF
+
+    DO i =1,nr_of_iterations
+      IF (.NOT. allAtOnce) THEN
+        current_source = source_tile(i)
+        current_sink = sink_tile(i)
+      ENDIF
 
       ! Collect inital area of all involved tiles
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
       ! Move actual area and collect lost and gained area of involved tiles
-      current_tile => tile%first_child_tile
+      current_tile => tile%Get_first_child_tile()
       moved_fract(:) = 0.0_wp
+      IF (.NOT. allAtOnce) THEN
+        lost_area(:,:) = 0.0_wp
+        gained_area(:,:) = 0.0_wp
+      ENDIF
+
       i_tile = 0
       DO WHILE (ASSOCIATED(current_tile))
 
@@ -193,40 +210,50 @@ CONTAINS
         IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN !JN-TODO: does this work or TRIM and DO loop?
           i_tile = i_tile + 1
 
-          IF ((current_tile%name .EQ. 'pft04') .OR. (current_tile%name .EQ. 'pft03')) THEN
+          is_source = .FALSE.
+          is_sink = .FALSE.
+          IF (allAtOnce .AND. ((current_tile%name .EQ. 'pft04') .OR. (current_tile%name .EQ. 'pft03'))) THEN
+            is_source = .TRUE.
+          ELSEIF (.NOT. allAtOnce .AND. (TRIM(current_tile%name) .EQ. TRIM(current_source))) THEN
+            is_source = .TRUE.
+          ELSEIF (allAtOnce .AND. (current_tile%name .EQ. 'pft05')) THEN
+            is_sink = .TRUE.
+            shift_fract = 0.3_wp
+            remaining_fract = 0.7_wp 
+          ELSEIF (allAtOnce .AND. (current_tile%name .EQ. 'pft06')) THEN
+            is_sink = .TRUE.
+            shift_fract = 1.0_wp
+            remaining_fract = 0.0_wp 
+          ELSEIF (.NOT. allAtOnce .AND. (TRIM(current_tile%name) .EQ. TRIM(current_sink))) THEN
+            is_sink = .TRUE.
+            shift_fract = 1.0_wp
+            remaining_fract = 0.0_wp 
+          ENDIF
 
+          IF (is_source) THEN
             CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
             WHERE (current_fract(:) .GT. 0.00015_wp)
-              lost_area(i_tile, :) = 0.00015_wp
+              lost_area(:, i_tile) = 0.00015_wp
               moved_fract(:) = moved_fract(:) + 0.00015_wp
             END WHERE 
 
-            current_fract(:) = current_fract(:) - lost_area(i_tile, :)
+            current_fract(:) = current_fract(:) - lost_area(:, i_tile)
             CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
 
-          ELSEIF (current_tile%name .EQ. 'pft05') THEN
-
-            gained_area(i_tile, :) = moved_fract(:) * 0.3_wp
+          ELSEIF(is_sink) THEN
+            gained_area(:, i_tile) = moved_fract(:) * shift_fract
 
             CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-            current_fract(:) = current_fract(:) + gained_area(i_tile, :)
+            current_fract(:) = current_fract(:) + gained_area(:, i_tile)
             CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
 
-            moved_fract(:) = moved_fract(:) * 0.7_wp
-
-          ELSEIF (current_tile%name .EQ. 'pft06') THEN
-
-              gained_area(i_tile, :) = moved_fract(:)
-    
-              CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-              current_fract(:) = current_fract(:) + gained_area(i_tile, :)
-              CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-    
-              moved_fract(:) = 0.0_wp
+            moved_fract(:) = moved_fract(:) * remaining_fract
           ENDIF
+
+          !last_involved_tile => current_tile
         ENDIF
 
-        current_tile => current_tile%next_sibling_tile
+        current_tile => current_tile%Get_next_sibling_tile()
       END DO
 
       !>
@@ -237,98 +264,49 @@ CONTAINS
       !>
       !> 4. Afterwards active content needs to be relocated to passive vars by manipulating the arrays in lcc_relocations
       !>
-      current_tile => tile%first_child_tile
-      IF (current_tile%Is_process_active(TCQ_)) THEN
-        ! For the test cq a_veg is simply put in a_dead ...
-        active_var_name = 'a_veg_c_tcq'
-        passive_var_name = 'a_dead_c_tcq'
-        CALL transfer_from_active_to_passive_var(lcc_relocations, options, active_var_name, passive_var_name)
-      ENDIF
+      !>     4.a This can be done by explicitly specifying how active variables should be treated
+      !>         e.g. by calling transfer_from_active_to_passive_var_onChunk for named variables 
+      !>
+      ! 
+      ! IF (last_involved_tile%Is_process_active(TCQ_)) THEN
+      !   ! For the test cq a_veg is simply put in a_dead ...
+      !   active_var_name = 'a_veg_c_tcq'
+      !   passive_var_name = 'a_dead_c_tcq'
+      !
+      !   current_tile => tile%Get_first_child_tile()
+      !   i_tile = 0
+      !   DO WHILE (ASSOCIATED(current_tile))
+      !     IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
+      !       i_tile = i_tile + 1
+      !       CALL transfer_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, active_var_name, passive_var_name)
+      !     ENDIF
+      !   ENDIF
+      !   current_tile => current_tile%Get_next_sibling_tile()
+      ! ENDDO
 
-      IF (current_tile%Is_process_active(CARBON_)) THEN
-        CALL finish(TRIM(routine), 'So far only tests tcq and not carbon')
-        ! JN-TODO: assert that required yasso pools are part of passive variables and then relocate from active to passive
-        ! call yasso for woody and non woody
-      ENDIF
+      !>
+      !>     4.b and finally by calling the more general transfer_active_to_passive_onChunk lcc routine where calls to
+      !>         process specific relocation routines can be specified
+      !>
+      current_tile => tile%Get_first_child_tile()
+      i_tile = 0
+      DO WHILE (ASSOCIATED(current_tile))
+        IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
+          i_tile = i_tile + 1
+          IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
+            CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
+          ENDIF
+          !last_involved_tile => current_tile
+        ENDIF
+
+        current_tile => current_tile%Get_next_sibling_tile()
+      ENDDO
 
       !>
       !> 5. Each lcc process needs to call end lcc to make the passive matter transfer 
       !>
       CALL end_lcc_reloc(lcc_relocations, options, gained_area)
-
-    ELSE ! not all at once but in a do loop
-
-      sourceTile = (/ 'pft04', 'pft03' /)
-      sinkTile = (/ 'pft06', 'pft05' /) 
-
-      DO i =1,SIZE(sourceTile)
-        currentSource = sourceTile(i)
-        currentSink = sinkTile(i)        
-
-        ! Collect inital area of all involved tiles
-        CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
-
-        ! Move actual area and collect lost and gained area of involved tiles
-        current_tile => tile%first_child_tile
-        moved_fract(:) = 0.0_wp
-        lost_area(:,:) = 0.0_wp
-        gained_area(:,:) = 0.0_wp
-        i_tile = 0
-        DO WHILE (ASSOCIATED(current_tile))
-
-          ! Note: Area movements are only possible among child tiles listed in the lcc structure!
-          IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN !JN-TODO: does this work or TRIM and DO loop?
-            i_tile = i_tile + 1
-
-            IF (TRIM(current_tile%name) .EQ. TRIM(currentSource)) THEN
-
-              CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-              WHERE (current_fract(:) .GT. 0.00015_wp)
-                lost_area(i_tile, :) = 0.00015_wp
-                moved_fract(:) = 0.00015_wp
-              END WHERE 
-
-              current_fract(:) = current_fract(:) - lost_area(i_tile, :)
-              CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-
-            ELSEIF (TRIM(current_tile%name) .EQ. TRIM(currentSink)) THEN
-
-                gained_area(i_tile, :) = moved_fract(:)
-      
-                CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-                current_fract(:) = current_fract(:) + gained_area(i_tile, :)
-                CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
-      
-                moved_fract(:) = 0.0_wp
-            ENDIF
-          ENDIF
-
-          current_tile => current_tile%next_sibling_tile
-        END DO
-
-        ! each lcc process needs to call start lcc to collect to be transferred matter 
-        CALL start_lcc_reloc(lcc_relocations, options, lost_area, initial_area)
-
-        ! active content needs to be relocated to passive vars by manipulating the arrays in lcc_relocations
-        current_tile => tile%first_child_tile
-        IF (current_tile%Is_process_active(TCQ_)) THEN
-          ! For the test cq a_veg is simply put in a_dead ...
-          active_var_name = 'a_veg_c_tcq'
-          passive_var_name = 'a_dead_c_tcq'
-          CALL transfer_from_active_to_passive_var(lcc_relocations, options, active_var_name, passive_var_name)
-        ENDIF
-  
-        IF (current_tile%Is_process_active(CARBON_)) THEN
-          CALL finish(TRIM(routine), 'So far only tests tcq and not carbon')
-          ! JN-TODO: assert that required yasso pools are part of passive variables and then relocate from active to passive
-          ! call yasso for woody and non woody
-        ENDIF
-
-        ! each lcc process needs to call end lcc to make the passive matter transfer 
-        CALL end_lcc_reloc(lcc_relocations, options, gained_area)
-
-      ENDDO
-    ENDIF
+    ENDDO ! Number of iterations depending on if allAtOnce  
 
     !>
     !> 6. Deallocate area vectors
@@ -349,16 +327,13 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
     TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_tlcc'
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
     iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-    nc   = options%nc
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
     

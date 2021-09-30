@@ -43,9 +43,10 @@ MODULE mo_jsb_cqt_class
   !
   TYPE :: t_jsb_consQuan
     INTEGER :: type_id = -1     !< one of the CQ_TYPEs found in mo_jsb_cqt_class
-    INTEGER :: no_of_vars = 0   !< number of vars - required for allocation of consQuanVars2D
-    INTEGER :: last_index_used = 0 !< last index used - required for filling of consQuanVars2D
-    TYPE(t_jsb_var_p), ALLOCATABLE :: consQuanVars2D(:) 
+    INTEGER :: no_of_vars = 0   !< number of vars - required for allocation of cq_vars_2D
+    INTEGER :: last_index_used = 0 !< last index used - required for filling of cq_vars_2D
+    INTEGER, ALLOCATABLE :: associated_process(:) !< process to which each CQ in cq_vars_2D belongs
+    TYPE(t_jsb_var_p), ALLOCATABLE :: cq_vars_2D(:) 
         !< collection of all variables of a certain CQT potentially from different process memories
   END TYPE t_jsb_consQuan
   TYPE :: t_jsb_consQuan_p

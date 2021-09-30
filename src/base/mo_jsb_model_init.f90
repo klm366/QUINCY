@@ -20,9 +20,10 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, A2L_, VEG_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(NLCC_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -192,6 +193,7 @@ CONTAINS
     USE mo_fuel_init,           ONLY: fuel_init
     !USE mo_disturb_init,        ONLY: disturb_init
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
+    USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
 
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
@@ -238,9 +240,15 @@ CONTAINS
     IF (.NOT. model%config%use_quincy) THEN
       ! Note: JN changed the order of the processes
       ! - processes potentially changing the area of a tile are conducted first in the timestep.
+      ! - the task npp_buffer is performed even before to provide already updated multi annual average
+      !   NPP to the NLCC process at the beginning of a year
       ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
       !   considerations
   
+      IF (model%processes(NLCC_)%p%config%active) THEN
+        CALL model%Queue_task(ASSIMI_, "npp_buffer")
+      END IF
+
       ! ------------------------ tasks that can change area
       !
       IF (model%processes(PPLCC_)%p%config%active) THEN
@@ -248,7 +256,13 @@ CONTAINS
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
 
         !***** Add LCC processes between pplcc_pre and pplcc_post *****
-        CALL model%Queue_task(TLCC_, "tlcc")
+        IF (model%processes(TLCC_)%p%config%active) THEN
+          CALL model%Queue_task(TLCC_, "tlcc")
+        END IF
+
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL model%Queue_task(ALCC_, "alcc")
+        END IF
 
         !! Do postprocessing after all LCC tasks were executed!
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
@@ -322,13 +336,6 @@ CONTAINS
           ! time step and jsbach should be also consistent with this.
           ! In the albedo update time step the albedo should be updated after the SEB process, so that also
           ! the SEB remains consistent within this time step.
-      IF (model%processes(ALCC_)%p%config%active) THEN
-        CALL model%Queue_task(ALCC_, "alcc")                ! JN-TODO: this should be moved up to tasks that can change area
-      END IF
-          ! The explanation above for the aldedo accounts also for alcc as it may also changes surface
-          ! properties affecting atmospheric radiation. However, in alcc we do not redistribute the albedos
-          ! of the pfts because they shall not keep their quantity for the gridbox but change with alcc.
-          ! Therefore, the sequence between the alcc and albedo process does not matter.
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     
@@ -427,7 +434,6 @@ CONTAINS
       !>     2.1 Initialize each tile
       !>
       ! Initialize tile process memories and read tile fractions
-      ! todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
         & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
@@ -567,8 +573,11 @@ CONTAINS
                 END IF
               END DO
               CALL tile%Get_fraction(fract=fract_tmp(:,:))
-              tile%lcts(ilct)%fract(:,:) = &
-                & MERGE(tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:), 0._wp, fract_tmp(:,:) > 0._wp)
+              WHERE (fract_tmp(:,:) > 0._wp)
+                tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:)
+              ELSE WHERE
+                tile%lcts(ilct)%fract(:,:) = 0._wp
+              END WHERE
             END IF
             child => child%Get_next_sibling_tile()
           END DO
@@ -653,6 +662,10 @@ CONTAINS
 
       IF (one_of(tile%process_action(TLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL tlcc_init_lcc(tile)
+      END IF
+
+      IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL alcc_init_lcc(tile)
       END IF
 
       CALL model%Goto_next_tile(tile)

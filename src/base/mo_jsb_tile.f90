@@ -408,7 +408,7 @@ CONTAINS
       & t_cf('tile_fraction', '',                                                                          &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions, loutput=.NOT. l_fixed_fractions,                     &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                    &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     CALL this%Set_fract_ptr(tmp_fract)
@@ -665,7 +665,7 @@ CONTAINS
 
           ! check if this type is already accounted for
           consQuanTypeInUse = .FALSE.
-          DO ind=1,this%numberOfConservedQuanTypes
+          DO ind=1,this%nr_of_cqts
             IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
               consQuanTypeInUse = .TRUE.
               this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1             
@@ -678,11 +678,11 @@ CONTAINS
             thisCQTName = Get_cqt_name(id)
             IF (debug_on())  CALL message(TRIM(routine), '... vars of type '//TRIM(thisCQTName))
 
-            this%numberOfConservedQuanTypes = this%numberOfConservedQuanTypes + 1
+            this%nr_of_cqts = this%nr_of_cqts + 1
 
             ALLOCATE(consQuanType)
-            this%conserved_quantities(this%numberOfConservedQuanTypes)%p => consQuanType
-            this%conserved_quantities(this%numberOfConservedQuanTypes)%p%type_id = id
+            this%conserved_quantities(this%nr_of_cqts)%p => consQuanType
+            this%conserved_quantities(this%nr_of_cqts)%p%type_id = id
             this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1
           ENDIF
 
@@ -733,14 +733,15 @@ CONTAINS
           consQuanTypeInUse = .FALSE.
 
           ! find container for this type 
-          DO ind=1,this%numberOfConservedQuanTypes
+          DO ind=1,this%nr_of_cqts
             IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
               consQuanTypeInUse = .TRUE.
               nrOfConsQuans = this%conserved_quantities(ind)%p%no_of_vars
 
               ! If this is the first collected variable: allocate collector for var pointers 
-              IF (.NOT. (ALLOCATED(this%conserved_quantities(ind)%p%consQuanVars2D))) THEN
-                ALLOCATE(this%conserved_quantities(ind)%p%consQuanVars2D(nrOfConsQuans))
+              IF (.NOT. (ALLOCATED(this%conserved_quantities(ind)%p%cq_vars_2D))) THEN
+                ALLOCATE(this%conserved_quantities(ind)%p%associated_process(nrOfConsQuans))
+                ALLOCATE(this%conserved_quantities(ind)%p%cq_vars_2D(nrOfConsQuans))
               ENDIF
 
               this%conserved_quantities(ind)%p%last_index_used = this%conserved_quantities(ind)%p%last_index_used + 1
@@ -750,7 +751,8 @@ CONTAINS
                 & CALL finish(TRIM(routine), 'Assigned conserved quantities exceed expected number.')              
 
               ! Add current variable
-              this%conserved_quantities(ind)%p%consQuanVars2D(last_index)%p => mem%vars(i)%p
+              this%conserved_quantities(ind)%p%cq_vars_2D(last_index)%p => mem%vars(i)%p
+              this%conserved_quantities(ind)%p%associated_process(last_index) = mem%owner_proc_id
 
               ! Since the type has been found: exit do loop now
               EXIT

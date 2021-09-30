@@ -818,6 +818,8 @@ CONTAINS
         ! Saturated hydraulic conductivity following percolation theory 
         ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
 
+        ! TODO: Add CLAW directives
+
         N_perc = (1._wp - thresh_org)**(-beta_perc)
 
         ALLOCATE(fract_perc(SIZE(hyd_cond_sat),nsoil))          ! fraction of the soil with connected organic pathways 
@@ -847,10 +849,11 @@ CONTAINS
         DEALLOCATE(hyd_cond_sat_uncon)
       ELSE
         ! Saturated hydraulic conductivity as weighted average from mineral and organic parts 
+        !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_1 tile_name=tile%name soil=i
         hyd_cond_sat_sl (:,:) = (1 - fract_org_sl(:,:)) * hyd_cond_sat_sl   (:,:) + fract_org_sl(:,:) * hyd_cond_sat_org
       END IF
 
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_1 tile_name=tile%name soil=i
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_2 tile_name=tile%name soil=i
       vol_porosity_sl   (:,:) = (1 - fract_org_sl(:,:)) * vol_porosity_sl   (:,:) + fract_org_sl(:,:) * vol_porosity_org
       bclapp_sl         (:,:) = (1 - fract_org_sl(:,:)) * bclapp_sl         (:,:) + fract_org_sl(:,:) * bclapp_org
       matrix_pot_sl     (:,:) = (1 - fract_org_sl(:,:)) * matrix_pot_sl     (:,:) + fract_org_sl(:,:) * matrix_pot_org
