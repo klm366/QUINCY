@@ -305,6 +305,13 @@ CONTAINS
     !$claw acc update device(is_glacier) ! 
     !$claw acc end data
 
+    !$claw acc data present(is_ocean, is_lake)
+    CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
+    is_ocean(:) = fract(:) <= 0._wp
+    is_lake(:)  = tile%fract(ics:ice,iblk) <= 0._wp
+    !$claw acc update device(is_ocean, is_lake)
+    !$claw acc end data
+
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
     ELSE
