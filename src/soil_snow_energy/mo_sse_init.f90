@@ -306,7 +306,7 @@ CONTAINS
       & vol_heat_cap_sl, &
       & heat_cond_sl, &
       & w_soil_sl, &
-      & w_ice_sl, &
+      & i_soil_sl, &
       & vol_porosity_sl, &
       & vol_field_cap_sl
 
@@ -359,7 +359,7 @@ CONTAINS
     END IF
 
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, w_ice_sl )
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, i_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
@@ -387,15 +387,15 @@ CONTAINS
       ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
       !$claw acc enter data pcreate(fract_water,fract_ice)
 
-      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,w_ice_sl)
-      !$claw acc update device(soil_depth_sl,w_soil_sl,w_ice_sl)
+      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,i_soil_sl)
+      !$claw acc update device(soil_depth_sl,w_soil_sl,i_soil_sl)
       !$claw acc parallel loop gang vector collapse(3)
       DO i = 1, nproma
         DO j = 1, nsoil
           DO b = 1, nblks
             IF (soil_depth_sl(i,j,b) > 0._wp) THEN
               fract_water(i,j,b) = w_soil_sl(i,j,b) / soil_depth_sl(i,j,b)
-              fract_ice  (i,j,b) = w_ice_sl(i,j,b) / soil_depth_sl(i,j,b)
+              fract_ice  (i,j,b) = i_soil_sl(i,j,b) / soil_depth_sl(i,j,b)
             ELSE
               fract_water(i,j,b) = 0._wp
               fract_ice  (i,j,b) = 0._wp
@@ -443,7 +443,7 @@ CONTAINS
         !&                              SPREAD( heat_cond(:,:),                    DIM=2, ncopies=nsoil)               , &
         &                                      heat_cond_tmp(:,:,:)                                                   , &
         &                                      w_soil_sl(:,:,:)                                                       , &
-        &                                      w_ice_sl(:,:,:)                                                        , &
+        &                                      i_soil_sl(:,:,:)                                                       , &
         &                                      vol_porosity_sl(:,:,:)                                                 , &
         &                                      vol_field_cap_sl(:,:,:)                                                , &
         &                                      fract_org_sl(:,:,:)                                                    , &
