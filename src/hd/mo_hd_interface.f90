@@ -938,7 +938,7 @@ CONTAINS
           END DO
         END DO
       END DO
-      volume_lake(:,:) = volume_lake(:,:)  + outflow_lake(:,:) + inflow_lake(:,:)
+      volume_lake(:,:) = volume_lake(:,:)  + ( outflow_lake(:,:) + inflow_lake(:,:) ) * steplen
 
       global_lake_volume_budget = global_sum_array(volume_lake(:,:)*in_domain)
       global_lake_volume_error = global_lake_volume_budget - global_lake_volume_budget_ref
