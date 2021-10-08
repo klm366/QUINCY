@@ -16,7 +16,7 @@ MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish, message_text
+  USE mo_exception, ONLY: finish, message, message_text, em_warn
 
   IMPLICIT NONE
   PRIVATE
@@ -599,7 +599,7 @@ CONTAINS
             runoff(i) = water_to_soil(i) - (ws_max(i)-ws_incl_ice(i)) ! if >0: amount of water exceeding water holding capacity
             IF (zvol > 0._wp) runoff(i) = runoff(i) + ws_max(i)*zvol**zb1
             runoff(i) = MAX(MIN(runoff(i), water_to_soil(i)), 0._wp)   ! no negative runoff, runoff limited by available water
-            infilt(i) = water_to_soil(i) - runoff(i)                   ! water not going into runoff is infiltrated
+            infilt(i) = MAX(water_to_soil(i) - runoff(i), 0._wp)       ! water not going into runoff is infiltrated
           ELSE
             runoff(i) = 0._wp                                            ! no runoff as soil is too dry
             infilt(i) = water_to_soil(i)                                ! all water infiltrated
@@ -1383,9 +1383,9 @@ CONTAINS
       DO  jk = 1, nsoil
         ws_l(i,jk) = ws_l(i,jk) + excess(i)
         IF (.NOT. ltpe_closed) THEN
-          IF (ws_l(i,jk) > field_cap_l(i,jk)) THEN         ! soil moisture exceeds field capacity
-            excess(i) = ws_l(i,jk) - field_cap_l(i,jk)       !   excess water -> goes into level below
-            ws_l(i,jk) = field_cap_l(i,jk)                   !   limit soil moisture to field capacity
+          IF (ws_l(i,jk) > field_cap_l(i,jk)) THEN                  ! soil moisture exceeds field capacity
+            excess(i) = MAX(ws_l(i,jk) - field_cap_l(i,jk), 0._wp)  !   excess water -> goes into level below
+            ws_l(i,jk) = field_cap_l(i,jk)                          !   limit soil moisture to field capacity
           ELSE
             excess(i) = 0._wp
           END IF
@@ -1411,9 +1411,9 @@ CONTAINS
 #ifndef _OPENACC
     IF (ANY(ws_l(:,:) < 0._wp)) THEN
       WRITE (message_text,*) 'negative soil moisture: ', MINVAL(ws_l), ' at ', MINLOC(ws_l)
-      CALL finish ('digest_infilt', message_text)
-      ! CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
-      ! ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
+      ! CALL finish ('digest_infilt', message_text)
+      CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
+      ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
     END IF
 #endif
 
