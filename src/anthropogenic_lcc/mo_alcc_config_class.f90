@@ -53,7 +53,8 @@ CONTAINS
   !!  
   SUBROUTINE Init_alcc_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
@@ -76,8 +77,6 @@ CONTAINS
          scheme,                      &
          nr_of_pfts
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_alcc_config'
     ! -------------------------------------------------------------------------------------------------- !
 
@@ -91,12 +90,16 @@ CONTAINS
     nr_of_pfts           = 11
     scheme               = 'maps'
 
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_alcc_nml', read_nml)
 
-    nml_unit = position_nml('jsb_alcc_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_alcc_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,               process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(alcc_filename_prefix, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(scheme,               process_mpi_root_id, mpi_comm)
+      CALL p_bcast(nr_of_pfts,           process_mpi_root_id, mpi_comm)
+    END IF
 
     config%active               = active
     config%ic_filename          = ic_filename
@@ -118,6 +121,13 @@ CONTAINS
     pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, nr_of_pfts, &
       & levels=(/ (REAL(i,kind=wp),i=1,nr_of_pfts) /), units='')
     CALL register_vgrid(pft_layer)
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_alcc_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_alcc_config
 

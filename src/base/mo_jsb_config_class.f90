@@ -69,7 +69,8 @@ CONTAINS
 
   FUNCTION new_model_config(namelist_filename) RESULT(model_config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
 
     CHARACTER(len=*),         INTENT(in) :: namelist_filename
     TYPE(t_jsb_model_config), POINTER    :: model_config
@@ -104,7 +105,7 @@ CONTAINS
       output_tiles, &
       relative_fractions_in_file
 
-    INTEGER :: nml_handler, nml_unit, istat, i
+    INTEGER :: i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_model_config'
 
@@ -127,18 +128,32 @@ CONTAINS
     relative_fractions_in_file = .TRUE.
 
     ! Read namelist
-    nml_handler = open_nml(TRIM(namelist_filename))
+    CALL process_nml(TRIM(namelist_filename), 'jsb_grid_nml', read_grid_nml)
 
-    nml_unit = position_nml('jsb_grid_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_grid_nml)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(grid_filename, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(grid_name,     process_mpi_root_id, mpi_comm)
+    END IF
 
     ! Write resulting values in config memory
     model_config%grid_filename = grid_filename
     model_config%grid_name     = grid_name
 
-    nml_unit =  position_nml('jsb_model_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
-    CALL close_nml(nml_handler)
+    ! Read namelist
+    CALL process_nml(TRIM(namelist_filename), 'jsb_model_nml', read_model_nml)
+
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(use_lakes,                  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(use_glacier,                process_mpi_root_id, mpi_comm)
+      CALL p_bcast(use_quincy,                 process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_compat401,                process_mpi_root_id, mpi_comm)
+      CALL p_bcast(usecase,                    process_mpi_root_id, mpi_comm)
+      CALL p_bcast(tpe_scheme,                 process_mpi_root_id, mpi_comm)
+      CALL p_bcast(hsm_mode,                   process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fract_filename,             process_mpi_root_id, mpi_comm)
+      CALL p_bcast(output_tiles,               process_mpi_root_id, mpi_comm)
+      CALL p_bcast(relative_fractions_in_file, process_mpi_root_id, mpi_comm)
+    END IF
 
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
@@ -160,6 +175,18 @@ CONTAINS
     END IF
     ALLOCATE(model_config%output_tiles(i))
     model_config%output_tiles(1:i) = output_tiles(1:i)
+
+  CONTAINS
+
+    SUBROUTINE read_grid_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_grid_nml)
+    END SUBROUTINE read_grid_nml
+
+    SUBROUTINE read_model_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_model_nml)
+    END SUBROUTINE read_model_nml
 
   END FUNCTION new_model_config
 

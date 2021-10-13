@@ -41,7 +41,8 @@ CONTAINS
 
   SUBROUTINE Init_seb_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
 
     CLASS(t_seb_config), INTENT(inout) :: config
 
@@ -59,8 +60,6 @@ CONTAINS
       lake_min_ice_depth,          &
       l_ice_on_lakes
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_seb_config'
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting seb configuration')
@@ -74,10 +73,17 @@ CONTAINS
     lake_min_ice_depth     = 0.05_wp
     l_ice_on_lakes  = .TRUE.
 
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_seb_nml', read_nml)
 
-    nml_unit = position_nml('jsb_seb_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_seb_nml)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,                 process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,            process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,            process_mpi_root_id, mpi_comm)
+      CALL p_bcast(scheme_albedo,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(lake_mixed_layer_depth, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(lake_min_ice_depth,     process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_ice_on_lakes,         process_mpi_root_id, mpi_comm)
+    END IF
 
     config%active                    = active
     config%ic_filename               = ic_filename
@@ -87,7 +93,12 @@ CONTAINS
     config%lake_min_ice_depth        = lake_min_ice_depth
     config%l_ice_on_lakes            = l_ice_on_lakes
 
-    CALL close_nml(nml_handler)
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_seb_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_seb_config
 

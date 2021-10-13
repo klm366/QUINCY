@@ -44,7 +44,8 @@ CONTAINS
   !!
   SUBROUTINE Init_fuel_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
 
     CLASS(t_fuel_config), INTENT(inout) :: config
 
@@ -59,8 +60,6 @@ CONTAINS
         & bc_filename,          &
         & fuel_algorithm
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fuel_config'
 
     CALL message(TRIM(routine), 'Starting fuel configuration')
@@ -72,18 +71,27 @@ CONTAINS
     fuel_algorithm         =  1
 
     ! Read namelist
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_fuel_nml', read_nml)
 
-    nml_unit = position_nml('jsb_fuel_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_fuel_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,         process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,    process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,    process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fuel_algorithm, process_mpi_root_id, mpi_comm)
+    END IF
 
     ! Write resulting values in config memory
     config%active                 = active
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%fuel_algorithm         = fuel_algorithm
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_fuel_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_fuel_config
 

@@ -125,7 +125,9 @@ CONTAINS
   !!
   SUBROUTINE read_jsb_control_namelist(namelist_filename)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: &
+      & process_nml, use_namelist_broadcast, open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, my_process_is_mpi_workroot, process_mpi_root_id, mpi_comm
 
     CHARACTER(len=*), INTENT(in) :: namelist_filename
 
@@ -167,21 +169,43 @@ CONTAINS
     debug_memory_level = 0
     l_force_from_obs   = .TRUE.
 
-    nml_handler = open_nml(TRIM(namelist_filename))
+    IF (.NOT. use_namelist_broadcast() .OR. my_process_is_mpi_workroot()) &
+      & nml_handler = open_nml(TRIM(namelist_filename))
+    IF (use_namelist_broadcast()) &
+      & CALL p_bcast(nml_handler, process_mpi_root_id, mpi_comm)
 
-    nml_unit = position_nml('jsb_control_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_control_nml)
+    IF (.NOT. use_namelist_broadcast() .OR. my_process_is_mpi_workroot()) THEN
+      nml_unit = position_nml('jsb_control_nml', nml_handler, STATUS=istat)
+      IF (istat == POSITIONED) READ(nml_unit, jsb_control_nml)
+    END IF
+
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(is_standalone,      process_mpi_root_id, mpi_comm)
+      CALL p_bcast(restart_jsbach,     process_mpi_root_id, mpi_comm)
+      CALL p_bcast(model_base_dir,     process_mpi_root_id, mpi_comm)
+      CALL p_bcast(timer_level,        process_mpi_root_id, mpi_comm)
+      CALL p_bcast(debug_level,        process_mpi_root_id, mpi_comm)
+      CALL p_bcast(debug_io,           process_mpi_root_id, mpi_comm)
+      CALL p_bcast(debug_memory_level, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_force_from_obs,   process_mpi_root_id, mpi_comm)
+    END IF
 
     ! Get number of models first
     rwnd = .TRUE.
     no_of_models = 0
-    DO
-      nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
-      IF (istat /= POSITIONED) EXIT
-      rwnd=.FALSE.
-      no_of_models = no_of_models + 1
-      READ(nml_unit, jsb_model_nml)
-    END DO
+    IF (.NOT. use_namelist_broadcast() .OR. my_process_is_mpi_workroot()) THEN
+      DO
+        nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
+        IF (istat /= POSITIONED) EXIT
+        rwnd=.FALSE.
+        no_of_models = no_of_models + 1
+        READ(nml_unit, jsb_model_nml)
+      END DO
+    END IF
+
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(no_of_models, process_mpi_root_id, mpi_comm)
+    END IF
 
     IF (no_of_models > max_no_of_models) THEN
       CALL finish(routine, 'no_of_models > max_no_of_models')
@@ -193,11 +217,6 @@ CONTAINS
     ! Note: no_of_models needs to be known here (therfore extra loop above) in order to test for a valid model_id below
     rwnd = .TRUE.
     DO i=1,no_of_models
-      nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
-      IF (istat /= POSITIONED) THEN
-        CALL finish(TRIM(routine), 'jsb_model_nml not found in namelist')
-      END IF
-      rwnd=.FALSE.
 
       model_id = i
       model_name = ''
@@ -205,7 +224,23 @@ CONTAINS
       model_description = ''
       model_namelist_filename = ''
 
-      READ(nml_unit, jsb_model_nml)
+      IF (.NOT. use_namelist_broadcast() .OR. my_process_is_mpi_workroot()) THEN
+        nml_unit = position_nml('jsb_model_nml', nml_handler, lrewind=rwnd, STATUS=istat)
+        IF (istat /= POSITIONED) THEN
+          CALL finish(TRIM(routine), 'jsb_model_nml not found in namelist')
+        END IF
+        rwnd=.FALSE.
+
+        READ(nml_unit, jsb_model_nml)
+      END IF
+
+      IF (use_namelist_broadcast()) THEN
+        CALL p_bcast(model_id,                process_mpi_root_id, mpi_comm)
+        CALL p_bcast(model_name,              process_mpi_root_id, mpi_comm)
+        CALL p_bcast(model_shortname,         process_mpi_root_id, mpi_comm)
+        CALL p_bcast(model_description,       process_mpi_root_id, mpi_comm)
+        CALL p_bcast(model_namelist_filename, process_mpi_root_id, mpi_comm)
+      END IF
 
       IF (jsb_models_nml(model_id)%model_id > 0) THEN
         CALL finish(TRIM(routine), 'Model id already taken.')
@@ -222,7 +257,8 @@ CONTAINS
       jsb_models_nml(i)%model_namelist_filename = model_namelist_filename
     END DO
 
-    CALL close_nml(nml_handler)
+    IF (.NOT. use_namelist_broadcast() .OR. my_process_is_mpi_workroot()) &
+      & CALL close_nml(nml_handler)
 
   END SUBROUTINE read_jsb_control_namelist
 

@@ -72,7 +72,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
 
     IMPLICIT NONE
     ! ---------------------------
@@ -103,9 +104,6 @@ CONTAINS
       ! biomass_alloc_scheme,         &
       ! leaf_stoichom_scheme
 
-    ! variables for reading model-options from namelist
-    INTEGER  :: nml_handler, nml_unit, istat
-
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
@@ -121,12 +119,19 @@ CONTAINS
 
     ! read the namelist
     ! &jsb_veg_nml
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_veg_nml', read_nml)
 
-    nml_unit = position_nml('jsb_veg_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_veg_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,                   process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,              process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,              process_mpi_root_id, mpi_comm)
+      ! CALL p_bcast(plant_functional_type_id, process_mpi_root_id, mpi_comm)
+      ! CALL p_bcast(cohort_harvest_interval,  process_mpi_root_id, mpi_comm)
+      ! CALL p_bcast(bnf_scheme,               process_mpi_root_id, mpi_comm)
+      ! CALL p_bcast(veg_dynamics_scheme,      process_mpi_root_id, mpi_comm)
+      ! CALL p_bcast(biomass_alloc_scheme,     process_mpi_root_id, mpi_comm)
+      ! CALL p_bcast(leaf_stoichom_scheme,     process_mpi_root_id, mpi_comm)
+    END IF
 
     ! pass values as read from file
     config%active                        = active
@@ -138,6 +143,13 @@ CONTAINS
     ! config%veg_dynamics_scheme           = TRIM(veg_dynamics_scheme)
     ! config%biomass_alloc_scheme          = biomass_alloc_scheme
     ! config%leaf_stoichom_scheme          = leaf_stoichom_scheme
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_veg_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_veg_config
 

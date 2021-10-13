@@ -40,7 +40,8 @@ CONTAINS
 
   SUBROUTINE Init_pheno_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
 
     CLASS(t_pheno_config), INTENT(inout) :: config
 
@@ -55,8 +56,6 @@ CONTAINS
       & ic_filename,          &
       & bc_filename
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_config'
 
     CALL message(TRIM(routine), 'Starting phenology configuration')
@@ -70,10 +69,15 @@ CONTAINS
     !first_call_phenology_this_day = .FALSE.
 
     ! Read namelist
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_pheno_nml', read_nml)
 
-    nml_unit = position_nml('jsb_pheno_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_pheno_nml)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,           process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,      process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,      process_mpi_root_id, mpi_comm)
+      CALL p_bcast(scheme,           process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_forestRegrowth, process_mpi_root_id, mpi_comm)
+    END IF
 
     ! Write resulting values in config memory
     config%active              = active
@@ -82,7 +86,12 @@ CONTAINS
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
 
-    CALL close_nml(nml_handler)
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_pheno_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_pheno_config
 

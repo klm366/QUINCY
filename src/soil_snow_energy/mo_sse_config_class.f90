@@ -54,8 +54,9 @@ CONTAINS
 
   SUBROUTINE Init_sse_config(config)
 
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
     USE mo_sse_constants,      ONLY: snow_depth_min
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC
@@ -77,7 +78,7 @@ CONTAINS
       & l_freeze, l_supercool, w_soil_critical, &
       & ic_filename, bc_filename
 
-    INTEGER :: nml_handler, nml_unit, istat, i
+    INTEGER :: i
     TYPE(t_input_file) :: input_file
     REAL(wp), POINTER :: ptr_1D(:)
     REAL(wp), ALLOCATABLE :: depths(:), mids(:)
@@ -106,12 +107,24 @@ CONTAINS
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
 
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_sse_nml', read_nml)
 
-    nml_unit = position_nml('jsb_sse_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_sse_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,     process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,     process_mpi_root_id, mpi_comm)
+      CALL p_bcast(nsnow,           process_mpi_root_id, mpi_comm)
+      CALL p_bcast(dz_snow,         process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_snow,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_dynsnow,       process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_heat_cap_dyn,  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_heat_cond_dyn, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_heat_cap_map,  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_heat_cond_map, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_freeze,        process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_supercool,     process_mpi_root_id, mpi_comm)
+      CALL p_bcast(w_soil_critical, process_mpi_root_id, mpi_comm)
+    END IF
 
     config%active        = active
     config%ic_filename   = ic_filename
@@ -219,6 +232,12 @@ CONTAINS
       DEALLOCATE(depths, mids)
     END IF
 
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_sse_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_sse_config
 

@@ -42,7 +42,8 @@ CONTAINS
   !
   SUBROUTINE Init_tcq_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_tcq_config), INTENT(inout) :: config !<Configuration type of process (t_tcq_config)
@@ -56,8 +57,6 @@ CONTAINS
          ic_filename,                 &
          bc_filename
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_tcq_config'
 
     CALL message(TRIM(routine), 'Starting cq configuration')
@@ -67,17 +66,25 @@ CONTAINS
     bc_filename         = 'bc_land_tcq.nc'
     ic_filename         = 'ic_land_tcq.nc'
 
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_tcq_nml', read_nml)
 
-    nml_unit = position_nml('jsb_tcq_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_tcq_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,            process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,       process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,       process_mpi_root_id, mpi_comm)
+    END IF
 
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_tcq_nml)
+    END SUBROUTINE read_nml
+
   END SUBROUTINE Init_tcq_config
 
 #endif

@@ -44,7 +44,8 @@ CONTAINS
 
   SUBROUTINE Init_hd_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
@@ -71,8 +72,6 @@ CONTAINS
       routing_scheme,              &
       read_initial_reservoirs
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r  ! Vertical grids
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hd_config'
@@ -90,12 +89,19 @@ CONTAINS
     routing_scheme          = 'full'
     read_initial_reservoirs = .FALSE.
 
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_hd_nml', read_nml)
 
-    nml_unit = position_nml('jsb_hd_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_hd_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,                  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,             process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,             process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fract_filename,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(debug_hd,                process_mpi_root_id, mpi_comm)
+      CALL p_bcast(diag_water_budget,       process_mpi_root_id, mpi_comm)
+      CALL p_bcast(enforce_water_budget,    process_mpi_root_id, mpi_comm)
+      CALL p_bcast(routing_scheme,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(read_initial_reservoirs, process_mpi_root_id, mpi_comm)
+    END IF
 
     config%active                    = active
     config%ic_filename               = ic_filename
@@ -117,6 +123,13 @@ CONTAINS
 
     hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._wp,2._wp,3._wp,4._wp,5._wp/), units='')
     CALL Register_vgrid(hd_r)
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_hd_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_hd_config
 

@@ -52,7 +52,8 @@ CONTAINS
   !!
   SUBROUTINE Init_carbon_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
     USE mo_carbon_constants,   ONLY: FireFracWood2Atmos
 
     CLASS(t_carbon_config), INTENT(inout) :: config
@@ -71,8 +72,6 @@ CONTAINS
          diag_humus_fluxes,        &
          fire_fract_wood_2_atmos
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_config'
 
     CALL message(TRIM(routine), 'Starting carbon configuration')
@@ -86,12 +85,16 @@ CONTAINS
     fire_fract_wood_2_atmos = FireFracWood2Atmos
 
     ! Read namelist
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_carbon_nml', read_nml)
 
-    nml_unit = position_nml('jsb_carbon_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_carbon_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,                  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,             process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,             process_mpi_root_id, mpi_comm)
+      CALL p_bcast(read_cpools,             process_mpi_root_id, mpi_comm)
+      CALL p_bcast(diag_humus_fluxes,       process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fire_fract_wood_2_atmos, process_mpi_root_id, mpi_comm)
+    ENDIF
 
     ! Write resulting values in config memory
     config%active                 = active
@@ -100,6 +103,13 @@ CONTAINS
     config%read_cpools            = read_cpools
     config%diag_humus_fluxes      = diag_humus_fluxes
     config%fire_fract_wood_2_atmos = fire_fract_wood_2_atmos
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_carbon_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_carbon_config
 

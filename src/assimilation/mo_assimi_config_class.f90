@@ -52,7 +52,8 @@ CONTAINS
   !!
   SUBROUTINE Init_assimi_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
@@ -87,8 +88,6 @@ CONTAINS
        ncanopy_q_,                &  ! renamed: ncanopy -> ncanopy_q_ avoiding conflicts with jsb4; there is no ncanopy_q_ parameter in the namelist !
        canopy_layer_scheme
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_config'
 
     !! quincy
@@ -110,12 +109,18 @@ CONTAINS
     ncanopy_q_                     = 10           ! (default for FAPAR based canopy layers would be 10)
     canopy_layer_scheme            = "fapar"      ! 
 
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_assimi_nml', read_nml)
 
-    nml_unit = position_nml('jsb_assimi_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_assimi_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,                  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,             process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,             process_mpi_root_id, mpi_comm)
+      CALL p_bcast(flag_optimal_Nfraction,  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(flag_t_resp_acclimation, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(flag_t_jmax_acclimation, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ncanopy_q_,              process_mpi_root_id, mpi_comm)
+      CALL p_bcast(canopy_layer_scheme,     process_mpi_root_id, mpi_comm)
+    END IF
 
     config%active              = active
     config%ic_filename         = ic_filename
@@ -182,6 +187,13 @@ CONTAINS
                       ! ubounds=  , &
                       dz=canopy_layer_thickness_profile(:))
     CALL register_vgrid(vgrid_canopy)
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_assimi_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_assimi_config
 

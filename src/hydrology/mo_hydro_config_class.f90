@@ -53,7 +53,8 @@ CONTAINS
 
   SUBROUTINE Init_hydro_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
@@ -82,7 +83,6 @@ CONTAINS
       & l_organic,                  &
       & l_glac_in_soil
 
-    INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
     REAL(wp), POINTER :: ptr_1D(:)
     REAL(wp), ALLOCATABLE :: depths(:), mids(:)
@@ -108,10 +108,22 @@ CONTAINS
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
 
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_hydro_nml', read_nml)
 
-    nml_unit = position_nml('jsb_hydro_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_hydro_nml)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,            process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,       process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,       process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_sso_filename,   process_mpi_root_id, mpi_comm)
+      CALL p_bcast(w_skin_max,        process_mpi_root_id, mpi_comm)
+      CALL p_bcast(w_soil_limit,      process_mpi_root_id, mpi_comm)
+      CALL p_bcast(w_soil_crit_fract, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(w_soil_wilt_fract, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(snow_depth_max,    process_mpi_root_id, mpi_comm)
+      CALL p_bcast(scheme_stom_cond,  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_organic,         process_mpi_root_id, mpi_comm)
+      CALL p_bcast(l_glac_in_soil,    process_mpi_root_id, mpi_comm)
+    END IF
 
     config%active              = active
     config%ic_filename         = ic_filename
@@ -141,8 +153,6 @@ CONTAINS
     IF (l_organic) CALL message(TRIM(routine), 'Using organic component in soil hydrology')
 
     config%l_glac_in_soil      = l_glac_in_soil
-
-    CALL close_nml(nml_handler)
 
     IF (.NOT. active) RETURN
 
@@ -178,6 +188,13 @@ CONTAINS
     WRITE(message_text, *) 'Soil level depths in hydrology   [m]: ', soil_w%dz
     CALL message(TRIM(routine), message_text)
     DEALLOCATE(depths, mids)
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_hydro_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_hydro_config
 

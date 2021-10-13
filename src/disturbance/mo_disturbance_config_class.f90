@@ -59,7 +59,8 @@ CONTAINS
   !!
   SUBROUTINE Init_disturb_config(config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_namelist_iface, ONLY: process_nml, use_namelist_broadcast
+    USE mo_jsb_parallel_iface, ONLY: p_bcast, process_mpi_root_id, mpi_comm
 
     CLASS(t_disturb_config), INTENT(inout) :: config
 
@@ -98,8 +99,6 @@ CONTAINS
          wnd_threshold,            &
          wnd_damage_scale
 
-    INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_config'
 
     CALL message(TRIM(routine), 'Starting disturb configuration')
@@ -128,12 +127,24 @@ CONTAINS
     wnd_damage_scale       =  5.e-03_wp ! scaling factor for wind damage
 
     ! Read namelist
-    nml_handler = open_nml(TRIM(config%namelist_filename))
+    CALL process_nml(TRIM(config%namelist_filename), 'jsb_disturb_nml', read_nml)
 
-    nml_unit = position_nml('jsb_disturb_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_disturb_nml)
-
-    CALL close_nml(nml_handler)
+    IF (use_namelist_broadcast()) THEN
+      CALL p_bcast(active,                 process_mpi_root_id, mpi_comm)
+      CALL p_bcast(bc_filename,            process_mpi_root_id, mpi_comm)
+      CALL p_bcast(ic_filename,            process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fire_algorithm,         process_mpi_root_id, mpi_comm)
+      CALL p_bcast(windbreak_algorithm,    process_mpi_root_id, mpi_comm)
+      CALL p_bcast(lburn_pasture,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fire_litter_threshold,  process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fire_rel_hum_threshold, process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fire_minimum_woody,     process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fire_minimum_grass,     process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fire_tau_woody,         process_mpi_root_id, mpi_comm)
+      CALL p_bcast(fire_tau_grass,         process_mpi_root_id, mpi_comm)
+      CALL p_bcast(wnd_threshold,          process_mpi_root_id, mpi_comm)
+      CALL p_bcast(wnd_damage_scale,       process_mpi_root_id, mpi_comm)
+    END IF
 
     ! Write resulting values in config memory
     config%active                 = active
@@ -150,6 +161,13 @@ CONTAINS
     config%fire_tau_grass         = fire_tau_grass
     config%wnd_threshold          = wnd_threshold
     config%wnd_damage_scale       = wnd_damage_scale
+
+  CONTAINS
+
+    SUBROUTINE read_nml(nml_unit)
+      INTEGER, INTENT(in) :: nml_unit
+      READ(nml_unit, NML=jsb_disturb_nml)
+    END SUBROUTINE read_nml
 
   END SUBROUTINE Init_disturb_config
 

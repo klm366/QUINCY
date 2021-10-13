@@ -783,12 +783,17 @@ CONTAINS
     ! Set model
     model => Get_model(tile%owner_model_id)
 
-    ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
-      & .NOT. jsbach_runs_standalone()) RETURN
+    ! Update albedo every time step if model runs standalone; else only at
+    ! experiment start or one time step before the radiation time step.
+    ! Two IF's in order to avoid calling is_time_ltrig_rad_m1() for standalone model
+    IF (.NOT. jsbach_runs_standalone()) THEN
+      IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
+        & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id)) THEN
+          RETURN
+      END IF
+    END IF
 
-    ! Enable for debugging:
+      ! Enable for debugging:
     ! IF (iblk == 1 .AND. .NOT. ASSOCIATED(tile%next_sibling_tile)) THEN
     !   IF (is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .OR. &
     !     & is_time_experiment_start(options%current_datetime)) THEN
@@ -1186,10 +1191,15 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
-      & .NOT. jsbach_runs_standalone()) RETURN
+    ! Update albedo every time step if model runs standalone; else only at
+    ! experiment start or one time step before the radiation time step.
+    ! Two IF's in order to avoid calling is_time_ltrig_rad_m1() for standalone model
+    IF (.NOT. jsbach_runs_standalone()) THEN
+      IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
+        & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id)) THEN
+          RETURN
+      END IF
+    END IF
 
     dsl4jsb_Get_memory(RAD_)
 
