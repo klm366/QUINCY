@@ -231,7 +231,7 @@ CONTAINS
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
       ! use_dynlake = .FALSE.:  basin_mask is set to zero
-      WHERE (basin_mask(:) == 1._wp)
+      WHERE (basin_mask(:) > 0._wp)
         lake_inflow(:) = lake_runoff(:) * lake_fract(:) * area / rhoh2o
         inflow(:)      = land_runoff(:) * land_fract(:) * area / rhoh2o
       ELSEWHERE
@@ -378,7 +378,7 @@ CONTAINS
       END WHERE
 
       ! update lake fraction [%]
-      WHERE (basin_mask(:) == 1._wp)
+      WHERE (basin_mask(:) > 0._wp)
         ! lake and land fraction changes [%]
         fract_lake_changes(:) = MIN( MAX(area_lake(:)/area_grid(:), 0._wp), 1._wp) - lake_fract(:)
       ELSE WHERE
@@ -642,13 +642,13 @@ CONTAINS
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
-      ELSE WHERE (hd_mask(:,:) == 2._wp .AND. basin_mask(:,:)== 0._wp)
+      ELSE WHERE (hd_mask(:,:) == 2._wp .AND. basin_mask(:,:) == 0._wp)
         ! internal drainage cells [m3/s]
         internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
-      ELSE WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:)== 1._wp)
+      ELSE WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
         ! lake water drained into internal lake [m3/s]
         lake_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         discharge(:,:) = 0._wp
@@ -864,7 +864,7 @@ CONTAINS
       global_lake_volume_budget_ref = global_sum_array(volume_lake(:,:)*in_domain)
 
       ! update grid cell lake height [m] and dynamic height [m]
-      WHERE (basin_mask(:,:)==1._wp)
+      WHERE (basin_mask(:,:) > 0._wp)
         WHERE (volume_lake(:,:).LE.volume_lake_max(:,:))
           height_lake(:,:) = height_lake_max(:,:) * ( volume_lake(:,:) / volume_lake_max(:,:) )**alpha(:,:)
         ELSE WHERE (volume_lake(:,:).GT.volume_lake_max(:,:))
@@ -905,8 +905,8 @@ CONTAINS
             IF ( height_dyn(jc,blk) == MINVAL(height_dyn(nnjc,nnblk)) .AND. &
                  height_dyn(jc,blk) < height_dyn(njc(n),nblk(n))      .AND. &
                  volume_lake(njc(n),nblk(n)) > 0._wp                  .AND. &
-                 basin_mask(jc,blk) == 1._wp                          .AND. &
-                 basin_mask(njc(n),nblk(n)) == 1._wp                ) THEN
+                 basin_mask(jc,blk) > 0._wp                           .AND. &
+                 basin_mask(njc(n),nblk(n)) >  0._wp                ) THEN
  
               height_lake_diff = MIN(height_lake(njc(n),nblk(n)), height_dyn(njc(n),nblk(n)) - height_dyn(jc,blk))
               volume_lake_low  = volume_lake_max(njc(n),nblk(n)) * ( (height_lake(njc(n),nblk(n)) - height_lake_diff) / &
@@ -922,8 +922,8 @@ CONTAINS
             IF ( height_dyn(njc(n),nblk(n)) == MINVAL(height_dyn(njc,nblk)) .AND. &
                  height_dyn(njc(n),nblk(n)) < height_dyn(jc,blk)            .AND. & 
                  volume_lake(jc,blk) > 0._wp                                .AND. & 
-                 basin_mask(jc,blk) == 1._wp                                .AND. &                        
-                 basin_mask(njc(n),nblk(n)) == 1._wp                      ) THEN
+                 basin_mask(jc,blk) > 0._wp                                .AND. &                        
+                 basin_mask(njc(n),nblk(n)) > 0._wp                      ) THEN
 
               height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
               volume_lake_low  = volume_lake_max(jc,blk) * ( (height_lake(jc,blk) - height_lake_diff ) / &
