@@ -934,7 +934,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
-    dsl4jsb_Real2D_onChunk :: w_soil_rel
+    dsl4jsb_Real2D_onChunk :: w_rootzone_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -999,7 +999,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_rel)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_rel)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
@@ -1076,26 +1076,23 @@ CONTAINS
       & )
 
     IF (dsl4jsb_Config(HYDRO_)%l_stress_from_all_ws) THEN
-      ! pdv: This definition of w_soil_rel is problematic if used for e.g. calculating the water stress of plants,
-      !      as the whole soil column is taken into account, even layers below the root zone.
-
-      !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
+      !$claw acc data present(max_moist, w_rootzone_rel, w_soil_column)
       !$claw acc parallel loop gang vector
       DO i = 1, nc
         IF (max_moist(i) > 0._wp) THEN
-          w_soil_rel(i) = MIN(w_soil_column(i) / max_moist(i), 1._wp)
+          w_rootzone_rel(i) = MIN(w_soil_column(i) / max_moist(i), 1._wp)
             ! @todo - in jsbach3, taking the MIN with 1 is not nessecary. Here, w_soil_column can be larger than
             ! max_moist (in some places) ... this should be investigated, maybe it has to do with the interpolated input fields
         ELSE
           ! max_moist is zero over glaciers
-          w_soil_rel(i) = 0._wp
+          w_rootzone_rel(i) = 0._wp
         END IF
       END DO
       !$claw acc end data
 
     ELSE
       ! pdv: When assuming that supercooled water is not available for plants,
-      !      w_soil_rel should only account for the water that is available to plants relative to the maximum
+      !      w_rootzone_rel should only account for the water that is available to plants relative to the maximum
       !      rootzone soil moisture reduced by the frozen volume & volume of potentially supercooled water.
       !      But here the variables w_rootzone_avail has to be updated after the call to calc_soil_hydrology,
       !      as w_soil_column was updated.
@@ -1112,15 +1109,15 @@ CONTAINS
         w_rootzone_avail(:) = w_rootzone(:)
       END IF
 
-      !$claw acc data present(w_rootzone_max, w_rootzone, w_soil_sl, soil_depth_sl, root_depth_sl, w_soil_rel)
+      !$claw acc data present(w_rootzone_max, w_rootzone, w_soil_sl, soil_depth_sl, root_depth_sl, w_rootzone_rel)
       !$claw acc data present(w_soil_pot_scool_sl, w_rootzone_scool_act, w_rootzone_avail, w_rootzone_max)
       !$claw acc parallel loop gang vector
       DO i = 1, nc
         IF (w_rootzone_max(i) > 0._wp) THEN
-          w_soil_rel(i) =  MIN(w_rootzone_avail(i) / w_rootzone_max(i), 1._wp)
+          w_rootzone_rel(i) =  MIN(w_rootzone_avail(i) / w_rootzone_max(i), 1._wp)
         ELSE
           ! max_moist is zero over glaciers
-          w_soil_rel(i) = 0._wp
+          w_rootzone_rel(i) = 0._wp
         END IF
       END DO
     END IF   
@@ -1171,7 +1168,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_column,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_rel,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_rel,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_sl,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, i_soil_sl,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_sat_sl,   weighted_by_fract)
@@ -2336,7 +2333,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: evapotrans
     dsl4jsb_Real2D_onDomain :: w_land
     dsl4jsb_Real2D_onDomain :: discharge_ocean
-    dsl4jsb_Real2D_onDomain :: w_soil_rel
+    dsl4jsb_Real2D_onDomain :: w_rootzone_rel
     dsl4jsb_Real2D_onDomain :: fract_snow
     dsl4jsb_Real2D_onDomain :: w_snow
 
@@ -2344,7 +2341,7 @@ CONTAINS
     REAL(wp), POINTER       :: evapotrans_gmean(:)
     REAL(wp), POINTER       :: w_land_gsum(:)
     REAL(wp), POINTER       :: discharge_ocean_gsum(:)
-    REAL(wp), POINTER       :: w_soil_rel_gmean(:)
+    REAL(wp), POINTER       :: w_rootzone_rel_gmean(:)
     REAL(wp), POINTER       :: fract_snow_gsum(:)
     REAL(wp), POINTER       :: w_snow_gsum(:)
 
@@ -2364,7 +2361,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  evapotrans)                 ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_land)                     ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  discharge_ocean)            ! in
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_soil_rel)                 ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_rootzone_rel)             ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  fract_snow)                 ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_snow)                     ! in
 
@@ -2373,7 +2370,7 @@ CONTAINS
     evapotrans_gmean     => HYDRO__mem%evapotrans_gmean%ptr(:)      ! out
     w_land_gsum          => HYDRO__mem%w_land_gsum%ptr(:)           ! out
     discharge_ocean_gsum => HYDRO__mem%discharge_ocean_gsum%ptr(:)  ! out
-    w_soil_rel_gmean     => HYDRO__mem%w_soil_rel_gmean%ptr(:)      ! out
+    w_rootzone_rel_gmean => HYDRO__mem%w_rootzone_rel_gmean%ptr(:)  ! out
     fract_snow_gsum      => HYDRO__mem%fract_snow_gsum%ptr(:)       ! out
     w_snow_gsum          => HYDRO__mem%w_snow_gsum%ptr(:)           ! out
 
@@ -2414,8 +2411,8 @@ CONTAINS
     ! Unit transformation from [m3/s] to [Sv] (1 Sv = 1.e6 m3/s)
     IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
       &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * in_domain(:,:)) * 1.e-6_wp
-    IF (HYDRO__mem%w_soil_rel_gmean%is_in_output)      &
-      &  w_soil_rel_gmean     = global_sum_array(w_soil_rel(:,:)      * scaling(:,:)) / global_land_area
+    IF (HYDRO__mem%w_rootzone_rel_gmean%is_in_output)  &
+      &  w_rootzone_rel_gmean = global_sum_array(w_rootzone_rel(:,:)  * scaling(:,:)) / global_land_area
     ! Unit transformation from [m2] to [Mio km2]: 1.e-12
     IF (HYDRO__mem%fract_snow_gsum%is_in_output)       &
       &  fract_snow_gsum      = global_sum_array(fract_snow(:,:)      * scaling(:,:)) * 1.e-12_wp

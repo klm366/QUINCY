@@ -550,14 +550,14 @@ CONTAINS
       END WHERE
 
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = &
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
           & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
       ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
       END WHERE
 
       
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel), &
       !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
       !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 

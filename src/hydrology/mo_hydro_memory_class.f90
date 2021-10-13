@@ -105,7 +105,7 @@ MODULE mo_hydro_memory_class
       & water_excess,         & !< Water available for infiltration into the soil                           [m water equivalent]
       & w_soil_overflow,      & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
       & w_soil_column,        & !< Water content in the whole soil column (root zone)                       [m]
-      & w_soil_rel              !< Filling of the soil water bucket relative to MaxMoisture (=field capacity?) TODO
+      & w_rootzone_rel          !< Water content of the rootzone relative to the maximum possible amout     [1]
 
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
@@ -178,7 +178,7 @@ MODULE mo_hydro_memory_class
       evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
       w_land_gsum,            & !< Global land water content                [km3]
       discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
-      w_soil_rel_gmean,       & !< Global mean relative soil moisture       [1]
+      w_rootzone_rel_gmean,   & !< Global mean relative rootzone moisture   [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       w_snow_gsum               !< Global snow amount on non-glacier land   [Gt]
 
@@ -750,7 +750,7 @@ CONTAINS
         & prefix, suffix,                                                                 &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var('w_soil_rel', mem%w_soil_rel,                                &
+      CALL mem%Add_var('w_rootzone_rel', mem%w_rootzone_rel,                        &
         &  hgrid, surface,                                                          &
         &  t_cf('water_soil_relative', '', ''),                                     &
         &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
@@ -1020,9 +1020,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
-      CALL mem%Add_var('w_soil_rel_gmean', mem%w_soil_rel_gmean,                         &
+      CALL mem%Add_var('w_rootzone_rel_gmean', mem%w_rootzone_rel_gmean,                 &
         & hgrid, surface,                                                                &
-        & t_cf('w_soil_rel_gmean', '1', 'Global mean relative soil moisture'),           &
+        & t_cf('w_rootzone_rel_gmean', '1', 'Global mean relative rootzone moisture'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
