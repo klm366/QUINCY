@@ -47,7 +47,7 @@ CONTAINS
   !>
   SUBROUTINE jsbach_model(jsb_namelist_filename, shr_namelist_filename)
 
-    USE mo_master_control,          ONLY: jsbach_process
+    USE mo_master_control,          ONLY: jsbach_process, get_my_process_name
     USE mo_master_config,           ONLY: isRestart
 
     USE mo_load_restart,            ONLY: read_restart_header, read_restart_files
@@ -132,13 +132,13 @@ CONTAINS
 
     USE mo_alloc_patches,           ONLY: destruct_patches, destruct_comm_patterns
     USE mo_action,                  ONLY: ACTION_RESET, reset_act
-    USE mo_var_list,                ONLY: print_group_details, print_all_var_lists
+    USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
     USE mo_dynamics_config,         ONLY: iequations
     USE mo_echam_phy_config,        ONLY: eval_echam_phy_config, eval_echam_phy_tc, print_echam_phy_config
     USE mo_echam_convect_tables,    ONLY: init_convect_tables
 
-    USE mo_derived_variable_handling, ONLY: init_statistics_streams, finish_statistics_streams, update_statistics, reset_statistics
+    USE mo_derived_variable_handling, ONLY: update_statistics
 
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
@@ -200,7 +200,7 @@ CONTAINS
       ! Reads attributes and namelists for all available domains from restart file.
       ! These namelist values will overwrite the model default, and will later be overwritten if the user has
       ! specified something different for this integration.
-      CALL read_restart_header("jsbach")
+      CALL read_restart_header(TRIM(get_my_process_name()))
     ENDIF
 
     !---------------------------------------------------------------------
@@ -414,7 +414,6 @@ CONTAINS
       ! get start counter for time loop from restart file:
       IF (restartAttributes%is_init) &
         & CALL restartAttributes%get("jstep", sim_step_info%jstep0)
-      CALL init_statistics_streams
       CALL init_name_list_output(sim_step_info)
       CALL create_mipz_level_selections(output_file)
       CALL create_vertical_axes(output_file)
@@ -427,12 +426,7 @@ CONTAINS
     !-------------------------------------------------------!
     !  (Optional) detailed print-out of some variable info  !
     !-------------------------------------------------------!
-    IF (my_process_is_stdio() .AND. (msg_level >= 15)) THEN
-      CALL print_group_details(idom=1,                            &
-        &                      opt_latex_fmt           = .TRUE., &
-        &                      opt_reduce_trailing_num = .TRUE.,  &
-        &                      opt_skip_trivial        = .TRUE.)
-    END IF
+    IF (my_process_is_stdio() .AND. (msg_level >= 15)) CALL vlr_print_groups(idom=1)
 
     IF (timers_level > 1) CALL timer_stop(timer_model_init)
 
@@ -452,8 +446,6 @@ CONTAINS
       IF (output_mode%l_nml) THEN
         CALL write_name_list_output(jstep=0)
       END IF
-  
-      CALL reset_statistics
   
     END IF ! not isRestart()
   
@@ -479,9 +471,7 @@ CONTAINS
     END IF
   
     ! for debug purposes print var lists: for msg_level >= 13 short and for >= 20 long format
-    IF  (msg_level >= 13) THEN
-      CALL print_all_var_lists(lshort=(msg_level < 20))
-    ENDIF
+    IF  (msg_level >= 13) CALL vlr_print_vls(lshort=(msg_level < 20))
     
     ! set events, group and the events
     CALL message('','')
@@ -596,10 +586,8 @@ CONTAINS
         CALL write_name_list_output(jstep)
       ENDIF
   
-      CALL reset_statistics
- 
-        ! re-initialize MAX/MIN fields with 'resetval'
-        ! must be done AFTER output
+      ! re-initialize MAX/MIN fields with 'resetval'
+      ! must be done AFTER output
       CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
 
       !--------------------------------------------------------------------------
@@ -706,7 +694,6 @@ CONTAINS
 
     IF (output_mode%l_nml) THEN
       CALL close_name_list_output
-      CALL finish_statistics_streams
     ENDIF
 #ifdef HAVE_CDI_PIO
     IF (pio_type == pio_type_cdipio) THEN
