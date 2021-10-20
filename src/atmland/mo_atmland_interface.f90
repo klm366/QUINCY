@@ -443,7 +443,7 @@ CONTAINS
 
   SUBROUTINE update_land2atm(tile, options,                                          &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                             &
-    & fact_q_air, fact_qsat_srf, evapopot,                                           &
+    & fact_q_air, fact_qsat_srf, drag_srf, evapopot,                                 &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,                  &
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
@@ -459,7 +459,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     REAL(wp), OPTIONAL, INTENT(out) ::                                               &
       & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                               &
-      & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
+      & fact_q_air(:), fact_qsat_srf(:), drag_srf(:), evapopot(:),                   &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
       & rough_h_srf(:), rough_m_srf(:), q_snocpymlt(:),                              &
       & t_lwtr(:), t_lice(:), qsat_lwtr(:), qsat_lice(:), s_lwtr(:), s_lice(:),      &
@@ -492,6 +492,7 @@ CONTAINS
       & s_star_ptr, &
       & fact_q_air_ptr, &
       & fact_qsat_srf_ptr, &
+      & drag_srf_ptr, &
       & evapopot_ptr, &
       & evapotrans_lnd_ptr, &
       & latent_hflx_lnd_ptr, &
@@ -560,7 +561,7 @@ CONTAINS
 
       !$acc data pcreate(fact_lake, fact_land, fract_ptr) present(tile%lcts)
       fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)
-      
+
       !$acc data present(fract_ptr)
       !$acc parallel loop
       DO i=1,nc
@@ -578,7 +579,7 @@ CONTAINS
         END IF
       END DO
       !$acc end data
-     
+
 
       IF (PRESENT(t_srf)) THEN
         t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t_filt)
@@ -634,6 +635,15 @@ CONTAINS
         END DO
         !$acc end data
       END IF
+      IF (PRESENT(drag_srf)) THEN
+        drag_srf_ptr => dsl4jsb_var2D_onChunk(TURB_,  drag_srf)
+        !$acc data present(drag_srf, drag_ptr)
+        !$acc parallel loop
+        DO i=1,nc
+          drag_srf(i) = drag_srf_ptr(i)
+        END DO
+        !$acc end data
+      END IF
       IF (PRESENT(evapopot)) THEN
         evapopot_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
         !$acc data present(evapopot, evapopot_ptr)
@@ -675,7 +685,7 @@ CONTAINS
         !$acc data present(grnd_hflx, forc_hflx_ptr)
         !$acc parallel loop
         DO i=1,nc
-          grnd_hflx(i) = forc_hflx_ptr(i)            
+          grnd_hflx(i) = forc_hflx_ptr(i)
         END DO
         !$acc end data
       END IF
@@ -1010,6 +1020,15 @@ CONTAINS
         END DO
         !$acc end data
       END IF
+      IF (PRESENT(drag_srf)) THEN
+        drag_srf_ptr => dsl4jsb_var2D_onChunk(TURB_,  drag_srf)
+        !$acc data present(drag_srf, drag_srf_ptr)
+        !$acc parallel loop
+        DO i=1,nc
+          drag_srf(i) = drag_srf_ptr(i)
+        END DO
+        !$acc end data
+      END IF
       IF (PRESENT(evapopot)) THEN
         evapopot_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapopot) ! For offline only
         !$acc data present(evapopot, evapopot_ptr)
@@ -1149,43 +1168,43 @@ CONTAINS
         END IF
       END IF
 
-      IF (PRESENT(t_lwtr)) THEN 
+      IF (PRESENT(t_lwtr)) THEN
         !$acc kernels default(present)
         t_lwtr(:)            = 0._wp                                   ! Temporary
         !$acc end kernels
       END IF
-      IF (PRESENT(t_lice)) THEN 
+      IF (PRESENT(t_lice)) THEN
         !$acc kernels default(present)
         t_lice(:)            = 0._wp                                   ! Temporary
         !$acc end kernels
       END IF
-      IF (PRESENT(qsat_lwtr)) THEN 
+      IF (PRESENT(qsat_lwtr)) THEN
         !$acc kernels default(present)
         qsat_lwtr(:)         = 0._wp
         !$acc end kernels
       END IF
-      IF (PRESENT(qsat_lice)) THEN 
+      IF (PRESENT(qsat_lice)) THEN
         !$acc kernels default(present)
         qsat_lice(:)         = 0._wp
         !$acc end kernels
       END IF
-      IF (PRESENT(s_lwtr)) THEN 
+      IF (PRESENT(s_lwtr)) THEN
         !$acc kernels default(present)
         s_lwtr(:)            = 0._wp                                   ! Temporary
         !$acc end kernels
       END IF
-      IF (PRESENT(s_lice)) THEN 
+      IF (PRESENT(s_lice)) THEN
         !$acc kernels default(present)
         s_lice(:)            = 0._wp                                   ! Temporary
         !$acc end kernels
       END IF
-      IF (PRESENT(evapo_wtr)) THEN 
+      IF (PRESENT(evapo_wtr)) THEN
         !$acc kernels default(present)
         evapo_wtr(:)         = 0._wp
         !$acc end kernels
       END IF
       IF (PRESENT(latent_hflx_wtr)) THEN
-        !$acc kernels default(present) 
+        !$acc kernels default(present)
         latent_hflx_wtr(:)   = 0._wp
         !$acc end kernels
       END IF
@@ -1194,7 +1213,7 @@ CONTAINS
         sensible_hflx_wtr(:) = 0._wp
         !$acc end kernels
       END IF
-      IF (PRESENT(evapo_ice)) THEN 
+      IF (PRESENT(evapo_ice)) THEN
         !$acc kernels default(present)
         evapo_ice(:)         = 0._wp
         !$acc end kernels
@@ -1209,7 +1228,7 @@ CONTAINS
         sensible_hflx_ice(:) = 0._wp
         !$acc end kernels
       END IF
-      IF (PRESENT(ice_fract_lake)) THEN 
+      IF (PRESENT(ice_fract_lake)) THEN
         !$acc kernels default(present)
         ice_fract_lake(:)    = 0._wp                                   ! Temporary
         !$acc end kernels
@@ -1219,7 +1238,7 @@ CONTAINS
         albedo_lwtr(:)       = 0.07_wp
         !$acc end kernels
       END IF
-      IF (PRESENT(albedo_lice)) THEN 
+      IF (PRESENT(albedo_lice)) THEN
         !$acc kernels default(present)
         albedo_lice(:)       = 0.55_wp
         !$acc end kernels

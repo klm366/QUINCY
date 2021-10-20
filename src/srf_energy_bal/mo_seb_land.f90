@@ -54,7 +54,7 @@ CONTAINS
 
     !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
     USE mo_sse_process,            ONLY: Get_liquid_max
-    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, drag_coef
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3, cvdifts
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day, get_date_components ! get_asselin_coef, timeStep_in_days
@@ -80,6 +80,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: wind_air
     dsl4jsb_Real2D_onChunk :: day_temp_min
     dsl4jsb_Real2D_onChunk :: day_temp_max
     dsl4jsb_Real2D_onChunk :: day_temp_sum
@@ -101,6 +102,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: forc_hflx
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: rough_h
+    dsl4jsb_Real2D_onChunk :: rough_m
     dsl4jsb_Real2D_onChunk :: fact_qsat_srf
     dsl4jsb_Real2D_onChunk :: fact_q_air
     dsl4jsb_Real2D_onChunk :: htc_stable      !< heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
@@ -199,6 +202,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)        ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
+    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)       ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)       ! IN
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
@@ -221,6 +225,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   heat_cap)       ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   forc_hflx)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_h)        ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)        ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  htc_stable)     ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  htc_unstable)   ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)     ! in
@@ -339,8 +345,7 @@ CONTAINS
 
     t_soil_upper(:)   = t_soil(:,1)
 
-
-    IF(size(lat, dim=1) == 2) THEN
+    IF(size(lat, dim=1) == 1) THEN
 
       open(555, file='output.txt')
       CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
@@ -354,6 +359,7 @@ CONTAINS
             write(555,999) yr,mo,dy, hr,mn,se, 'Rnet', rad_srf_net(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Gfl1', grnd_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Tsoi', t_soil_upper(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'dra1', drag_srf(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'lati', lat(i)
             IF (l_is_clas) THEN
               write(555,999) yr,mo,dy, hr,mn,se, 'Clas', 1._wp
@@ -414,7 +420,6 @@ CONTAINS
           , qsat_srf_old(:)  &  ! Saturated specific humidity of the surface (old timestep)
           , dQdT(:)          &  ! Sensitivity of surface saturation specific humidity to temperature
           , rad_srf_net(:)   &  ! Net radiation
-          , heat_tcoef(:)    &  ! Drag coefficient for heat
           , fact_q_air(:)    &  ! See (*)
           , fact_qsat_srf(:) &  ! Similar to fact_q_air (formerly c_sat)
           , fract_snow(:)    &  ! Snow fraction
@@ -424,9 +429,17 @@ CONTAINS
           , htc_stable(:)    &  ! Heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
           , htc_unstable(:)  &  ! Heat transfer coefficient (skin conuctivity) for unstable conditions (Ri < 0)
           , lat(:)           &  ! Latitude (needed for site experiments)
+          , t_air(:)         &  ! Air temperature of the lowest atmospheric level
+          , q_air(:)         &  ! Air specific humidity of the lowest atmospheric level
+          , wind_air(:)      &  ! Wind speed of the lowest atmospheric level
+          , rough_h(:)       &  ! Roughmess length of heat
+          , rough_m(:)       &  ! Roughmess length of momentum
+
+
 
 
         ! Output
+          , heat_tcoef(:)    &  ! Drag coefficient for heat
           , forc_hflx(:)     &  ! Ground heat flux
           , s_star(:)        )  ! Dry static energy of the surface (new timestep)
 
@@ -441,14 +454,18 @@ CONTAINS
 
     END IF
 
+    drag_srf(:) = drag_coef(heat_tcoef(:), steplen)
+
+
     soil_stor(:)  = heat_cap(:) / t2s_conv(:)*(s_star(:) - s_old(:)) / (steplen*cvdifts)
-    IF(size(lat, dim=1) == 2) THEN
+    IF(size(lat, dim=1) == 1) THEN
 
       IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
         DO i=1,size(lat, dim=1)
           IF (lat(i) > 37._wp) THEN
             write(555,999) yr,mo,dy, hr,mn,se, 'Gfl2', forc_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Ssoi', soil_stor(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'dra2', drag_srf(i)
           END IF
         END DO
       END IF
@@ -470,6 +487,9 @@ CONTAINS
       END IF
     END DO
     !$claw acc end data
+
+
+
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
@@ -629,12 +649,6 @@ CONTAINS
 
     !$claw acc end data
   END SUBROUTINE surface_temp_implicit
-
-
-
-
-
-
   !
   ! ================================================================================================================================
   !
@@ -652,19 +666,26 @@ CONTAINS
     , qsat_srf_old  &  ! Saturated specific humidity of the surface (old timestep)
     , dQdT          &  ! Sensitivity of surface saturation specific humidity to temperature
     , rad_srf_net   &  ! Net radiation
-    , heat_tcoef    &  ! Drag coefficient for heat
     , fact_q_air    &  ! See (*)
     , fact_qsat_srf &  ! Similar to fact_q_air (formerly c_sat)
     , fract_snow    &  ! Snow fraction
     , heat_cap      &  ! Heat capacity of uppermost soil layer (only diagnostic for SkIn+)
     , press_srf     &  ! Surface pressure
-    , t_soil_upper    &  ! Soil temperature of top/uppermost soil layer
+    , t_soil_upper  &  ! Soil temperature of top/uppermost soil layer
     , htc_stable    &  ! Heat transfer coefficient (skin conuctivity) for stable   conditions (Ri > 0)
     , htc_unstable  &  ! Heat transfer coefficient (skin conuctivity) for unstable conditions (Ri < 0)
     , lat           &  ! Latitude (needed for site experiments)
+    , t_air         &  ! Air temperature of the lowest atmospheric level
+    , q_air         &  ! Air specific humidity of the lowest atmospheric level
+    , wind_air      &  ! Wind speed of the lowest atmospheric level
+    , rough_h       &  ! Roughmess length of heat
+    , rough_m       &  ! Roughmess length of momentum
+
+
 
 
   ! Output
+    , heat_tcoef    &  ! Drag coefficient for heat
     , forc_hflx     &  ! Ground heat flux
     , s_star        )  ! Dry static energy of the surface (new timestep)
 
@@ -676,14 +697,8 @@ CONTAINS
     USE mo_jsb_time,               ONLY: get_date_components
     USE mo_time_control,           ONLY: current_date
     USE mo_phy_schemes,            ONLY: qsat
-    USE mo_jsb_physical_constants, ONLY: &
-      !& cpd, &
-      !& cpvd1, &
-      & zemiss_def, &
-      & stbo, &
-      & alv,  &
-      & als,  &
-      & cvdifts
+    USE mo_jsb_physical_constants, ONLY: zemiss_def, stbo, alv, als, cvdifts
+    USE mo_physical_constants,     ONLY: vtmpc1, rd
 
   ! Input
     INTEGER,  INTENT(in)    :: nc
@@ -697,7 +712,6 @@ CONTAINS
     REAL(wp), INTENT(in)    :: qsat_srf_old(nc)
     REAL(wp), INTENT(in)    :: dQdT(nc)
     REAL(wp), INTENT(in)    :: rad_srf_net(nc)
-    REAL(wp), INTENT(in)    :: heat_tcoef(nc)
     REAL(wp), INTENT(in)    :: fact_q_air(nc)
     REAL(wp), INTENT(in)    :: fact_qsat_srf(nc)
     REAL(wp), INTENT(in)    :: fract_snow(nc)
@@ -707,7 +721,13 @@ CONTAINS
     REAL(wp), INTENT(in)    :: htc_stable(nc)
     REAL(wp), INTENT(in)    :: htc_unstable(nc)
     REAL(wp), INTENT(in)    :: lat(nc)
+    REAL(wp), INTENT(in)    :: t_air(nc)
+    REAL(wp), INTENT(in)    :: q_air(nc)
+    REAL(wp), INTENT(in)    :: wind_air(nc)
+    REAL(wp), INTENT(in)    :: rough_h(nc)
+    REAL(wp), INTENT(in)    :: rough_m(nc)
   ! Output
+    REAL(wp), INTENT(out)   :: heat_tcoef(nc)
     REAL(wp), INTENT(out)   :: forc_hflx(nc)
     REAL(wp), INTENT(out)   :: s_star(nc)
 
@@ -742,7 +762,18 @@ CONTAINS
   	  , zdqsold			&	! derivative saturated surface specific humidity (old iteration step)
   	  , znetrad			&	! net radiation (iteration)
       , zradcon			&	! constant part of net radiation (SWnet + LWdown)
-      , zhtc				  ! stable/unstable heat transfer coefficient (skin conductivity)
+      , zhtc	      & ! stable/unstable heat transfer coefficient (skin conductivity)
+      , press_air   & ! air pressure at bottom (depending on local elevation) [N/m^2]
+      , cloud_cover & ! cloud cover
+      , cloud_water & ! cloud liquid and frozen water
+      , t_vir       & ! virtual temperature
+      , geopot_mom  & ! geopotential for momentum
+      , geopot_heat & ! geopotential for heat
+      , zril        & ! Richardson numbers
+      , zpsi        &
+      , zzcml       &
+      , pzchl          ! (sole) drag coefficient c_h (without windspeed)
+
 
 
     ! Parameters needed for heat transfer coefficient
@@ -753,7 +784,7 @@ CONTAINS
     !
     REAL(wp) :: 		&
         zTeps			  & ! Small temperature difference used for derivative of saturated specific humidity
-      , zpressfrac    ! Fraction between surface and lowest atmospheric level pressure (should be read dynamically)
+      , press_frac    ! Fraction between surface and lowest atmospheric level pressure (should be read dynamically)
 
     ! Iteration parameters
     REAL(wp) :: 		&
@@ -784,8 +815,23 @@ CONTAINS
     ! Small temperature difference used for derivative of saturated specific humidity
       zTeps   = 0.001_wp
 
-    ! Fraction between surface and lowest atmospheric level pressure (should be read dynamically)
-      zpressfrac   = 0.99615_wp
+    ! The drag coefficients need to be iterated when using the SkIn scheme (to avoid numerically instability). The calculation
+    ! of the drag coefficients normally takes place in ECHAM/ICON and requires atmospheric vatiables like air pressure,
+    ! cloud cover, cloud water (liquid and frozen) and the geopotential, which are normally not passed from ECHAM/ICON to JSBACH.
+    ! To keep this behavior of the interface between atmosphere and land model, the above mentioned variables are rather
+    ! neglected (cloud properties) or estimated (air pressure, geopotential) the same way as in the offline case of
+    ! JSBACH (see mo_jsb4_forcing)
+      cloud_cover(:) = 0._wp
+      cloud_water(:) = 0._wp
+
+      press_frac   = 0.99615_wp !Fraction between surface and lowest atmospheric level pressure of 47 layer echam (should be read dynamically)
+      press_air(:) = press_frac * press_srf(:)
+
+      t_vir(:)       = t_air(:) * ( 1._wp + vtmpc1*q_air(:) - cloud_water(:) )
+      geopot_mom(:)  = t_vir(:) *  rd * LOG(1._wp / press_frac)
+      geopot_heat(:) = geopot_mom(:)
+
+
 
     ! Iteration options
       zloop       = 0
@@ -862,7 +908,19 @@ CONTAINS
     	  	zqsold(:)  = qsat(zTold(:), press_srf(:))
     	  	zdqsold(:) = ( qsat(zTold(:)+zTeps, press_srf(:)) - zqsold(:) ) / zTeps
     	  	znetrad(:) = zradcon(:) - zemiss_def * stbo * zTold(:)**4
-    	  END IF
+        END IF
+
+          ! Update drag coefficient for heat (analogous to precalc_land in mo_surface_land, ECHAM)
+            CALL update_dragcoef(	nc				                       &
+              , t_air(:)      , q_air(:)      , wind_air(:)        &
+              , zTold(:)      , zqsold(:)     , press_srf(:)    	 &
+              , press_air(:)  , fact_q_air(:) , fact_qsat_srf(:)   &
+              , cloud_cover(:), rough_m(:)    , rough_h(:)         &
+              , geopot_mom(:) , geopot_heat(:), cloud_water(:)     &
+              ! Output
+              , zril(:)       , heat_tcoef(:) , zpsi(:)	           &
+              , zzcml(:)      , pzchl(:)				                   )
+
 
     	! Heat Transfer Coefficient (Hyperbolic tangent ensures smooth transition from stable to unstable)
     	  !zhtc(:) = zaxSym*(phtcu(:) - phtcs(:)) * tanh(-zslope*zril(:)) + zaxSym*(phtcu(:) + phtcs(:))
@@ -945,7 +1003,7 @@ CONTAINS
     ! Ground heat flux
       forc_hflx(:) = zhtc(:)*(t_soil_upper(:) - zTnew(:))
 
-      IF(size(lat, dim=1) == 2) THEN
+      IF(size(lat, dim=1) == 1) THEN
 
         CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
         999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
@@ -954,16 +1012,35 @@ CONTAINS
         IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN
           DO i=1,size(lat, dim=1)
             IF (lat(i) > 37._wp) THEN
+              write(555,999) yr,mo,dy, hr,mn,se, 'Tair', t_air(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'qair', q_air(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'wind', wind_air(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'Told', zTold(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'qsol', zqsold(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'psfc', press_srf(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'pair', press_air(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'cair', fact_q_air(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'csat', fact_qsat_srf(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'ccov', cloud_cover(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'rouh', rough_h(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'roum', rough_m(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'geom', geopot_mom(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'geoh', geopot_heat(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'cwat', cloud_water(i)
+
+              write(555,999) yr,mo,dy, hr,mn,se, 'Rich', zril(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'cdra', heat_tcoef(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'zpsi', zpsi(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'zcml', zzcml(i)
+              write(555,999) yr,mo,dy, hr,mn,se, 'zchl', pzchl(i)
+
               write(555,999) yr,mo,dy, hr,mn,se, 'Tnew', zTnew(i)
               write(555,999) yr,mo,dy, hr,mn,se, 'zhtc', zhtc(i)
               write(555,998) yr,mo,dy, hr,mn,se, 'loop', zfinaloop(i)
             END IF
           END DO
         END IF
-
       END IF
-
-
 
     !$claw end expand
 
@@ -973,6 +1050,151 @@ CONTAINS
   !
   ! ================================================================================================================================
   !
+  SUBROUTINE update_dragcoef(klon,  &
+
+  ! Input
+    pairtemp , pqair    , pwind  , 	&
+    psfctemp , pqsat    , pspress,	&
+    pairpress, pcair    , pcsat  ,  &
+    pclc     , pz0m     , pz0h   ,  &
+    pgeopotm , pgeopoth , pqx    ,  &
+  ! Output
+    pril     , pcfh     , psi	   ,	&
+    pzcml    , pzchl				        )
+
+
+    USE mo_jsb_physical_constants,  ONLY: grav, tmelt, alv, als, cpd
+    USE mo_physical_constants,      ONLY: rd, vtmpc1
+    USE mo_phy_schemes,             ONLY: qsat
+    IMPLICIT NONE
+
+  ! Input
+    INTEGER,  INTENT(in)    :: klon
+    REAL(wp), DIMENSION(klon), INTENT(in)  :: pairtemp , pqair    , pwind
+    REAL(wp), DIMENSION(klon), INTENT(in)  :: psfctemp , pqsat    , pspress
+    REAL(wp), DIMENSION(klon), INTENT(in)  :: pairpress, pcair    , pcsat
+    REAL(wp), DIMENSION(klon), INTENT(in)  :: pclc     , pz0m     , pz0h
+    REAL(wp), DIMENSION(klon), INTENT(in)  :: pgeopotm , pgeopoth , pqx
+  ! Output
+    REAL(wp), DIMENSION(klon), INTENT(out) :: pril     , pcfh , psi
+    REAL(wp), DIMENSION(klon), INTENT(out) :: pzcml    , pzchl
+
+  ! Local variables
+    REAL(wp), DIMENSION(klon) :: zdu2  , zwind  , zteta1, ztvir1
+    REAL(wp), DIMENSION(klon) :: zfaxe , zlteta1, zcdnl , zchnl
+    REAL(wp), DIMENSION(klon) :: zrho  , zcons  , zcfncl, zcfnchl
+    REAL(wp), DIMENSION(klon) :: ztesl , zqsfc  , ztvl  , zqmid
+    REAL(wp), DIMENSION(klon) :: zqtmid, ztmid  , zqss  , zqsmid
+    REAL(wp), DIMENSION(klon) :: ztemid, zvirmid, zfux  , zfox
+    REAL(wp), DIMENSION(klon) :: zmult1, zmult2 , zmult3, zmult5
+    REAL(wp), DIMENSION(klon) :: zmult4, zdus1  , zdus2 , zteldif
+    REAL(wp), DIMENSION(klon) :: zqddif, zbuoy  , zucfl , zucfhl
+    REAL(wp), DIMENSION(klon) :: zscfl , zcfml  , zcfhl
+
+
+
+  ! Constants
+    REAL(wp) :: zkappa, zcons8, zcons9, zcons11
+    REAL(wp) :: zrvrd, zrdrv
+
+    !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
+    REAL(wp), PARAMETER :: cb = 5._wp
+    REAL(wp), PARAMETER :: cc = 5._wp
+    REAL(wp), PARAMETER :: ckap = 0.4_wp
+
+
+
+  !--------
+  ! Constants used for computation of drag coefficients
+  !--------
+    zrvrd   = 1._wp + vtmpc1
+    zrdrv   = 1._wp/ zrvrd
+    zkappa  = rd / cpd
+    zcons8  = 2._wp * cb
+    zcons9  = 3._wp * cb
+    zcons11 = 3._wp * cb * cc
+
+  !-----------------------------------------------------------------------------------------
+  ! Approximation of cdrag (no iteration)
+  !-----------------------------------------------------------------------------------------
+
+  ! squared wind shear ! minimum wind speed square from mo_surface_land.f90:precalc_land
+    zdu2(:)     = MAX(pwind(:)**2,1._wp)
+    zwind(:)    = SQRT(zdu2(:))
+  !
+  ! virtual potential air temperature (see mo_surface_boundary.f90)
+    zteta1(:)   = pairtemp(:) * ( 1.e5_wp / pairpress(:) )**zkappa
+    ztvir1(:)   = zteta1(:)   * ( 1._wp + vtmpc1*pqair(:) - pqx(:) )
+    WHERE( pairtemp(:) .GE. tmelt)
+      zfaxe(:)  = alv
+    ELSEWHERE
+      zfaxe(:)  = als
+    ENDWHERE
+    zlteta1(:)  = zteta1(:) - zfaxe(:)*zteta1(:)*pqx(:)/(cpd * pairtemp(:))
+
+  ! Neutral drag coefficient for momentum
+    zcdnl(:)    = (  ckap / LOG( 1._wp + pgeopotm(:)/(grav * pz0m(:)) )  )**2
+  ! Neutral drag coefficient for heat
+    zchnl(:)    = ckap**2 / (   LOG(  ( pgeopoth(:)/grav + pz0m(:) ) / pz0h(:)  )   &
+         						* LOG(  ( pgeopotm(:)/grav + pz0m(:) ) / pz0m(:)  )   )
+
+  ! cloud water correction (see mo_surface_land.f90)
+    zrho(:)     = pairpress(:) / ( rd*pairtemp(:)*( 1._wp + vtmpc1*pqair(:) - pqx(:)))
+    zcons(:)    = zrho(:)  * zwind(:)
+    zcfncl(:)   = zcons(:) * zcdnl(:)
+    zcfnchl(:)  = zcons(:) * zchnl(:)
+
+  !-----------------------------------------------------------------------------------------
+  ! Approximation of cdrag (iteration)
+  !-----------------------------------------------------------------------------------------
+
+    ztesl(:)     = psfctemp(:) * (1.e5_wp/ pspress(:))**zkappa
+    zqsfc(:)     = pcsat(:)*pqsat(:) + (1._wp - pcair(:))*pqair(:)
+    ztvl(:)      = ztesl(:)*( 1._wp + vtmpc1*zqsfc(:) )
+    zqmid(:)     = (pqair(:) + zqsfc(:)) / 2._wp
+    zqtmid(:)    = pqx(:) * 0.5_wp + zqmid(:)
+    ztmid(:)     = (pairtemp(:) + psfctemp(:)) / 2._wp
+    zqss(:)      = qsat(pairtemp(:), pairpress(:))
+    zqsmid(:)    = (zqss(:) + pqsat(:)) / 2._wp
+    ztemid(:)    = (zteta1(:) + ztesl(:)) / 2._wp
+    zvirmid(:)   = (ztvir1(:) + ztvl(:)) / 2._wp
+    zfux(:)      = zfaxe(:) / (cpd * ztmid(:))
+    zfox(:)      = zfaxe(:) / ( rd * ztmid(:))
+    zmult1(:)    = 1._wp + vtmpc1 * zqtmid(:)
+    zmult2(:)    = zfux(:) * zmult1(:) - zrvrd
+    zmult3(:)    = zrdrv*zfox(:)*zqsmid(:)/(1._wp + zrdrv*zfox(:)*zfux(:)*zqsmid(:))
+    zmult5(:)    = zmult1(:) - zmult2(:) * zmult3(:)
+    zmult4(:)    = zfux(:) * zmult5(:) - 1._wp
+    zdus1(:)     = pclc(:) * zmult5(:) + (1._wp - pclc(:)) * zmult1(:)
+    zdus2(:)     = pclc(:) * zmult4(:) + (1._wp - pclc(:)) * vtmpc1
+    zteldif(:)   = zlteta1(:) - ztesl(:)
+    zqddif(:)    = pqair(:) + pqx(:) - zqsfc(:)
+    zbuoy(:)     = zdus1(:) * zteldif(:) + zdus2(:) * ztemid(:) * zqddif(:)
+
+    pril(:)      = pgeopotm(:) * zbuoy(:) / (zvirmid(:) * zdu2(:))
+    zucfl(:)     = 1._wp / (1._wp + zcons11 * zcdnl(:) * SQRT(ABS(pril(:)) * (1._wp    &
+  				 + pgeopotm(:) / (grav * pz0m(:)  ) )))
+    zucfhl(:)    = 1._wp / (1._wp + zcons11 * zchnl(:) * SQRT(ABS(pril(:)) * (1._wp    &
+  				 + pgeopoth(:) / ( grav * pz0h(:) ) )))
+    zscfl(:)     = SQRT(1._wp + ABS(pril(:)))
+
+    WHERE(pril(:).GT.0._wp)
+  	zcfml(:)   = zcfncl(:)  / (1._wp + zcons8 * pril(:) / zscfl(:))
+  	zcfhl(:)   = zcfnchl(:) / (1._wp + zcons8 * pril(:) * zscfl(:))
+    ELSEWHERE
+  	zcfml(:)   = zcfncl(:)  * (1._wp - zcons8 * pril(:) * zucfl(:))
+  	zcfhl(:)   = zcfnchl(:) * (1._wp - zcons9 * pril(:) * zucfhl(:))
+    ENDWHERE
+
+    pcfh(:)      = zcfhl(:)
+    pzchl(:)     = zcfhl(:) / zcfnchl(:) * zchnl(:)
+    pzcml(:)     = zcfml(:) / zcfncl(:)  * zcdnl(:)
+    psi(:)       = zcfhl(:) / zchnl(:)
+
+    END SUBROUTINE update_dragcoef
+    !
+    ! ================================================================================================================================
+    !
   SUBROUTINE update_asselin_land(tile, options)
 
     USE mo_jsb_time,               ONLY: get_asselin_coef, get_date_components
@@ -1042,7 +1264,7 @@ CONTAINS
     END IF
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_2 tile_name=tile%name
 
-    IF(size(lat, dim=1) == 2) THEN
+    IF(size(lat, dim=1) == 1) THEN
 
       CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
       999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
@@ -1168,7 +1390,7 @@ CONTAINS
     !
     latent_hflx(:) = alv * evapotrans(:) + (als - alv) * fract_snow(:) * evapopot(:)
 
-    IF(size(lat, dim=1) == 2) THEN
+    IF(size(lat, dim=1) == 1) THEN
 
       CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
       999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
@@ -1178,6 +1400,7 @@ CONTAINS
           IF (lat(i) > 37._wp) THEN
             write(555,999) yr,mo,dy, hr,mn,se, 'Lflx', latent_hflx(i)
             write(555,999) yr,mo,dy, hr,mn,se, 'Hflx', sensible_hflx(i)
+            write(555,999) yr,mo,dy, hr,mn,se, 'dra3', drag_srf(i)
           END IF
         END DO
 

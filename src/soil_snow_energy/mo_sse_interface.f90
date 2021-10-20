@@ -306,7 +306,7 @@ CONTAINS
     END IF
 
 
-    IF(size(lat, dim=1) == 2) THEN
+    IF(size(lat, dim=1) == 1) THEN
 
   		CALL get_date_components (current_date, yr, mo, dy, hr, mn, se)
   		999 FORMAT(I0.2, I0.2, I0.2, 1X,  I0.2, I0.2, I0.2, 1X, A4, 1X, ES15.7E3)
@@ -478,7 +478,7 @@ CONTAINS
 
       !$claw acc parallel loop default(none) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
 
-      IF(size(lat, dim=1) == 2) THEN
+      IF(size(lat, dim=1) == 1) THEN
 
         IF (.NOT. tile%is_glacier) THEN
     			IF (yr == 1999  .AND. mo == 10 .AND. (dy == 23 .OR. dy == 24 .OR. dy == 25 .OR. dy == 26)) THEN

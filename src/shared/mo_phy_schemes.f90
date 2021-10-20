@@ -20,7 +20,7 @@ MODULE mo_phy_schemes
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, &
+  PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, drag_coef, &
     thermal_radiation, lwnet_from_lwdown
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes'
@@ -61,7 +61,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION q_effective
-  !! 
+  !!
   !! out: q_effective
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION q_effective(qsat, qair, fsat, fair)
@@ -80,7 +80,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION surface_dry_static_energy
-  !! 
+  !!
   !! out: surface_dry_static_energy
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
@@ -102,7 +102,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION thermal_radiation
-  !! 
+  !!
   !! out: thermal_radiation
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION thermal_radiation(t_srf)
@@ -120,7 +120,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION lwnet_from_lwdown
-  !! 
+  !!
   !! out: lwnet_from_lwdown
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
@@ -141,7 +141,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION heat_transfer_coef
-  !! 
+  !!
   !! out: heat_transfer_coef
   !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
@@ -157,6 +157,26 @@ CONTAINS
     heat_transfer_coef = drag / (cvdifts * grav * steplen)
 
   END FUNCTION heat_transfer_coef
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION drag coeficcient
+  !!
+  !! out: drag_coef
+  !-----------------------------------------------------------------------------------------------------
+  REAL(wp) ELEMENTAL FUNCTION drag_coef(heat_tcoef, steplen)
+
+    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
+
+    REAL(wp), INTENT(in) :: &
+      & heat_tcoef,      &
+      & steplen
+
+    !$claw sca routine
+
+
+    drag_coef = heat_tcoef * (cvdifts * grav * steplen)
+
+  END FUNCTION drag_coef
 
 #endif
 END MODULE mo_phy_schemes
