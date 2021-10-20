@@ -64,9 +64,9 @@ MODULE mo_hd_memory_class
       volume_lake_max , &  !< maximum lake water volume of endorheic lakes [m^3]
       height_oro_min        , &  !< minimum elevation within ICON grid cell [m]
       height_dyn      , &  !< minimum dynamic height within ICON grid cell [m]
-      alpha           , &  !< parameter to describe lake volume-height relation
-      beta            , &  !< parameter to describe lake volume-area relation
-      basin_mask      , &  !< lake basin grid points flagged as 1 else 0 
+      alpha           , &  !< parameter to describe lake volume-height relation [-]
+      beta            , &  !< parameter to describe lake volume-area relation [-]
+      basin_mask      , &  !< lake basin grid points flagged as >0 else 0 [-] 
       lake_inflow     , &  !< lake inflow from runoff (precipitation minus evaporation) [m^3/s]
       lake_drain      , &  !< lake inflow from runoff and discharge into lake storage [m^3/s]
       water_budget    , &
