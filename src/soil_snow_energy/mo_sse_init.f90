@@ -15,17 +15,19 @@
 MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
-  USE mo_jsb_control,       ONLY: debug_on
+  USE mo_kind,               ONLY: wp
+  USE mo_exception,          ONLY: message
+  USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_io,            ONLY: missval
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_class,          ONLY: get_model
+  USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_io,             ONLY: missval
+  USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
+  USE mo_util,               ONLY: int2string
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
@@ -37,7 +39,7 @@ MODULE mo_sse_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: sse_init
+  PUBLIC :: sse_init, init_soil_properties
 
   REAL(wp), PARAMETER :: &
     & fao_thermal_diff(0:6) = (/7.4e-7_wp ,8.7e-7_wp ,8.0e-7_wp ,7.4e-7_wp ,7.1e-7_wp ,6.7e-7_wp ,-1._wp/), &
@@ -45,10 +47,12 @@ MODULE mo_sse_init
 
   TYPE t_sse_init_vars
     REAL(wp), POINTER ::     &
-      & fao         (:,:  ), &
-      & vol_heat_cap(:,:  ), &
-      & heat_cond   (:,:  ), &
-      & t_srf_mon   (:,:,:)
+      & fao         (:,:  ) => NULL(), &
+      & vol_heat_cap(:,:  ) => NULL(), &
+      & heat_cond   (:,:  ) => NULL(), &
+      & t_srf_mon   (:,:,:) => NULL(), &
+      & ifs_tsoil   (:,:,:) => NULL(), &
+      & ifs_tskin   (:,:  ) => NULL()
   END TYPE t_sse_init_vars
 
   TYPE(t_sse_init_vars) :: sse_init_vars
@@ -84,9 +88,13 @@ CONTAINS
     DEALLOCATE(                     &
       & sse_init_vars%fao,          &
       & sse_init_vars%vol_heat_cap, &
-      & sse_init_vars%heat_cond,    &
-      & sse_init_vars%t_srf_mon     &
+      & sse_init_vars%heat_cond     &
       & )
+
+    IF (ASSOCIATED(sse_init_vars%t_srf_mon)) DEALLOCATE(sse_init_vars%t_srf_mon)
+
+    IF (ASSOCIATED(sse_init_vars%ifs_tsoil)) DEALLOCATE(sse_init_vars%ifs_tsoil)
+    IF (ASSOCIATED(sse_init_vars%ifs_tskin)) DEALLOCATE(sse_init_vars%ifs_tskin)
 
   END SUBROUTINE sse_finalize_init_vars
       
@@ -103,7 +111,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e
-    INTEGER :: nproma, nblks
+    INTEGER :: nproma, nblks, isoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_read_init_vars'
 
@@ -116,14 +124,23 @@ CONTAINS
     ALLOCATE(                                          &
       & sse_init_vars%fao         (nproma, nblks    ), &
       & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
-      & sse_init_vars%heat_cond   (nproma, nblks    ), &
-      & sse_init_vars%t_srf_mon   (nproma, nblks, 12)  &
+      & sse_init_vars%heat_cond   (nproma, nblks    )  &
       & )
 
     sse_init_vars%fao         (:,:)   = missval
     sse_init_vars%vol_heat_cap(:,:)   = missval
     sse_init_vars%heat_cond   (:,:)   = missval
-    sse_init_vars%t_srf_mon   (:,:,:) = missval
+
+    IF (model%config%init_from_ifs) THEN
+      ALLOCATE(sse_init_vars%ifs_tsoil(nproma,ifs_nsoil,nblks))
+      sse_init_vars%ifs_tsoil(:,:,:) = missval
+      ALLOCATE(sse_init_vars%ifs_tskin(nproma,nblks))
+      sse_init_vars%ifs_tskin(:,:) = missval
+    ELSE
+      ALLOCATE(sse_init_vars%t_srf_mon(nproma, nblks, 12))
+      sse_init_vars%t_srf_mon(:,:,:) = missval
+    END IF
+
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
@@ -156,14 +173,28 @@ CONTAINS
 
     CALL input_file%Close()
 
-    input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
+    IF (model%config%init_from_ifs) THEN
+      DO isoil=1,ifs_nsoil
+        ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
+          & variable_name='STL'//int2string(isoil))
+        sse_init_vars%ifs_tsoil(:,isoil,:) = ptr_2D(:,:)
+      END DO
+      ptr_3D => model%config%ifs_input_file%Read_2d_time( &
+        & variable_name='SKT', start_time_step=1, end_time_step=1)
+      sse_init_vars%ifs_tskin(:,:) = ptr_3D(:,:,1)
 
-    ! Read climatological surface temperature
-    ptr_3D => input_file%Read_2d_time( &
-      & variable_name='surf_temp')
-    sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+    ELSE
 
-    CALL input_file%Close()
+      input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
+
+      ! Read climatological surface temperature
+      ptr_3D => input_file%Read_2d_time( &
+        & variable_name='surf_temp')
+      sse_init_vars%t_srf_mon(:,:,:) = MERGE(ptr_3D, 280._wp, ptr_3D > 0._wp)
+
+      CALL input_file%Close()
+
+    END IF
 
   END SUBROUTINE sse_read_init_vars
 
@@ -227,6 +258,7 @@ CONTAINS
   SUBROUTINE sse_init_ic(tile)
 
     USE mo_sse_process, ONLY: init_soil_temperature
+    USE mo_util,        ONLY: ifs2soil
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -257,33 +289,49 @@ CONTAINS
 
     ! Soil and surface temperatures
     !
-    DO iblk=1,SIZE(sse_init_vars%t_srf_mon, DIM=2)
-      CALL init_soil_temperature(                   &
-        & soil_e%levels(:),                         &
-        & sse_init_vars%t_srf_mon(:,iblk,1:12),     &
-        & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,iblk),   &
-        & dsl4jsb_var_ptr(SEB_,t)(:,iblk))
-    END DO
-    dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
+    IF (model%config%init_from_ifs) THEN
 
-    !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
-    !$acc dsl4jsb_var2D_onDomain(SEB_,t), &
-    !$acc dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
-    !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
-    !$acc dsl4jsb_var2D_onDomain(SEB_,t), &
-    !$acc dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
+      ! CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:), &
+      !   & ifs_sfc=sse_init_vars%ifs_tskin(:,:))
+      CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:))
+
+    ELSE
+      DO iblk=1,SIZE(sse_init_vars%t_srf_mon, DIM=2)
+        CALL init_soil_temperature(                   &
+          & soil_e%levels(:),                         &
+          & sse_init_vars%t_srf_mon(:,iblk,1:12),     &
+          & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,iblk))
+      END DO
+    END IF
+
+    !$acc data present(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
+    !$acc update device(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
+
+    ! IF (TRIM(tile%name) /= 'box') THEN
+    IF (TRIM(tile%name) == 'land') THEN
+      dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
+      dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
+
+      !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
+      !$acc              dsl4jsb_var2D_onDomain(SEB_,t))
+      !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
+      !$acc               dsl4jsb_var2D_onDomain(SEB_,t))
+    END IF
+
     !$acc end data
 
-    CALL init_soil_properties(tile)
+    ! Note: called from model_init now
+    ! CALL init_soil_properties(tile)
 
   END SUBROUTINE sse_init_ic
 
   SUBROUTINE init_soil_properties(tile)
 
-    USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min
+    USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi, ci, dens_snow_min
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, & ! vol_hcap_snow_min,
       &                                  hcond_ice, hcond_snow !, hcond_snow_min, hcond_org
-    USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity
+    USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
+    USE mo_hydro_util,             ONLY: get_water_in_root_zone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -293,6 +341,7 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SEB_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
@@ -302,17 +351,23 @@ CONTAINS
       & heat_cond_snow
     dsl4jsb_Real3D_onDomain :: &
       & soil_depth_sl, &
+      & w_soil_sl, &
+      & w_ice_sl, &
+      & t_soil_sl, &
+      & matrix_pot_sl, &
+      & bclapp_sl, &
       & fract_org_sl, &
       & vol_heat_cap_sl, &
       & heat_cond_sl, &
-      & w_soil_sl, &
-      & w_ice_sl, &
       & vol_porosity_sl, &
       & vol_field_cap_sl
 
     ! Locally allocated vectors
     ! 
     dsl4jsb_Real3D_onDomain :: &
+      & ws_max_sl,             &
+      & liquid_max,            &
+      & heat_cap_sl,           &
       & fract_water,           &
       & fract_ice,             &
       & soil_e_dz_tmp,         & 
@@ -338,6 +393,7 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SEB_)
 
     dsl4jsb_Get_var3D_onDomain(SSE_, vol_heat_cap_sl)
     dsl4jsb_Get_var3D_onDomain(SSE_, heat_cond_sl)
@@ -358,15 +414,90 @@ CONTAINS
       RETURN
     END IF
 
+    dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_ice_sl )
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
-    dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
+
+    nproma = SIZE(vol_heat_cap,1)
+    nblks  = SIZE(vol_heat_cap,2)
+
+    IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
+
+      dsl4jsb_Get_var3D_onDomain(SSE_, t_soil_sl)
+
+      ALLOCATE( &
+        & liquid_max (nproma, nsoil, nblks), &
+        & ws_max_sl  (nproma, nsoil, nblks), &
+        & heat_cap_sl(nproma, nsoil, nblks)  &
+        & )
+      ws_max_sl(:,:,:) = soil_depth_sl(:,:,:) * vol_porosity_sl(:,:,:)
+
+      IF (dsl4jsb_Config(SSE_)%l_supercool) THEN
+        liquid_max(:,:,:) = Get_liquid_max( &
+          & t_soil_sl    (:,:,:), &
+          & ws_max_sl    (:,:,:), &
+          & matrix_pot_sl(:,:,:), &
+          & bclapp_sl    (:,:,:)  &
+          & )
+      ELSE
+        liquid_max(:,:,:) = 0._wp
+      END IF
+
+      w_ice_sl(:,:,:) = 0._wp
+      DO j = 1, nsoil
+        heat_cap_sl(:,j,:) = soil_e%dz(j) * vol_heat_cap(:,:)
+      END DO
+      WHERE (t_soil_sl(:,:,:) < tmelt .AND. w_soil_sl(:,:,:) > liquid_max(:,:,:))
+        w_ice_sl(:,:,:) = MIN(w_soil_sl(:,:,:) - liquid_max(:,:,:),                            &
+          &                   heat_cap_sl(:,:,:) * (tmelt - t_soil_sl(:,:,:)) / (alf * rhoh2o) &
+          &              )
+      END WHERE
+      w_soil_sl(:,:,:) = w_soil_sl(:,:,:) - w_ice_sl(:,:,:)
+      ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + w_ice_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
+      ! IF (TRIM(tile%name) == 'land') THEN
+      !   dsl4jsb_var_ptr(SEB_,t)(:,:)        = t_soil_sl(:,1,:)
+      !   dsl4jsb_var_ptr(SEB_,t_unfilt)(:,:) = t_soil_sl(:,1,:)
+      ! END IF
+
+      DEALLOCATE(liquid_max, ws_max_sl, heat_cap_sl)
+
+      ! dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
+      !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
+
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
+          CALL get_water_in_root_zone(                       &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
+      END DO
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
+        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      END WHERE
+
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
+        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = &
+          & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      ELSE WHERE
+        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
+      END WHERE
+
+      
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
+      !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
+
+    END IF
+
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
-    nproma = SIZE(heat_cond,1)
-    nblks  = SIZE(heat_cond,2)
+
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
     ELSE
