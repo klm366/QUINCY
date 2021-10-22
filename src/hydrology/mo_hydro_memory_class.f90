@@ -143,7 +143,7 @@ MODULE mo_hydro_memory_class
       & w_rootzone_scool_pot, & !< Potentially suppercooled water content in root zone
       & w_rootzone_scool_act, & !< Suppercooled water content in root zone
       & w_rootzone_avail,     & !< Plant available water content in root zone
-      & w_rootzone_max,       & !< Maximum plant available water content in root zone
+      & w_rootzone_avail_max, & !< Maximum plant available water content in root zone
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
@@ -855,7 +855,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                             &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'w_rootzone_max', mem%w_rootzone_max,                                   &
+      CALL mem%Add_var( 'w_rootzone_avail_max', mem%w_rootzone_avail_max,                       &
         & hgrid, surface,                                                                       &
         & t_cf('Maximum plant available water content in root zone', 'm water equivalent', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &

@@ -51,13 +51,14 @@ MODULE mo_hydro_config_class
       & l_scool_impedance,      & !< Additionally account for impedance by scooled water
       & l_diffuse_all_ws,       & !< Calculate soil water diffusion from all soil water, including immobile
       & l_infil_subzero,        & !< Allow infiltration at soil temperatures below 0°C
-      & l_discount_scool,       & !< Supercooled water is neither available to plants nor percolates
+      & l_scool_percolates,     & !< Supercooled water percolates
       & l_drain_lat,            & !< Lateral drainage, i.e. drainage from upper to lower soil layers;
-                                  !  if false, only the lowest soil level drains.
-      & l_stress_from_all_ws,   & !< Calculate water stress from all soil water, including water below
-                                  !  the root zone and including supercooled water.
-      & l_percolation_theory      !< The saturated hydraulic conductivity is calculated following
+                                & !  if false, only the lowest soil level drains.
+      & l_percolation_theory,   & !< The saturated hydraulic conductivity is calculated following
                                   !  the percolation theory
+      & l_scool_avail_to_plants,  & !< Consider supercooled water to be available to plants
+      & l_ice_reduces_maxavail,   & !< Maximum available water is reduced by the amount of ice
+      & l_scool_reduces_maxavail    !< Maximum available water is reduced by supercooled water
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -85,8 +86,9 @@ CONTAINS
     LOGICAL                     :: l_organic, l_glac_in_soil
     LOGICAL     :: l_hyd_compat420
     LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top
-    LOGICAL     :: l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_discount_scool
-    LOGICAL     :: l_drain_lat, l_stress_from_all_ws, l_percolation_theory
+    LOGICAL     :: l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates
+    LOGICAL     :: l_drain_lat, l_percolation_theory
+    LOGICAL     :: l_scool_avail_to_plants, l_ice_reduces_maxavail, l_scool_reduces_maxavail
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -109,10 +111,12 @@ CONTAINS
       & l_ice_impedance,            &
       & l_scool_impedance,          &
       & l_diffuse_all_ws,           &
-      & l_discount_scool,           &
+      & l_scool_percolates,         &
       & l_drain_lat,                &
-      & l_stress_from_all_ws,       &
-      & l_percolation_theory
+      & l_percolation_theory,       &
+      & l_scool_avail_to_plants,    &
+      & l_ice_reduces_maxavail,     &
+      & l_scool_reduces_maxavail
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -147,10 +151,12 @@ CONTAINS
     l_ice_impedance        = .FALSE.
     l_scool_impedance      = .FALSE.
     l_diffuse_all_ws       = .TRUE.
-    l_discount_scool       = .FALSE.
+    l_scool_percolates     = .TRUE.
     l_drain_lat            = .TRUE.
-    l_stress_from_all_ws   = .TRUE.
     l_percolation_theory   = .FALSE.
+    l_scool_avail_to_plants  = .TRUE.
+    l_ice_reduces_maxavail   = .FALSE.
+    l_scool_reduces_maxavail = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -223,10 +229,10 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_diffuse_all_ws=T. Namelist definition of l_diffuse_all_ws ignored.')
         l_diffuse_all_ws       = .TRUE.
       END IF
-      IF (l_discount_scool) THEN
+      IF (.NOT. l_scool_percolates) THEN
         CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_discount_scool=F. Namelist definition of l_discount_scool ignored.')
-        l_discount_scool       = .FALSE.
+         & 'WARNING: with l_hyd_compat420  l_scool_percolates=T. Namelist definition of l_scool_percolates ignored.')
+        l_scool_percolates     = .TRUE.
       END IF
       IF (.NOT. l_drain_lat) THEN
         CALL message(TRIM(routine), &
@@ -238,10 +244,20 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_percolation_theory=F. Namelist definition of l_percolation_theory ignored.')
         l_percolation_theory   = .FALSE.
       END IF
-      IF (.NOT. l_stress_from_all_ws) THEN
+      IF (l_scool_avail_to_plants) THEN
         CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_stress_from_all_ws=T. Namelist definition of l_stress_from_all_ws ignored.')
-        l_stress_from_all_ws   = .TRUE.
+         & 'WARNING: with l_hyd_compat420  l_scool_avail_to_plants=T. Namelist definition of l_scool_avail_to_plants ignored.')
+        l_scool_avail_to_plants = .TRUE.
+      END IF
+      IF (.NOT. l_ice_reduces_maxavail) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_ice_reduces_maxavail=F. Namelist definition of l_ice_reduces_maxavail ignored.')
+        l_ice_reduces_maxavail = .FALSE.
+      END IF
+      IF (.NOT. l_scool_reduces_maxavail) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_scool_reduces_maxavail=F. Namelist definition of l_scool_reduces_maxavail ignored.')
+        l_scool_reduces_maxavail = .FALSE.
       END IF
     END IF
     config%l_infil_subzero        = l_infil_subzero
@@ -270,19 +286,24 @@ CONTAINS
     config%l_diffuse_all_ws       = l_diffuse_all_ws
     CALL message(TRIM(routine), &
      & 'Calculate diffusion of all water, including supercooled water: '//TRIM(logical2string(l_diffuse_all_ws)))
-    config%l_discount_scool       = l_discount_scool
+    config%l_scool_percolates     = l_scool_percolates
     CALL message(TRIM(routine), &
-     & 'Account for supercooled water: '//TRIM(logical2string(l_discount_scool)))
+     & 'Allow percolation of supercooled water: '//TRIM(logical2string(l_scool_percolates)))
     config%l_drain_lat            = l_drain_lat
     CALL message(TRIM(routine), &
      & 'Lateral drainage is possible: '//TRIM(logical2string(l_drain_lat)))
     config%l_percolation_theory   = l_percolation_theory
     CALL message(TRIM(routine), &
      & 'Calculate percolation from Percolation Theory: '//TRIM(logical2string(l_percolation_theory)))
-    config%l_stress_from_all_ws   = l_stress_from_all_ws
     CALL message(TRIM(routine), &
-     & 'Account for all water for water stress calculation, including water below the rootzone and supercooled water: ' &
-     & //TRIM(logical2string(l_stress_from_all_ws)))
+     & 'Consider supercooled water as plant available water: '//TRIM(logical2string(l_scool_avail_to_plants)))
+    config%l_ice_reduces_maxavail = l_ice_reduces_maxavail
+    CALL message(TRIM(routine), &
+     & 'Reduce maximum plant available water by amount of ice: '//TRIM(logical2string(l_ice_reduces_maxavail)))
+    config%l_scool_reduces_maxavail = l_scool_reduces_maxavail
+    CALL message(TRIM(routine), &
+     & 'Reduce maximum plant available water by amount of potentially supercooled water: ' &
+     & //TRIM(logical2string(l_scool_reduces_maxavail)))
 
     CALL close_nml(nml_handler)
 

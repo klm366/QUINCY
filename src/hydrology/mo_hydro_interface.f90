@@ -934,7 +934,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
-    dsl4jsb_Real2D_onChunk :: w_rootzone_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -943,7 +942,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl
     dsl4jsb_Real2D_onChunk :: w_rootzone
-    dsl4jsb_Real2D_onChunk :: w_rootzone_max
     dsl4jsb_Real2D_onChunk :: w_rootzone_fc
     dsl4jsb_Real2D_onChunk :: w_rootzone_avail
     dsl4jsb_Real2D_onChunk :: w_rootzone_scool_act
@@ -999,7 +997,6 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_rel)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
@@ -1008,7 +1005,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pot_scool_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pwp_sl)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_max)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_fc)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_avail)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_scool_act)
@@ -1043,7 +1039,7 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%l_ice_impedance,             &
       & dsl4jsb_Config(HYDRO_)%l_scool_impedance,           &
       & dsl4jsb_Config(HYDRO_)%l_diffuse_all_ws,            &
-      & dsl4jsb_Config(HYDRO_)%l_discount_scool,            &
+      & dsl4jsb_Config(HYDRO_)%l_scool_percolates,          &
       & dsl4jsb_Config(HYDRO_)%l_drain_lat,                 &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
@@ -1074,53 +1070,6 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
       & )
-
-    IF (dsl4jsb_Config(HYDRO_)%l_stress_from_all_ws) THEN
-      !$claw acc data present(max_moist, w_rootzone_rel, w_soil_column)
-      !$claw acc parallel loop gang vector
-      DO i = 1, nc
-        IF (max_moist(i) > 0._wp) THEN
-          w_rootzone_rel(i) = MIN(w_soil_column(i) / max_moist(i), 1._wp)
-            ! @todo - in jsbach3, taking the MIN with 1 is not nessecary. Here, w_soil_column can be larger than
-            ! max_moist (in some places) ... this should be investigated, maybe it has to do with the interpolated input fields
-        ELSE
-          ! max_moist is zero over glaciers
-          w_rootzone_rel(i) = 0._wp
-        END IF
-      END DO
-      !$claw acc end data
-
-    ELSE
-      ! pdv: When assuming that supercooled water is not available for plants,
-      !      w_rootzone_rel should only account for the water that is available to plants relative to the maximum
-      !      rootzone soil moisture reduced by the frozen volume & volume of potentially supercooled water.
-      !      But here the variables w_rootzone_avail has to be updated after the call to calc_soil_hydrology,
-      !      as w_soil_column was updated.
-
-      ! Amount of water in root zone
-      CALL get_water_in_root_zone(w_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone(:))
-
-      IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
-        ! Amount of supercooled water in root zone
-        CALL get_water_in_root_zone(MIN(w_soil_pot_scool_sl(:,:), w_soil_sl(:,:)), &
-          &                         soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_scool_act(:))
-        w_rootzone_avail(:) = w_rootzone(:) - w_rootzone_scool_act(:)
-      ELSE
-        w_rootzone_avail(:) = w_rootzone(:)
-      END IF
-
-      !$claw acc data present(w_rootzone_max, w_rootzone, w_soil_sl, soil_depth_sl, root_depth_sl, w_rootzone_rel)
-      !$claw acc data present(w_soil_pot_scool_sl, w_rootzone_scool_act, w_rootzone_avail, w_rootzone_max)
-      !$claw acc parallel loop gang vector
-      DO i = 1, nc
-        IF (w_rootzone_max(i) > 0._wp) THEN
-          w_rootzone_rel(i) =  MIN(w_rootzone_avail(i) / w_rootzone_max(i), 1._wp)
-        ELSE
-          ! max_moist is zero over glaciers
-          w_rootzone_rel(i) = 0._wp
-        END IF
-      END DO
-    END IF   
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
       !$claw acc exit data delete(fract_org_sl)
@@ -1176,9 +1125,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pwp_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
-    IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
-      dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
-    END IF
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pot_scool_sl, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1319,14 +1266,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_rootzone_scool_act!< Suppercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: w_rootzone_avail    !< Plant available water content in root zone
     dsl4jsb_Real2D_onChunk :: i_rootzone
-    dsl4jsb_Real2D_onChunk :: w_rootzone_max      !< Maximum plant available water content in root zone
+    dsl4jsb_Real2D_onChunk :: w_rootzone_avail_max !< Maximum plant available water content in root zone
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
+    dsl4jsb_Real2D_onChunk :: w_rootzone_rel      !< Relative root zone soil moisture
 
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk :: beta_soil_gs
     dsl4jsb_Real2D_onChunk :: beta_soil_ps
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk, ics, ice, nc, i
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
@@ -1334,6 +1282,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
@@ -1368,7 +1317,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_scool_pot)! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_scool_act)! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_avail)    ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_max)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_avail_max) ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_rel)      ! out
     !
     IF (model%config%use_quincy) THEN
       dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
@@ -1387,44 +1337,49 @@ CONTAINS
     CALL get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_fc (:))
     CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_pwp(:))
 
-    ! Calculate water stress factor
-    ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    IF (dsl4jsb_Config(HYDRO_)%l_stress_from_all_ws) THEN
-      ! Calculate water stress by taking into account all soil water, including water 
-      ! below the rootzone and supercooled water.
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_stress_expand_0 tile_name=tile%name
-      water_stress(:) = get_water_stress_factor(w_soil_column(:), max_moist(:), &
-            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
-      !$claw end expand
+    ! Calculate plant available water
+    IF (.NOT. dsl4jsb_Config(SSE_)%l_freeze .OR. dsl4jsb_Config(HYDRO_)%l_scool_avail_to_plants) THEN
+      ! Available water in the root zone, including supercooled water
+      w_rootzone_avail(:) = w_soil_column(:)
     ELSE
-      IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
-        !vg: these options are used with the calcuation of w_soil_pot_scool_sl
-        !pdv: Needs to be discussed how to handle supercooled water: Is it available to plants? Then:
-        !    w_rootzone_avail(:,:) = w_rootzone(:,:)
-        !!!! If not then :
-        CALL get_water_in_root_zone(w_soil_pot_scool_sl(:,:),  &
-                                 &  soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_scool_pot(:))
-        CALL get_water_in_root_zone(MIN(w_soil_pot_scool_sl(:,:), w_soil_sl(:,:)),  &
-                                 &  soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_scool_act(:))
-
-        IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
-          w_rootzone_avail(:) = w_rootzone(:) - w_rootzone_scool_act(:)
-        ELSE
-          w_rootzone_avail(:) = w_rootzone(:)
-        END IF
-      END IF
-
-      ! Here also the question is how to treat the potential rootzone soil moisture
-      ! Definitly ice should be removed -- otherwise plants suffer constant waterstress in pf-regions:
-      ! But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in Ws_max
-      IF (dsl4jsb_Config(HYDRO_)%l_discount_scool) THEN
-        w_rootzone_max(:) = max_moist(:)-i_rootzone(:)-w_rootzone_scool_pot(:)
-      ELSE
-        w_rootzone_max(:) = max_moist(:)-i_rootzone(:)
-      END IF
-      water_stress(:) = get_water_stress_factor(w_rootzone_avail(:), w_rootzone_max(:), &
-            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
+      ! Supercooled water is not available to plants
+      CALL get_water_in_root_zone(w_soil_pot_scool_sl(:,:),  &
+                               &  soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_scool_pot(:))
+      CALL get_water_in_root_zone(MIN(w_soil_pot_scool_sl(:,:), w_soil_sl(:,:)),  &
+                               &  soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_scool_act(:))
+      w_rootzone_avail(:) = w_soil_column(:) - w_rootzone_scool_act(:)
     END IF
+
+    ! Calculate maximum available water
+    ! pdv: Here also the question is how to treat the potential rootzone soil moisture
+    !      Definitly ice should be removed -- otherwise plants suffer constant waterstress in pf-regions:
+    !      But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in Ws_max
+    w_rootzone_avail_max(:) = max_moist(:)
+    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(HYDRO_)%l_ice_reduces_maxavail) THEN
+      w_rootzone_avail_max(:) = w_rootzone_avail_max(:) - i_rootzone(:)
+    END IF
+    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(HYDRO_)%l_scool_reduces_maxavail) THEN
+      w_rootzone_avail_max(:) = w_rootzone_avail_max(:) - w_rootzone_scool_pot(:)
+    END IF
+
+    ! Calculate water stress
+    ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
+    water_stress(:) = get_water_stress_factor(w_rootzone_avail(:), w_rootzone_avail_max(:), &
+            &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
+
+    ! Calculate relative soil moisture (used in LoGro-P Phenology)
+    !$claw acc data present(w_rootzone_avail_max, w_rootzone, w_soil_sl, soil_depth_sl, root_depth_sl, w_rootzone_rel)
+    !$claw acc data present(w_soil_pot_scool_sl, w_rootzone_scool_act, w_rootzone_avail)
+    !$claw acc parallel loop gang vector
+    DO i = 1, nc
+      IF (w_rootzone_avail_max(i) > 0._wp) THEN
+        w_rootzone_rel(i) =  MIN(w_rootzone_avail(i) / w_rootzone_avail_max(i), 1._wp)
+      ELSE
+        ! max_moist is zero over glaciers
+        w_rootzone_rel(i) = 0._wp
+      END IF
+    END DO
+
 
     !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
     !!
@@ -1619,7 +1574,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_scool_pot,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_scool_act,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_avail,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_max,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_avail_max,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

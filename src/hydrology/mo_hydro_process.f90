@@ -405,7 +405,8 @@ CONTAINS
   ! @param [in]      l_ice_impedance        Account for ice impedance
   ! @param [in]      l_scool_impedance      Account for impedance by supercooled water
   ! @param [in]      l_diffuse_all_ws       Allow diffusion of supercooed water
-  ! @param [in]      l_discount_scool       Supercooled water does not percolate and is not available to plants
+  ! @param [in]      l_scool_percolates     Supercooled water percolates
+  ! @param [in]      l_scool_avail_to_plants Supercooled water is available to plants
   ! @param [in]      l_drain_lat            Allow lateral drainage, i.e. drainage from upper to soil layers
   ! @param [in]      soil_depth_l       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_l       Thicknesses of soil layers until rooting depth [m]
@@ -439,7 +440,7 @@ CONTAINS
     ! in
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
     & l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top,                         &
-    & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat,                       &
+    & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates, l_drain_lat,                     &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
     & pot_scool_l,                                                                                               &
@@ -464,7 +465,7 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top, &
-      & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_discount_scool, l_drain_lat
+      & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates, l_drain_lat
     REAL(wp), INTENT(in), DIMENSION(:,:) ::                         &
       & soil_depth_l, root_depth_l, fract_org_l,                    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l,  &
@@ -682,7 +683,7 @@ CONTAINS
     ! Drainage calculation with multi-layer soil scheme
     CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog,                     &
       &     l_ice_impedance, l_scool_impedance, l_diffuse_all_ws,          &
-      &     l_discount_scool, l_drain_lat, ws_l, soil_depth_l,             &
+      &     l_scool_percolates, l_drain_lat, ws_l, soil_depth_l,           &
       &     wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, &
       &     matrix_pot_l, pot_scool_l,                                     &
       &     drainage, pore_size_index_l, p_wilt_l, dz,                     &
@@ -710,7 +711,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------------------
   SUBROUTINE soilhyd(nidx, nsoil, delta_time, ilog, jllog,                          &
-    & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_discount_scool,       &
+    & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates,     &
     & l_drain_lat, ws_l, dsoil,                                                     &
     & wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
     & pot_scool_l, drainage, pore_size_index_l, p_wilt_l, dz, soil_ice_l,           &
@@ -734,7 +735,7 @@ CONTAINS
     LOGICAL,  INTENT(IN)            :: l_scool_impedance          ! Account for impedance by supercooled water
     LOGICAL,  INTENT(IN)            :: l_diffuse_all_ws           ! Calculate soil water diffusion of all
                                                                   !   soil water, including immobile
-    LOGICAL,  INTENT(IN)            :: l_discount_scool           ! Supercooled water does not percolate
+    LOGICAL,  INTENT(IN)            :: l_scool_percolates         ! Supercooled water percolate
     LOGICAL,  INTENT(IN)            :: l_drain_lat                ! Lateral drainage, i.e. from upper soil layers
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wsat_l(:,:)                ! Maximum storage in each soil layer (porosity) [m]
@@ -845,7 +846,7 @@ CONTAINS
     !$claw acc loop gang vector
     DO j = 1, nidx
       DO i = 1, nsoil
-        IF (l_discount_scool) THEN
+        IF (.NOT. l_scool_percolates) THEN
           !!!! When there is supercooled water in the soil, this should not be able to move vertically
           ws_immo_l(j,i) = MAX(pot_scool_l(j,i), p_wilt_l(j,i))
         ELSE
@@ -925,7 +926,7 @@ CONTAINS
             ! The lateral drainage from each soil layer should very much be discussed with Stefan again ...
             ! I would not include it.
             ! Furthermore, when there is supercooled water it should not be assumed to move through the soil
-            IF (.NOT. l_discount_scool) THEN
+            IF (l_scool_percolates) THEN
               IF (ws_l(j,i) > ws_crit(j)) THEN
                 drain_crit(j) = (zdrmax-zdrmin)  &
                   &            * ((ws_l(j,i)-ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
