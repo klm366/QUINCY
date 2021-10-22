@@ -934,14 +934,13 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
-    dsl4jsb_Real2D_onChunk :: w_soil_column
+    dsl4jsb_Real2D_onChunk :: w_rootzone
     dsl4jsb_Real2D_onChunk :: max_moist
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl
-    dsl4jsb_Real2D_onChunk :: w_rootzone
     dsl4jsb_Real2D_onChunk :: w_rootzone_fc
     dsl4jsb_Real2D_onChunk :: w_rootzone_avail
     dsl4jsb_Real2D_onChunk :: w_rootzone_scool_act
@@ -997,14 +996,13 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_column)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_fc_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pot_scool_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pwp_sl)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_fc)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_avail)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_scool_act)
@@ -1059,7 +1057,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ), &
       ! inout
-      & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_column     ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, w_rootzone        ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sl         ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, i_soil_sl         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_overflow   ), &
@@ -1116,7 +1114,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_column,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_rel,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_sl,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, i_soil_sl,       weighted_by_fract)
@@ -1253,11 +1251,10 @@ CONTAINS
     ! HYDRO_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
-    dsl4jsb_Real2D_onChunk :: w_soil_column       !< Water content in soil column
-    dsl4jsb_Real3D_onChunk :: w_soil_sl           !< Water content in soil layers
+    dsl4jsb_Real2D_onChunk :: w_rootzone          !< Liquid water content in the root zone
+    dsl4jsb_Real3D_onChunk :: w_soil_sl           !< Liquid water content in soil layers
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl        !< Water content of soil layers at field capacity
     dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
-    dsl4jsb_Real2D_onChunk :: w_rootzone          !< Water content in root zone
     dsl4jsb_Real2D_onChunk :: w_rootzone_fc       !< Water content in root zone at field capacity
     dsl4jsb_Real2D_onChunk :: w_rootzone_pwp      !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: max_moist
@@ -1308,9 +1305,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pot_scool_sl) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    i_rootzone)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist)           ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_soil_column)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_fc)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_pwp)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
@@ -1333,21 +1329,20 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-    CALL get_water_in_root_zone(w_soil_sl     (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone    (:))
     CALL get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_fc (:))
     CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_pwp(:))
 
     ! Calculate plant available water
     IF (.NOT. dsl4jsb_Config(SSE_)%l_freeze .OR. dsl4jsb_Config(HYDRO_)%l_scool_avail_to_plants) THEN
       ! Available water in the root zone, including supercooled water
-      w_rootzone_avail(:) = w_soil_column(:)
+      w_rootzone_avail(:) = w_rootzone(:)
     ELSE
       ! Supercooled water is not available to plants
       CALL get_water_in_root_zone(w_soil_pot_scool_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_scool_pot(:))
       CALL get_water_in_root_zone(MIN(w_soil_pot_scool_sl(:,:), w_soil_sl(:,:)),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_scool_act(:))
-      w_rootzone_avail(:) = w_soil_column(:) - w_rootzone_scool_act(:)
+      w_rootzone_avail(:) = w_rootzone(:) - w_rootzone_scool_act(:)
     END IF
 
     ! Calculate maximum available water

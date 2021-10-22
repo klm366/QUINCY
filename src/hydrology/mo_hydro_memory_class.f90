@@ -104,7 +104,7 @@ MODULE mo_hydro_memory_class
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_excess,         & !< Water available for infiltration into the soil                           [m water equivalent]
       & w_soil_overflow,      & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
-      & w_soil_column,        & !< Water content in the whole soil column (root zone)                       [m]
+      & w_rootzone,           & !< Liquid water content in the rootzone                                     [m]
       & w_rootzone_rel          !< Water content of the rootzone relative to the maximum possible amout     [1]
 
     TYPE(t_jsb_var_real3d) :: &
@@ -136,7 +136,6 @@ MODULE mo_hydro_memory_class
       & root_depth,           & !< Rooting depth [m]
       & fract_snow_can,       & !< Snow fraction on canopy                                                  []
       & w_snow_can,           & !< Water content of snow reservoir on canopy                                [m water equivalent]
-      & w_rootzone,           & !< Water content in root zone of the soil                                   [m]
       & w_rootzone_fc,        & !< Water content at field capacity in root zone of the soil                 [m]
       & w_rootzone_pwp,       & !< Water content at permanent wilting point in root zone of the soil        [m]
       & i_rootzone,           & !< Frozen water content of the root zone                                    [m water equivalent]
@@ -680,12 +679,12 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-      CALL mem%Add_var( 'w_soil_column', mem%w_soil_column,                          &
-        & hgrid, surface,                                                            &
-        & t_cf('Water content in the whole soil column', 'm water equivalent', ''),  &
-        & t_grib1(table, 255, grib_bits), grib2_desc,                                &
-        & prefix, suffix,                                                            &
-        & loutput=.TRUE., output_level=BASIC,                                        &
+      CALL mem%Add_var( 'w_rootzone', mem%w_rootzone,                                         &
+        & hgrid, surface,                                                                     &
+        & t_cf('w_rootzone', 'Liquid water content of the root zone', 'm water equivalent'),  &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                                         &
+        & prefix, suffix,                                                                     &
+        & loutput=.TRUE., output_level=BASIC,                                                 &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'w_soil_sl', mem%w_soil_sl,                          &
@@ -794,15 +793,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC,                                                          &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var( 'w_rootzone', mem%w_rootzone,                                &
-        & hgrid, surface,                                                            &
-        & t_cf('Water content in root zone of the soil', 'm water equivalent', ''),  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-        & prefix, suffix,                                                            &
-        & lrestart=.FALSE.,                                                          &
-        & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'w_rootzone_fc', mem%w_rootzone_fc,                                           &

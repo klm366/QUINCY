@@ -536,31 +536,7 @@ CONTAINS
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
       !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_rootzone), 2)
-          CALL get_water_in_root_zone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
-      END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      END WHERE
-
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
-      END WHERE
-
       
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel), &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
-      !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
       CALL init_soil_properties(tile)
     END IF
 
@@ -585,9 +561,24 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, w_rootzone_pwp) (:,  i)  )
       END DO
+
+      ! Make sure w_rootzone is smaller than max_moist
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      END WHERE
+
+      ! Initialization of w_rootzone_rel (completely ignoring ice)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
+          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      ELSE WHERE
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
+      END WHERE
+
       !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_rootzone),     &
       !$acc             dsl4jsb_var_ptr(HYDRO_, w_rootzone_fc),  &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, w_rootzone_pwp))
+      !$acc             dsl4jsb_var_ptr(HYDRO_, w_rootzone_pwp), &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, w_rootzone_rel))
     END IF
 
   END SUBROUTINE hydro_init_ic
