@@ -777,14 +777,15 @@ CONTAINS
     !
     dsl4jsb_Get_memory(HYDRO_)
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, hyd_cond_sat)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_porosity)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, bclapp)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, matrix_pot)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, pore_size_index)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_field_cap)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_p_wilt)
-    IF (dsl4jsb_Config(HYDRO_)%l_organic) dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, hyd_cond_sat)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_porosity)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, bclapp)             ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, matrix_pot)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, pore_size_index)    ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_field_cap)      ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_p_wilt)         ! in
+    IF (dsl4jsb_Config(HYDRO_)%l_organic)   &
+      &  dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)    ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)          ! out
@@ -803,15 +804,6 @@ CONTAINS
       vol_field_cap_sl  (:,i) = vol_field_cap(:)
       vol_p_wilt_sl     (:,i) = vol_p_wilt(:)
       !$claw end expand
-
-    ! hyd_cond_sat_sl   (:,:) = SPREAD(hyd_cond_sat   (:), DIM=2, ncopies=nsoil)
-    ! vol_porosity_sl   (:,:) = SPREAD(vol_porosity   (:), DIM=2, ncopies=nsoil)
-    ! bclapp_sl         (:,:) = SPREAD(bclapp         (:), DIM=2, ncopies=nsoil)
-    ! matrix_pot_sl     (:,:) = SPREAD(matrix_pot     (:), DIM=2, ncopies=nsoil)
-    ! pore_size_index_sl(:,:) = SPREAD(pore_size_index(:), DIM=2, ncopies=nsoil)
-    ! vol_field_cap_sl  (:,:) = SPREAD(vol_field_cap  (:), DIM=2, ncopies=nsoil)
-    ! vol_p_wilt_sl     (:,:) = SPREAD(vol_p_wilt     (:), DIM=2, ncopies=nsoil)
-
     END DO
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       IF (dsl4jsb_Config(HYDRO_)%l_percolation_theory) THEN
@@ -941,9 +933,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl
-    dsl4jsb_Real2D_onChunk :: w_rootzone_fc
-    dsl4jsb_Real2D_onChunk :: w_rootzone_avail
-    dsl4jsb_Real2D_onChunk :: w_rootzone_scool_act
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: w_soil_overflow
 
@@ -996,29 +985,25 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_fc_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pot_scool_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pwp_sl)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_fc)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_avail)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone_scool_act)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, root_depth_sl)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_overflow)
-
-    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
-
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)             ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pot_scool_sl)   ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, root_depth_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)            ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)        ! in
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
       !$claw acc enter data create(fract_org_sl)
       !$claw expand parallel update
       fract_org_sl(:,:) = 0._wp
     END IF
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone)            ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)             ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_overflow)       ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_fc_sl)          ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pwp_sl)         ! out
+
 
     !$claw acc update device(soil_w%dz) ! TODO move if possible
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name

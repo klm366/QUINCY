@@ -703,21 +703,22 @@ CONTAINS
     !
     dsl4jsb_Get_memory(HYDRO_)
 
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_porosity)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, bclapp)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, matrix_pot)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, pore_size_index)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_field_cap)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_p_wilt)
-    IF (dsl4jsb_Config(HYDRO_)%l_organic) dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)       ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_porosity)       ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, bclapp)             ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, matrix_pot)         ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, pore_size_index)    ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_field_cap)      ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_p_wilt)         ! in
+    IF (dsl4jsb_Config(HYDRO_)%l_organic)   &
+     &   dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)  ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl)    ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)    ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)          ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)      ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl) ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)   ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)      ! out
 
     hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
     vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
