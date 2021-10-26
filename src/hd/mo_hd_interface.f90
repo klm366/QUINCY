@@ -807,6 +807,7 @@ CONTAINS
       & u_lake,                &
       & k_lake,                &
       & global_lake_volume_error,          &  ! water budget change within the time step
+      & neigh_dist,                  &
       & steplen
 
     INTEGER  :: jc, jcs, jce       ! grid cells
@@ -822,6 +823,10 @@ CONTAINS
     LOGICAL,  POINTER ::    &
       & is_in_domain (:,:)      ! T: cell in domain (not halo)
 
+    REAL(wp),  POINTER ::    &
+      & lat (:,:),           & ! latitude in degree
+      & lon (:,:)              ! longitude in degree
+
     LOGICAL, ALLOCATABLE  ::  &
       & neigh_mask(:,:),       & ! mask for neighbor cells 
       & nneigh_mask(:,:)         ! mask for neighbor's neighbor cells 
@@ -836,6 +841,8 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     grid  => Get_grid(model%grid_id)
     is_in_domain => grid%patch%cells%decomp_info%owner_mask  (:,:)
+    lat  => grid%lat(:,:)
+    lon  => grid%lon(:,:)
 
     nproma  = grid%nproma
     nblks   = grid%nblks
@@ -937,11 +944,12 @@ CONTAINS
                basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))    ) THEN
  
               height_lake_diff = MIN(height_lake(njc(n),nblk(n)), height_dyn(njc(n),nblk(n)) - height_dyn(jc,blk))
+              CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
 !              volume_lake_low  = volume_lake_max(njc(n),nblk(n)) * ( (height_lake(njc(n),nblk(n)) - height_lake_diff) / &
 !                                 height_lake_max(njc(n),nblk(n))) ** (1._wp/alpha(njc(n),nblk(n)) )
 !              volume_lake_diff = volume_lake(njc(n),nblk(n)) - volume_lake_low
-              u_lake           = 0.01_wp * (height_lake_diff/160000)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
-              k_lake           = 160000/u_lake
+              u_lake           = 0.01_wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
+              k_lake           = neigh_dist/u_lake
               ncount = COUNT(height_dyn(jc,blk)==PACK(height_dyn(:,:),nneigh_mask(:,:)))
               IF (ncount==1) THEN
                 inflow_lake(jc,blk) = inflow_lake(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, volume_lake(njc(n),nblk(n))/steplen )
@@ -957,11 +965,12 @@ CONTAINS
                  basin_mask(jc,blk) > 0._wp                                 .AND. &                        
                  basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))         ) THEN               
               height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
+              CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
 !              volume_lake_low  = volume_lake_max(jc,blk) * ( (height_lake(jc,blk) - height_lake_diff ) / &
 !                                 height_lake_max(jc,blk) ) ** (1._wp/alpha(jc,blk))
 !              volume_lake_diff = volume_lake(jc,blk) - volume_lake_low
-              u_lake           = 0.01_wp * (height_lake_diff/160000)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
-              k_lake           = 160000/u_lake
+              u_lake           = 0.01_wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
+              k_lake           = neigh_dist/u_lake
               ! make sure neighbor cells have different dynamic height
               ! (water outflow only into one neighboring grid cells allowed)
               IF (outflow_lake(jc,blk)==0._wp) THEN
@@ -999,6 +1008,28 @@ CONTAINS
 
   END SUBROUTINE lake_lateral_flow
 
+
+  SUBROUTINE haversine_distance(clat, clon, nlat, nlon, dist)
+
+    REAL(wp), INTENT(in) :: &
+      & clat,               &
+      & clon,               &
+      & nlat,               &
+      & nlon
+
+    REAL(wp), INTENT(out) :: &
+      & dist
+
+    REAL(wp) :: r, a, delta_phi, delta_lambda
+
+    r = 6371220.0_wp ! Reference Earth's Radius (m)
+
+    delta_phi = (nlat - clat) * deg2rad
+    delta_lambda = (nlon - clon) * deg2rad
+    a = SIN(delta_phi / 2)**2 + COS(clat*deg2rad) * COS(nlat*deg2rad) * SIN(delta_lambda / 2)**2
+    dist = r * (2 * ATAN2(SQRT(a), SQRT(1 - a)))
+
+  END SUBROUTINE haversine_distance
 
   !------------------------------------------------------------------------------------------------
   SUBROUTINE hd_check_water_budget(tile, options)
