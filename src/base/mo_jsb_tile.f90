@@ -356,7 +356,14 @@ CONTAINS
     USE mo_jsb_io,              ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables, TSTEP_INSTANT, TSTEP_CONSTANT
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
+#ifdef HAVE_MOFFLEDAC
+    USE mo_timer,               ONLY: timer_start, timer_stop
+    USE mo_moffledac_iface,     ONLY: timer_moffledac, get_jsb_var_name, get_var_name_add
+    USE mo_input,               ONLY: InputFileAdd, InputVarAdd, InputOptAdd, InputVarGroupStart, InputVarGroupEnd, InputGetData, &
+                                      InputVarReleaseMem, input_file_list, input_var_list
+#else
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+#endif
 
     CLASS(t_jsb_tile), INTENT(inout) :: this
     CHARACTER(len=*),  INTENT(in)    :: varlist_name
@@ -364,14 +371,21 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)    :: suffix
     LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
     LOGICAL,           INTENT(in)    :: l_rel_fractions    ! Tile fractions in input file are relative wrt parent
-
+#ifdef HAVE_MOFFLEDAC
+    TYPE(input_file_list), POINTER   :: IFile
+    TYPE(input_var_list),  POINTER   :: vfrc, vfrc_max
+    REAL(wp),              POINTER   :: fract(:,:), fract_max(:,:)
+    CHARACTER (len=4)                :: loc_add
+#else
+    TYPE(t_input_file)         :: input_file
+    REAL(wp),          POINTER :: return_pointer(:,:)
+#endif
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     CLASS(t_jsb_aggregator),                  POINTER :: aggregator
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER                    :: table
-    TYPE(t_input_file)         :: input_file
-    REAL(wp),          POINTER :: return_pointer(:,:), tmp_fract(:,:)
+    REAL(wp),          POINTER :: tmp_fract(:,:)
     CHARACTER(len=50)          :: name_loc
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
     CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
@@ -460,6 +474,33 @@ CONTAINS
       tmp_fract(:,:) = 1._wp
       CALL this%Set_fraction(fract_max=tmp_fract(:,:))
     ELSE
+#ifdef HAVE_MOFFLEDAC
+      loc_add = get_var_name_add(prefix)
+      CALL InputFileAdd(TRIM(this%fract_filename),file_ref=IFile,dt_file=0)
+      CALL InputVarGroupStart('tile_'//TRIM(suffix),IFile=IFile,dt_update=0)
+      CALL InputVarAdd('nproma,nblock',fract, TRIM(loc_add)//TRIM(prefix)//'_fract_'    //TRIM(suffix),var_ref=vfrc)
+      CALL InputVarAdd('nproma,nblock',fract_max,TRIM(loc_add)//TRIM(prefix)//'_fract_max_'//TRIM(suffix),var_ref=vfrc_max)
+      CALL InputVarGroupEnd()
+      name_loc = get_jsb_var_name(TRIM(this%fract_varname),'fract',TRIM(prefix),TRIM(suffix))
+      CALL InputOptAdd(AVar=vfrc,var_file_name=name_loc,fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+      name_loc = get_jsb_var_name(TRIM(this%fract_varname)//'_max','fract_max',TRIM(prefix),TRIM(suffix))
+      CALL InputOptAdd(AVar=vfrc_max,var_file_name=name_loc, &
+                       def_val=1._wp,action_var_miss='ignore',fill_val=1._wp,valid_range=(/0._wp,1._wp/))
+      CALL timer_start(timer_moffledac(this%owner_model_id))
+      CALL InputGetData(msg=TRIM(routine))
+      CALL timer_stop(timer_moffledac(this%owner_model_id))
+      IF (ASSOCIATED(this%parent_tile) .AND. l_rel_fractions) THEN
+        CALL this%parent_tile%Get_fraction(fract     = tmp_fract(:,:))
+        CALL this%Set_fraction(fract     = MAX(0._wp, fract    (:,:) * tmp_fract(:,:)))
+        CALL this%parent_tile%Get_fraction(fract_max = tmp_fract(:,:))
+        CALL this%Set_fraction(fract_max = MAX(0._wp, fract_max(:,:) * tmp_fract(:,:)))
+      ELSE
+        CALL this%Set_fraction(fract     = fract    (:,:))
+        CALL this%Set_fraction(fract_max = fract_max(:,:))
+      ENDIF
+      CALL InputVarReleaseMem(var_ref = vfrc)
+      CALL InputVarReleaseMem(var_ref = vfrc_max)
+#else
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
 
       IF (TRIM(this%fract_varname) == '') THEN
@@ -529,7 +570,7 @@ CONTAINS
       END IF
 
       CALL input_file%Close()
-
+#endif ! HAVE_MOFFLEDAC: else
     END IF
 
     ! If tile has children, create and register aggregator
@@ -569,7 +610,9 @@ CONTAINS
 
     END DO
 
+#ifndef HAVE_MOFFLEDAC
     DEALLOCATE(tmp_fract)
+#endif
 
   END SUBROUTINE Init_fractions_on_tile
 
