@@ -314,7 +314,11 @@ CONTAINS
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
     IF (ASSOCIATED(this%ptr))   NULLIFY(this%ptr)
+#ifdef HAVE_MOFFLEDAC
+    IF (ASSOCIATED(this%ptr2d)) NULLIFY(this%ptr2d)
+#else
     IF (ASSOCIATED(this%ptr2d)) DEALLOCATE(this%ptr2d)
+#endif
 
   END SUBROUTINE finalize_jsb_var_real2d
 
@@ -330,7 +334,11 @@ CONTAINS
     IF (ALLOCATED(this%child_idx)) DEALLOCATE(this%child_idx)
 
     IF (ASSOCIATED(this%ptr))   NULLIFY(this%ptr)
-    IF (ASSOCIATED(this%ptr3d)) DEALLOCATE(this%ptr3d)
+#ifdef HAVE_MOFFLEDAC
+    IF (ASSOCIATED(this%ptr2d)) NULLIFY(this%ptr3d)
+#else
+    IF (ASSOCIATED(this%ptr2d)) DEALLOCATE(this%ptr3d)
+#endif
 
   END SUBROUTINE finalize_jsb_var_real3d
 

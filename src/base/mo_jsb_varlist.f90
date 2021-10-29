@@ -37,6 +37,10 @@ MODULE mo_jsb_varlist
 #else
 #define __acc_attach(ptr)
 #endif
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input,             ONLY: InputDimAdd, InputVarAdd
+  USE mo_input_strings,     ONLY: RmSpc
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -110,6 +114,7 @@ CONTAINS
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
 
 !!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
+    REAL(wp), POINTER :: p5(:,:,:,:,:), p7(:,:,:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
     TYPE(t_cf_var)    :: cf_loc
@@ -140,6 +145,14 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(varlist_name), hgrid%host_patch_id)
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarAdd('nproma,nblock',ptr,TRIM(name_loc),lmodel=.TRUE.,po7=p7)
+#else
+    ALLOCATE(p7(ldims(1),ldims(2),1,1,1,1,1))
+    ptr => p7(:,:,1,1,1,1,1)
+#endif
+    p5 => p7(:,:,:,:,:,1,1)
+
     IF (PRESENT(groups)) THEN
       n_groups = SIZE(groups) + 2
     ELSE
@@ -158,7 +171,7 @@ CONTAINS
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
-      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups_loc, verbose=verbose)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups_loc, verbose=verbose, p5=p5)
 
   END SUBROUTINE jsb_add_var_list_element_r2d
 

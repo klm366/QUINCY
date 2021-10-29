@@ -69,7 +69,10 @@ PROGRAM jsb4_driver
     &                            echam_time, manager_state
 
   USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
-
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input,               ONLY: InputUpdate, InputDone, InputTimeString
+  USE mo_moffledac_iface,     ONLY: timer_moffledac
+#endif
   USE mo_timer, ONLY: init_timer, cleanup_timer, timer_start, timer_stop, timer_loop, timer_output, timer_restart
 
   ! ICON would be:
@@ -364,6 +367,12 @@ PROGRAM jsb4_driver
 
   ! - Main loop
   main_loop:DO
+
+#ifdef HAVE_MOFFLEDAC
+    CALL timer_start(timer_moffledac(model_id)
+    CALL InputUpdate()
+    CALL timer_stop(timer_moffledac(model_id))
+#endif
 
     CALL time_set   !(echam!)
     CALL manager_state(echam_time, current_datetime)

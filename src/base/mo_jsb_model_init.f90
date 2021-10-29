@@ -34,6 +34,11 @@ MODULE mo_jsb_model_init
   USE mo_jsb_parallel,     ONLY: Get_omp_thread, Is_omp_inside_serial
   USE mo_jsb_time,         ONLY: is_time_restart, get_time_start
 
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input,            ONLY: InputDimSync, inputdimdisp, INPUT_PE_SHOW_ALL, INPUT_PE_SHOW_PE
+  USE mo_moffledac_iface,  ONLY: init_moffledac
+#endif
+
   IMPLICIT NONE
   PRIVATE
 
@@ -109,6 +114,11 @@ CONTAINS
     CALL get_nlon_nlat_from_file(model%config%grid_filename, nlon, nlat)
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
+#ifdef HAVE_MOFFLEDAC
+    ! Setup input via MofFlEDAc for this model
+    CALL init_moffledac(model,model_id,decomp=decomposition)
+#endif
+
     CALL inigau               ! beside others required for get_area, i.e. required before new_grid
     CALL init_convect_tables
 
@@ -156,6 +166,11 @@ CONTAINS
       & CALL finish(routine, 'Host request to more jsbach models than are defined')
 
     model => Get_model(model_id)
+
+#ifdef HAVE_MOFFLEDAC
+    ! Setup input via MofFlEDAc for this model
+    CALL init_moffledac(model,model_id,patch=patch)
+#endif HAVE_MOFFLEDAC
 
     grid => new_grid(patch, type)
     CALL Register_grid(grid)
@@ -222,6 +237,12 @@ CONTAINS
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
+
+#ifdef HAVE_MOFFLEDAC
+    ! Finalize MofFlEDAc setup
+    CALL InputDimSync()
+    call inputdimdisp(level=1,pe=INPUT_PE_SHOW_ALL+INPUT_PE_SHOW_PE)
+#endif
 
     CALL cdiDefMissval(missval)
 
