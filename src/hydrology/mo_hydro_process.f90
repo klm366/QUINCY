@@ -502,8 +502,8 @@ CONTAINS
       & ws_keep(nidx),       & ! just used to keep pure liquid soil moisture [m]
       & ice_rootzone(nidx)     ! amount of ice in the rootzone [m]
     
-!vg     REAL(wp) ::                    &
-!vg       & vfc_times_sd_l(nidx,nsoil)   ! vol_field_cap_l * soil_depth_l needed to compute ws_max
+    REAL(wp) ::              &
+      & hlp_2d(nidx,nsoil)     ! helper array needed with openacc
 
     INTEGER :: jl, i
 
@@ -535,12 +535,9 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
-!vg       vfc_times_sd_l(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
-!vg       CALL get_water_in_root_zone(vfc_times_sd_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
-!vg>>
     !vg: is it necessary to re-calculate ws_max here? Shouldn't it come as input?
-    CALL get_water_in_root_zone(vol_field_cap_l(:,:) * soil_depth_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
-!vg<<
+    hlp_2d(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
+    CALL get_water_in_root_zone(hlp_2d(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
 
     IF (l_ws_max_depend_on_org) THEN
 !!!! Careful: ws_max is used inconsistantly -> it is used to calculate the relative saturation of the soil but using water+ice 
