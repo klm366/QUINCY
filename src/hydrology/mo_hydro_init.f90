@@ -541,25 +541,13 @@ CONTAINS
     END IF
 
     IF (tile%contains_vegetation) THEN
-      ! Calculate water content and field capacity in the root zone
+      ! Calculate water content in the root zone
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_rootzone), 2)
           CALL get_water_in_root_zone( &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)      (:,:,i), & 
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, w_rootzone)     (:,  i)  )
- 
-          CALL get_water_in_root_zone( & 
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)   (:,:,i), & 
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, w_rootzone_fc)  (:,  i)  )
-          
-          CALL get_water_in_root_zone( & 
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl)  (:,:,i), & 
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, w_rootzone_pwp) (:,  i)  )
       END DO
 
       ! Make sure w_rootzone is smaller than max_moist
@@ -576,8 +564,6 @@ CONTAINS
       END WHERE
 
       !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_rootzone),     &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, w_rootzone_fc),  &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, w_rootzone_pwp), &
       !$acc             dsl4jsb_var_ptr(HYDRO_, w_rootzone_rel))
     END IF
 
