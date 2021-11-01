@@ -30,8 +30,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear
 #ifdef HAVE_MOFFLEDAC
-  USE mo_input,               ONLY: InputUpdate, InputSubmodelSelect,
-nputTimeString
+  USE mo_input,               ONLY: InputUpdate, InputSubmodelSelect, InputTimeString
   USE mo_moffledac_iface,     ONLY: timer_moffledac
 #endif
 

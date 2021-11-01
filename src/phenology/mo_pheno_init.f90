@@ -105,7 +105,7 @@ CONTAINS
 #endif
     DEALLOCATE( &
       & pheno_init_vars%lai_mon,       &
-      & pheno_init_vars%fract_fpc_mon, &
+      & pheno_init_vars%fract_fpc_mon  &
       & )
 
   END SUBROUTINE pheno_finalize_init_vars
@@ -145,7 +145,7 @@ CONTAINS
 
     ALLOCATE( &
       & pheno_init_vars%lai_mon      (nproma, nblks, 0:13), &
-      & pheno_init_vars%fract_fpc_mon(nproma, nblks, 0:13), &
+      & pheno_init_vars%fract_fpc_mon(nproma, nblks, 0:13)  &
       & )
 
     pheno_init_vars%lai_mon      (:,:,:) = missval
