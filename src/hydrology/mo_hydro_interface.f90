@@ -911,7 +911,6 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-    USE mo_hydro_util,             ONLY: get_water_in_root_zone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
