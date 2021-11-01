@@ -48,6 +48,9 @@ CONTAINS
     ! USE mo_sse_constants,       ONLY: init_sse_constants
     ! USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
+#ifdef HAVE_MOFFLEDAC
+    USE mo_moffledac_iface,     ONLY: init_moffledac
+#endif
 
     dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_
     dsl4jsb_Use_config(SSE_)
@@ -119,6 +122,11 @@ CONTAINS
        END IF
 
       CALL model%Set_mode(model%config%hsm_mode)
+
+#ifdef HAVE_MOFFLEDAC
+      ! Initialize data reading via MofFlEDAc
+      CALL init_moffledac(model,model%id)
+#endif
 
       surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
       CALL register_vgrid(surface)

@@ -36,7 +36,7 @@ MODULE mo_jsb_model_init
 
 #ifdef HAVE_MOFFLEDAC
   USE mo_input,            ONLY: InputDimSync, inputdimdisp, INPUT_PE_SHOW_ALL, INPUT_PE_SHOW_PE
-  USE mo_moffledac_iface,  ONLY: init_moffledac
+  USE mo_moffledac_iface,  ONLY: init_moffledac_grids
 #endif
 
   IMPLICIT NONE
@@ -115,8 +115,8 @@ CONTAINS
     CALL jsbalone_init_decomp(nlon, nlat, nproca, nprocb, npedim, decomposition)
 
 #ifdef HAVE_MOFFLEDAC
-    ! Setup input via MofFlEDAc for this model
-    CALL init_moffledac(model,model_id,decomp=decomposition)
+    ! Complete MofFlEDAc setup for this model
+    CALL init_moffledac_grids(model,decomp=decomposition)
 #endif
 
     CALL inigau               ! beside others required for get_area, i.e. required before new_grid
@@ -168,8 +168,8 @@ CONTAINS
     model => Get_model(model_id)
 
 #ifdef HAVE_MOFFLEDAC
-    ! Setup input via MofFlEDAc for this model
-    CALL init_moffledac(model,model_id,patch=patch)
+    ! Complete MofFlEDAc setup for this model
+    CALL init_moffledac_grids(model,patch=patch)
 #endif HAVE_MOFFLEDAC
 
     grid => new_grid(patch, type)
