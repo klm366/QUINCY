@@ -59,7 +59,14 @@ CONTAINS
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC
+#ifdef HAVE_MOFFLEDAC
+!    USE mo_timer,               ONLY: timer_start, timer_stop
+!    USE mo_moffledac_iface,     ONLY: timer_moffledac
+    USE mo_input,              ONLY: InputFileAdd, InputVarAdd, InputOptAdd, InputGetData, InputVarReleaseMem, &
+                                     InputDimAdd, InputDimInq, InputVarReleaseMem, input_file_list, input_var_list
+#else
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+#endif
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
@@ -78,7 +85,12 @@ CONTAINS
       & ic_filename, bc_filename
 
     INTEGER :: nml_handler, nml_unit, istat, i
+#ifdef HAVE_MOFFLEDAC
+    TYPE(input_file_list), POINTER :: IFile
+    TYPE(input_var_list),  POINTER :: vsoillev
+#else
     TYPE(t_input_file) :: input_file
+#endif
     REAL(wp), POINTER :: ptr_1D(:)
     REAL(wp), ALLOCATABLE :: depths(:), mids(:)
     INTEGER :: nsoil
@@ -160,19 +172,31 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputFileAdd(TRIM(ic_filename),dt_file=0,file_ref=IFile)
+    CALL InputDimAdd('soillev')
+    CALL InputVarAdd('soillev',ptr_1D,'soillev',IFile=IFile,dt_update=0,var_ref=vsoillev)
+    ! Should start the moffledac timer, but don't know how to get the model_id from here
+    CALL InputGetData(var=vsoillev)
+    CALL InputDimInq('soillev',local=nsoil)
+#else
     input_file = jsb_netcdf_open_input(ic_filename)
 
     ! @todo: At the moment, the soil layers for the energy calculations are the same as for the hydrology
     ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
+    CALL input_file%Close()
+#endif
     nsoil = SIZE(ptr_1D)
     ALLOCATE(depths(nsoil+1))
     ALLOCATE(mids(nsoil))
     depths(1) = 0._wp
     depths(2:nsoil+1) = ptr_1D(1:nsoil)
     mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarReleaseMem(var_ref = vsoillev)
+#else
     DEALLOCATE(ptr_1D)
-
-    CALL input_file%Close()
+#endif
 
     soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                              &
