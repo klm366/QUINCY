@@ -24,8 +24,15 @@ MODULE mo_rad_init
   USE mo_jsb_grid,          ONLY: Get_grid
   USE mo_jsb_class,         ONLY: Get_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
+#ifdef HAVE_MOFFLEDAC
+  USE mo_timer,             ONLY: timer_start, timer_stop
+  USE mo_moffledac_iface,   ONLY: timer_moffledac
+  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, &
+                                  InputGetData, InputVarReleaseMem, input_file_list
+#else
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,            ONLY: missval
+#endif
 
   dsl4jsb_Use_processes RAD_
   dsl4jsb_Use_config(RAD_)
@@ -83,6 +90,13 @@ CONTAINS
 
   SUBROUTINE rad_finalize_init_vars
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarReleaseMem('albedo')
+    CALL InputVarReleaseMem('albedo_soil_vis')
+    CALL InputVarReleaseMem('albedo_soil_nir')
+    CALL InputVarReleaseMem('albedo_veg_vis')
+    CALL InputVarReleaseMem('albedo_veg_nir')
+#else
     DEALLOCATE( &
       & rad_init_vars%alb_background, &
       & rad_init_vars%alb_vis_soil,   &
@@ -90,6 +104,7 @@ CONTAINS
       & rad_init_vars%alb_vis_can,    &
       & rad_init_vars%alb_nir_can     &
       & )
+#endif
       
   END SUBROUTINE rad_finalize_init_vars
 
@@ -98,21 +113,25 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model), POINTER :: model
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: IFile
+#else
     TYPE(t_jsb_grid),  POINTER :: grid
     INTEGER :: nproma, nblks
 
-    dsl4jsb_Def_config(RAD_)
-
     TYPE(t_input_file) :: input_file
     REAL(wp), POINTER  :: ptr_2D(:,:)
+#endif
+
+    dsl4jsb_Def_config(RAD_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_read_init_vars'
 
     model => get_model(tile%owner_model_id)
+#ifndef HAVE_MOFFLEDAC
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
-
 
     ALLOCATE( &
       & rad_init_vars%alb_background(nproma, nblks), &
@@ -127,6 +146,7 @@ CONTAINS
     rad_init_vars%alb_nir_soil  (:,:) = missval
     rad_init_vars%alb_vis_can   (:,:) = missval
     rad_init_vars%alb_nir_can   (:,:) = missval
+#endif
 
     dsl4jsb_Get_config(RAD_)
 
@@ -136,6 +156,31 @@ CONTAINS
 
     ! TODO: adapt names of variables in input files to names in memory
 
+#ifdef HAVE_MOFFLEDAC
+    ! Warning: Order of InputVarAdd/InputOptAdd is important (InputOptAdd always refere to last InputVarAdd call
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(RAD_)%bc_filename),file_ref=IFile,dt_file=0)
+    CALL InputVarGroupStart('rad_init',IFile=IFile,dt_update=0)
+    CALL InputOptAdd(var_name='rad_init',fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+    CALL InputVarAdd('nproma,nblock',rad_init_vars%alb_background, 'albedo')
+    CALL InputOptAdd(var_name='albedo',fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+    IF (tile%contains_soil) THEN
+      CALL InputVarAdd('nproma,nblock',rad_init_vars%alb_vis_soil,'albedo_soil_vis')
+      CALL InputOptAdd(var_name='albedo_soil_vis',fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+      CALL InputVarAdd('nproma,nblock',rad_init_vars%alb_nir_soil,'albedo_soil_nir')
+      CALL InputOptAdd(var_name='albedo_soil_nir',fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+    ENDIF
+    IF (tile%contains_vegetation) THEN
+      CALL InputVarAdd('nproma,nblock',rad_init_vars%alb_vis_can, 'albedo_veg_vis')
+      CALL InputOptAdd(var_name='albedo_veg_vis',fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+      CALL InputVarAdd('nproma,nblock',rad_init_vars%alb_nir_can, 'albedo_veg_nir')
+      CALL InputOptAdd(var_name='albedo_veg_nir',fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+    ENDIF
+    CALL InputVarGroupEnd()
+    ! Read all variables
+    CALL timer_start(timer_moffledac(model%id))
+    CALL InputGetData(msg=TRIM(routine))
+    CALL timer_stop(timer_moffledac(model%id))
+#else
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(RAD_)%bc_filename), model%grid_id)
 
     ! background albedo (without snow or canopy)
@@ -181,6 +226,7 @@ CONTAINS
     CALL input_file%Close()
 
     NULLIFY(ptr_2D)
+#endif
 
   END SUBROUTINE rad_read_init_vars
 

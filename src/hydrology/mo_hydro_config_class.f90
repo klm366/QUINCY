@@ -57,7 +57,14 @@ CONTAINS
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
+#ifdef HAVE_MOFFLEDAC
+!    USE mo_timer,               ONLY: timer_start, timer_stop
+!    USE mo_moffledac_iface,     ONLY: timer_moffledac
+    USE mo_input,               ONLY: InputFileAdd, InputVarAdd, InputOptAdd, InputGetData, InputVarReleaseMem, &
+                                      InputDimAdd, InputDimInq, InputVarReleaseMem, input_file_list, input_var_list
+#else
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+#endif
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -83,12 +90,18 @@ CONTAINS
       & l_glac_in_soil
 
     INTEGER :: nml_handler, nml_unit, istat
-    TYPE(t_input_file) :: input_file
     REAL(wp), POINTER :: ptr_1D(:)
     REAL(wp), ALLOCATABLE :: depths(:), mids(:)
     INTEGER :: nsoil
 
-    TYPE(t_jsb_vgrid), POINTER :: soil_w
+   TYPE(t_jsb_vgrid), POINTER :: soil_w
+
+#ifdef HAVE_MOFFLEDAC
+    TYPE(input_file_list), POINTER :: IFile
+    TYPE(input_var_list),  POINTER :: vsoillev
+#else
+    TYPE(t_input_file) :: input_file
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hydro_config'
 
@@ -146,10 +159,21 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputFileAdd(TRIM(ic_filename),dt_file=0,file_ref=IFile)
+    CALL InputDimAdd('soillev')
+    CALL InputVarAdd('soillev',ptr_1D,'soillev',IFile=IFile,dt_update=0,var_ref=vsoillev)
+    ! Should start the moffledac timer, but don't know how to get the model_id from here
+    CALL InputGetData(var=vsoillev,msg=TRIM(routine))
+    CALL InputDimInq('soillev',local=nsoil)
+#else
     input_file = jsb_netcdf_open_input(ic_filename)
 
     ptr_1D => input_file%Read_1d(variable_name='soillev')    ! Depth of layer bottom
     nsoil = SIZE(ptr_1D)
+
+    CALL input_file%Close()
+#endif
 
     IF (l_organic .AND. nsoil < 3) &
       & CALL finish(TRIM(routine), 'At least three soil layers required for using organic soil component')
@@ -159,9 +183,11 @@ CONTAINS
     depths(1) = 0._wp
     depths(2:nsoil+1) = ptr_1D(1:nsoil)
     mids(1:nsoil) = (depths(1:nsoil) + depths(2:nsoil+1)) / 2._wp
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarReleaseMem(var_ref = vsoillev)
+#else
     DEALLOCATE(ptr_1D)
-
-    CALL input_file%Close()
+#endif
 
     soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                         &

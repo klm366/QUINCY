@@ -23,8 +23,15 @@ MODULE mo_turb_init
   USE mo_kind,              ONLY: wp
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on, jsbach_runs_standalone
+#ifdef HAVE_MOFFLEDAC
+  USE mo_timer,             ONLY: timer_start, timer_stop
+  USE mo_moffledac_iface,   ONLY: timer_moffledac
+  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, &
+                                  InputGetData, InputVarReleaseMem, input_file_list, input_var_list
+#else
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,            ONLY: missval
+#endif
 
   dsl4jsb_Use_processes TURB_
   dsl4jsb_Use_config(TURB_)
@@ -70,9 +77,13 @@ CONTAINS
 
   SUBROUTINE turb_finalize_init_vars
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarReleaseMem('roughness_length')
+#else
     DEALLOCATE( &
       & turb_init_vars%rough_m &
       & )
+#endif
 
   END SUBROUTINE turb_finalize_init_vars
 
@@ -81,24 +92,31 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     dsl4jsb_Def_config(TURB_)
 
+#ifdef HAVE_MOFFLEDAC
+    TYPE(input_file_list), POINTER :: IFile
+    TYPE(input_var_list),  POINTER :: var
+#else
+    TYPE(t_jsb_grid),  POINTER :: grid
     REAL(wp), POINTER :: ptr_2D(:,:)       !< temporary pointer
     TYPE(t_input_file) :: input_file
 
     INTEGER :: nproma, nblks
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':turb_read_init_vars'
 
     model => get_model(tile%owner_model_id)
+#ifndef HAVE_MOFFLEDAC
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
 
     ALLOCATE(turb_init_vars%rough_m(nproma, nblks))
     turb_init_vars%rough_m(:,:) = missval
+#endif
 
     ! Get turb config
     dsl4jsb_Get_config(TURB_)
@@ -108,6 +126,17 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), &
          'Reading turb init vars for tile from '//TRIM(dsl4jsb_Config(TURB_)%bc_filename))
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(TURB_)%bc_filename),file_ref=IFile,dt_file=0)
+    CALL InputVarGroupStart('turbulence_init',IFile=IFile,dt_update=0)
+    CALL InputVarAdd('nproma,nblock',turb_init_vars%rough_m,'roughness_length',var_ref=var)
+    CALL InputVarGroupEnd()
+    CALL InputOptAdd(AVar=var,fill_val=1._wp,valid_range=(/0._wp,1.e300_wp/))
+    ! Read all variables
+    CALL timer_start(timer_moffledac(model%id))
+    CALL InputGetData(msg=TRIM(routine))
+    CALL timer_stop(timer_moffledac(model%id))
+#else
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TURB_)%bc_filename), model%grid_id)
 
     ! Surface roughness length
@@ -117,6 +146,7 @@ CONTAINS
     ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
 
     CALL input_file%Close()
+#endif
 
   END SUBROUTINE turb_read_init_vars
 

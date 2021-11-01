@@ -177,7 +177,7 @@ CONTAINS
     CALL InputDimAdd('soillev')
     CALL InputVarAdd('soillev',ptr_1D,'soillev',IFile=IFile,dt_update=0,var_ref=vsoillev)
     ! Should start the moffledac timer, but don't know how to get the model_id from here
-    CALL InputGetData(var=vsoillev)
+    CALL InputGetData(var=vsoillev,msg=TRIM(routine))
     CALL InputDimInq('soillev',local=nsoil)
 #else
     input_file = jsb_netcdf_open_input(ic_filename)

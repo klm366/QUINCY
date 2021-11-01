@@ -24,8 +24,15 @@ MODULE mo_hydro_init
   USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,         ONLY: get_model
+#ifdef HAVE_MOFFLEDAC
+  USE mo_timer,             ONLY: timer_start, timer_stop
+  USE mo_moffledac_iface,   ONLY: timer_moffledac
+  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputGetData, &
+                                  InputVarReleaseMem, input_file_list
+#else
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,            ONLY: missval
+#endif
 
   dsl4jsb_Use_processes HYDRO_, PHENO_
   dsl4jsb_Use_config(HYDRO_)
@@ -92,6 +99,22 @@ CONTAINS
 
   SUBROUTINE hydro_finalize_init_vars
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarReleaseMem('elevation')
+    CALL InputVarReleaseMem('orostd')
+    CALL InputVarReleaseMem('soil_depth')
+    CALL InputVarReleaseMem('maxmoist')
+    CALL InputVarReleaseMem('soil_porosity')
+    CALL InputVarReleaseMem('hyd_cond_sat')
+    CALL InputVarReleaseMem('moisture_pot')
+    CALL InputVarReleaseMem('bclapp')
+    CALL InputVarReleaseMem('pore_size_index')
+    CALL InputVarReleaseMem('soil_field_cap')
+    CALL InputVarReleaseMem('wilting_point')
+    CALL InputVarReleaseMem('root_depth')
+    CALL InputVarReleaseMem('snow')
+    CALL InputVarReleaseMem('layer_moist')
+#else
     DEALLOCATE( &
       & hydro_init_vars%elevation       ,       &
       & hydro_init_vars%oro_stddev      ,       &
@@ -108,6 +131,7 @@ CONTAINS
       & hydro_init_vars%w_snow_soil     ,       &
       & hydro_init_vars%w_soil_sl               &
       & )
+#endif
 
   END SUBROUTINE hydro_finalize_init_vars
 
@@ -117,15 +141,21 @@ CONTAINS
 
     dsl4jsb_Def_config(HYDRO_)
 
+    TYPE(t_jsb_model), POINTER :: model
+
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: BCFile, ICFile, SSOFile
+#else
+
     REAL(wp), POINTER :: &
       & ptr_2D(:,  :),   &
       & ptr_3D(:,:,:)
 
-    TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
     TYPE(t_input_file) :: input_file
     INTEGER :: i, isoil, nproma, nblks, nsoil
+#endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
@@ -135,6 +165,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+#ifndef HAVE_MOFFLEDAC
     grid   => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
@@ -172,12 +203,66 @@ CONTAINS
       hydro_init_vars%root_depth     (:,:)   = missval
       hydro_init_vars%w_snow_soil    (:,:)   = missval
       hydro_init_vars%w_soil_sl      (:,:,:) = missval
+#endif
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
 
     !----------
+#ifdef HAVE_MOFFLEDAC
+    ! Warning: The order of InputVarAdd and InputOptAdd calls below is important: Changing may change the results!
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename),dt_file=0,file_ref=BCFile)
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(HYDRO_)%ic_filename),dt_file=0,file_ref=ICFile)
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(HYDRO_)%bc_sso_filename),dt_file=0,file_ref=SSOFile)
+    CALL InputVarGroupStart('hydro_init',IFile=BCFile,dt_update=0)
+    CALL InputVarAdd('nproma,nblock',hydro_init_vars%elevation, 'elevation',IFile=SSOFile)
+    CALL InputOptAdd(fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    CALL InputVarAdd('nproma,nblock',hydro_init_vars%oro_stddev,'orostd', IFile=SSOFile)
+    CALL InputOptAdd(fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    IF (tile%contains_soil) THEN
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%soil_depth, 'soil_depth')
+      CALL InputOptAdd(fill_val=0.1_wp,  valid_range=(/0.0_wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%max_moist, 'maxmoist')
+      CALL InputOptAdd(fill_val=0.2_wp,  valid_range=(/0.0_wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%vol_porosity, 'soil_porosity')
+      CALL InputOptAdd(fill_val=0.2_wp,  valid_range=(/0.0_wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%hyd_cond_sat, 'hyd_cond_sat')
+      CALL InputOptAdd(fill_val=4.e-6_wp,valid_range=(/0.0_wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%matrix_pot, 'moisture_pot')
+      CALL InputOptAdd(fill_val=0.2_wp,  valid_range=(/0.0_wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%bclapp, 'bclapp')
+      CALL InputOptAdd(fill_val=6.0_wp,  valid_range=(/0.0_wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock', hydro_init_vars%pore_size_index,'pore_size_index')
+      CALL InputOptAdd(fill_val=0.25_wp, valid_range=(/0.0_wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%vol_field_cap, 'soil_field_cap')
+      CALL InputOptAdd(fill_val=0._wp,   valid_range=(/0._wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%vol_p_wilt, 'wilting_point')
+      CALL InputOptAdd(fill_val=0._wp,   valid_range=(/0._wp,1.e300_wp/))
+      CALL InputVarAdd('nproma,nblock',        hydro_init_vars%w_snow_soil, 'snow',       IFile=ICFile)
+      CALL InputOptAdd(fill_val=0._wp, valid_range=(/0._wp,1.e300_wp/),def_val=0._wp)
+      CALL InputVarAdd('nproma,soillev,nblock',hydro_init_vars%w_soil_sl, 'layer_moist',IFile=ICFIle)
+      CALL InputOptAdd(fill_val=0._wp,   valid_range=(/0._wp,1.e300_wp/))
+    ENDIF
+    IF (tile%contains_vegetation) THEN
+      CALL InputVarAdd('nproma,nblock',hydro_init_vars%root_depth,'root_depth')
+      CALL InputOptAdd(fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    ENDIF
+    CALL InputVarGroupEnd()
+    ! Read all hydro variables
+    CALL timer_start(timer_moffledac(model%id))
+    CALL InputGetData(msg=TRIM(routine))
+    CALL timer_stop(timer_moffledac(model%id))
 
+    ! Final adjustments
+    IF (tile%contains_soil) THEN
+      IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
+        hydro_init_vars%max_moist = MIN(hydro_init_vars%max_moist, dsl4jsb_Config(HYDRO_)%w_soil_limit)
+      END IF
+    ENDIF
+    IF (tile%contains_vegetation) THEN
+      hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)  ! Temporary fix (root depth sometimes larger then soil depth)
+    ENDIF
+#else
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_sso_filename), model%grid_id)
 
     ! Orography ...
@@ -301,6 +386,7 @@ CONTAINS
       CALL input_file%Close()
 
     END IF
+#endif
 
   END SUBROUTINE hydro_read_init_vars
 

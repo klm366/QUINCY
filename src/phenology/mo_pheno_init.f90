@@ -25,7 +25,14 @@ MODULE mo_pheno_init
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+#ifdef HAVE_MOFFLEDAC
+  USE mo_timer,               ONLY: timer_start, timer_stop
+  USE mo_moffledac_iface,     ONLY: timer_moffledac
+  USE mo_input,               ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputDimAdd, &
+                                    InputGetData, InputVarReleaseMem, input_file_list, input_var_list
+#else
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+#endif
   USE mo_jsb_io,              ONLY: missval
 
   dsl4jsb_Use_processes PHENO_
@@ -87,11 +94,18 @@ CONTAINS
 
   SUBROUTINE pheno_finalize_init_vars
 
+#ifdef HAVE_MOFFLEDAC
+    CALL InputVarReleaseMem('forest_fract')
+    CALL InputVarReleaseMem('veg_ratio_max')
+#else
+    DEALLOCATE( &
+      & pheno_init_vars%fract_forest,  &
+      & pheno_init_vars%fract_fpc_max  &
+      & )
+#endif
     DEALLOCATE( &
       & pheno_init_vars%lai_mon,       &
       & pheno_init_vars%fract_fpc_mon, &
-      & pheno_init_vars%fract_forest,  &
-      & pheno_init_vars%fract_fpc_max  &
       & )
 
   END SUBROUTINE pheno_finalize_init_vars
@@ -100,6 +114,11 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
+#ifdef HAVE_MOFFLEDAC
+    TYPE (input_file_list), POINTER :: IFile
+    TYPE (input_var_list),  POINTER :: var1, var2
+#endif
+
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
@@ -107,8 +126,13 @@ CONTAINS
 
     REAL(wp), POINTER ::  &
       & ptr_mon(:,:,:),   &
+#ifdef HAVE_MOFFLEDAC
+      & ptr_mon2(:,:,:),  &
+#endif
       & ptr_2D(:,:)
-    TYPE(t_input_file) :: input_file
+#ifndef HAVE_MOFFLEDAC
+     TYPE(t_input_file) :: input_file
+#endif      & ptr_2D(:,:)
 
     INTEGER :: nproma, nblks
 
@@ -122,16 +146,46 @@ CONTAINS
     ALLOCATE( &
       & pheno_init_vars%lai_mon      (nproma, nblks, 0:13), &
       & pheno_init_vars%fract_fpc_mon(nproma, nblks, 0:13), &
-      & pheno_init_vars%fract_forest (nproma, nblks      ), &
-      & pheno_init_vars%fract_fpc_max(nproma, nblks      )  &
       & )
 
     pheno_init_vars%lai_mon      (:,:,:) = missval
     pheno_init_vars%fract_fpc_mon(:,:,:) = missval
-    pheno_init_vars%fract_forest (:,:)   = missval
-    pheno_init_vars%fract_fpc_max(:,:)   = missval
 
     dsl4jsb_Get_config(PHENO_)
+
+#ifdef HAVE_MOFFLEDAC
+    CALL InputDimAdd('clim_monthly_year',Extent=12)
+    CALL InputFileAdd(TRIM(dsl4jsb_Config(PHENO_)%bc_filename),file_ref=IFile,dt_file=0)
+    CALL InputVarGroupStart('pheno_init',IFile=IFile,dt_update=0)
+    CALL InputVarAdd('nproma,nblock,clim_monthly_year',ptr_mon ,'lai_clim', var_ref=var1)
+    CALL InputVarAdd('nproma,nblock,clim_monthly_year',ptr_mon2,'veg_fract',var_ref=var2)
+    CALL InputVarAdd('nproma,nblock',pheno_init_vars%fract_forest, 'forest_fract')
+    CALL InputVarAdd('nproma,nblock',pheno_init_vars%fract_fpc_max,'veg_ratio_max',file_name=TRIM(model%config%fract_filename))
+    CALL InputVarGroupEnd()
+    CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_monthly_year')
+!    CALL InputOptAdd(var_name='pheno_init',fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    CALL InputOptAdd(var_name='forest_fract',fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+    CALL InputOptAdd(var_name='veg_ratio_max',fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+    CALL InputOptAdd(AVar=var1,fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+    CALL InputOptAdd(AVar=var2,fill_val=0._wp,valid_range=(/0._wp,1._wp/))
+    ! Read all 4 variables
+    CALL timer_start(timer_moffledac(model%id))
+    CALL InputGetData(msg=TRIM(routine))
+    CALL timer_stop(timer_moffledac(model%id))
+    pheno_init_vars%lai_mon      (:,:,1:12) = ptr_mon (:,:,1:12)
+    pheno_init_vars%lai_mon      (:,:,0   ) = ptr_mon (:,:,12  )
+    pheno_init_vars%lai_mon      (:,:,13  ) = ptr_mon (:,:,1   )
+    pheno_init_vars%fract_fpc_mon(:,:,1:12) = ptr_mon2(:,:,1:12)
+    pheno_init_vars%fract_fpc_mon(:,:,0   ) = ptr_mon2(:,:,12  )
+    pheno_init_vars%fract_fpc_mon(:,:,13  ) = ptr_mon2(:,:,1   )
+    CALL InputVarReleaseMem(var_ref=var1)
+    CALL InputVarReleaseMem(var_ref=var2)
+#else
+    ALLOCATE(pheno_init_vars%fract_forest (nproma, nblks      ), &
+      &      pheno_init_vars%fract_fpc_max(nproma, nblks      ))
+
+    pheno_init_vars%fract_forest (:,:)   = missval
+    pheno_init_vars%fract_fpc_max(:,:)   = missval
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting phenology init vars from ' &
       &                          //TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
@@ -178,6 +232,8 @@ CONTAINS
     ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
     CALL input_file%Close()
+
+#endif
 
   END SUBROUTINE pheno_read_init_vars
 
