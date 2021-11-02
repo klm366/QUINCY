@@ -951,11 +951,7 @@ CONTAINS
               u_lake           = 0.01_wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
               k_lake           = neigh_dist/u_lake
               ncount = COUNT(height_dyn(jc,blk)==PACK(height_dyn(:,:),nneigh_mask(:,:)))
-              IF (ncount==1) THEN
-                inflow_lake(jc,blk) = inflow_lake(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, volume_lake(njc(n),nblk(n))/steplen )
-              ELSE
-                inflow_lake(jc,blk) = inflow_lake(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, volume_lake(njc(n),nblk(n))/steplen ) / ncount
-              END IF
+              inflow_lake(jc,blk) = inflow_lake(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, volume_lake(njc(n),nblk(n))/steplen ) / ncount
             END IF
              
             ! outflow
@@ -973,9 +969,8 @@ CONTAINS
               k_lake           = neigh_dist/u_lake
               ! make sure neighbor cells have different dynamic height
               ! (water outflow only into one neighboring grid cells allowed)
-              IF (outflow_lake(jc,blk)==0._wp) THEN
-                outflow_lake(jc,blk) = outflow_lake(jc,blk) - MIN( volume_lake(jc,blk)/k_lake, volume_lake(jc,blk)/steplen )
-              END IF
+              ncount = COUNT(height_dyn(njc(n),nblk(n))==PACK(height_dyn(:,:),neigh_mask(:,:)))
+              outflow_lake(jc,blk) = outflow_lake(jc,blk) - MIN( volume_lake(jc,blk)/k_lake, volume_lake(jc,blk)/steplen ) / ncount
             END IF
 
           END DO
@@ -984,7 +979,9 @@ CONTAINS
 
       volume_lake(:,:) = volume_lake(:,:) + ( outflow_lake(:,:) + inflow_lake(:,:) ) * steplen
       global_lake_volume_error = global_sum_array((outflow_lake(:,:)+inflow_lake(:,:))*in_domain(:,:))
-     
+
+      PRINT*, 'lake inflow', global_sum_array(inflow_lake(:,:)*in_domain(:,:))    
+      PRINT*, 'lake outflow', global_sum_array(outflow_lake(:,:)*in_domain(:,:))    
       IF (ABS(global_lake_volume_error) > 10._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
              global_lake_volume_error,' m3'
