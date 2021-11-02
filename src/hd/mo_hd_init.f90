@@ -158,13 +158,6 @@ CONTAINS
         & variable_name='ALPHA',                     &
         & fill_array = dsl4jsb_var_ptr(HD_,alpha))
 
-      IF (model%config%use_dynlakes) THEN
-        ! maximum grid cell lake height in meter
-        return_pointer => input_file%Read_2d(         &
-          & variable_name='BASIN_MASK',                     &
-          & fill_array = dsl4jsb_var_ptr(HD_,basin_mask))
-      ENDIF
-   
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &
         & variable_name='BETA',                     &
@@ -174,6 +167,23 @@ CONTAINS
       return_pointer => input_file%Read_2d(         &
         & variable_name='ELEV_MIN',                     &
         & fill_array = dsl4jsb_var_ptr(HD_,height_oro_min))
+
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='OUTLETS',                  &
+        & fill_array = dsl4jsb_var_ptr(HD_,outlets))
+
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='VOLUME_OUT',                  &
+        & fill_array = dsl4jsb_var_ptr(HD_,volume_out))
+
+      IF (model%config%use_dynlakes) THEN
+        ! maximum grid cell lake height in meter
+        return_pointer => input_file%Read_2d(         &
+          & variable_name='BASIN_MASK',                     &
+          & fill_array = dsl4jsb_var_ptr(HD_,basin_mask))
+      ENDIF
 
       nproma = grid%nproma
       nblks  = grid%nblks

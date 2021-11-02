@@ -53,20 +53,23 @@ MODULE mo_hd_memory_class
       outflow_rivers  , &  !< grid cell outflow due to rivers
       volume_lake     , &  !< lake water volume storage of endorheic lakes [m^3]
       fract_lake      , &  !< lake fraction of endorheic lakes [-]
-      fract_land_changes    , &  !< lake water volume storage of endorheic lakes [m^3]
-      fract_lake_changes   , &  !< lake water volume storage of endorheic lakes [m^3]
+      fract_land_changes,  &  !< lake water volume storage of endorheic lakes [m^3]
+      fract_lake_changes,  &  !< lake water volume storage of endorheic lakes [m^3]
       inflow_lake     , &  !< lake water outflow to neighbor grid cell [m^3/s]
       outflow_lake    , &  !< lake water outflow to neighbor grid cell [m^3/s]
+      lake_to_outlet  , &  !< lake water outflow to neighbor grid cell [m^3]
       height_lake     , &  !< actual lake water height of endorheic lakes [m]
       area_lake       , &  !< actual lake water area of endorheic lakes [m^2]
       height_lake_max , &  !< maximum lake water height of endorheic lakes [m]
       area_lake_max   , &  !< maximum lake water area of endorheic lakes [m^2]
       volume_lake_max , &  !< maximum lake water volume of endorheic lakes [m^3]
-      height_oro_min        , &  !< minimum elevation within ICON grid cell [m]
+      height_oro_min  , &  !< minimum elevation within ICON grid cell [m]
       height_dyn      , &  !< minimum dynamic height within ICON grid cell [m]
       alpha           , &  !< parameter to describe lake volume-height relation [-]
       beta            , &  !< parameter to describe lake volume-area relation [-]
       basin_mask      , &  !< lake basin grid points flagged as >0 else 0 [-] 
+      outlets         , &  !< lake outlet grid points flagged with basin number else 0 [-] 
+      volume_out      , &  !< volume in ICON grid cell at outlet height [m^3] 
       lake_inflow     , &  !< lake inflow from runoff (precipitation minus evaporation) [m^3/s]
       lake_drain      , &  !< lake inflow from runoff and discharge into lake storage [m^3/s]
       water_budget    , &
@@ -256,6 +259,14 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
+     CALL mem%Add_var( 'lake_to_outlet', mem%lake_to_outlet,                 &
+      & hgrid, surface,                                                      &
+      & t_cf('lake_to_outlet', 'm3', 'lake outflow to neighbor grid cell'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
      CALL mem%Add_var( 'height_lake', mem%height_lake,                       &
       & hgrid, surface,                                                      &
       & t_cf('height_lake', 'm', 'grid cell lake height'),                   &
@@ -331,6 +342,22 @@ CONTAINS
     CALL mem%Add_var( 'basin_mask', mem%basin_mask,                          &
       & hgrid, surface,                                                      &
       & t_cf('basin_mask', 'none', 'lake basin grid point flagged'),         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'outlets', mem%outlets,                                &
+      & hgrid, surface,                                                      &
+      & t_cf('outlets', 'none', 'lake outlet grid point flagged'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'volume_out', mem%volume_out,                                &
+      & hgrid, surface,                                                      &
+      & t_cf('volume_out', 'm3', 'volume in grid cell at outlet height'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &

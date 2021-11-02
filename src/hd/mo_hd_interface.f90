@@ -18,6 +18,7 @@ MODULE mo_hd_interface
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish, message, message_text
   USE mo_sync,             ONLY: SYNC_C, sync_patch_array, global_sum_array
+  USE mo_sync,             ONLY: global_max
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -30,6 +31,8 @@ MODULE mo_hd_interface
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_jsb_math_constants, ONLY: deg2rad
   USE mo_jsb_parallel,       ONLY: Get_omp_thread
+
+  USE mo_model_domain,       ONLY: p_patch
 
   dsl4jsb_Use_processes HD_, HYDRO_
   dsl4jsb_Use_config(HD_)
@@ -128,6 +131,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: discharge
+    dsl4jsb_Real2D_onChunk :: lake_to_outlet
     dsl4jsb_Real2D_onChunk :: outflow_runoff
     dsl4jsb_Real2D_onChunk :: outflow_drainage
     dsl4jsb_Real2D_onChunk :: outflow_rivers
@@ -211,6 +215,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, discharge)   ! in
 
+    dsl4jsb_Get_var2D_onChunk(HD_, lake_to_outlet)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_overlflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_overlflow)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_baseflow)     ! in
@@ -237,6 +242,7 @@ CONTAINS
       ELSEWHERE
         inflow(:)      = runoff(:) * tile_fract(:) * area / rhoh2o
       END WHERE
+      inflow(:)  = inflow(:) + lake_to_outlet(:)
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
       inflow(:) = drainage(:) * tile_fract(:) * area / rhoh2o
@@ -793,11 +799,15 @@ CONTAINS
       & volume_lake_max,       &
       & alpha,                 &
       & basin_mask,            &
+      & outlets,               &
+      & volume_out,               &
       & volume_lake,           &
       & height_lake,           &
       & height_dyn,            &
       & inflow_lake,           &
-      & outflow_lake
+      & outflow_lake,          &
+      & lake_to_outlet
+
 
     REAL(wp) ::                &
       & dyn_min,               &
@@ -806,8 +816,11 @@ CONTAINS
       & volume_lake_diff,      &
       & u_lake,                &
       & k_lake,                &
-      & global_lake_volume_error,          &  ! water budget change within the time step
-      & neigh_dist,                  &
+      & global_lake_volume,    &  ! water budget change within the time step
+      & global_lake_volume_error,  &  ! water budget change within the time step
+      & global_lateral_flow_error, &  ! water budget change within the time step
+      & outlets_maxs,          &
+      & neigh_dist,            &
       & steplen
 
     INTEGER  :: jc, jcs, jce       ! grid cells
@@ -832,7 +845,10 @@ CONTAINS
       & nneigh_mask(:,:)         ! mask for neighbor's neighbor cells 
 
     REAL(wp), ALLOCATABLE  ::  &
-      & in_domain  (:,:)         ! 1: cell in domain, 0: halo cell
+      & in_domain       (:,:), &  ! 1: cell in domain, 0: halo cell
+      & volume_from_lake(:,:)
+
+    REAL(wp) :: outlets_max(p_patch(1)%nblks_c)
 
     LOGICAL  :: debug_hd
 
@@ -865,11 +881,14 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake_max)  ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, outlets)          ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, volume_out)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_dyn)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, inflow_lake)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_lake)     ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_to_outlet)   ! OUT
 
     ! Configuration parameters from the namelist
     routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
@@ -977,13 +996,42 @@ CONTAINS
         END DO
       END DO
 
+      ! checkout water budget conservation: lateral flow only
       volume_lake(:,:) = volume_lake(:,:) + ( outflow_lake(:,:) + inflow_lake(:,:) ) * steplen
-      global_lake_volume_error = global_sum_array((outflow_lake(:,:)+inflow_lake(:,:))*in_domain(:,:))
-
-      PRINT*, 'lake inflow', global_sum_array(inflow_lake(:,:)*in_domain(:,:))    
-      PRINT*, 'lake outflow', global_sum_array(outflow_lake(:,:)*in_domain(:,:))    
-      IF (ABS(global_lake_volume_error) > 10._wp*EPSILON(1._wp)) THEN
+      global_lateral_flow_error = global_sum_array((outflow_lake(:,:)+inflow_lake(:,:))*in_domain(:,:))
+      IF (ABS(global_lateral_flow_error) > 10._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
+             global_lateral_flow_error,' m3'
+        CALL finish (TRIM(routine), message_text)
+      END IF
+
+
+      ! outlet overflow to riverflow
+      ALLOCATE (volume_from_lake(nproma, nblks))
+
+      DO blk = 1, p_patch(1)%nblks_c ! block centers
+        outlets_max(blk) = MAXVAL(outlets(:,blk))
+      END DO
+      ! number of outlets
+      global_lake_volume = global_sum_array(volume_lake(:,:)*in_domain(:,:))
+      outlets_maxs = global_max(MAXVAL(outlets_max))  ! Get max over all PEs
+      lake_to_outlet(:,:)=0._wp
+      DO n = 1, outlets_maxs
+        volume_from_lake(:,:) = 0._wp
+        WHERE (n==basin_mask(:,:).AND.volume_lake(:,:)>volume_out(:,:))
+          volume_from_lake(:,:) = volume_lake(:,:) - volume_out(:,:)
+          volume_lake(:,:)      = volume_lake(:,:) - volume_from_lake(:,:)
+        END WHERE
+        WHERE(n==outlets)
+          lake_to_outlet(:,:)=global_sum_array(volume_from_lake(:,:)/steplen*in_domain(:,:))
+        END WHERE
+      END DO
+
+
+      ! checkout water budget conservation: outlet overflow
+      global_lake_volume_error=global_lake_volume-global_sum_array((volume_lake(:,:)+lake_to_outlet(:,:)*steplen)*in_domain(:,:))
+      IF (ABS(global_lake_volume_error) > 10._wp*EPSILON(1._wp)) THEN
+        WRITE (message_text,*) 'Lake water conservation problem: outlet overflow imbalance: ', &
              global_lake_volume_error,' m3'
         CALL finish (TRIM(routine), message_text)
       END IF
@@ -1062,6 +1110,7 @@ CONTAINS
       & drainage        , &
       !& outflow_resid   , &
       & discharge       , &
+      & lake_to_outlet  , &
       & discharge_ocean , &
       & lake_drain      , &
       & water_budget    , &
@@ -1127,6 +1176,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HD_, overlflow_res) ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, baseflow_res) ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, riverflow_res) ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, lake_to_outlet)  ! ÍN
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, runoff)          ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, drainage)        ! IN
@@ -1191,6 +1241,7 @@ CONTAINS
     water_flux(:,:) = &
       &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
       & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
+!      & + lake_to_outlet (:,:) * in_domain(:,:)                                   & !< outlet to runoff [m3/s]
       & - discharge_ocean(:,:) * in_domain(:,:)                                   & !< discharge to the ocean
       & - lake_drain     (:,:) * in_domain(:,:)                                     !< discharge to the lakes
     global_water_flux = global_sum_array(water_flux(:,:))
@@ -1202,6 +1253,9 @@ CONTAINS
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   drainage              : ', &
            global_sum_array(drainage/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
+      CALL message(routine, message_text)
+      WRITE(message_text,*) '-   outlet              : ', &
+           global_sum_array(lake_to_outlet*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   discharge_ocean (neg.): ', &
            global_sum_array(discharge_ocean*in_domain*steplen), ' m3'
