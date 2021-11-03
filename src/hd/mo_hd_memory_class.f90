@@ -65,8 +65,7 @@ MODULE mo_hd_memory_class
       volume_lake_max , &  !< maximum lake water volume of endorheic lakes [m^3]
       height_oro_min  , &  !< minimum elevation within ICON grid cell [m]
       height_dyn      , &  !< minimum dynamic height within ICON grid cell [m]
-      alpha           , &  !< parameter to describe lake volume-height relation [-]
-      beta            , &  !< parameter to describe lake volume-area relation [-]
+      shp             , &  !< parameter to describe lake volume-area-height relation [-]
       basin_mask      , &  !< lake basin grid points flagged as >0 else 0 [-] 
       outlets         , &  !< lake outlet grid points flagged with basin number else 0 [-] 
       volume_out      , &  !< volume in ICON grid cell at outlet height [m^3] 
@@ -323,17 +322,9 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'alpha', mem%alpha,                                    &
+    CALL mem%Add_var( 'shp', mem%shp,                                        &
       & hgrid, surface,                                                      &
-      & t_cf('alpha', 'none', 'parameter of height-volume relations'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-
-    CALL mem%Add_var( 'beta', mem%beta,                                      &
-      & hgrid, surface,                                                      &
-      & t_cf('beta', 'none', 'parameter of area-volume relations'),          &
+      & t_cf('shp', 'none', 'parameter of height-area-volume relations'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &

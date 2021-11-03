@@ -155,13 +155,8 @@ CONTAINS
 
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &
-        & variable_name='ALPHA',                     &
-        & fill_array = dsl4jsb_var_ptr(HD_,alpha))
-
-      ! maximum grid cell lake height in meter
-      return_pointer => input_file%Read_2d(         &
-        & variable_name='BETA',                     &
-        & fill_array = dsl4jsb_var_ptr(HD_,beta))
+        & variable_name='SHAPE',                     &
+        & fill_array = dsl4jsb_var_ptr(HD_,shp))
 
       ! maximum grid cell lake height in meter
       return_pointer => input_file%Read_2d(         &

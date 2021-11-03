@@ -307,8 +307,7 @@ CONTAINS
       & area_lake_max,         &
       & volume_lake_max,       &
       & height_oro_min,        &
-      & alpha,                 &
-      & beta,                  &
+      & shp,                 &
       & basin_mask,            & 
       & height_lake,           &
       & area_lake,             &
@@ -364,8 +363,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HD_, area_lake_max)    ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, volume_lake_max)  ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, height_oro_min)   ! IN
-    dsl4jsb_Get_var2D_onChunk(HD_, alpha)            ! IN
-    dsl4jsb_Get_var2D_onChunk(HD_, beta)             ! IN
+    dsl4jsb_Get_var2D_onChunk(HD_, shp)            ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onChunk(HD_, area_lake)        ! OUT
@@ -389,7 +387,7 @@ CONTAINS
       ! update grid cell lake height [m]
       WHERE (basin_mask(:) > 0._wp)
         WHERE (volume_lake(:).LE.volume_lake_max(:))
-          height_lake(:) = height_lake_max(:) * ( volume_lake(:) / volume_lake_max(:) )**alpha(:)
+          height_lake(:) = height_lake_max(:) * ( volume_lake(:) / volume_lake_max(:) )**(1._wp/(1._wp+(2._wp/shp(:))))
         ELSE WHERE (volume_lake(:).GT.volume_lake_max(:))
           height_lake(:) = height_lake_max(:) + ( volume_lake(:) - volume_lake_max(:) )/area_lake_max(:)
         END WHERE
@@ -400,7 +398,7 @@ CONTAINS
 
       ! update grid cell lake area [m3]
       WHERE (basin_mask(:) > 0._wp)
-        area_lake(:) = area_lake_max(:) * MIN( ( volume_lake(:) / volume_lake_max(:) )**beta(:), 1._wp )
+        area_lake(:) = area_lake_max(:) * MIN( ( volume_lake(:) / volume_lake_max(:) )**(2._wp/(2._wp+shp(:))), 1._wp )
       ELSE WHERE
         area_lake(:) = 0._wp
       END WHERE
@@ -797,7 +795,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: &
       & height_lake_max,       &
       & volume_lake_max,       &
-      & alpha,                 &
+      & shp,                 &
       & basin_mask,            &
       & outlets,               &
       & volume_out,               &
@@ -879,7 +877,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(HD_, height_lake_max)  ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake_max)  ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, alpha)            ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, shp)            ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outlets)          ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_out)       ! IN
@@ -965,7 +963,7 @@ CONTAINS
               height_lake_diff = MIN(height_lake(njc(n),nblk(n)), height_dyn(njc(n),nblk(n)) - height_dyn(jc,blk))
               CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
 !              volume_lake_low  = volume_lake_max(njc(n),nblk(n)) * ( (height_lake(njc(n),nblk(n)) - height_lake_diff) / &
-!                                 height_lake_max(njc(n),nblk(n))) ** (1._wp/alpha(njc(n),nblk(n)) )
+!                                 height_lake_max(njc(n),nblk(n))) ** (1._wp/(1._wp/(1._wp+(2._wp/shp(:))))(njc(n),nblk(n)) )
 !              volume_lake_diff = volume_lake(njc(n),nblk(n)) - volume_lake_low
               u_lake           = 0.01_wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
               k_lake           = neigh_dist/u_lake
@@ -982,7 +980,7 @@ CONTAINS
               height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
               CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
 !              volume_lake_low  = volume_lake_max(jc,blk) * ( (height_lake(jc,blk) - height_lake_diff ) / &
-!                                 height_lake_max(jc,blk) ) ** (1._wp/alpha(jc,blk))
+!                                 height_lake_max(jc,blk) ) ** (1._wp/(1._wp/(1._wp+(2._wp/shp(:))))(jc,blk))
 !              volume_lake_diff = volume_lake(jc,blk) - volume_lake_low
               u_lake           = 0.01_wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
               k_lake           = neigh_dist/u_lake
