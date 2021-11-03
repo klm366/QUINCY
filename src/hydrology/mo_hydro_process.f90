@@ -427,9 +427,9 @@ CONTAINS
   ! @param [in]      water_to_soil      Amount of water going into the soil [m]
   ! @param [in]      evapotrans_soil    Evapotranspiration from the soil (w/o snow or canopy) [kg m-2 s-1]
   ! @param [in]      transpiration      Evapotranspiration [kg m-2 s-1]
-  ! @param [in,out]  ws                 Total water content of soil column in rooting zone [m]
   ! @param [in,out]  ws_l               Content un-frozen water of soil layers in rooting zone [m]
   ! @param [in,out]  soil_ice_l         Content of frozen water of soil layers in rooting zone [m]
+  ! @param [out]     ws                 Liquid water content of the root zone [m]
   ! @param [out]     wsat_l             Maximum water storage in each soil layer [m]
   ! @param [out]     field_cap_l        Water content at field capacity in soil layers [m]
   ! @param [out]     p_wilt_l           Water content at permanent wilting point in soil layers [m]
@@ -447,9 +447,9 @@ CONTAINS
     !& sfract_srf, wfract_srf,
     & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, evapotrans_soil, transpiration,             &
     ! inout
-    & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                     &
+    & ws_l, soil_ice_l, w_soil_overflow,                                                                         &
     ! out
-    & wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                                            &
+    & ws, wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                                        &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o

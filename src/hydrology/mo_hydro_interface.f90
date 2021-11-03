@@ -1041,11 +1041,11 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ), &
       ! inout
-      & dsl4jsb_var2D_onChunk (HYDRO_, w_rootzone        ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sl         ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, i_soil_sl         ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_overflow   ), &
       ! out
+      & dsl4jsb_var2D_onChunk (HYDRO_, w_rootzone        ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sat_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_fc_sl      ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pwp_sl     ), &
