@@ -1588,7 +1588,7 @@ CONTAINS
 
         IF (model%processes(DISTURB_)%p%config%active) THEN
           C_flux_yday(ics:ice) =  C_flux_yday(ics:ice) &
-            & - (dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta))
+            & - dsl4jsb_var2D_onChunk(CARBON_, cflux_fire_all_2_atm_ta)
         ENDIF
 
         CALL calculate_current_c_ta_state_sum(tile, options, carbon_conservation_test)

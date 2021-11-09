@@ -586,10 +586,10 @@ CONTAINS
         runoff(i) = 0._wp
         infilt(i) = water_to_soil(i)
       ELSE
-        IF (t_soil_upper_layer(i) < tmelt) THEN
-          runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
-          infilt(i) = 0._wp
-        ELSE
+!!$ TR        IF (t_soil_upper_layer(i) < tmelt) THEN
+!!$ TR          runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
+!!$ TR          infilt(i) = 0._wp
+!!$ TR        ELSE
           ws_incl_ice(i) = ws(i) + ice_rootzone(i)                    ! soil water including ice
           IF (water_to_soil(i) > 0._wp .AND. ws_incl_ice(i) > ws_min_drain(i)) THEN ! soilwater content above limit for drainage
 
@@ -604,7 +604,7 @@ CONTAINS
             runoff(i) = 0._wp                                            ! no runoff as soil is too dry
             infilt(i) = water_to_soil(i)                                ! all water infiltrated
           END IF
-        END IF
+!!$ TR        END IF
       END IF
     END DO
     !$claw acc end parallel

@@ -260,6 +260,10 @@ CONTAINS
           CALL model%Queue_task(TLCC_, "tlcc")
         END IF
 
+        IF (model%processes(DYNVEG_)%p%config%active) THEN
+          CALL model%Queue_task(DYNVEG_,"dynveg")
+        END IF
+
         IF (model%processes(ALCC_)%p%config%active) THEN
           CALL model%Queue_task(ALCC_, "alcc")
         END IF

@@ -26,6 +26,7 @@ MODULE mo_atmland_interface
   !USE mo_jsb_config_class,   ONLY: t_jsb_config
   !USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
+  USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_, RAD_, CARBON_
   dsl4jsb_Use_config(SEB_)
@@ -519,6 +520,7 @@ CONTAINS
       & cflux_npp_2_atm_ta_ptr, &
       & cflux_soilresp_2_atm_ta_ptr, &
       & cflux_herb_2_atm_ta_ptr, &
+      & cflux_fire_all_2_atm_ta_ptr, &
       & t_lwtr_ptr, &
       & t_lice_ptr, &
       & qsat_lwtr_ptr, &
@@ -788,6 +790,7 @@ CONTAINS
         cflux_npp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)
         cflux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)
         cflux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta)
+        cflux_fire_all_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_fire_all_2_atm_ta)
         !$acc data present(CO2_flux, fact_land, cflux_npp_2_atm_ta_ptr, cflux_soilresp_2_atm_ta_ptr, cflux_herb_2_atm_ta_ptr)
         !$acc parallel loop
         DO i=1,nc
@@ -795,6 +798,7 @@ CONTAINS
             & (   cflux_npp_2_atm_ta_ptr(i)       &
             &   + cflux_soilresp_2_atm_ta_ptr(i)  &
             &   + cflux_herb_2_atm_ta_ptr(i)      &
+            &   + cflux_fire_all_2_atm_ta_ptr(i) * molarMassCO2_kg / sec_per_day &
             & )
         END DO
         !$acc end data

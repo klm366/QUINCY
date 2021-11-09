@@ -30,7 +30,8 @@ MODULE mo_dynveg_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_dynveg_config
     LOGICAL             :: &
-      & init_running_means
+      & init_running_means, &
+      & init_dynveg
      !X e.g: LOGICAL                     :: use_alb_veg_simple
 
    CONTAINS
@@ -57,6 +58,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
+    LOGICAL                     :: init_dynveg
 
     !X e.g: LOGICAL                     :: use_alb_veg_simple
 
@@ -64,7 +66,8 @@ CONTAINS
          active,                   &
          ic_filename,              &
          bc_filename,              &
-         init_running_means
+         init_running_means,       &
+         init_dynveg
          !X e.g: use_<PROCESS_NAME_LOWER_CASE>_veg_simple
 
     INTEGER :: nml_handler, nml_unit, istat, npft, i
@@ -78,6 +81,7 @@ CONTAINS
     bc_filename         = 'bc_land_dynveg.nc'
     ic_filename         = 'ic_land_dynveg.nc'
     init_running_means  = .FALSE.
+    init_dynveg         = .FALSE.
     !X e.g: use_alb_veg_simple        = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -91,7 +95,9 @@ CONTAINS
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means
+    config%init_dynveg         = init_dynveg
     IF (init_running_means) CALL message(TRIM(routine), 'Initializing climate buffer')
+    IF (init_dynveg) CALL message(TRIM(routine), 'Initializing DYNVEG')
     !X e.g: config%use_alb_veg_simple        = use_alb_veg_simple
 
     ! Create vertical axis

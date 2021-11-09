@@ -62,7 +62,7 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting pplcc configuration')
 
     ! Set defaults
-    active              = .FALSE.
+    active              = .TRUE.
     bc_filename         = 'bc_land_pplcc.nc'
     ic_filename         = 'ic_land_pplcc.nc'
 
