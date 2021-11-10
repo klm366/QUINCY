@@ -53,7 +53,7 @@ MODULE mo_hydro_config_class
       & l_infil_subzero,        & !< Allow infiltration at soil temperatures below 0°C
       & l_scool_percolates,     & !< Supercooled water percolates
       & l_drain_lat,            & !< Lateral drainage, i.e. drainage from upper to lower soil layers;
-                                & !  if false, only the lowest soil level drains.
+                                  !  if false, only the lowest soil level drains.
       & l_percolation_theory,   & !< The saturated hydraulic conductivity is calculated following
                                   !  the percolation theory
       & l_scool_avail_to_plants,  & !< Consider supercooled water to be available to plants
