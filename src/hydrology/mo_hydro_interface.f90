@@ -1004,13 +1004,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pwp_sl)         ! out
 
 
-    !$claw acc update device(soil_w%dz) ! TODO move if possible
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
       & nsoil, &
-      & soil_w%dz(:), &
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
       & ltpe_closed, ltpe_open,                             &

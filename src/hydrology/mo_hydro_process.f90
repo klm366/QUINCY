@@ -395,7 +395,6 @@ CONTAINS
   !
   ! @param [in]      nidx               Vector lenth
   ! @param [in]      nsoil              Number of soil layers
-  ! @param [in]      dz                 (Fixed) Thicknesses of soil layers [m]
   ! @param [in]      nlat               (Effective) number of latitudes
   ! @param [in]      delta_time         Time step [s]
   ! @param [in]      l_infil_subzero        Allow infiltration of supercolled water
@@ -438,7 +437,7 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                                                &
     ! in
-    & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
+    & nidx, nsoil, nlat, delta_time, ltpe_closed, ltpe_open,                                                     &
     & l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top,                         &
     & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates, l_drain_lat,                     &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
@@ -458,8 +457,6 @@ CONTAINS
 
     INTEGER,  INTENT(in) :: &
       & nidx, nsoil, nlat
-    REAL(wp), INTENT(in) :: &
-      & dz(nsoil)
     REAL(wp), INTENT(in) :: &
       & delta_time
     LOGICAL, INTENT(in) :: ltpe_closed
@@ -683,7 +680,7 @@ CONTAINS
       &     l_scool_percolates, l_drain_lat, ws_l, soil_depth_l,           &
       &     wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, &
       &     matrix_pot_l, pot_scool_l,                                     &
-      &     drainage, pore_size_index_l, p_wilt_l, dz,                     &
+      &     drainage, pore_size_index_l, p_wilt_l,                         &
       &     soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
 
     ! update soil moisture according to infiltration
@@ -711,7 +708,7 @@ CONTAINS
     & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates,     &
     & l_drain_lat, ws_l, dsoil,                                                     &
     & wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
-    & pot_scool_l, drainage, pore_size_index_l, p_wilt_l, dz, soil_ice_l,           &
+    & pot_scool_l, drainage, pore_size_index_l, p_wilt_l, soil_ice_l,               &
     & w_soil_overflow, ltpe_closed, ltpe_open)
 
     !----------------------------------------------------------------------------------------------
@@ -744,7 +741,6 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: pot_scool_l(:,:)           ! potentially supercooled water [m]
     REAL(wp), INTENT(IN)            :: pore_size_index_l(:,:)     ! soil pore size distribution index used in Van Genuchten
     REAL(wp), INTENT(IN)            :: p_wilt_l(:,:)              ! wilting point of the soil layer
-    REAL(wp), INTENT(IN)            :: dz(:)                      ! vertical depth of each soil layer
     REAL(wp), INTENT(INOUT)         :: ws_l(:,:)                  ! soil moisture of each layer [m]
     REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: w_soil_overflow(:)
@@ -752,9 +748,6 @@ CONTAINS
 
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
-
-    INTEGER,  PARAMETER :: iredu  = 0         ! reduction of conductivity with depth yes/no (1/0)
-    REAL(wp), PARAMETER :: credu  = 1.0_wp
 
     INTEGER  :: i, j                          ! looping index
     REAL(wp) :: percolation(nidx,0:nsoil)     ! downward flux from one soil layer to the layer below [m/s]
@@ -773,7 +766,6 @@ CONTAINS
     REAL(wp) :: zdc(nidx,nsoil)               !     ''
     REAL(wp) :: ztri(nidx,nsoil)              !     ''
     REAL(wp) :: diffusivity(nidx,nsoil-1)     ! diffusivity between two layers, i.e. at the bottom of each layer
-    REAL(wp) :: zkredu(nsoil)                 ! reduction factor of hydraulic conductivity with depth for percolation
     REAL(wp) :: zdiflog(10), wslog(nsoil)     ! needed for debugging output
     REAL(wp) :: remoist(nidx)                 ! for TPE
 
@@ -795,23 +787,6 @@ CONTAINS
         ws_rel(j,i) = 0._wp
       END DO
     END DO
-
-    ! define reduction factor of hydraulic conductivity with depth (for percolation)
-    IF (iredu == 1) THEN
-      !$claw acc parallel
-      zkredu(1) = (1._wp + EXP(-credu*dz(1)) )/2._wp
-      !$claw acc loop gang vector
-      DO i = 2, nsoil
-        zkredu(i) = (EXP(-credu*SUM(dz(1:i-1))) + EXP(-credu*SUM(dz(1:i)))) / 2._wp
-      END DO
-      !$claw acc end parallel
-    ELSE
-      !$claw acc parallel loop gang vector
-      DO i = 1, nsoil
-        ! conductivity is constant with depth
-        zkredu(i) = 1._wp
-      END DO
-    END IF
 
     !$claw acc parallel loop gang vector collapse(2)
     DO j = 1, nidx 
@@ -858,7 +833,7 @@ CONTAINS
 
             ws_rel(j,i) = MAX(ws_l(j,i) - ws_immo_l(j,i), 0._wp) / (field_cap_l(j,i) - ws_immo_l(j,i))
             ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
-            percolation(j,i) = hyd_cond_sat_l(j,i)*zkredu(i) * SQRT(ws_rel(j,i))                           &
+            percolation(j,i) = hyd_cond_sat_l(j,i) * SQRT(ws_rel(j,i))                                     &
               &                 * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
               &                 * delta_time     ! [m/s] -> [m]
 
@@ -874,7 +849,7 @@ CONTAINS
             END IF
             ws_rel(j,i) = MAX(ws_l(j,i) - ws_immo_l(j,i), 0._wp) / (field_cap_l(j,i) - ws_immo_l(j,i))
             ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
-            percolation(j,i) = ice_impede(j) * hyd_cond_sat_l(j,i)*zkredu(i) * SQRT(ws_rel(j,i))           &
+            percolation(j,i) = ice_impede(j) * hyd_cond_sat_l(j,i) * SQRT(ws_rel(j,i))                     &
               &                 * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
               &                 * delta_time     ! [m/s] -> [m]
 
