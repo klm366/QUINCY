@@ -444,7 +444,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
 
-    ! variables needed for DYNVEG
+    ! variables needed for NLCC process
     dsl4jsb_Real2D_onChunk :: max_green_bio
     dsl4jsb_Real2D_onChunk :: sla
 
@@ -552,7 +552,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
-    ! variables needed for DYNVEG
+    ! variables needed for NLCC process
     dsl4jsb_Get_var2D_onChunk(CARBON_,  max_green_bio)
     dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)
 
@@ -776,7 +776,7 @@ CONTAINS
         & c_into_humus_2_sum    = c_into_humus_2_sum                  & ! out
         & )
 
-      ! determine annual maximum content of green pool for DYNVEG
+      ! determine annual maximum content of green pool for NLCC process
       IF (new_year) THEN
          max_green_bio = c_green
       ELSEIF (new_day) THEN
@@ -863,7 +863,7 @@ CONTAINS
     CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:),            &
       & c_sum_veg_ta(:), c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
 
-    ! write lct information on variable to make it available on pft-tiles via function collect_var for DYNVEG
+    ! write lct information on variable to make it available on pft-tiles via function collect_var for NLCC process
     sla(:) = REAL(dsl4jsb_Lctlib_param(specificLeafArea_C))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -965,7 +965,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_yday_ta,  weighted_by_fract)
 
-    ! variables for DYNVEG
+    ! variables for NLCC process
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
 

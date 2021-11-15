@@ -209,6 +209,7 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
+    var%full_name = TRIM(name_loc)
     IF (loutput_loc) THEN
       IF (mem%in_var_groups) THEN
         var%is_in_output = is_variable_in_output(var%full_name, groups(:))
@@ -235,7 +236,6 @@ CONTAINS
 
     var%ptr => var%ptr1d
     var%name = TRIM(name)
-    var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL1D
     var%missval = missval_r_loc

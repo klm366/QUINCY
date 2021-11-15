@@ -183,8 +183,8 @@ MODULE mo_carbon_memory_class
 
       c_bg_sum,              & ! Sum of belowground Yasso pools  [mol(C)/m^2(canopy)]
       c_ag_sum_1,            & ! Sum of aboveground green Yasso pools  [mol(C)/m^2(canopy)]
-      max_green_bio,         & ! Annual maximum of C-pool green for DYNVEG [mol(C)/m^2(canopy)]
-      sla,                   & ! specific leave area for DYNVEG [m2(leaf)/mol(C)]
+      max_green_bio,         & ! Annual maximum of C-pool green for NLCC process [mol(C)/m^2(canopy)]
+      sla,                   & ! specific leave area for NLCC process [m2(leaf)/mol(C)]
 
   !JN: vars for analytically equilibrating YASSO humus pools outside of jsb4 simulations (compare jsb3 svn ref 9652)
       c_decomp_humus_1_sum,      & ! annual cflux sum of humus decomposed in YASSO (leaf) [mol(C)/m^2(canopy)]

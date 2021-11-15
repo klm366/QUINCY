@@ -206,7 +206,6 @@ CONTAINS
     CALL input_file%Close()
 
     DEALLOCATE(cf_correction)
-    DEALLOCATE(ptr_2D)
 
     ! Assert: sum of absolute fractions needs to be <=1
     IF (ANY(SUM(cf_current_year(:,:,:),DIM=2) > 1.0_wp + 1.E-11_wp)) THEN

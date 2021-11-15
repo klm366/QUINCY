@@ -47,9 +47,13 @@ MODULE mo_jsb4_forcing
     & tmelt, rd, amco2, amd, cpd, vtmpc1, cpvd1, ckap, zkappa
   USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
 #ifdef __ICON__
-  USE mo_psrad_orbit,            ONLY: inquire_declination
+#ifdef __NO_RTE_RRTMGP__
+    USE mo_psrad_orbit,       ONLY: inquire_declination
 #else
-    USE mo_orbit,                ONLY: inquire_declination
+    USE mo_radiation_orbit,   ONLY: inquire_declination
+#endif
+#else
+  USE mo_orbit,                ONLY: inquire_declination
 #endif
 
   ! jsb4
