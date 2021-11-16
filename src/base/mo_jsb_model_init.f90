@@ -366,6 +366,9 @@ CONTAINS
   
       !!------------------------ tasks that do not change area
       !!
+      IF(model%config%quincy_model == 'land') THEN
+        CALL model%Queue_task(SB_,   "sb_rate_modifier")            !! quincy - land model
+      END IF
       CALL model%Queue_task(RAD_,    "sw_radiation_q_")             !! quincy (sw radiation and albedo)
       CALL model%Queue_task(RAD_,    "surface_radiation")
       CALL model%Queue_task(PHENO_,  "phenology_q_")                !! quincy
@@ -396,6 +399,10 @@ CONTAINS
       IF((model%config%quincy_model == 'plant') .OR. (model%config%quincy_model == 'land')) THEN
         CALL model%Queue_task(VEG_,  "veg_turnover")               !! quincy - land/plant model
         CALL model%Queue_task(VEG_,  "veg_dynamics")               !! quincy - land/plant model
+        ! land model
+        IF(model%config%quincy_model == 'land') THEN
+          CALL model%Queue_task(SB_,  "sb_simple_model")           !! quincy - land model
+        END IF
         CALL model%Queue_task(VEG_,  "veg_growth")                 !! quincy - land/plant model
       END IF
       CALL model%Queue_task(VEG_,    "veg_pools")                  !! quincy - land/plant/canopy model
@@ -486,11 +493,7 @@ CONTAINS
         CALL pheno_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL veg_init(tile)
-      END IF
-
-      ! HYDRO_ needs to be initialized before SSE_
+      ! HYDRO_ needs to be initialized prior to SSE_
       IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL hydro_init(tile)
       END IF
@@ -499,7 +502,7 @@ CONTAINS
         CALL sse_init(tile)
       END IF
 
-      ! Initialize SSE_ before SB_
+      ! Initialize SSE_ & HYDRO_ before SB_
       IF (one_of(tile%process_action(SB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL sb_init(tile)
       END IF
@@ -516,6 +519,11 @@ CONTAINS
 
       IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL carbon_init(tile)
+      END IF
+
+      ! VEG_ needs HYDRO_ to be initilized
+      IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL veg_init(tile)
       END IF
 
       IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN

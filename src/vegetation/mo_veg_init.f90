@@ -55,7 +55,9 @@ CONTAINS
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
-    USE mo_jsb_process_class,               ONLY: VEG_, PHENO_
+    USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                        ONLY: Get_vgrid
+    USE mo_jsb_process_class,               ONLY: VEG_, PHENO_, SSE_
 
     USE mo_jsb_math_constants,              ONLY: eps8
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
@@ -70,6 +72,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(PHENO_)
+    dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
@@ -81,14 +84,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)    :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),      POINTER              :: model
-    TYPE(t_lctlib_element), POINTER              :: lctlib     !< land-cover-type library - parameter across pft's
-    REAL(wp), ALLOCATABLE                        :: hlp1(:,:)  !< dummy variable
-    REAL(wp)                                     :: ref_lai    !< LAI                                 | for canopy model init
+    TYPE(t_jsb_model),      POINTER              :: model             !
+    TYPE(t_lctlib_element), POINTER              :: lctlib            ! land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER              :: vgrid_soil_sb     ! Vertical grid
+    REAL(wp), ALLOCATABLE                        :: hlp1(:,:)         ! dummy variable
+    REAL(wp)                                     :: ref_lai           ! LAI | for canopy model init
+    INTEGER                                      :: isoil, nsoil_sb   ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_config(VEG_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
@@ -100,6 +106,8 @@ CONTAINS
     dsl4jsb_Real2D_onDomain     :: lai
     ! PHENO_ 3D
     dsl4jsb_Real3D_onDomain     :: lai_cl
+    ! SSE_ 3D
+    dsl4jsb_Real3D_onDomain     :: soil_lay_depth_ubound_sl
     ! VEG_ 2D
     dsl4jsb_Real2D_onDomain     :: target_cn_leaf
     dsl4jsb_Real2D_onDomain     :: target_np_leaf
@@ -185,10 +193,13 @@ CONTAINS
     model  => Get_model(tile%owner_model_id)
     IF (.NOT. model%config%use_quincy) RETURN       ! only with QUINCY model
     IF (tile%lcts(1)%lib_id == 0) RETURN            ! run this init only if the present tile is a pft
-    lctlib => model%lctlib(tile%lcts(1)%lib_id)
+    lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(PHENO_)
+    dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
@@ -203,6 +214,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)                           ! in
     ! PHENO_ 3D
     dsl4jsb_Get_var3D_onDomain(PHENO_, lai_cl)                        ! in
+    ! SSE_ 3D
+    dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_ubound_sl)      ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onDomain(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onDomain(VEG_, target_np_leaf)

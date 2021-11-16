@@ -169,13 +169,13 @@ CONTAINS
     active                      = .TRUE.
     bc_filename                 = 'bc_land_sb.nc'
     ic_filename                 = 'ic_land_sb.nc'
-    sb_model_scheme             = "simple_0d"       ! simple_0d simple_1d jsm
+    sb_model_scheme             = "simple_1d"       ! simple_1d jsm
     sb_nloss_scheme             = "dynamic"         ! none fixed dynamic 
     sb_bnf_scheme               = "standard"        ! none standard unlimited 
     sb_adsorp_scheme            = "eca_full"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
-    flag_sb_prescribe_nh4       = .FALSE.
-    flag_sb_prescribe_no3       = .FALSE.
-    flag_sb_prescribe_po4       = .FALSE.
+    flag_sb_prescribe_nh4       = .TRUE.
+    flag_sb_prescribe_no3       = .TRUE.
+    flag_sb_prescribe_po4       = .TRUE.
     flag_mycorrhiza             = .FALSE.
     flag_mycorrhiza_org         = .FALSE.
     flag_mycorrhiza_prim        = .FALSE.
@@ -186,13 +186,13 @@ CONTAINS
     usda_taxonomy_class         = 1
     nwrb_taxonomy_class         = 1
     lithology_class             = 1
-    soil_ph                     = 6.5_wp 
-    soil_p_depth                = 0.5_wp        ! these soil_p* values are valid for DE-Hainich ?!
-    soil_p_labile               = 50._wp
-    soil_p_slow                 = 70._wp
-    soil_p_occluded             = 150._wp
-    soil_p_primary              = 100._wp
-    qmax_org_fine_particle      = 6.5537_wp
+    soil_ph                     = 6.5_wp        ! soil ph
+    soil_p_depth                = 0.5_wp        ! 0.5 m is the default for all sites, unless there is a specific measurement for this value 
+    soil_p_labile               = 50._wp        ! content of P* in soil until soil_p_depth from global P input data (Labile_Inorganic_P) [gP/m2]
+    soil_p_slow                 = 70._wp        ! content of P* in soil until soil_p_depth from global P input data (Seconday_Mineral__P) [gP/m2]
+    soil_p_occluded             = 150._wp       ! content of P* in soil until soil_p_depth from global P input data (Occluded_P) [gP/m2]
+    soil_p_primary              = 100._wp       ! content of P* in soil until soil_p_depth from global P input data (Apatite_P) [gP/m2]
+    qmax_org_fine_particle      = 6.5537_wp     ! calculated from NWRB category available from TAXNWRB.soilgrid.3600.1800.nc
 
     ! read the namelist
     ! &jsb_sb_nml

@@ -126,6 +126,10 @@ MODULE mo_hydro_memory_class
                                 !! (derived from vol. perm wilt point)                                      [m]
     ! quincy
     TYPE(t_jsb_var_real3d) :: &
+      & w_soil_pot_sl           !< soil water potential per layer [MPa]    
+
+    ! quincy
+    TYPE(t_jsb_var_real3d) :: &
       & saxtonA,              & !< coefficient in moisture-tension relationship
       & saxtonB,              & !< coefficient in moisture-tension relationship
       & saxtonC                 !< exponent of moisture-conductivity relationship
@@ -741,6 +745,16 @@ CONTAINS
         & prefix, suffix,                                                                            &
         & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('w_soil_pot_sl', mem%w_soil_pot_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('w_soil_pot_sl', 'MPa', 'soil water potential per layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
       CALL mem%Add_var('saxtonA', mem%saxtonA, &
         & hgrid, vgrid_soil_sb, &

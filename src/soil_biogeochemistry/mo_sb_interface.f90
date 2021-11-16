@@ -38,12 +38,19 @@ MODULE mo_sb_interface
   USE mo_jsb_task_class,              ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_process_class,           ONLY: t_jsb_process
 
+  ! "Integrate" routines
+  USE mo_sb_rate_modifier,            ONLY: update_sb_rate_modifier
+  USE mo_sb_simple_model,             ONLY: update_sb_simple_model
+  ! USE mo_sb_jsm_main,                 ONLY: update_sb_jsm
+  USE mo_sb_update_pools,             ONLY: update_sb_pools
+
   ! Use of processes in this module
-  dsl4jsb_Use_processes SB_
+  dsl4jsb_Use_processes SB_, VEG_
   ! Use of process configurations
   dsl4jsb_Use_config(SB_)
   ! Use of process memories
   dsl4jsb_Use_memory(SB_)
+  dsl4jsb_Use_memory(VEG_)
 
   IMPLICIT NONE
   PRIVATE
@@ -55,29 +62,27 @@ MODULE mo_sb_interface
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_sb_fluxes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_reset_sb_fluxes  !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggr_reset_sb_fluxes    !< Aggregates computed task variables
+    PROCEDURE, NOPASS :: Aggregate => aggregate_reset_sb_fluxes    !< Aggregates computed task variables
   END TYPE tsk_reset_sb_fluxes
 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Type definition: update_sb_rate_modifier task
-  ! !! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_sb_rate_modifier
-  ! CONTAINS
-  !   PROCEDURE, NOPASS :: Integrate => update_sb_rate_modifier      !< Advances task computation for one timestep
-  !   PROCEDURE, NOPASS :: Aggregate => aggr_update_sb_rate_modifier !< Aggregates computed task variables
-  ! END TYPE tsk_update_sb_rate_modifier
-  ! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Type definition: update_sb_simple_model task
-  ! !! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_sb_simple_model
-  ! CONTAINS
-  !   PROCEDURE, NOPASS :: Integrate => update_sb_simple_model      !< Advances task computation for one timestep
-  !   PROCEDURE, NOPASS :: Aggregate => aggr_update_sb_simple_model !< Aggregates computed task variables
-  ! END TYPE tsk_update_sb_simple_model
-  ! 
+  ! ======================================================================================================= !
+  !>Type definition: sb_rate_modifier task
+  !> 
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_sb_rate_modifier
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_sb_rate_modifier       !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_sb_rate_modifier    !< Aggregates computed task variables
+  END TYPE tsk_sb_rate_modifier
+  
+  ! ======================================================================================================= !
+  !>Type definition: sb_simple_model task
+  !> 
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_sb_simple_model
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_sb_simple_model        !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_sb_simple_model     !< Aggregates computed task variables
+  END TYPE tsk_sb_simple_model
+  
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Type definition: update_sb_jsm task
   ! !! 
@@ -89,13 +94,13 @@ MODULE mo_sb_interface
   ! END TYPE tsk_update_sb_jsm
 
   ! ======================================================================================================= !
-  !>Type definition: update_sb_pools task
+  !>Type definition: sb_pools task
   !> 
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_sb_pools
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_sb_pools
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_sb_pools      !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggr_update_sb_pools !< Aggregates computed task variables
-  END TYPE tsk_update_sb_pools  
+    PROCEDURE, NOPASS :: Integrate => update_sb_pools         !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_sb_pools      !< Aggregates computed task variables
+  END TYPE tsk_sb_pools  
 
   ! ======================================================================================================= !
   !>Type definition: time_average_soilbiogeochemistry task
@@ -114,22 +119,20 @@ MODULE mo_sb_interface
     PROCEDURE Create_task_reset_sb_fluxes         !< Constructor function for task
   END INTERFACE tsk_reset_sb_fluxes
 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Constructor interface: update_sb_rate_modifier task
-  ! !! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! INTERFACE tsk_update_sb_rate_modifier
-  !   PROCEDURE Create_task_update_sb_rate_modifier         !< Constructor function for task
-  ! END INTERFACE tsk_update_sb_rate_modifier
-  ! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Constructor interface: update_sb_simple_model task
-  ! !! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! INTERFACE tsk_update_sb_simple_model
-  !   PROCEDURE Create_task_update_sb_simple_model         !< Constructor function for task
-  ! END INTERFACE tsk_update_sb_simple_model
-  ! 
+  ! ======================================================================================================= !
+  !>Constructor interface: sb_rate_modifier task
+  !> 
+  INTERFACE tsk_sb_rate_modifier
+    PROCEDURE Create_task_sb_rate_modifier         !< Constructor function for task
+  END INTERFACE tsk_sb_rate_modifier
+  
+  ! ======================================================================================================= !
+  !>Constructor interface: sb_simple_model task
+  !> 
+  INTERFACE tsk_sb_simple_model
+    PROCEDURE Create_task_sb_simple_model         !< Constructor function for task
+  END INTERFACE tsk_sb_simple_model
+  
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor interface: update_sb_jsm task
   ! !! 
@@ -139,11 +142,11 @@ MODULE mo_sb_interface
   ! END INTERFACE tsk_update_sb_jsm
 
   ! ======================================================================================================= !
-  !>Constructor interface: update_sb_pools task
+  !>Constructor interface: sb_pools task
   !> 
-  INTERFACE tsk_update_sb_pools
-    PROCEDURE Create_task_update_sb_pools         !< Constructor function for task
-  END INTERFACE tsk_update_sb_pools
+  INTERFACE tsk_sb_pools
+    PROCEDURE Create_task_sb_pools         !< Constructor function for task
+  END INTERFACE tsk_sb_pools
 
   ! ======================================================================================================= !
   !>Constructor interface: time_average_soilbiogeochemistry task
@@ -154,9 +157,7 @@ MODULE mo_sb_interface
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_interface'
 
-
 CONTAINS
-
 
   ! ======================================================================================================= !
   !>Register tasks: SB_ process
@@ -167,14 +168,13 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_reset_sb_fluxes(model_id))
-    ! CALL this%Register_task(tsk_update_sb_rate_modifier(model_id))
-    ! CALL this%Register_task(tsk_update_sb_simple_model(model_id))
+    CALL this%Register_task(tsk_sb_rate_modifier(model_id))
+    CALL this%Register_task(tsk_sb_simple_model(model_id))
     ! CALL this%Register_task(tsk_update_sb_jsm(model_id))
-    CALL this%Register_task(tsk_update_sb_pools(model_id))
+    CALL this%Register_task(tsk_sb_pools(model_id))
     CALL this%Register_task(tsk_time_average_soilbiogeochemistry(model_id))
 
   END SUBROUTINE Register_sb_tasks
-
 
   ! ======================================================================================================= !
   !>Constructor: reset_sb_fluxes task
@@ -189,42 +189,32 @@ CONTAINS
 
   END FUNCTION Create_task_reset_sb_fluxes
 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Constructor: update_sb_rate_modifier task
-  ! !! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Create_task_update_sb_rate_modifier(model_id) RESULT(return_ptr)
-  ! 
-  !   IMPLICIT NONE
-  !   ! ---------------------------
-  !   ! 0.1 InOut
-  !   INTEGER,                   INTENT(in) :: model_id
-  !   CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  ! 
-  ! 
-  !   ALLOCATE(tsk_update_sb_rate_modifier::return_ptr)
-  !   CALL return_ptr%Construct(name='update_sb_rate_modifier', process_id=SB_, owner_model_id=model_id)
-  ! 
-  ! END FUNCTION Create_task_update_sb_rate_modifier
-  ! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Constructor: update_sb_simple_model task
-  ! !! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! FUNCTION Create_task_update_sb_simple_model(model_id) RESULT(return_ptr)
-  ! 
-  !   IMPLICIT NONE
-  !   ! ---------------------------
-  !   ! 0.1 InOut
-  !   INTEGER,                   INTENT(in) :: model_id
-  !   CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  ! 
-  ! 
-  !   ALLOCATE(tsk_update_sb_simple_model::return_ptr)
-  !   CALL return_ptr%Construct(name='update_sb_simple_model', process_id=SB_, owner_model_id=model_id)
-  ! 
-  ! END FUNCTION Create_task_update_sb_simple_model
-  ! 
+  ! ======================================================================================================= !
+  !>Constructor: sb_rate_modifier task
+  !> 
+  FUNCTION Create_task_sb_rate_modifier(model_id) RESULT(return_ptr)
+  
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+  
+    ALLOCATE(tsk_sb_rate_modifier::return_ptr)
+    CALL return_ptr%Construct(name='sb_rate_modifier', process_id=SB_, owner_model_id=model_id)
+  
+  END FUNCTION Create_task_sb_rate_modifier
+  
+  ! ======================================================================================================= !
+  !>Constructor: sb_simple_model task
+  !> 
+  FUNCTION Create_task_sb_simple_model(model_id) RESULT(return_ptr)
+  
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+  
+    ALLOCATE(tsk_sb_simple_model::return_ptr)
+    CALL return_ptr%Construct(name='sb_simple_model', process_id=SB_, owner_model_id=model_id)
+  
+  END FUNCTION Create_task_sb_simple_model
+  
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor: update_sb_jsm task
   ! !! 
@@ -244,17 +234,17 @@ CONTAINS
   ! END FUNCTION Create_task_update_sb_jsm
 
   ! ======================================================================================================= !
-  !>Constructor: update_sb_pools task
+  !>Constructor: sb_pools task
   !> 
-  FUNCTION Create_task_update_sb_pools(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_sb_pools(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_update_sb_pools::return_ptr)
+    ALLOCATE(tsk_sb_pools::return_ptr)
     CALL return_ptr%Construct(name='sb_pools', process_id=SB_, owner_model_id=model_id)
     
-  END FUNCTION Create_task_update_sb_pools
+  END FUNCTION Create_task_sb_pools
 
   ! ======================================================================================================= !
   !>Constructor: tsk_time_average_soilbiogeochemistry task
@@ -269,11 +259,9 @@ CONTAINS
     
   END FUNCTION Create_task_update_time_average_soilbiogeochemistry
 
-
   ! ------------------------------------------------------------------------------------------------------- !
   ! update_* routines
   ! ------------------------------------------------------------------------------------------------------- !
-  
 
   ! ======================================================================================================= !
   !>Implementation of "integrate": reset_sb_fluxes task
@@ -298,30 +286,6 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE update_reset_sb_fluxes
-
-  ! ======================================================================================================= !
-  !>Implementation of "integrate": update_sb_pools task
-  !>
-  SUBROUTINE update_sb_pools(tile, options)
-
-    USE mo_sb_update_pools, ONLY: real_update_sb_pools => update_sb_pools
-    dsl4jsb_Use_processes SB_
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    INTEGER :: iblk
-    CHARACTER(len=*), PARAMETER :: routine = modname//':integrate_update_sb_pools'
-
-    iblk = options%iblk
-    IF (.NOT. tile%Is_process_active(SB_)) RETURN
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    CALL real_update_sb_pools(tile, options)
-
-    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
-
-  END SUBROUTINE update_sb_pools
 
   ! ======================================================================================================= !
   !>calculate time moving averages and daytime averages for SB_
@@ -351,172 +315,142 @@ CONTAINS
 
   END SUBROUTINE update_time_average_soilbiogeochemistry
 
-
   ! ------------------------------------------------------------------------------------------------------- !
   ! aggregate_* routines
   ! ------------------------------------------------------------------------------------------------------- !
-  
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": reset_sb_fluxes task
   !>
-  SUBROUTINE aggr_reset_sb_fluxes(tile, options)
-
-    dsl4jsb_Use_processes SB_
+  SUBROUTINE aggregate_reset_sb_fluxes(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    TYPE(t_jsb_model),        POINTER         :: model
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice, nc
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_reset_sb_fluxes'
-
-    ! dsl4jsb_Def_config(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
-
-    ! Get local variables from options argument
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_reset_sb_fluxes'
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
+    ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-    ! Get process config
-    !dsl4jsb_Get_config(SB_)
-    ! Get process memories
-    dsl4jsb_Get_memory(SB_)
-
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(SB_)
 
     ! nothing to aggregate, yet
 
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
 
-  END SUBROUTINE aggr_reset_sb_fluxes
+  END SUBROUTINE aggregate_reset_sb_fluxes
 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Implementation of "aggregate": update_sb_rate_modifier task
-  ! !!  actually NOT using this routine, i.e., no var is aggregated here
-  ! !-----------------------------------------------------------------------------------------------------
-  ! SUBROUTINE aggr_update_sb_rate_modifier(tile, options)
-  ! 
-  !   IMPLICIT NONE
-  !   ! ---------------------------
-  !   ! 0.1 InOut
-  !   CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-  !   TYPE(t_jsb_task_options),   INTENT(in)    :: options
-  !   ! ---------------------------
-  !   ! 0.2 Local
-  !   TYPE(t_jsb_model),        POINTER         :: model
-  !   CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-  !   INTEGER                                   :: iblk, ics, ice, nc
-  !   !X if necessary: REAL(wp) :: dtime, steplen
-  !   CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_update_sb_rate_modifier'
-  !   ! ---------------------------
-  !   ! 0.3 Declare Memory
-  !   ! Declare process configuration and memory Pointers
-  !   dsl4jsb_Def_config(SB_)
-  !   dsl4jsb_Def_memory(SB_)
-  !   ! Get local variables from options argument
-  !   iblk    = options%iblk
-  !   ics     = options%ics
-  !   ice     = options%ice
-  !   nc      = options%nc
-  !   !X if necessary: dtime   = options%dtime
-  !   !X if necessary: steplen = options%steplen
-  !   ! ---------------------------
-  !   ! 0.4 Process Activity, Debug Option
-  !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-  !   ! ---------------------------
-  !   ! 0.5 Get Memory
-  !   ! Get process variables (Set pointers to variables in memory)
-  !   model => Get_model(tile%owner_model_id)
-  !   ! Get process config
-  !   dsl4jsb_Get_config(SB_)
-  !   ! Get process memories
-  !   dsl4jsb_Get_memory(SB_)
-  ! 
-  ! 
-  !   ! ------------------------------------------------------------------------------------------------------------
-  !   ! Go aggregate
-  !   ! ------------------------------------------------------------------------------------------------------------
-  ! 
-  ! 
-  !   IF (tile%Has_children()) THEN
-  !     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-  !     ! do not aggregate after this routine, only after update_sb_pools()
-  !   END IF
-  ! 
-  !   !X Implementation: Start your process scheme here...
-  !   !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen Tasks aggregiert werden sollen.
-  ! 
-  !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  ! 
-  ! END SUBROUTINE aggr_update_sb_rate_modifier
-  ! 
-  ! !-----------------------------------------------------------------------------------------------------
-  ! !> Implementation of "aggregate": update_sb_simple_model task
-  ! !!  actually NOT using this routine, i.e., no var is aggregated here
-  ! !-----------------------------------------------------------------------------------------------------
-  ! SUBROUTINE aggr_update_sb_simple_model(tile, options)
-  ! 
-  !   IMPLICIT NONE
-  !   ! ---------------------------
-  !   ! 0.1 InOut
-  !   CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-  !   TYPE(t_jsb_task_options),   INTENT(in)    :: options
-  !   ! ---------------------------
-  !   ! 0.2 Local
-  !   TYPE(t_jsb_model),        POINTER         :: model
-  !   CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-  !   INTEGER                                   :: iblk, ics, ice, nc
-  !   !X if necessary: REAL(wp) :: dtime, steplen
-  !   CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_update_sb_simple_model'
-  !   ! ---------------------------
-  !   ! 0.3 Declare Memory
-  !   ! Declare process configuration and memory Pointers
-  !   dsl4jsb_Def_config(SB_)
-  !   dsl4jsb_Def_memory(SB_)
-  !   ! Get local variables from options argument
-  !   iblk    = options%iblk
-  !   ics     = options%ics
-  !   ice     = options%ice
-  !   nc      = options%nc
-  !   !X if necessary: dtime   = options%dtime
-  !   !X if necessary: steplen = options%steplen
-  !   ! ---------------------------
-  !   ! 0.4 Process Activity, Debug Option
-  !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-  !   ! ---------------------------
-  !   ! 0.5 Get Memory
-  !   ! Get process variables (Set pointers to variables in memory)
-  !   model => Get_model(tile%owner_model_id)
-  !   ! Get process config
-  !   dsl4jsb_Get_config(SB_)
-  !   ! Get process memories
-  !   dsl4jsb_Get_memory(SB_)
-  ! 
-  ! 
-  !   ! ------------------------------------------------------------------------------------------------------------
-  !   ! Go aggregate
-  !   ! ------------------------------------------------------------------------------------------------------------
-  ! 
-  ! 
-  !   IF (tile%Has_children()) THEN
-  !     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-  !     ! do not aggregate after this routine, only after update_sb_pools()
-  !   END IF
-  ! 
-  !   !X Implementation: Start your process scheme here...
-  !   !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen Tasks aggregiert werden sollen.
-  ! 
-  !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  ! 
-  ! END SUBROUTINE aggr_update_sb_simple_model
-  ! 
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": sb_rate_modifier task
+  !>
+  SUBROUTINE aggregate_sb_rate_modifier(tile, options)
+  
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sb_rate_modifier'
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(SB_)
+
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_decomposition              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_depolymerisation           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_mic_uptake                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_plant_uptake               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_sorption                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_desorption                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_hsc                        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_nitrification              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_denitrification            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rtm_gasdiffusion               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_decomposition              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_depolymerisation           , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_mic_uptake                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_plant_uptake               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_sorption                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_desorption                 , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_hsc                        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_nitrification              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, rmm_gasdiffusion               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, anaerobic_volume_fraction_sl   , weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+  
+  END SUBROUTINE aggregate_sb_rate_modifier
+  
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": sb_simple_model task
+  !>
+  SUBROUTINE aggregate_sb_simple_model(tile, options)
+  
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(SB_)
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sb_simple_model'
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(SB_)
+    dsl4jsb_Get_memory(VEG_)
+
+    ! VEG 2D
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_n_pot               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, unit_uptake_p_pot               , weighted_by_fract)
+! TODO  add missing variables for aggregation
+    ! SB_ 2D
+    ! dsl4jsb_Aggregate_onChunk(SB_,    , weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SB_,    , weighted_by_fract)
+    ! SB_ 3D
+    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_nh4_sl             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_no3_sl             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_,  plant_uptake_po4_sl             , weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SB_,    , weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(SB_,    , weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+  
+  END SUBROUTINE aggregate_sb_simple_model
+
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Implementation of "aggregate": update_sb_jsm task
   ! !!  actually NOT using this routine, i.e., no var is aggregated here
@@ -577,108 +511,69 @@ CONTAINS
   ! 
   ! END SUBROUTINE aggr_update_sb_jsm
 
-
   ! ======================================================================================================= !
-  !>Implementation of "aggregate": update_sb_pools task
+  !>Implementation of "aggregate": sb_pools task
   !> 
-  SUBROUTINE aggr_update_sb_pools(tile, options)
+  SUBROUTINE aggregate_sb_pools(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    TYPE(t_jsb_model),        POINTER         :: model
-    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
-    INTEGER                                   :: iblk, ics, ice, nc
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggr_update_sb_pools'
-
-    dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_memory(SB_)
-
-    iblk    = options%iblk
-    ics     = options%ics
-    ice     = options%ice
-    nc      = options%nc
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
-    dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_memory(SB_)
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go aggregate
-    ! ------------------------------------------------------------------------------------------------------------
-    
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-    ! dsl4jsb_Aggregate_onChunk(SB_,       total_flux_carbon          , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SB_,       total_flux_nitrogen        , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SB_,       total_flux_phosphorus      , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SB_,       total_flux_carbon13        , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SB_,       total_flux_carbon14        , weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(SB_,       total_flux_nitrogen15      , weighted_by_fract)
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggr_update_sb_pools
-
-
-  ! ======================================================================================================= !
-  !> Implementation of "aggregate": time_average_assimilation task
-  !>
-  SUBROUTINE aggregate_time_average_soilbiogeochemistry(tile, options)
-
-    USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
-    USE mo_jsb_task_class,     ONLY: t_jsb_task_options
-    dsl4jsb_Use_processes SB_
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*),         PARAMETER       :: routine = TRIM(modname)//':aggregate_time_average_soilbiogeochemistry'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_sb_pools'
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_memory(SB_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! SB_ 3D
-    dsl4jsb_Real3D_onChunk      :: microbial_cue_eff_tmic_mavg
-    dsl4jsb_Real3D_onChunk      :: microbial_nue_eff_tmic_mavg
-    dsl4jsb_Real3D_onChunk      :: microbial_pue_eff_tmic_mavg
-    dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
-    dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
-    dsl4jsb_Real3D_onChunk      :: myc_export_n_tlabile_mavg_sl
-    dsl4jsb_Real3D_onChunk      :: myc_export_p_tlabile_mavg_sl
-    dsl4jsb_Real3D_onChunk      :: dom_cn_mavg
-    dsl4jsb_Real3D_onChunk      :: dom_cp_mavg
-    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_c_mavg
-    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_n_mavg
-    dsl4jsb_Real3D_onChunk      :: enzyme_frac_poly_p_mavg
-    ! ----------------------------------------------------------------------------------------------------- !
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Get_memory(SB_)
-    ! ----------------------------------------------------------------------------------------------------- !
-    ! SB_ 3D
-    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_cue_eff_tmic_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_nue_eff_tmic_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  microbial_pue_eff_tmic_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  myc_export_c_tmyc_mavg_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,  myc_export_n_tmyc_mavg_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,  myc_export_n_tlabile_mavg_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,  myc_export_p_tlabile_mavg_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,  dom_cn_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  dom_cp_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_c_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n_mavg)
-    dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p_mavg)
-
-
+    model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(SB_)
+
+! TODO  add missing variables for aggregation
+    ! 2D
+    dsl4jsb_Aggregate_onChunk(SB_, total_flux_carbon            , weighted_by_fract)
+    ! 3D
+    dsl4jsb_Aggregate_onChunk(SB_, nh4_solute                   , weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_sb_pools
+
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": time_average_assimilation task
+  !>
+  SUBROUTINE aggregate_time_average_soilbiogeochemistry(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(SB_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_time_average_soilbiogeochemistry'
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(SB_)
 
     dsl4jsb_Aggregate_onChunk(SB_, microbial_cue_eff_tmic_mavg    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, microbial_nue_eff_tmic_mavg    , weighted_by_fract)
