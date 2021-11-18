@@ -34,6 +34,7 @@ MODULE mo_hd_config_class
      CHARACTER(len=32)           :: routing_scheme          !< river_routing_scheme: full / weighted_to_coast / zero
      CHARACTER(len=filename_max) :: fract_filename          !< file name with fractions (land, ocean, etc)
      LOGICAL                     :: read_initial_reservoirs !< whether to read initial reservoir fillings from file
+     LOGICAL                     :: use_bifurcated_rivers   !< Switches on the potential splitting of rivers
    CONTAINS
      PROCEDURE :: Init => Init_hd_config
   END type t_hd_config
@@ -60,6 +61,7 @@ CONTAINS
     LOGICAL                       :: enforce_water_budget    !< finish if water conservation problem
     CHARACTER(len=32)             :: routing_scheme          !< river_routing_scheme: full / weighted_to_coast / zero
     LOGICAL                       :: read_initial_reservoirs !< whether to read initial reservoir fillings from file
+    LOGICAL                       :: use_bifurcated_rivers   !< Switches on the potential splitting of rivers
 
     NAMELIST /jsb_hd_nml/          &
       active,                      &
@@ -69,7 +71,8 @@ CONTAINS
       diag_water_budget,           &
       enforce_water_budget,        &
       routing_scheme,              &
-      read_initial_reservoirs
+      read_initial_reservoirs,     &
+      use_bifurcated_rivers
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -89,6 +92,7 @@ CONTAINS
     enforce_water_budget    = .TRUE.
     routing_scheme          = 'full'
     read_initial_reservoirs = .FALSE.
+    use_bifurcated_rivers   = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -106,6 +110,7 @@ CONTAINS
     config%enforce_water_budget      = enforce_water_budget
     config%routing_scheme            = routing_scheme
     config%read_initial_reservoirs   = read_initial_reservoirs
+    config%use_bifurcated_rivers     = use_bifurcated_rivers
 
     IF (.NOT. active) RETURN
 
