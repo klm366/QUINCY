@@ -1330,9 +1330,7 @@ CONTAINS
     !  Update soil moisture due to evaporation and transpiration fluxes. The fluxes had been
     !  calculated with the old bucket scheme, and are not necessarily consistent to soil moisture
     !  of the multi-layer scheme.
-    !  Therefore evaporation might need to be reduced (reduce_evapo).
-    !  @todo: However this term is only
-    !  exported for diagnostics and the water deficit is distributed between the soil layers.
+    !  A potential water deficit is distributed between the soil layers.
     !----------------------------------------------------------------------------------------------
 
     ! arguments
@@ -1361,7 +1359,7 @@ CONTAINS
     REAL(wp) :: trans_layer(nidx)    ! transpiration from the layer
     REAL(wp) :: ws(nidx)             ! water within all soil layers
     REAL(wp) :: root_depth(nidx)     ! Total depth of rootzone
-    REAL(wp) :: reduce_evapo(nidx)
+    REAL(wp) :: deficit_evapotrans(nidx) ! water deficit due to evapotranspiration
     REAL(wp) :: ws_l_new(nidx)
 
     INTEGER :: max2d(2)
@@ -1376,7 +1374,7 @@ CONTAINS
 
     !$claw acc data present(droot, dsoil, field_cap_l, transpiration_in_m, evapo_soil, &
     !$claw acc ws_l, soil_ice_l) pcreate(deficit_evapo, deficit_trans, deficit_l, &
-    !$claw acc remaining, rootfract, fixed, trans_layer, ws, root_depth, reduce_evapo)
+    !$claw acc remaining, rootfract, fixed, trans_layer, ws, root_depth, deficit_evapotrans)
 
     !  bare soil evaporation
     ! -----------------------
@@ -1449,24 +1447,24 @@ CONTAINS
       END DO
 
       ! -----------------------------------------
-      !  reduction needed for evapotranspiration
+      !  Total deficit from evapotranspiration
       ! -----------------------------------------
-      reduce_evapo(i) = deficit_evapo(i) + deficit_trans(i)
+      deficit_evapotrans(i) = deficit_evapo(i) + deficit_trans(i)
 
       ! --------------------------
       !  soil moisture correction
       ! --------------------------
-      ! reduce_evapo is only used for diagnostics. If the therm is not zero, soil moisture must be
+      ! In case of a water deficit due to evapotranspiration, soil moisture must be
       ! changed to close the land surface water balance.
 
       IF (l_correct_ws_from_top) THEN
         ! Deficit should be taken from layers starting at the surface to accelerate the feedback on evapotranspiration
         DO jk=1, nsoil
           ! todo: same as above: shouldn't we use here p_wilt_l (instead of filed_cap_l*zwilt)?
-          IF (reduce_evapo(i) < 0._wp .AND. ws_l(i,jk) * field_cap_l(i,jk) * zwilt > 0._wp) THEN
+          IF (deficit_evapotrans(i) < 0._wp .AND. ws_l(i,jk) * field_cap_l(i,jk) * zwilt > 0._wp) THEN
             ! reduce soil moisture and ice relative to the water content of each layer
-            ws_l_new(i)      = MAX(ws_l(i,jk) + reduce_evapo(i), field_cap_l(i,jk) * zwilt)
-            reduce_evapo(i) = reduce_evapo(i) + ws_l(i,jk) - ws_l_new(i)
+            ws_l_new(i)      = MAX(ws_l(i,jk) + deficit_evapotrans(i), field_cap_l(i,jk) * zwilt)
+            deficit_evapotrans(i) = deficit_evapotrans(i) + ws_l(i,jk) - ws_l_new(i)
             ws_l(i,jk)     = ws_l_new(i)
           END IF
         END DO
@@ -1475,10 +1473,10 @@ CONTAINS
       ! Note: ws here refers to total soil column, and not to root zone (as ws above).
       ws(i) = SUM(ws_l(i,:)) + SUM(soil_ice_l(i,:))  ! water and ice within the column
       DO jk=1, nsoil
-        IF (reduce_evapo(i) < 0._wp .AND. ws(i) > 0._wp) THEN
+        IF (deficit_evapotrans(i) < 0._wp .AND. ws(i) > 0._wp) THEN
           ! reduce soil moisture and ice relative to the water content of each layer
-          ws_l(i,jk)     = MAX(0._wp, ws_l(i,jk)     + reduce_evapo(i) * ws_l(i,jk)/ws(i))
-          soil_ice_l(i,jk) = MAX(0._wp, soil_ice_l(i,jk) + reduce_evapo(i) * soil_ice_l(i,jk)/ws(i))
+          ws_l(i,jk)     = MAX(0._wp, ws_l(i,jk)     + deficit_evapotrans(i) * ws_l(i,jk)/ws(i))
+          soil_ice_l(i,jk) = MAX(0._wp, soil_ice_l(i,jk) + deficit_evapotrans(i) * soil_ice_l(i,jk)/ws(i))
         END IF
       END DO
     END DO ! nidx loop
