@@ -880,15 +880,6 @@ CONTAINS
               &                 * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
               &                 * delta_time     ! [m/s] -> [m]
 
-            ! Even with ice impedance accounted for, there is still water movement that can lead to a slow
-            ! desiccation of the frozen soil. Therefore, it is assumed that there is no water movement once
-            ! more than half of the porespace is blocked.
-            IF (soil_ice_l(j,i+1) + MIN(ws_immo_l(j,i+1),ws_l(j,i+1)) > EPSILON(1.0)) THEN
-              IF ((soil_ice_l(j,i+1)+ MIN(ws_immo_l(j,i+1),ws_l(j,i+1))) &
-                &     /(field_cap_l(j,i+1) + soil_ice_l(j,i+1)) > 0.5_wp) THEN
-                percolation(:,i) = 0._wp
-              END IF
-            END IF
           END IF
         ELSE
           percolation(j,i) = 0._wp
