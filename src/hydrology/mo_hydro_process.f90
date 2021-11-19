@@ -512,9 +512,6 @@ CONTAINS
 
 
     !$claw acc data pcreate(evapo_soil_in_m,transpiration_in_m,infilt,ws_max,ws_min_drain,ws_keep,ice_rootzone,vfc_times_sd_l)
-    sigma_0   = oro_var_min
-    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
-
     !$claw acc data present(transpiration_in_m,transpiration,wsat_l,vol_porosity_l, &
     !$claw acc soil_depth_l,soil_ice_l,field_cap_l,vol_field_cap_l,p_wilt_l,vol_p_wilt_l)
     !$claw acc parallel
@@ -523,7 +520,6 @@ CONTAINS
     !> Calculation of soil saturation, field capacity and wilting point taking into account soil ice
     !
     DO i = 1, nidx
-      transpiration_in_m(i) = transpiration(i)  * delta_time / rhoh2o
       !$claw acc loop seq
       DO jl = 1, nsoil
         ! here we are using soil saturation (this does not correspond to max_moist, which was calculated from field capacity)
@@ -568,17 +564,7 @@ CONTAINS
     CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
     CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
 
-    !$claw acc data present(evapo_soil_in_m,evapotrans_soil,transpiration_in_m) &
     !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
-    !$claw acc present(water_to_soil,ice_rootzone,drainage,t_soil_upper_layer)
-    !$claw acc parallel
-    !$claw acc loop gang
-    DO i = 1, nidx
-      ! note: at this point ignoring the amount of dew that exceeds the skinreservoir
-      !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
-      evapo_soil_in_m(i) = evapotrans_soil(i) * delta_time / rhoh2o - transpiration_in_m(i)
-
-    END DO
     !$claw acc end parallel
 
     !>
@@ -595,13 +581,12 @@ CONTAINS
     ! sigma_0: minimum value (100 m); below b = 0.01
     ! sigma_max: resolution dependent maximum
 
+    sigma_0   = oro_var_min
+    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
+
     !$claw acc parallel
     !$claw acc loop gang vector
     DO i=1,nidx
-      ! No drainage is possible below a certain minimum amount of water (zwdmin). This corresponds
-      ! to the layered bucket scheme, and has nothing to do with field capacity or wilting point.
-      ws_min_drain(i) = zwdmin * ws_max(i)    ! minimum amount of root zone soil water for drainage
-
       steepness = MAX(0._wp, oro_stddev(i)-sigma_0) / (oro_stddev(i)+sigma_max)
 
       ! todo: parameters should be defined as parameters
@@ -616,6 +601,11 @@ CONTAINS
       !    rather than the uppermost soil layer (or the soil until bedrock, as this has nothing to
       !    do with plants).
       !    Using the uppermost soil layer only might need sub-time-steps...
+
+      ! No drainage is possible below a certain minimum amount of water (zwdmin). This corresponds
+      ! to the layered bucket scheme, and has nothing to do with field capacity or wilting point.
+      ws_min_drain(i) = zwdmin * ws_max(i)    ! minimum amount of root zone soil water for drainage
+
       IF (ltpe_closed) THEN
         ! Terra planet setup without runoff
         runoff(i) = 0._wp
@@ -654,6 +644,26 @@ CONTAINS
       END IF
     END DO
 
+    !
+    !> 1.2 Update soil water with respect to evapotransration fluxes
+    !
+    ! Note: Even though evapotranspiration was calculated earlier, the corresponding water is taken
+    !       from soil only here. Moving digest_evaporation to the beginnig of this routine would
+    !       lead to wetter soils, as more water could infiltrate.
+    !$claw acc data present(evapo_soil_in_m,evapotrans_soil,transpiration_in_m,transpiration)
+    !$claw acc parallel
+    !$claw acc loop gang
+    DO i = 1, nidx
+      transpiration_in_m(i) = transpiration(i)  * delta_time / rhoh2o
+      ! note: at this point ignoring the amount of dew that exceeds the skinreservoir
+      !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
+      evapo_soil_in_m(i) = evapotrans_soil(i) * delta_time / rhoh2o - transpiration_in_m(i)
+    END DO
+
+    CALL digest_evapotrans(nidx, nsoil,                         &
+      &     l_correct_ws_from_top, root_depth_l, soil_depth_l,  &
+      &     field_cap_l, transpiration_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
+
     !$claw acc end parallel
     !---------------------
     !> 2. drainage and runoff
@@ -668,15 +678,6 @@ CONTAINS
     !$claw acc end parallel
 
     !$claw acc end data
-    !
-    !> Update soil water with respect to evapotransration fluxes
-    !
-    ! Note: Even though evapotranspiration was calculated earlier, the corresponding water is taken
-    !       from soil only here. Moving digest_evaporation to the beginnig of this routine would
-    !       lead to wetter soils, as more water could infiltrate.
-    CALL digest_evapotrans(nidx, nsoil,                         &
-      &     l_correct_ws_from_top, root_depth_l, soil_depth_l,  &
-      &     field_cap_l, transpiration_in_m, evapo_soil_in_m, ws_l, soil_ice_l)
 
     ! For numerical reasons, half of the water is infiltrated
     ! before soilhyd and the other half of it afterwards
