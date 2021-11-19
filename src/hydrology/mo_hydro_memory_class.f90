@@ -85,6 +85,7 @@ MODULE mo_hydro_memory_class
       & fract_org_sl            !< Fractions of organic material in soil layers                        []
     TYPE(t_jsb_var_real2d) :: &
       & soil_depth,           & !< Soil depth derived from textures (bedrock)                          [m]
+      !todo: rename max_moist to rootzone_max
       & max_moist,            & !< Maximum root zone moisture content                                  [m]
       & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
@@ -139,10 +140,10 @@ MODULE mo_hydro_memory_class
       & w_rootzone_fc,        & !< Water content at field capacity in root zone of the soil                 [m]
       & w_rootzone_pwp,       & !< Water content at permanent wilting point in root zone of the soil        [m]
       & i_rootzone,           & !< Frozen water content of the root zone                                    [m water equivalent]
-      & w_rootzone_scool_pot, & !< Potentially suppercooled water content in root zone
-      & w_rootzone_scool_act, & !< Suppercooled water content in root zone
-      & w_rootzone_avail,     & !< Plant available water content in root zone
-      & w_rootzone_avail_max, & !< Maximum plant available water content in root zone
+      & w_rootzone_scool_pot, & !< Potential amount of suppercooled water in the root zone                  [m]
+      & w_rootzone_scool_act, & !< Suppercooled water content in root zone                                  [m]
+      & w_rootzone_avail,     & !< Plant available water content in root zone                               [m]
+      & w_rootzone_avail_max, & !< Maximum plant available water content in the root zone                   [m]
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
@@ -249,6 +250,9 @@ CONTAINS
     ELSE
       grib2_desc = t_grib2(255, 255, 255, grib_bits)
     END IF
+
+    ! todo: t_cf specifications are wrong for most variables: it should be (varname, unit, longname)
+
     CALL mem%Add_var('fract_snow', mem%fract_snow,                             &
       & hgrid, surface,                                                        &
       & t_cf('fraction of snow on surface', '-', ''),                          &
@@ -751,7 +755,7 @@ CONTAINS
 
       CALL mem%Add_var('w_rootzone_rel', mem%w_rootzone_rel,                        &
         &  hgrid, surface,                                                          &
-        &  t_cf('water_soil_relative', '', ''),                                     &
+        &  t_cf('w_rootzone_rel', '1', 'Relative root zone moisture'),              &
         &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp )
@@ -795,6 +799,8 @@ CONTAINS
         & output_level=BASIC,                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      ! todo: Currently only used with quincy, only in update_water_sress, where it could also be defined
+      !    as local variable. Do we need that in the output without quincy? Do we need it at all?
       CALL mem%Add_var( 'w_rootzone_fc', mem%w_rootzone_fc,                                           &
         & hgrid, surface,                                                                             &
         & t_cf('Water content at field capacity in root zone of the soil', 'm water equivalent', ''), &
@@ -804,6 +810,8 @@ CONTAINS
         & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      ! todo: Currently only used with quincy, only in update_water_sress, where it could also be defined
+      !    as local variable. Do we need that in the output without quincy? Do we need it at all?
       CALL mem%Add_var( 'w_rootzone_pwp', mem%w_rootzone_pwp,                                                  &
         & hgrid, surface,                                                                                      &
         & t_cf('Water content at permanent wilting point in root zone of the soil', 'm water equivalent', ''), &
@@ -845,12 +853,12 @@ CONTAINS
         & lrestart=.FALSE.,                                                             &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'w_rootzone_avail_max', mem%w_rootzone_avail_max,                       &
-        & hgrid, surface,                                                                       &
-        & t_cf('Maximum plant available water content in root zone', 'm water equivalent', ''), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
-        & prefix, suffix,                                                                       &
-        & lrestart=.FALSE.,                                                                     &
+      CALL mem%Add_var( 'w_rootzone_avail_max', mem%w_rootzone_avail_max,                          &
+        & hgrid, surface,                                                                          &
+        & t_cf('w_rootzone_avail_max', 'm', 'Maximum plant available water content in root zone'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                       &
+        & prefix, suffix,                                                                          &
+        & lrestart=.FALSE.,                                                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'water_stress', mem%water_stress,                     &

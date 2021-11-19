@@ -204,6 +204,9 @@ CONTAINS
       hydro_init_vars%soil_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))
 
       ! Maximum root zone soil moisture
+      ! Note: maxmoist from the initial file corresponds to the field capacity. It is however
+      !    not used as field capacity in a hydrological sense, but rather as maximum soil
+      !    moisture corresponding to a layered bucket scheme, using one bucket for each soil layer.
       ptr_2D => input_file%Read_2d(                        &
         & fill_array = hydro_init_vars%max_moist, &
         & variable_name='maxmoist')
@@ -533,6 +536,9 @@ CONTAINS
     IF (tile%contains_soil) THEN
       ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
+
+      ! Note: w_soil_fc_sl is not meant as field capacity in a hydrological sense, but as maximum
+      !    filling of the specific soil layer.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
       !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
@@ -541,7 +547,12 @@ CONTAINS
     END IF
 
     IF (tile%contains_vegetation) THEN
-      ! Calculate water content in the root zone
+
+      ! Initialization of relative root zone soil moisture (ignoring ice).
+      !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
+
+      ! w_rootzone calculated here is only used to calculate relative soil moisture for phenology.
+      ! It is re-calculated in update_soil_hydrology.
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_rootzone), 2)
           CALL get_water_in_root_zone( &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)      (:,:,i), & 
@@ -551,11 +562,14 @@ CONTAINS
       END DO
 
       ! Make sure w_rootzone is smaller than max_moist
+      ! Note: max_moist corresponds to the maximum possible amount of water in the root zone. This
+      !    concept is different from the hydrological understanding of field capacity and saturation.
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
       END WHERE
 
       ! Initialization of w_rootzone_rel (completely ignoring ice)
+      !    It is re-calculated - considering ice - in update_water_stress.
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
           & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
@@ -635,6 +649,8 @@ CONTAINS
 
 
   SUBROUTINE init_soil_properties(tile)
+    ! This routine is needed because soil snow and energy (SSE) processes are calculated before
+    ! the soil properties are calculated the first time within the hydrology in update_soil_properties.
 
     USE mo_hydro_constants, ONLY: vol_porosity_org, hyd_cond_sat_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
       & vol_field_cap_org, vol_p_wilt_org
@@ -714,6 +730,7 @@ CONTAINS
     vol_field_cap_sl  (:,:,:) = SPREAD(vol_field_cap  (:,:), DIM=2, ncopies=nsoil)
     vol_p_wilt_sl     (:,:,:) = SPREAD(vol_p_wilt     (:,:), DIM=2, ncopies=nsoil)
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+      ! Attention: hyd_cond_sat_sl is calculated differently (correct) in update_soil_properties
       hyd_cond_sat_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * hyd_cond_sat_sl   (:,:,:) + fract_org_sl(:,:,:) * hyd_cond_sat_org
       vol_porosity_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_porosity_sl   (:,:,:) + fract_org_sl(:,:,:) * vol_porosity_org
       bclapp_sl         (:,:,:) = (1 - fract_org_sl(:,:,:)) * bclapp_sl         (:,:,:) + fract_org_sl(:,:,:) * bclapp_org

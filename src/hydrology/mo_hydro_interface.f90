@@ -1028,11 +1028,11 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, matrix_pot_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, pore_size_index_sl), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &
+      & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &  !! ice not considered
+      & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &  !! ice not considered
+      & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &  !! ice not considered
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pot_scool_sl), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &  !! only used in grid cells without organic fraction
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
       &                                t_soil_sl     (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
@@ -1044,9 +1044,9 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_overflow   ), &
       ! out
       & dsl4jsb_var2D_onChunk (HYDRO_, w_rootzone        ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sat_sl     ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_fc_sl      ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pwp_sl     ), &
+      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sat_sl     ), &  !! ice volume is substracted
+      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_fc_sl      ), &  !! ice volume is substracted
+      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pwp_sl     ), &  !! reduced relative to ice fraction
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
       & )
@@ -1311,10 +1311,15 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
+    ! todo: w_rootzone_fc and w_rootzone_pwp are updated within this routine (intent out), and only
+    !    used within the routine and only with quincy! Do we need w_rootzone_fc and w_rootzone_pwp
+    !    as state (and output) variables without quincy? And with quincy?
     CALL get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_fc (:))
     CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_pwp(:))
 
     ! Calculate plant available water
+    !   Meant here is all liquid water (with or without supercooled water) in the root zone. Water
+    !   below the wilting point is not subtracted, so calling it available water might be misleading.
     IF (.NOT. dsl4jsb_Config(SSE_)%l_freeze .OR. dsl4jsb_Config(HYDRO_)%l_scool_avail_to_plants) THEN
       ! Available water in the root zone, including supercooled water
       w_rootzone_avail(:) = w_rootzone(:)
@@ -1328,6 +1333,8 @@ CONTAINS
     END IF
 
     ! Calculate maximum available water
+    !   As in the the available water calculation above, water below the wilting point is not
+    !   subtracted.
     ! pdv: Here also the question is how to treat the potential rootzone soil moisture
     !      Definitly ice should be removed -- otherwise plants suffer constant waterstress in pf-regions:
     !      But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in Ws_max
@@ -1421,6 +1428,8 @@ CONTAINS
 
     ! HYDRO_
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone,          weighted_by_fract)
+    ! todo: Do we need w_rootzone_fc and w_rootzone_pwp aggregated or in the output without quincy? Both
+    !    arrays are only used with quincy.
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_fc,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_pwp,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
