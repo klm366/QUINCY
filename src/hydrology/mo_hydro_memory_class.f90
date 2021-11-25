@@ -439,6 +439,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & lrestart=.FALSE.,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -696,7 +697,7 @@ CONTAINS
         & t_cf('Water content in soil layers', 'm water equivalent', ''),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
-        & loutput=.TRUE., &
+        & loutput=.TRUE., output_level=BASIC,                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'i_soil_sl', mem%i_soil_sl,                          &
@@ -704,6 +705,7 @@ CONTAINS
         & t_cf('Ice content in soil layers', 'm water equivalent', ''),      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & loutput=.TRUE., output_level=BASIC,                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'w_soil_freeze_sl', mem%w_soil_freeze_sl,            &
@@ -893,7 +895,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & lrestart=.FALSE.,                                                          &
-        & loutput=.TRUE., &
+        & loutput=.TRUE., output_level=BASIC,                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF

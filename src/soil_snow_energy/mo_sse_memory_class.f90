@@ -197,7 +197,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
-        & output_level=MEDIUM,                                                 &
+        & output_level=BASIC,                                                  &
         & initval_r=0._wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 't_snow', mem%t_snow,                                  &
@@ -263,7 +263,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=MEDIUM, &
+      & output_level=BASIC,                                                  &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
 
     END SUBROUTINE Init_sse_memory
