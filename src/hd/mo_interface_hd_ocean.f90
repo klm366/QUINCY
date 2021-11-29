@@ -22,8 +22,8 @@ MODULE mo_interface_hd_ocean
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-  USE mo_coupling_config,     ONLY: is_coupled_run
 #ifdef YAC_coupling
+  USE mo_coupling_config,     ONLY: is_coupled_run
   USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
 #endif
 
@@ -94,6 +94,7 @@ CONTAINS
 
     n =options%nc ! only to avoid compiler warnings
 
+#ifdef YAC_coupling
     IF ( .NOT. is_coupled_run() ) RETURN
 
     IF (ASSOCIATED(tile%parent)) &
@@ -127,16 +128,12 @@ CONTAINS
       END DO
     END DO
 
-#ifdef YAC_coupling
     CALL yac_fget_field_id_from_name('river_runoff', field_id)
-#endif
     nbr_hor_cells = grid%ntotal
     collection_size = 1
     nbr_pointsets   = 1
     nbr_subdomains  = 1
-#ifdef YAC_coupling
     CALL yac_fput(field_id, nbr_hor_cells, collection_size, buffer, info, ierror)
-#endif
     IF ( info > 1 .AND. info < 7 ) write_coupler_restart = .TRUE.
 
     IF ( write_coupler_restart ) THEN
@@ -144,6 +141,7 @@ CONTAINS
     ENDIF
 
     DEALLOCATE(buffer)
+#endif
 
   END SUBROUTINE interface_hd_ocean
 
