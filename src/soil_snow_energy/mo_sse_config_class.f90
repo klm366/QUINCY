@@ -56,6 +56,8 @@ CONTAINS
 
     USE mo_sse_constants,      ONLY: snow_depth_min
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_io_iface,       ONLY: VGRID_SOIL_DEPTH_ENERGY, ZAXIS_SOIL_DEPTH_ENERGY, &
+      &                              VGRID_SNOW_DEPTH_ENERGY, ZAXIS_SNOW_DEPTH_ENERGY
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC
@@ -190,6 +192,10 @@ CONTAINS
     CALL message(TRIM(routine), message_text)
     DEALLOCATE(depths, mids)
 
+    ! Needed for mvstream in configurations with ECHAM
+    VGRID_SOIL_DEPTH_ENERGY = soil_vgrid%ID
+    ZAXIS_SOIL_DEPTH_ENERGY = soil_vgrid%zaxisID
+
     IF (l_snow) THEN
       IF (dz_snow(1) < snow_depth_min)                                                                 &
         & CALL finish(TRIM(routine), 'Depth of first snow layer should be larger than snow_depth_min=' &
@@ -217,6 +223,10 @@ CONTAINS
       WRITE(message_text, *) 'Snow level depths in soil energy   [m]: ', snow_vgrid%dz
       CALL message(TRIM(routine), message_text)
       DEALLOCATE(depths, mids)
+
+      ! Needed for mvstream in configurations with ECHAM
+      VGRID_SNOW_DEPTH_ENERGY = snow_vgrid%ID
+      ZAXIS_SNOW_DEPTH_ENERGY = snow_vgrid%zaxisID
     END IF
 
 

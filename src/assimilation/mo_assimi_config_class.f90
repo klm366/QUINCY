@@ -54,6 +54,8 @@ CONTAINS
   SUBROUTINE Init_assimi_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_io_iface,       ONLY: VGRID_CANOPY_LAYER,   ZAXIS_CANOPY_LAYER,   &
+      &                              VGRID_CANOPY_LAYER_Q, ZAXIS_CANOPY_LAYER_Q
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
@@ -137,6 +139,10 @@ CONTAINS
       levels=(/ (REAL(i,kind=wp),i=1,config%ncanopy) /), units='')
     CALL register_vgrid(canopy_layer)
 
+    ! Needed for mvstream in configurations with ECHAM
+    VGRID_CANOPY_LAYER = vgrid_canopy%ID
+    ZAXIS_CANOPY_LAYER = vgrid_canopy%zaxisID
+
     ! Prepare canopy boundaries of lai_cl
     ALLOCATE(config%canopy_bound_lai(0:ncanopy))
     DO i=0,ncanopy
@@ -187,6 +193,10 @@ CONTAINS
                       ! ubounds=  , &
                       dz=canopy_layer_thickness_profile(:))
     CALL register_vgrid(vgrid_canopy)
+
+    ! Needed for mvstream in configurations with ECHAM
+    VGRID_CANOPY_LAYER_Q = vgrid_canopy%ID
+    ZAXIS_CANOPY_LAYER_Q = vgrid_canopy%zaxisID
 
   END SUBROUTINE Init_assimi_config
 
