@@ -251,7 +251,7 @@ CONTAINS
   ! E. Roeckner, MPI, Sep 2002, initialization of mixed layer ocean
   ! T. Raddatz, MPI, Mai 2005, adaption to JSBACH
   !
-  SUBROUTINE init_soil_temperature(cmid, tclim, tsoil, tsurf)
+  SUBROUTINE init_soil_temperature(cmid, tclim, tsoil)
 
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, deallocateDatetime, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
@@ -260,7 +260,6 @@ CONTAINS
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
     REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
-    REAL(wp), INTENT(out) :: tsurf(:)    !< Surface temperature
 
     INTEGER                   :: nsoil, ndim
     REAL(wp)                  :: zkap, zsqrt
@@ -318,9 +317,6 @@ CONTAINS
                  & + 0.5_wp * zrange(:) * EXP(-(cmid(i)-cmid_offset) / zsqrt) &
                  &   * COS(2._wp * pi * (day_in_year - zdmax(:)) / year_len - (cmid(i)-cmid_offset) / zsqrt)
     END DO
-
-    ! Set surface temperature to uppermost soil temperature
-    tsurf(:) = tsoil(:,1)
 
     DEALLOCATE(zrange, jmax, zdmax)
 
