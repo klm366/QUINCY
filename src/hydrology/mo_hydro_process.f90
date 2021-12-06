@@ -984,6 +984,9 @@ CONTAINS
             !   de Vrese --- WS_L corrected for incomming percolation
 
             ! Remove percolating water from the corresponding soil layer and add percolation from the above layer
+            ! Note: In contrast to the below 'real' update of soil water w.r.t. percolation,
+            !       ws_min_drain and field_cap_l are not accounted for, here. Besides, water from
+            !       the above layer is added immediately.
             IF (.NOT. soil_above(j)) THEN       ! surface layer
               ws_tmp(j) = ws_l(j,i) - percolation(j,i)
             ELSE
