@@ -430,6 +430,8 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk :: &
       & w_soil_sl,            &
+      & i_soil_sl,            &
+      & w_soil_pot_scool_sl,  &
       & w_soil_fc_sl,         &
       & w_soil_pwp_sl
 
@@ -440,6 +442,7 @@ CONTAINS
       fact_qsat_soil(options%nc),  &
       fact_qair_veg(options%nc),   &
       fact_qair_soil(options%nc),  &
+      w_maxtop(options%nc),        & ! maximum water holding capacity of the uppermost soil layer
       rel_hum(options%nc),         & ! relative humidity of uppermost soil layer as compared to its field capacity
       zfract_fpc(options%nc),      &
       w_soil_wilt_fract_tmp
@@ -494,6 +497,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  max_moist)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  w_rootzone)          ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)           ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  i_soil_sl)           ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pot_scool_sl) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_fc_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pwp_sl)       ! in
     END IF
@@ -549,8 +554,21 @@ CONTAINS
     END IF
 
     IF (tile%contains_soil) THEN
+      ! Note: w_soil_fc_sl has been reduced by the amount of soil ice. It defines the maximum possible amount
+      !   of liquid water.
+      IF (dsl4jsb_Config(HYDRO_)%l_ice_reduces_maxtop) THEN
+        w_maxtop(:)=w_soil_fc_sl(:,1)
+      ELSE
+        w_maxtop(:)=w_soil_fc_sl(:,1) + i_soil_sl(:,1)
+      END IF
+      IF (dsl4jsb_Config(HYDRO_)%l_scool_reduces_maxtop) THEN
+        w_maxtop(:)=MAX(0._wp, w_soil_fc_sl(:,1) - w_soil_pot_scool_sl(:,1))
+      ELSE
+        w_maxtop(:)=w_soil_fc_sl(:,1)
+      END IF
+
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_4 tile_name=tile%name
-      rel_hum(:) = relative_humidity_soil(w_soil_sl(:,1), w_soil_fc_sl(:,1))
+      rel_hum(:) = relative_humidity_soil(w_soil_sl(:,1), w_maxtop(:))
 
       !$claw acc data present(fact_qsat_soil,fact_qair_soil,qsat_star,rel_hum,q_air,fract_snow,fract_water)
       !$claw acc parallel loop gang vector

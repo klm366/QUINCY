@@ -57,8 +57,12 @@ MODULE mo_hydro_config_class
       & l_percolation_theory,   & !< The saturated hydraulic conductivity is calculated following
                                   !  the percolation theory
       & l_scool_avail_to_plants,  & !< Consider supercooled water to be available to plants
-      & l_ice_reduces_maxavail,   & !< Maximum available water is reduced by the amount of ice
-      & l_scool_reduces_maxavail    !< Maximum available water is reduced by supercooled water
+                                    !< Switches for water stress:
+      & l_ice_reduces_maxavail,   & !<   Maximum available water is reduced by the amount of ice
+      & l_scool_reduces_maxavail, & !<   Maximum available water is reduced by supercooled water
+                                    !< Switches for soil evaporation:
+      & l_ice_reduces_maxtop,     & !<   Maximum amount of top layer water reduced by the amount of ice
+      & l_scool_reduces_maxtop      !<   Maximum amount of top layer water reduced by supercooled water
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -89,6 +93,7 @@ CONTAINS
     LOGICAL     :: l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates
     LOGICAL     :: l_drain_lat, l_percolation_theory
     LOGICAL     :: l_scool_avail_to_plants, l_ice_reduces_maxavail, l_scool_reduces_maxavail
+    LOGICAL     :: l_ice_reduces_maxtop, l_scool_reduces_maxtop
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -116,7 +121,9 @@ CONTAINS
       & l_percolation_theory,       &
       & l_scool_avail_to_plants,    &
       & l_ice_reduces_maxavail,     &
-      & l_scool_reduces_maxavail
+      & l_scool_reduces_maxavail,   &
+      & l_ice_reduces_maxtop,       &
+      & l_scool_reduces_maxtop
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -143,7 +150,7 @@ CONTAINS
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
-    l_hyd_compat420        = .TRUE.
+    l_hyd_compat420        = .FALSE.
     l_infil_subzero        = .FALSE.
     l_runoff_with_ice      = .TRUE.
     l_ws_max_depend_on_org = .TRUE.
@@ -157,6 +164,8 @@ CONTAINS
     l_scool_avail_to_plants  = .TRUE.
     l_ice_reduces_maxavail   = .FALSE.
     l_scool_reduces_maxavail = .FALSE.
+    l_ice_reduces_maxtop     = .TRUE.
+    l_scool_reduces_maxtop   = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -244,20 +253,30 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_percolation_theory=F. Namelist definition of l_percolation_theory ignored.')
         l_percolation_theory   = .FALSE.
       END IF
-      IF (l_scool_avail_to_plants) THEN
+      IF (.NOT. l_scool_avail_to_plants) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_scool_avail_to_plants=T. Namelist definition of l_scool_avail_to_plants ignored.')
         l_scool_avail_to_plants = .TRUE.
       END IF
-      IF (.NOT. l_ice_reduces_maxavail) THEN
+      IF (l_ice_reduces_maxavail) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_ice_reduces_maxavail=F. Namelist definition of l_ice_reduces_maxavail ignored.')
         l_ice_reduces_maxavail = .FALSE.
       END IF
-      IF (.NOT. l_scool_reduces_maxavail) THEN
+      IF (l_scool_reduces_maxavail) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_scool_reduces_maxavail=F. Namelist definition of l_scool_reduces_maxavail ignored.')
         l_scool_reduces_maxavail = .FALSE.
+      END IF
+      IF (.NOT. l_ice_reduces_maxtop) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_ice_reduces_maxtop=T. Namelist definition of l_ice_reduces_maxtop ignored.')
+        l_ice_reduces_maxtop = .TRUE.
+      END IF
+      IF (l_scool_reduces_maxtop) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_scool_reduces_maxtop=F. Namelist definition of l_scool_reduces_maxtop ignored.')
+        l_scool_reduces_maxtop = .FALSE.
       END IF
     END IF
     config%l_infil_subzero        = l_infil_subzero
@@ -304,6 +323,13 @@ CONTAINS
     CALL message(TRIM(routine), &
      & 'Reduce maximum plant available water by amount of potentially supercooled water: ' &
      & //TRIM(logical2string(l_scool_reduces_maxavail)))
+    config%l_ice_reduces_maxtop = l_ice_reduces_maxtop
+    CALL message(TRIM(routine), &
+     & 'Soil evaporation: Reduce maximum top layer water by amount of ice: '//TRIM(logical2string(l_ice_reduces_maxtop)))
+    config%l_scool_reduces_maxtop = l_scool_reduces_maxtop
+    CALL message(TRIM(routine), &
+     & 'Soil evaporation: Reduce maximum top layer water by potentially supercooled water: ' &
+     & //TRIM(logical2string(l_scool_reduces_maxtop)))
 
     CALL close_nml(nml_handler)
 
