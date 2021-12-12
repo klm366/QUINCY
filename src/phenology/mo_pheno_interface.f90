@@ -302,7 +302,7 @@ CONTAINS
 
     !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
     !$claw create(LaiMax_corrected, veg_fract_correction_old) &
-    !$claw create(old_c_state_sum, dummy_flux)
+    !$claw create(old_c_state_sum_ta, dummy_flux)
     IF ( .NOT. tile%Is_process_active(ASSIMI_)) THEN
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
