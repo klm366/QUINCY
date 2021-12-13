@@ -410,6 +410,8 @@ CONTAINS
       & fract_old(:),    &
       & fract_max_old(:)
 
+    INTEGER :: ilct
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_1d'
 
     IF (PRESENT(fract)) THEN
