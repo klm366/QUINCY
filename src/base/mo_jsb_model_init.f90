@@ -296,6 +296,7 @@ CONTAINS
       IF (model%processes(PPLCC_)%p%config%active) THEN
         ! Prepare LCC tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
+      END IF
 
         !***** Add LCC processes between pplcc_pre and pplcc_post *****
         ! order of tasks of course determines area available for change for the subsequent lcc tasks!
@@ -317,9 +318,9 @@ CONTAINS
           CALL model%Queue_task(NLCC_, "nlcc")
         END IF
 
-        IF (model%processes(ALCC_)%p%config%active) THEN
-          CALL model%Queue_task(ALCC_, "alcc")
-        END IF
+      IF (model%processes(NLCC_)%p%config%active) THEN
+        CALL model%Queue_task(NLCC_, "nlcc")
+      END IF
 
         ! Do postprocessing after all LCC tasks were executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
