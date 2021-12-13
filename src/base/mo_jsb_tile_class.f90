@@ -446,6 +446,8 @@ CONTAINS
 
     INTEGER :: ilct
 
+    INTEGER :: ilct
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_1d'
 
     IF (PRESENT(fract)) THEN
