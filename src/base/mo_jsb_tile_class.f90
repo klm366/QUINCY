@@ -426,6 +426,17 @@ CONTAINS
           WHERE (this%fract(ics:ice, iblk) /= this%fract_old(ics:ice, iblk))
             parent%l_fract_children_changed(ics:ice, iblk) = .TRUE.
           END WHERE
+          IF (ANY(parent%l_fract_children_changed(ics:ice,iblk))) THEN
+            DO ilct=1,SIZE(parent%lcts)
+              IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
+                WHERE (parent%l_fract_children_changed(ics:ice,iblk))
+                  parent%lcts(ilct)%fract(ics:ice,iblk) = &
+                    & parent%lcts(ilct)%fract(ics:ice,iblk) - this%fract_old(ics:ice,iblk) + this%fract(ics:ice,iblk)
+                END WHERE
+                EXIT
+              END IF
+            END DO
+          END IF
         END SELECT
       END IF
     END IF
@@ -489,7 +500,9 @@ CONTAINS
             IF (ANY(parent%l_fract_children_changed(:,:))) THEN
               DO ilct=1,SIZE(parent%lcts)
                 IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
-                  parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
+                  WHERE (parent%l_fract_children_changed(:,:))
+                    parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
+                  END WHERE
                   EXIT
                 END IF
               END DO
