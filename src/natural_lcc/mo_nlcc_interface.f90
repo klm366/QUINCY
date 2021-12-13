@@ -285,7 +285,11 @@ CONTAINS
 !!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
 
-    lstart = is_time_experiment_start(options%current_datetime)
+    IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+      lstart = .TRUE.
+    ELSE
+      lstart = .FALSE.
+    END IF
     new_year = is_newyear(options%current_datetime, options%dtime)
     new_month = is_newmonth(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)

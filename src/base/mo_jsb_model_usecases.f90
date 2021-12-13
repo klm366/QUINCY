@@ -198,6 +198,7 @@ CONTAINS
             & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
+
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
