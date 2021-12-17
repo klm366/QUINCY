@@ -426,7 +426,8 @@ CONTAINS
       & canopy_cond_limited,  &
       & pch,                  &
       & wind_air,             &
-      & q_air
+      & q_air,                &
+      & maxtop_mineral
 
     dsl4jsb_Real3D_onChunk :: &
       & w_soil_sl,            &
@@ -501,6 +502,9 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pot_scool_sl) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_fc_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pwp_sl)       ! in
+      IF (.NOT. dsl4jsb_Config(HYDRO_)%l_maxtop_depend_on_org) THEN
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,  maxtop_mineral)    ! in
+      END IF
     END IF
 
     ! ---------------------------
@@ -554,12 +558,20 @@ CONTAINS
     END IF
 
     IF (tile%contains_soil) THEN
-      ! Note: w_soil_fc_sl has been reduced by the amount of soil ice. It defines the maximum possible amount
-      !   of liquid water.
+      ! Note: In contrast to maxtop_mineral w_soil_fc_sl has been reduced by the amount of soil
+      !       ice. It defines the maximum possible amount of liquid water.
       IF (dsl4jsb_Config(HYDRO_)%l_ice_reduces_maxtop) THEN
-        w_maxtop(:)=w_soil_fc_sl(:,1)
-      ELSE
-        w_maxtop(:)=w_soil_fc_sl(:,1) + i_soil_sl(:,1)
+        IF (dsl4jsb_Config(HYDRO_)%l_maxtop_depend_on_org) THEN
+          w_maxtop(:)=w_soil_fc_sl(:,1)
+        ELSE
+          w_maxtop(:)=maxtop_mineral(:) - i_soil_sl(:,1)
+        END IF
+      ELSE   ! w_maxtop does not depend on soil ice
+        IF (dsl4jsb_Config(HYDRO_)%l_maxtop_depend_on_org) THEN
+          w_maxtop(:)=w_soil_fc_sl(:,1) + i_soil_sl(:,1)
+        ELSE
+          w_maxtop(:)=maxtop_mineral(:)
+        END IF
       END IF
       IF (dsl4jsb_Config(HYDRO_)%l_scool_reduces_maxtop) THEN
         w_maxtop(:)=MAX(0._wp, w_soil_fc_sl(:,1) - w_soil_pot_scool_sl(:,1))

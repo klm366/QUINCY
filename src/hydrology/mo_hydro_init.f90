@@ -516,6 +516,11 @@ CONTAINS
           END IF
         END IF
       END IF
+
+      IF (.NOT. dsl4jsb_Config(HYDRO_)%l_maxtop_depend_on_org) THEN
+        ! Save top layer water holding capacity of mineral soil for evaporation calculations
+        dsl4jsb_var_ptr(HYDRO_, maxtop_mineral)(:,:) = dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)(:,1,:)
+      END IF
       ! The following can change later depending on the organic layers and soil ice content.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &

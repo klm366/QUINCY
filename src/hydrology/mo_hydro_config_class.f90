@@ -62,7 +62,8 @@ MODULE mo_hydro_config_class
       & l_scool_reduces_maxavail, & !<   Maximum available water is reduced by supercooled water
                                     !< Switches for soil evaporation:
       & l_ice_reduces_maxtop,     & !<   Maximum amount of top layer water reduced by the amount of ice
-      & l_scool_reduces_maxtop      !<   Maximum amount of top layer water reduced by supercooled water
+      & l_scool_reduces_maxtop,   & !<   Maximum amount of top layer water reduced by supercooled water
+      & l_maxtop_depend_on_org      !<   Maximum amount of top layer water depends on organic matter
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -93,7 +94,7 @@ CONTAINS
     LOGICAL     :: l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates
     LOGICAL     :: l_drain_lat, l_percolation_theory
     LOGICAL     :: l_scool_avail_to_plants, l_ice_reduces_maxavail, l_scool_reduces_maxavail
-    LOGICAL     :: l_ice_reduces_maxtop, l_scool_reduces_maxtop
+    LOGICAL     :: l_ice_reduces_maxtop, l_scool_reduces_maxtop, l_maxtop_depend_on_org
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -123,7 +124,8 @@ CONTAINS
       & l_ice_reduces_maxavail,     &
       & l_scool_reduces_maxavail,   &
       & l_ice_reduces_maxtop,       &
-      & l_scool_reduces_maxtop
+      & l_scool_reduces_maxtop,     &
+      & l_maxtop_depend_on_org
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -166,6 +168,7 @@ CONTAINS
     l_scool_reduces_maxavail = .FALSE.
     l_ice_reduces_maxtop     = .TRUE.
     l_scool_reduces_maxtop   = .FALSE.
+    l_maxtop_depend_on_org   = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -213,7 +216,7 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_runoff_with_ice=T. Namelist definition of l_runoff_with_ice ignored.')
         l_runoff_with_ice      = .TRUE.
       END IF
-      IF (.NOT. l_ws_max_depend_on_org) THEN
+      IF (l_organic .AND. .NOT. l_ws_max_depend_on_org) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_ws_max_depend_on_org=T. Namelist definition of l_ws_max_depend_on_org ignored.')
         l_ws_max_depend_on_org = .TRUE.
@@ -278,6 +281,11 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_scool_reduces_maxtop=F. Namelist definition of l_scool_reduces_maxtop ignored.')
         l_scool_reduces_maxtop = .FALSE.
       END IF
+      IF (l_organic .AND. .NOT. l_maxtop_depend_on_org) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_maxtop_depend_on_org=T. Namelist definition of l_maxtop_depend_on_org ignored.')
+        l_maxtop_depend_on_org = .TRUE.
+      END IF
     END IF
     config%l_infil_subzero        = l_infil_subzero
     CALL message(TRIM(routine), &
@@ -285,9 +293,6 @@ CONTAINS
     config%l_runoff_with_ice      = l_runoff_with_ice
     CALL message(TRIM(routine), &
      & 'Calculate runoff including ice: '//TRIM(logical2string(l_runoff_with_ice)))
-    config%l_ws_max_depend_on_org = l_ws_max_depend_on_org
-    CALL message(TRIM(routine), &
-     & 'Re-calculate ws_max from initialfile dep. on organic: '//TRIM(logical2string(l_ws_max_depend_on_org)))
     config%l_correct_ws_from_top  = l_correct_ws_from_top
     CALL message(TRIM(routine), &
      & 'Start correction of soil moisture from top level: '//TRIM(logical2string(l_correct_ws_from_top)))
@@ -330,7 +335,15 @@ CONTAINS
     CALL message(TRIM(routine), &
      & 'Soil evaporation: Reduce maximum top layer water by potentially supercooled water: ' &
      & //TRIM(logical2string(l_scool_reduces_maxtop)))
-
+    config%l_ws_max_depend_on_org = l_ws_max_depend_on_org
+    config%l_maxtop_depend_on_org = l_maxtop_depend_on_org
+    IF (l_organic) THEN
+      CALL message(TRIM(routine), &
+       & 'Re-calculate ws_max from initialfile dep. on organic: '//TRIM(logical2string(l_ws_max_depend_on_org)))
+      CALL message(TRIM(routine), &
+       & 'Soil evaporation: Maximum water in top layer depends on organic matter: ' &
+       & //TRIM(logical2string(l_maxtop_depend_on_org)))
+    END IF
     CALL close_nml(nml_handler)
 
     IF (.NOT. active) RETURN
