@@ -40,4 +40,3 @@ CONTAINS
 
   END FUNCTION Create_process_memory
 
-END MODULE mo_jsb_process_factory
