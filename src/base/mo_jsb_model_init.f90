@@ -252,25 +252,34 @@ CONTAINS
 
       ! ------------------------ tasks that can change area
       !
+      ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
+      ! if any process that changes area (e.g. TLCC_, NLCC_, ALCC_) is active.
+      !
       IF (model%processes(PPLCC_)%p%config%active) THEN
-        !! Prepare LCC tasks!
+        ! Prepare LCC tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
+      END IF
 
-        !***** Add LCC processes between pplcc_pre and pplcc_post *****
+      !***** Add LCC processes between pplcc_pre and pplcc_post *****
+      !
+      IF (model%config%use_dynlakes) THEN
+        CALL model%Queue_task(HD_, "dynlake")
+      END IF
 
-        IF (model%config%use_dynlakes) THEN
-          CALL model%Queue_task(HD_, "dynlake")
-        END IF
+      IF (model%processes(TLCC_)%p%config%active) THEN
+        CALL model%Queue_task(TLCC_, "tlcc")
+      END IF
 
-        IF (model%processes(TLCC_)%p%config%active) THEN
-          CALL model%Queue_task(TLCC_, "tlcc")
-        END IF
+      IF (model%processes(NLCC_)%p%config%active) THEN
+        CALL model%Queue_task(NLCC_, "nlcc")
+      END IF
 
-        IF (model%processes(ALCC_)%p%config%active) THEN
-          CALL model%Queue_task(ALCC_, "alcc")
-        END IF
+      IF (model%processes(ALCC_)%p%config%active) THEN
+        CALL model%Queue_task(ALCC_, "alcc")
+      END IF
 
-        !! Do postprocessing after all LCC tasks were executed!
+      IF (model%processes(PPLCC_)%p%config%active) THEN
+        ! Do postprocessing after all LCC tasks were executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
 

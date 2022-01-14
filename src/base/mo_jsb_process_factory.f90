@@ -150,7 +150,6 @@ CONTAINS
       CALL Register_tlcc_tasks(return_ptr, model_id)
       ALLOCATE(t_tlcc_config::return_ptr%config)
     CASE (TCQ_)
-      return_ptr%l_changes_fractions = .TRUE.
       CALL Register_tcq_tasks(return_ptr, model_id)
       ALLOCATE(t_tcq_config::return_ptr%config)
     CASE (ALCC_)
