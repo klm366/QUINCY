@@ -32,7 +32,9 @@ MODULE mo_carbon_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
+  USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day,                    &
+                                 & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
+                                 & i_lctlib_nonsoluble, i_lctlib_humus
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
   dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_
@@ -55,7 +57,7 @@ MODULE mo_carbon_interface
   PUBLIC ::  Register_carbon_tasks
   PUBLIC ::  recalc_per_tile_vars, calculate_current_c_ag_1_and_bg_sums, rescale_carbon_upon_reference_area_change, &
     &        calculate_current_c_ta_state_sum, check_carbon_conservation, yday_carbon_conservation_test,            &
-    &        global_carbon_diagnostics
+    &        carbon_transfer_from_active_to_passive_vars_onChunk, global_carbon_diagnostics
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_interface'
 
@@ -198,7 +200,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg1  ! Yasso below ground litter-pool for non-soluble litter
                                                       ! [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_humus_1         ! Yasso below ground litter-pool for slow C compartment
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     !SIZE CLASS 2
     dsl4jsb_Real2D_onChunk ::  c_acid_ag2        ! Yasso above ground litter-pool for acid soluble litter
                                                       !  [mol(C)/m^2(canopy)]
@@ -217,16 +219,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_nonsoluble_bg2  ! Yasso below ground litter-pool for non-soluble litter
                                                       !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_humus_2         ! Yasso below ground litter-pool for slow C compartment
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  c_decomp_humus_1_sum  ! Annual sum of humus decomposed in YASSO (leaf)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_decomp_humus_2_sum  ! Annual sum of humus decomposed in YASSO (wood)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_into_humus_1_sum    ! Annual sum of cflux into humus in YASSO (leaf)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum    ! Annual sum of cflux into humus in YASSO (wood)
-                                                      !  [mol(C)^2/m(canopy)]
+                                                      !  [mol(C)/m^2(canopy)]
 
     dsl4jsb_Real2D_onChunk ::  gross_assimilation_ca  ! Gross assimilation of all canopy layers together
     dsl4jsb_Real2D_onChunk ::  NPP_pot_rate_ca        ! The instantaneous (potential) NPP rate [mol(C)/m^2(canopy) s]
@@ -284,7 +286,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
 
-    ! variables needed for DYNVEG
+    ! variables needed for NLCC process
     dsl4jsb_Real2D_onChunk :: max_green_bio
     dsl4jsb_Real2D_onChunk :: sla
 
@@ -392,7 +394,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,     rain)                       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,     snow)                       ! in
 
-    ! variables needed for DYNVEG
+    ! variables needed for NLCC process
     dsl4jsb_Get_var2D_onChunk(CARBON_,  max_green_bio)
     dsl4jsb_Get_var2D_onChunk(CARBON_,  sla)
 
@@ -577,17 +579,17 @@ CONTAINS
         &  c_nonsoluble_bg2 =  c_nonsoluble_bg2,                      & ! inout
         &  c_humus_2        =  c_humus_2,                             & ! inout
                               !
-        &  LeafLit_coef1    =  dsl4jsb_Lctlib_param(LeafLit_coef(1)), & ! in
-        &  LeafLit_coef2    =  dsl4jsb_Lctlib_param(LeafLit_coef(2)), & ! in
-        &  LeafLit_coef3    =  dsl4jsb_Lctlib_param(LeafLit_coef(3)), & ! in
-        &  LeafLit_coef4    =  dsl4jsb_Lctlib_param(LeafLit_coef(4)), & ! in
-        &  LeafLit_coef5    =  dsl4jsb_Lctlib_param(LeafLit_coef(5)), & ! in
-        &  WoodLit_coef1    =  dsl4jsb_Lctlib_param(WoodLit_coef(1)), & ! in
-        &  WoodLit_coef2    =  dsl4jsb_Lctlib_param(WoodLit_coef(2)), & ! in
-        &  WoodLit_coef3    =  dsl4jsb_Lctlib_param(WoodLit_coef(3)), & ! in
-        &  WoodLit_coef4    =  dsl4jsb_Lctlib_param(WoodLit_coef(4)), & ! in
-        &  WoodLit_coef5    =  dsl4jsb_Lctlib_param(WoodLit_coef(5)), & ! in
-        &  WoodLitterSize   =  dsl4jsb_Lctlib_param(WoodLitterSize),  & ! in
+        &  LeafLit_coef_acid       =  dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_acid)),       & ! in
+        &  LeafLit_coef_water      =  dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_water)),      & ! in
+        &  LeafLit_coef_ethanol    =  dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_ethanol)),    & ! in
+        &  LeafLit_coef_nonsoluble =  dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_nonsoluble)), & ! in
+        &  LeafLit_coef_humus      =  dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_humus)),      & ! in
+        &  WoodLit_coef_acid       =  dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_acid)),       & ! in
+        &  WoodLit_coef_water      =  dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_water)),      & ! in
+        &  WoodLit_coef_ethanol    =  dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_ethanol)),    & ! in
+        &  WoodLit_coef_nonsoluble =  dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_nonsoluble)), & ! in
+        &  WoodLit_coef_humus      =  dsl4jsb_Lctlib_param(WoodLit_coef(i_lctlib_humus)),      & ! in
+        &  WoodLitterSize          =  dsl4jsb_Lctlib_param(WoodLitterSize),                    & ! in
 
         & c_decomp_humus_1_sum  = c_decomp_humus_1_sum,               & ! out
         & c_decomp_humus_2_sum  = c_decomp_humus_2_sum,               & ! out
@@ -595,12 +597,12 @@ CONTAINS
         & c_into_humus_2_sum    = c_into_humus_2_sum                  & ! out
         & )
 
-      ! determine annual maximum content of green pool for DYNVEG 
+      ! determine annual maximum content of green pool for NLCC process
       IF (new_year) THEN
          max_green_bio = c_green
       ELSEIF (new_day) THEN
          max_green_bio = MAX(max_green_bio, c_green)
-      ENDIF  
+      ENDIF
 
 
       ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
@@ -682,7 +684,7 @@ CONTAINS
     CALL calculate_current_c_ta_state_sum(tile, options, c_sum_natural_ta(:),            &
       & c_sum_veg_ta(:), c_sum_litter_ag_ta(:), c_sum_litter_bg_ta(:), c_sum_humus_ta(:))
 
-    ! write lct information on variable to make it available on pft-tiles via function collect_var for DYNVEG
+    ! write lct information on variable to make it available on pft-tiles via function collect_var for NLCC process
     sla(:) = REAL(dsl4jsb_Lctlib_param(specificLeafArea_C))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -784,7 +786,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_herb_2_atm_ta,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, cflux_npp_2_atm_yday_ta,  weighted_by_fract)
 
-    ! variables for DYNVEG
+    ! variables for NLCC process
     dsl4jsb_Aggregate_onChunk(CARBON_, max_green_bio,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(CARBON_, sla,                      weighted_by_fract)
 
@@ -1393,6 +1395,98 @@ CONTAINS
     c_ag_sum_1(:) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
     !$claw end expand
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
+
+
+  ! ====================================================================================================== !
+  !
+  !> Relocates content of (expected) own active to own passive vars that are part of lcc_relocations
+  !
+  SUBROUTINE carbon_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
+
+    USE mo_util,                ONLY: one_of
+    USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc, collect_matter_of_active_vars_onChunk
+    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
+    USE mo_carbon_constants,    ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
+      &                               nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
+    USE mo_carbon_process,      ONLY: add_litter_to_yasso_pool
+    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+
+    IMPLICIT NONE
+    ! -------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
+        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var 
+    CLASS(t_jsb_tile_abstract), INTENT(IN)    :: tile    !< tile for which the relocation is be conducted
+    INTEGER,                    INTENT(IN)    :: i_tile  !< index of the tile in lcc structure
+    TYPE(t_jsb_task_options),   INTENT(IN)    :: options !< run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
+    CHARACTER(len=*), PARAMETER :: routine = modname//':carbon_transfer_from_active_to_passive_vars_onChunk'
+
+    TYPE(t_jsb_model), POINTER   :: model
+
+    INTEGER :: i, k, i_pool, i_active, i_passive, i_this_active, i_litter_coefficient, nc, ics, ice, iblk
+    
+    REAL(wp) :: litter_coefficient, fraction, this_fract
+    REAL(wp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
+    ! -------------------------------------------------------------------------------------------------- !
+
+    !JN-TODO: is it less expensive to only do it for tiles with actual area changes?
+    nc = options%nc
+    ics = options%ics
+    ice = options%ice
+    iblk = options%iblk
+
+    IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Collect matter from all potential active variables -- here unfortunately explicit 
+    non_woody_litter = 0.0
+    woody_litter = 0.0
+    CALL collect_matter_of_active_vars_onChunk( &
+      & non_woody_litter, lcc_relocations, i_tile, options, [character(len=VARNAME_LEN) :: 'c_green', 'c_reserve' ])
+    CALL collect_matter_of_active_vars_onChunk( &
+      & woody_litter, lcc_relocations, i_tile, options, [character(len=VARNAME_LEN) ::  'c_woods' ])
+
+    !--- And distribute them according to the yasso scheme
+    DO i_pool = 1, nr_of_yasso_pools
+      i_passive = one_of(carbon_required_passive_vars(i_pool), lcc_relocations%passive_vars_names)
+      i_litter_coefficient = coefficient_ind_of_passive_vars(i_pool)
+
+      IF (INDEX(carbon_required_passive_vars(i_pool), '1') > 0) THEN
+        this_litter = non_woody_litter
+        this_fract = fract_green_aboveGround
+        litter_coefficient = dsl4jsb_Lctlib_param(LeafLit_coef(i_litter_coefficient))
+      ELSEIF (INDEX(carbon_required_passive_vars(i_pool), '2') > 0) THEN
+        this_litter = woody_litter
+        this_fract = fract_wood_aboveGround
+        litter_coefficient = dsl4jsb_Lctlib_param(WoodLit_coef(i_litter_coefficient))
+      ELSE
+        CALL finish(TRIM(routine), 'Violation of assertion: ' // carbon_required_passive_vars(i_pool) &
+          & // ' did not contain "1" or "2" which are key to identifiy woody vs non-woody yasso pools. Please check!')
+      ENDIF
+
+      IF (INDEX(carbon_required_passive_vars(i_pool), 'ag') > 0) THEN
+        fraction = this_fract
+      ELSEIF (INDEX(carbon_required_passive_vars(i_pool), 'bg') > 0) THEN
+        fraction = 1.0_wp - this_fract
+      ELSEIF (INDEX(carbon_required_passive_vars(i_pool), 'humus') > 0) THEN
+        fraction = 1.0_wp
+      ELSE
+        CALL finish(TRIM(routine), 'Violation of assertion: ' // carbon_required_passive_vars(i_pool) &
+          & // ' did not contain "ag" or "bg" which are key to identifiy above vs below ground yasso pools. Please check!')
+      ENDIF
+
+      !JN-TODO: better way? Reiner? DSL?
+      DO i = 1,nc
+        k = ics + i - 1 
+        CALL add_litter_to_yasso_pool( &
+          & lcc_relocations%passive_vars(i_passive)%p%relocate_this(k,i_tile,iblk), &
+          & this_litter(i), fraction, litter_coefficient)
+      ENDDO
+    ENDDO
+
+
+  END SUBROUTINE carbon_transfer_from_active_to_passive_vars_onChunk
 
 
   ! ================================================================================================================================

@@ -16,7 +16,7 @@ MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish, message_text
+  USE mo_exception, ONLY: message, finish, message_text, em_warn
 
   IMPLICIT NONE
   PRIVATE
@@ -1411,9 +1411,12 @@ CONTAINS
 #ifndef _OPENACC
     IF (ANY(ws_l(:,:) < 0._wp)) THEN
       WRITE (message_text,*) 'negative soil moisture: ', MINVAL(ws_l), ' at ', MINLOC(ws_l)
-      CALL finish ('digest_infilt', message_text)
-      ! CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
-      ! ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
+      IF (ANY(ws_l(:,:) < -EPSILON(1._wp))) THEN
+        CALL finish ('digest_infilt', message_text)
+      ELSE
+        CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
+        ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
+      END IF
     END IF
 #endif
 

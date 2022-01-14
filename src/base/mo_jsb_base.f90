@@ -177,6 +177,10 @@ CONTAINS
         dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
       END IF
 
+      IF (model%config%init_from_ifs) THEN
+        CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
+      END IF
+
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
         CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
           &                         ' ... therefore no influence of vegetation on albedo')

@@ -251,7 +251,7 @@ CONTAINS
   ! E. Roeckner, MPI, Sep 2002, initialization of mixed layer ocean
   ! T. Raddatz, MPI, Mai 2005, adaption to JSBACH
   !
-  SUBROUTINE init_soil_temperature(cmid, tclim, tsoil, tsurf)
+  SUBROUTINE init_soil_temperature(cmid, tclim, tsoil)
 
     USE mo_jsb_time,       ONLY: t_datetime, get_time_start, get_year, deallocateDatetime, &
                                  & get_year_length, get_month_length, get_day_length, get_year_day
@@ -260,7 +260,6 @@ CONTAINS
     REAL(wp), INTENT(in)  :: cmid(:)     !< Depths of soil layer mid points
     REAL(wp), INTENT(in)  :: tclim(:,:)  !< Climatological monthly surface temperature
     REAL(wp), INTENT(out) :: tsoil(:,:)  !< Soil temperatures
-    REAL(wp), INTENT(out) :: tsurf(:)    !< Surface temperature
 
     INTEGER                   :: nsoil, ndim
     REAL(wp)                  :: zkap, zsqrt
@@ -318,9 +317,6 @@ CONTAINS
                  & + 0.5_wp * zrange(:) * EXP(-(cmid(i)-cmid_offset) / zsqrt) &
                  &   * COS(2._wp * pi * (day_in_year - zdmax(:)) / year_len - (cmid(i)-cmid_offset) / zsqrt)
     END DO
-
-    ! Set surface temperature to uppermost soil temperature
-    tsurf(:) = tsoil(:,1)
 
     DEALLOCATE(zrange, jmax, zdmax)
 
@@ -787,12 +783,12 @@ CONTAINS
     REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
     REAL(wp) :: t_soil_upper_layer(nidx)                  !< t_soil_sl(:,1)
 
-    !$claw acc data create(zmid,z1,zd1,zdz1,zdz2)
+    !$claw acc data create(zmid,z1,zd1,zdz1,zdz2,t_soil_upper_layer)
 
-
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_0
     t_soil_upper_layer(:) = t_soil_sl(:,1)
 
-    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_0 
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_1
     grnd_hflx(:) = 0._wp
     hcap_grnd(:) = 0._wp
     t_soil_top(:) = t_srf_unfilt(:)
@@ -823,7 +819,7 @@ CONTAINS
     !$claw acc end data
 
     ! mid of two uppermost soil layers
-    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_1
+    !$claw expand parallel update savepoint=ser_jsb_sse_calc_snow_temperature_expand_2
     zmid(:,nsnow+1) = zmid(:,nsnow) + 0.5_wp * (dz(:,nsnow) + dz_soil(1))
     zmid(:,nsnow+2) = zmid(:,nsnow+1) + 0.5_wp * (dz_soil(1) + dz_soil(2))
     zd1(:,nsnow) = 1._wp / (zmid(:,nsnow+1) - zmid(:,nsnow))

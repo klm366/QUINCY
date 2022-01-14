@@ -83,14 +83,14 @@ MODULE mo_assimi_memory_class
 !                                         CO2_flux_herbivory_acc,         & ! CO2 flux to the atmosphere from grazing
 !                                         CO2_emission_landcover_change_acc, & ! CO2 flux to the atmosphere from land cover changes
 !                                         CO2_emission_harvest_acc,       & ! CO2 flux to the atmosphere from harvest
-!                                         CO2_flux_dynveg_acc               ! CO2 flux to the atmosphere from vegetation dynamics
+!                                         CO2_flux_nlcc_acc                 ! CO2 flux to the atmosphere from vegetation dynamics
 !                                                                           ! (disturbance?)
 !
 
 
     ! t_canopy variables
     TYPE(t_jsb_var_real3d) ::     &
-      & assimi_scaling_fact_cl,   &
+      & scaling_fact_cl,          &
       & canopy_cond_cl,           & ! Canopy conductance per layer and per leaf area
                                     ! quincy: conductance for water per canopy layer [m s-1]
       & gross_assimilation_cl,    & ! Gross photosynthesis [ mol(co2) / (m^2(leaf area) * s) ]
@@ -341,9 +341,9 @@ CONTAINS
         & output_level=BASIC,                                                               &
         & lrestart=.FALSE., initval_r=10000.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var('scaling_fact_cl', mem%assimi_scaling_fact_cl,        &
+      CALL mem%Add_var('scaling_fact_cl', mem%scaling_fact_cl,               &
         & hgrid, canopy_layer,                                               &
-        & t_cf('assimi_scaling_fact_cl', '-',                                &
+        & t_cf('scaling_fact_cl', '-',                                       &
         'assimilation scaling factors per canopy layer'),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &

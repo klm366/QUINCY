@@ -204,16 +204,7 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
-    __acc_attach(var%ptr1d)
-    !$acc update device(var%ptr1d)
-    var%ptr => var%ptr1d
-    __acc_attach(var%ptr)
-    var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
-    var%unit = TRIM(cf%units)
-    var%type = REAL1D
-    var%missval = missval_r_loc
-    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
     IF (loutput_loc) THEN
       IF (mem%in_var_groups) THEN
         var%is_in_output = is_variable_in_output(var%full_name, groups(:))
@@ -222,8 +213,28 @@ CONTAINS
       END IF
     END IF
     var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default, even though
-                                ! the monitoring variables are not needed in resatart files
+                                ! the monitoring variables are not needed in restart files
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+
+    ! As the 1d variables are only intended as diagnostic output variables (monitoring), the corresponding
+    ! stream elements only need to be added, if the variables are actually defined as output variables.
+    IF (.NOT. var%is_in_output .AND. .NOT. var%is_in_restart) RETURN
+
+    CALL add_var_list_element_r1d(                                                            &
+      this_list, TRIM(name_loc), var%ptr1d, GRID_LONLAT, vgrid%ZaxisID,                       &
+      cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
+      ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
+      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
+      verbose=verbose)
+
+    var%ptr => var%ptr1d
+    var%name = TRIM(name)
+    var%unit = TRIM(cf%units)
+    var%type = REAL1D
+    var%missval = missval_r_loc
+    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
 
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
@@ -239,18 +250,11 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    ! As the 1d variables are only intended as diagnostic output variables (monitoring), the corresponding
-    ! stream elements only need to be added, if the variables are actually defined as output variables.
-    IF (var%is_in_output .OR. var%is_in_restart) THEN
-      CALL add_var_list_element_r1d(                                                            &
-        this_list, TRIM(name_loc), var%ptr, GRID_LONLAT, vgrid%ZaxisID,                         &
-        cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table,                             &
-        ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx,                                &
-        loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
-        initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
-        lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
-        verbose=verbose)
-    END IF
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr1d)
+    __acc_attach(var%ptr1d)
+    __acc_attach(var%ptr)
+
 #endif
 
   END SUBROUTINE t_jsb_memory_add_var_r1d
@@ -361,11 +365,8 @@ CONTAINS
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
       verbose=verbose)
-    __acc_attach(var%ptr2d)
 
-    !$acc update device(var%ptr2d)
     var%ptr => var%ptr2d
-    __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
@@ -399,6 +400,11 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
+
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr2d)
+    __acc_attach(var%ptr2d)
+    __acc_attach(var%ptr)
 
   END SUBROUTINE t_jsb_memory_add_var_r2d
 
@@ -525,11 +531,8 @@ CONTAINS
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
-    __acc_attach(var%ptr3d)
 
-    !$acc update device(var%ptr3d)
     var%ptr => var%ptr3d
-    __acc_attach(var%ptr)
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
@@ -563,6 +566,11 @@ CONTAINS
       mem%vars(pos_of_var)%p => var
       mem%no_of_vars = pos_of_var
     END IF
+
+    !$acc enter data copyin(var)
+    !$acc update device(var%ptr3d)
+    __acc_attach(var%ptr3d)
+    __acc_attach(var%ptr)
 
   END SUBROUTINE t_jsb_memory_add_var_r3d
 

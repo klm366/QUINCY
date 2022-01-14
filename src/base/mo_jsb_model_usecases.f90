@@ -19,7 +19,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-                                    FUEL_, ALCC_, DYNVEG_, VEG_, PPLCC_, TLCC_, TCQ_
+                                    FUEL_, ALCC_, NLCC_, VEG_, PPLCC_, TLCC_, TCQ_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -202,8 +202,8 @@ CONTAINS
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
           !
-          IF (model%processes(DYNVEG_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(DYNVEG_, ON_TILE_, AGGREGATE_)
+          IF (model%processes(NLCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
           !
           ! use_quincy: 

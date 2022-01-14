@@ -209,6 +209,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_w  ! Vertical grids
     INTEGER :: table
+    TYPE(t_grib2) :: grib2_desc
 
     REAL(wp) :: ini_snow_dens
 
@@ -237,18 +238,28 @@ CONTAINS
 
     ! Common variables
 
+    IF (TRIM(mem%owner_tile_name) == 'box') THEN
+      grib2_desc = t_grib2(1,0,202, grib_bits)
+    ELSE
+      grib2_desc = t_grib2(255, 255, 255, grib_bits)
+    END IF
     CALL mem%Add_var('fract_snow', mem%fract_snow,                             &
       & hgrid, surface,                                                        &
       & t_cf('fraction of snow on surface', '-', ''),                          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+      & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix,                                                        &
       & output_level=BASIC,                                                    &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    IF (TRIM(mem%owner_tile_name) == 'box') THEN
+      grib2_desc = t_grib2(1,0,212, grib_bits)
+    ELSE
+      grib2_desc = t_grib2(255, 255, 255, grib_bits)
+    END IF
     CALL mem%Add_var( 'w_snow', mem%w_snow,                                           &
       & hgrid, surface,                                                               &
       & t_cf('Water content of snow reservoir on surface', 'm water equivalent', ''), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+      & t_grib1(table, 255, grib_bits), grib2_desc,                                   &
       & prefix, suffix,                                                               &
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -420,10 +431,15 @@ CONTAINS
         & lrestart=.FALSE.,                                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(1,0,201, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
       CALL mem%Add_var( 'fract_water', mem%fract_water,                          &
         & hgrid, surface,                                                        &
         & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                            &
         & prefix, suffix,                                                        &
         & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -584,10 +600,15 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(1,0,211, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
       CALL mem%Add_var( 'w_skin', mem%w_skin,                                                         &
         & hgrid, surface,                                                                             &
         & t_cf('skin_reservoir', 'm water equivalent', 'Water content in skin reservoir of surface'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                                                 &
         & prefix, suffix,                                                                             &
         & output_level=BASIC,                                                                         &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -647,10 +668,15 @@ CONTAINS
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(1,0,213, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
       CALL mem%Add_var( 'w_soil_column', mem%w_soil_column,                          &
         & hgrid, surface,                                                            &
         & t_cf('Water content in the whole soil column', 'm water equivalent', ''),  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                                &
         & prefix, suffix,                                                            &
         & loutput=.TRUE., output_level=BASIC,                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )

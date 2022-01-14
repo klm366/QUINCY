@@ -134,6 +134,8 @@ CONTAINS
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
+     & is_lake,                       &
+     & is_ocean,                      &
      & has_snow_layer
 
     REAL(wp) ::    & ! Avoid compute in param
@@ -223,8 +225,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
-    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  & 
-    !$claw acc soil_depth_sl_vol_porosity_sl_tmp)
+    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,is_ocean,is_lake, & 
+    !$claw acc has_snow_layer,soil_depth_sl_vol_porosity_sl_tmp)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     !$claw acc data present(is_glacier)
@@ -239,6 +241,13 @@ CONTAINS
       is_glacier(:) = .FALSE.
     END IF
     !$claw acc update device(is_glacier) ! 
+    !$claw acc end data
+
+    !$claw acc data present(is_ocean, is_lake)
+    CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
+    is_ocean(:) = fract(:) <= 0._wp
+    is_lake(:)  = tile%fract(ics:ice,iblk) <= 0._wp
+    !$claw acc update device(is_ocean, is_lake)
     !$claw acc end data
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
@@ -282,7 +291,18 @@ CONTAINS
     t_old   (:) = t(:)
     !$claw end expand
 
-    ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
+    ! Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
+    ! leading to a crash in convect_tables
+    !$claw acc data present(is_ocean,is_lake,t_unfilt_old,t_old)
+    !$claw acc parallel loop gang vector
+    DO i=1, size(s_star,dim=1)
+      IF (is_ocean(i) .OR. is_lake(i)) THEN
+        t_unfilt_old(i) = 280._wp
+        t_old(i)        = 280._wp
+      END IF
+    END DO
+    !$claw acc end data
+
     ! t_unfilt_old(:) = MAX(MIN(t_unfilt(:), 380._wp), 100._wp)
     ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
@@ -328,16 +348,12 @@ CONTAINS
         & s_star(:))                             ! out
     END IF
 
-    ! @todo - hack for oceans boxes (land tile is direct child of root tile)
-    !$claw acc data present(fract)
-    CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
-    !$claw acc update device(fract)
-    !$claw acc end data
-
-    !$claw acc data present(fract,s_star,t2s_conv)
+    ! Todo: Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
+    ! leading to a crash in convect_tables (lake and land tiles need to be direct children of root tile!)
+    !$claw acc data present(is_ocean,is_lake,s_star,t2s_conv)
     !$claw acc parallel loop gang vector
     DO i=1, size(s_star,dim=1)
-      IF (fract(i) < EPSILON(1._wp)) THEN
+      IF (is_ocean(i) .OR. is_lake(i)) THEN
         ! s_star(:) = s_old(:)
         s_star(i) = 280._wp * t2s_conv(i)
       END IF

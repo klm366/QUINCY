@@ -667,23 +667,23 @@ CONTAINS
       ! END DO
 
       WHERE (hd_mask(:,:) == 0._wp)
-        ! ocean inflow cells [m3/s]
+        ! ocean inflow cells
         discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
-        discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
+        discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp .AND. basin_mask(:,:) == 0._wp)
-        ! internal drainage cells [m3/s]
+        ! internal drainage cells
         internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
-        discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
+        discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
-        ! lake water drained into internal lake [m3/s]
+        ! lake water drained into internal lake
         lake_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
-        discharge(:,:) = 0._wp
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
+        discharge(:,:) = 0._wp
       END WHERE
       ! drainage at lake sink points and runoff above lake
       lake_drain(:,:) = lake_drain(:,:) + lake_inflow(:,:) 

@@ -331,7 +331,11 @@ CONTAINS
      !    Note: problem still exists in the 26.10.2015 version of icon-les-dev !
      !    However taken from mo_psrad_orbit works... perhaps precompiler command necessary here...
 #ifdef __ICON__
+#ifdef __NO_RTE_RRTMGP__
     USE mo_psrad_orbit,       ONLY: inquire_declination
+#else
+    USE mo_radiation_orbit,   ONLY: inquire_declination
+#endif
 #else
     USE mo_orbit,             ONLY: inquire_declination
 #endif
@@ -360,7 +364,7 @@ CONTAINS
     dsl4jsb_Def_memory(PHENO_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl
+    dsl4jsb_Real3D_onChunk :: scaling_fact_cl
     dsl4jsb_Real2D_onChunk :: lai
 
     ! Get local variables from options argument
@@ -390,8 +394,8 @@ CONTAINS
     grid => Get_grid(model%grid_id)
     lat  => grid%lat(ics:ice, iblk)
 
-    dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                     ! in
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_, assimi_scaling_fact_cl) ! out
+    dsl4jsb_Get_var2D_onChunk(PHENO_,  lai)             ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_, scaling_fact_cl) ! out
 
     ! ---------------------------
     ! Go
@@ -406,12 +410,12 @@ CONTAINS
           & canopy_bound_lai(i-1),              & ! input
           & lai(:),                             & ! input
           & lat(:),                             & ! input
-          & assimi_scaling_fact_cl(:,i)         & ! output
+          & scaling_fact_cl(:,i)                & ! output
           & )
       END DO
     ELSE                                           ! to some vegetation classes nitrogen scaling is not applied
       !$claw expand parallel update savepoint=ser_jsb_assim_update_assimilation_scaling_factors_expand_0 tile_name=tile%name 
-      assimi_scaling_fact_cl(:,:) = 1._wp
+      scaling_fact_cl(:,:) = 1._wp
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -451,7 +455,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, assimi_scaling_fact_cl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(ASSIMI_, scaling_fact_cl, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -504,7 +508,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: CO2_air_mol           ! CO2 particle mixing ratio [molCO2/molDryAir]
 
-    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl
+    dsl4jsb_Real3D_onChunk :: scaling_fact_cl
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl
     dsl4jsb_Real3D_onChunk :: lai_cl                  ! Leaf area index [-]
 
@@ -537,7 +541,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_,      apar_per_lai_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   canopy_cond_unlimited)   ! out
 
@@ -554,7 +558,7 @@ CONTAINS
         & par_down_mol(:),                   & ! in
         & apar_per_lai_cl(:,icanopy),        & ! in
         & CO2_air_mol(:),                    & ! in
-        & assimi_scaling_fact_cl(:,icanopy), & ! in
+        & scaling_fact_cl(:,icanopy),        & ! in
         & canopy_cond_cl(:,icanopy)          & ! out
         & )
     END DO
@@ -796,7 +800,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: dark_respiration_cl
     dsl4jsb_Real2D_onChunk :: dark_respiration
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real3D_onChunk :: assimi_scaling_fact_cl ! Input
+    dsl4jsb_Real3D_onChunk :: scaling_fact_cl        ! Input
     dsl4jsb_Real2D_onChunk :: fract_fpc_max          ! in
     dsl4jsb_Real3D_onChunk :: canopy_cond_cl         ! InOut for water limited case here.
     dsl4jsb_Real3D_onChunk :: gross_assimilation_cl  ! Output.
@@ -845,7 +849,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_,      lai_cl)                  ! in
 
     dsl4jsb_Get_var2D_onChunk(PHENO_,    veg_fract_correction)    ! in
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   assimi_scaling_fact_cl)  ! in
+    dsl4jsb_Get_var3D_onChunk(ASSIMI_,   scaling_fact_cl)         ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max )          ! in
     dsl4jsb_Get_var3D_onChunk(ASSIMI_,   canopy_cond_cl)          ! in
 
@@ -883,7 +887,7 @@ CONTAINS
         & par_down_mol(:),                    & ! in
         & apar_per_lai_cl(:,icanopy),         & ! in
         & CO2_air_mol(:),                     & ! in
-        & assimi_scaling_fact_cl(:,icanopy),  & ! in
+        & scaling_fact_cl(:,icanopy),         & ! in
         & CO2_conc_leaf_cl(:,icanopy),        & ! out only for the water limited case here
         & canopy_cond_cl(:,icanopy),          & ! in  only for the water limited case here
         & gross_assimilation_cl(:,icanopy),   & ! out
@@ -1134,7 +1138,7 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Implementation of NPP buffer
-  !! Task "npp_buffer" calculates multi-annual average of potential  NPP for use in the DYNVEG module
+  !! Task "npp_buffer" calculates multi-annual average of potential  NPP for use in the NLCC process
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
@@ -1208,7 +1212,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   bclimit_min_gdd)         ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   tau_c_woods)             ! out
 
-    ! Accumulate NPP_sum_year and update NPP_mean_5year for DYNVEG
+    ! Accumulate NPP_sum_year and update NPP_mean_5year for NLCC
     lstart = is_time_experiment_start(options%current_datetime)
     new_year = is_newyear(options%current_datetime, dtime)
 
@@ -1222,7 +1226,7 @@ CONTAINS
        IF (MINVAL(NPP_mean_5year(:)) >= -999._wp) CALL message(TRIM(routine), 'initialisation of NPP_mean_5year')
     ENDIF
 
-    ! write lct information on variables to make them available on pft-tiles via function collect_var for DYNVEG
+    ! write lct information on variables to make them available on pft-tiles via function collect_var for NLCC
     land_cover_class(:) = REAL(dsl4jsb_Lctlib_param(LandcoverClass))
     bclimit_min_cold_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_min_cold_mmtemp))
     bclimit_max_cold_mmtemp(:) = REAL(dsl4jsb_Lctlib_param(bclimit_max_cold_mmtemp))

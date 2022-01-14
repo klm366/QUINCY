@@ -30,7 +30,7 @@ MODULE mo_assimi_config_class
   PUBLIC :: t_assimi_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
-     LOGICAL               :: init_running_means ! initialize npp buffer for DYNVEG
+     LOGICAL               :: init_running_means ! initialize npp buffer for NLCC process
      INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
                                                ! R: could be different for other processes e.g. for radiation
      REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
