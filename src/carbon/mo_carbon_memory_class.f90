@@ -130,7 +130,7 @@ MODULE mo_carbon_memory_class
       cflux_dist_greenreserve_2_soil,  & ! R: should be later renamed to C_2_GreenLitterPools
       cflux_dist_woods_2_soil,    & ! R: should be later renamed to C_2_WoodLitterPools
       cflux_fire_all_2_atm,       & ! R: should be later renamed to C_2_atmos
-                                    ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
+                                    ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)s-1]
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
       !fract_litter_wood_new,       & ! new fraction in above ground wood litter pool
 
@@ -212,18 +212,18 @@ MODULE mo_carbon_memory_class
       !cflux_herb_2_atm_ta,      & ! ..part of cflux_c_green_2_herb that goes into atmosphere
       cflux_dist_greenreserve_2_soil_ta,  & ! R: should be later renamed to C_2_GreenLitterPools_ta
       cflux_dist_woods_2_soil_ta,   & ! R: should be later renamed to C_2_WoodLitterPools_ta
-      cflux_fire_all_2_atm_ta,             & ! R: should be later renamed to C_2_atmos_ta
-                                    ! Carbon immedieatly released by fire per tile [mol(C)m-2(subtile)]
 
       ! variables needed with Spitfire to compute fuel classes from wood and green pools and litter
       fract_litter_wood_new_ta,      & ! new fraction in above ground wood litter pool
-      ! former (JS3) local variables. R: nur auf tile area benötigt!
-      cflux_npp_2_atm_ta,            & ! [kg(CO2)/m^2 s]  tile averages of net CO2 fluxes between
-      cflux_soilresp_2_atm_ta,       & !  .. biosphere (due to NPP, soil respiration and
-      cflux_herb_2_atm_ta,      & !  .. grazing) and atmosphere [kg(CO2)/(m^2(ground) s)]
-                                       ! .. (positive for emission to atmosphere,
-                                       ! ..  negative for absorption by biosphere)
-      cflux_npp_2_atm_yday_ta          ! previous day CO2 flux from actual NPP, required for C conservation test
+
+      ! tile averages of net CO2 fluxes between various compartments and atmosphere [kg(CO2)/m^2 s]  
+      ! .. positive for emission to atmosphere
+      ! .. negative for absorption by biosphere
+      co2flux_npp_2_atm_ta,          & ! fluxes due to NPP
+      co2flux_soilresp_2_atm_ta,     & ! fluxes due to soil respiration
+      co2flux_herb_2_atm_ta,         & ! fluxes due to grazing
+      co2flux_fire_all_2_atm_ta,     & ! Carbon immediatly released by fire per tile
+      co2flux_npp_2_atm_yday_ta        ! previous day CO2 flux from actual NPP, required for C conservation test
 
 
     ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
@@ -690,9 +690,9 @@ CONTAINS
       & output_level=MEDIUM,                                                                            &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('c2atmos', mem%cflux_fire_all_2_atm,                                                         &
+    CALL mem%Add_var('cflux_fire_2_atmos', mem%cflux_fire_all_2_atm,                                    &
       & hgrid, surface,                                                                                           &
-      & t_cf('cflux_fire_all_2_atm', 'mol(C) m-2(canopy)', 'Carbon flux into atmosphere.'),         &
+      & t_cf('cflux_fire_all_2_atm', 'mol(C) m-2(canopy) s-1', 'Carbon flux into atmosphere.'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
       & output_level=MEDIUM,                                                                                      &
@@ -1026,44 +1026,43 @@ CONTAINS
       & output_level=MEDIUM,                                                                               &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    ! @todo: this flux had a wrong unit 'mol(C) m-2 s-1' --> also check other fluxes such as "cflux_dist_woods_2_soil_ta"!
-    CALL mem%Add_var('c2atmos_ta', mem%cflux_fire_all_2_atm_ta,                                           &
+    CALL mem%Add_var('co2_l2a_fire_ta', mem%co2flux_fire_all_2_atm_ta,                                    &
       & hgrid, surface,                                                                                   &
-      & t_cf('cflux_fire_all_2_atm_ta', 'mol(C) m-2', 'Carbon flux from C pools to atmosphere due to fire.'), &
+      & t_cf('co2flux_fire_all_2_atm_ta', 'kg(CO2) m-2 s-1', 'CO2 flux from C pools to atmosphere due to fire.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                &
       & prefix, suffix,                                                                                   &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     ! R: In JSBACH3 the following variables are not written into the output.
-    CALL mem%Add_var('co2_l2a_npp_ta', mem%cflux_npp_2_atm_ta,                                                       &
+    CALL mem%Add_var('co2_l2a_npp_ta', mem%co2flux_npp_2_atm_ta,                                                     &
       & hgrid, surface,                                                                                              &
-      & t_cf('cflux_npp_2_atm_ta', 'kg(CO2) m-2 s-1', 'Net CO2 fluxes between biosphere and atmosphere due to NPP.'), &
+      & t_cf('co2flux_npp_2_atm_ta', 'kg(CO2) m-2 s-1', 'Net CO2 fluxes between biosphere and atmosphere due to NPP.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
       & prefix, suffix,                                                                                              &
       & output_level=BASIC,                                                                                &
       & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('co2_l2a_resp_ta', mem%cflux_soilresp_2_atm_ta,                                       &
+    CALL mem%Add_var('co2_l2a_resp_ta', mem%co2flux_soilresp_2_atm_ta,                                     &
       & hgrid, surface,                                                                                    &
-      & t_cf('cflux_soilresp_2_atm_ta', 'kg(CO2) m-2 s-1',                                                 &
+      & t_cf('co2flux_soilresp_2_atm_ta', 'kg(CO2) m-2 s-1',                                               &
       &      'Net CO2 fluxes between biosphere and atmosphere due to soil respiration.'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
       & prefix, suffix,                                                                                    &
       & output_level=BASIC,                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('co2_l2a_herb_ta', mem%cflux_herb_2_atm_ta,                                            &
+    CALL mem%Add_var('co2_l2a_herb_ta', mem%co2flux_herb_2_atm_ta,                                          &
       & hgrid, surface,                                                                                     &
-      & t_cf('cflux_herb_2_atm_ta', 'kg(CO2) m-2 s-1',                                                 &
+      & t_cf('co2flux_herb_2_atm_ta', 'kg(CO2) m-2 s-1',                                                    &
       &      'Net CO2 fluxes between biosphere and atmosphere due to herbivory.'),                          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                  &
       & prefix, suffix,                                                                                     &
       & output_level=BASIC,                                                                                &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
-    CALL mem%Add_var('co2_l2a_npp_yday_ta', mem%cflux_npp_2_atm_yday_ta,                                             &
+    CALL mem%Add_var('co2_l2a_npp_yday_ta', mem%co2flux_npp_2_atm_yday_ta,                                           &
       & hgrid, surface,                                                                                              &
-      & t_cf('cflux_npp_2_atm_yday_ta', 'kg(CO2) m-2 s-1', 'Net daily CO2 flux, only needed for conservation test.'), &
+      & t_cf('co2flux_npp_2_atm_yday_ta', 'kg(CO2) m-2 s-1', 'Net daily CO2 flux, only needed for conservation test.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                           &
       & prefix, suffix,                                                                                              &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
