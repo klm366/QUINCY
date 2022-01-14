@@ -292,20 +292,8 @@ CONTAINS
   ! Note that this routine should only be applied to special vegetation classes
   SUBROUTINE update_assimilation_scaling_factors(tile, options)
 
-    ! Use declarations
-    !USE mo_orbit,                 ONLY: inquire_declination
-     ! R: Returns declination calculated in last orbit call.
-     !    Problem: FATAL ERROR in inquire_declination: Not Initialized
-     !    This is because ICON did not call the calculation of orbital parameters in SUBROUTINE orbit_vsop87 or
-     !    alternatively in SUBROUTINE orbit_kepler. Therefore this seems to be a problem solved with the development of ICON...
-     !    Note: problem still exists in the 26.10.2015 version of icon-les-dev !
-     !    However taken from mo_psrad_orbit works... perhaps precompiler command necessary here...
 #ifdef __ICON__
-#ifdef __NO_RTE_RRTMGP__
-    USE mo_psrad_orbit,       ONLY: inquire_declination
-#else
     USE mo_radiation_orbit,   ONLY: inquire_declination
-#endif
 #else
     USE mo_orbit,             ONLY: inquire_declination
 #endif

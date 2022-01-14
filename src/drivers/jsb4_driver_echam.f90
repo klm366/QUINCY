@@ -72,8 +72,6 @@ PROGRAM jsb4_driver
 
   USE mo_timer, ONLY: init_timer, cleanup_timer, timer_start, timer_stop, timer_loop, timer_output, timer_restart
 
-  ! ICON would be:
-  ! USE mo_psrad_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
 !<<<
 
   IMPLICIT NONE
