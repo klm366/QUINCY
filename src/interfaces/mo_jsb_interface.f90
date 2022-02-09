@@ -102,7 +102,7 @@ CONTAINS
     & t_lice, qsat_lice, s_lice,                                        &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                    & !< out
     & albedo_lice,                                                      & !< out
-    & ice_fract_lake,                                                   & !< out
+    & fract_lake, ice_fract_lake,                                       & !< out
     ! For standalone jsbach
     & evapopot                                                          & !< out; optional
     & )
@@ -196,6 +196,7 @@ CONTAINS
       & latent_hflx_ice   (:), &
       & sensible_hflx_ice (:), &
       & albedo_lice       (:), &
+      & fract_lake        (:), &
       & ice_fract_lake    (:)
     ! For standalone jsbach:
     REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
@@ -328,6 +329,7 @@ CONTAINS
       & evapo_ice          = evapo_ice,          &
       & latent_hflx_ice    = latent_hflx_ice,    &
       & sensible_hflx_ice  = sensible_hflx_ice,  &
+      & fract_lake         = fract_lake,         &
       & ice_fract_lake     = ice_fract_lake,     &
       & albedo_lwtr        = albedo_lwtr,        &
       & albedo_lice        = albedo_lice         &
