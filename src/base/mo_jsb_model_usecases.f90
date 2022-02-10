@@ -310,6 +310,106 @@ CONTAINS
       & 'C4 hbp miscanthus',            &
       & 'C4 hbp panicum']
 
+    ! Index of PFT into lctlib columns
+    ! id is one less than in lctlib file because the first column (glacier) has been thrown away
+    INTEGER, PARAMETER :: pft_ids(npft) = (/ 1,2,3,4,9,10,11,12,14,15,19,21,22 /)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_hbp'
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, fract_varname='notsea')
+    model%top => box_tile
+
+#ifndef __NO_JSBACH_HD__
+    IF (model%processes(HD_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(HD_, ON_TILE_)
+    END IF
+#endif
+
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
+    END IF
+
+    IF (model%config%use_lakes) THEN
+      lake_tile => t_jsb_tile('lake', 'Lake tile', &
+        & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+        & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+      land_tile => t_jsb_tile('land', 'Land tile', &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+    ELSE
+      land_tile => t_jsb_tile('land', 'Land tile', &
+        & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+        & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+        & fract_varname='equal')   ! Fraction = 1.
+    END IF
+
+    IF (model%config%use_glacier) THEN
+      glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+        & processes = (/HYDRO_, SSE_/), &
+        & process_actions = (/ON_TILE_, ON_TILE_/), &
+        & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+    END IF
+
+    ! default jsb4: HYDRO_ is active at veg tile only to save runtime
+    IF (.NOT. model%config%use_quincy) THEN
+      veg_tile => t_jsb_tile('veg', 'Veg tile', &
+        & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+        & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+        & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+        & fract_varname='fract_veg')
+
+      IF (model%processes(ALCC_)%p%config%active) THEN
+        CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
+      END IF
+      !
+      IF (model%processes(NLCC_)%p%config%active) THEN
+        CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
+      END IF
+      
+    !  VEG_ is active
+    ELSE
+      veg_tile => t_jsb_tile('veg', 'Veg tile', &
+        & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   PHENO_,    VEG_   /), &
+        & process_actions = (/ON_LEAFS_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+        & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+        & fract_varname='fract_veg')
+    ENDIF
+
+    IF (model%processes(TLCC_)%p%config%active) THEN
+      CALL veg_tile%Set_process_action(TLCC_, ON_TILE_, AGGREGATE_)
+    END IF
+
+      
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)
+    END IF
+    IF (model%processes(TCQ_)%p%config%active) THEN
+      CALL veg_tile%Set_process_action(TCQ_, ON_LEAFS_, AGGREGATE_)
+    END IF
+    IF (model%processes(FUEL_)%p%config%active) THEN
+      CALL veg_tile%Set_process_action(FUEL_, ON_TILE_, AGGREGATE_)
+    END IF
+    IF (model%processes(DISTURB_)%p%config%active) THEN
+      CALL veg_tile%Set_process_action(DISTURB_, ON_LEAFS_, AGGREGATE_)
+    END IF
+
+    DO i=1,npft
+      pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
+        & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+    END DO
+
+    ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
+    ! IF (ASSOCIATED(glacier_tile)) CONTINUE
+    ! IF (ASSOCIATED(lake_tile)) CONTINUE
+    ! IF (ASSOCIATED(pft_tile)) CONTINUE
+        
+    NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
+    IF (model%config%use_glacier) NULLIFY(glacier_tile)
+    IF (model%config%use_lakes) NULLIFY(lake_tile)
     ! TODO: include processes and PFTs for miscantus and panicum following Dorothea Mayer's PhD (2017)
   END SUBROUTINE init_usecase_hbp
 #endif
