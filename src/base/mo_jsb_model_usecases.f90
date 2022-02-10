@@ -307,7 +307,7 @@ CONTAINS
       & 'C3 pasture',                   &
       & 'C4 pasture',                   &
       & 'C3 crops',                     &
-      & 'C4 hbp miscantus',             &
+      & 'C4 hbp miscanthus',            &
       & 'C4 hbp panicum']
 
     ! TODO: include processes and PFTs for miscantus and panicum following Dorothea Mayer's PhD (2017)
