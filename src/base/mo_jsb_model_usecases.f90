@@ -54,6 +54,9 @@ CONTAINS
 
     CASE ('jsbach_pfts')
       CALL init_usecase_pfts(model)
+    
+    CASE ('jsbach_hbp')
+      CALL init_usecase_hbp(model)
 
     CASE DEFAULT
       CALL finish(TRIM(routine), 'JSBACH usecase not defined.')
@@ -278,5 +281,36 @@ CONTAINS
 
   END SUBROUTINE init_usecase_pfts
 
+  SUBROUTINE init_usecase_hbp(model)
+  
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile, pft_tile
+
+    INTEGER :: i
+
+    INTEGER, PARAMETER :: npft = 13
+
+    CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
+    & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
+    & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11', 'pft12', 'pft13' ]
+
+    CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
+      & 'Tropical broadleaf evergreen', &
+      & 'Tropical broadleaf deciduous', &
+      & 'Extra-tropical evergreen',     &
+      & 'Extra-tropical deciduous',     &
+      & 'Raingreen shrubs',             &
+      & 'Deciduous shrubs',             &
+      & 'C3 grass',                     &
+      & 'C4 grass',                     &
+      & 'C3 pasture',                   &
+      & 'C4 pasture',                   &
+      & 'C3 crops',                     &
+      & 'C4 hbp miscantus',             &
+      & 'C4 hbp panicum']
+
+    ! TODO: include processes and PFTs for miscantus and panicum following Dorothea Mayer's PhD (2017)
+  END SUBROUTINE init_usecase_hbp
 #endif
 END MODULE mo_jsb_model_usecases
