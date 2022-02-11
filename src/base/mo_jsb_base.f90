@@ -238,8 +238,8 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    model%lctlib => Read_lctlib('lctlib_nlct21_copy.def', model%config%use_quincy)
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21_copy.def')
+    model%lctlib => Read_lctlib('lctlib_nlct.def', model%config%use_quincy)
+    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct.def')
 
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
