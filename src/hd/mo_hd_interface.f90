@@ -385,7 +385,7 @@ CONTAINS
     CASE ('full')
 
       ! update grid cell lake height [m]
-      WHERE (basin_mask(:) > 0._wp)
+      WHERE (basin_mask(:) > 0._wp .AND. volume_lake(:)>0._wp)
         WHERE (volume_lake(:).LE.volume_lake_max(:))
           height_lake(:) = height_lake_max(:) * ( volume_lake(:) / volume_lake_max(:) )**(1._wp/(1._wp+(2._wp/shp(:))))
         ELSE WHERE (volume_lake(:).GT.volume_lake_max(:))
@@ -397,7 +397,7 @@ CONTAINS
       height_dyn(:) = height_oro_min(:) + height_lake(:)
 
       ! update grid cell lake area [m3]
-      WHERE (basin_mask(:) > 0._wp)
+      WHERE (basin_mask(:) > 0._wp .AND. volume_lake(:)>0._wp)
         area_lake(:) = area_lake_max(:) * MIN( ( volume_lake(:) / volume_lake_max(:) )**(2._wp/(2._wp+shp(:))), 1._wp )
       ELSE WHERE
         area_lake(:) = 0._wp
