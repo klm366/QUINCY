@@ -52,12 +52,9 @@ MODULE mo_hd_memory_class
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
       volume_lake     , &  !< lake water volume storage of endorheic lakes [m^3]
-      fract_lake      , &  !< lake fraction of endorheic lakes [-]
-      fract_land_changes,  &  !< lake water volume storage of endorheic lakes [m^3]
-      fract_lake_changes,  &  !< lake water volume storage of endorheic lakes [m^3]
-      inflow_lake     , &  !< lake water outflow to neighbor grid cell [m^3/s]
-      outflow_lake    , &  !< lake water outflow to neighbor grid cell [m^3/s]
-      lake_to_outlet  , &  !< lake water outflow to neighbor grid cell [m^3]
+      lake_inflow     , &  !< lake water outflow to neighbor grid cell [m^3/s]
+      lake_outflow    , &  !< lake water outflow to neighbor grid cell [m^3/s]
+      drainage_lake    , &  !< lake water outflow to neighbor grid cell [m^3]
       height_lake     , &  !< actual lake water height of endorheic lakes [m]
       area_lake       , &  !< actual lake water area of endorheic lakes [m^2]
       height_lake_max , &  !< maximum lake water height of endorheic lakes [m]
@@ -69,8 +66,12 @@ MODULE mo_hd_memory_class
       basin_mask      , &  !< lake basin grid points flagged as >0 else 0 [-] 
       outlets         , &  !< lake outlet grid points flagged with basin number else 0 [-] 
       volume_out      , &  !< volume in ICON grid cell at outlet height [m^3] 
-      lake_inflow     , &  !< lake inflow from runoff (precipitation minus evaporation) [m^3/s]
-      lake_drain      , &  !< lake inflow from runoff and discharge into lake storage [m^3/s]
+      runoff_lake     , &  !< lake inflow from runoff (precipitation minus evaporation) [m^3/s]
+      discharge_lake     , &  !< lake inflow from land runoff, drainge and discharge into lake [m^3/s]
+      runoff_land     , &  !< land surface runoff into lake (precipitation minus evaporation) [m^3/s]
+      drainage_land   , &  !< underground water drainge from from into lake [m^3/s]
+      discharge_river , &  !< river discharge from upstream cells into lake [m^3/s]
+
       water_budget    , &
       water_budget_old, &
       water_flux      , &
@@ -226,41 +227,25 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'fract_land_changes', mem%fract_land_changes,             &
-      & hgrid, surface,                                                          &
-      & t_cf('fract_land_changes', 'm3', 'water content of the endorheic lake'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
-      & prefix, suffix,                                                          &
-      & output_level=BASIC,                                                      &
-      & initval_r=0.0_wp )
-
-     CALL mem%Add_var( 'fract_lake_changes', mem%fract_lake_changes,             &
-      & hgrid, surface,                                                          &
-      & t_cf('fract_lake_changes', 'm3', 'water content of the endorheic lake'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
-      & prefix, suffix,                                                          &
-      & output_level=BASIC,                                                      &
-      & initval_r=0.0_wp )
-
-     CALL mem%Add_var( 'outflow_lake', mem%outflow_lake,                     &
+     CALL mem%Add_var( 'lake_outflow', mem%lake_outflow,                     &
       & hgrid, surface,                                                      &
-      & t_cf('outflow_lake', 'm3', 'lake outflow to neighbor grid cell'),    &
+      & t_cf('lake_outflow', 'm3', 'lake outflow to neighbor grid cell'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'inflow_lake', mem%inflow_lake,                       &
+     CALL mem%Add_var( 'lake_inflow', mem%lake_inflow,                       &
       & hgrid, surface,                                                      &
-      & t_cf('inflow_lake', 'm3', 'lake inflow to neighbor grid cell'),      &
+      & t_cf('lake_inflow', 'm3', 'lake inflow to neighbor grid cell'),      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'lake_to_outlet', mem%lake_to_outlet,                 &
+     CALL mem%Add_var( 'drainage_lake', mem%drainage_lake,                 &
       & hgrid, surface,                                                      &
-      & t_cf('lake_to_outlet', 'm3', 'lake outflow to neighbor grid cell'),  &
+      & t_cf('drainage_lake', 'm3', 'lake outflow to outlet'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -354,17 +339,41 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-     CALL mem%Add_var( 'lake_inflow', mem%lake_inflow,                       &
+     CALL mem%Add_var( 'runoff_lake', mem%runoff_lake,                       &
       & hgrid, surface,                                                      &
-      & t_cf('lake_inflow', 'm3/s', 'lake inflow from runoff'),              &
+      & t_cf('runoff_lake', 'm3/s', 'lake inflow from runoff'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'lake_drain', mem%lake_drain,                         &
+     CALL mem%Add_var( 'discharge_lake', mem%discharge_lake,                         &
       & hgrid, surface,                                                      &
-      & t_cf('lake_drain', 'm3/s', 'lake inflow from runoff and discharge'), &
+      & t_cf('discharge_lake', 'm3/s', 'lake discharge'),                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'runoff_land', mem%runoff_land,                         &
+      & hgrid, surface,                                                      &
+      & t_cf('runoff_land', 'm3/s', 'land surface runoff into lake'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'drainage_land', mem%drainage_land,                         &
+      & hgrid, surface,                                                      &
+      & t_cf('drainage_land', 'm3/s', 'underground water drainage into lake'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'discharge_river', mem%discharge_river,                         &
+      & hgrid, surface,                                                      &
+      & t_cf('discharge_river', 'm3/s', 'river discharge into lake'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
