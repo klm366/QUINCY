@@ -293,7 +293,8 @@ CONTAINS
 
     CHARACTER(len=5), PARAMETER :: pft_shortnames(npft) = [character(len=5) ::  &
     & 'pft01', 'pft02', 'pft03', 'pft04', 'pft05', 'pft06', &
-    & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11', 'pft12', 'pft13' ]
+    & 'pft07', 'pft08', 'pft09', 'pft10', 'pft11', 'pft12', &
+    & 'pft13' ]
 
     CHARACTER(len=30), PARAMETER :: pft_longnames(npft) = [character(len=30) :: &
       & 'Tropical broadleaf evergreen', &
