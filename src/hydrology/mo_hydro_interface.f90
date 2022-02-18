@@ -2904,4 +2904,3 @@ CONTAINS
 #endif
   END SUBROUTINE global_hydrology_diagnostics
 
-#endif

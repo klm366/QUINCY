@@ -321,4 +321,3 @@ CONTAINS
   END SUBROUTINE Init_hydro_config
 
 #endif
-END MODULE mo_hydro_config_class
