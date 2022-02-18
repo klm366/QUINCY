@@ -967,6 +967,7 @@ CONTAINS
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
       & ltpe_closed, ltpe_open,                             &
+      & dsl4jsb_Config(HYDRO_)%l_infil_subzero,             &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
       &                                fract_org_sl  (:,:), &
