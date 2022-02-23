@@ -2903,4 +2903,3 @@ CONTAINS
     DEALLOCATE (scaling, in_domain)
 #endif
   END SUBROUTINE global_hydrology_diagnostics
-
