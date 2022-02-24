@@ -828,6 +828,7 @@ CONTAINS
       & global_lake_volume,    &  ! water budget change within the time step
       & global_lake_volume_error,  &  ! water budget change within the time step
       & global_lateral_flow_error, &  ! water budget change within the time step
+      & global_lateral_flow_abs, &  ! water budget change within the time step
       & outlets_maxs,          &
       & neigh_dist,            &
       & steplen
@@ -973,7 +974,7 @@ CONTAINS
  
               height_lake_diff = MIN(height_lake(njc(n),nblk(n)), height_dyn(njc(n),nblk(n)) - height_dyn(jc,blk))
               CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
-              u_lake           = 0.01_wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
+              u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
               k_lake           = neigh_dist/u_lake
               ncount = COUNT(height_dyn(jc,blk)==PACK(height_dyn(:,:),nneigh_mask(:,:)))
               lake_inflow(jc,blk) = lake_inflow(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, volume_lake(njc(n),nblk(n))/steplen ) / ncount
@@ -987,7 +988,7 @@ CONTAINS
                  basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))         ) THEN               
               height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
               CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
-              u_lake           = 0.01_wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
+              u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
               k_lake           = neigh_dist/u_lake
               ! make sure neighbor cells have different dynamic height
               ! (water outflow only into one neighboring grid cells allowed)
@@ -1002,7 +1003,8 @@ CONTAINS
       ! checkout water budget conservation: lateral flow only
       volume_lake(:,:) = volume_lake(:,:) + ( lake_outflow(:,:) + lake_inflow(:,:) ) * steplen
       global_lateral_flow_error = global_sum_array((lake_outflow(:,:)+lake_inflow(:,:))*in_domain(:,:))
-      IF (ABS(global_lateral_flow_error) > 10._wp*EPSILON(1._wp)) THEN
+      global_lateral_flow_abs   = global_sum_array((ABS(lake_outflow(:,:))+ABS(lake_inflow(:,:)))*in_domain(:,:))
+      IF (ABS(global_lateral_flow_error)/global_lateral_flow_abs > 10._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
              global_lateral_flow_error,' m3'
         CALL finish (TRIM(routine), message_text)
