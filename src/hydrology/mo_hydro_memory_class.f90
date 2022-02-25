@@ -181,7 +181,8 @@ MODULE mo_hydro_memory_class
       discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
       w_rootzone_rel_gmean,   & !< Global mean relative rootzone moisture   [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
-      w_snow_gsum               !< Global snow amount on non-glacier land   [Gt]
+      w_snow_gsum,            & !< Global snow amount on non-glacier land   [Gt]
+      water_budget_gsum         !< Global land water budget                 [m3]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -1047,6 +1048,12 @@ CONTAINS
       CALL mem%Add_var('w_snow_gsum', mem%w_snow_gsum,                                   &
         & hgrid, surface,                                                                &
         & t_cf('w_snow_gsum', 'Gt', 'Global snow amount on non-glacier land'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('water_budget_gsum', mem%water_budget_gsum,                       &
+        & hgrid, surface,                                                                &
+        & t_cf('water_budget_gsum', 'm3', 'Global land water budget error'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
