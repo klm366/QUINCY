@@ -16,7 +16,7 @@ MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish, message_text
+  USE mo_exception, ONLY: finish, message, message_text, em_warn
 
   IMPLICIT NONE
   PRIVATE
@@ -1491,26 +1491,26 @@ CONTAINS
 #ifndef _OPENACC
     ! make sure there is no negative soil ice
     IF (ANY(soil_ice_l(:,:) < 0._wp)) THEN
-      WRITE (message_text,*) 'negative soil ice: ', MINVAL(soil_ice_l), ' at ', MINLOC(soil_ice_l)
-      CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      ! soil_ice_l(:,:) = MAX(soil_ice_l(:,:), 0._wp)
+       WRITE (message_text,*) 'negative soil ice: ', MINVAL(soil_ice_l), ' at ', MINLOC(soil_ice_l)
+      ! CALL finish ('digest_evapotrans', message_text)
+      CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+      soil_ice_l(:,:) = MAX(soil_ice_l(:,:), 0._wp)
     END IF
 
     ! make sure there is no negative soil moisture and soil moisture does not exceed field capacity
     IF (ANY(ws_l(:,:) < 0._wp)) THEN
-      WRITE (message_text,*) 'negative soil moisture: ', MINVAL(ws_l), ' at ', MINLOC(ws_l)
-      CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      ! ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
+       WRITE (message_text,*) 'negative soil moisture: ', MINVAL(ws_l), ' at ', MINLOC(ws_l)
+      ! CALL finish ('digest_evapotrans', message_text)
+      CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+      ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
     END IF
     IF (ANY(ws_l(:,:) > field_cap_l(:,:) + zfcmin)) THEN
       max2d(:) = MAXLOC(ws_l(:,:) - field_cap_l(:,:))
       WRITE (message_text,*) 'liquid water content above field capacity: at ',max2d(:) ,': ws_l: ', ws_l(max2d(1),max2d(2)), &
          ' field_cap_l: ', field_cap_l(max2d(1),max2d(2))
-      CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      ! ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
+      ! CALL finish ('digest_evapotrans', message_text)
+      CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+      ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
     END IF
 #endif
 
@@ -1594,9 +1594,9 @@ CONTAINS
 #ifndef _OPENACC
     IF (ANY(ws_l(:,:) < 0._wp)) THEN
       WRITE (message_text,*) 'negative soil moisture: ', MINVAL(ws_l), ' at ', MINLOC(ws_l)
-      CALL finish ('digest_infilt', message_text)
-      ! CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
-      ! ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
+      ! CALL finish ('digest_infilt', message_text)
+      CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
+      ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
     END IF
 #endif
 

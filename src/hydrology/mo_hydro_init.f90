@@ -52,6 +52,7 @@ MODULE mo_hydro_init
       & vol_p_wilt(:,:),      &
       & root_depth(:,:),      &
       & w_snow_soil(:,:),     &
+      & soil_org_cont(:,:),   &
       & w_soil_sl(:,:,:)
   END TYPE t_hydro_init_vars
 
@@ -106,6 +107,7 @@ CONTAINS
       & hydro_init_vars%vol_p_wilt      ,       &
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%w_snow_soil     ,       &
+      & hydro_init_vars%soil_org_cont   ,       &
       & hydro_init_vars%w_soil_sl               &
       & )
 
@@ -155,6 +157,7 @@ CONTAINS
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
       & hydro_init_vars%w_snow_soil     (nproma, nblks),       &
+      & hydro_init_vars%soil_org_cont   (nproma, nblks),       &
       & hydro_init_vars%w_soil_sl       (nproma, nsoil, nblks) &
       & )
 
@@ -171,6 +174,7 @@ CONTAINS
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
       hydro_init_vars%w_snow_soil    (:,:)   = missval
+      hydro_init_vars%soil_org_cont  (:,:)   = missval
       hydro_init_vars%w_soil_sl      (:,:,:) = missval
 
     ! Get hydrology config
@@ -258,6 +262,14 @@ CONTAINS
         & variable_name='wilting_point',                            &
         & fill_array=hydro_init_vars%vol_p_wilt)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      IF (dsl4jsb_Config(HYDRO_)%l_socc30) THEN
+        ! Soil organic content within the upper 30 cm (used as mask for cool_ruby project)
+        ptr_2D => input_file%Read_2d(                 &
+          & variable_name='socc30',          &
+          & fill_array = hydro_init_vars%soil_org_cont)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+      END IF
 
       CALL input_file%Close()
 
@@ -402,6 +414,9 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
+      ! Soil organic carbon content within the upper 30 cm of the soil column
+      dsl4jsb_var_ptr(HYDRO_, soil_org_cont) = hydro_init_vars%soil_org_cont
+
       !$acc update device(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl), &
@@ -412,9 +427,11 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, matrix_pot), &
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, soil_org_cont), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, max_moist), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) )
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) ), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_org_cont)
 
     END IF
 
@@ -521,6 +538,16 @@ CONTAINS
         ! Save top layer water holding capacity of mineral soil for evaporation calculations
         dsl4jsb_var_ptr(HYDRO_, maxtop_mineral)(:,:) = dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)(:,1,:)
       END IF
+
+      IF (dsl4jsb_Config(HYDRO_)%l_socc30) THEN
+        ! Overwrite organic fraction with mask derived from the soil organic
+        ! carbon content dataset for cool ruby experiments
+        dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
+        WHERE (dsl4jsb_var2D_onDomain(HYDRO_, soil_org_cont) > 1.0e-10_wp)
+          dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = 0.99999_wp
+        END WHERE
+      END IF
+
       ! The following can change later depending on the organic layers and soil ice content.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
