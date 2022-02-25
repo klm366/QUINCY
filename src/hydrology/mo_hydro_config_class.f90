@@ -58,6 +58,7 @@ MODULE mo_hydro_config_class
       & l_percolation_theory,   & !< The saturated hydraulic conductivity is calculated following
                                   !  the percolation theory
       & l_scool_avail_to_plants,  & !< Consider supercooled water to be available to plants
+      & l_feed_sro,             &   !< Fraction of water going into surface runoff even if it could infiltrate
                                     !< Switches for water stress:
       & l_ice_reduces_maxavail,   & !<   Maximum available water is reduced by the amount of ice
       & l_scool_reduces_maxavail, & !<   Maximum available water is reduced by supercooled water
@@ -95,7 +96,7 @@ CONTAINS
     LOGICAL     :: l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates
     LOGICAL     :: l_drain_lat, l_percolation_theory
     LOGICAL     :: l_scool_avail_to_plants, l_ice_reduces_maxavail, l_scool_reduces_maxavail
-    LOGICAL     :: l_ice_reduces_maxtop, l_scool_reduces_maxtop, l_maxtop_depend_on_org
+    LOGICAL     :: l_ice_reduces_maxtop, l_scool_reduces_maxtop, l_maxtop_depend_on_org, l_feed_sro
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -127,7 +128,8 @@ CONTAINS
       & l_scool_reduces_maxavail,   &
       & l_ice_reduces_maxtop,       &
       & l_scool_reduces_maxtop,     &
-      & l_maxtop_depend_on_org
+      & l_maxtop_depend_on_org,     &
+      & l_feed_sro
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -172,6 +174,7 @@ CONTAINS
     l_ice_reduces_maxtop     = .TRUE.
     l_scool_reduces_maxtop   = .FALSE.
     l_maxtop_depend_on_org   = .TRUE.
+    l_feed_sro = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -289,6 +292,11 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_maxtop_depend_on_org=T. Namelist definition of l_maxtop_depend_on_org ignored.')
         l_maxtop_depend_on_org = .TRUE.
       END IF
+      IF (l_feed_sro) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_feed_sro=F. Namelist definition of l_feed_sro ignored.')
+        l_feed_sro = .FALSE.
+      END IF
       IF (l_socc30) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_socc30=F. Namelist definition of l_socc30 ignored.')
@@ -355,6 +363,10 @@ CONTAINS
       CALL message(TRIM(routine), &
        & 'Replace organic carbon layer with SOCC30 map: ' &
        & //TRIM(logical2string(l_socc30)))
+      config%l_feed_sro = l_feed_sro
+      CALL message(TRIM(routine), &
+       & 'Assign minimum fraction of water to surface runoff: ' &
+       & //TRIM(logical2string(l_feed_sro)))
     END IF
     CALL close_nml(nml_handler)
 

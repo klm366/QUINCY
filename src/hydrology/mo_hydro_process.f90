@@ -408,6 +408,7 @@ CONTAINS
   ! @param [in]      l_scool_percolates     Supercooled water percolates
   ! @param [in]      l_scool_avail_to_plants Supercooled water is available to plants
   ! @param [in]      l_drain_lat            Allow lateral drainage, i.e. drainage from upper to soil layers
+  ! @param [in]      l_feed_sro             Guarantee minimum surface runoff (0.2 * water_to_soil)
   ! @param [in]      soil_depth_l       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_l       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      fract_org_l        Fractions per soil layer of organic comonent []
@@ -442,7 +443,7 @@ CONTAINS
     ! in
     & nidx, nsoil, nlat, delta_time, ltpe_closed, ltpe_open,                                                     &
     & l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top,                         &
-    & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates, l_drain_lat,                     &
+    & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates, l_drain_lat, l_feed_sro,         &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
     & pot_scool_l,                                                                                               &
@@ -465,7 +466,7 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top, &
-      & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates, l_drain_lat
+      & l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates, l_drain_lat, l_feed_sro
     REAL(wp), INTENT(in), DIMENSION(:,:) ::                         &
       & soil_depth_l, root_depth_l, fract_org_l,                    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l,  &
@@ -494,6 +495,7 @@ CONTAINS
       & evapo_soil_in_m(nidx),        & !< evaporation from the soil (without transpiration) [m]
       & transpiration_in_m(nidx),     & !< transpiration within time step [m]
       & ws_rel(nidx),                 & !< relative soil moisture (0: wilting point, 1: field capacity)
+      & sromin(nidx),                 & !< minimum surface runoff amount [m]
       & infilt(nidx)                    !< infiltration [m]
 
     REAL(wp) ::              &
@@ -511,7 +513,7 @@ CONTAINS
     INTEGER :: jllog = 0
 
 
-    !$claw acc data pcreate(evapo_soil_in_m,transpiration_in_m,infilt,ws_max,ws_min_drain,ws_keep,ice_rootzone,vfc_times_sd_l)
+    !$claw acc data pcreate(evapo_soil_in_m,transpiration_in_m,infilt,ws_max,ws_min_drain,ws_keep,ice_rootzone,vfc_times_sd_l,sromin)
     !$claw acc data present(transpiration_in_m,transpiration,wsat_l,vol_porosity_l, &
     !$claw acc soil_depth_l,soil_ice_l,field_cap_l,vol_field_cap_l,p_wilt_l,vol_p_wilt_l)
     !$claw acc parallel
@@ -622,6 +624,13 @@ CONTAINS
             ws_keep = ws(i)                       ! liquid water content of the root zone
             ws(i) = ws(i) + ice_rootzone(i)       ! root zone soil water including ice
           END IF
+          !tost: assign minimum water fraction to surface runoff
+          ! independent of soil state over organic top layer
+          IF (l_feed_sro .AND. fract_org_l(i,1) > 0.9_wp) THEN
+            sromin(i) = water_to_soil(i) * 0.2_wp
+          ELSE
+            sromin(i) = 0._wp
+          END IF
           IF (water_to_soil(i) > 0._wp .AND. ws(i) > ws_min_drain(i)) THEN ! soilwater content above limit for drainage
             ! compare jsbach3 documentation section 2.3.2.2
             ws_rel(i) = MIN(1._wp, ws(i) / ws_max(i))                      ! relative soil moisture
@@ -630,11 +639,11 @@ CONTAINS
 
             runoff(i) = water_to_soil(i) - (ws_max(i)-ws(i)) ! if >0: amount of water exceeding water holding capacity
             IF (zvol > 0._wp) runoff(i) = runoff(i) + ws_max(i)*zvol**zb1
-            runoff(i) = MAX(MIN(runoff(i), water_to_soil(i)), 0._wp)   ! no negative runoff, runoff limited by available water
-            infilt(i) = water_to_soil(i) - runoff(i)                   ! water not going into runoff is infiltrated
+            runoff(i) = MAX(MIN(runoff(i), water_to_soil(i)), sromin(i))   ! no negative runoff, runoff limited by available water
+            infilt(i) = water_to_soil(i) - runoff(i)                       ! water not going into runoff is infiltrated
           ELSE
-            runoff(i) = 0._wp                                            ! no runoff as soil is too dry
-            infilt(i) = water_to_soil(i)                                ! all water infiltrated
+            runoff(i) = sromin(i)                                          ! no runoff as soil is too dry
+            infilt(i) = water_to_soil(i)                                   ! all water infiltrated
           END IF
           IF (l_runoff_with_ice) THEN
             !just to have again only the liquid soil water in ws
