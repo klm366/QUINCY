@@ -225,8 +225,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
-    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  & 
-    !$claw acc soil_depth_sl_vol_porosity_sl_tmp)
+    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,is_ocean,is_lake, & 
+    !$claw acc has_snow_layer,soil_depth_sl_vol_porosity_sl_tmp)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     !$claw acc data present(is_glacier)
