@@ -151,9 +151,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: snow_depth_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_ice_sl
+    dsl4jsb_Real3D_onChunk :: i_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_freeze_sl
-    dsl4jsb_Real3D_onChunk :: w_ice_melt_sl
+    dsl4jsb_Real3D_onChunk :: i_soil_melt_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
@@ -247,9 +247,9 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)    ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)        ! inout
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)         ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, i_soil_sl)        ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_freeze_sl) ! out
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)    ! out
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, i_soil_melt_sl)   ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
@@ -483,10 +483,10 @@ CONTAINS
         & bclapp_sl                           (:,:), &
         ! optional, inout
         & w_soil_sl                           (:,:), &
-        & w_ice_sl                            (:,:), &
+        & i_soil_sl                           (:,:), &
         ! optional, out
         & w_soil_freeze_sl                    (:,:), &
-        & w_ice_melt_sl                       (:,:)  &
+        & i_soil_melt_sl                      (:,:)  &
         & )
       !$claw acc exit data delete(ws_max_sl)
       DEALLOCATE(ws_max_sl)
@@ -555,7 +555,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SSE_,   t_snow,           weighted_by_fract)
     END IF
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, i_soil_melt_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -590,7 +590,7 @@ CONTAINS
       & vol_heat_cap_sl,      &
       & heat_cond_sl,         & 
       & w_soil_sl,            &
-      & w_ice_sl,             &
+      & i_soil_sl,            &
       & vol_porosity_sl,      &
       & vol_field_cap_sl
 
@@ -668,7 +668,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap)
     dsl4jsb_Get_var2D_onChunk(SSE_, heat_cond)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, i_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)  
 
@@ -685,13 +685,13 @@ CONTAINS
       ALLOCATE(fract_water(nc, nsoil), fract_ice(nc, nsoil))
       !$claw acc enter data pcreate(fract_water, fract_ice)
 
-      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,w_ice_sl)
+      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,i_soil_sl)
       !$claw acc parallel loop gang vector collapse(2)
       DO i = 1, size(soil_depth_sl, dim=1)
         DO j = 1, size(soil_depth_sl, dim=2)
           IF (soil_depth_sl(i,j) > 0._wp) THEN
             fract_water(i,j) = w_soil_sl(i,j) / soil_depth_sl(i,j)
-            fract_ice  (i,j) = w_ice_sl(i,j) / soil_depth_sl(i,j)
+            fract_ice  (i,j) = i_soil_sl(i,j) / soil_depth_sl(i,j)
           ELSE
             fract_water(i,j) = 0._wp
             fract_ice  (i,j) = 0._wp
@@ -747,7 +747,7 @@ CONTAINS
         !&                        SPREAD( heat_cond(:),                    DIM=2, ncopies=nsoil)             , &
         &                                heat_cond_tmp(:,:)                                                 , &
         &                                w_soil_sl(:,:)                                                     , &
-        &                                w_ice_sl(:,:)                                                      , &
+        &                                i_soil_sl(:,:)                                                     , &
         &                                vol_porosity_sl(:,:)                                               , &
         &                                vol_field_cap_sl(:,:)                                              , &
         &                                fract_org_sl(:,:)                                                  , &

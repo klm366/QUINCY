@@ -29,15 +29,18 @@ MODULE mo_sse_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_sse_config
     INTEGER  :: nsnow           !< Maximum number of snow layers
-    LOGICAL  :: l_snow          !< T: Consider snow layers in soil thermal calculations
-    ! l_dynsnow, l_heat_cap_dyn and l_heat_cond_dyn are only effective for l_snow=.true.
-    LOGICAL  :: l_dynsnow       !< T: Calculate snow parameters heat cond. and heat cap. dynamically (depending on snow density)
-    LOGICAL  :: l_heat_cap_dyn  !< T: Use dynamic calculation of soil heat capacity, F: use mineral soil map
-    LOGICAL  :: l_heat_cond_dyn !< T: Use dynamic calculation of soil heat conductivity, F: use mineral soil map
+    LOGICAL  :: l_snow          !< T: Use multi-layer snow scheme;
+                                !  Note: This affects thermal snow and soil properties:
+                                !  l_dynsnow, l_heat_cap_dyn and l_heat_cond_dyn are only effective if l_snow=.true.
+    LOGICAL  :: l_dynsnow       !< T: Calculate snow heat cond. and heat cap. dynamically depending on snow density
+    LOGICAL  :: l_heat_cap_dyn  !< T: Dynamic calculation of soil heat capacity;
+                                !  F: Static map or FAO data, depending on l_heat_cap_map
+    LOGICAL  :: l_heat_cond_dyn !< T: Dynamic calculation of soil heat conductivity;
+                                !  F: Static map or FAO data, depending on l_heat_cond_map
     !
     LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
-    LOGICAL  :: l_heat_cond_map !< T: USe soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
-    LOGICAL  :: l_freeze        !< T: Consider freezing and thawing in thermal soil calculations
+    LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
+    LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]

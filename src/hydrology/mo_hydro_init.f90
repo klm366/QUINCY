@@ -187,7 +187,7 @@ CONTAINS
       hydro_init_vars%w_soil_sl(:,:,:) = missval
     END IF
 
-      ! Get hydrology config
+    ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
 
     !----------
@@ -218,6 +218,9 @@ CONTAINS
       hydro_init_vars%soil_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))
 
       ! Maximum root zone soil moisture
+      ! Note: maxmoist from the initial file corresponds to the field capacity. It is however
+      !    not used as field capacity in a hydrological sense, but rather as maximum soil
+      !    moisture corresponding to a layered bucket scheme, using one bucket for each soil layer.
       ptr_2D => input_file%Read_2d(                        &
         & fill_array = hydro_init_vars%max_moist, &
         & variable_name='maxmoist')
@@ -589,61 +592,49 @@ CONTAINS
     IF (tile%contains_soil) THEN
       ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
+
+      ! Note: w_soil_fc_sl is not meant as field capacity in a hydrological sense, but as maximum
+      !    filling of the specific soil layer.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
       !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-          CALL get_water_in_root_zone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
-      END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      END WHERE
-
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
-      END WHERE
-
       
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
-      !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
       CALL init_soil_properties(tile)
     END IF
 
     IF (tile%contains_vegetation) THEN
-      ! Calculate water content and field capacity in the root zone
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
+
+      ! Initialization of relative root zone soil moisture (ignoring ice).
+      !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
+
+      ! w_rootzone calculated here is only used to calculate relative soil moisture for phenology.
+      ! It is re-calculated in update_soil_hydrology.
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_rootzone), 2)
           CALL get_water_in_root_zone( &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)      (:,:,i), & 
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_root)    (:,  i)  )
- 
-          CALL get_water_in_root_zone( & 
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)   (:,:,i), & 
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc) (:,  i)  )
-          
-          CALL get_water_in_root_zone( & 
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl)  (:,:,i), & 
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp)(:,  i)  )
+          & dsl4jsb_var_ptr(HYDRO_, w_rootzone)     (:,  i)  )
       END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_root),     &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc),  &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
+
+      ! Make sure w_rootzone is smaller than max_moist
+      ! Note: max_moist corresponds to the maximum possible amount of water in the root zone. This
+      !    concept is different from the hydrological understanding of field capacity and saturation.
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      END WHERE
+
+      ! Initialization of w_rootzone_rel (completely ignoring ice)
+      !    It is re-calculated - considering ice - in update_water_stress.
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
+          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      ELSE WHERE
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
+      END WHERE
+
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_rootzone),     &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, w_rootzone_rel))
     END IF
 
   END SUBROUTINE hydro_init_ic
@@ -714,6 +705,8 @@ CONTAINS
 
 
   SUBROUTINE init_soil_properties(tile)
+    ! This routine is needed because soil snow and energy (SSE) processes are calculated before
+    ! the soil properties are calculated the first time within the hydrology in update_soil_properties.
 
     USE mo_hydro_constants, ONLY: vol_porosity_org, hyd_cond_sat_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
       & vol_field_cap_org, vol_p_wilt_org
@@ -768,21 +761,22 @@ CONTAINS
     !
     dsl4jsb_Get_memory(HYDRO_)
 
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_porosity)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, bclapp)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, matrix_pot)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, pore_size_index)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_field_cap)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_p_wilt)
-    IF (dsl4jsb_Config(HYDRO_)%l_organic) dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)       ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_porosity)       ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, bclapp)             ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, matrix_pot)         ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, pore_size_index)    ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_field_cap)      ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_p_wilt)         ! in
+    IF (dsl4jsb_Config(HYDRO_)%l_organic)   &
+     &   dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)  ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl)    ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)    ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)          ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)      ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl) ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)   ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)      ! out
 
     hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
     vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
@@ -792,6 +786,7 @@ CONTAINS
     vol_field_cap_sl  (:,:,:) = SPREAD(vol_field_cap  (:,:), DIM=2, ncopies=nsoil)
     vol_p_wilt_sl     (:,:,:) = SPREAD(vol_p_wilt     (:,:), DIM=2, ncopies=nsoil)
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+      ! Attention: hyd_cond_sat_sl is calculated differently (correct) in update_soil_properties
       hyd_cond_sat_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * hyd_cond_sat_sl   (:,:,:) + fract_org_sl(:,:,:) * hyd_cond_sat_org
       vol_porosity_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_porosity_sl   (:,:,:) + fract_org_sl(:,:,:) * vol_porosity_org
       bclapp_sl         (:,:,:) = (1 - fract_org_sl(:,:,:)) * bclapp_sl         (:,:,:) + fract_org_sl(:,:,:) * bclapp_org
