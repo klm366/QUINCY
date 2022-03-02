@@ -883,7 +883,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     dsl4jsb_Real2D_onChunk :: w_rootzone
-    dsl4jsb_Real2D_onChunk :: max_moist
+    dsl4jsb_Real2D_onChunk :: rootzone_max
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
@@ -942,7 +942,7 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_rootzone)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, max_moist)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, rootzone_max)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
 
@@ -974,7 +974,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &  !! ice not considered
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &  !! ice not considered
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &  !! ice not considered
-      & dsl4jsb_var2D_onChunk (HYDRO_, max_moist         ), &  !! only used in grid cells without organic fraction
+      & dsl4jsb_var2D_onChunk (HYDRO_, rootzone_max      ), &  !! only used in grid cells without organic fraction
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
       &                                t_soil_sl     (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
@@ -1173,7 +1173,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
     dsl4jsb_Real2D_onChunk :: w_rootzone_fc       !< Water content in root zone at field capacity
     dsl4jsb_Real2D_onChunk :: w_rootzone_pwp      !< Water content in root zone at permanent wilting point
-    dsl4jsb_Real2D_onChunk :: max_moist
+    dsl4jsb_Real2D_onChunk :: rootzone_max
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: w_rootzone_rel      !< Relative root zone soil moisture
     ! ASSIMI_
@@ -1209,7 +1209,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    max_moist)           ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rootzone_max)        ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_fc)       ! out
@@ -1238,7 +1238,7 @@ CONTAINS
 
     ! Calculate water stress
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    water_stress(:) = get_water_stress_factor(w_rootzone(:), max_moist(:), &
+    water_stress(:) = get_water_stress_factor(w_rootzone(:), rootzone_max(:), &
             &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
@@ -1246,10 +1246,10 @@ CONTAINS
     !$claw acc data present(w_soil_pot_scool_sl, w_rootzone_scool_act)
     !$claw acc parallel loop gang vector
     DO i = 1, nc
-      IF (max_moist(i) > 0._wp) THEN
-        w_rootzone_rel(i) =  MIN(w_rootzone(i) / max_moist(i), 1._wp)
+      IF (rootzone_max(i) > 0._wp) THEN
+        w_rootzone_rel(i) =  MIN(w_rootzone(i) / rootzone_max(i), 1._wp)
       ELSE
-        ! max_moist is zero over glaciers
+        ! rootzone_max is zero over glaciers
         w_rootzone_rel(i) = 0._wp
       END IF
     END DO

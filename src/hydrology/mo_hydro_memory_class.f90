@@ -85,8 +85,7 @@ MODULE mo_hydro_memory_class
       & fract_org_sl            !< Fractions of organic material in soil layers                        []
     TYPE(t_jsb_var_real2d) :: &
       & soil_depth,           & !< Soil depth derived from textures (bedrock)                          [m]
-      !todo: rename max_moist to rootzone_max
-      & max_moist,            & !< Maximum root zone moisture content                                  [m]
+      & rootzone_max ,        & !< Maximum root zone moisture content                                  [m]
       & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
       & vol_porosity,         & !< Volumetric porosity of mineral soil                                 [m/m]
@@ -484,9 +483,9 @@ CONTAINS
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
       END IF
 
-      CALL mem%Add_var( 'max_moist', mem%max_moist,                            &
+      CALL mem%Add_var( 'rootzone_max', mem%rootzone_max,                      &
         & hgrid, surface,                                                      &
-        & t_cf('max_moist', 'm', 'Maximum root zone moisture'),                &
+        & t_cf('rootzone_max', 'm', 'Maximum root zone moisture'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
