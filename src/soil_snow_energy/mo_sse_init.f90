@@ -507,7 +507,7 @@ CONTAINS
 
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
       END WHERE
