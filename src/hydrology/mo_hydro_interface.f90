@@ -1152,7 +1152,7 @@ CONTAINS
     ! Used variables
     USE mo_jsb_math_constants, ONLY: eps8
     USE mo_hydro_process,      ONLY: get_water_stress_factor
-    USE mo_hydro_util,         ONLY: get_water_in_root_zone
+    USE mo_hydro_util,         ONLY: get_amount_in_rootzone
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1233,8 +1233,8 @@ CONTAINS
     ! todo: w_rootzone_fc and w_rootzone_pwp are updated within this routine (intent out), and only
     !    used within the routine and only with quincy! Do we need w_rootzone_fc and w_rootzone_pwp
     !    as state (and output) variables without quincy? And with quincy?
-    CALL get_water_in_root_zone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_fc (:))
-    CALL get_water_in_root_zone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_pwp(:))
+    CALL get_amount_in_rootzone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_fc (:))
+    CALL get_amount_in_rootzone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), w_rootzone_pwp(:))
 
     ! Calculate water stress
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function

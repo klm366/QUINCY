@@ -444,7 +444,7 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
-    USE mo_hydro_util,             ONLY: get_water_in_root_zone
+    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: &
       & nidx, nsoil, nlat
@@ -524,7 +524,7 @@ CONTAINS
     ! Note: ws_max calculated here (based on field capacity) is different from wsat calculated
     !       below (based on saturation). ws_max does not account for ice.
     hlp_2d(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
-    CALL get_water_in_root_zone(hlp_2d(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
+    CALL get_amount_in_rootzone(hlp_2d(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
 
     !$claw acc data present(fract_org_l,ws_max,ws_max_mineral)
     !$claw acc parallel loop gang vector
@@ -540,8 +540,8 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
-    CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
-    CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
+    CALL get_amount_in_rootzone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
+    CALL get_amount_in_rootzone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
 
     !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
     !$claw acc end parallel
@@ -679,7 +679,7 @@ CONTAINS
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     ! Note: ws only includes the soil moisture within the root zone
-    CALL get_water_in_root_zone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws(:))
+    CALL get_amount_in_rootzone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws(:))
 
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector

@@ -331,7 +331,7 @@ CONTAINS
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, & ! vol_hcap_snow_min,
       &                                  hcond_ice, hcond_snow !, hcond_snow_min, hcond_org
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
-    USE mo_hydro_util,             ONLY: get_water_in_root_zone
+    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -494,7 +494,7 @@ CONTAINS
       ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 
       DO b=1,nblks
-          CALL get_water_in_root_zone(                       &
+          CALL get_amount_in_rootzone(                       &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,b),  &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,b),  &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,b),  &

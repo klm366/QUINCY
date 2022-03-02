@@ -467,7 +467,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  DECLARATIONS
     USE mo_hydro_constants, ONLY: vol_porosity_org, vol_field_cap_org, vol_p_wilt_org
-    USE mo_hydro_util,      ONLY: get_water_in_root_zone
+    USE mo_hydro_util,      ONLY: get_amount_in_rootzone
     USE mo_util,            ONLY: ifs2soil
 
     !-----------------------------------------------------------------------
@@ -610,7 +610,7 @@ CONTAINS
       ! w_rootzone calculated here is only used to calculate relative soil moisture for phenology.
       ! It is re-calculated in update_soil_hydrology.
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_rootzone), 2)
-          CALL get_water_in_root_zone( &
+          CALL get_amount_in_rootzone( &
           & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)      (:,:,i), & 
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
