@@ -22,8 +22,8 @@ MODULE mo_hd_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
-  USE mo_jsb_grid,           ONLY: Get_grid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -296,6 +296,7 @@ CONTAINS
     !
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_vgrid), POINTER :: dl_l
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
@@ -303,26 +304,30 @@ CONTAINS
     ! Pointers to variables in memory
 
     dsl4jsb_Real2D_onChunk ::  &
-      & height_lake_max,       &
-      & area_lake_max,         &
-      & volume_lake_max,       &
-      & height_oro_min,        &
-      & shp,                 &
-      & basin_mask,            & 
-      & height_lake,           &
-      & area_lake,             &
-      & volume_lake,           &
+      & volume_lake_max,    &
+      & height_oro_min,     &
+      & basin_mask,         & 
+      & height_lake,        &
+      & area_lake,          &
+      & volume_lake,        &
       & height_dyn
 
-    REAL(wp), POINTER :: area_grid(:)
+    dsl4jsb_Real3D_onChunk ::  &
+      & heights_lake,       &
+      & areas_lake,         &
+      & volumes_lake
+
     REAL(wp), POINTER :: lake_fract(:)
     REAL(wp), POINTER :: land_fract(:)
+
+    LOGICAL, ALLOCATABLE  ::  &
+      & volume_mask(:,:)          !> dummy field 
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_dynlake'
 
     CHARACTER(len=32) :: routing_scheme        ! river routing scheme
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, nlev
     INTEGER  :: no_omp_thread
 
     REAL(wp) :: steplen
@@ -352,6 +357,9 @@ CONTAINS
 
     grid => Get_grid(model%grid_id)
 
+    dl_l => Get_vgrid('dynamic_lake_level')
+    nlev    = dl_l%n_levels
+
     ! Configuration parameters from the namelist
     routing_scheme    = dsl4jsb_Config(HD_)%routing_scheme
 
@@ -359,11 +367,11 @@ CONTAINS
     !
     dsl4jsb_Get_memory(HD_)
 
-    dsl4jsb_Get_var2D_onChunk(HD_, height_lake_max)  ! IN
-    dsl4jsb_Get_var2D_onChunk(HD_, area_lake_max)    ! IN
+    dsl4jsb_Get_var3D_onChunk(HD_, heights_lake)     ! IN
+    dsl4jsb_Get_var3D_onChunk(HD_, areas_lake)       ! IN
+    dsl4jsb_Get_var3D_onChunk(HD_, volumes_lake)     ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, volume_lake_max)  ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, height_oro_min)   ! IN
-    dsl4jsb_Get_var2D_onChunk(HD_, shp)            ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onChunk(HD_, area_lake)        ! OUT
@@ -376,7 +384,6 @@ CONTAINS
 
     lake_fract => lake_tile%fract(ics:ice,iblk)
     land_fract => land_tile%fract(ics:ice,iblk)
-    area_grid  => grid%area (ics:ice, iblk)
 
     ! Configuration parameters from the namelist
     routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
@@ -384,29 +391,23 @@ CONTAINS
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
 
-      ! update grid cell lake height [m]
-      WHERE (basin_mask(:) > 0._wp .AND. volume_lake(:)>0._wp)
-        WHERE (volume_lake(:).LE.volume_lake_max(:))
-          height_lake(:) = height_lake_max(:) * ( volume_lake(:) / volume_lake_max(:) )**(1._wp/(1._wp+(2._wp/shp(:))))
-        ELSE WHERE (volume_lake(:).GT.volume_lake_max(:))
-          height_lake(:) = height_lake_max(:) + ( volume_lake(:) - volume_lake_max(:) )/area_lake_max(:)
-        END WHERE
+      ALLOCATE (volume_mask(nc,nlev))
+
+      ! update grid cell lake height [m] and area [m3]
+      volume_mask(:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)>=volumes_lake(:,:)
+      WHERE (basin_mask(:) > 0._wp .AND. volume_lake(:)>MINVAL(volumes_lake(:,:), DIM=2))
+        height_lake(:) = MAXVAL(heights_lake(:,:), DIM=2, MASK=volume_mask(:,:))
+        area_lake(:)   = MAXVAL(areas_lake(:,:),   DIM=2, MASK=volume_mask(:,:))
       ELSE WHERE
         height_lake(:) = 0._wp
+        area_lake(:)   = 0._wp
       END WHERE
       height_dyn(:) = height_oro_min(:) + height_lake(:)
-
-      ! update grid cell lake area [m3]
-      WHERE (basin_mask(:) > 0._wp .AND. volume_lake(:)>0._wp)
-        area_lake(:) = area_lake_max(:) * MIN( ( volume_lake(:) / volume_lake_max(:) )**(2._wp/(2._wp+shp(:))), 1._wp )
-      ELSE WHERE
-        area_lake(:) = 0._wp
-      END WHERE
 
       ! update lake fraction [%]
       WHERE (basin_mask(:) > 0._wp)
         ! lake and land fraction changes [%]
-        fract_lake_changes(:) = MIN( MAX(area_lake(:)/area_grid(:), 0._wp), 1._wp) - lake_fract(:)
+        fract_lake_changes(:) = MIN( MAX(area_lake(:), 0._wp), 1._wp) - lake_fract(:)
       ELSE WHERE
         fract_lake_changes(:) = 0._wp
       END WHERE
@@ -466,9 +467,13 @@ CONTAINS
       ! adjust fraction for lake, land and all children
       CALL cur%Get_fraction(ics, ice, iblk, fract=fract(:))
       IF(cur%is_lake) THEN
-        fract(:) = fract(:) + fract_lake_changes(:)
+        WHERE(fract_lake_changes(:)>=10e-5)
+          fract(:) = fract(:) + fract_lake_changes(:)
+        END WHERE
       ELSE
-        fract(:) = fract(:) - fract_lake_changes(:) * fract(:)/fract_land(:)
+        WHERE(fract_lake_changes(:)>=10e-5)
+          fract(:) = fract(:) - fract_lake_changes(:) * fract(:)/fract_land(:)
+        END WHERE
       ENDIF
       CALL cur%Set_fraction(ics, ice, iblk, fract=fract(:))
 
@@ -590,7 +595,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, discharge_lake)       ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, discharge_lake)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, runoff_land)      ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, drainage_land)    ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, discharge_river)  ! IN
@@ -804,12 +809,9 @@ CONTAINS
     ! Pointers to variables in memory
 
     dsl4jsb_Real2D_onDomain :: &
-      & height_lake_max,       &
       & volume_lake_max,       &
-      & shp,                 &
       & basin_mask,            &
       & outlets,               &
-      & volume_out,               &
       & volume_lake,           &
       & height_lake,           &
       & height_dyn,            &
@@ -817,6 +819,8 @@ CONTAINS
       & lake_outflow,          &
       & drainage_lake
 
+    dsl4jsb_Real3D_onDomain :: &
+      & volumes_lake       
 
     REAL(wp) ::                &
       & dyn_min,               &
@@ -887,18 +891,17 @@ CONTAINS
     !
     dsl4jsb_Get_memory(HD_)
 
-    dsl4jsb_Get_var2D_onDomain(HD_, height_lake_max)  ! IN
+    dsl4jsb_Get_var3D_onDomain(HD_, volumes_lake)     ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake_max)  ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, shp)            ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outlets)          ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, volume_out)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_dyn)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_inflow)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, drainage_lake)   ! OUT
+
 
     ! Configuration parameters from the namelist
     routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
@@ -923,6 +926,8 @@ CONTAINS
 !      CALL sync_patch_array(sync_c, grid%patch, height_lake_max(:,:))
       CALL sync_patch_array(sync_c, grid%patch, volume_lake(:,:))
 !      CALL sync_patch_array(sync_c, grid%patch, volume_lake_max(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, volumes_lake(:,:,:))
+
 
       ALLOCATE (neigh_mask(nproma, nblks))
       ALLOCATE (nneigh_mask(nproma, nblks))
@@ -968,7 +973,7 @@ CONTAINS
             ! inflow 
             IF(height_dyn(jc,blk) == MINVAL(PACK(height_dyn(:,:),nneigh_mask(:,:))) .AND. &
                height_dyn(jc,blk) < height_dyn(njc(n),nblk(n))      .AND. &
-               volume_lake(njc(n),nblk(n)) > 0._wp                  .AND. &
+               volume_lake(njc(n),nblk(n)) > MINVAL(volumes_lake(njc(n),:,nblk(n))) .AND. &
                basin_mask(jc,blk) > 0._wp                           .AND. &
                basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))    ) THEN
  
@@ -983,7 +988,7 @@ CONTAINS
             ! outflow
             IF ( height_dyn(njc(n),nblk(n)) == MINVAL(PACK(height_dyn(:,:),neigh_mask(:,:))) .AND. &
                  height_dyn(njc(n),nblk(n)) < height_dyn(jc,blk)            .AND. & 
-                 volume_lake(jc,blk) > 0._wp                                .AND. & 
+                 volume_lake(jc,blk) > MINVAL(volumes_lake(jc,:,blk))           .AND. & 
                  basin_mask(jc,blk) > 0._wp                                 .AND. &                        
                  basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))         ) THEN               
               height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
@@ -1004,10 +1009,12 @@ CONTAINS
       volume_lake(:,:) = volume_lake(:,:) + ( lake_outflow(:,:) + lake_inflow(:,:) ) * steplen
       global_lateral_flow_error = global_sum_array((lake_outflow(:,:)+lake_inflow(:,:))*in_domain(:,:))
       global_lateral_flow_abs   = global_sum_array((ABS(lake_outflow(:,:))+ABS(lake_inflow(:,:)))*in_domain(:,:))
-      IF (ABS(global_lateral_flow_error)/global_lateral_flow_abs > 10._wp*EPSILON(1._wp)) THEN
-        WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
-             global_lateral_flow_error,' m3'
-        CALL finish (TRIM(routine), message_text)
+      IF (ABS(global_lateral_flow_error)> 10._wp*EPSILON(1._wp)) THEN
+        IF (ABS(global_lateral_flow_error)/global_lateral_flow_abs > 10._wp*EPSILON(1._wp)) THEN
+          WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
+               global_lateral_flow_error,' m3'
+          CALL finish (TRIM(routine), message_text)
+        END IF
       END IF
 
 
@@ -1023,8 +1030,8 @@ CONTAINS
       drainage_lake(:,:)=0._wp
       DO n = 1, outlets_maxs
         volume_from_lake(:,:) = 0._wp
-        WHERE (n==basin_mask(:,:).AND.volume_lake(:,:)>volume_out(:,:))
-          volume_from_lake(:,:) = volume_lake(:,:) - volume_out(:,:)
+        WHERE (n==basin_mask(:,:).AND.volume_lake(:,:)>volume_lake_max(:,:))
+          volume_from_lake(:,:) = volume_lake(:,:) - volume_lake_max(:,:)
           volume_lake(:,:)      = volume_lake(:,:) - volume_from_lake(:,:)
         END WHERE
         WHERE(n==outlets)
