@@ -48,8 +48,10 @@ MODULE mo_hydro_config_class
       & l_runoff_with_ice,      & !< Include soil ice in runoff and infiltration calculations
       & l_ws_max_depend_on_org, & !< ws_max re-calculation (in calc_soil_hydrology) depends on organic soil fraction
       & l_correct_ws_from_top,  & !< Start soil water correction from top layer (instead of equal reduction from all layers)
-      & l_ice_impedance,        & !< Account for ice impedance
-      & l_scool_impedance,      & !< Additionally account for impedance by scooled water
+      & l_ice_impedance_perc,   & !< Account for ice impedance during percolation
+      & l_ice_impedance_drain,  & !< Account for ice impedance during drainage
+      & l_scool_impedance_perc, & !< Additionally account for impedance by scooled water during percolation
+      & l_scool_impedance_drain,& !< Additionally account for impedance by scooled water during drainage
       & l_diffuse_all_ws,       & !< Calculate soil water diffusion from all soil water, including immobile
       & l_infil_subzero,        & !< Allow infiltration at soil temperatures below 0°C
       & l_scool_percolates,     & !< Supercooled water percolates
@@ -64,7 +66,6 @@ MODULE mo_hydro_config_class
       & l_scool_reduces_maxavail, & !<   Maximum available water is reduced by supercooled water
                                     !< Switches for soil evaporation:
       & l_ice_reduces_maxtop,     & !<   Maximum amount of top layer water reduced by the amount of ice
-      & l_scool_reduces_maxtop,   & !<   Maximum amount of top layer water reduced by supercooled water
       & l_maxtop_depend_on_org      !<   Maximum amount of top layer water depends on organic matter
 
   CONTAINS
@@ -93,10 +94,10 @@ CONTAINS
     LOGICAL                     :: l_organic, l_glac_in_soil, l_socc30
     LOGICAL     :: l_hyd_compat420
     LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top
-    LOGICAL     :: l_ice_impedance, l_scool_impedance, l_diffuse_all_ws, l_scool_percolates
-    LOGICAL     :: l_drain_lat, l_percolation_theory
+    LOGICAL     :: l_ice_impedance_perc, l_ice_impedance_drain, l_scool_impedance_perc, l_scool_impedance_drain
+    LOGICAL     :: l_diffuse_all_ws, l_scool_percolates, l_drain_lat, l_percolation_theory
     LOGICAL     :: l_scool_avail_to_plants, l_ice_reduces_maxavail, l_scool_reduces_maxavail
-    LOGICAL     :: l_ice_reduces_maxtop, l_scool_reduces_maxtop, l_maxtop_depend_on_org, l_feed_sro
+    LOGICAL     :: l_ice_reduces_maxtop, l_maxtop_depend_on_org, l_feed_sro
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -117,8 +118,10 @@ CONTAINS
       & l_runoff_with_ice,          &
       & l_ws_max_depend_on_org,     &
       & l_correct_ws_from_top,      &
-      & l_ice_impedance,            &
-      & l_scool_impedance,          &
+      & l_ice_impedance_perc,       &
+      & l_ice_impedance_drain,      &
+      & l_scool_impedance_perc,     &
+      & l_scool_impedance_drain,    &
       & l_diffuse_all_ws,           &
       & l_scool_percolates,         &
       & l_drain_lat,                &
@@ -127,7 +130,6 @@ CONTAINS
       & l_ice_reduces_maxavail,     &
       & l_scool_reduces_maxavail,   &
       & l_ice_reduces_maxtop,       &
-      & l_scool_reduces_maxtop,     &
       & l_maxtop_depend_on_org,     &
       & l_feed_sro
 
@@ -157,22 +159,23 @@ CONTAINS
     l_organic         = .FALSE.
     l_socc30          = .FALSE.
     l_glac_in_soil    = .FALSE.
-    l_hyd_compat420        = .FALSE.
-    l_infil_subzero        = .FALSE.
-    l_runoff_with_ice      = .TRUE.
-    l_ws_max_depend_on_org = .TRUE.
-    l_correct_ws_from_top  = .FALSE.
-    l_ice_impedance        = .FALSE.
-    l_scool_impedance      = .FALSE.
-    l_diffuse_all_ws       = .TRUE.
-    l_scool_percolates     = .TRUE.
-    l_drain_lat            = .TRUE.
-    l_percolation_theory   = .FALSE.
+    l_hyd_compat420          = .FALSE.
+    l_infil_subzero          = .FALSE.
+    l_runoff_with_ice        = .TRUE.
+    l_ws_max_depend_on_org   = .TRUE.
+    l_correct_ws_from_top    = .FALSE.
+    l_ice_impedance_perc     = .FALSE.
+    l_ice_impedance_drain    = .FALSE.
+    l_scool_impedance_perc   = .FALSE.
+    l_scool_impedance_drain  = .FALSE.
+    l_diffuse_all_ws         = .TRUE.
+    l_scool_percolates       = .TRUE.
+    l_drain_lat              = .TRUE.
+    l_percolation_theory     = .FALSE.
     l_scool_avail_to_plants  = .TRUE.
     l_ice_reduces_maxavail   = .FALSE.
     l_scool_reduces_maxavail = .FALSE.
     l_ice_reduces_maxtop     = .TRUE.
-    l_scool_reduces_maxtop   = .FALSE.
     l_maxtop_depend_on_org   = .TRUE.
     l_feed_sro = .FALSE.
 
@@ -232,15 +235,25 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_correct_ws_from_top=F. Namelist definition of l_correct_ws_from_top ignored.')
         l_correct_ws_from_top  = .FALSE.
       END IF
-      IF (l_ice_impedance) THEN
+      IF (l_ice_impedance_perc) THEN
         CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_ice_impedance=F. Namelist definition of l_ice_impedance ignored.')
-        l_ice_impedance        = .FALSE.
+         & 'WARNING: with l_hyd_compat420  l_ice_impedance_perc=F. Namelist definition of l_ice_impedance_perc ignored.')
+        l_ice_impedance_perc   = .FALSE.
       END IF
-      IF (l_scool_impedance) THEN
+      IF (l_ice_impedance_drain) THEN
         CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_scool_impedance=F. Namelist definition of l_scool_impedance ignored.')
-        l_scool_impedance      = .FALSE.
+         & 'WARNING: with l_hyd_compat420  l_ice_impedance_drain=F. Namelist definition of l_ice_impedance_drain ignored.')
+        l_ice_impedance_drain  = .FALSE.
+      END IF
+      IF (l_scool_impedance_perc) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_scool_impedance_perc=F. Namelist definition of l_scool_impedance_perc ignored.')
+        l_scool_impedance_perc  = .FALSE.
+      END IF
+      IF (l_scool_impedance_drain) THEN
+        CALL message(TRIM(routine), &
+         & 'WARNING: with l_hyd_compat420  l_scool_impedance_drain=F. Namelist definition of l_scool_impedance_drain ignored.')
+        l_scool_impedance_drain = .FALSE.
       END IF
       IF (.NOT. l_diffuse_all_ws) THEN
         CALL message(TRIM(routine), &
@@ -282,11 +295,6 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_ice_reduces_maxtop=T. Namelist definition of l_ice_reduces_maxtop ignored.')
         l_ice_reduces_maxtop = .TRUE.
       END IF
-      IF (l_scool_reduces_maxtop) THEN
-        CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_scool_reduces_maxtop=F. Namelist definition of l_scool_reduces_maxtop ignored.')
-        l_scool_reduces_maxtop = .FALSE.
-      END IF
       IF (l_organic .AND. .NOT. l_maxtop_depend_on_org) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_maxtop_depend_on_org=T. Namelist definition of l_maxtop_depend_on_org ignored.')
@@ -312,16 +320,31 @@ CONTAINS
     config%l_correct_ws_from_top  = l_correct_ws_from_top
     CALL message(TRIM(routine), &
      & 'Start correction of soil moisture from top level: '//TRIM(logical2string(l_correct_ws_from_top)))
-    config%l_ice_impedance        = l_ice_impedance
+    config%l_ice_impedance_perc   = l_ice_impedance_perc
     CALL message(TRIM(routine), &
-     & 'Account for ice impedance: '//TRIM(logical2string(l_ice_impedance)))
-    config%l_scool_impedance      = l_scool_impedance
-    IF (l_scool_impedance .AND. .NOT. l_ice_impedance) THEN
+     & 'Account for ice impedance_perc: '//TRIM(logical2string(l_ice_impedance_perc)))
+    config%l_ice_impedance_drain  = l_ice_impedance_drain
+    CALL message(TRIM(routine), &
+     & 'Account for ice impedance_drain: '//TRIM(logical2string(l_ice_impedance_drain)))
+    config%l_scool_impedance_perc  = l_scool_impedance_perc
+    IF (l_scool_impedance_perc .AND. .NOT. l_ice_impedance_perc) THEN
       CALL finish(TRIM(routine), &
-       & 'Impedance by supercooled water (l_scool_impedance) only possible with ice impedance (l_ice_impedance=T).')
+       & 'Impedance on percolation by supercooled water (l_scool_impedance_perc) only possible '//& 
+       & 'with ice impedance (l_ice_impedance_perc=T).')
     ELSE
       CALL message(TRIM(routine), &
-       & 'Account for impedance by supercooled water: '//TRIM(logical2string(l_scool_impedance)))
+       & 'Account for impedance on percolation by supercooled water: '//&
+       & TRIM(logical2string(l_scool_impedance_perc)))
+    END IF
+    config%l_scool_impedance_drain = l_scool_impedance_drain
+    IF (l_scool_impedance_drain .AND. .NOT. l_ice_impedance_drain) THEN
+      CALL finish(TRIM(routine), &
+       & 'Impedance on drainage by supercooled water (l_scool_impedance_drain) only possible '//& 
+       & 'with ice impedance (l_ice_impedance_drain=T).')
+    ELSE
+      CALL message(TRIM(routine), &
+       & 'Account for impedance on drainage by supercooled water: '//&
+       & TRIM(logical2string(l_scool_impedance_drain)))
     END IF
     config%l_diffuse_all_ws       = l_diffuse_all_ws
     CALL message(TRIM(routine), &
@@ -347,10 +370,6 @@ CONTAINS
     config%l_ice_reduces_maxtop = l_ice_reduces_maxtop
     CALL message(TRIM(routine), &
      & 'Soil evaporation: Reduce maximum top layer water by amount of ice: '//TRIM(logical2string(l_ice_reduces_maxtop)))
-    config%l_scool_reduces_maxtop = l_scool_reduces_maxtop
-    CALL message(TRIM(routine), &
-     & 'Soil evaporation: Reduce maximum top layer water by potentially supercooled water: ' &
-     & //TRIM(logical2string(l_scool_reduces_maxtop)))
     config%l_ws_max_depend_on_org = l_ws_max_depend_on_org
     config%l_maxtop_depend_on_org = l_maxtop_depend_on_org
     IF (l_organic) THEN

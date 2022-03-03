@@ -573,11 +573,6 @@ CONTAINS
           w_maxtop(:)=maxtop_mineral(:)
         END IF
       END IF
-      IF (dsl4jsb_Config(HYDRO_)%l_scool_reduces_maxtop) THEN
-        w_maxtop(:)=MAX(0._wp, w_soil_fc_sl(:,1) - w_soil_pot_scool_sl(:,1))
-      ELSE
-        w_maxtop(:)=w_soil_fc_sl(:,1)
-      END IF
 
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_4 tile_name=tile%name
       rel_hum(:) = relative_humidity_soil(w_soil_sl(:,1), w_maxtop(:))
