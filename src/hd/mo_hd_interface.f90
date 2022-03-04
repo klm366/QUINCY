@@ -442,7 +442,7 @@ CONTAINS
         ELSE WHERE
           fract_lake_changes(:) = 0._wp
         END WHERE
-      ELSEIF
+      ELSE
         fract_lake_changes(:) = 0._wp
       END IF
 
