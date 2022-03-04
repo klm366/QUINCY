@@ -321,7 +321,16 @@ CONTAINS
     REAL(wp), POINTER :: land_fract(:)
 
     LOGICAL, ALLOCATABLE  ::  &
-      & volume_mask(:,:)          !> dummy field 
+      & volume_mask_low(:,:), &        !> dummy field 
+      & volume_mask_high(:,:)          !> dummy field 
+
+    REAL, ALLOCATABLE  ::  &
+      & height_low(:),   &        !> dummy field 
+      & height_high(:),  &        !> dummy field 
+      & area_low(:),     &        !> dummy field 
+      & area_high(:),    &        !> dummy field 
+      & volume_low(:),   &        !> dummy field 
+      & volume_high(:)               !> dummy field 
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_dynlake'
 
@@ -391,13 +400,27 @@ CONTAINS
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
 
-      ALLOCATE (volume_mask(nc,nlev))
+      ALLOCATE (volume_mask_low(nc,nlev))
+      ALLOCATE (volume_mask_high(nc,nlev))
+      ALLOCATE (height_low(nc))
+      ALLOCATE (height_high(nc))
+      ALLOCATE (area_low(nc))
+      ALLOCATE (area_high(nc))
+      ALLOCATE (volume_low(nc))
+      ALLOCATE (volume_high(nc))
 
       ! update grid cell lake height [m] and area [m3]
-      volume_mask(:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)>=volumes_lake(:,:)
-      WHERE (basin_mask(:) > 0._wp .AND. volume_lake(:)>MINVAL(volumes_lake(:,:), DIM=2))
-        height_lake(:) = MAXVAL(heights_lake(:,:), DIM=2, MASK=volume_mask(:,:))
-        area_lake(:)   = MAXVAL(areas_lake(:,:),   DIM=2, MASK=volume_mask(:,:))
+      volume_mask_low(:,:)= SPREAD(volume_lake(:), DIM=2, NCOPIES=100)>=volumes_lake(:,:)
+      volume_mask_high(:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)<=volumes_lake(:,:)
+      height_low(:)= MAXVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_low(:,:) )
+      height_high(:)=MINVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
+      area_low(:)= MAXVAL(areas_lake(:,:), DIM=2, MASK=volume_mask_low(:,:) )
+      area_high(:)=MINVAL(areas_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
+      volume_low(:)= MAXVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_low(:,:) )
+      volume_high(:)=MINVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
+      WHERE (basin_mask(:) > 0._wp .AND. volume_lake(:)>=MINVAL(volumes_lake(:,:), DIM=2))
+        height_lake(:) = height_low(:) + (volume_lake(:)-volume_low(:)) * (height_high(:)-height_low(:)) / (volume_high(:)-volume_low(:)) 
+        area_lake(:)   = area_low(:) + (volume_lake(:)-volume_low(:)) * (area_high(:)-area_low(:)) / (volume_high(:)-volume_low(:))
       ELSE WHERE
         height_lake(:) = 0._wp
         area_lake(:)   = 0._wp
@@ -467,13 +490,9 @@ CONTAINS
       ! adjust fraction for lake, land and all children
       CALL cur%Get_fraction(ics, ice, iblk, fract=fract(:))
       IF(cur%is_lake) THEN
-        WHERE(fract_lake_changes(:)>=10e-5)
-          fract(:) = fract(:) + fract_lake_changes(:)
-        END WHERE
+        fract(:) = fract(:) + fract_lake_changes(:)
       ELSE
-        WHERE(fract_lake_changes(:)>=10e-5)
-          fract(:) = fract(:) - fract_lake_changes(:) * fract(:)/fract_land(:)
-        END WHERE
+        fract(:) = fract(:) - fract_lake_changes(:) * fract(:)/fract_land(:)
       ENDIF
       CALL cur%Set_fraction(ics, ice, iblk, fract=fract(:))
 
@@ -819,9 +838,6 @@ CONTAINS
       & lake_outflow,          &
       & drainage_lake
 
-    dsl4jsb_Real3D_onDomain :: &
-      & volumes_lake       
-
     REAL(wp) ::                &
       & dyn_min,               &
       & volume_lake_low,       &
@@ -891,7 +907,6 @@ CONTAINS
     !
     dsl4jsb_Get_memory(HD_)
 
-    dsl4jsb_Get_var3D_onDomain(HD_, volumes_lake)     ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake_max)  ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outlets)          ! IN
@@ -926,7 +941,6 @@ CONTAINS
 !      CALL sync_patch_array(sync_c, grid%patch, height_lake_max(:,:))
       CALL sync_patch_array(sync_c, grid%patch, volume_lake(:,:))
 !      CALL sync_patch_array(sync_c, grid%patch, volume_lake_max(:,:))
-      CALL sync_patch_array(sync_c, grid%patch, volumes_lake(:,:,:))
 
 
       ALLOCATE (neigh_mask(nproma, nblks))
@@ -973,7 +987,7 @@ CONTAINS
             ! inflow 
             IF(height_dyn(jc,blk) == MINVAL(PACK(height_dyn(:,:),nneigh_mask(:,:))) .AND. &
                height_dyn(jc,blk) < height_dyn(njc(n),nblk(n))      .AND. &
-               volume_lake(njc(n),nblk(n)) > MINVAL(volumes_lake(njc(n),:,nblk(n))) .AND. &
+               volume_lake(njc(n),nblk(n)) > 0._wp                  .AND. &
                basin_mask(jc,blk) > 0._wp                           .AND. &
                basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))    ) THEN
  
@@ -988,7 +1002,7 @@ CONTAINS
             ! outflow
             IF ( height_dyn(njc(n),nblk(n)) == MINVAL(PACK(height_dyn(:,:),neigh_mask(:,:))) .AND. &
                  height_dyn(njc(n),nblk(n)) < height_dyn(jc,blk)            .AND. & 
-                 volume_lake(jc,blk) > MINVAL(volumes_lake(jc,:,blk))           .AND. & 
+                 volume_lake(jc,blk) > 0._wp                                .AND. & 
                  basin_mask(jc,blk) > 0._wp                                 .AND. &                        
                  basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))         ) THEN               
               height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
@@ -1009,12 +1023,10 @@ CONTAINS
       volume_lake(:,:) = volume_lake(:,:) + ( lake_outflow(:,:) + lake_inflow(:,:) ) * steplen
       global_lateral_flow_error = global_sum_array((lake_outflow(:,:)+lake_inflow(:,:))*in_domain(:,:))
       global_lateral_flow_abs   = global_sum_array((ABS(lake_outflow(:,:))+ABS(lake_inflow(:,:)))*in_domain(:,:))
-      IF (ABS(global_lateral_flow_error)> 10._wp*EPSILON(1._wp)) THEN
-        IF (ABS(global_lateral_flow_error)/global_lateral_flow_abs > 10._wp*EPSILON(1._wp)) THEN
-          WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
-               global_lateral_flow_error,' m3'
-          CALL finish (TRIM(routine), message_text)
-        END IF
+      IF (ABS(global_lateral_flow_error)/global_lateral_flow_abs > 10._wp*EPSILON(1._wp)) THEN
+        WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
+             global_lateral_flow_error,' m3'
+        CALL finish (TRIM(routine), message_text)
       END IF
 
 
