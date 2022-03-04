@@ -73,7 +73,7 @@ CONTAINS
   !! @param [in,out] canopy_snow           snow depth on the canopy [m water equivalent]
   !! @param [in,out] snow_soil_dens        snow density on soil at non-glacier points [m water equivalent]
   !! @param [out]    q_snocpymlt           Heating due to snow melt on canopy [W m-2]
-  !! @param [out]    snow_accum            snow budget at non-glacier points [m water equivalent]
+  !! @param [out]    snow_accum            snow budget change within time step [m water equivalent]
   !! @param [out]    snow_melt_soil        snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
   !! @param [out]    evapotrans_soil       evapotranspiration from soil w/o skin and snow reservoirs [kg m-2 s-1]
   !! @param [out]    evapo_skin             evaporation from skin reservoir [kg m-2 s-1]

@@ -611,7 +611,7 @@ CONTAINS
 
       CALL mem%Add_var( 'snow_accum', mem%snow_accum,                                                        &
         & hgrid, surface,                                                                                    &
-        & t_cf('snow_accum', 'm (water equivalent)', 'Snow accumulation at non-glacier/non-lake land points'), &
+        & t_cf('snow_accum', 'm (water equivalent)', 'Snow budget change within the time step'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
         & prefix, suffix,                                                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
