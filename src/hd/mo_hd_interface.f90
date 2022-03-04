@@ -322,7 +322,8 @@ CONTAINS
 
     LOGICAL, ALLOCATABLE  ::  &
       & volume_mask_low(:,:), &        !> dummy field 
-      & volume_mask_high(:,:)          !> dummy field 
+      & volume_mask_high(:,:),&        !> dummy field 
+      & volume_mask(:)                 !> dummy field 
 
     REAL, ALLOCATABLE  ::  &
       & height_low(:),   &        !> dummy field 
@@ -402,6 +403,7 @@ CONTAINS
 
       ALLOCATE (volume_mask_low(nc,nlev))
       ALLOCATE (volume_mask_high(nc,nlev))
+      ALLOCATE (volume_mask(nc))
       ALLOCATE (height_low(nc))
       ALLOCATE (height_high(nc))
       ALLOCATE (area_low(nc))
@@ -410,17 +412,22 @@ CONTAINS
       ALLOCATE (volume_high(nc))
 
       ! update grid cell lake height [m] and area [m3]
-      volume_mask_low(:,:)= SPREAD(volume_lake(:), DIM=2, NCOPIES=100)>=volumes_lake(:,:)
+      volume_mask_low (:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)>=volumes_lake(:,:)
       volume_mask_high(:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)<=volumes_lake(:,:)
-      height_low(:)= MAXVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_low(:,:) )
-      height_high(:)=MINVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
-      area_low(:)= MAXVAL(areas_lake(:,:), DIM=2, MASK=volume_mask_low(:,:) )
-      area_high(:)=MINVAL(areas_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
-      volume_low(:)= MAXVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_low(:,:) )
-      volume_high(:)=MINVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
-      WHERE (basin_mask(:) > 0._wp .AND. volume_lake(:)>=MINVAL(volumes_lake(:,:), DIM=2))
-        height_lake(:) = height_low(:) + (volume_lake(:)-volume_low(:)) * (height_high(:)-height_low(:)) / (volume_high(:)-volume_low(:)) 
-        area_lake(:)   = area_low(:) + (volume_lake(:)-volume_low(:)) * (area_high(:)-area_low(:)) / (volume_high(:)-volume_low(:))
+      volume_mask(:) = basin_mask(:) > 0._wp .AND. volume_lake(:)>=MINVAL(volumes_lake(:,:), DIM=2)
+
+      WHERE      ( volume_mask(:)  .AND. volume_lake(:)< MAXVAL(volumes_lake(:,:), DIM=2) )
+        height_low (:)=MAXVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_low (:,:))
+        height_high(:)=MINVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
+        area_low   (:)=MAXVAL(areas_lake  (:,:), DIM=2, MASK=volume_mask_low (:,:))
+        area_high  (:)=MINVAL(areas_lake  (:,:), DIM=2, MASK=volume_mask_high(:,:))
+        volume_low (:)=MAXVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_low (:,:))
+        volume_high(:)=MINVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
+        height_lake(:)= height_low(:) + (volume_lake(:)-volume_low(:)) * (height_high(:)-height_low(:)) / (volume_high(:)-volume_low(:)) 
+        area_lake  (:)= area_low  (:) + (volume_lake(:)-volume_low(:)) * (area_high  (:)-area_low  (:)) / (volume_high(:)-volume_low(:))
+      ELSE WHERE ( volume_mask(:) .AND. volume_lake(:)>=MAXVAL(volumes_lake(:,:), DIM=2) )
+        height_lake(:) = MAXVAL(heights_lake(:,:), DIM=2) + (volume_lake(:)-MAXVAL(volumes_lake(:,:), DIM=2)) / MAXVAL(areas_lake(:,:), DIM=2)
+        area_lake(:)   = MAXVAL(areas_lake(:,:), DIM=2)
       ELSE WHERE
         height_lake(:) = 0._wp
         area_lake(:)   = 0._wp
@@ -428,12 +435,16 @@ CONTAINS
       height_dyn(:) = height_oro_min(:) + height_lake(:)
 
       ! update lake fraction [%]
-      WHERE (basin_mask(:) > 0._wp)
-        ! lake and land fraction changes [%]
-        fract_lake_changes(:) = MIN( MAX(area_lake(:), 0._wp), 1._wp) - lake_fract(:)
-      ELSE WHERE
+      IF (model%config%use_sizelakes) THEN
+        WHERE (basin_mask(:) > 0._wp)
+          ! lake and land fraction changes [%]
+          fract_lake_changes(:) = MIN( MAX(area_lake(:), 0._wp), 1._wp) - lake_fract(:)
+        ELSE WHERE
+          fract_lake_changes(:) = 0._wp
+        END WHERE
+      ELSEIF
         fract_lake_changes(:) = 0._wp
-      END WHERE
+      END IF
 
       ! update fractions of lake tile, land tile and their children
       CALL model%Get_top_tile(fract_tile)
