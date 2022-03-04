@@ -247,7 +247,7 @@ CONTAINS
 
     CALL mem%Add_var('fract_snow', mem%fract_snow,                             &
       & hgrid, surface,                                                        &
-      & t_cf('fraction of snow on surface', '-', ''),                          &
+      & t_cf('fract_snow', '-', 'Snow area fraction'),                         &
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix,                                                        &
       & output_level=BASIC,                                                    &
@@ -260,7 +260,7 @@ CONTAINS
     END IF
     CALL mem%Add_var( 'w_snow', mem%w_snow,                                           &
       & hgrid, surface,                                                               &
-      & t_cf('Water content of snow reservoir on surface', 'm water equivalent', ''), &
+      & t_cf('w_snow', 'm (water equivalent)', 'Snow amount'),                        &
       & t_grib1(table, 255, grib_bits), grib2_desc,                                   &
       & prefix, suffix,                                                               &
       & output_level=BASIC, &
@@ -269,7 +269,7 @@ CONTAINS
       ! Total evapotranspiration, including sublimation
     CALL mem%Add_var( 'evapotrans', mem%evapotrans,                                          &
       & hgrid, surface,                                                                      &
-      & t_cf('surface_evapotranspiration', 'kg m-2 s-1', 'Evapotranspiration from surface'), &
+      & t_cf('evapotrans', 'kg m-2 s-1', 'Evapotranspiration, including sublimation'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
       & prefix, suffix,                                                                      &
       & lrestart=.TRUE.,                                                                     &
@@ -279,7 +279,7 @@ CONTAINS
       ! Potential evapotranspiration/sublimation
     CALL mem%Add_var( 'evapopot', mem%evapopot,                                                    &
       & hgrid, surface,                                                                            &
-      & t_cf('surface_evaporation_potential', 'kg m-2 s-1', 'Potential evaporation from surface'), &
+      & t_cf('evapopot', 'kg m-2 s-1', 'Potential evaporation (including sublimation)'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
       & prefix, suffix,                                                                            &
       & lrestart=.TRUE.,                                                                           &
@@ -295,7 +295,7 @@ CONTAINS
 
     CALL mem%Add_var( 'snowmelt', mem%snowmelt,                                &
       & hgrid, surface,                                                        &
-      & t_cf('snow_melt', 'kg m-2 s-1', 'Snow melt on surface'),               &
+      & t_cf('snowmelt', 'kg m-2 s-1', 'Snow melt'),                           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
       & prefix, suffix,                                                        &
       & lrestart=.FALSE.,                                                      &
@@ -303,7 +303,7 @@ CONTAINS
 
     CALL mem%Add_var( 'runoff', mem%runoff,                                   &
       & hgrid, surface,                                                       &
-      & t_cf('surface_runoff', 'kg m-2 s-1', 'Surface runoff'),               &
+      & t_cf('runoff', 'kg m-2 s-1', 'Surface runoff'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
       & prefix, suffix,                                                       &
       & lrestart=.FALSE.,                                                     &
@@ -312,7 +312,7 @@ CONTAINS
 
     CALL mem%Add_var( 'drainage', mem%drainage,                              &
       & hgrid, surface,                                                      &
-      & t_cf('drainage', 'kg m-2 s-1', 'drainage'),                          &
+      & t_cf('drainage', 'kg m-2 s-1', 'Drainage'),                          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
@@ -321,21 +321,21 @@ CONTAINS
 
     CALL mem%Add_var( 'discharge', mem%discharge,                            &
       & hgrid, surface,                                                      &
-      & t_cf('discharge', 'kg m-2 s-1', 'local discharge'),                  &
+      & t_cf('discharge', 'kg m-2 s-1', 'Local discharge'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'discharge_ocean', mem%discharge_ocean,                &
       & hgrid, surface,                                                      &
-      & t_cf('discharge_ocean', 'm3 s-1', 'discharge to the ocean'),         &
+      & t_cf('discharge_ocean', 'm3 s-1', 'Discharge to the ocean'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'internal_drain', mem%internal_drain,                &
       & hgrid, surface,                                                    &
-      & t_cf('internal_drain', 'kg m-2 s-1', 'internal drainage'),         &
+      & t_cf('internal_drain', 'kg m-2 s-1', 'Internal drainage'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix,                                                    &
       & lrestart=.FALSE.,                                                  &
@@ -343,7 +343,7 @@ CONTAINS
 
     CALL mem%Add_var( 'water_flux', mem%water_flux,                                  &
       & hgrid, surface,                                                              &
-      & t_cf('water_flux', 'm3 s-1', 'all land water fluxes'),                       &
+      & t_cf('water_flux', 'm3 s-1', 'All land water fluxes (for water balance check)'),&
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
@@ -366,7 +366,7 @@ CONTAINS
 
     CALL mem%Add_var( 'elevation', mem%elevation,                                    &
       & hgrid, surface,                                                              &
-      & t_cf('elevation', '', ''),                                                   &
+      & t_cf('elevation', 'm', 'Mean orography'),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
@@ -374,7 +374,7 @@ CONTAINS
 
     CALL mem%Add_var( 'oro_stddev', mem%oro_stddev,                                  &
       & hgrid, surface,                                                              &
-      & t_cf('orography_standard_deviation', '', ''),                                &
+      & t_cf('oro_stddev', 'm', 'Orographic standard deviation'),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
@@ -389,24 +389,17 @@ CONTAINS
 
       CALL mem%Add_var( 'fract_snow_soil', mem%fract_snow_soil,                 &
         & hgrid, surface,                                                       &
-        & t_cf('fraction of snow on soil', '-', ''),                            &
+        & t_cf('fract_snow_soil', '-', 'Snow fraction on soil'),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                       &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'w_snow_soil', mem%w_snow_soil,                              &
         & hgrid, surface,                                                            &
-        & t_cf('Water content of snow reservoir on soil', 'm water equivalent', ''), &
+        & t_cf('w_snow_soil', 'm (water equivalent)', 'Snow amount on soil'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      ! CALL mem%Add_var( 'w_snow_soil_old', mem%w_snow_soil_old,                            &
-      !   & hgrid, surface,                                                                  &
-      !   & t_cf('Water content of snow reservoir on soil (old)', 'm water equivalent', ''), &
-      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-      !   & prefix, suffix,                                                                  &
-      !   & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'snow_soil_dens', mem%snow_soil_dens,                &
         & hgrid, surface,                                                    &
@@ -418,7 +411,7 @@ CONTAINS
       ! Total evapotranspiration, including sublimation
       CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                                                     &
         & hgrid, surface,                                                                                         &
-        & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'), &
+        & t_cf('evapotrans_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'),                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix,                                                                                         &
         & lrestart=.FALSE.,                                                                                       &
@@ -427,7 +420,7 @@ CONTAINS
 
       CALL mem%Add_var( 'q_snocpymlt', mem%q_snocpymlt,                          &
         & hgrid, surface,                                                        &
-        & t_cf('heating_snow_cpy_melt', 'W m-2', ''),                            &
+        & t_cf('q_snocpymlt', 'W m-2', 'Heating due to snow melt on canopy'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
         & prefix, suffix,                                                        &
         & lrestart=.FALSE.,                                                      &
@@ -441,7 +434,7 @@ CONTAINS
       END IF
       CALL mem%Add_var( 'fract_water', mem%fract_water,                          &
         & hgrid, surface,                                                        &
-        & t_cf('fraction of water on surface surface_wet_fraction', '-', ''),    &
+        & t_cf('fract_water', '-', 'Wet surface fraction'),                      &
         & t_grib1(table, 255, grib_bits), grib2_desc,                            &
         & prefix, suffix,                                                        &
         & output_level=BASIC,                                                    &
@@ -466,7 +459,7 @@ CONTAINS
 
       CALL mem%Add_var( 'soil_depth_sl', mem%soil_depth_sl,                    &
         & hgrid, soil_w,                                                       &
-        & t_cf('soil_depth_layer', 'm', ''),                                   &
+        & t_cf('soil_depth_sl', 'm', 'Soil depth within each soil layer'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE.,                                                      &
@@ -476,7 +469,7 @@ CONTAINS
       IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
         CALL mem%Add_var( 'fract_org_sl', mem%fract_org_sl,                         &
           & hgrid, soil_w,                                                          &
-          & t_cf('fract_org_sl', '', 'Fraction of organic material in soil layer'), &
+          & t_cf('fract_org_sl', '-', 'Fraction of organic material in soil layer'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
           & prefix, suffix,                                                         &
           & lrestart=.TRUE.,                                                        &
@@ -493,7 +486,7 @@ CONTAINS
 
       CALL mem%Add_var( 'vol_field_cap', mem%vol_field_cap,                    &
         & hgrid, surface,                                                      &
-        & t_cf('vol_field_capacity', 'm/m', ''),                               &
+        & t_cf('vol_field_capacity', 'm/m', 'Volumetric soil field capacity'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -501,7 +494,7 @@ CONTAINS
 
       CALL mem%Add_var( 'vol_field_cap_sl', mem%vol_field_cap_sl,              &
         & hgrid, soil_w,                                                       &
-        & t_cf('vol_field_capacity_sl', 'm/m', ''),                            &
+        & t_cf('vol_field_capy_sl', 'm/m', 'Volumetric soil field capacity'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -509,7 +502,7 @@ CONTAINS
 
       CALL mem%Add_var( 'vol_p_wilt', mem%vol_p_wilt,                          &
         & hgrid, surface,                                                      &
-        & t_cf('vol_p_wilt', 'm/m', ''),                                       &
+        & t_cf('vol_p_wilt', 'm/m', 'Volumetric permanent wilting point'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -517,7 +510,7 @@ CONTAINS
 
       CALL mem%Add_var( 'vol_p_wilt_sl', mem%vol_p_wilt_sl,                    &
         & hgrid, soil_w,                                                       &
-        & t_cf('vol_p_wilt_sl', 'm/m', ''),                                    &
+        & t_cf('vol_p_wilt_sl', 'm/m', 'Volumetric permanent wilting point'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -525,7 +518,7 @@ CONTAINS
 
       CALL mem%Add_var( 'vol_porosity', mem%vol_porosity,                      &
         & hgrid, surface,                                                      &
-        & t_cf('vol_porosity', '', ''),                                        &
+        & t_cf('vol_porosity', 'm/m', 'Volumetric soil porosity'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -533,7 +526,7 @@ CONTAINS
 
       CALL mem%Add_var( 'vol_porosity_sl', mem%vol_porosity_sl,                &
         & hgrid, soil_w,                                                       &
-        & t_cf('vol_porosity_sl', 'm/m', ''),                                  &
+        & t_cf('vol_porosity_sl', 'm/m', 'Volumetric soil porosity'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -541,7 +534,7 @@ CONTAINS
 
       CALL mem%Add_var( 'pore_size_index', mem%pore_size_index,                &
         & hgrid, surface,                                                      &
-        & t_cf('pore_size_index', '', ''),                                     &
+        & t_cf('pore_size_index', '', 'Soil pore size distribution index'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -549,7 +542,7 @@ CONTAINS
 
       CALL mem%Add_var( 'pore_size_index_sl', mem%pore_size_index_sl,          &
         & hgrid, soil_w,                                                       &
-        & t_cf('pore_size_index_sl', '', ''),                                  &
+        & t_cf('pore_size_index_sl', '', 'Soil pore size distribution index'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -557,7 +550,7 @@ CONTAINS
 
       CALL mem%Add_var( 'bclapp', mem%bclapp,                                  &
         & hgrid, surface,                                                      &
-        & t_cf('bclapp_sl', '', ''),                                           &
+        & t_cf('bclapp_sl', '', 'Clapp and Hornberger (1978) exponent b'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -565,7 +558,7 @@ CONTAINS
 
       CALL mem%Add_var( 'bclapp_sl', mem%bclapp_sl,                            &
         & hgrid, soil_w,                                                       &
-        & t_cf('bclapp_sl', '', ''),                                           &
+        & t_cf('bclapp_sl', '', 'Clapp and Hornberger (1978) exponent b'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -573,7 +566,7 @@ CONTAINS
 
       CALL mem%Add_var( 'matrix_pot', mem%matrix_pot,                          &
         & hgrid, surface,                                                      &
-        & t_cf('matrix_potential', 'm', ''),                                   &
+        & t_cf('matrix_pot', 'm', 'Soil saturated matrix potential'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -581,7 +574,7 @@ CONTAINS
 
       CALL mem%Add_var( 'matrix_pot_sl', mem%matrix_pot_sl,                    &
         & hgrid, soil_w,                                                       &
-        & t_cf('matrix_potential_sl', 'm', ''),                                &
+        & t_cf('matrix_pot_sl', 'm', 'Soil saturated matrix potential'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -589,7 +582,7 @@ CONTAINS
 
       CALL mem%Add_var( 'hyd_cond_sat', mem%hyd_cond_sat,                      &
         & hgrid, surface,                                                      &
-        & t_cf('sat_hydraulic_cond', 'm s-1', ''),                             &
+        & t_cf('hyd_cond_sat', 'm s-1', 'Hydraulic conductivity at saturation'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -597,7 +590,7 @@ CONTAINS
 
       CALL mem%Add_var( 'hyd_cond_sat_sl', mem%hyd_cond_sat_sl,                &
         & hgrid, soil_w,                                                       &
-        & t_cf('sat_hydraulic_cond_sl', 'm s-1', ''),                          &
+        & t_cf('hyd_cond_sat_sl', 'm s-1', 'Hydraulic conductivity at saturation'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -610,7 +603,7 @@ CONTAINS
       END IF
       CALL mem%Add_var( 'w_skin', mem%w_skin,                                                         &
         & hgrid, surface,                                                                             &
-        & t_cf('skin_reservoir', 'm water equivalent', 'Water content in skin reservoir of surface'), &
+        & t_cf('w_skin', 'm', 'Water content of surface skin reservoir'),                             &
         & t_grib1(table, 255, grib_bits), grib2_desc,                                                 &
         & prefix, suffix,                                                                             &
         & output_level=BASIC,                                                                         &
@@ -618,7 +611,7 @@ CONTAINS
 
       CALL mem%Add_var( 'snow_accum', mem%snow_accum,                                                        &
         & hgrid, surface,                                                                                    &
-        & t_cf('snow_accum', 'm water equivalent', 'Snow accumulation at non-glacier/non-lake land points'), &
+        & t_cf('snow_accum', 'm (water equivalent)', 'Snow accumulation at non-glacier/non-lake land points'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                 &
         & prefix, suffix,                                                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -648,25 +641,29 @@ CONTAINS
         & lrestart=.FALSE.,                                                       &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    !Todo: is this variable of any interest?
     CALL mem%Add_var( 'evapo_deficit', mem%evapo_deficit,                      &
         & hgrid, surface,                                                      &
-        & t_cf('evaporation_deficit', 'm water equivalent', ''),               &
+        & t_cf('evapo_deficit', 'm',   'Water that would have been evaporated  &
+              & additionally, if there had been more snow or surface water'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    !Todo: Misleading name: water_excess corresponds to water_to_soil of calc_soil_hydrology
     CALL mem%Add_var( 'water_excess', mem%water_excess,                        &
         & hgrid, surface,                                                      &
-        & t_cf('water_excess', 'm water equivalent', ''),                      &
+        & t_cf('water_excess', 'm', 'Amount of water entering the soil'),      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      ! Overflow pool is only used in the terra planet setup (TPE closed).
       CALL mem%Add_var( 'w_soil_overflow', mem%w_soil_overflow,                        &
         & hgrid, surface,                                                              &
-        & t_cf('Water content of reservoir for soil water', 'm water equivalent', ''), &
+        & t_cf('w_soil_overflow', 'm', 'Terra planet overflow pool'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -678,7 +675,7 @@ CONTAINS
       END IF
       CALL mem%Add_var( 'w_rootzone', mem%w_rootzone,                                         &
         & hgrid, surface,                                                                     &
-        & t_cf('w_rootzone', 'Liquid water content of the root zone', 'm water equivalent'),  &
+        & t_cf('w_rootzone', 'm', 'Liquid water content of the root zone'),                   &
         & t_grib1(table, 255, grib_bits), grib2_desc,                                         &
         & prefix, suffix,                                                                     &
         & loutput=.TRUE., output_level=BASIC,                                                 &
@@ -686,7 +683,7 @@ CONTAINS
 
       CALL mem%Add_var( 'w_soil_sl', mem%w_soil_sl,                          &
         & hgrid, soil_w,                                                     &
-        & t_cf('Water content in soil layers', 'm water equivalent', ''),    &
+        & t_cf('w_soil_sl', 'm', 'Water content of soil layers'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., output_level=BASIC,                                &
@@ -694,7 +691,7 @@ CONTAINS
 
       CALL mem%Add_var( 'i_soil_sl', mem%i_soil_sl,                          &
         & hgrid, soil_w,                                                     &
-        & t_cf('Ice content in soil layers', 'm water equivalent', ''),      &
+        & t_cf('i_soil_sl', 'm', 'Ice content of soil layers'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., output_level=BASIC,                                &
@@ -702,7 +699,7 @@ CONTAINS
 
       CALL mem%Add_var( 'w_soil_freeze_sl', mem%w_soil_freeze_sl,            &
         & hgrid, soil_w,                                                     &
-        & t_cf('Freezing water flux in soil layers', 'kg m-2 s-1', ''),      &
+        & t_cf('w_soil_freeze_sl', 'kg m-2 s-1', 'Freezing water flux in soil layers'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=.FALSE.,                                                  &
@@ -710,7 +707,7 @@ CONTAINS
 
       CALL mem%Add_var( 'i_soil_melt_sl', mem%i_soil_melt_sl,                &
         & hgrid, soil_w,                                                     &
-        & t_cf('Melting ice flux in soil layers', 'kg m-2 s-1', ''),         &
+        & t_cf('i_soil_melt_sl', 'kg m-2 s-1', 'Melting ice flux in soil layers'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=.FALSE.,                                                  &
@@ -718,7 +715,7 @@ CONTAINS
 
       CALL mem%Add_var( 'w_soil_sat_sl', mem%w_soil_sat_sl,                             &
         & hgrid, soil_w,                                                                &
-        & t_cf('Water content in soil layers at saturation', 'm water equivalent', ''), &
+        & t_cf('w_soil_sat_sl', 'm', 'Water content in soil layers at saturation'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & prefix, suffix,                                                               &
         & loutput=.TRUE., &
@@ -726,7 +723,7 @@ CONTAINS
 
       CALL mem%Add_var( 'w_soil_fc_sl', mem%w_soil_fc_sl,                                   &
         & hgrid, soil_w,                                                                    &
-        & t_cf('Water content in soil layers at field capacity', 'm water equivalent', ''), &
+        & t_cf('w_soil_fc_sl', 'm', 'Water content in soil layers at field capacity'),      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
         & prefix, suffix,                                                                   &
         & loutput=.TRUE., &
@@ -734,7 +731,7 @@ CONTAINS
 
       CALL mem%Add_var( 'w_soil_pwp_sl', mem%w_soil_pwp_sl,                                          &
         & hgrid, soil_w,                                                                             &
-        & t_cf('Water content in soil layers at permanent wilting point', 'm water equivalent', ''), &
+        & t_cf('w_soil_pwp_sl', 'm', 'Water content in soil layers at permanent wilting point'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
         & prefix, suffix,                                                                            &
         & loutput=.TRUE., &
@@ -742,7 +739,7 @@ CONTAINS
 
       CALL mem%Add_var('w_rootzone_rel', mem%w_rootzone_rel,                        &
         &  hgrid, surface,                                                          &
-        &  t_cf('w_rootzone_rel', '1', 'Relative root zone moisture'),              &
+        &  t_cf('w_rootzone_rel', '-', 'Relative root zone moisture'),              &
         &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp )
@@ -756,7 +753,7 @@ CONTAINS
 
       CALL mem%Add_var( 'root_depth', mem%root_depth,                        &
         & hgrid, surface,                                                    &
-        & t_cf('rooting_depth', '', ''),                                     &
+        & t_cf('root_depth', 'm', 'Rooting depth'),                          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., &
@@ -764,7 +761,7 @@ CONTAINS
 
       CALL mem%Add_var( 'root_depth_sl', mem%root_depth_sl,                  &
         & hgrid, soil_w,                                                     &
-        & t_cf('root_depth_layer', 'm', ''),                                 &
+        & t_cf('root_depth_sl', 'm', 'Rooting depth within the soil layer'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., &
@@ -772,7 +769,7 @@ CONTAINS
 
       CALL mem%Add_var( 'fract_snow_can', mem%fract_snow_can,                &
         & hgrid, surface,                                                    &
-        & t_cf('fraction of snow on canopy', '-', ''),                       &
+        & t_cf('fract_snow_can', '-', 'Snow fraction on canopy'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=BASIC,                                                &
@@ -780,7 +777,7 @@ CONTAINS
 
       CALL mem%Add_var( 'w_snow_can', mem%w_snow_can,                                  &
         & hgrid, surface,                                                              &
-        & t_cf('Water content of snow reservoir on canopy', 'm water equivalent', ''), &
+        & t_cf('w_snow_can', 'm (water equivalent)', 'Snow amount on canopy'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC,                                                          &
@@ -790,7 +787,7 @@ CONTAINS
       !    as local variable. Do we need that in the output without quincy? Do we need it at all?
       CALL mem%Add_var( 'w_rootzone_fc', mem%w_rootzone_fc,                                           &
         & hgrid, surface,                                                                             &
-        & t_cf('Water content at field capacity in root zone of the soil', 'm water equivalent', ''), &
+        & t_cf('w_rootzone_fc', 'm', 'Root zone water content at field capacity'),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                                             &
         & lrestart=.FALSE.,                                                                           &
@@ -801,7 +798,7 @@ CONTAINS
       !    as local variable. Do we need that in the output without quincy? Do we need it at all?
       CALL mem%Add_var( 'w_rootzone_pwp', mem%w_rootzone_pwp,                                                  &
         & hgrid, surface,                                                                                      &
-        & t_cf('Water content at permanent wilting point in root zone of the soil', 'm water equivalent', ''), &
+        & t_cf('w_rootzone_pwp', 'm', 'Root zone water content at permanent wilting point'),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                   &
         & prefix, suffix,                                                                                      &
         & lrestart=.FALSE.,                                                                                    &
@@ -810,7 +807,7 @@ CONTAINS
 
       CALL mem%Add_var( 'water_stress', mem%water_stress,                     &
         & hgrid, surface,                                                     &
-        & t_cf('Water stress factor of canopy', '-', ''),                     &
+        & t_cf('water_stress', '-', 'Water stress factor'),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
         & prefix, suffix,                                                     &
         & loutput=.TRUE., &
@@ -819,7 +816,7 @@ CONTAINS
       IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
         CALL mem%Add_var( 'canopy_cond_unlimited', mem%canopy_cond_unlimited,  &
           & hgrid, surface,                                                    &
-          & t_cf('canopy_conductance_unlimited', '', ''),                      &
+          & t_cf('canopy_cond_unlimited', 'm/s', 'Canopy conductance ignoring water limitation'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., &
@@ -827,7 +824,7 @@ CONTAINS
 
         CALL mem%Add_var( 'canopy_cond_limited', mem%canopy_cond_limited,      &
           & hgrid, surface,                                                    &
-          & t_cf('canopy_conductance_limited', '', ''),                        &
+          & t_cf('canopy_cond_limited', 'm/s', 'Canopy conductance accounting for water limitation'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & loutput=.TRUE., &
@@ -836,7 +833,7 @@ CONTAINS
 
       CALL mem%Add_var( 'transpiration', mem%transpiration,                          &
         & hgrid, surface,                                                            &
-        & t_cf('surface_transpiration', 'kg m-2 s-1', 'Transpiration from surface'), &
+        & t_cf('transpiration', 'kg m-2 s-1', 'Transpiration'),                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & lrestart=.FALSE.,                                                          &
@@ -852,7 +849,7 @@ CONTAINS
 
       CALL mem%Add_var( 'fract_snow_glac', mem%fract_snow_glac,              &
         & hgrid, surface,                                                    &
-        & t_cf('fraction of snow on glacier', '-', ''),                      &
+        & t_cf('fract_snow_glac', '-', 'Snow frction on glacier'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=BASIC,                                                &
@@ -860,7 +857,7 @@ CONTAINS
 
       CALL mem%Add_var( 'w_glac', mem%w_glac,                                                  &
         & hgrid, surface,                                                                      &
-        & t_cf('water_glac', 'm water equivalent', 'Water content of glacier including snow'), &
+        & t_cf('w_glac', 'm (water equivalent)', 'Glacier depth (including snow)'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                   &
         & prefix, suffix,                                                                      &
         & output_level=BASIC,                                                                  &
@@ -880,7 +877,7 @@ CONTAINS
 
       CALL mem%Add_var( 'evapo_wtr', mem%evapo_wtr,                                                   &
         & hgrid, surface,                                                                             &
-        & t_cf('surface_evapotranspiration_wtr', 'kg m-2 s-1', 'Evapotranspiration from lake water'), &
+        & t_cf('evapo_wtr', 'kg m-2 s-1', 'Evaporation from lake water'),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                          &
         & prefix, suffix,                                                                             &
         & lrestart=.FALSE.,                                                                           &
@@ -889,7 +886,7 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         CALL mem%Add_var( 'evapo_ice', mem%evapo_ice,                                                 &
           & hgrid, surface,                                                                           &
-          & t_cf('surface_evapotranspiration_ice', 'kg m-2 s-1', 'Evapotranspiration from lake ice'), &
+          & t_cf('evapo_ice', 'kg m-2 s-1', 'Evaporation from lake ice'),                             &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
           & prefix, suffix,                                                                           &
           & lrestart=.FALSE.,                                                                         &
@@ -898,7 +895,7 @@ CONTAINS
         !Fraction of snow on lake ice, rel. to ice fraction
         CALL mem%Add_var( 'fract_snow_lice', mem%fract_snow_lice,                                     &
           & hgrid, surface,                                                                           &
-          & t_cf('fract_snow_lice', '-', 'fraction of snow on lake ice (rel. to ice fraction)'),      &
+          & t_cf('fract_snow_lice', '-', 'Snow fraction on lake ice (rel. to ice fraction)'),         &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
           & prefix, suffix,                                                                           &
           & output_level=BASIC,                                                                       &
@@ -906,7 +903,7 @@ CONTAINS
 
         CALL mem%Add_var( 'w_snow_lice', mem%w_snow_lice,                                             &
           & hgrid, surface,                                                                           &
-          & t_cf('w_snow_lice', 'm water equivalent', 'Water content of snow reservoir on lake ice'), &
+          & t_cf('w_snow_lice', 'm water equivalent', 'Snow amount on lake ice'),                     &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                        &
           & prefix, suffix,                                                                           &
           & output_level=BASIC,                                                                       &
@@ -967,7 +964,7 @@ CONTAINS
         & lrestart=.FALSE., initval_r=0.0_wp )
       CALL mem%Add_var('w_rootzone_rel_gmean', mem%w_rootzone_rel_gmean,                 &
         & hgrid, surface,                                                                &
-        & t_cf('w_rootzone_rel_gmean', '1', 'Global mean relative rootzone moisture'),   &
+        & t_cf('w_rootzone_rel_gmean', '-', 'Global mean relative rootzone moisture'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
