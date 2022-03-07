@@ -116,9 +116,9 @@ MODULE mo_hydro_memory_class
       & matrix_pot_sl,        & !< Matrix potential                                                         [m]
       & hyd_cond_sat_sl,      & !< Saturated hydraulic conductivity                                         [m/s]
       & w_soil_sl,            & !< Water content in soil layers                                             [m]
-      & i_soil_sl,            & !< Ice content in soil layers                                               [m]
+      & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
       & w_soil_freeze_sl,     & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
-      & i_soil_melt_sl,       & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
+      & ice_soil_melt_sl,     & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
       & w_soil_sat_sl,        & !< Water content of soil layers at saturation (derived from soil porosity)  [m]
       & w_soil_fc_sl,         & !< Water content of soil layers at field capacity
                                 !! (derived from volumetric field capacity)                                 [m]
@@ -690,9 +690,9 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'i_soil_sl', mem%i_soil_sl,                            &
+      CALL mem%Add_var( 'ice_soil_sl', mem%ice_soil_sl,                        &
         & hgrid, soil_w,                                                       &
-        & t_cf('i_soil_sl', 'm', 'Ice content of soil layers'),                &
+        & t_cf('ice_soil_sl', 'm', 'Ice content of soil layers'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
@@ -706,9 +706,9 @@ CONTAINS
         & lrestart=.FALSE.,                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'i_soil_melt_sl', mem%i_soil_melt_sl,                            &
+      CALL mem%Add_var( 'ice_soil_melt_sl', mem%ice_soil_melt_sl,                        &
         & hgrid, soil_w,                                                                 &
-        & t_cf('i_soil_melt_sl', 'kg m-2 s-1', 'Melting ice flux in soil layers'),       &
+        & t_cf('ice_soil_melt_sl', 'kg m-2 s-1', 'Melting ice flux in soil layers'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &

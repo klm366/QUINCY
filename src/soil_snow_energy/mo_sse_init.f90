@@ -352,7 +352,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain :: &
       & soil_depth_sl, &
       & w_soil_sl, &
-      & i_soil_sl, &
+      & ice_soil_sl, &
       & t_soil_sl, &
       & matrix_pot_sl, &
       & bclapp_sl, &
@@ -416,7 +416,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, i_soil_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
 
@@ -453,20 +453,20 @@ CONTAINS
       END IF
 
       !$claw expand parallel update
-      i_soil_sl(:,:,:) = 0._wp
+      ice_soil_sl(:,:,:) = 0._wp
 
       DO j = 1, nsoil
         heat_cap_sl(:,j,:) = soil_e%dz(j) * vol_heat_cap(:,:)
       END DO
       !$claw acc update device(heat_cap_sl)
 
-      !$claw acc data present(heat_cap_sl,t_soil_sl,w_soil_sl,liquid_max,i_soil_sl)
+      !$claw acc data present(heat_cap_sl,t_soil_sl,w_soil_sl,liquid_max,ice_soil_sl)
       !$claw acc parallel loop gang vector collapse(3)
       DO i = 1, nproma
         DO j = 1, nsoil
           DO b = 1, nblks
             IF (t_soil_sl(i,j,b) < tmelt .AND. w_soil_sl(i,j,b) > liquid_max(i,j,b)) THEN
-              i_soil_sl(i,j,b) = MIN(w_soil_sl(i,j,b) - liquid_max(i,j,b),                            &
+              ice_soil_sl(i,j,b) = MIN(w_soil_sl(i,j,b) - liquid_max(i,j,b),                         &
                 &                   heat_cap_sl(i,j,b) * (tmelt - t_soil_sl(i,j,b)) / (alf * rhoh2o) &
                 &                  )
             END IF
@@ -476,11 +476,11 @@ CONTAINS
       !$claw acc end data
 
       !$claw expand parallel update
-      w_soil_sl(:,:,:) = w_soil_sl(:,:,:) - i_soil_sl(:,:,:)
+      w_soil_sl(:,:,:) = w_soil_sl(:,:,:) - ice_soil_sl(:,:,:)
 
-      !$claw acc update host(w_soil_sl,i_soil_sl)
+      !$claw acc update host(w_soil_sl,ice_soil_sl)
 
-      ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + i_soil_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
+      ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + ice_soil_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
       ! IF (TRIM(tile%name) == 'land') THEN
       !   dsl4jsb_var_ptr(SEB_,t)(:,:)        = t_soil_sl(:,1,:)
       !   dsl4jsb_var_ptr(SEB_,t_unfilt)(:,:) = t_soil_sl(:,1,:)
@@ -540,15 +540,15 @@ CONTAINS
       ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
       !$claw acc enter data pcreate(fract_water,fract_ice)
 
-      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,i_soil_sl)
-      !$claw acc update device(soil_depth_sl,w_soil_sl,i_soil_sl)
+      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,ice_soil_sl)
+      !$claw acc update device(soil_depth_sl,w_soil_sl,ice_soil_sl)
       !$claw acc parallel loop gang vector collapse(3)
       DO i = 1, nproma
         DO j = 1, nsoil
           DO b = 1, nblks
             IF (soil_depth_sl(i,j,b) > 0._wp) THEN
-              fract_water(i,j,b) = w_soil_sl(i,j,b) / soil_depth_sl(i,j,b)
-              fract_ice  (i,j,b) = i_soil_sl(i,j,b) / soil_depth_sl(i,j,b)
+              fract_water(i,j,b) = w_soil_sl(i,j,b)   / soil_depth_sl(i,j,b)
+              fract_ice  (i,j,b) = ice_soil_sl(i,j,b) / soil_depth_sl(i,j,b)
             ELSE
               fract_water(i,j,b) = 0._wp
               fract_ice  (i,j,b) = 0._wp
@@ -596,7 +596,7 @@ CONTAINS
         !&                              SPREAD( heat_cond(:,:),                    DIM=2, ncopies=nsoil)               , &
         &                                      heat_cond_tmp(:,:,:)                                                   , &
         &                                      w_soil_sl(:,:,:)                                                       , &
-        &                                      i_soil_sl(:,:,:)                                                       , &
+        &                                      ice_soil_sl(:,:,:)                                                     , &
         &                                      vol_porosity_sl(:,:,:)                                                 , &
         &                                      vol_field_cap_sl(:,:,:)                                                , &
         &                                      fract_org_sl(:,:,:)                                                    , &
