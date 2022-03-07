@@ -419,7 +419,7 @@ CONTAINS
   ! @param [in]      transpiration      Evapotranspiration [kg m-2 s-1]
   ! @param [in,out]  ws_l               Content un-frozen water of soil layers in rooting zone [m]
   ! @param [in,out]  soil_ice_l         Content of frozen water of soil layers in rooting zone [m]
-  ! @param [out]     ws                 Liquid water content of the root zone [m]
+  ! @param [out]     w_rootzone         Liquid water content of the root zone [m]
   ! @param [out]     wsat_l             Maximum possible amount of liquid water in soil layer
   !                                       - reduced by amount of ice [m]
   ! @param [out]     field_cap_l        Liquid water content at field capacity in soil layer [m]
@@ -439,7 +439,7 @@ CONTAINS
     ! inout
     & ws_l, soil_ice_l, w_soil_overflow,                                                                         &
     ! out
-    & ws, wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                                        &
+    & w_rootzone, wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                                &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -461,7 +461,7 @@ CONTAINS
       & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & ws, w_soil_overflow
+      & w_rootzone, w_soil_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & ws_l, soil_ice_l
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -541,7 +541,7 @@ CONTAINS
     !$claw acc end data
 
     CALL get_amount_in_rootzone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
-    CALL get_amount_in_rootzone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
+    CALL get_amount_in_rootzone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), w_rootzone  (:))
 
     !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
     !$claw acc end parallel
@@ -596,7 +596,7 @@ CONTAINS
           runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
           infilt(i) = 0._wp
         ELSE
-          ws_incl_ice(i) = ws(i) + ice_rootzone(i)                    ! soil water including ice
+          ws_incl_ice(i) = w_rootzone(i) + ice_rootzone(i)            ! soil water including ice
           IF (water_to_soil(i) > 0._wp .AND. ws_incl_ice(i) > ws_min_drain(i)) THEN ! soilwater content above limit for drainage
             ! compare jsbach3 documentation section 2.3.2.2
             ws_rel(i) = MIN(1._wp, ws_incl_ice(i) / ws_max(i))             ! relative soil moisture
@@ -678,8 +678,7 @@ CONTAINS
          ws_l, drainage, w_soil_overflow)
 
     ! recalculate soil moisture from the soil moisture of the individual levels
-    ! Note: ws only includes the soil moisture within the root zone
-    CALL get_amount_in_rootzone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws(:))
+    CALL get_amount_in_rootzone(ws_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), w_rootzone(:))
 
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector
@@ -1334,7 +1333,6 @@ CONTAINS
       ! In case of a water deficit due to evapotranspiration, soil moisture must be
       ! changed to close the land surface water balance.
 
-      ! Note: ws here refers to total soil column, and not to root zone (as ws above).
       ws(i) = SUM(ws_l(i,:)) + SUM(soil_ice_l(i,:))  ! water and ice within the column
       DO jk=1, nsoil
         IF (deficit_evapotrans(i) < 0._wp .AND. ws(i) > 0._wp) THEN
