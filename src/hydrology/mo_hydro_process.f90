@@ -982,17 +982,22 @@ CONTAINS
           IF (l_ice_impedance_drain)THEN
             IF (l_scool_impedance_drain) THEN
               ! Ice and supercooled water are considerred to block water movement.
-              ice_impede(j)= 10._wp**(-6._wp *                                             &
+              ice_impede(j)= min(1.0_wp, max(0.1_wp, 10._wp**(-6._wp *                     &
                               ( (SUM(soil_ice_l(j,i:nsoil)) + SUM(pot_scool_l(j,i:nsoil))) &
-                               /(SUM(field_cap_l(j,i:nsoil)) + SUM(soil_ice_l(j,i:nsoil)))))
+                               /(SUM(field_cap_l(j,i:nsoil)) + SUM(soil_ice_l(j,i:nsoil)))))))
             ELSE
               ! Only ice is considerred to block water movement.
-              ice_impede(j)= 10._wp**(-6._wp *                                             &
+              ice_impede(j)= min(1.0_wp, max(0.1_wp, 10._wp**(-6._wp *                     &
                               (  SUM(soil_ice_l(j,i:nsoil))                                &
-                               /(SUM(field_cap_l(j,i:nsoil)) + SUM(soil_ice_l(j,i:nsoil)))))
+                               /(SUM(field_cap_l(j,i:nsoil)) + SUM(soil_ice_l(j,i:nsoil)))))))
             END IF
           ELSE
             ice_impede(j)= 1.0_wp
+          END IF
+
+          ! Replace missing values with setting lateral drainage to zero
+          IF (ice_impede(j) /= ice_impede(j)) THEN
+            ice_impede(j)= 0._wp
           END IF
 
           ! Calculate lateral drainage
