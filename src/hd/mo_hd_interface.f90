@@ -742,7 +742,7 @@ CONTAINS
       global_outflow_resid   = 0._wp
       global_discharge       = global_sum_array(discharge(:,:)*in_domain(:,:))
       global_internal_drain  = global_sum_array(internal_drain(:,:)*in_domain(:,:))
-      global_discharge_lake      = global_sum_array(discharge_lake(:,:)*in_domain(:,:))
+      global_discharge_lake  = global_sum_array(discharge_lake(:,:)*in_domain(:,:))
       global_discharge_ocean = global_sum_array(discharge_ocean(:,:)*in_domain(:,:))
 
       IF (debug_hd) THEN
@@ -1070,7 +1070,6 @@ CONTAINS
              global_lake_volume_error,' m3'
         CALL finish (TRIM(routine), message_text)
       END IF
-
  
     CASE ('weighted_to_coast')
       WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
@@ -1277,7 +1276,9 @@ CONTAINS
       &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
       & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
       & - discharge_ocean(:,:) * in_domain(:,:)                                   & !< discharge to the ocean
-      & - discharge_lake     (:,:) * in_domain(:,:)                                     !< discharge to the lakes
+      & - discharge_lake (:,:) * in_domain(:,:)                                   & !< discharge to the lakes
+      & - drainage_lake  (:,:) * in_domain(:,:)                                     !< drainge from the lakes (outlet overflow)
+
     global_water_flux = global_sum_array(water_flux(:,:))
 
     IF (debug_hd) THEN
