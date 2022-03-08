@@ -34,7 +34,7 @@ CONTAINS
   !
   REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
 
-    USE mo_echam_convect_tables, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
+    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
                                  jptlucu1, jptlucu2
     USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
 
