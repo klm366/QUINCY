@@ -56,7 +56,8 @@ MODULE mo_hd_memory_class
       runoff_land     , &  !< land inflow from over land runoff (P-E) [m3/s]
       drainage_land   , &  !< land inflow from over land drainge (baseflow) [m3/s]
       discharge_river , &  !< river discharge from upstream cells into lake [m3/s]
-      drainage_lake   , &  !< lake outflow to outlet [m3/s]
+      overflow_lake   , &  !< new lake outflow to outlet [m3/s]
+      drainage_lake   , &  !< old lake outflow to outlet [m3/s]
       lake_inflow     , &  !< lake inflow from neighbor grid cell [m3/s]
       lake_outflow    , &  !< lake outflow to neighbor grid cell [m3/s]
       volume_lake     , &  !< lake water volume storage [m3]
@@ -253,6 +254,14 @@ CONTAINS
      CALL mem%Add_var( 'discharge_river', mem%discharge_river,               &
       & hgrid, surface,                                                      &
       & t_cf('discharge_river', 'm3/s', 'river discharge into lake'),        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'overflow_lake', mem%overflow_lake,                 &
+      & hgrid, surface,                                                      &
+      & t_cf('overflow_lake', 'm3', 'lake outflow to outlet'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &

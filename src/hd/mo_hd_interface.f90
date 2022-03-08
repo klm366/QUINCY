@@ -131,7 +131,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: discharge
-    dsl4jsb_Real2D_onChunk :: drainage_lake
+    dsl4jsb_Real2D_onChunk :: overflow_lake
     dsl4jsb_Real2D_onChunk :: outflow_runoff
     dsl4jsb_Real2D_onChunk :: outflow_drainage
     dsl4jsb_Real2D_onChunk :: outflow_rivers
@@ -215,7 +215,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, discharge)   ! in
 
-    dsl4jsb_Get_var2D_onChunk(HD_, drainage_lake)   ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, overflow_lake)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_overlflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_overlflow)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_baseflow)     ! in
@@ -242,7 +242,7 @@ CONTAINS
       ELSEWHERE
         inflow(:)      = runoff(:) * tile_fract(:) * area / rhoh2o
       END WHERE
-      inflow(:)  = inflow(:) + drainage_lake(:)
+      inflow(:)  = inflow(:) + overflow_lake(:)
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
       inflow(:) = drainage(:) * tile_fract(:) * area / rhoh2o
@@ -843,6 +843,7 @@ CONTAINS
       & basin_mask,            &
       & outlets,               &
       & volume_lake,           &
+      & overflow_lake,         &
       & height_lake,           &
       & height_dyn,            &
       & lake_inflow,           &
@@ -922,11 +923,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outlets)          ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, overflow_lake)    ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, height_dyn)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_inflow)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
-    dsl4jsb_Get_var2D_onDomain(HD_, drainage_lake)   ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, drainage_lake)    ! OUT
 
 
     ! Configuration parameters from the namelist
@@ -1044,13 +1046,15 @@ CONTAINS
       ! outlet overflow to riverflow
       ALLOCATE (volume_from_lake(nproma, nblks))
 
+      drainage_lake(:,:)=0._wp
+      drainage_lake(:,:)=overflow_lake
+
       DO blk = 1, p_patch(1)%nblks_c ! block centers
         outlets_max(blk) = MAXVAL(outlets(:,blk))
       END DO
       ! number of outlets
       global_lake_volume = global_sum_array(volume_lake(:,:)*in_domain(:,:))
       outlets_maxs = global_max(MAXVAL(outlets_max))  ! Get max over all PEs
-      drainage_lake(:,:)=0._wp
       DO n = 1, outlets_maxs
         volume_from_lake(:,:) = 0._wp
         WHERE (n==basin_mask(:,:).AND.volume_lake(:,:)>volume_lake_max(:,:))
@@ -1058,14 +1062,14 @@ CONTAINS
           volume_lake(:,:)      = volume_lake(:,:) - volume_from_lake(:,:)
         END WHERE
         WHERE(n==outlets)
-          drainage_lake(:,:)=global_sum_array(volume_from_lake(:,:)/steplen*in_domain(:,:))
+          overflow_lake(:,:)=global_sum_array(volume_from_lake(:,:)/steplen*in_domain(:,:))
         END WHERE
       END DO
 
 
       ! checkout water budget conservation: outlet overflow
-      global_lake_volume_error=global_lake_volume-global_sum_array((volume_lake(:,:)+drainage_lake(:,:)*steplen)*in_domain(:,:))
-      IF (ABS(global_lake_volume_error) > 10._wp*EPSILON(1._wp)) THEN
+      global_lake_volume_error=global_lake_volume-global_sum_array((volume_lake(:,:)+overflow_lake(:,:)*steplen)*in_domain(:,:))
+      IF (ABS(global_lake_volume_error)/global_lake_volume > 10._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Lake water conservation problem: outlet overflow imbalance: ', &
              global_lake_volume_error,' m3'
         CALL finish (TRIM(routine), message_text)
@@ -1275,9 +1279,9 @@ CONTAINS
     water_flux(:,:) = &
       &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
       & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
+      & + drainage_lake  (:,:) * in_domain(:,:)                                   & !< drainge from the lakes (outlet overflow)
       & - discharge_ocean(:,:) * in_domain(:,:)                                   & !< discharge to the ocean
-      & - discharge_lake (:,:) * in_domain(:,:)                                   & !< discharge to the lakes
-      & - drainage_lake  (:,:) * in_domain(:,:)                                     !< drainge from the lakes (outlet overflow)
+      & - discharge_lake (:,:) * in_domain(:,:)                                     !< discharge to the lakes
 
     global_water_flux = global_sum_array(water_flux(:,:))
 
