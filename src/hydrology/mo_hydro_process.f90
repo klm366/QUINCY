@@ -547,26 +547,6 @@ CONTAINS
     hlp_2d(:,:) = vol_field_cap_l(:,:) * soil_depth_l(:,:)
     CALL get_water_in_root_zone(hlp_2d(:,:), soil_depth_l(:,:), root_depth_l(:,:), ws_max(:))
 
-    IF (l_ws_max_depend_on_org) THEN
-!!!! Careful: ws_max is used inconsistantly -> it is used to calculate the relative saturation of the soil but using water+ice 
-!!!! so at this point the ice should not be deducted (as it is in field_cap_l), or later the saturation should not be calculated by:
-!!!! (w_liq + ice) / ws_max -- see changes below
-!!!! But in any case the question whether or not ice is discounted should not depend on the organic matter content of the soil
-      !$claw acc data present(fract_org_l,ws_max,ws_max_mineral)
-      !$claw acc parallel loop gang vector
-      ! Careful: ws_max just calculated from vol_field_cap_l (depending on organic matter) is
-      !          overwritten with max_moist from the initial file (not depending on organic matter)
-      !          in grid cells with no significant organic fraction. This might lead to unexpected
-      !          inconsistencies!
-      DO i = 1, nidx
-        IF (SUM(fract_org_l(i,:)) <= EPSILON(1._wp)) THEN
-          ws_max(i) = ws_max_mineral(i)
-        END IF
-      END DO
-      !$claw acc end parallel
-      !$claw acc end data
-    END IF
-
     CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))
     CALL get_water_in_root_zone(ws_l      (:,:), soil_depth_l(:,:), root_depth_l(:,:), ws          (:))
 

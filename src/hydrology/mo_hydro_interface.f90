@@ -711,8 +711,13 @@ CONTAINS
   !!
   SUBROUTINE update_soil_properties(tile, options)
 
-    USE mo_hydro_constants, ONLY: vol_porosity_org, hyd_cond_sat_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
-      & vol_field_cap_org, vol_p_wilt_org, thresh_org, beta_perc
+    USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matrix_pot_org_top, pore_size_index_org_top, &
+      & vol_field_cap_org_top, vol_p_wilt_org_top, &
+      & vol_porosity_org_below, hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, pore_size_index_org_below, &
+      & vol_field_cap_org_below, vol_p_wilt_org_below, &
+      & thresh_org, beta_perc
+
+
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -753,6 +758,14 @@ CONTAINS
     REAL(wp), ALLOCATABLE ::  fract_perc(:,:)          ! fraction of the soil with connected organic pathways 
     REAL(wp), ALLOCATABLE ::  fract_uncon(:,:)         ! fraction of the soil with unconnected organic matter
     REAL(wp), ALLOCATABLE ::  hyd_cond_sat_uncon(:,:)  ! saturated hydraulic conductivity of 'unconnected' fraction
+
+    REAL(wp), ALLOCATABLE ::  hyd_cond_sat_org(:,:)
+    REAL(wp), ALLOCATABLE ::  vol_porosity_org(:,:)
+    REAL(wp), ALLOCATABLE ::  bclapp_org(:,:)
+    REAL(wp), ALLOCATABLE ::  matrix_pot_org(:,:)
+    REAL(wp), ALLOCATABLE ::  pore_size_index_org(:,:)
+    REAL(wp), ALLOCATABLE ::  vol_field_cap_org(:,:)
+    REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
@@ -806,6 +819,33 @@ CONTAINS
       !$claw end expand
     END DO
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+
+      ALLOCATE(hyd_cond_sat_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(vol_porosity_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(bclapp_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(matrix_pot_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(pore_size_index_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(vol_field_cap_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(vol_p_wilt_org(SIZE(hyd_cond_sat),nsoil))
+
+      ! Use different parameters for top layer and deeper layers
+      hyd_cond_sat_org(:,1) = hyd_cond_sat_org_top
+      vol_porosity_org(:,1) = vol_porosity_org_top
+      bclapp_org(:,1) = bclapp_org_top
+      matrix_pot_org(:,1) = matrix_pot_org_top
+      pore_size_index_org(:,1) = pore_size_index_org_top
+      vol_field_cap_org(:,1) = vol_field_cap_org_top
+      vol_p_wilt_org(:,1) = vol_p_wilt_org_top 
+      DO i=2,nsoil
+        hyd_cond_sat_org(:,i) = hyd_cond_sat_org_below
+        vol_porosity_org(:,i) = vol_porosity_org_below
+        bclapp_org(:,i) = bclapp_org_below
+        matrix_pot_org(:,i) = matrix_pot_org_below
+        pore_size_index_org(:,i) = pore_size_index_org_below
+        vol_field_cap_org(:,i) = vol_field_cap_org_below
+        vol_p_wilt_org(:,i) = vol_p_wilt_org_below      
+      END DO
+
       IF (dsl4jsb_Config(HYDRO_)%l_percolation_theory) THEN
         ! Saturated hydraulic conductivity following percolation theory 
         ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
@@ -831,9 +871,9 @@ CONTAINS
         WHERE(fract_org_sl(:,:) > 0._wp)
           hyd_cond_sat_uncon(:,:) = fract_uncon(:,:)                                                  &
             &                        * ( (1._wp - fract_org_sl(:,:))       / hyd_cond_sat_sl(:,:)     &
-            &                          + (fract_org_sl(:,:) - fract_perc(:,:)) / hyd_cond_sat_org )**(-1._wp)
+            &                          + (fract_org_sl(:,:) - fract_perc(:,:)) / hyd_cond_sat_org(:,:) )**(-1._wp)
           hyd_cond_sat_sl(:,:)    = fract_uncon(:,:) * hyd_cond_sat_uncon(:,:)  &
-            &                      + fract_perc(:,:) * hyd_cond_sat_org
+            &                      + fract_perc(:,:) * hyd_cond_sat_org(:,:)
         END WHERE
 
         DEALLOCATE(fract_perc)
@@ -842,16 +882,25 @@ CONTAINS
       ELSE
         ! Saturated hydraulic conductivity as weighted average from mineral and organic parts 
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_1 tile_name=tile%name soil=i
-        hyd_cond_sat_sl (:,:) = (1._wp - fract_org_sl(:,:)) * hyd_cond_sat_sl   (:,:) + fract_org_sl(:,:) * hyd_cond_sat_org
+        hyd_cond_sat_sl (:,:) = (1._wp - fract_org_sl(:,:)) * hyd_cond_sat_sl   (:,:) + fract_org_sl(:,:) * hyd_cond_sat_org(:,:)
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_2 tile_name=tile%name soil=i
-      vol_porosity_sl   (:,:) = (1._wp - fract_org_sl(:,:)) * vol_porosity_sl   (:,:) + fract_org_sl(:,:) * vol_porosity_org
-      bclapp_sl         (:,:) = (1._wp - fract_org_sl(:,:)) * bclapp_sl         (:,:) + fract_org_sl(:,:) * bclapp_org
-      matrix_pot_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * matrix_pot_sl     (:,:) + fract_org_sl(:,:) * matrix_pot_org
-      pore_size_index_sl(:,:) = (1._wp - fract_org_sl(:,:)) * pore_size_index_sl(:,:) + fract_org_sl(:,:) * pore_size_index_org
-      vol_field_cap_sl  (:,:) = (1._wp - fract_org_sl(:,:)) * vol_field_cap_sl  (:,:) + fract_org_sl(:,:) * vol_field_cap_org
-      vol_p_wilt_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * vol_p_wilt_sl     (:,:) + fract_org_sl(:,:) * vol_p_wilt_org
+      vol_porosity_sl   (:,:) = (1._wp - fract_org_sl(:,:)) * vol_porosity_sl   (:,:) + fract_org_sl(:,:) * vol_porosity_org(:,:)
+      bclapp_sl         (:,:) = (1._wp - fract_org_sl(:,:)) * bclapp_sl         (:,:) + fract_org_sl(:,:) * bclapp_org(:,:)
+      matrix_pot_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * matrix_pot_sl     (:,:) + fract_org_sl(:,:) * matrix_pot_org(:,:)
+      pore_size_index_sl(:,:) = (1._wp - fract_org_sl(:,:)) * pore_size_index_sl(:,:) + fract_org_sl(:,:) * pore_size_index_org(:,:)
+      vol_field_cap_sl  (:,:) = (1._wp - fract_org_sl(:,:)) * vol_field_cap_sl  (:,:) + fract_org_sl(:,:) * vol_field_cap_org(:,:)
+      vol_p_wilt_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * vol_p_wilt_sl     (:,:) + fract_org_sl(:,:) * vol_p_wilt_org(:,:) 
+ 
+      DEALLOCATE(hyd_cond_sat_org)
+      DEALLOCATE(vol_porosity_org)
+      DEALLOCATE(bclapp_org)
+      DEALLOCATE(matrix_pot_org)
+      DEALLOCATE(pore_size_index_org)
+      DEALLOCATE(vol_field_cap_org)
+      DEALLOCATE(vol_p_wilt_org)
+
       !$claw end expand
     END IF
 

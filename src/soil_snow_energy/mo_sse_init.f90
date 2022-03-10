@@ -329,7 +329,10 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi, ci, dens_snow_min
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, & ! vol_hcap_snow_min,
-      &                                  hcond_ice, hcond_snow !, hcond_snow_min, hcond_org
+      &                                  vol_hcap_org_top, vol_hcap_org_below, &
+      &                                  hcond_ice, hcond_snow, & !, hcond_snow_min, hcond_org
+      &                                  hcond_org_top, hcond_dry_org_top, hcond_org_below, hcond_dry_org_below
+    USE mo_hydro_constants,        ONLY: vol_porosity_org_top, vol_porosity_org_below
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
     USE mo_hydro_util,             ONLY: get_water_in_root_zone
 
@@ -372,7 +375,11 @@ CONTAINS
       & fract_ice,             &
       & soil_e_dz_tmp,         & 
       & vol_heat_cap_tmp,      &
-      & heat_cond_tmp
+      & vol_heat_cap_org_tmp,  &
+      & heat_cond_tmp,         &
+      & vol_porosity_org_tmp,  & 
+      & hcond_org_tmp,         & 
+      & hcond_dry_org_tmp
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
@@ -537,10 +544,10 @@ CONTAINS
     !$claw acc update device(soil_e_dz_tmp,vol_heat_cap_tmp,heat_cond_tmp)
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
-      ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
-      !$claw acc enter data pcreate(fract_water,fract_ice)
+      ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks), vol_heat_cap_org_tmp(nproma, nsoil, nblks))
+      !$claw acc enter data pcreate(fract_water,fract_ice,vol_heat_cap_org_tmp)
 
-      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,i_soil_sl)
+      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,i_soil_sl,vol_heat_cap_org_tmp)
       !$claw acc update device(soil_depth_sl,w_soil_sl,i_soil_sl)
       !$claw acc parallel loop gang vector collapse(3)
       DO i = 1, nproma
@@ -556,6 +563,10 @@ CONTAINS
           END DO
         END DO
       END DO
+      vol_heat_cap_org_tmp(:,1,:) = vol_hcap_org_top
+      DO j = 2, nsoil
+        vol_heat_cap_org_tmp(:,j,:) = vol_hcap_org_below
+      END DO
       !$claw acc update host(fract_water,fract_ice)
       !$claw acc end data
       
@@ -563,6 +574,7 @@ CONTAINS
       vol_heat_cap_sl (:,:,:) = calc_vol_heat_capacity( &
         !&                         SPREAD( vol_heat_cap     (:,:),   DIM=2, ncopies=nsoil)                        , &
         &                                 vol_heat_cap_tmp (:,:,:)                                               , &
+        &                                 vol_heat_cap_org_tmp(:,:,:)                                            , &
         &                                 vol_porosity_sl  (:,:,:)                                               , &
         &                                 fract_org_sl     (:,:,:)                                               , &
         &                                 fract_water      (:,:,:)                                               , &
@@ -572,8 +584,8 @@ CONTAINS
         !&                   SPREAD(SPREAD(soil_e%dz        (:),     DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
         & )
 
-      !$claw acc exit data delete(fract_water, fract_ice)
-      DEALLOCATE(fract_water, fract_ice)
+      !$claw acc exit data delete(fract_water, fract_ice, vol_heat_cap_org_tmp)
+      DEALLOCATE(fract_water, fract_ice, vol_heat_cap_org_tmp)
     ELSE
 
       !$claw acc data present(vol_heat_cap_sl,vol_heat_cap)
@@ -591,6 +603,22 @@ CONTAINS
     !$claw acc update host(vol_heat_cap_sl)
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
+      ALLOCATE( &
+        & vol_porosity_org_tmp(nproma,nsoil,nblks), &
+        & hcond_org_tmp(nproma,nsoil,nblks),        &
+        & hcond_dry_org_tmp(nproma,nsoil,nblks))
+
+      vol_porosity_org_tmp(:,1,:)   = vol_porosity_org_top
+      hcond_org_tmp(:,1,:)          = hcond_org_top
+      hcond_dry_org_tmp(:,1,:)      = hcond_dry_org_top
+      DO j = 2, nsoil
+        vol_porosity_org_tmp(:,j,:) = vol_porosity_org_below
+        hcond_org_tmp(:,j,:)        = hcond_org_below
+        hcond_dry_org_tmp(:,j,:)    = hcond_dry_org_below
+      END DO
+
+      !$claw acc enter data pcreate(soil_e_dz_tmp,vol_heat_cap_tmp,heat_cond_tmp)
+
       !$claw expand parallel update savepoint=ser_jsb_sse_init_calc_thermal_conductivity_1 tile_name=tile%name
       heat_cond_sl (:,:,:) = calc_thermal_conductivity( &
         !&                              SPREAD( heat_cond(:,:),                    DIM=2, ncopies=nsoil)               , &
@@ -600,11 +628,15 @@ CONTAINS
         &                                      vol_porosity_sl(:,:,:)                                                 , &
         &                                      vol_field_cap_sl(:,:,:)                                                , &
         &                                      fract_org_sl(:,:,:)                                                    , &
+        &                                      vol_porosity_org_tmp(:,:,:)                                            , &
+        &                                      hcond_org_tmp(:,:,:)                                                   , &
+        &                                      hcond_dry_org_tmp(:,:,:)                                               , &
         &                                      soil_depth_sl(:,:,:)                                                   , &
         &                                      soil_e_dz_tmp(:,:,:)                                                     &
         !&                   SPREAD(SPREAD(soil_e%dz        (:),     DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
         & )
       !$claw acc update host(heat_cond_sl)
+      DEALLOCATE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
     ELSE
       !$claw acc data present(heat_cond_sl,heat_cond)
       !$claw acc update device(heat_cond)

@@ -726,6 +726,7 @@ CONTAINS
         & t_cf('Freezing water flux in soil layers', 'kg m-2 s-1', ''),      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & loutput=.TRUE., output_level=BASIC,                                &
         & lrestart=.FALSE.,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -734,6 +735,7 @@ CONTAINS
         & t_cf('Melting ice flux in soil layers', 'kg m-2 s-1', ''),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
+        & loutput=.TRUE., output_level=BASIC,                                &
         & lrestart=.FALSE.,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 

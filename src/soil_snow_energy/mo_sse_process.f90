@@ -44,6 +44,7 @@ CONTAINS
   !!
   ELEMENTAL PURE FUNCTION calc_vol_heat_capacity( &
     & vol_heat_cap_soil_dry_mineral,              &
+    & vol_heat_cap_soil_dry_organic,              &
     & porosity,                                   &
     & fract_organic,                              &
     & fract_water,                                &
@@ -52,9 +53,10 @@ CONTAINS
     & dz                                          &
     & ) RESULT(vol_heat_cap)
 
-    USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_org, vol_hcap_air, vol_hcap_bedrock
+    USE mo_sse_constants, ONLY: vol_hcap_water, vol_hcap_ice, vol_hcap_air, vol_hcap_bedrock
 
-    REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, fract_organic, fract_water, fract_ice, layer_depth, dz
+    REAL(wp), INTENT(in) :: porosity, vol_heat_cap_soil_dry_mineral, vol_heat_cap_soil_dry_organic, fract_organic, &
+                         &  fract_water, fract_ice, layer_depth, dz
     REAL(wp)             :: vol_heat_cap
 
     !$claw sca routine
@@ -62,7 +64,7 @@ CONTAINS
     IF (layer_depth > 0._wp) THEN  ! above bedrock
       vol_heat_cap = (1._wp - porosity)                                            & ! vol. fraction of solid (mineral + organic)
         &              * ( (1._wp - fract_organic) * vol_heat_cap_soil_dry_mineral & ! heat cap of mineral soil
-        &                  +        fract_organic  * vol_hcap_org                  & ! heat cap of organic soil
+        &                  +        fract_organic  * vol_heat_cap_soil_dry_organic & ! heat cap of organic soil
         &                )                                                         &
         &            + fract_water * vol_hcap_water                                & ! heat cap of liquid water
         &            + fract_ice   * vol_hcap_ice                                  & ! heat cap of frozen water
@@ -95,15 +97,17 @@ CONTAINS
     & water, ice,                                    &
     & porosity, vol_field_cap,                       &
     & fract_organic,                                 &
+    & vol_porosity_org, hcond_org, hcond_dry_org,    &
     & layer_depth,                                   &
     & dz                                             &
     & ) RESULT(heat_cond)
 
     USE mo_jsb_physical_constants, ONLY: dens_soil
-    USE mo_sse_constants,          ONLY: hcond_org, hcond_dry_org, hcond_water, hcond_ice, hcond_bedrock
-    USE mo_hydro_constants,        ONLY: vol_porosity_org
+    USE mo_sse_constants,          ONLY: hcond_water, hcond_ice, hcond_bedrock
 
-    REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, fract_organic, layer_depth, dz
+
+    REAL(wp), INTENT(in) :: heat_cond_soil_mineral, water, ice, porosity, vol_field_cap, &
+                          & fract_organic, vol_porosity_org, hcond_org, hcond_dry_org, layer_depth, dz
     REAL(wp)             :: heat_cond
 
     REAL(wp) ::           &

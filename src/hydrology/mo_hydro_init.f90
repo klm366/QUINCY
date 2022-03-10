@@ -489,7 +489,8 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_hydro_constants, ONLY: vol_porosity_org, vol_field_cap_org, vol_p_wilt_org
+    USE mo_hydro_constants, ONLY: vol_porosity_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, &
+                                & vol_porosity_org_below, vol_field_cap_org_below, vol_p_wilt_org_below
     USE mo_hydro_util,      ONLY: get_water_in_root_zone
     USE mo_util,            ONLY: ifs2soil
 
@@ -608,13 +609,23 @@ CONTAINS
       ! The following can change later depending on the organic layers and soil ice content.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
-        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_porosity_org
+        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_porosity_org_below
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl) =                                                         &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl)  &
-        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_field_cap_org
+        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_field_cap_org_below
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) =                                                        &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) &
-        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_p_wilt_org
+        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_p_wilt_org_below
+
+      dsl4jsb_var_ptr(HYDRO_, w_soil_sat_sl)(:,1,:) =                                                        &
+        & (1 - dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)) * dsl4jsb_var_ptr(HYDRO_, w_soil_sat_sl)(:,1,:) &
+        & +    dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)  * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,1,:) * vol_porosity_org_top
+      dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)(:,1,:) =                                                         &
+        & (1 - dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)) * dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)(:,1,:)  &
+        & +    dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)  * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,1,:) * vol_field_cap_org_top
+      dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl)(:,1,:) =                                                        &
+        & (1 - dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)) * dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl)(:,1,:) &
+        & +    dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)  * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,1,:) * vol_p_wilt_org_top
       
       !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl), &
@@ -741,8 +752,10 @@ CONTAINS
     ! This routine is needed because soil snow and energy (SSE) processes are calculated before
     ! the soil properties are calculated the first time within the hydrology in update_soil_properties.
 
-    USE mo_hydro_constants, ONLY: vol_porosity_org, hyd_cond_sat_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
-      & vol_field_cap_org, vol_p_wilt_org
+    USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matrix_pot_org_top, &
+      & pore_size_index_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, &
+      & vol_porosity_org_below, hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, &
+      & pore_size_index_org_below, vol_field_cap_org_below, vol_p_wilt_org_below
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -820,13 +833,21 @@ CONTAINS
     vol_p_wilt_sl     (:,:,:) = SPREAD(vol_p_wilt     (:,:), DIM=2, ncopies=nsoil)
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       ! Attention: hyd_cond_sat_sl is calculated differently (correct) in update_soil_properties
-      hyd_cond_sat_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * hyd_cond_sat_sl   (:,:,:) + fract_org_sl(:,:,:) * hyd_cond_sat_org
-      vol_porosity_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_porosity_sl   (:,:,:) + fract_org_sl(:,:,:) * vol_porosity_org
-      bclapp_sl         (:,:,:) = (1 - fract_org_sl(:,:,:)) * bclapp_sl         (:,:,:) + fract_org_sl(:,:,:) * bclapp_org
-      matrix_pot_sl     (:,:,:) = (1 - fract_org_sl(:,:,:)) * matrix_pot_sl     (:,:,:) + fract_org_sl(:,:,:) * matrix_pot_org
-      pore_size_index_sl(:,:,:) = (1 - fract_org_sl(:,:,:)) * pore_size_index_sl(:,:,:) + fract_org_sl(:,:,:) * pore_size_index_org
-      vol_field_cap_sl  (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_field_cap_sl  (:,:,:) + fract_org_sl(:,:,:) * vol_field_cap_org
-      vol_p_wilt_sl     (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_p_wilt_sl     (:,:,:) + fract_org_sl(:,:,:) * vol_p_wilt_org
+      hyd_cond_sat_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * hyd_cond_sat_sl   (:,:,:) + fract_org_sl(:,:,:) * hyd_cond_sat_org_below
+      vol_porosity_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_porosity_sl   (:,:,:) + fract_org_sl(:,:,:) * vol_porosity_org_below
+      bclapp_sl         (:,:,:) = (1 - fract_org_sl(:,:,:)) * bclapp_sl         (:,:,:) + fract_org_sl(:,:,:) * bclapp_org_below
+      matrix_pot_sl     (:,:,:) = (1 - fract_org_sl(:,:,:)) * matrix_pot_sl     (:,:,:) + fract_org_sl(:,:,:) * matrix_pot_org_below
+      pore_size_index_sl(:,:,:) = (1 - fract_org_sl(:,:,:)) * pore_size_index_sl(:,:,:) + fract_org_sl(:,:,:) * pore_size_index_org_below
+      vol_field_cap_sl  (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_field_cap_sl  (:,:,:) + fract_org_sl(:,:,:) * vol_field_cap_org_below
+      vol_p_wilt_sl     (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_p_wilt_sl     (:,:,:) + fract_org_sl(:,:,:) * vol_p_wilt_org_below
+
+      hyd_cond_sat_sl   (:,1,:) = (1 - fract_org_sl(:,1,:)) * hyd_cond_sat_sl   (:,1,:) + fract_org_sl(:,1,:) * hyd_cond_sat_org_top
+      vol_porosity_sl   (:,1,:) = (1 - fract_org_sl(:,1,:)) * vol_porosity_sl   (:,1,:) + fract_org_sl(:,1,:) * vol_porosity_org_top
+      bclapp_sl         (:,1,:) = (1 - fract_org_sl(:,1,:)) * bclapp_sl         (:,1,:) + fract_org_sl(:,1,:) * bclapp_org_top
+      matrix_pot_sl     (:,1,:) = (1 - fract_org_sl(:,1,:)) * matrix_pot_sl     (:,1,:) + fract_org_sl(:,1,:) * matrix_pot_org_top
+      pore_size_index_sl(:,1,:) = (1 - fract_org_sl(:,1,:)) * pore_size_index_sl(:,1,:) + fract_org_sl(:,1,:) * pore_size_index_org_top
+      vol_field_cap_sl  (:,1,:) = (1 - fract_org_sl(:,1,:)) * vol_field_cap_sl  (:,1,:) + fract_org_sl(:,1,:) * vol_field_cap_org_top
+      vol_p_wilt_sl     (:,1,:) = (1 - fract_org_sl(:,1,:)) * vol_p_wilt_sl     (:,1,:) + fract_org_sl(:,1,:) * vol_p_wilt_org_top
     END IF
 
     !$acc update device(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, &
