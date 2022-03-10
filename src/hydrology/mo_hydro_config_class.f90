@@ -42,7 +42,7 @@ MODULE mo_hydro_config_class
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
-      & l_socc30,            & !< Replace computed organic layer with SOCC30 map
+      & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
       & l_hyd_compat420,        & !< Reference version: JSBACH 4.20, i.e. without KoPF changes
       & l_runoff_with_ice,      & !< Include soil ice in runoff and infiltration calculations
@@ -91,7 +91,7 @@ CONTAINS
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
-    LOGICAL                     :: l_organic, l_glac_in_soil, l_socc30
+    LOGICAL                     :: l_organic, l_glac_in_soil, l_socmap
     LOGICAL     :: l_hyd_compat420
     LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top
     LOGICAL     :: l_ice_impedance_perc, l_ice_impedance_drain, l_scool_impedance_perc, l_scool_impedance_drain
@@ -111,7 +111,7 @@ CONTAINS
       & snow_depth_max,             &
       & scheme_stom_cond,           &
       & l_organic,                  &
-      & l_socc30,                   &
+      & l_socmap,                   &
       & l_glac_in_soil,             &
       & l_hyd_compat420,            &
       & l_infil_subzero,            &
@@ -157,7 +157,7 @@ CONTAINS
     snow_depth_max    = -1.0_wp             ! -1: no limitation
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
-    l_socc30          = .FALSE.
+    l_socmap          = .FALSE.
     l_glac_in_soil    = .FALSE.
     l_hyd_compat420          = .FALSE.
     l_infil_subzero          = .FALSE.
@@ -305,10 +305,10 @@ CONTAINS
          & 'WARNING: with l_hyd_compat420  l_feed_sro=F. Namelist definition of l_feed_sro ignored.')
         l_feed_sro = .FALSE.
       END IF
-      IF (l_socc30) THEN
+      IF (l_socmap) THEN
         CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_socc30=F. Namelist definition of l_socc30 ignored.')
-        l_socc30 = .FALSE.
+         & 'WARNING: with l_hyd_compat420  l_socmap=F. Namelist definition of l_socmap ignored.')
+        l_socmap = .FALSE.
       END IF
     END IF
     config%l_infil_subzero        = l_infil_subzero
@@ -378,10 +378,10 @@ CONTAINS
       CALL message(TRIM(routine), &
        & 'Soil evaporation: Maximum water in top layer depends on organic matter: ' &
        & //TRIM(logical2string(l_maxtop_depend_on_org)))
-      config%l_socc30 = l_socc30
+      config%l_socmap = l_socmap
       CALL message(TRIM(routine), &
-       & 'Replace organic carbon layer with SOCC30 map: ' &
-       & //TRIM(logical2string(l_socc30)))
+       & 'Replace organic carbon fractions with map from bc file: ' &
+       & //TRIM(logical2string(l_socmap)))
       config%l_feed_sro = l_feed_sro
       CALL message(TRIM(routine), &
        & 'Assign minimum fraction of water to surface runoff: ' &

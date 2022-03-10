@@ -54,7 +54,7 @@ MODULE mo_hydro_init
       & vol_p_wilt     (:,:) => NULL(), &
       & root_depth     (:,:) => NULL(), &
       & w_snow_soil    (:,:) => NULL(), &
-      & soil_org_cont  (:,:) => NULL(), &
+      & fract_org_sl (:,:,:) => NULL(), &
       & w_soil_sl    (:,:,:) => NULL(), &
       & ifs_smi_sl   (:,:,:) => NULL(), &
       & ifs_w_snow     (:,:) => NULL()
@@ -111,7 +111,8 @@ CONTAINS
       & hydro_init_vars%vol_p_wilt      ,       &
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%w_snow_soil     ,       &
-      & hydro_init_vars%soil_org_cont)
+      & hydro_init_vars%fract_org_sl            &
+      & )
 
     IF (ASSOCIATED(hydro_init_vars%w_soil_sl)) DEALLOCATE(hydro_init_vars%w_soil_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl)) DEALLOCATE(hydro_init_vars%ifs_smi_sl)
@@ -162,8 +163,7 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   (nproma, nblks),       &
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
-      & hydro_init_vars%w_snow_soil     (nproma, nblks),       &
-      & hydro_init_vars%soil_org_cont   (nproma, nblks)        &
+      & hydro_init_vars%w_snow_soil     (nproma, nblks)        &
       & )
 
       hydro_init_vars%elevation      (:,:)   = missval
@@ -179,7 +179,6 @@ CONTAINS
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
       hydro_init_vars%w_snow_soil    (:,:)   = missval
-      hydro_init_vars%soil_org_cont  (:,:)   = missval
 
     IF (model%config%init_from_ifs) THEN
       ALLOCATE(hydro_init_vars%ifs_smi_sl(nproma,ifs_nsoil,nblks))
@@ -190,6 +189,9 @@ CONTAINS
       ALLOCATE(hydro_init_vars%w_soil_sl(nproma, nsoil, nblks))
       hydro_init_vars%w_soil_sl(:,:,:) = missval
     END IF
+
+    ALLOCATE(hydro_init_vars%fract_org_sl(nproma, nsoil, nblks))
+    hydro_init_vars%fract_org_sl(:,:,:) = missval
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
@@ -277,12 +279,14 @@ CONTAINS
         & fill_array=hydro_init_vars%vol_p_wilt)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-      IF (dsl4jsb_Config(HYDRO_)%l_socc30) THEN
-        ! Soil organic content within the upper 30 cm (used as mask for cool_ruby project)
-        ptr_2D => input_file%Read_2d(                 &
-          & variable_name='socc30',          &
-          & fill_array = hydro_init_vars%soil_org_cont)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+      IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+        ! Read soil organic carbon fractions for each soil layer
+        DO isoil=1,nsoil
+          ptr_3D => input_file%Read_2d_extdim( &
+            & variable_name='fract_org_sl',     &
+            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
+          hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+        END DO
       END IF
 
       CALL input_file%Close()
@@ -443,8 +447,10 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
-      ! Soil organic carbon content within the upper 30 cm of the soil column
-      dsl4jsb_var_ptr(HYDRO_, soil_org_cont) = hydro_init_vars%soil_org_cont
+      ! Soil organic carbon fraction from map
+      IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+        dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
+      END IF
 
       !$acc update device(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl), &
@@ -456,11 +462,11 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, matrix_pot), &
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, soil_org_cont), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, fract_org_sl), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, max_moist), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) ), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_org_cont)
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) )
 
     END IF
 
@@ -577,16 +583,11 @@ CONTAINS
     ! Initialize organic soil layer fractions and modify saturated, field capacity and perm. wilting point capacities accordingly
     ! Note: at the moment, fract_org_sl doesn't change over time, but it could
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
-      dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
-      IF (tile%is_vegetation) THEN
-        ! Using external soil carbon content information 
-        IF (dsl4jsb_Config(HYDRO_)%l_socc30) THEN
-          ! Overwrite organic fraction with mask derived from the soil organic
-          ! carbon content dataset for cool ruby experiments
-          WHERE (dsl4jsb_var2D_onDomain(HYDRO_, soil_org_cont) > 1.0e-10_wp)
-            dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = 0.9999_wp
-          END WHERE
-        ELSE
+      IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+        ! Compute soil organic carbon fraction from forest fraction
+        dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
+        IF (tile%is_vegetation) THEN
+          ! Using external soil carbon content information 
           ! For general VEG tile
           dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
           IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a PFT (otherwise lctlib not defined)
@@ -597,7 +598,6 @@ CONTAINS
             END IF
           END IF
         END IF
-
       END IF
 
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_maxtop_depend_on_org) THEN

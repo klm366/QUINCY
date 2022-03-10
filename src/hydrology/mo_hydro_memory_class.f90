@@ -94,8 +94,7 @@ MODULE mo_hydro_memory_class
       & pore_size_index,      & !< Soil pore size distribution index                                   []
       & bclapp,               & !< Exponent B in Clapp and Hornberger
       & matrix_pot,           & !< Matrix potential [m]
-      & hyd_cond_sat,         & !< Saturated hydraulic conductivity [m/s]
-      & soil_org_cont           !< Soil organic carbon content of the upper 30 cm                      [kg m-2]
+      & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
       & fract_water,          & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
@@ -620,14 +619,6 @@ CONTAINS
       CALL mem%Add_var( 'hyd_cond_sat_sl', mem%hyd_cond_sat_sl,                &
         & hgrid, soil_w,                                                       &
         & t_cf('sat_hydraulic_cond_sl', 'm s-1', ''),                          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
-
-      CALL mem%Add_var( 'soil_org_cont', mem%soil_org_cont,                    &
-        & hgrid, surface,                                                      &
-        & t_cf('soil_org_cont', 'kg m-2', ''),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
