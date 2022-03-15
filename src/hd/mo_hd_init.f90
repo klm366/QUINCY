@@ -73,7 +73,7 @@ CONTAINS
     ! Get hd config
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+    IF (.NOT. model%Is_process_active(HD_)) RETURN
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
@@ -235,7 +235,7 @@ CONTAINS
     ! Get hd config
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+    IF (.NOT. model%Is_process_active(HD_)) RETURN
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)

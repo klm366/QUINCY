@@ -559,7 +559,7 @@ CONTAINS
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
-    IF (tile%Is_process_active(CARBON_)) THEN
+    IF (tile%Has_process_memory(CARBON_)) THEN
       dsl4jsb_Get_memory(CARBON_)
     END IF
 
@@ -785,7 +785,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(CO2_flux)) THEN
-      IF (tile%Is_process_active(CARBON_)) THEN
+      IF (tile%Has_process_memory(CARBON_)) THEN
         co2flux_npp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_npp_2_atm_ta)
         co2flux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_soilresp_2_atm_ta)
         co2flux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_herb_2_atm_ta)

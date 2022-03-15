@@ -373,8 +373,8 @@ CONTAINS
     ice     = options%ice
     !nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -520,8 +520,8 @@ CONTAINS
     ice     = options%ice
     !nc      = options%nc
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
@@ -662,7 +662,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (.NOT. tile%Is_process_active(ASSIMI_) .OR. .NOT. tile%is_vegetation) RETURN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -822,8 +822,8 @@ CONTAINS
     !nc      = options%nc
     dtime   = options%dtime
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1001,7 +1001,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_assimi_fluxes'
 
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     iblk = options%iblk
 
@@ -1064,7 +1064,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggr_canopy_fluxes'
 
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     iblk = options%iblk
 
@@ -1185,8 +1185,8 @@ CONTAINS
     !nc      = options%nc
     dtime   = options%dtime
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

@@ -21,7 +21,7 @@ MODULE mo_tcq_memory_class
 
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
-  USE mo_jsb_cqt_class,          ONLY: DEAD_CARBON_CQ_TYPE, LIVE_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
+  USE mo_jsb_cqt_class,          ONLY: BG_DEAD_C_CQ_TYPE, LIVE_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
@@ -95,7 +95,7 @@ CONTAINS
       & t_cf('a_dead_c_tcq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                           &
-      & l_conserve_quan=.TRUE., cons_quan_type_id = DEAD_CARBON_CQ_TYPE,     &
+      & l_conserve_quan=.TRUE., cons_quan_type_id = BG_DEAD_C_CQ_TYPE,     &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
 
       CALL mem%Add_var('another_dead_c_tcq', mem%another_dead_c_tcq,                                     &
@@ -103,7 +103,7 @@ CONTAINS
       & t_cf('another_dead_c_tcq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                     &
-      & l_conserve_quan=.TRUE., cons_quan_type_id = DEAD_CARBON_CQ_TYPE,     &
+      & l_conserve_quan=.TRUE., cons_quan_type_id = BG_DEAD_C_CQ_TYPE,     &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
 
       CALL mem%Add_var('an_implicit_scaling_tcq', mem%an_implicit_scaling_tcq,                      &

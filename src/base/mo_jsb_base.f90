@@ -49,13 +49,16 @@ CONTAINS
     ! USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_
+
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
+    dsl4jsb_Use_config(FLCC_)
+    dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
@@ -66,6 +69,8 @@ CONTAINS
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(FLCC_)
+    dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
@@ -138,6 +143,8 @@ CONTAINS
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(FUEL_)
       dsl4jsb_Get_config(DISTURB_)
+      dsl4jsb_Get_config(WLCC_)
+      dsl4jsb_Get_config(FLCC_)
       dsl4jsb_Get_config(PPLCC_)
 
       ! Crosscheck process configs
@@ -203,11 +210,19 @@ CONTAINS
         CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
       END IF
 
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
+      IF (model%Is_process_active(FLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+        dsl4jsb_Config(DISTURB_)%active = .TRUE.
+        CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
+      END IF
+      IF (model%Is_process_active(WLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+        dsl4jsb_Config(DISTURB_)%active = .TRUE.
+        CALL message(TRIM(routine), 'Switching on disturbance process since wind lcc process is active')
+      END IF
+      IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(FUEL_)) THEN
         dsl4jsb_Config(FUEL_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
       END IF
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
+      IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(CARBON_)) THEN
         dsl4jsb_Config(CARBON_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
       END IF

@@ -92,7 +92,6 @@ CONTAINS
   SUBROUTINE update_tlcc(tile, options)
 
     USE mo_jsb_time,          ONLY: is_newday
-    USE mo_jsb_process_class, ONLY: Get_process_id
     USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, transfer_from_active_to_passive_var_onChunk
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
 
@@ -109,7 +108,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
 
-    INTEGER  :: i, i_tile, iblk, ics, ice, nc, process_id, nr_of_tiles, nr_of_iterations
+    INTEGER  :: i, i_tile, iblk, ics, ice, nc, nr_of_tiles, nr_of_iterations
     REAL(wp) :: dtime
     REAL(wp), ALLOCATABLE :: lost_area(:,:), gained_area(:,:), initial_area(:,:)
     REAL(wp), DIMENSION(options%nc) :: moved_fract, current_fract
@@ -131,21 +130,19 @@ CONTAINS
     dtime   = options%dtime
     
     model => Get_model(tile%owner_model_id)
-    process_id = Get_process_id(procname)
 
     !>
     !> 1. Get lcc structure
     !>
-    lcc_relocations => model%processes(process_id)%p%lcc_relocations ! JN-TODO: DSL?
+    dsl4jsb_Get_lcc_relocations(TLCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
     
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(TLCC_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(TLCC_)) RETURN
 
-    ! Assert, that PPLCC is active on the box tile
-    CALL model%Get_top_tile(current_tile)
-    IF (.NOT. current_tile%Is_process_active(PPLCC_)) THEN
-      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to run on the box tile')
+    ! Assert, that PPLCC is active
+    IF (.NOT. model%Is_process_active(PPLCC_)) THEN
+      CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
     ENDIF
 
     ! If not newday, do nothing
@@ -192,7 +189,7 @@ CONTAINS
         current_sink = sink_tile(i)
       ENDIF
 
-      ! Collect inital area of all involved tiles
+      ! Collect initial area of all involved tiles
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
       ! Move actual area and collect lost and gained area of involved tiles
@@ -268,7 +265,7 @@ CONTAINS
       !>         e.g. by calling transfer_from_active_to_passive_var_onChunk for named variables 
       !>
       ! 
-      ! IF (last_involved_tile%Is_process_active(TCQ_)) THEN
+      ! IF (last_involved_tile%Has_process_memory(TCQ_)) THEN
       !   ! For the test cq a_veg is simply put in a_dead ...
       !   active_var_name = 'a_veg_c_tcq'
       !   passive_var_name = 'a_dead_c_tcq'
@@ -278,7 +275,8 @@ CONTAINS
       !   DO WHILE (ASSOCIATED(current_tile))
       !     IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
       !       i_tile = i_tile + 1
-      !       CALL transfer_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, active_var_name, passive_var_name)
+      !       CALL transfer_from_active_to_passive_var_onChunk( &
+      !         & lcc_relocations, i_tile, options, active_var_name, passive_var_name) ! optional: transfer_fract, conversion_fact)
       !     ENDIF
       !   ENDIF
       !   current_tile => current_tile%Get_next_sibling_tile()

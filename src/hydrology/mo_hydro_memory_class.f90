@@ -817,7 +817,7 @@ CONTAINS
         & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
-      IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
+      IF (.NOT. model%Is_process_active(ASSIMI_)) THEN
         CALL mem%Add_var( 'canopy_cond_unlimited', mem%canopy_cond_unlimited,  &
           & hgrid, surface,                                                    &
           & t_cf('canopy_conductance_unlimited', '', ''),                      &
