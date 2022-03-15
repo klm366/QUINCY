@@ -87,26 +87,26 @@ CONTAINS
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_varname='fract_lake')
+          & lct=t_jsb_lct(LAKE_TYPE, 2), parent=box_tile, fract_varname='fract_lake')
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), &
+          & lct=t_jsb_lct(LAND_TYPE, 1), &
           & parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
-            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
+            & lct=t_jsb_lct(GLACIER_TYPE, 3), parent=land_tile, &
             & fract_varname='fract_glac')
         END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
             & fract_varname='fract_veg')
 
     ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
@@ -172,14 +172,14 @@ CONTAINS
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
-          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAKE_TYPE, 2), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
@@ -187,7 +187,7 @@ CONTAINS
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
-            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+            & lct=t_jsb_lct(GLACIER_TYPE, 3), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
         END IF
 
@@ -196,7 +196,7 @@ CONTAINS
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
             & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
             & fract_varname='fract_veg')
 
           IF (model%processes(ALCC_)%p%config%active) THEN
@@ -215,7 +215,7 @@ CONTAINS
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   PHENO_,    VEG_   /), &
             & process_actions = (/ON_LEAFS_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
             & fract_varname='fract_veg')
         ENDIF
 
@@ -264,7 +264,7 @@ CONTAINS
 
             DO i=1,npft
               pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
-               & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+               & lct=t_jsb_lct(VEG_TYPE, 4+i, lib_id=pft_ids(i)), parent=veg_tile)
             END DO
 
     ! ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced

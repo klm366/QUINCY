@@ -54,6 +54,7 @@ MODULE mo_jsb_memory_class
   TYPE, ABSTRACT :: t_jsb_memory
     INTEGER :: id = 0
     INTEGER :: grid_id = 0
+    INTEGER :: grib_id = 0
     INTEGER :: owner_model_id = 0
     INTEGER :: owner_proc_id = 0
     CHARACTER(LEN=:), ALLOCATABLE :: owner_proc_name
@@ -227,7 +228,7 @@ CONTAINS
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r,                        &
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups,                             &
-      verbose=verbose)
+      verbose=verbose, grib_id=mem%grib_id)
 
     var%ptr => var%ptr1d
     var%name = TRIM(name)
@@ -364,7 +365,7 @@ CONTAINS
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
-      verbose=verbose)
+      verbose=verbose, grib_id=mem%grib_id)
 
     var%ptr => var%ptr2d
     var%name = TRIM(name)
@@ -530,7 +531,7 @@ CONTAINS
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
-      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose, grib_id=mem%grib_id)
 
     var%ptr => var%ptr3d
     var%name = TRIM(name)
