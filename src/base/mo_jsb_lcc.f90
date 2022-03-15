@@ -538,6 +538,7 @@ CONTAINS
     DO i_var = 1,lcc_relocations%nr_of_active_vars
       DO i_tile = 1,nr_of_tiles
         IF(ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk) /= 0.0_wp)) THEN
+WRITE(*,*) lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk)
           CALL finish(TRIM(routine), 'Violation of assertion: All active variables need to already have been ' &
             & // 'relocated upon call of this routine. However, found != 0.0 values for active var '           &
             & // TRIM(lcc_relocations%active_vars(i_var)%p%name) // ' on tile '                                &

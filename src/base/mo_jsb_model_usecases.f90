@@ -504,6 +504,12 @@ CONTAINS
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
           END IF
+          IF (model%processes(FLCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
+          END IF
+          IF (model%processes(WLCC_)%p%config%active) THEN
+            CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
+          END IF
           !
           IF (model%processes(NLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)

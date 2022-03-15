@@ -817,4 +817,3 @@ CONTAINS
   END SUBROUTINE Sync_vars_from_cpu_to_gpu
 #endif
 
-#endif

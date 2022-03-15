@@ -1416,8 +1416,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & cflux_c_greenwood_2_litter(:), veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(root_exudates)) CALL get_per_tile(root_exudates_ta(:), &
       & root_exudates(:), veg_fract_correction(:), fract_fpc_max(:))
-    IF (PRESENT(cflux_herb_2_atm)) CALL get_per_tile(co2flux_herb_2_atm_ta(:), &
-      & cflux_herb_2_atm(:) * molarMassCO2_kg, veg_fract_correction(:), fract_fpc_max(:))
     IF (PRESENT(cflux_c_green_2_herb)) CALL get_per_tile(cflux_c_green_2_herb_ta(:), &
       & cflux_c_green_2_herb(:), veg_fract_correction(:), fract_fpc_max(:))
 
@@ -1710,6 +1708,19 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
       not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
       ! (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround)) = Rest of wood after burning parts of AG wood
+      this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
+    ENDIF
+
+    ! Usually green, reserve and wood are distributed to ag and bg pools according to given fractions
+    this_fract_green_aboveGround = fract_green_aboveGround
+    this_fract_wood_aboveGround = fract_wood_aboveGround
+    IF(lcc_relocations%name .EQ. 'flcc_lcc') THEN
+      ! in this case there is no transport of green or reserve to AG litter pools, since it burned
+      this_fract_green_aboveGround = 0.0_wp
+      ! # in this case part of the ag wood has also already been added to the atmosphere flux
+      fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
+      not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
+      ! (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround)) = Rest of wood after burning parts of AG wood 
       this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
     ENDIF
 

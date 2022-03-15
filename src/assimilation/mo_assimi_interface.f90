@@ -1172,7 +1172,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggr_canopy_fluxes'
 
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     iblk = options%iblk
 
@@ -1293,8 +1293,8 @@ CONTAINS
     !nc      = options%nc
     dtime   = options%dtime
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1397,4 +1397,3 @@ CONTAINS
   END SUBROUTINE aggregate_npp_buffer
 
 #endif
-END MODULE mo_assimi_interface

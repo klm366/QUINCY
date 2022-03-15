@@ -37,6 +37,8 @@ MODULE mo_disturb_interface
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
+  dsl4jsb_Use_config(FLCC_)
+  dsl4jsb_Use_config(WLCC_)
   dsl4jsb_Use_config(CARBON_)
 
   ! Use of process memories (t_disturb_memory)

@@ -1225,4 +1225,3 @@ CONTAINS
 
     END SUBROUTINE Init_hydro_memory
 #endif
-END MODULE mo_hydro_memory_class

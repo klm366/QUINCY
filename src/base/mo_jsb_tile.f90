@@ -1304,4 +1304,3 @@ CONTAINS
       IF (this%process_action(iproc) > 0) THEN
         ! Print names of processes running on the tile
         CALL message('     Process '//Get_process_name(iproc), 'Action '//Get_action_name(this%process_action(iproc)))
-      END IF

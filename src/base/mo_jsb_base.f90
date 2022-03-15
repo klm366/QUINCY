@@ -410,4 +410,3 @@ CONTAINS
   END SUBROUTINE jsbach_setup_tiles
 
 #endif
-END MODULE mo_jsb_base

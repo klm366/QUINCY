@@ -296,7 +296,6 @@ CONTAINS
       IF (model%processes(PPLCC_)%p%config%active) THEN
         ! Prepare LCC tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-      END IF
 
         !***** Add LCC processes between pplcc_pre and pplcc_post *****
         ! order of tasks of course determines area available for change for the subsequent lcc tasks!
@@ -318,9 +317,9 @@ CONTAINS
           CALL model%Queue_task(NLCC_, "nlcc")
         END IF
 
-      IF (model%processes(NLCC_)%p%config%active) THEN
-        CALL model%Queue_task(NLCC_, "nlcc")
-      END IF
+        IF (model%processes(FLCC_)%p%config%active) THEN
+          CALL model%Queue_task(FLCC_, "flcc")
+        END IF
 
         ! Do postprocessing after all LCC tasks were executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
@@ -844,6 +843,14 @@ CONTAINS
 
       IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL alcc_init_lcc(tile)
+      END IF
+
+      IF (one_of(tile%process_action(FLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL flcc_init_lcc(tile)
+      END IF
+
+      IF (one_of(tile%process_action(WLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL wlcc_init_lcc(tile)
       END IF
 
       CALL model%Goto_next_tile(tile)
