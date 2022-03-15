@@ -132,15 +132,15 @@ CONTAINS
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_varname='fract_lake')
+          & lct=t_jsb_lct(LAKE_TYPE, 2), parent=box_tile, fract_varname='fract_lake')
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile)
         !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), &
+          & lct=t_jsb_lct(LAND_TYPE, 1), &
           & parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
         !$ACC ENTER DATA COPYIN(land_tile)
@@ -148,13 +148,13 @@ CONTAINS
 
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', processes=(/SSE_/), &
-            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
+            & lct=t_jsb_lct(GLACIER_TYPE, 3), parent=land_tile, &
             & fract_varname='fract_glac')
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', processes=(/SSE_, PHENO_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
             & fract_varname='fract_veg')
           !$ACC ENTER DATA COPYIN(veg_tile)
 
@@ -192,17 +192,17 @@ CONTAINS
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           ! & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_varname='fract_lake')
+          & lct=t_jsb_lct(LAKE_TYPE, 2), parent=box_tile, fract_varname='fract_lake')
         land_tile => t_jsb_tile('land', 'Land tile', &
           ! & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile)
         !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           ! & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
-          & lct=t_jsb_lct(LAND_TYPE), &
+          & lct=t_jsb_lct(LAND_TYPE, 1), &
           & parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
         !$ACC ENTER DATA COPYIN(land_tile)
@@ -210,18 +210,18 @@ CONTAINS
 
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
-            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
+            & lct=t_jsb_lct(GLACIER_TYPE, 3), parent=land_tile, &
             & fract_varname='fract_glac')
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
             & fract_varname='fract_veg')
           !$ACC ENTER DATA COPYIN(glacier_tile, veg_tile)
         ELSE
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
             & fract_varname='equal')
           !$ACC ENTER DATA COPYIN(veg_tile)
         END IF
@@ -305,15 +305,15 @@ CONTAINS
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
-          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAKE_TYPE, 2), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile)
         !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
         !$ACC ENTER DATA COPYIN(land_tile)
       END IF
@@ -322,7 +322,7 @@ CONTAINS
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
-            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+            & lct=t_jsb_lct(GLACIER_TYPE, 3), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
@@ -331,7 +331,7 @@ CONTAINS
         veg_tile => t_jsb_tile('veg', 'Veg tile', &
           & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
           & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
-          & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+          & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
           & fract_varname='fract_veg')
         !$ACC ENTER DATA COPYIN(veg_tile)
 
@@ -364,7 +364,7 @@ CONTAINS
 
           DO i=1,npft
             pft_tile => t_jsb_tile(pft_shortnames(i), TRIM(pft_longnames(i)), &
-              & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+              & lct=t_jsb_lct(VEG_TYPE, 4+i, lib_id=pft_ids(i)), parent=veg_tile)
             !$ACC ENTER DATA COPYIN(pft_tile)
             NULLIFY(pft_tile)
           END DO
@@ -473,15 +473,15 @@ CONTAINS
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
-          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAKE_TYPE, 2), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile)
         !$ACC ENTER DATA COPYIN(lake_tile, land_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+          & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
         !$ACC ENTER DATA COPYIN(land_tile)
       END IF
@@ -490,7 +490,7 @@ CONTAINS
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
             & process_actions = (/ON_TILE_, ON_TILE_/), &
-            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
+            & lct=t_jsb_lct(GLACIER_TYPE, 3), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
           !$ACC ENTER DATA COPYIN(glacier_tile)
         END IF
@@ -501,7 +501,7 @@ CONTAINS
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
             & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
             & fract_varname='fract_veg')
           !$ACC ENTER DATA COPYIN(veg_tile)
 
@@ -527,7 +527,7 @@ CONTAINS
 
               WRITE(pft_shortname, "(A3,I2.2)") "pft", i
               pft_tile => t_jsb_tile(pft_shortname, TRIM(pft_longnames(i)), &
-                & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=veg_tile)
+                & lct=t_jsb_lct(VEG_TYPE, 4+i, lib_id=pft_ids(i)), parent=veg_tile)
               !$ACC ENTER DATA COPYIN(pft_tile)
 
                 IF (model%processes(FLCC_)%p%config%active) THEN
@@ -544,7 +544,7 @@ CONTAINS
                 DO j=1,nacs
                   WRITE(age_class_name, "(A5,A3,I2.2)") pft_shortname, "_fc", j
                   fage_tile => t_jsb_tile(age_class_name, TRIM(age_class_name // ' tile'), &
-                    & lct=t_jsb_lct(VEG_TYPE, lib_id=pft_ids(i)), parent=pft_tile, &
+                    & lct=t_jsb_lct(VEG_TYPE, 4+npft+(i-1)*nacs+j, lib_id=pft_ids(i)), parent=pft_tile, &
                     & fract_varname=TRIM(init_ac_fracts_scheme))
                   !$ACC ENTER DATA COPYIN(fage_tile)
                 END DO
@@ -645,7 +645,7 @@ CONTAINS
     land_tile => t_jsb_tile('land', 'Land tile', &
       ! add processes here only to make model init and jsb4_forcing working
       ! none of the tasks of these processes is running via task queue
-      & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+      & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile, &
       & fract_varname='equal')   ! Fraction of land tile = 1
                                  ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
     !$ACC ENTER DATA COPYIN(land_tile)
@@ -657,7 +657,7 @@ CONTAINS
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
       & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_,       SPQ_/), &
       & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
-      & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+      & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
 
@@ -666,7 +666,7 @@ CONTAINS
       ! via constructor of t_jsb_tile
       pft_tile => t_jsb_tile(pft_shortnames(i), &
         &                    TRIM(pft_longnames(i)), &
-        &                    lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
+        &                    lct = t_jsb_lct(VEG_TYPE, 4+i, lib_id = pft_ids(i)), &
         &                    parent = veg_tile)
       !$ACC ENTER DATA COPYIN(pft_tile)
     END DO
@@ -755,7 +755,7 @@ CONTAINS
     land_tile => t_jsb_tile('land', 'Land tile', &
       ! add processes here only to make model init and jsb4_forcing working
       ! none of the tasks of these processes is running via task queue
-      & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
+      & lct=t_jsb_lct(LAND_TYPE, 1), parent=box_tile, &
       & fract_varname='equal')   ! Fraction of land tile = 1
                                  ! "equal" specifically means, no fraction input file is read and all tiles have the same fraction
     !$ACC ENTER DATA COPYIN(land_tile)
@@ -767,7 +767,7 @@ CONTAINS
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
       & processes       = (/Q_ASSIMI_, Q_PHENO_,  VEG_,      SB_       /), &
       & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_ /), &
-      & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+      & lct=t_jsb_lct(VEG_TYPE, 4), parent=land_tile,  &
       & fract_varname='equal')
     !$ACC ENTER DATA COPYIN(veg_tile)
 
@@ -776,7 +776,7 @@ CONTAINS
       ! via constructor of t_jsb_tile
       pft_tile => t_jsb_tile(pft_shortnames(i), &
         &                    TRIM(pft_longnames(i)), &
-        &                    lct = t_jsb_lct(VEG_TYPE, lib_id = pft_ids(i)), &
+        &                    lct = t_jsb_lct(VEG_TYPE, 4+i, lib_id = pft_ids(i)), &
         &                    parent = veg_tile)
       !$ACC ENTER DATA COPYIN(pft_tile)
     END DO
