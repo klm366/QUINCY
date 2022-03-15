@@ -83,7 +83,7 @@ CONTAINS
     loutput, lcontainer,                                        &
     lrestart, lrestart_cont, initval_r, isteptype,              &
     resetval_r, lmiss, missval_r,                               &
-    groups, verbose                                             &
+    groups, verbose, grib_id                                    &
     )
 
     CHARACTER(len=*),     INTENT(in)           :: varlist_name
@@ -107,6 +107,7 @@ CONTAINS
     REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
     CHARACTER(LEN=VARNAME_LEN), INTENT(in), OPTIONAL :: groups(:)
     LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+    INTEGER,              INTENT(in), OPTIONAL :: grib_id             ! GRIB ID of owning tile
 
 !!$    REAL(wp), POINTER :: ptr(:,:,:,:,:)
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
@@ -158,7 +159,7 @@ CONTAINS
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
       loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
-      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups_loc, verbose=verbose)
+      lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups_loc, verbose=verbose, grib_id=grib_id)
 
   END SUBROUTINE jsb_add_var_list_element_r2d
 

@@ -458,7 +458,7 @@ CONTAINS
     CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
     CHARACTER(len=3)           :: model_id_suffix                    ! Suffix for domain if more than one model
 
-    INTEGER :: isteptype, i, ilct
+    INTEGER :: isteptype, i, ilct, grib_id
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fractions_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
@@ -487,6 +487,12 @@ CONTAINS
       varlist_name_loc = TRIM(varlist_name)
     END IF
 
+    IF (ASSOCIATED(this%parent_tile)) THEN
+      grib_id = this%lcts(1)%grib_id
+    ELSE
+      grib_id = 0
+    END IF
+
     ! Note: uses a much simpler add_var routine than process variables do
     ! Further, the fractions are direct components of the tile class and do not 'live' on a process memory
     ! Therefore, as opposed to the process variables a temporal pointer (tmp_fract) is used here,
@@ -498,7 +504,8 @@ CONTAINS
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
       & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'],   &
+      & grib_id=grib_id)
 
     ! Now we need to set the tile component fract pointer to the just allocated memory
     CALL this%Set_fract_ptr(tmp_fract)
@@ -510,7 +517,8 @@ CONTAINS
       &      'old fraction of grid box covered by tile '//TRIM(this%name)),                                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
       & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                                                      &
-      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+      & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'],    &
+      & grib_id=grib_id)
     CALL this%Set_fract_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
@@ -620,7 +628,8 @@ CONTAINS
         &      'fraction of '//TRIM(this%name)//' covered by LCT '//TRIM(this%lcts(ilct)%name)),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
         & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                       &
-        & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
+        & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'],     &
+        & grib_id=grib_id)
       __acc_attach(this%lcts(ilct)%fract)
 
     END DO
