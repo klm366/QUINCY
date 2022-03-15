@@ -308,7 +308,10 @@ CONTAINS
         END IF
         this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
   
-        IF (ASSOCIATED(parent_tile)) this%mem(iproc)%p%parent => parent_tile%mem(iproc)%p
+        IF (ASSOCIATED(parent_tile)) THEN
+          this%mem(iproc)%p%parent => parent_tile%mem(iproc)%p
+          this%mem(iproc)%p%grib_id = this%lcts(1)%grib_id
+        END IF
 
         this%mem(iproc)%p%grid_id = grid_id
         this%mem(iproc)%p%owner_model_id = this%owner_model_id

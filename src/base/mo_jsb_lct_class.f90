@@ -40,6 +40,7 @@ MODULE mo_jsb_lct_class
     CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
     REAL(wp), POINTER :: fract(:,:) => NULL() !< Cover fraction of this lct (relative to tile that owns this lct)
     INTEGER           :: lib_id               !< Id of lct in lctlib
+    INTEGER           :: grib_id = 0          !< Id of lct in GRIB outputs.
   CONTAINS
     PROCEDURE :: Get_name     => Get_lct_type_name
     PROCEDURE :: Get_longname => Get_lct_type_longname
@@ -54,9 +55,10 @@ MODULE mo_jsb_lct_class
 
 CONTAINS
 
-  FUNCTION Construct_jsb_lct(id, name, long_name, lib_id) RESULT(return_value)
+  FUNCTION Construct_jsb_lct(id, grib_id, name, long_name, lib_id) RESULT(return_value)
 
     INTEGER, INTENT(in)                    :: id
+    INTEGER, INTENT(in)                    :: grib_id
     CHARACTER(LEN=*), INTENT(in), OPTIONAL :: name
     CHARACTER(LEN=*), INTENT(in), OPTIONAL :: long_name
     INTEGER,          INTENT(in), OPTIONAL :: lib_id
@@ -65,6 +67,8 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_jsb_lct'
 
     return_value%id = id
+    return_value%grib_id = grib_id
+
     IF (PRESENT(name)) THEN
       return_value%name = TRIM(name)
     ELSE
