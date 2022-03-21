@@ -418,7 +418,7 @@ CONTAINS
       & fract_snow,           &
       & fract_water,          &
       & rootzone_max,         &
-      & w_rootzone,           &
+      & wat_rootzone,         &
       & fact_q_air,           &
       & fact_qsat_srf,        &
       & fact_qsat_trans_srf,  &
@@ -492,7 +492,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  rootzone_max)        ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  w_rootzone)          ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wat_rootzone)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)           ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_fc_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pwp_sl)       ! in
@@ -515,7 +515,7 @@ CONTAINS
       ELSE
         w_soil_wilt_fract_tmp = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
         !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_1 tile_name=tile%name
-        mask(:) = w_rootzone(:) > w_soil_wilt_fract_tmp * rootzone_max(:)
+        mask(:) = wat_rootzone(:) > w_soil_wilt_fract_tmp * rootzone_max(:)
       END IF
 
       !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)

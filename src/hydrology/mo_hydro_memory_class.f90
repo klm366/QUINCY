@@ -104,8 +104,8 @@ MODULE mo_hydro_memory_class
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_excess,         & !< Water available for infiltration into the soil                           [m water equivalent]
       & w_soil_overflow,      & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
-      & w_rootzone,           & !< Liquid water content in the rootzone                                     [m]
-      & w_rootzone_rel          !< Water content of the rootzone relative to the maximum possible amout     [1]
+      & wat_rootzone,         & !< Liquid water content in the rootzone                                     [m]
+      & wat_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
 
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
@@ -134,8 +134,8 @@ MODULE mo_hydro_memory_class
       & root_depth,           & !< Rooting depth [m]
       & fract_snow_can,       & !< Snow fraction on canopy                                                  []
       & w_snow_can,           & !< Water content of snow reservoir on canopy                                [m water equivalent]
-      & w_rootzone_fc,        & !< Water content at field capacity in root zone of the soil                 [m]
-      & w_rootzone_pwp,       & !< Water content at permanent wilting point in root zone of the soil        [m]
+      & rootzone_fc,          & !< Water content at field capacity in root zone of the soil                 [m]
+      & rootzone_pwp,         & !< Water content at permanent wilting point in root zone of the soil        [m]
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
@@ -170,7 +170,7 @@ MODULE mo_hydro_memory_class
       evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
       w_land_gsum,            & !< Global land water content                [km3]
       discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
-      w_rootzone_rel_gmean,   & !< Global mean relative rootzone moisture   [1]
+      wat_rootzone_rel_gmean, & !< Global mean relative rootzone moisture   [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       w_snow_gsum               !< Global snow amount on non-glacier land   [Gt]
 
@@ -674,9 +674,9 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-      CALL mem%Add_var( 'w_rootzone', mem%w_rootzone,                          &
+      CALL mem%Add_var( 'wat_rootzone', mem%wat_rootzone,                      &
         & hgrid, surface,                                                      &
-        & t_cf('w_rootzone', 'm', 'Liquid water content of the root zone'),    &
+        & t_cf('wat_rootzone', 'm', 'Liquid water content of the root zone'),  &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
@@ -739,9 +739,9 @@ CONTAINS
         & loutput=.TRUE.,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var('w_rootzone_rel', mem%w_rootzone_rel,                             &
+      CALL mem%Add_var('wat_rootzone_rel', mem%wat_rootzone_rel,                         &
         &  hgrid, surface,                                                               &
-        &  t_cf('w_rootzone_rel', '-', 'Relative root zone moisture'),                   &
+        &  t_cf('wat_rootzone_rel', '-', 'Relative root zone moisture'),                 &
         &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
         & prefix, suffix,                                                                &
         & initval_r=0.0_wp )
@@ -787,9 +787,9 @@ CONTAINS
 
       ! todo: Currently only used with quincy, only in update_water_sress, where it could also be defined
       !    as local variable. Do we need that in the output without quincy? Do we need it at all?
-      CALL mem%Add_var( 'w_rootzone_fc', mem%w_rootzone_fc,                              &
+      CALL mem%Add_var( 'rootzone_fc', mem%rootzone_fc,                                  &
         & hgrid, surface,                                                                &
-        & t_cf('w_rootzone_fc', 'm', 'Root zone water content at field capacity'),       &
+        & t_cf('rootzone_fc', 'm', 'Root zone water content at field capacity'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &
@@ -797,9 +797,9 @@ CONTAINS
 
       ! todo: Currently only used with quincy, only in update_water_sress, where it could also be defined
       !    as local variable. Do we need that in the output without quincy? Do we need it at all?
-      CALL mem%Add_var( 'w_rootzone_pwp', mem%w_rootzone_pwp,                            &
+      CALL mem%Add_var( 'rootzone_pwp', mem%rootzone_pwp,                                &
         & hgrid, surface,                                                                &
-        & t_cf('w_rootzone_pwp', 'm',                                                    &
+        & t_cf('rootzone_pwp', 'm',                                                      &
         &      'Root zone water content at permanent wilting point'),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
@@ -964,9 +964,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
-      CALL mem%Add_var('w_rootzone_rel_gmean', mem%w_rootzone_rel_gmean,                 &
+      CALL mem%Add_var('wat_rootzone_rel_gmean', mem%wat_rootzone_rel_gmean,             &
         & hgrid, surface,                                                                &
-        & t_cf('w_rootzone_rel_gmean', '-', 'Global mean relative rootzone moisture'),   &
+        & t_cf('wat_rootzone_rel_gmean', '-', 'Global mean relative rootzone moisture'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )

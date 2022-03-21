@@ -498,22 +498,22 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,b),  &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,b),  &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, w_rootzone)    (:,  b)   )
+          & dsl4jsb_var_ptr(HYDRO_, wat_rootzone)  (:,  b)   )
       END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_rootzone))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wat_rootzone))
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max))
+        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
       END WHERE
 
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone_rel) = &
+          & dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
       ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
+        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone_rel) = 0._wp
       END WHERE
 
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel),    &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone))
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone_rel),    &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone))
 
     END IF
 
