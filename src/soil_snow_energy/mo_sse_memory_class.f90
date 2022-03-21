@@ -172,7 +172,7 @@ CONTAINS
     CALL mem%Add_var( 't_soil_sl', mem%t_soil_sl,                            &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature', 'K', ''),                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 207, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=280.0_wp )
@@ -180,14 +180,14 @@ CONTAINS
     CALL mem%Add_var( 't_soil_acoef', mem%t_soil_acoef,                      &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature_acoef', '', ''),                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 208, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 't_soil_bcoef', mem%t_soil_bcoef,                      &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature_bcoef', '', ''),                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 209, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
@@ -195,7 +195,7 @@ CONTAINS
       CALL mem%Add_var( 'snow_depth_sl', mem%snow_depth_sl,                    &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_depth_sl', 'm', 'Depth of snow layers'),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 210, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & output_level=MEDIUM,                                                 &
@@ -204,7 +204,7 @@ CONTAINS
       CALL mem%Add_var( 't_snow', mem%t_snow,                                  &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_temperature', 'K', ''),                                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 211, grib_bits),   &
         & prefix, suffix,                                                      &
         & output_level=BASIC,                                                  &
         & initval_r=273.15_wp )
@@ -212,14 +212,14 @@ CONTAINS
       CALL mem%Add_var( 't_snow_acoef', mem%t_snow_acoef,                      &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_temperature_acoef', '', ''),                              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 212, grib_bits),   &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 't_snow_bcoef', mem%t_snow_bcoef,                      &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_temperature_bcoef', '', ''),                              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 213, grib_bits),   &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
     END IF
@@ -227,7 +227,7 @@ CONTAINS
     CALL mem%Add_var( 'hcap_grnd', mem%hcap_grnd,                            &
       & hgrid, surface,                                                      &
       & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 214, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=1.3e5_wp )
@@ -244,7 +244,7 @@ CONTAINS
     CALL mem%Add_var( 'grnd_hflx', mem%grnd_hflx,                            &
       & hgrid, surface,                                                      &
       & t_cf('grnd_hflx', 'J m-2 s-1', 'Ground heat flux'),                  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 215, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=10.0_wp )

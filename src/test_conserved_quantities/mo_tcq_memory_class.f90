@@ -85,7 +85,7 @@ CONTAINS
     CALL mem%Add_var('a_veg_c_tcq', mem%a_veg_c_tcq,                                     &
       & hgrid, surface,                                                              &
       & t_cf('a_veg_c_tcq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 240, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                      &
       & l_conserve_quan=.TRUE., cons_quan_type_id = LIVE_CARBON_CQ_TYPE,     &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
@@ -93,7 +93,7 @@ CONTAINS
     CALL mem%Add_var('a_dead_c_tcq', mem%a_dead_c_tcq,                                     &
       & hgrid, surface,                                                              &
       & t_cf('a_dead_c_tcq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 241, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                           &
       & l_conserve_quan=.TRUE., cons_quan_type_id = DEAD_CARBON_CQ_TYPE,     &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
@@ -101,7 +101,7 @@ CONTAINS
       CALL mem%Add_var('another_dead_c_tcq', mem%another_dead_c_tcq,                                     &
       & hgrid, surface,                                                              &
       & t_cf('another_dead_c_tcq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 242, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                     &
       & l_conserve_quan=.TRUE., cons_quan_type_id = DEAD_CARBON_CQ_TYPE,     &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
@@ -109,7 +109,7 @@ CONTAINS
       CALL mem%Add_var('an_implicit_scaling_tcq', mem%an_implicit_scaling_tcq,                      &
       & hgrid, surface,                                                              &
       & t_cf('an_implicit_scaling_tcq', 'mol(C) m-2(canopy)', 'A C-Pool.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 243, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                                 &
       & l_conserve_quan=.TRUE., cons_quan_type_id = PRODUCT_CARBON_CQ_TYPE,     &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
@@ -117,7 +117,7 @@ CONTAINS
       CALL mem%Add_var('a_veg_c_ta_tcq', mem%a_veg_c_ta_tcq,                                     &
       & hgrid, surface,                                                              &
       & t_cf('a_veg_c_ta_tcq', 'mol(C) m-2', 'A C-Pool.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 244, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
@@ -125,7 +125,7 @@ CONTAINS
       CALL mem%Add_var('a_dead_c_ta_tcq', mem%a_dead_c_ta_tcq,                                     &
       & hgrid, surface,                                                              &
       & t_cf('a_dead_c_ta_tcq', 'mol(C) m-2', 'A C-Pool.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 245, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,  &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
@@ -133,7 +133,7 @@ CONTAINS
       CALL mem%Add_var('another_dead_c_ta_tcq', mem%another_dead_c_ta_tcq,                                     &
       & hgrid, surface,                                                              &
       & t_cf('another_dead_c_ta_tcq', 'mol(C)', 'A C-Pool.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 246, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
@@ -141,7 +141,7 @@ CONTAINS
       CALL mem%Add_var('an_implicit_scaling_ta_tcq', mem%an_implicit_scaling_ta_tcq,                      &
       & hgrid, surface,                                                              &
       & t_cf('an_implicit_scaling_ta_tcq', 'mol(C) m-2', 'A C-Pool.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 247, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
@@ -149,7 +149,7 @@ CONTAINS
       CALL mem%Add_var('conservation_test_field', mem%conservation_test_field,                      &
       & hgrid, surface,                                                              &
       & t_cf('conservation_test_field', 'mol(C) m-2', 'Neither scaled nor relocated -- tcq test.'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 248, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp) 
@@ -157,7 +157,7 @@ CONTAINS
       CALL mem%Add_var('old_sum', mem%old_sum,                      &
       & hgrid, surface,                                                              &
       & t_cf('old_sum', 'mol(C) m-2', 'Neither scaled nor relocated C-Pool -- old tcq sum'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 249, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp) 
