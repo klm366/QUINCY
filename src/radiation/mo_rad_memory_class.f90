@@ -283,7 +283,7 @@ CONTAINS
     CALL mem%Add_var( 'alb_vis', mem%alb_vis,                              &
       & hgrid, surface,                                                    &
       & t_cf('gridcell_surface_albedo_visible', '', ''),                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 167, grib_bits), &
       & prefix, suffix,                                                    &
       & lrestart=.TRUE.,                                                   &
       & output_level=BASIC,                                                &
@@ -292,7 +292,7 @@ CONTAINS
     CALL mem%Add_var( 'alb_nir', mem%alb_nir,                              &
       & hgrid, surface,                                                    &
       & t_cf('gridcell_surface_albedo_nir', '', ''),                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 168, grib_bits), &
       & prefix, suffix,                                                    &
       & lrestart=.TRUE.,                                                   &
       & output_level=BASIC,                                                &
@@ -301,7 +301,7 @@ CONTAINS
     CALL mem%Add_var( 'alb_vis_snow', mem%alb_vis_snow,                    &
       & hgrid, surface,                                                    &
       & t_cf('albedo_vis_snow', '', ''),                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 169, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=MEDIUM,                                               &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
@@ -309,7 +309,7 @@ CONTAINS
     CALL mem%Add_var( 'alb_nir_snow', mem%alb_nir_snow,                    &
       & hgrid, surface,                                                    &
       & t_cf('albedo_nir_snow', '', ''),                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 170, grib_bits), &
       & prefix, suffix,                                                    &
       & output_level=MEDIUM,                                               &
       & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
@@ -322,7 +322,7 @@ CONTAINS
       CALL mem%Add_var( 'alb_vis_lnd', mem%alb_vis_lnd,                             &
         & hgrid, surface,                                                           &
         & t_cf('surface_albvis_lnd', '', ''),                                       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 171, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
         & output_level=MEDIUM, &
@@ -331,7 +331,7 @@ CONTAINS
       CALL mem%Add_var( 'alb_nir_lnd', mem%alb_nir_lnd,                             &
         & hgrid, surface,                                                           &
         & t_cf('surface_albnir_lnd', '', ''),                                       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 172, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE.,                                                          &
         & output_level=MEDIUM, &
@@ -347,7 +347,7 @@ CONTAINS
       CALL mem%Add_var( 'alb_vis_soil', mem%alb_vis_soil,                    &
         & hgrid, surface,                                                    &
         & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 173, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
@@ -355,7 +355,7 @@ CONTAINS
       CALL mem%Add_var( 'alb_nir_soil', mem%alb_nir_soil,                    &
         & hgrid, surface,                                                    &
         & t_cf('soil_albedo_with_carbon_and_litter', '', ''),                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 174, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
@@ -363,7 +363,7 @@ CONTAINS
       CALL mem%Add_var( 'alb_vis_mineralsoil', mem%alb_vis_mineralsoil,      &
         & hgrid, surface,                                                    &
         & t_cf('alb_vis_mineralsoil', '', ''),                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 175, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
@@ -371,7 +371,7 @@ CONTAINS
       CALL mem%Add_var( 'alb_nir_mineralsoil', mem%alb_nir_mineralsoil,      &
         & hgrid, surface,                                                    &
         & t_cf('alb_nir_mineralsoil', '', ''),                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 176, grib_bits), &
         & prefix, suffix,                                                    &
         & output_level=MEDIUM,                                               &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
@@ -402,21 +402,21 @@ CONTAINS
       CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
         & hgrid, surface,                                                    &
         & t_cf('snow_age', '', ''),                                          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 177, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
       CALL mem%Add_var( 'sky_view_fract', mem%sky_view_fract,                &
         & hgrid, surface,                                                    &
         & t_cf('sky_view_fract', '', ''),                                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 178, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL mem%Add_var( 'sky_view_fract_stem', mem%sky_view_fract_stem,      &
         & hgrid, surface,                                                    &
         & t_cf('sky_view_fract_stem', '', ''),                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 179, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
@@ -530,7 +530,7 @@ CONTAINS
       CALL mem%Add_var( 'albedo_lwtr', mem%albedo_lwtr,                       &
         & hgrid, surface,                                                     &
         & t_cf('albedo_lwtr', '', 'Albedo of open water on lakes'),           &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 180, grib_bits),  &
         & prefix, suffix,                                                     &
         & output_level=MEDIUM,                                                &
         & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeWater )
@@ -549,7 +549,7 @@ CONTAINS
         CALL mem%Add_var( 'albedo_lice', mem%albedo_lice,                       &
           & hgrid, surface,                                                     &
           & t_cf('albedo_lice', '', 'Albedo of ice on lake water'),             &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 181, grib_bits),  &
           & prefix, suffix,                                                     &
           & output_level=MEDIUM,                                                &
           & loutput=.TRUE., lrestart=.TRUE., initval_r=AlbedoLakeIceMin )
@@ -612,7 +612,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('net_radiation', 'W m-2', 'net radiation at surface'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 182, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -657,7 +657,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('albedo', 'unitless', 'total surface albedo'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 183, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp )
@@ -684,7 +684,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('arad_vis_soil', 'W m-2', 'radiation in VIS range absorbed by the soil'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 184, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -693,7 +693,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('arad_nir_soil', 'W m-2', 'radiation in NIR range absorbed by the soil'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 185, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -720,7 +720,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('arad_vis_can', 'W m-2', 'radiation in VIS range absorbed by the canopy'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 186, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -729,7 +729,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('arad_nir_can', 'W m-2', 'radiation in NIR range absorbed by the canopy'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 187, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -738,7 +738,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('appfd', 'µmol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 188, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -747,7 +747,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('rfr_ratio_boc', 'unitless', 'red to far-red ratio at the bottom of the canopy'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 189, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -756,7 +756,7 @@ CONTAINS
             hgrid, surface, &
             t_cf('rfr_ratio_boc_tvegdyn_mavg', 'unitless', 'red to far-red ratio at the bottom of the canopy'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 190, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -765,7 +765,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_sunlit_cl', 'µmol m-2 s-1', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 191, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -774,7 +774,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_shaded_cl', 'µmol m-2 s-1', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 192, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -783,7 +783,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_sunlit_daytime_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves of the previous day'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 193, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -792,7 +792,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_shaded_daytime_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves of the previous day'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 194, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -801,7 +801,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_sunlit_daytime_dacc_cl', 'µmol m-2 d-1', 'daily accumulated PPFD on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 195, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -810,7 +810,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_shaded_daytime_dacc_cl', 'µmol m-2 d-1', 'daily accumulated PPFD on shaded leaves of the previous day'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 196, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -819,7 +819,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_sunlit_tfrac_mavg_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves at tfrac-timescale'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 197, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -828,7 +828,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_shaded_tfrac_mavg_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves at tfrac-timescale'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 198, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -837,7 +837,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_sunlit_tcnl_mavg_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves at tcnl-timescale'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 199, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -846,7 +846,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('ppfd_shaded_tcnl_mavg_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves at tcnl-timescale'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 200, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -855,7 +855,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('arad_sunlit_vis_cl', 'W m-2', 'absorbed radiation in visible band on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 201, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -864,7 +864,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('arad_shaded_vis_cl', 'W m-2', 'absorbed radiation in visible band on shaded leaves'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 202, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -873,7 +873,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fleaf_sunlit_vis_cl', 'unitless', 'fraction of leaves that are sunlit in VIS band'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 203, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -882,7 +882,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('arad_sunlit_nir_cl', 'W m-2', 'absorbed radiation in NIR band on sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 204, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -891,7 +891,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('arad_shaded_nir_cl', 'W m-2', 'absorbed radiation in NIR band on shaded leaves'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 205, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -900,7 +900,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fleaf_sunlit_nir_cl', 'unitless', 'fraction of leaves that are sunlit in NIR band'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 198, 206, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue

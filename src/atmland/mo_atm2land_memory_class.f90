@@ -445,7 +445,7 @@ CONTAINS
       & hgrid, surface,                                                           &
       & t_cf('CO2_mixing_ratio', 'ppm', 'surface air CO2 mixing ratio'),          &
       & t_grib1(table, 255, grib_bits),                                           &
-      & t_grib2(255, 255, 255, grib_bits),                                        &
+      & t_grib2(  2, 198,  44, grib_bits),                                        &
       & prefix, suffix,                                                           &
       & loutput=.TRUE., lrestart=.TRUE.,                                          &
       & initval_r=0.0_wp)
@@ -454,7 +454,7 @@ CONTAINS
       & hgrid, surface,                                                           &
       & t_cf('CO2_mixing_ratio_C13', 'ppm', 'surface air 13CO2 mixing ratio'),    &
       & t_grib1(table, 255, grib_bits),                                           &
-      & t_grib2(255, 255, 255, grib_bits),                                        &
+      & t_grib2(  2, 198,  45, grib_bits),                                        &
       & prefix, suffix,                                                           &
       & loutput=.TRUE., lrestart=.TRUE.,                                          &
       & initval_r=0.0_wp)
@@ -463,7 +463,7 @@ CONTAINS
       & hgrid, surface,                                                           &
       & t_cf('CO2_mixing_ratio_C14', 'scaled', 'surface air 14CO2 mixing ratio'), &
       & t_grib1(table, 255, grib_bits),                                           &
-      & t_grib2(255, 255, 255, grib_bits),                                        &
+      & t_grib2(  2, 198,  46, grib_bits),                                        &
       & prefix, suffix,                                                           &
       & loutput=.TRUE., lrestart=.TRUE.,                                          &
       & initval_r=0.0_wp)

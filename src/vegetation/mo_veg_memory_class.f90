@@ -200,7 +200,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('height', 'm', 'plant height'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   0, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -209,7 +209,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('growth_req_n', 'mol N m-2 -1', 'moles N required for a unit of C growth under current allocation fractions '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   1, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -218,7 +218,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('growth_req_p', 'mol P m-2 -1', 'moles P required for a unit of N growth under current allocation fractions '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   2, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -227,7 +227,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('gpp_tlabile_mavg', 'µmol m-2 s-1', 'gpp '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   3, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -236,7 +236,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('maint_respiration_tlabile_mavg', 'µmol m-2 s-1', 'maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   4, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -245,7 +245,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('growth_req_n_tlabile_mavg', '', 'moles N required for a unit of C growth under current allocation fractions'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   5, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -254,7 +254,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('growth_req_p_tlabile_mavg', '', 'moles P required for a unit of N growth under current allocation fractions'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   6, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -263,7 +263,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('t_air_tphen_mavg', '', 'air temp mavg for phenology calc'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   7, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -272,7 +272,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('t_air_week_mavg', '', 'avrg air temperature across 7 days'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   8, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -281,7 +281,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('t_air_month_mavg', '', 'avrg air temperature across 30 days'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,   9, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -290,7 +290,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('mean_leaf_age', '', 'average foliage age in days '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  10, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -300,7 +300,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('beta_sinklim_ps', '', 'scaling factor to account for a direct sink limitation contraint on photosynthesis'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  11, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -309,7 +309,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('t_jmax_opt_mavg', '', 'optimim temperature for electron transport of photosynthesis'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  12, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -318,7 +318,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('t_air_tacclim_mavg', '', 'average air temperature for respiration acclimation'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  13, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -327,7 +327,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('maint_respiration_pot', 'µmol CO2 m-2 s-1', 'potential maintenance respiration'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  14, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -336,7 +336,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fleaf_sunlit_tfrac_mavg_cl', '', 'fraction of sunlit leaves'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  15, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -345,7 +345,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('leaf_nitrogen_cl', 'mmol m-2 LAI', 'N in canopy layer'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  16, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -354,7 +354,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fn_chl_cl', '', 'fraction of N in chlorophyll, pigments only'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  17, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -363,7 +363,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fn_et_cl', '', 'fraction of N in electron transport '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  18, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -372,7 +372,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fn_rub_cl', '', 'fraction of N in Rubisco '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  19, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -381,7 +381,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fn_pepc_cl', '', 'fraction of N in PEP carboylase, C4 plants only'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  20, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -390,7 +390,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fn_oth_cl', '', 'fraction of N not associated with photosynthesis '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  21, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -399,7 +399,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('fleaf_sunlit_cl', '', 'fraction of layer which is sunlit'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  22, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -408,7 +408,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('lai_cl', 'm2 m-2', 'leaf area in the canopy layer '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  23, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -417,7 +417,7 @@ CONTAINS
             hgrid, vgrid_canopy, &
             t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  24, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -426,7 +426,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('veg_pool_leaf_carbon', '[]', 'leaf carbon veg pool'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  25, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -435,7 +435,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('veg_pool_leaf_nitrogen', '[]', 'leaf nitrogen veg pool'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  26, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -444,7 +444,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('veg_pool_leaf_phosphorus', '[]', 'leaf phosphorus veg pool'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  27, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -453,7 +453,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('veg_growth_leaf_carbon', '[]', 'leaf carbon growth flux'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  28, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue
@@ -462,7 +462,7 @@ CONTAINS
             hgrid, vgrid_surface, &
             t_cf('veg_litterfall_leaf_carbon', '[]', 'leaf crabon litterfall flux'), &
             t_grib1(table, 255, grib_bits), &
-            t_grib2(255, 255, 255, grib_bits), &
+            t_grib2(  2, 199,  29, grib_bits), &
             prefix, suffix, &
             loutput=.TRUE., lrestart=.TRUE., &
             initval_r=0.0_wp) ! initvalue

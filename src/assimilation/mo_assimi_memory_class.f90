@@ -244,7 +244,7 @@ CONTAINS
       CALL mem%Add_var('npp_pot_rate_ca', mem%NPP_pot_rate_ca,                              &
         & hgrid, surface,                                                                   &
         & t_cf('NPP_pot_rate_ca', 'mol(CO2)/(m^2 (canopy ground) / s)', 'NPP_pot_rate_ca'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   5, grib_bits),                &
         & prefix, suffix,                                                                   &
         & output_level=BASIC,                                                               &
         & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -318,21 +318,21 @@ CONTAINS
       CALL mem%Add_var('canopy_cond_unlimited', mem%canopy_cond_unlimited,       &
         & hgrid, surface,                                                        &
         & t_cf('canopy_conductance_unlimited', '', ''),                          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   6, grib_bits),     &
         & prefix, suffix,                                                        &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var('canopy_cond_limited', mem%canopy_cond_limited,           &
         & hgrid, surface,                                                        &
         & t_cf('canopy_conductance_limited', '', ''),                            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   7, grib_bits),     &
         & prefix, suffix,                                                        &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var('cover_fract_pot', mem%cover_fract_pot,               &
         & hgrid, surface,                                                    &
         & t_cf('cover_fract_pot', 'fract', ''),                              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   8, grib_bits), &
         & prefix, suffix,                                                    &
         & initval_r=0.1_wp ) ! initval choosen freely
     END IF  !  IF(.NOT. use_quincy)
@@ -366,7 +366,7 @@ CONTAINS
           CALL mem%Add_var('canopy_cond_limited', mem%canopy_cond_limited,         &
           & hgrid, surface,                                                        &
           & t_cf('canopy_conductance_limited', '', ''),                            &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+          & t_grib1(table, 255, grib_bits), t_grib2(  2, 198,   7, grib_bits),     &
           & prefix, suffix,                                                        &
           & initval_r=0.0_wp )
 
@@ -376,7 +376,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('gross_assimilation', 'µmol CO2 m-2 s-1', 'canopy-integrated gross assimilation rate'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,   9, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -385,7 +385,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('gross_assimilation_C13', 'µmol 13CO2 m-2 s-1', 'canopy-integrated gross assimilation rate'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  10, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -394,7 +394,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('gross_assimilation_C14', 'µmol 14CO2 m-2 s-1', 'canopy-integrated gross assimilation rate'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  11, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -403,7 +403,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('net_assimilation', 'µmol CO2 m-2 s-1', 'canopy-integrated net assimilation rate'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  12, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -412,7 +412,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('net_assimilation_boc', 'µmol CO2 m-2 s-1', 'net assimilation rate at the bottom of the canopy'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  13, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -421,7 +421,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('maint_respiration_leaf', 'µmol CO2 m-2 s-1', 'canopy-integrated foliar respiration rate'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  14, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -430,7 +430,7 @@ CONTAINS
               hgrid, vgrid_canopy, &
               t_cf('gross_assimilation_cl', 'µmol CO2 m-2 s-1', 'gross assimilation rate per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  15, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -439,7 +439,7 @@ CONTAINS
               hgrid, vgrid_canopy, &
               t_cf('net_assimilation_cl', 'µmol CO2 m-2 s-1', 'net assimilation rate per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  16, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -448,7 +448,7 @@ CONTAINS
               hgrid, vgrid_canopy, &
               t_cf('maint_respiration_leaf_cl', 'µmol CO2 m-2 s-1', 'foliar respiration rate per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  17, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -457,7 +457,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_air', 'unitless', 'scaling factor to account for air humidity effects on conductance'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  18, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -466,7 +466,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soa', 'unitless', 'scaling factor to account for spring in coniferous forests'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  19, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -475,7 +475,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_ps', 'unitless', 'scaling factor to account for soil moisture constraints on photosynthesis'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  20, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -484,7 +484,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_gs', 'unitless', 'scaling factor to account for soil moisture constraints on conductance'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  21, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -493,7 +493,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('canopy_cond', 'm s-1', 'canopy-integrated conductance for water'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  22, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -502,7 +502,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('co2_conc_leaf', 'ppm', 'canopy-integrated internal leaf CO2 concentration'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  23, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -511,7 +511,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('t_jmax_opt', 'deg C', 'optimal temperature for electron transport of photosynthesis'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  24, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -520,7 +520,7 @@ CONTAINS
               hgrid, vgrid_canopy, &
               t_cf('canopy_cond_cl', 'm s-1', 'conductance for water per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  25, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -529,7 +529,7 @@ CONTAINS
               hgrid, vgrid_canopy, &
               t_cf('co2_conc_leaf_cl', 'ppm', 'internal leaf CO2 concentration per canopy layer'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  26, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -538,7 +538,7 @@ CONTAINS
               hgrid, vgrid_canopy, &
               t_cf('jmax_cl', 'µmol CO2 m-2 s-1', 'maximum rate of electron transport'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  27, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -547,7 +547,7 @@ CONTAINS
               hgrid, vgrid_canopy, &
               t_cf('vcmax_cl', 'µmol CO2 m-2 s-1', 'maximum rate of carboxylation'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  28, grib_bits), &
               prefix, suffix, &
               loutput=.FALSE.,&
               initval_r=0.0_wp) ! initvalue
@@ -556,7 +556,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('soa_tsoa_mavg', '', 'state of acclimation, used in calculation of beta_soa time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  29, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -565,7 +565,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_air_daytime', 'unitless', 'scaling factor beta_air average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  30, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -574,7 +574,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_air_daytime_dacc', 'unitless', 'scaling factor beta_air average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  31, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -583,7 +583,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_air_tfrac_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  32, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -592,7 +592,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_air_tcnl_mavg', 'unitless', 'scaling factor beta_air time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  33, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -601,7 +601,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soa_tphen_mavg', 'unitless', 'scaling factor account for spring in coniferous forests time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  34, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -610,7 +610,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_ps_daytime', 'unitless', 'scaling factor beta_soil_ps average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  35, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -619,7 +619,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_ps_daytime_dacc', 'unitless', 'scaling factor beta_soil_ps average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  36, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -628,7 +628,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_ps_tfrac_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  37, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -637,7 +637,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_ps_tcnl_mavg', 'unitless', 'scaling factor beta_soil_ps time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  38, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -646,7 +646,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_gs_daytime', 'unitless', 'scaling factor beta_soil_gs average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  39, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -655,7 +655,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_gs_daytime_dacc', 'unitless', 'scaling factor beta_soil_gs average of the previous day'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  40, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -664,7 +664,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_gs_tphen_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  41, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -673,7 +673,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_gs_tfrac_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  42, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
@@ -682,7 +682,7 @@ CONTAINS
               hgrid, surface, &
               t_cf('beta_soil_gs_tcnl_mavg', 'unitless', 'scaling factor beta_soil_gs time-averaged'), &
               t_grib1(table, 255, grib_bits), &
-              t_grib2(255, 255, 255, grib_bits), &
+              t_grib2(  2, 198,  43, grib_bits), &
               prefix, suffix, &
               loutput=.TRUE., lrestart=.TRUE., &
               initval_r=0.0_wp) ! initvalue
