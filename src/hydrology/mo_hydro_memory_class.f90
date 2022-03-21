@@ -259,7 +259,7 @@ CONTAINS
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
       grib2_desc = t_grib2(1,0,202, grib_bits)
     ELSE
-      grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      grib2_desc = t_grib2(  1,   0, 202, grib_bits)
     END IF
 
     CALL mem%Add_var('fract_snow', mem%fract_snow,                             &
@@ -273,7 +273,7 @@ CONTAINS
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
       grib2_desc = t_grib2(1,0,212, grib_bits)
     ELSE
-      grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      grib2_desc = t_grib2(  1,   0, 212, grib_bits)
     END IF
     CALL mem%Add_var( 'weq_snow', mem%weq_snow,                                &
       & hgrid, surface,                                                        &
@@ -286,7 +286,7 @@ CONTAINS
     CALL mem%Add_var( 'evapotrans', mem%evapotrans,                                      &
       & hgrid, surface,                                                                  &
       & t_cf('evapotrans', 'kg m-2 s-1', 'Evapotranspiration, including sublimation'),   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 116, grib_bits),               &
       & prefix, suffix,                                                                  &
       & lrestart=.TRUE.,                                                                 &
       & output_level=BASIC,                                                              &
@@ -296,7 +296,7 @@ CONTAINS
     CALL mem%Add_var( 'evapopot', mem%evapopot,                                          &
       & hgrid, surface,                                                                  &
       & t_cf('evapopot', 'kg m-2 s-1', 'Potential evaporation (including sublimation)'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 117, grib_bits),               &
       & prefix, suffix,                                                                  &
       & lrestart=.TRUE.,                                                                 &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -372,14 +372,14 @@ CONTAINS
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
       & hgrid, surface,                                                              &
       & t_cf('discharge', 'm3 s-1', 'Local discharge'),                              &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 118, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'discharge_ocean', mem%discharge_ocean,                        &
       & hgrid, surface,                                                              &
       & t_cf('discharge_ocean', 'm3 s-1', 'Discharge to the ocean'),                 &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 119, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -403,7 +403,7 @@ CONTAINS
     CALL mem%Add_var( 'weq_land', mem%weq_land,                                      &
       & hgrid, surface,                                                              &
       & t_cf('weq_land', 'm3', 'Total land water and ice content'),                  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 120, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
@@ -471,21 +471,21 @@ CONTAINS
       CALL mem%Add_var( 'fract_snow_soil', mem%fract_snow_soil,                      &
         & hgrid, surface,                                                            &
         & t_cf('fract_snow_soil', '-', 'Snow fraction on soil'),                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 121, grib_bits),         &
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'weq_snow_soil', mem%weq_snow_soil,                          &
         & hgrid, surface,                                                            &
         & t_cf('weq_snow_soil', 'm (water equivalent)', 'Snow amount on soil'),      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 122, grib_bits),         &
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'snow_soil_dens', mem%snow_soil_dens,                        &
         & hgrid, surface,                                                            &
         & t_cf('snow_soil_dens', 'kg m-3', 'Density of snow on soil'),               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 123, grib_bits),         &
         & prefix, suffix,                                                            &
         & initval_r=ini_snow_dens, l_aggregate_all=.TRUE. )
 
@@ -512,7 +512,7 @@ CONTAINS
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,201, grib_bits)
       ELSE
-        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+        grib2_desc = t_grib2(  1,   0, 201, grib_bits)
       END IF
       CALL mem%Add_var( 'fract_wet', mem%fract_wet,                              &
         & hgrid, surface,                                                        &
@@ -560,7 +560,7 @@ CONTAINS
         CALL mem%Add_var( 'fract_org_sl', mem%fract_org_sl,                          &
           & hgrid, soil_w,                                                           &
           & t_cf('fract_org_sl', '-', 'Fraction of organic material in soil layer'), &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+          & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 124, grib_bits),       &
           & prefix, suffix,                                                          &
           & lrestart=.TRUE.,                                                         &
           & initval_r=0.0_wp )
@@ -705,7 +705,7 @@ CONTAINS
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,211, grib_bits)
       ELSE
-        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+        grib2_desc = t_grib2(  1,   0, 211, grib_bits)
       END IF
       CALL mem%Add_var( 'wtr_skin', mem%wtr_skin,                                   &
         & hgrid, surface,                                                           &
@@ -719,7 +719,7 @@ CONTAINS
         & hgrid, surface,                                                           &
         & t_cf('snow_accum', 'm (water equivalent)',                                &
         &      'Snow budget change within the time step'),                          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 125, grib_bits),        &
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -777,14 +777,14 @@ CONTAINS
       CALL mem%Add_var( 'wtr_soilhyd_res', mem%wtr_soilhyd_res,                        &
         & hgrid, surface,                                                              &
         & t_cf('wtr_soilhyd_res', 'm3/(time step)', 'Vertical transport residual'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 126, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,213, grib_bits)
       ELSE
-        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+        grib2_desc = t_grib2(  1,   0, 213, grib_bits)
       END IF
       CALL mem%Add_var( 'wtr_rootzone', mem%wtr_rootzone,                      &
         & hgrid, surface,                                                      &
@@ -806,7 +806,7 @@ CONTAINS
       CALL mem%Add_var( 'wtr_soil_sl', mem%wtr_soil_sl,                        &
         & hgrid, soil_w,                                                       &
         & t_cf('wtr_soil_sl', 'm', 'Water content of soil layers'),            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 127, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -814,7 +814,7 @@ CONTAINS
       CALL mem%Add_var( 'ice_soil_sl', mem%ice_soil_sl,                        &
         & hgrid, soil_w,                                                       &
         & t_cf('ice_soil_sl', 'm', 'Ice content of soil layers'),              &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 128, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -887,7 +887,7 @@ CONTAINS
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
         & hgrid, surface,                                                                &
         & t_cf('wtr_rootzone_rel', '-', 'Relative root zone moisture'),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 129, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp )
@@ -983,7 +983,7 @@ CONTAINS
       CALL mem%Add_var( 'root_depth', mem%root_depth,                                    &
         & hgrid, surface,                                                                &
         & t_cf('root_depth', 'm', 'Rooting depth'),                                      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 130, grib_bits),             &
         & prefix, suffix,                                                                &
         & loutput=.TRUE.,                                                                &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
@@ -991,7 +991,7 @@ CONTAINS
       CALL mem%Add_var( 'root_depth_sl', mem%root_depth_sl,                              &
         & hgrid, soil_w,                                                                 &
         & t_cf('root_depth_sl', 'm', 'Rooting depth within the soil layer'),             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 131, grib_bits),             &
         & prefix, suffix,                                                                &
         & loutput=.TRUE.,                                                                &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
@@ -999,7 +999,7 @@ CONTAINS
       CALL mem%Add_var( 'fract_snow_can', mem%fract_snow_can,                            &
         & hgrid, surface,                                                                &
         & t_cf('fract_snow_can', '-', 'Snow fraction on canopy'),                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 132, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -1007,7 +1007,7 @@ CONTAINS
       CALL mem%Add_var( 'weq_snow_can', mem%weq_snow_can,                                &
         & hgrid, surface,                                                                &
         & t_cf('weq_snow_can', 'm (water equivalent)', 'Snow amount on canopy'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 133, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -1059,7 +1059,7 @@ CONTAINS
           & hgrid, surface,                                                              &
           & t_cf('canopy_cond_unlimited', 'm/s',                                         &
           &      'Canopy conductance ignoring water limitation'),                        &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 134, grib_bits),           &
           & prefix, suffix,                                                              &
           & loutput=.TRUE., initval_r=0.0_wp )
 
@@ -1067,7 +1067,7 @@ CONTAINS
           & hgrid, surface,                                                              &
           & t_cf('canopy_cond_limited', 'm/s',                                           &
           &      'Canopy conductance accounting for water limitation'),                  &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+          & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 135, grib_bits),           &
           & prefix, suffix,                                                              &
           & loutput=.TRUE., initval_r=0.0_wp )
       END IF
@@ -1091,7 +1091,7 @@ CONTAINS
       CALL mem%Add_var( 'fract_snow_glac', mem%fract_snow_glac,                          &
         & hgrid, surface,                                                                &
         & t_cf('fract_snow_glac', '-', 'Snow fraction on glacier'),                      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 136, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -1099,7 +1099,7 @@ CONTAINS
       CALL mem%Add_var( 'weq_glac', mem%weq_glac,                                        &
         & hgrid, surface,                                                                &
         & t_cf('weq_glac', 'm (water equivalent)', 'Glacier depth (including snow)'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 137, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
         & initval_r=20.0_wp, l_aggregate_all=.TRUE. )
@@ -1107,7 +1107,7 @@ CONTAINS
       CALL mem%Add_var( 'runoff_glac', mem%runoff_glac,                                  &
         & hgrid, surface,                                                                &
         & t_cf('runoff_glac', 'kg m-2 s-1', 'Runoff from glacier (rain + melt)'),        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 138, grib_bits),             &
         & prefix, suffix,                                                                &
         & initval_r=20.0_wp, l_aggregate_all=.TRUE. )
 
@@ -1138,7 +1138,7 @@ CONTAINS
           & hgrid, surface,                                                        &
           & t_cf('fract_snow_lice', '-',                                           &
           &      'Snow fraction on lake ice (rel. to ice fraction)'),              &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+          & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 139, grib_bits),     &
           & prefix, suffix,                                                        &
           & output_level=BASIC,                                                    &
           & initval_r=0.0_wp )
@@ -1146,7 +1146,7 @@ CONTAINS
         CALL mem%Add_var( 'weq_snow_lice', mem%weq_snow_lice,                        &
           & hgrid, surface,                                                          &
           & t_cf('weq_snow_lice', 'm water equivalent', 'Snow amount on lake ice'),  &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+          & t_grib1(table, 255, grib_bits), t_grib2(  2, 198, 140, grib_bits),       &
           & prefix, suffix,                                                          &
           & output_level=BASIC,                                                      &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
