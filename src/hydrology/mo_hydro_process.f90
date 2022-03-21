@@ -52,7 +52,7 @@ CONTAINS
   !!   Adapted for JSBACH4 in February 2017 by R. Schnur
   !!
   !! @param [in]     lstart                T: Start of experiment
-  !! @param [in]     delta_time            Time step
+  !! @param [in]     dtime                 Time step
   !! @param [in]     l_dynsnow             T: Compute density of snow dynamically
   !! @param [in]     snow_depth_max        Snow depth limit [m water equivalent]; -1. for no limit
   !! @param [in]     t_srf_unfilt          surface tempemperature [K] (unfiltered)
@@ -82,7 +82,7 @@ CONTAINS
   !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
   !
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (          &
-    & lstart, delta_time, l_dynsnow, snow_depth_max,               &
+    & lstart, dtime, l_dynsnow, snow_depth_max,                    &
     & t_srf_unfilt, wind_10m, t_air,                               &
     & skinres_canopy_max, skinres_max, sfract_srf, wfract_srf,     &
     & hcap_grnd, evapotrans, evapopot, transpiration,              &
@@ -95,7 +95,7 @@ CONTAINS
     USE mo_sse_constants,          ONLY: snow_depth_min
 
     LOGICAL,  INTENT(in) :: lstart, l_dynsnow
-    REAL(wp), INTENT(in) :: delta_time, snow_depth_max
+    REAL(wp), INTENT(in) :: dtime, snow_depth_max
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                         &
       & t_srf_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,             &
@@ -155,13 +155,13 @@ CONTAINS
     ! Convert water fluxes to m water equivalent within the time step
     !-----------------------------------------------------------------
 
-    rain_in_m           = rain          * delta_time/rhoh2o
-    new_snow            = snow          * delta_time/rhoh2o   !in_m       ! snow_fall
-    evapotrans_in_m     = evapotrans    * delta_time/rhoh2o
-    transpiration_in_m  = transpiration * delta_time/rhoh2o
-    evapo_snow_pot_in_m = sfract_srf    * evapopot * delta_time/rhoh2o
+    rain_in_m           = rain          * dtime/rhoh2o
+    new_snow            = snow          * dtime/rhoh2o   !in_m       ! snow_fall
+    evapotrans_in_m     = evapotrans    * dtime/rhoh2o
+    transpiration_in_m  = transpiration * dtime/rhoh2o
+    evapo_snow_pot_in_m = sfract_srf    * evapopot * dtime/rhoh2o
     evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
-    evapo_skin_pot_in_m = (1._wp - sfract_srf) * wfract_srf * evapopot * delta_time/rhoh2o
+    evapo_skin_pot_in_m = (1._wp - sfract_srf) * wfract_srf * evapopot * dtime/rhoh2o
 
     !---------------------------------------------
     !  Budgets of snow (canopy, ground)
@@ -179,19 +179,19 @@ CONTAINS
     canopy_snow = MIN(MAX(0._wp, canopy_pre_snow + new_snow_canopy + evapo_snow_pot_in_m), skinres_canopy_max)
     evapo_snow_in_m = evapo_snow_pot_in_m - (canopy_snow - canopy_pre_snow - new_snow_canopy)
     ! unloading of snow from the canopy due to melting
-    exp_t = MAX(0._wp, t_air-zc1)/zc2 * delta_time
+    exp_t = MAX(0._wp, t_air-zc1)/zc2 * dtime
     snow_melt_can = canopy_snow * (1._wp-EXP(-exp_t))
     canopy_snow = canopy_snow - snow_melt_can
 
     ! unloading of snow from the canopy due to wind
-    exp_w = wind_10m/zc3 * delta_time
+    exp_w = wind_10m/zc3 * dtime
     snow_blown = canopy_snow * (1._wp-EXP(-exp_w))
     canopy_snow   = canopy_snow   - snow_blown
     new_snow_soil = new_snow_soil + snow_blown
 
     ! Heating due to snow melt on canopy
     ! @Todo Why is heating only computed for canopy?
-    q_snocpymlt = snow_melt_can * rhoh2o * alf / delta_time
+    q_snocpymlt = snow_melt_can * rhoh2o * alf / dtime
 
     !  Snowfall and sublimation
     !-----------------------------------------------
@@ -262,7 +262,7 @@ CONTAINS
     IF (l_dynsnow) THEN
       IF (snow_soil_old * rhoh2o / snow_soil_dens > snow_depth_min) THEN
         ! Update density of old snow following eq. 31 of Verseghy, 1991
-        snow_soil_dens = dens_snow_max - (dens_snow_max - snow_soil_dens) * EXP(-0.01_wp * delta_time/3600._wp)
+        snow_soil_dens = dens_snow_max - (dens_snow_max - snow_soil_dens) * EXP(-0.01_wp * dtime/3600._wp)
         ! Calculate weighted mean density from old and fresh snow
         IF (snow_soil > snow_soil_old) &
           & snow_soil_dens = (snow_soil_dens * snow_soil_old + dens_snow_min * (snow_soil - snow_soil_old)) / snow_soil
@@ -274,10 +274,10 @@ CONTAINS
     END IF
 
     ! Transform fluxes in output from [m] to [kg m-2 s-1]
-    snow_melt_soil = snow_melt_soil * rhoh2o / delta_time
+    snow_melt_soil = snow_melt_soil * rhoh2o / dtime
 
-    evapotrans_soil = evapotrans_soil_in_m * rhoh2o / delta_time
-    evapo_skin = evapo_skin_in_m  * rhoh2o / delta_time
+    evapotrans_soil = evapotrans_soil_in_m * rhoh2o / dtime
+    evapo_skin = evapo_skin_in_m  * rhoh2o / dtime
     evapo_snow = sfract_srf * evapopot
 
   END SUBROUTINE calc_surface_hydrology_land
@@ -292,7 +292,7 @@ CONTAINS
   !!   Adapted for JSBACH4 in February 2017 by R. Schnur
   !!
   !! @param [in]     lstart                T: Start of experiment
-  !! @param [in]     delta_time            Time step
+  !! @param [in]     dtime                 Time step
   !! @param [in]     t_srf_unfilt          surface tempemperature [K] (unfiltered)
   !! @param [in]     sfract_srf            surface snow fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
@@ -307,7 +307,7 @@ CONTAINS
   !! @param [out]    pme_glacier           precipitation minus sublimation on glacier [kg m-2 s-1]
   !
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_glacier ( &
-    & lstart, delta_time,                                    &
+    & lstart, dtime,                                         &
     & t_srf_unfilt,                                          &
     & sfract_srf, hcap_grnd,                                 &
     & evapotrans, evapopot, rain, snow,                      &
@@ -318,7 +318,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf
 
     LOGICAL,  INTENT(in) :: lstart
-    REAL(wp), INTENT(IN) :: delta_time
+    REAL(wp), INTENT(IN) :: dtime
     !$claw model-data
     REAL(wp), INTENT(in) ::       &
       & t_srf_unfilt,             &
@@ -356,10 +356,10 @@ CONTAINS
     ! Convert water fluxes to m water equivalent within the time step
     !-----------------------------------------------------------------
 
-    rain_in_m          = rain       * delta_time/rhoh2o
-    new_snow           = snow       * delta_time/rhoh2o   !in_m       ! snow_fall
-    evapotrans_in_m    = evapotrans * delta_time/rhoh2o
-    evapo_snow_pot_in_m = sfract_srf * evapopot * delta_time/rhoh2o
+    rain_in_m          = rain       * dtime/rhoh2o
+    new_snow           = snow       * dtime/rhoh2o   !in_m       ! snow_fall
+    evapotrans_in_m    = evapotrans * dtime/rhoh2o
+    evapo_snow_pot_in_m = sfract_srf * evapopot * dtime/rhoh2o
 
     !  Snowfall and sublimation on glaciers
     !---------------------------------------
@@ -385,9 +385,9 @@ CONTAINS
 
     q_snocpymlt = 0._wp
 
-    glacier_melt   = glacier_melt_in_m   * rhoh2o / delta_time
-    glacier_runoff = glacier_runoff_in_m * rhoh2o / delta_time
-    pme_glacier    = pme_glacier_in_m    * rhoh2o / delta_time
+    glacier_melt   = glacier_melt_in_m   * rhoh2o / dtime
+    glacier_runoff = glacier_runoff_in_m * rhoh2o / dtime
+    pme_glacier    = pme_glacier_in_m    * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_glacier
 
@@ -397,7 +397,7 @@ CONTAINS
   ! @param [in]      nc                 Vector lenth
   ! @param [in]      nsoil              Number of soil layers
   ! @param [in]      nlat               (Effective) number of latitudes
-  ! @param [in]      delta_time         Time step [s]
+  ! @param [in]      dtime              Time step [s]
   ! @param [in]      l_infil_subzero    Allow infiltration of supercolled water
   ! @param [in]      soil_depth_l       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_l       Thicknesses of soil layers until rooting depth [m]
@@ -430,7 +430,7 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                                                &
     ! in
-    & nc, nsoil, nlat, delta_time, ltpe_closed, ltpe_open,                                                       &
+    & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                                            &
     & l_infil_subzero,                                                                                           &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
@@ -449,7 +449,7 @@ CONTAINS
     INTEGER,  INTENT(in) :: &
       & nc, nsoil, nlat
     REAL(wp), INTENT(in) :: &
-      & delta_time
+      & dtime
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero
@@ -625,10 +625,10 @@ CONTAINS
     !$claw acc parallel
     !$claw acc loop gang
     DO i = 1, nc
-      transpiration_in_m(i) = transpiration(i)  * delta_time / rhoh2o
+      transpiration_in_m(i) = transpiration(i)  * dtime / rhoh2o
       ! note: at this point ignoring the amount of dew that exceeds the skinreservoir
       !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
-      evapo_soil_in_m(i) = evapotrans_soil(i) * delta_time / rhoh2o - transpiration_in_m(i)
+      evapo_soil_in_m(i) = evapotrans_soil(i) * dtime / rhoh2o - transpiration_in_m(i)
     END DO
 
     CALL digest_evapotrans(nc, nsoil, root_depth_l, soil_depth_l,  &
@@ -666,7 +666,7 @@ CONTAINS
       &     ws_l, drainage, w_soil_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
-    CALL soilhyd(nc, nsoil, delta_time, ilog, jllog, ws_l, soil_depth_l,   &
+    CALL soilhyd(nc, nsoil, dtime, ilog, jllog, ws_l, soil_depth_l,        &
       &     wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, &
       &     matrix_pot_l, drainage, pore_size_index_l, p_wilt_l,           &
       &     soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
@@ -683,15 +683,15 @@ CONTAINS
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector
     DO i = 1, nc
-      runoff(i)   = runoff  (i) * rhoh2o / delta_time
-      drainage(i) = drainage(i) * rhoh2o / delta_time
+      runoff(i)   = runoff  (i) * rhoh2o / dtime
+      drainage(i) = drainage(i) * rhoh2o / dtime
     END DO
     !$claw acc end data
     !$claw acc end data
   END SUBROUTINE calc_soil_hydrology
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE soilhyd(nc, nsoil, delta_time, ilog, jllog, ws_l, dsoil,               &
+  SUBROUTINE soilhyd(nc, nsoil, dtime, ilog, jllog, ws_l, dsoil,                    &
     & wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
     & drainage, pore_size_index_l, p_wilt_l, soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
 
@@ -706,7 +706,7 @@ CONTAINS
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
-    REAL(wp), INTENT(IN)            :: delta_time                 ! model time step legth [s]
+    REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
     INTEGER,  INTENT(IN)            :: ilog                       !
     INTEGER,  INTENT(IN)            :: jllog                      !
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
@@ -805,7 +805,7 @@ CONTAINS
           ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
           percolation(j,i) =  hyd_cond_sat_l(j,i) * SQRT(ws_rel(j,i))                           &
             &                  * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_l(j,i)))**zmvg_l(j,i))**2._wp &
-            &                  * delta_time     ! [m/s] -> [m]
+            &                  * dtime     ! [m/s] -> [m]
         ELSE
           percolation(j,i) = 0._wp
         END IF
@@ -855,12 +855,12 @@ CONTAINS
 
             IF (ws_l(j,i) > ws_crit(j)) THEN  ! enough liquid water for fast drainage
               drain_crit(j) = (zdrmax-zdrmin) * ((ws_l(j,i)-ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
-              drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_l(j,i)-ws_crit(j))/delta_time)
+              drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_l(j,i)-ws_crit(j))/dtime)
             END IF
             ! drainage is limited by the available water of the layer
-            drain_l(j) = MIN(drain_l(j), (ws_l(j,i)-p_wilt_l(j,i))/delta_time)
+            drain_l(j) = MIN(drain_l(j), (ws_l(j,i)-p_wilt_l(j,i))/dtime)
           END IF
-          percolation(j,i) = drain_l(j) * delta_time  ! [m/s] -> [m]
+          percolation(j,i) = drain_l(j) * dtime  ! [m/s] -> [m]
 
         ELSE IF (dsoil(j,i) > 0._wp) THEN  ! there are soil layers below
 
@@ -892,10 +892,10 @@ CONTAINS
             ! Fast drainage
             IF (ws_tmp(j) > ws_crit(j)) THEN
               drain_crit(j) = (zdrmax-zdrmin) * ((ws_tmp(j) - ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
-              drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_tmp(j) - ws_crit(j))/delta_time)
+              drain_l(j) = drain_l(j) + MIN(drain_crit(j), (ws_tmp(j) - ws_crit(j))/dtime)
             END IF
             ! drainage is limited by the soil moisture within the layer
-            drain_l(j) = MIN(drain_l(j) * delta_time, (ws_tmp(j) - p_wilt_l(j,i)))
+            drain_l(j) = MIN(drain_l(j) * dtime, (ws_tmp(j) - p_wilt_l(j,i)))
           END IF
         END IF
 
@@ -948,7 +948,7 @@ CONTAINS
       ! deepest layer
       zda(j,nsoil) = 0._wp
       IF (dsoil(j,nsoil) > 0._wp) THEN
-        zdb(j,nsoil) = diffusivity(j,nsoil-1) * delta_time / dsoil(j,nsoil) / (dsoil(j,nsoil)+dsoil(j,nsoil-1)) * 2._wp
+        zdb(j,nsoil) = diffusivity(j,nsoil-1) * dtime / dsoil(j,nsoil) / (dsoil(j,nsoil)+dsoil(j,nsoil-1)) * 2._wp
       ELSE
         zdb(j,nsoil) = 0._wp
       END IF
@@ -958,11 +958,11 @@ CONTAINS
       DO i = nsoil-1, 2, -1
         IF (dsoil(j,i) > 0._wp) THEN
           IF (dsoil(j,i+1) > 0._wp) THEN
-            zda(j,i) = diffusivity(j,i) * delta_time / dsoil(j,i) / (dsoil(j,i)+dsoil(j,i+1)) * 2._wp
+            zda(j,i) = diffusivity(j,i) * dtime / dsoil(j,i) / (dsoil(j,i)+dsoil(j,i+1)) * 2._wp
           ELSE
             zda(j,i) = 0._wp
           END IF
-          zdb(j,i) = diffusivity(j,i-1) * delta_time / dsoil(j,i) / (dsoil(j,i)+dsoil(j,i-1)) * 2._wp
+          zdb(j,i) = diffusivity(j,i-1) * dtime / dsoil(j,i) / (dsoil(j,i)+dsoil(j,i-1)) * 2._wp
         ELSE
           zda(j,i) = 0._wp
           zdb(j,i) = 0._wp
@@ -973,7 +973,7 @@ CONTAINS
       zdb(j, 1) = 0._wp
       IF (dsoil(j,1) > 0) THEN
         IF (dsoil(j,2) > 0) THEN
-          zda(j,1) = diffusivity(j,1) * delta_time / dsoil(j,1) / (dsoil(j,1)+dsoil(j,2)) * 2._wp
+          zda(j,1) = diffusivity(j,1) * dtime / dsoil(j,1) / (dsoil(j,1)+dsoil(j,2)) * 2._wp
         ELSE
           zda(j,1) = 0._wp
         END IF
