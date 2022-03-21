@@ -547,12 +547,12 @@ CONTAINS
 
       END IF
 
-      ! Initial w_soil_overflown water
-      dsl4jsb_var2D_onDomain(HYDRO_,w_soil_overflow) = 0._wp
+      ! Initial soil water overflow
+      dsl4jsb_var2D_onDomain(HYDRO_,overflow) = 0._wp
 
       !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow),       &
       !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil),  &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_overflow))
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, overflow))
       ! avoid compiler warnings about pointers not being dereferenced
 
     END IF

@@ -437,7 +437,7 @@ CONTAINS
     !& sfract_srf, wfract_srf,
     & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, evapotrans_soil, transpiration,             &
     ! inout
-    & soil_wat_l, soil_ice_l, w_soil_overflow,                                                                   &
+    & soil_wat_l, soil_ice_l, overflow,                                                                          &
     ! out
     & wat_rootzone, wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                              &
     & )
@@ -461,7 +461,7 @@ CONTAINS
       & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & wat_rootzone, w_soil_overflow
+      & wat_rootzone, overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & soil_wat_l, soil_ice_l
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -663,19 +663,19 @@ CONTAINS
     !    - first half of the water
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_0
     CALL digest_infilt(nc, nsoil, ltpe_closed, field_cap_l, infilt, &
-      &     soil_wat_l, drainage, w_soil_overflow)
+      &     soil_wat_l, drainage, overflow)
 
     ! Drainage calculation with multi-layer soil scheme
     CALL soilhyd(nc, nsoil, dtime, ilog, jllog, soil_wat_l, soil_depth_l,  &
       &     wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, &
       &     matrix_pot_l, drainage, pore_size_index_l, p_wilt_l,           &
-      &     soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
+      &     soil_ice_l, overflow, ltpe_closed, ltpe_open)
 
     ! update soil moisture according to infiltration
     !    - second half of the water
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_1
     CALL digest_infilt(nc, nsoil, ltpe_closed, field_cap_l, infilt, &
-         soil_wat_l, drainage, w_soil_overflow)
+         soil_wat_l, drainage, overflow)
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     CALL get_amount_in_rootzone(soil_wat_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), wat_rootzone(:))
@@ -693,7 +693,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
   SUBROUTINE soilhyd(nc, nsoil, dtime, ilog, jllog, soil_wat_l, dsoil,              &
     & wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l,  &
-    & drainage, pore_size_index_l, p_wilt_l, soil_ice_l, w_soil_overflow, ltpe_closed, ltpe_open)
+    & drainage, pore_size_index_l, p_wilt_l, soil_ice_l, overflow, ltpe_closed, ltpe_open)
 
     !----------------------------------------------------------------------------------------------
     !
@@ -721,7 +721,7 @@ CONTAINS
                                                                   !    todo: discuss if ice reduction is wanted here
     REAL(wp), INTENT(INOUT)         :: soil_wat_l(:,:)            ! soil moisture of each layer [m]
     REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of drainage within timestep [m]
-    REAL(wp), INTENT(INOUT)         :: w_soil_overflow(:)
+    REAL(wp), INTENT(INOUT)         :: overflow(:)
     REAL(wp), INTENT(IN), OPTIONAL  :: soil_ice_l(:,:)            ! amount of ice in the soil [m]
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -752,7 +752,7 @@ CONTAINS
 
     !$claw acc data &
     !$claw acc present(dsoil, wsat_l, field_cap_l, hyd_cond_sat_l, vol_porosity_l, bclapp_l, matrix_pot_l, &
-    !$claw acc         pore_size_index_l, p_wilt_l, dz, soil_wat_l, drainage, w_soil_overflow, soil_ice_l) &
+    !$claw acc         pore_size_index_l, p_wilt_l, dz, soil_wat_l, drainage, overflow, soil_ice_l)        &
     !$claw acc pcreate(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above,   &
     !$claw acc         soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_l,     &
     !$claw acc         percolation, wslog)
@@ -1045,13 +1045,13 @@ CONTAINS
           IF (dsoil(j,i) > 0._wp) THEN
             IF (soil_wat_l(j,i) > field_cap_l(j,i)) THEN
               ! redirect overflow from drainage to overflow pool
-              w_soil_overflow(j) = w_soil_overflow(j) + soil_wat_l(j,i) - field_cap_l(j,i)
+              overflow(j) = overflow(j) + soil_wat_l(j,i) - field_cap_l(j,i)
               soil_wat_l(j,i) = field_cap_l(j,i)
             ELSE ! soil_wat_l <= field_cap_l
               ! refill soil moisture from overflow pool
-              remoist(j) = MIN(w_soil_overflow(j), field_cap_l(j,i) - soil_wat_l(j,i))
+              remoist(j) = MIN(overflow(j), field_cap_l(j,i) - soil_wat_l(j,i))
               soil_wat_l(j,i) = soil_wat_l(j,i) + remoist(j)
-              w_soil_overflow(j) = w_soil_overflow(j) - remoist(j)
+              overflow(j) = overflow(j) - remoist(j)
             END IF
           END IF
         END DO
@@ -1128,7 +1128,7 @@ CONTAINS
           END IF
         ELSE  ! TPE closed case
           IF (dsoil(j,i+1) <= 0._wp) THEN      ! bedrock below
-            w_soil_overflow(j) = w_soil_overflow(j) + percolation(j,i)
+            overflow(j) = overflow(j) + percolation(j,i)
             percolation(j,i) = 0._wp
           END IF
         END IF
@@ -1154,7 +1154,7 @@ CONTAINS
         drainage(j) = drainage(j) + percolation(j,nsoil)
       ELSE  ! TPE closed case
         ! redirect percolation from drainage to overflow pool
-        w_soil_overflow(j) = w_soil_overflow(j) +  percolation(j,nsoil)
+        overflow(j) = overflow(j) +  percolation(j,nsoil)
       END IF
 
       ! 4. Add overflow of the surface layer to drainage
@@ -1169,7 +1169,7 @@ CONTAINS
       ELSE      ! TPE closed case
         IF (soil_wat_l(j,1) > field_cap_l(j,1)) THEN
           ! redirect overflow to overflow pool
-          w_soil_overflow(j) = w_soil_overflow(j) + soil_wat_l(j,1) - field_cap_l(j,1)
+          overflow(j) = overflow(j) + soil_wat_l(j,1) - field_cap_l(j,1)
           soil_wat_l(j,1) = field_cap_l(j,1)
         END IF
       END IF
@@ -1387,7 +1387,7 @@ CONTAINS
     & infilt,                &
     & soil_wat_l,            &
     & drainage,              &
-    & w_soil_overflow        &
+    & overflow               &
     & )
 
   !------------------------------------------------------------------------------------------------
@@ -1405,7 +1405,7 @@ CONTAINS
 
     REAL(wp), INTENT(inout)  :: soil_wat_l(:,:)         ! water content of the soil layer [m]
     REAL(wp), INTENT(inout)  :: drainage(:)             ! drainage [m]
-    REAL(wp), INTENT(inout)  :: w_soil_overflow(:)      ! For TPE
+    REAL(wp), INTENT(inout)  :: overflow(:)             ! For TPE
 
     ! local variables
 
@@ -1417,7 +1417,7 @@ CONTAINS
     !------------------------------------------------------------------------------------------------
 
     !$claw acc data &
-    !$claw acc present(field_cap_l, infilt, soil_wat_l, drainage, w_soil_overflow) &
+    !$claw acc present(field_cap_l, infilt, soil_wat_l, drainage, overflow) &
     !$claw acc create(excess)
     !$claw acc parallel
     !$claw acc loop gang vector
@@ -1435,7 +1435,7 @@ CONTAINS
           END IF
         ELSE  ! TPE closed case
           IF (soil_wat_l(i,jk) > field_cap_l(i,jk)) THEN
-            w_soil_overflow(i) = w_soil_overflow(i) + soil_wat_l(i,jk) - field_cap_l(i,jk)
+            overflow(i) = overflow(i) + soil_wat_l(i,jk) - field_cap_l(i,jk)
             soil_wat_l(i,jk) = field_cap_l(i,jk)
           END IF
           excess(i) = 0._wp

@@ -103,7 +103,7 @@ MODULE mo_hydro_memory_class
       & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_excess,         & !< Water available for infiltration into the soil                           [m water equivalent]
-      & w_soil_overflow,      & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
+      & overflow,             & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
       & wat_rootzone,         & !< Liquid water content in the rootzone                                     [m]
       & wat_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
 
@@ -662,9 +662,9 @@ CONTAINS
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Overflow pool is only used in the terra planet setup (TPE closed).
-      CALL mem%Add_var( 'w_soil_overflow', mem%w_soil_overflow,                &
+      CALL mem%Add_var( 'overflow', mem%overflow,                              &
         & hgrid, surface,                                                      &
-        & t_cf('w_soil_overflow', 'm', 'Terra planet overflow pool'),          &
+        & t_cf('overflow', 'm', 'Terra planet soil water overflow pool'),      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
