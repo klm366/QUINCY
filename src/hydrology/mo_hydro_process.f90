@@ -55,7 +55,7 @@ CONTAINS
   !! @param [in]     dtime                 Time step
   !! @param [in]     l_dynsnow             T: Compute density of snow dynamically
   !! @param [in]     snow_depth_max        Snow depth limit [m water equivalent]; -1. for no limit
-  !! @param [in]     t_srf_unfilt          surface tempemperature [K] (unfiltered)
+  !! @param [in]     t_unfilt              Surface tempemperature [K] (unfiltered)
   !! @param [in]     wind_10m              wind speed at 10m height [m/s]
   !! @param [in]     t_air                 lowest layer atmosphere temperature [K]
   !! @param [in]     skinres_canopy_max    capacity of the canopy skin reservoir [m]
@@ -83,7 +83,7 @@ CONTAINS
   !
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (          &
     & lstart, dtime, l_dynsnow, snow_depth_max,                    &
-    & t_srf_unfilt, wind_10m, t_air,                               &
+    & t_unfilt, wind_10m, t_air,                                   &
     & skinres_canopy_max, skinres_max, sfract_srf, wfract_srf,     &
     & hcap_grnd, evapotrans, evapopot, transpiration,              &
     & rain, snow, skinres, snow_soil, canopy_snow, snow_soil_dens, &
@@ -98,7 +98,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                         &
-      & t_srf_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,             &
+      & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,                 &
       & sfract_srf, wfract_srf, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
     REAL(wp), INTENT(inout) :: &
       & skinres, snow_soil, canopy_snow, snow_soil_dens
@@ -210,8 +210,8 @@ CONTAINS
     !------------------------
 
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
-      IF (t_srf_unfilt > tmelt) THEN
-        snow_melt_pot_in_m = hcap_grnd * (t_srf_unfilt-tmelt)/(alf*rhoh2o) !  potential snow and ice melt [m]
+      IF (t_unfilt > tmelt) THEN
+        snow_melt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o)     !  potential snow and ice melt [m]
         IF (snow_soil > 0._wp) THEN
           snow_melt_soil = MAX(MIN(snow_melt_pot_in_m, snow_soil), 0._wp)  ! snow melt limited by actual snow depth [m]
           snow_soil = snow_soil - snow_melt_soil                           ! reduce snow depth according to melting
@@ -293,7 +293,7 @@ CONTAINS
   !!
   !! @param [in]     lstart                T: Start of experiment
   !! @param [in]     dtime                 Time step
-  !! @param [in]     t_srf_unfilt          surface tempemperature [K] (unfiltered)
+  !! @param [in]     t_unfilt              surface tempemperature [K] (unfiltered)
   !! @param [in]     sfract_srf            surface snow fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
@@ -308,7 +308,7 @@ CONTAINS
   !
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_glacier ( &
     & lstart, dtime,                                         &
-    & t_srf_unfilt,                                          &
+    & t_unfilt,                                              &
     & sfract_srf, hcap_grnd,                                 &
     & evapotrans, evapopot, rain, snow,                      &
     & glacier_depth, q_snocpymlt,                            &
@@ -321,7 +321,7 @@ CONTAINS
     REAL(wp), INTENT(IN) :: dtime
     !$claw model-data
     REAL(wp), INTENT(in) ::       &
-      & t_srf_unfilt,             &
+      & t_unfilt,                 &
       & sfract_srf, hcap_grnd, evapotrans, evapopot, rain, snow
     REAL(wp), INTENT(inout) :: &
       & glacier_depth
@@ -374,8 +374,8 @@ CONTAINS
 
     glacier_melt_in_m = 0._wp
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
-      IF (t_srf_unfilt > tmelt) THEN
-        snow_melt_pot_in_m  = hcap_grnd * (t_srf_unfilt-tmelt)/(alf*rhoh2o) !  potential snow and ice melt [m]
+      IF (t_unfilt > tmelt) THEN
+        snow_melt_pot_in_m  = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o) !  potential snow and ice melt [m]
         glacier_melt_in_m   = snow_melt_pot_in_m                       ! there is an unlimited amount of snow
         glacier_depth       = glacier_depth - glacier_melt_in_m        ! reduce glacier depth according to melting
         glacier_runoff_in_m = glacier_runoff_in_m + glacier_melt_in_m  ! add melt water to the runoff
