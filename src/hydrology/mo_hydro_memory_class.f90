@@ -71,8 +71,7 @@ MODULE mo_hydro_memory_class
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_soil,      & !< Snow fraction on soil                                               []
-      & w_snow_soil,          & !< Water content of snow reservoir of soil                             [m water equivalent]
-      ! & w_snow_soil_old,      & !< Water content of snow reservoir of soil (old)                     [m water equivalent]
+      & snow_soil,            & !< Water content of snow reservoir of soil                             [m water equivalent]
       & snow_soil_dens,       & !< Density of snow on soil                                             [kg m-3]
       & evapotrans_lnd,       & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
       & q_snocpymlt             !< Heating by melting of snow on canopy                                [W m-2]
@@ -133,7 +132,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & root_depth,           & !< Rooting depth [m]
       & fract_snow_can,       & !< Snow fraction on canopy                                                  []
-      & w_snow_can,           & !< Water content of snow reservoir on canopy                                [m water equivalent]
+      & snow_canopy,          & !< Water content of snow reservoir on canopy                                [m water equivalent]
       & rootzone_fc,          & !< Water content at field capacity in root zone of the soil                 [m]
       & rootzone_pwp,         & !< Water content at permanent wilting point in root zone of the soil        [m]
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
@@ -392,9 +391,9 @@ CONTAINS
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'w_snow_soil', mem%w_snow_soil,                              &
+      CALL mem%Add_var( 'snow_soil', mem%snow_soil,                                  &
         & hgrid, surface,                                                            &
-        & t_cf('w_snow_soil', 'm (water equivalent)', 'Snow amount on soil'),        &
+        & t_cf('snow_soil', 'm (water equivalent)', 'Snow amount on soil'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -777,9 +776,9 @@ CONTAINS
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'w_snow_can', mem%w_snow_can,                                    &
+      CALL mem%Add_var( 'snow_canopy', mem%snow_canopy,                                  &
         & hgrid, surface,                                                                &
-        & t_cf('w_snow_can', 'm (water equivalent)', 'Snow amount on canopy'),           &
+        & t_cf('snow_canopy', 'm (water equivalent)', 'Snow amount on canopy'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &

@@ -160,7 +160,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: thaw_depth
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
-    dsl4jsb_Real2D_onChunk :: w_snow_soil
+    dsl4jsb_Real2D_onChunk :: snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
 
@@ -220,7 +220,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
 
@@ -292,7 +292,7 @@ CONTAINS
         & dtime,                                       &
         & lstart,                                      &
         & t_unfilt_corrected(:)                     ,  &
-        & w_snow_soil(:)                            ,  &
+        & snow_soil(:)                              ,  &
         & heat_cond(:)                              ,  &
         & vol_heat_cap(:)                           ,  &
         & t_soil_acoef                          (:,:), &
@@ -317,10 +317,10 @@ CONTAINS
       ! Calculate snow depth in m (no longer in m water equivalent)
       IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
         !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_3 tile_name=tile%name
-        snow_depth(:) = w_snow_soil(:) * rhoh2o / snow_soil_dens(:)
+        snow_depth(:) = snow_soil(:) * rhoh2o / snow_soil_dens(:)
       ELSE
         !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_4 tile_name=tile%name
-        snow_depth(:) = w_snow_soil(:) * rhoh2o / dens_snow
+        snow_depth(:) = snow_soil(:) * rhoh2o / dens_snow
       END IF
 
       ! Calculate top snow layer for previous time step
@@ -418,7 +418,7 @@ CONTAINS
       snow_depth_sl(:,:) = 0._wp
 
       !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_9 tile_name=tile%name
-      snow_depth(:) = w_snow_soil(:) * rhoh2o / dens_snow
+      snow_depth(:) = snow_soil(:) * rhoh2o / dens_snow
       snow_fract(:) = 0._wp
       t_soil_top(:) = t_unfilt_corrected(:)
       grnd_hflx_snow(:) = 0._wp

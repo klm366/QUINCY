@@ -401,12 +401,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: snow
     dsl4jsb_Real2D_onChunk :: w_skin
     dsl4jsb_Real2D_onChunk :: fract_water
-    dsl4jsb_Real2D_onChunk :: w_snow_soil
+    dsl4jsb_Real2D_onChunk :: snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: w_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
     dsl4jsb_Real2D_onChunk :: fract_snow
-    dsl4jsb_Real2D_onChunk :: w_snow_can
+    dsl4jsb_Real2D_onChunk :: snow_canopy
     dsl4jsb_Real2D_onChunk :: evapotrans_soil
     dsl4jsb_Real2D_onChunk :: evapo_skin
     dsl4jsb_Real2D_onChunk :: evapo_deficit
@@ -499,7 +499,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! in
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)         ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)    ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)     ! in
@@ -524,7 +524,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_skin)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)   ! out
       IF (tile%is_vegetation .OR. tile%is_land) THEN
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   w_snow_can)    ! inout
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   snow_canopy)   ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration) ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)           ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max) ! in
@@ -555,7 +555,7 @@ CONTAINS
       w_skin_max(:) = 0._wp
     END IF
 
-    ! w_snow_soil_old(:) = w_snow_soil(:) ! Remember old snow on ground for use in snow model
+    ! snow_soil_old(:) = snow_soil(:) ! Remember old snow on ground for use in snow model
 
     IF (tile%is_glacier) THEN
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_hydrology_glacier_1 tile_name=tile%name
@@ -577,7 +577,7 @@ CONTAINS
         & )
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_5 tile_name=tile%name
       drainage(:) = 0._wp
-      w_snow_soil(:) = 0._wp
+      snow_soil(:) = 0._wp
       evapo_snow(:) = evapopot(:)
       !$claw end expand
       IF (model%config%l_compat401) THEN
@@ -615,8 +615,8 @@ CONTAINS
         & rain(:),                        & !< in
         & snow(:),                        & !< in
         & w_skin(:),                      & !< inout
-        & w_snow_soil(:),                 & !< inout
-        & w_snow_can(:),                  & !< inout
+        & snow_soil(:),                   & !< inout
+        & snow_canopy(:),                 & !< inout
         & snow_soil_dens(:),              & !< inout
         & q_snocpymlt(:),                 & !< out
         & snow_accum(:),                  & !< out
@@ -640,10 +640,10 @@ CONTAINS
       w_snow(:) = 0._wp
     ELSE IF (tile%is_bare) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_12 tile_name=tile%name
-      w_snow(:) = w_snow_soil(:)
+      w_snow(:) = snow_soil(:)
     ELSE IF (tile%is_vegetation .OR. tile%is_land) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_13 tile_name=tile%name
-      w_snow(:) = w_snow_soil(:) + w_snow_can(:)
+      w_snow(:) = snow_soil(:) + snow_canopy(:)
     END IF
 
     !$claw acc end data
@@ -683,8 +683,8 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_skin,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow_soil,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow_can,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, snow_canopy,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snowmelt,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, q_snocpymlt,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_glac,          weighted_by_fract)
@@ -1776,8 +1776,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_snow_can
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
     dsl4jsb_Real2D_onChunk :: fract_snow_lice
-    dsl4jsb_Real2D_onChunk :: w_snow_can
-    dsl4jsb_Real2D_onChunk :: w_snow_soil
+    dsl4jsb_Real2D_onChunk :: snow_canopy
+    dsl4jsb_Real2D_onChunk :: snow_soil
     dsl4jsb_Real2D_onChunk :: w_snow_lice
     dsl4jsb_Real2D_onChunk :: w_skin
     dsl4jsb_Real2D_onChunk :: oro_stddev
@@ -1857,7 +1857,7 @@ CONTAINS
     END IF
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)       ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_soil)      ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_soil)        ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
 
     ! Maximum capacity of skin reservoir (soil + canopy)
@@ -1884,7 +1884,7 @@ CONTAINS
     END IF
 
     IF (tile%is_vegetation .OR. tile%is_land) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_can)       ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_canopy)       ! in
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_veg_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
@@ -1896,8 +1896,8 @@ CONTAINS
         & drag_srf(:),               & ! in
         & q_air(:),                  & ! in
         & w_skin(:),                 & ! in
-        & w_snow_soil(:),            & ! in
-        & w_snow_can(:),             & ! in
+        & snow_soil(:),              & ! in
+        & snow_canopy(:),            & ! in
         & fract_snow_can(:),         & ! out
         & fract_water(:),            & ! out
         & fract_snow_soil(:)         & ! out
@@ -1919,7 +1919,7 @@ CONTAINS
         & drag_srf(:),                & ! in
         & q_air(:),                   & ! in
         & w_skin(:),                  & ! in
-        & w_snow_soil(:),             & ! in
+        & snow_soil(:),               & ! in
         & fract_water(:),             & ! out
         & fract_snow_soil(:)          & ! out
         & )

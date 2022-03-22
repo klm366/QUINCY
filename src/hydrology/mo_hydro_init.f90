@@ -53,7 +53,7 @@ MODULE mo_hydro_init
       & vol_field_cap  (:,:) => NULL(), &
       & vol_p_wilt     (:,:) => NULL(), &
       & root_depth     (:,:) => NULL(), &
-      & w_snow_soil    (:,:) => NULL(), &
+      & snow_soil      (:,:) => NULL(), &
       & soil_wat_sl  (:,:,:) => NULL(), &
       & ifs_smi_sl   (:,:,:) => NULL(), &
       & ifs_w_snow     (:,:) => NULL()
@@ -109,7 +109,7 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   ,       &
       & hydro_init_vars%vol_p_wilt      ,       &
       & hydro_init_vars%root_depth      ,       &
-      & hydro_init_vars%w_snow_soil)
+      & hydro_init_vars%snow_soil)
 
     IF (ASSOCIATED(hydro_init_vars%soil_wat_sl)) DEALLOCATE(hydro_init_vars%soil_wat_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl))  DEALLOCATE(hydro_init_vars%ifs_smi_sl)
@@ -160,7 +160,7 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   (nproma, nblks),       &
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
-      & hydro_init_vars%w_snow_soil     (nproma, nblks)        &
+      & hydro_init_vars%snow_soil       (nproma, nblks)        &
       & )
 
       hydro_init_vars%elevation      (:,:)   = missval
@@ -175,7 +175,7 @@ CONTAINS
       hydro_init_vars%vol_field_cap  (:,:)   = missval
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
-      hydro_init_vars%w_snow_soil    (:,:)   = missval
+      hydro_init_vars%snow_soil      (:,:)   = missval
 
     IF (model%config%init_from_ifs) THEN
       ALLOCATE(hydro_init_vars%ifs_smi_sl(nproma,ifs_nsoil,nblks))
@@ -314,10 +314,10 @@ CONTAINS
         IF (input_file%Has_var('snow')) THEN
           ptr_2D => input_file%Read_2d( &
             & variable_name='snow',     &
-            & fill_array = hydro_init_vars%w_snow_soil)
-          hydro_init_vars%w_snow_soil = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+            & fill_array = hydro_init_vars%snow_soil)
+          hydro_init_vars%snow_soil = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
         ELSE
-          hydro_init_vars%w_snow_soil = 0._wp
+          hydro_init_vars%snow_soil = 0._wp
           CALL message(TRIM(routine), 'Initializing snow to zero')
         END IF
 
@@ -533,16 +533,16 @@ CONTAINS
             &        ) &
             &    )
         END WHERE
-        dsl4jsb_var_ptr(HYDRO_, w_snow_soil)(:,:) = hydro_init_vars%ifs_w_snow(:,:)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)
+        dsl4jsb_var_ptr(HYDRO_, snow_soil)(:,:) = hydro_init_vars%ifs_w_snow(:,:)
+        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, snow_soil)
 
       ELSE
 
         ! Initialize hydrology variables from ic file
 
         ! Initial snow depth
-        dsl4jsb_var_ptr(HYDRO_, w_snow_soil) = hydro_init_vars%w_snow_soil
-        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)
+        dsl4jsb_var_ptr(HYDRO_, snow_soil) = hydro_init_vars%snow_soil
+        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, snow_soil)
 
         dsl4jsb_var_ptr(HYDRO_,soil_wat_sl) (:,:,:) = hydro_init_vars%soil_wat_sl(:,:,:)
 
@@ -552,7 +552,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(HYDRO_,overflow) = 0._wp
 
       !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow),       &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil),  &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, snow_soil),  &
       !$acc               dsl4jsb_var2D_onDomain(HYDRO_, overflow))
       ! avoid compiler warnings about pointers not being dereferenced
 
