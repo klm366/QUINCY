@@ -411,7 +411,7 @@ CONTAINS
   ! @param [in]      vol_p_wilt_sl       Volumetric permanent wilting point - ice not considered [m/m]
   ! @param [in]      ws_max_mineral      Maximum water holding capacity of non-organic soil [m]
   ! @param [in]      oro_stddev          Sub-grid standard deviation of orography [m]
-  ! @param [in]      t_soil_upper_layer  Temperature of the upper soil layer [K]
+  ! @param [in]      t_soil_sl1          Temperature of the upper soil layer [K]
   ! @param [in]      water_to_soil       Amount of water going into the soil [m]
   ! @param [in]      evapotrans_soil     Evapotranspiration from the soil (w/o snow or canopy) [kg m-2 s-1]
   ! @param [in]      transpiration       Evapotranspiration [kg m-2 s-1]
@@ -432,7 +432,7 @@ CONTAINS
     & l_infil_subzero,                                                                   &
     & soil_depth_sl, root_depth_sl, fract_org_sl,                                        &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, ws_max_mineral, oro_stddev, t_soil_upper_layer,   &
+    & vol_field_cap_sl, vol_p_wilt_sl, ws_max_mineral, oro_stddev, t_soil_sl1,           &
     & water_to_soil, evapotrans_soil, transpiration,                                     &
     ! inout
     & soil_wat_sl, soil_ice_sl, overflow,                                                &
@@ -456,7 +456,7 @@ CONTAINS
       & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       !& sfract_srf, wfract_srf, 
-      & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, &
+      & ws_max_mineral, oro_stddev, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & wat_rootzone, overflow
@@ -589,7 +589,7 @@ CONTAINS
         runoff(i) = 0._wp
         infilt(i) = water_to_soil(i)
       ELSE
-        IF (.NOT. l_infil_subzero .AND. (t_soil_upper_layer(i) < tmelt)) THEN
+        IF (.NOT. l_infil_subzero .AND. (t_soil_sl1(i) < tmelt)) THEN
           !pdv: Temperature dependence should not be included when using the 5-layer snow scheme because:
           !pdv  when tsurf == 0.C; T_soil < 0.C -- and all snow melt is going to surfcae runoff
           runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
