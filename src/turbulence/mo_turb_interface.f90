@@ -429,7 +429,7 @@ CONTAINS
       & q_air
 
     dsl4jsb_Real3D_onChunk :: &
-      & w_soil_sl,            &
+      & soil_wat_sl,          &
       & w_soil_fc_sl,         &
       & w_soil_pwp_sl
 
@@ -493,7 +493,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  rootzone_max)        ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  wat_rootzone)        ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)           ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  soil_wat_sl)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_fc_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pwp_sl)       ! in
     END IF
@@ -511,7 +511,7 @@ CONTAINS
 
       IF (model%config%l_compat401) THEN
         !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_0 tile_name=tile%name
-        mask(:) = w_soil_sl(:,1) > w_soil_pwp_sl(:,1)
+        mask(:) = soil_wat_sl(:,1) > w_soil_pwp_sl(:,1)
       ELSE
         w_soil_wilt_fract_tmp = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
         !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_1 tile_name=tile%name
@@ -550,7 +550,7 @@ CONTAINS
 
     IF (tile%contains_soil) THEN
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_4 tile_name=tile%name
-      rel_hum(:) = relative_humidity_soil(w_soil_sl(:,1), w_soil_fc_sl(:,1))
+      rel_hum(:) = relative_humidity_soil(soil_wat_sl(:,1), w_soil_fc_sl(:,1))
 
       !$claw acc data present(fact_qsat_soil,fact_qair_soil,qsat_star,rel_hum,q_air,fract_snow,fract_water)
       !$claw acc parallel loop gang vector

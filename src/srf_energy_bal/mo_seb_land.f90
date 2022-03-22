@@ -109,8 +109,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
-    dsl4jsb_Real3D_onChunk :: ice_soil_sl
+    dsl4jsb_Real3D_onChunk :: soil_wat_sl
+    dsl4jsb_Real3D_onChunk :: soil_ice_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
@@ -215,8 +215,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)      ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_wat_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_ice_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)      ! in
@@ -405,15 +405,15 @@ CONTAINS
         liquid_max(:) = 0._wp
       END IF
 
-      !$claw acc data present(has_snow_layer,is_glacier,w_soil_sl,liquid_max,t_star,ice_soil_sl)
+      !$claw acc data present(has_snow_layer,is_glacier,soil_wat_sl,liquid_max,t_star,soil_ice_sl)
       !$claw acc parallel loop gang vector
       DO i=1,size(t_star, dim=1)  
         IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
-          IF (w_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
+          IF (soil_wat_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
             ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
             t_star(i) = MAX(t_star(i), tmelt)
           END IF
-          IF (ice_soil_sl(i,1) > w_soil_critical_tmp ) THEN
+          IF (soil_ice_sl(i,1) > w_soil_critical_tmp ) THEN
             ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
             t_star(i) = MIN(t_star(i), tmelt)
           END IF
