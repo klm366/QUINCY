@@ -60,8 +60,8 @@ CONTAINS
   !! @param [in]     t_air                 lowest layer atmosphere temperature [K]
   !! @param [in]     skinres_canopy_max    capacity of the canopy skin reservoir [m]
   !! @param [in]     skinres_max
-  !! @param [in]     sfract_srf            surface snow fraction []
-  !! @param [in]     wfract_srf            skin reservoir fraction []
+  !! @param [in]     fract_snow            surface snow fraction []
+  !! @param [in]     fract_water           skin reservoir fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
   !! @param [in]     evapopot              potential evaporation [kg m-2 s-1]
@@ -84,7 +84,7 @@ CONTAINS
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (          &
     & lstart, dtime, l_dynsnow, snow_depth_max,                    &
     & t_unfilt, wind_10m, t_air,                                   &
-    & skinres_canopy_max, skinres_max, sfract_srf, wfract_srf,     &
+    & skinres_canopy_max, skinres_max, fract_snow, fract_water,    &
     & hcap_grnd, evapotrans, evapopot, transpiration,              &
     & rain, snow, skinres, snow_soil, canopy_snow, snow_soil_dens, &
     & q_snocpymlt, snow_accum, snow_melt_soil,                     &
@@ -99,7 +99,7 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                         &
       & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,                 &
-      & sfract_srf, wfract_srf, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
+      & fract_snow, fract_water, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
     REAL(wp), INTENT(inout) :: &
       & skinres, snow_soil, canopy_snow, snow_soil_dens
     REAL(wp), INTENT(out)   ::                   &
@@ -159,9 +159,9 @@ CONTAINS
     new_snow            = snow          * dtime/rhoh2o   !in_m       ! snow_fall
     evapotrans_in_m     = evapotrans    * dtime/rhoh2o
     transpiration_in_m  = transpiration * dtime/rhoh2o
-    evapo_snow_pot_in_m = sfract_srf    * evapopot * dtime/rhoh2o
+    evapo_snow_pot_in_m = fract_snow    * evapopot * dtime/rhoh2o
     evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
-    evapo_skin_pot_in_m = (1._wp - sfract_srf) * wfract_srf * evapopot * dtime/rhoh2o
+    evapo_skin_pot_in_m = (1._wp - fract_snow) * fract_water * evapopot * dtime/rhoh2o
 
     !---------------------------------------------
     !  Budgets of snow (canopy, ground)
@@ -278,7 +278,7 @@ CONTAINS
 
     evapotrans_soil = evapotrans_soil_in_m * rhoh2o / dtime
     evapo_skin = evapo_skin_in_m  * rhoh2o / dtime
-    evapo_snow = sfract_srf * evapopot
+    evapo_snow = fract_snow * evapopot
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -294,7 +294,7 @@ CONTAINS
   !! @param [in]     lstart                T: Start of experiment
   !! @param [in]     dtime                 Time step
   !! @param [in]     t_unfilt              surface tempemperature [K] (unfiltered)
-  !! @param [in]     sfract_srf            surface snow fraction []
+  !! @param [in]     fract_snow            surface snow fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
   !! @param [in]     evapopot              potential evaporation [kg m-2 s-1]
@@ -309,7 +309,7 @@ CONTAINS
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_glacier ( &
     & lstart, dtime,                                         &
     & t_unfilt,                                              &
-    & sfract_srf, hcap_grnd,                                 &
+    & fract_snow, hcap_grnd,                                 &
     & evapotrans, evapopot, rain, snow,                      &
     & glacier_depth, q_snocpymlt,                            &
     & glacier_melt, glacier_runoff,                          &
@@ -322,7 +322,7 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::       &
       & t_unfilt,                 &
-      & sfract_srf, hcap_grnd, evapotrans, evapopot, rain, snow
+      & fract_snow, hcap_grnd, evapotrans, evapopot, rain, snow
     REAL(wp), INTENT(inout) :: &
       & glacier_depth
     REAL(wp), INTENT(out)   :: &
@@ -359,7 +359,7 @@ CONTAINS
     rain_in_m          = rain       * dtime/rhoh2o
     new_snow           = snow       * dtime/rhoh2o   !in_m       ! snow_fall
     evapotrans_in_m    = evapotrans * dtime/rhoh2o
-    evapo_snow_pot_in_m = sfract_srf * evapopot * dtime/rhoh2o
+    evapo_snow_pot_in_m = fract_snow * evapopot * dtime/rhoh2o
 
     !  Snowfall and sublimation on glaciers
     !---------------------------------------
@@ -455,7 +455,6 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, fract_org_sl,    &
       & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      !& sfract_srf, wfract_srf, 
       & ws_max_mineral, oro_stddev, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
