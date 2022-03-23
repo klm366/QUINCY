@@ -135,7 +135,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Reading/setting hydrology init vars')
 
@@ -352,7 +352,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
 
@@ -491,7 +491,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! CONTENT
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
 
@@ -747,7 +747,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (tile%is_lake) RETURN
 

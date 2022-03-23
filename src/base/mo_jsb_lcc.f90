@@ -107,17 +107,19 @@ CONTAINS
     lcc_relocations%name = TRIM(process_name) // "_lcc"
     lcc_relocations%tile_names = involved_child_tiles(:)
 
-    !>
-    !> Assertion: active and passive cqts are not allowed to overlap
-    !>
-    DO i_cqt = 1,SIZE(active_cqts(:))
-      IF (ANY(active_cqts(i_cqt) == passive_cqts(:) )) THEN
-          CALL finish(TRIM(routine), &
-            & 'Violation of assertion: Conceptually each CQT type can only be active or passive ' &
-            & //'for one lcc proc! If further distinctions are required new sub-types need to be implemented. ' &
-            & //'CQ type which was active and passive: '// Get_cqt_name(active_cqts(i_cqt)) //'. Please check.')
-      ENDIF
-    ENDDO
+    ! for flcc this is required, because ag woody litter is burning upon fire, but then at the same
+    ! time filled with new woody litter which then needs to be passively allocated 
+    ! !>
+    ! !> Assertion: active and passive cqts are not allowed to overlap
+    ! !>
+    !DO i_cqt = 1,SIZE(active_cqts(:))
+    !  IF (ANY(active_cqts(i_cqt) == passive_cqts(:) )) THEN
+    !      CALL finish(TRIM(routine), &
+    !        & 'Violation of assertion: Conceptually each CQT type can only be active or passive ' &
+    !        & //'for one lcc proc! If further distinctions are required new sub-types need to be implemented. ' &
+    !        & //'CQ type which was active and passive: '// Get_cqt_name(active_cqts(i_cqt)) //'. Please check.')
+    !  ENDIF
+    !ENDDO
 
     nr_of_active_vars = 0
     nr_of_passive_vars = 0
@@ -147,7 +149,8 @@ CONTAINS
           IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == active_cqts(:) )) THEN
             nr_of_active_vars = nr_of_active_vars &
               & + child%conserved_quantities(i_cqt)%p%no_of_vars
-          ELSEIF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
+          ENDIF
+          IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
             nr_of_passive_vars = nr_of_passive_vars &
               & + child%conserved_quantities(i_cqt)%p%no_of_vars
           ENDIF
@@ -190,8 +193,9 @@ CONTAINS
                 & lcc_relocations%active_vars, lcc_relocations%active_vars_names)
 
             ENDDO 
+          ENDIF
           ! and separately for the passive cqts
-          ELSEIF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
+          IF (ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
             nr_of_vars = child%conserved_quantities(i_cqt)%p%no_of_vars
             DO i_var = 1,nr_of_vars
               i_passive = i_passive + 1
@@ -202,6 +206,7 @@ CONTAINS
 
             ENDDO 
           ENDIF !... for active or passive CQTs
+
         ENDDO !... for all CQTs
 
         ! Collect the names of the processes carrying variables that are actively relocated by this lcc process
@@ -231,7 +236,8 @@ CONTAINS
             CALL collect_pointers_for_cqs(i_cqt, i_tile, i_active_this_tile, child%name, &
               & TRIM(involved_child_tiles(1)), child%conserved_quantities, &
               & lcc_relocations%active_vars, lcc_relocations%nr_of_active_vars, 'active')
-          ELSEIF(ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
+          ENDIF
+          IF(ANY(child%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
             CALL collect_pointers_for_cqs(i_cqt, i_tile, i_passive_this_tile, child%name, &
               & TRIM(involved_child_tiles(1)), child%conserved_quantities, &
               & lcc_relocations%passive_vars, lcc_relocations%nr_of_passive_vars, 'passive')
@@ -447,6 +453,14 @@ CONTAINS
       CALL finish(TRIM(routine), 'Violation of assertion: Lost area exceeds available area! Please check!')
     ENDIF
 
+    !>
+    !> NOTE: in the current implementation it is crucial that the active vars are filled first, 
+    !>       because implementation of flcc made it necessary that variables can be active and passive
+    !>       and currently active vars are relocated first and then passive vars are relocated
+    !> HOWEVER: as soon as lcc is realised as passive -> active -> passive relocation via bare tile
+    !>          it'll of course be the other way round
+    !>
+    !@TODO: switch order as soon as lcc is realised as passive -> active -> passive relocation via bare tile
     CALL collect_to_be_transferred_matter(options, lost_area, initial_area, &
       & nr_of_tiles, lcc_relocations%nr_of_active_vars, lcc_relocations%active_vars)
 
@@ -501,6 +515,7 @@ CONTAINS
     DO i_var = 1,lcc_relocations%nr_of_active_vars
       DO i_tile = 1,nr_of_tiles
         IF(ANY(lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk) /= 0.0_wp)) THEN
+WRITE(*,*) lcc_relocations%active_vars(i_var)%p%relocate_this(ics:ice,i_tile,iblk)
           CALL finish(TRIM(routine), 'Violation of assertion: All active variables need to already have been ' &
             & // 'relocated upon call of this routine. However, found != 0.0 values for active var '&
             & // TRIM(lcc_relocations%active_vars(i_var)%p%name) // ' on tile ' &

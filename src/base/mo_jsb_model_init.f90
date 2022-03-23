@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, A2L_, VEG_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(NLCC_)
@@ -191,10 +191,11 @@ CONTAINS
     USE mo_veg_init,            ONLY: veg_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_tcq_init,            ONLY: tcq_init
-    USE mo_fuel_init,           ONLY: fuel_init
-    !USE mo_disturb_init,        ONLY: disturb_init
+
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
+    USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
+    USE mo_wlcc_init_lcc,       ONLY: wlcc_init_lcc
 
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
@@ -240,14 +241,22 @@ CONTAINS
     !>
     IF (.NOT. model%config%use_quincy) THEN
       ! Note: JN changed the order of the processes
+      ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
+      !   considerations
       ! - processes potentially changing the area of a tile are conducted first in the timestep.
       ! - the task npp_buffer is performed even before to provide already updated multi annual average
       !   NPP to the NLCC process at the beginning of a year
-      ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
-      !   considerations
   
       IF (model%processes(NLCC_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
+      END IF
+
+      ! - also fuel and area damaged by natural disturbances in this timestep are calculated before any lcc takes place
+      IF (model%processes(FUEL_)%p%config%active) THEN
+        CALL model%Queue_task(FUEL_, "fuel")
+      END IF
+      IF (model%processes(DISTURB_)%p%config%active) THEN
+        CALL model%Queue_task(DISTURB_, "damaged_area")
       END IF
 
       ! ------------------------ tasks that can change area
@@ -258,33 +267,35 @@ CONTAINS
       IF (model%processes(PPLCC_)%p%config%active) THEN
         ! Prepare LCC tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
-      END IF
 
-      !***** Add LCC processes between pplcc_pre and pplcc_post *****
-      !
-      IF (model%processes(TLCC_)%p%config%active) THEN
-        CALL model%Queue_task(TLCC_, "tlcc")
-      END IF
+        !***** Add LCC processes between pplcc_pre and pplcc_post *****
+        ! order of tasks of course determines area available for change for the subsequent lcc tasks!
+        ! suggestion: natural changes before anthropogenic changes; wind before fire (prev. order in disturb)
+        IF (model%processes(WLCC_)%p%config%active) THEN
+          CALL model%Queue_task(WLCC_, "wlcc")
+        END IF
 
-      IF (model%processes(NLCC_)%p%config%active) THEN
-        CALL model%Queue_task(NLCC_, "nlcc")
-      END IF
+        IF (model%processes(FLCC_)%p%config%active) THEN
+          CALL model%Queue_task(FLCC_, "flcc")
+        END IF
 
-      IF (model%processes(ALCC_)%p%config%active) THEN
-        CALL model%Queue_task(ALCC_, "alcc")
-      END IF
+        IF (model%processes(NLCC_)%p%config%active) THEN
+          CALL model%Queue_task(NLCC_, "nlcc")
+        END IF
 
-      IF (model%processes(PPLCC_)%p%config%active) THEN
+        IF (model%processes(ALCC_)%p%config%active) THEN
+          CALL model%Queue_task(ALCC_, "alcc")
+        END IF
+
+        IF (model%processes(TLCC_)%p%config%active) THEN
+          CALL model%Queue_task(TLCC_, "tlcc")
+        END IF
+
         ! Do postprocessing after all LCC tasks were executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
 
-      ! JN-TODO: disturbances need to be adapted to work on per grid-cell variables to be treated 
-      !          alongside the lccs above that change area to enable age-classes to be reintroduced
-      ! Disturbances happen on a daily basis and can lead to area changes when running with age-classes
-      IF (model%processes(FUEL_)%p%config%active) THEN
-        CALL model%Queue_task(FUEL_, "fuel")
-      END IF
+      ! Disturbances happen on a daily basis
       IF (model%processes(DISTURB_)%p%config%active) THEN
          CALL model%Queue_task(DISTURB_, "natural_disturbances")
       END IF
@@ -483,8 +494,10 @@ CONTAINS
         CALL pheno_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL veg_init(tile)
+      IF (model%config%use_quincy) THEN
+        IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+          CALL veg_init(tile)
+        END IF
       END IF
 
       IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
@@ -517,15 +530,6 @@ CONTAINS
       IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL tcq_init(tile)
       END IF
-
-      IF (one_of(tile%process_action(FUEL_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL fuel_init(tile)
-      END IF
-      
-      ! R: at the moment we do not need any initialization for disturbance:
-      ! IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-      !  CALL disturb_init(tile)
-      ! END IF
 
 #ifndef __NO_JSBACH_HD__
       IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
@@ -686,6 +690,14 @@ CONTAINS
 
       IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL alcc_init_lcc(tile)
+      END IF
+
+      IF (one_of(tile%process_action(FLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL flcc_init_lcc(tile)
+      END IF
+
+      IF (one_of(tile%process_action(WLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL wlcc_init_lcc(tile)
       END IF
 
       CALL model%Goto_next_tile(tile)
