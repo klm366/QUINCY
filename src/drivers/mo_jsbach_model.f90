@@ -135,7 +135,7 @@ CONTAINS
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
     USE mo_dynamics_config,         ONLY: iequations
-    USE mo_echam_convect_tables,    ONLY: init_convect_tables
+    USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
 
