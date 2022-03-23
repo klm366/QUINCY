@@ -890,7 +890,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
-    dsl4jsb_Real2D_onChunk :: overflow
+    dsl4jsb_Real2D_onChunk :: tpe_overflow
 
 
     ! Locally allocated vectors
@@ -983,7 +983,7 @@ CONTAINS
       ! inout
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_wat_sl       ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_ice_sl       ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, overflow          ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ), &
       ! out
       & dsl4jsb_var2D_onChunk (HYDRO_, wat_rootzone      ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sat_sl     ), &  !! ice volume is substracted
