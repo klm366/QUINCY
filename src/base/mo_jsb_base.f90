@@ -49,6 +49,7 @@ CONTAINS
     USE mo_hydro_constants,     ONLY: init_hydro_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
+    USE mo_spq_constants,       ONLY: init_spq_constants
 
     dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_
     dsl4jsb_Use_config(SSE_)
@@ -199,8 +200,13 @@ CONTAINS
       CALL message(TRIM(routine), 'Starting init of QUINCY process constants')
       CALL init_rad_constants      
       CALL init_assimi_constants   
-      CALL init_veg_constants      
-      CALL init_sse_constants
+      CALL init_veg_constants    
+      ! either SPQ_ or SSE_
+      IF (model%config%use_quincy_spq) THEN  
+        CALL init_spq_constants
+      ELSE
+        CALL init_sse_constants
+      END IF
       CALL init_sb_constants
       CALL init_pheno_constants    
       IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')
@@ -222,21 +228,33 @@ CONTAINS
 
     INTEGER, INTENT(in) :: model_id
 
-    TYPE(t_jsb_model), POINTER :: model
-
+    TYPE(t_jsb_model), POINTER  :: model
+    CHARACTER(LEN=30)           :: lctlib_filename
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_tiles'
 
     model => Get_model(model_id)
 
-    model%lctlib => Read_lctlib('lctlib_nlct21.def', model%config%use_quincy)
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
+    ! select lctlib file depending on the usecase
+    SELECT CASE (TRIM(model%config%usecase))
+    ! quincy model with 8 PFT tiles
+    CASE ('quincy_eight_pfts')
+      lctlib_filename = 'lctlib_quincy_nlct8.def'
+    ! jsbach_lite & jsbach_pfts
+    CASE DEFAULT
+      lctlib_filename = 'lctlib_nlct21.def'
+    END SELECT
+    
+    ! import lctlib
+    model%lctlib => Read_lctlib(TRIM(lctlib_filename), model%config%use_quincy, TRIM(model%config%usecase))
+    CALL message(TRIM(routine), 'Imported lctlib from '//TRIM(lctlib_filename))
 
+    ! initialize usecase if defined via namelist
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
       CALL init_usecase(model)
     ELSE
       ! Explicit model configuration through namelist
-      ! TBD
+      ! TODO
     END IF
 
   END SUBROUTINE jsbach_setup_tiles

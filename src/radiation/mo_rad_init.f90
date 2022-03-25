@@ -64,20 +64,24 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
-      CALL rad_read_init_vars(tile)
+    ! only w/o SPQ_
+    IF (.NOT. model%config%use_quincy_spq) THEN
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+        CALL rad_read_init_vars(tile)
+      END IF
+
+      CALL rad_init_bc(tile)
+      CALL rad_init_ic(tile)
+
+      IF (tile%Is_last_process_tile(RAD_)) THEN
+        CALL rad_finalize_init_vars()
+      END IF
     END IF
 
-    CALL rad_init_bc(tile)
-    CALL rad_init_ic(tile)
-    !! quincy
+    ! quincy
     IF (model%config%use_quincy .AND. tile%contains_vegetation) THEN
       CALL rad_init_ic_q_(tile)
     ENDIF
-
-    IF (tile%Is_last_process_tile(RAD_)) THEN
-      CALL rad_finalize_init_vars()
-    END IF
 
   END SUBROUTINE rad_init
 

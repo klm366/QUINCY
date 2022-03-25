@@ -778,7 +778,7 @@ CONTAINS
     !>2.0 advective transport in the vertical axis of the soil (i.e. down)
     !>  I can do '1,n-1' here, because by definition, there cannot be any upward transport from the uppermost layer
     !>
-!! NOTE for now no upward transport - need to properly think about this in update_sse_physics
+!! NOTE for now no upward transport - need to properly think about this in update_spq_physics
     DO ic = 1,nc
       ! no transport if there is only one soil layer
       IF (soil_layer_lowest(ic) < 2) THEN

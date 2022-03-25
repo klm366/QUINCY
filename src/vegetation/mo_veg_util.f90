@@ -275,15 +275,17 @@ CONTAINS
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
-    dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, PHENO_, HYDRO_, SSE_
+    ! dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, PHENO_, HYDRO_, SSE_
+    dsl4jsb_Use_processes A2L_, ASSIMI_, VEG_, PHENO_, SPQ_
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(PHENO_)
-    dsl4jsb_Use_memory(HYDRO_)
-    dsl4jsb_Use_memory(SSE_)
+    ! dsl4jsb_Use_memory(HYDRO_)
+    ! dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(SPQ_)
 #ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
     USE mo_veg_memory_class,    ONLY: veg_pool
@@ -314,8 +316,9 @@ CONTAINS
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(PHENO_)
-    dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SSE_)
+    ! dsl4jsb_Def_memory(HYDRO_)
+    ! dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(SPQ_)
 #ifdef __QUINCY_NO_JSB__
 #else
     dsl4jsb_Def_pool(t_veg_elements_pool)   :: veg_exudation
@@ -442,11 +445,16 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
-    ! HYDRO_ 2D
+    ! ! HYDRO_ 2D
+    ! dsl4jsb_Real2D_onChunk      :: transpiration
+    ! dsl4jsb_Real2D_onChunk      :: w_soil_root
+    ! dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
+    ! ! SSE_ 2D
+    ! dsl4jsb_Real2D_onChunk      :: t_soil_root
+    ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: w_soil_root
     dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
-    ! SSE_ 2D
     dsl4jsb_Real2D_onChunk      :: t_soil_root
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
@@ -472,8 +480,9 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
-    dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SSE_)
+    ! dsl4jsb_Get_memory(HYDRO_)
+    ! dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(SPQ_)
 #ifdef __QUINCY_NO_JSB__
 #else
     ! Get pools
@@ -605,12 +614,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_daytime_dacc_cl)
-    ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)
-    ! SSE_ 2D
-    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)
+    ! ! HYDRO_ 2D
+    ! dsl4jsb_Get_var2D_onChunk(HYDRO_, transpiration)
+    ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root)
+    ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_fc)
+    ! ! SSE_ 2D
+    ! dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_, transpiration)
+    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root)
+    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_fc)
+    dsl4jsb_Get_var2D_onChunk(SPQ_, t_soil_root)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
 #define Get_veg_pool

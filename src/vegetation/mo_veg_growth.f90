@@ -61,7 +61,8 @@ CONTAINS
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
-    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    ! USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,       ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_veg_respiration,         ONLY: temperature_response_respiration, calc_maintenance_respiration 
@@ -79,8 +80,9 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
-    dsl4jsb_Use_memory(HYDRO_)
+    ! dsl4jsb_Use_memory(SSE_)       !  USE mo_sse_memory_class,     ONLY: t_sse_memory
+    ! dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     ! Use of pools
 #ifdef __QUINCY_NO_JSB__
@@ -125,8 +127,9 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(PHENO_)                      !     TYPE(t_pheno_memory),    POINTER :: pheno__mem
     dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory),      POINTER :: rad__mem
-    dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
-    dsl4jsb_Def_memory(HYDRO_)
+    ! dsl4jsb_Def_memory(SSE_)                       !     TYPE(t_sse_memory),     POINTER :: sse__mem
+    ! dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(SB_)                         !     TYPE(t_sb_memory),       POINTER :: sb__mem
 #ifdef __QUINCY_NO_JSB__
 #else
@@ -173,11 +176,16 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: myc_export_p_tlabile_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_c_tmyc_mavg_sl
     dsl4jsb_Real3D_onChunk      :: myc_export_n_tmyc_mavg_sl
-    ! SSE_ 2D
+    ! ! SSE_ 2D
+    ! dsl4jsb_Real2D_onChunk      :: t_soil_root
+    ! ! HYDRO_ 2D
+    ! dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Real3D_onChunk      :: soil_depth_sl 
+    ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: t_soil_root
-    ! HYDRO_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
-    ! HYDRO_ 3D
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl 
     ! RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -323,8 +331,9 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(HYDRO_)
+    ! dsl4jsb_Get_memory(SSE_)
+    ! dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(SB_)
 #ifdef __QUINCY_NO_JSB__
 #else
@@ -380,12 +389,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_p_tlabile_mavg_sl)        ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_c_tmyc_mavg_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_, myc_export_n_tmyc_mavg_sl)           ! inout
-    ! SSE_ 2D
-    dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)                        ! in
-    ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_theta)                ! in
-    ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                    ! in
+    ! ! SSE_ 2D
+    ! dsl4jsb_Get_var2D_onChunk(SSE_, t_soil_root)                        ! in
+    ! ! HYDRO_ 2D
+    ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_theta)                ! in
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                    ! in
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_, t_soil_root)                        ! in
+    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)                  ! in
+    ! SPQ_ 3D
+    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                      ! in
     ! RAD_ 3D
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                     ! in
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                     ! in

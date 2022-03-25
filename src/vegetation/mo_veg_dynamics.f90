@@ -61,7 +61,8 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_math_constants,    ONLY: one_year, one_day, eps4
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    ! USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb4_forcing,          ONLY: forcing_options
     USE mo_veg_constants,         ONLY: itree
 
@@ -72,7 +73,8 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
-    dsl4jsb_Use_memory(HYDRO_)
+    ! dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SPQ_)
     ! Use of pools
 #ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg        !  USE mo_veg_memory_class,      ONLY: t_veg_element_a, t_veg_pool_a
@@ -101,7 +103,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                              ! TYPE(t_veg_memory),      POINTER :: veg__mem
     dsl4jsb_Def_memory(RAD_)                              ! TYPE(t_rad_memory),      POINTER :: rad__mem
     dsl4jsb_Def_memory(PHENO_)                            ! TYPE(t_pheno_memory),    POINTER :: pheno__mem
-    dsl4jsb_Def_memory(HYDRO_)
+    ! dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SPQ_)
 #ifdef __QUINCY_NO_JSB__
 #else
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_pool
@@ -113,7 +116,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
-    ! HYDRO_
+    ! ! HYDRO_
+    ! dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
+    ! SPQ_
     dsl4jsb_Real2D_onChunk      :: w_soil_root_theta
     ! VEG_
     dsl4jsb_Real2D_onChunk      :: do_cohort_harvest
@@ -147,7 +152,8 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)                              ! veg__mem => veg_memory
     dsl4jsb_Get_memory(RAD_)                              ! rad__mem => rad_memory
     dsl4jsb_Get_memory(PHENO_)                            ! pheno__mem => pheno_memory
-    dsl4jsb_Get_memory(HYDRO_)
+    ! dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SPQ_)
 #ifdef __QUINCY_NO_JSB__
 #else
     ! Get pools
@@ -164,7 +170,8 @@ CONTAINS
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)             ! in
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_theta)          ! in
+    ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_theta)          ! in
+    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_theta)          ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(VEG_, do_cohort_harvest)            ! out
     dsl4jsb_Get_var2D_onChunk(VEG_, dens_ind)                     ! in

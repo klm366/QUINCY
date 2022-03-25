@@ -60,7 +60,7 @@ CONTAINS
     USE mo_jsb_task_class,                  ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_model_class,                 ONLY: t_jsb_model
-    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+    USE mo_jsb_process_class,               ONLY: A2L_, L2A_, SEB_, TURB_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_, SPQ_
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
 
@@ -86,7 +86,8 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     dsl4jsb_Use_memory(SB_)         !  USE mo_sb_memory_class,       ONLY: t_sb_memory
     dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class,      ONLY: t_rad_memory
-    dsl4jsb_Use_memory(HYDRO_)
+    ! dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SPQ_)
     ! Use of pools
 #ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_veg
@@ -127,7 +128,8 @@ CONTAINS
     dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),         POINTER :: veg__mem
     dsl4jsb_Def_memory(SB_)                           ! TYPE(t_sb_memory),          POINTER :: sb__mem
     dsl4jsb_Def_memory(RAD_)                          ! TYPE(t_rad_memory),         POINTER :: rad__mem
-    dsl4jsb_Def_memory(HYDRO_)
+    ! dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SPQ_)
 #ifdef __QUINCY_NO_JSB__
 #else
     dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_pool
@@ -156,9 +158,13 @@ CONTAINS
     ! PHENO_ 3D
     dsl4jsb_Real3D_onChunk      :: lai_cl
     dsl4jsb_Real3D_onChunk      :: cumm_lai_cl
-    ! HYDRO_ 2D
+    ! ! HYDRO_ 2D
+    ! dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Real3D_onChunk      :: soil_depth_sl
+    ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: w_soil_root_pot
-    ! HYDRO_ 3D
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk      :: soil_depth_sl
     ! RAD_ 2D
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
@@ -252,7 +258,8 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(HYDRO_)
+    ! dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SPQ_)
 #ifdef __QUINCY_NO_JSB__
 #else
     ! Get pools
@@ -292,8 +299,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                       ! out
     dsl4jsb_Get_var3D_onChunk(PHENO_, cumm_lai_cl)                  ! out
     ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_pot)              ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
+    ! dsl4jsb_Get_var2D_onChunk(HYDRO_, w_soil_root_pot)              ! in
+    ! dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)                ! in
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onChunk(SPQ_, w_soil_root_pot)                ! in
+    ! SPQ_ 3D
+    dsl4jsb_Get_var3D_onChunk(SPQ_, soil_depth_sl)                  ! in
     ! ---------------------------
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout

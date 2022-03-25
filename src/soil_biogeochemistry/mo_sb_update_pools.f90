@@ -56,7 +56,8 @@ CONTAINS
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                ONLY: Get_vgrid
-    USE mo_jsb_process_class,       ONLY: SB_, A2L_, VEG_, SSE_, HYDRO_
+    ! USE mo_jsb_process_class,       ONLY: SB_, A2L_, VEG_, SSE_, HYDRO_
+    USE mo_jsb_process_class,       ONLY: SB_, A2L_, VEG_, SPQ_
     USE mo_jsb_math_constants,      ONLY: dtime, eps8
     USE mo_jsb_physical_constants,  ONLY: lambda_C14
     USE mo_sb_constants
@@ -64,12 +65,13 @@ CONTAINS
       & calc_qmax_bulk_density_correction, calc_Psorption_parameter
     ! USE mo_sb_jsm_transport,        ONLY: calc_particle_fluxrate, calc_particle_transport_wrapper
     USE mo_isotope_util,            ONLY: calc_mixing_ratio_N15N14
-    USE mo_sse_util,                ONLY: calc_qmax_texture
+    USE mo_spq_util,                ONLY: calc_qmax_texture
 
     dsl4jsb_Use_config(SB_)
     dsl4jsb_Use_memory(SB_)
-    dsl4jsb_Use_memory(SSE_)
-    dsl4jsb_Use_memory(HYDRO_)
+    ! dsl4jsb_Use_memory(SSE_)
+    ! dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(A2L_) 
     !------------------------------------------------------------------------------------------------------ !
@@ -106,8 +108,9 @@ CONTAINS
     !------------------------------------------------------------------------------------------------------ !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SSE_)
-    dsl4jsb_Def_memory(HYDRO_)
+    ! dsl4jsb_Def_memory(SSE_)
+    ! dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(A2L_)
     !------------------------------------------------------------------------------------------------------ !
@@ -134,9 +137,21 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: f_p_demand
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
-    ! HYDRO_ 3D
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    ! ! SSE_ 3D
+    ! dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
+    ! dsl4jsb_Real3D_onChunk :: percolation_sl
+    ! dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
+    ! dsl4jsb_Real3D_onChunk :: qmax_po4_min_sl
+    ! dsl4jsb_Real3D_onChunk :: qmax_nh4_min_sl
+    ! dsl4jsb_Real3D_onChunk :: qmax_po4_om_sl
+    ! dsl4jsb_Real3D_onChunk :: sand_sl
+    ! dsl4jsb_Real3D_onChunk :: silt_sl
+    ! dsl4jsb_Real3D_onChunk :: clay_sl
+    ! dsl4jsb_Real3D_onChunk :: volume_min_sl
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    ! SSE_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
     dsl4jsb_Real3D_onChunk :: percolation_sl
     dsl4jsb_Real3D_onChunk :: qmax_org_min_sl
@@ -314,8 +329,9 @@ CONTAINS
     !------------------------------------------------------------------------------------------------------ !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(HYDRO_)
+    ! dsl4jsb_Get_memory(SSE_)
+    ! dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(A2L_) 
     !------------------------------------------------------------------------------------------------------ !
@@ -367,19 +383,31 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_,      f_p_demand)                  ! in
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)            ! in
-    ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)               ! in
-    ! SSE_ 3D
-    dsl4jsb_Get_var3D_onChunk(SSE_,      bulk_dens_sl)                ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      percolation_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      qmax_org_min_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      qmax_po4_min_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      qmax_nh4_min_sl)             ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      qmax_po4_om_sl)              ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      sand_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      silt_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      clay_sl)                     ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,      volume_min_sl)               ! in
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)               ! in
+    ! ! SSE_ 3D
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      bulk_dens_sl)                ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      percolation_sl)              ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      qmax_org_min_sl)             ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      qmax_po4_min_sl)             ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      qmax_nh4_min_sl)             ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      qmax_po4_om_sl)              ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      sand_sl)                     ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      silt_sl)                     ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      clay_sl)                     ! in
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      volume_min_sl)               ! in
+    ! SPQ_ 3D
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      soil_depth_sl)               ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      bulk_dens_sl)                ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      percolation_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      qmax_org_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      qmax_po4_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      qmax_nh4_min_sl)             ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      qmax_po4_om_sl)              ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      sand_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      silt_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      clay_sl)                     ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      volume_min_sl)               ! in
     ! SB_ 2D
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
     dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out

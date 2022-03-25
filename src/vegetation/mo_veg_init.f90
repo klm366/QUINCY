@@ -57,7 +57,8 @@ CONTAINS
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
-    USE mo_jsb_process_class,               ONLY: VEG_, PHENO_, SSE_
+    ! USE mo_jsb_process_class,               ONLY: VEG_, PHENO_, SSE_
+    USE mo_jsb_process_class,               ONLY: VEG_, PHENO_, SPQ_
 
     USE mo_jsb_math_constants,              ONLY: eps8
     USE mo_assimi_constants,                ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
@@ -72,7 +73,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
     dsl4jsb_Use_memory(PHENO_)
-    dsl4jsb_Use_memory(SSE_)
+    ! dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
@@ -94,7 +96,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(PHENO_)
-    dsl4jsb_Def_memory(SSE_)
+    ! dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
@@ -106,7 +109,9 @@ CONTAINS
     dsl4jsb_Real2D_onDomain     :: lai
     ! PHENO_ 3D
     dsl4jsb_Real3D_onDomain     :: lai_cl
-    ! SSE_ 3D
+    ! ! SSE_ 3D
+    ! dsl4jsb_Real3D_onDomain     :: soil_lay_depth_ubound_sl
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onDomain     :: soil_lay_depth_ubound_sl
     ! VEG_ 2D
     dsl4jsb_Real2D_onDomain     :: target_cn_leaf
@@ -199,7 +204,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(VEG_)
     dsl4jsb_Get_memory(PHENO_)
-    dsl4jsb_Get_memory(SSE_)
+    ! dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
@@ -214,8 +220,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)                           ! in
     ! PHENO_ 3D
     dsl4jsb_Get_var3D_onDomain(PHENO_, lai_cl)                        ! in
-    ! SSE_ 3D
-    dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_ubound_sl)      ! in
+    ! ! SSE_ 3D
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_ubound_sl)      ! in
+    ! SPQ_ 3D
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_depth_ubound_sl)      ! in
     ! VEG_ 2D
     dsl4jsb_Get_var2D_onDomain(VEG_, target_cn_leaf)
     dsl4jsb_Get_var2D_onDomain(VEG_, target_np_leaf)

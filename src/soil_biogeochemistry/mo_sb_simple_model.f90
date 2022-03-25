@@ -40,7 +40,8 @@ MODULE mo_sb_simple_model
   USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,       ONLY: t_jsb_model
   USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element    
-  USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  ! USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+  USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
   USE mo_jsb_math_constants,    ONLY: dtime, one_day, one_year, eps8
 
   IMPLICIT NONE
@@ -64,11 +65,10 @@ CONTAINS
     USE mo_sb_litter_processes,   ONLY: calc_litter_partitioning
 
     dsl4jsb_Use_config(SB_)
-    dsl4jsb_Use_config(VEG_)
-    dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(SSE_)
-    dsl4jsb_Use_memory(HYDRO_)
+    ! dsl4jsb_Use_memory(SSE_)
+    ! dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(A2L_)
     !------------------------------------------------------------------------------------------------------ !
@@ -124,11 +124,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
     !------------------------------------------------------------------------------------------------------ !
     dsl4jsb_Def_config(SB_)
-    dsl4jsb_Def_config(VEG_)
-    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(SSE_)
-    dsl4jsb_Def_memory(HYDRO_)
+    ! dsl4jsb_Def_memory(SSE_)
+    ! dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(SB_)
     dsl4jsb_Def_memory(A2L_)
     !------------------------------------------------------------------------------------------------------ !
@@ -150,10 +149,15 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: root_fraction_sl
     ! A2L_ 2D
     dsl4jsb_Real2D_onChunk :: p_deposition
-    ! SSE_ 3D
+    ! ! SSE_ 3D
+    ! dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
+    ! dsl4jsb_Real3D_onChunk :: percolation_sl
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Real3D_onChunk :: w_soil_sl
+    ! dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onChunk :: bulk_dens_sl 
     dsl4jsb_Real3D_onChunk :: percolation_sl
-    ! HYDRO_ 3D
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     ! SB_ 2D
@@ -285,11 +289,10 @@ CONTAINS
     nsoil_sb      =  vgrid_soil_sb%n_levels
     !------------------------------------------------------------------------------------------------------ !
     dsl4jsb_Get_config(SB_)
-    dsl4jsb_Get_config(VEG_)
-    dsl4jsb_Get_config(SSE_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(HYDRO_)
+    ! dsl4jsb_Get_memory(SSE_)
+    ! dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(SB_)
     dsl4jsb_Get_memory(A2L_) 
     !------------------------------------------------------------------------------------------------------ !
@@ -364,12 +367,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_,      unit_uptake_p_pot)           ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_,      root_fraction_sl)
-    ! SSE_ 3D
-    dsl4jsb_Get_var3D_onChunk(SSE_,      bulk_dens_sl)
-    dsl4jsb_Get_var3D_onChunk(SSE_,      percolation_sl)
-    ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)                   ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)
+    ! ! SSE_ 3D
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      bulk_dens_sl)
+    ! dsl4jsb_Get_var3D_onChunk(SSE_,      percolation_sl)
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_sl)                   ! in
+    ! dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)
+    ! SPQ_ 3D
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      bulk_dens_sl)
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      percolation_sl)
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      w_soil_sl)                   ! in
+    dsl4jsb_Get_var3D_onChunk(SPQ_,      soil_depth_sl)
     ! SB_ 2D
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute) 
     dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute) 

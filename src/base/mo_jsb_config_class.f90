@@ -33,11 +33,12 @@ MODULE mo_jsb_config_class
     CHARACTER(len=40)              :: usecase
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
-    LOGICAL                        :: use_quincy       !< use the QUINCY set of Tasks T/F
-    CHARACTER(len=10)              :: quincy_model     !< canopy/plant/land - selection of Tasks and Code within subroutines
-    CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
+    LOGICAL                        :: use_quincy          !< use the QUINCY set of Tasks T/F
+    LOGICAL                        :: use_quincy_spq      !< use the process SPQ_ replacing other JSBACH4 physics processes
+    CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
+    CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
-    LOGICAL                        :: l_compat401      ! Use configuration compatible with jsbach 4.01
+    LOGICAL                        :: l_compat401         !< Use configuration compatible with jsbach 4.01
     CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
     LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
     ! quincy @TODO temporary solution for model%config%options
@@ -93,6 +94,7 @@ CONTAINS
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
+    LOGICAL                       :: use_quincy_spq           ! use the process SPQ_ replacing other JSBACH4 physics processes
     CHARACTER(len=10)             :: quincy_model
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
@@ -106,6 +108,7 @@ CONTAINS
       use_lakes, &
       use_glacier, &
       use_quincy, &
+      use_quincy_spq, &
       quincy_model, &
       l_compat401, &
       usecase, &
@@ -127,7 +130,8 @@ CONTAINS
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
-    quincy_model               = 'plant'
+    use_quincy_spq             = .FALSE.
+    quincy_model               = 'land'
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
@@ -155,6 +159,7 @@ CONTAINS
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
     model_config%use_quincy                 = use_quincy
+    model_config%use_quincy_spq             = use_quincy_spq
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase

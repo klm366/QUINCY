@@ -51,7 +51,8 @@ CONTAINS
     USE mo_jsb_lctlib_class,            ONLY: t_lctlib_element
     USE mo_jsb_grid_class,              ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,                    ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_process_class,           ONLY: SB_, SSE_, VEG_, HYDRO_
+    USE mo_jsb_process_class,           ONLY: SB_, VEG_, SPQ_
+    ! USE mo_jsb_process_class,           ONLY: SB_, SSE_, VEG_, HYDRO_, SPQ_
 
     USE mo_isotope_util,                ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, &
       & calc_mixing_ratio_N15N14, calc_fractionation
@@ -59,7 +60,8 @@ CONTAINS
     USE mo_sb_jsm_processes,            ONLY: calc_bulk_soil_carbon, calc_Psorption_parameter, &
       & calc_fast_po4, calc_qmax_bulk_density_correction, calc_bulk_density_correction
 !    USE mo_sb_jsm_transport,            ONLY: calc_bioturbation_rate, ...
-    USE mo_sse_util,                    ONLY: calc_qmax_texture
+    ! USE mo_sse_util,                    ONLY: calc_qmax_texture
+    USE mo_spq_util,                    ONLY: calc_qmax_texture
 
     USE mo_jsb_math_constants,          ONLY: eps4, eps8
     USE mo_jsb_physical_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
@@ -73,7 +75,8 @@ CONTAINS
     dsl4jsb_Use_memory(SB_)
     dsl4jsb_Use_memory(SSE_)
     dsl4jsb_Use_memory(VEG_)
-    dsl4jsb_Use_memory(HYDRO_)
+    ! dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
     dsl4slm_Use_memory_a_sb
@@ -108,9 +111,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
-    dsl4jsb_Def_memory(SSE_)
+    ! dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(VEG_)
-    dsl4jsb_Def_memory(HYDRO_)
+    ! dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
 #else
@@ -119,12 +123,30 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_
     dsl4jsb_Real3D_onDomain :: root_fraction_sl
-    ! HYDRO_ 2D
+    ! ! HYDRO_ 2D
+    ! dsl4jsb_Real2D_onDomain :: soil_depth
+    ! dsl4jsb_Real2D_onDomain :: root_depth
+    ! SPQ_ 2D
     dsl4jsb_Real2D_onDomain :: soil_depth
     dsl4jsb_Real2D_onDomain :: root_depth
-    ! HYDRO_ 3D
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Real3D_onDomain :: w_soil_sl
+    ! ! SSE_ 3D
+    ! dsl4jsb_Real3D_onDomain :: bulk_dens_sl
+    ! dsl4jsb_Real3D_onDomain :: soil_lay_width_sl
+    ! dsl4jsb_Real3D_onDomain :: soil_lay_depth_center_sl
+    ! dsl4jsb_Real3D_onDomain :: soil_lay_depth_ubound_sl
+    ! dsl4jsb_Real3D_onDomain :: soil_lay_depth_lbound_sl
+    ! dsl4jsb_Real3D_onDomain :: qmax_org_min_sl
+    ! dsl4jsb_Real3D_onDomain :: qmax_po4_min_sl
+    ! dsl4jsb_Real3D_onDomain :: qmax_nh4_min_sl
+    ! dsl4jsb_Real3D_onDomain :: qmax_po4_om_sl
+    ! dsl4jsb_Real3D_onDomain :: sand_sl
+    ! dsl4jsb_Real3D_onDomain :: silt_sl
+    ! dsl4jsb_Real3D_onDomain :: clay_sl
+    ! dsl4jsb_Real3D_onDomain :: volume_min_sl
+    ! SPQ_ 3D
     dsl4jsb_Real3D_onDomain :: w_soil_sl
-    ! SSE_ 3D
     dsl4jsb_Real3D_onDomain :: bulk_dens_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_width_sl
     dsl4jsb_Real3D_onDomain :: soil_lay_depth_center_sl
@@ -204,9 +226,10 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
-    dsl4jsb_Get_memory(SSE_)
+    ! dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(VEG_)
-    dsl4jsb_Get_memory(HYDRO_)
+    ! dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_NO_JSB__
 #define Get_sb_pool
@@ -219,25 +242,43 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_ 2D
     dsl4jsb_Get_var3D_onDomain(VEG_,   root_fraction_sl)           ! out
-    ! HYDRO_ 2D
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, soil_depth)                 ! in
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, root_depth)                 ! in
-    ! HYDRO_ 3D
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
-    ! SB_ 3D
-    dsl4jsb_Get_var3D_onDomain(SSE_,   bulk_dens_sl)
-    dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_width_sl)          ! in
-    dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_center_sl)   ! in
-    dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_ubound_sl)   ! in
-    dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_lbound_sl)   ! in
-    dsl4jsb_Get_var3D_onDomain(SSE_,   qmax_org_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SSE_,   qmax_po4_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SSE_,   qmax_nh4_min_sl)
-    dsl4jsb_Get_var3D_onDomain(SSE_,   qmax_po4_om_sl)
-    dsl4jsb_Get_var3D_onDomain(SSE_,   sand_sl)
-    dsl4jsb_Get_var3D_onDomain(SSE_,   silt_sl)
-    dsl4jsb_Get_var3D_onDomain(SSE_,   clay_sl)
-    dsl4jsb_Get_var3D_onDomain(SSE_,   volume_min_sl)
+    ! ! HYDRO_ 2D
+    ! dsl4jsb_Get_var2D_onDomain(HYDRO_, soil_depth)                 ! in
+    ! dsl4jsb_Get_var2D_onDomain(HYDRO_, root_depth)                 ! in
+    ! SPQ_ 2D
+    dsl4jsb_Get_var2D_onDomain(SPQ_, soil_depth)                 ! in
+    dsl4jsb_Get_var2D_onDomain(SPQ_, root_depth)                 ! in
+    ! ! HYDRO_ 3D
+    ! dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
+    ! ! SSE_ 3D
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   bulk_dens_sl)
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_width_sl)          ! in
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_center_sl)   ! in
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_ubound_sl)   ! in
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   soil_lay_depth_lbound_sl)   ! in
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   qmax_org_min_sl)
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   qmax_po4_min_sl)
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   qmax_nh4_min_sl)
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   qmax_po4_om_sl)
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   sand_sl)
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   silt_sl)
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   clay_sl)
+    ! dsl4jsb_Get_var3D_onDomain(SSE_,   volume_min_sl)
+    ! SPQ_ 3D
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   w_soil_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   bulk_dens_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_width_sl)          ! in
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_depth_center_sl)   ! in
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_depth_ubound_sl)   ! in
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   soil_lay_depth_lbound_sl)   ! in
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_org_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_po4_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_nh4_min_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   qmax_po4_om_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   sand_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   silt_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   clay_sl)
+    dsl4jsb_Get_var3D_onDomain(SPQ_,   volume_min_sl)
     ! SB_ 3D
     dsl4jsb_Get_var3D_onDomain(SB_,    nh4_assoc)
     dsl4jsb_Get_var3D_onDomain(SB_,    nh4_solute)

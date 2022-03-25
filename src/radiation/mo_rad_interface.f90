@@ -122,6 +122,24 @@ MODULE mo_rad_interface
     PROCEDURE Create_task_update_time_average_radiation         !< Constructor function for task
   END INTERFACE tsk_time_average_radiation
 
+  ! ======================================================================================================= !
+  !>Type definition for radiation_q_
+  !>
+  !>  used with SPQ_ to avoid dependencies with jsbach4 physics processes
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_radiation_q_
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_radiation_q_
+    PROCEDURE, NOPASS :: Aggregate => aggregate_radiation_q_
+  END TYPE tsk_radiation_q_
+
+  ! ======================================================================================================= !
+  !>Constructor interface: radiation_q_ task
+  !>
+  INTERFACE tsk_radiation_q_
+    PROCEDURE Create_task_radiation_q_
+  END INTERFACE tsk_radiation_q_
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_interface'
 
 
@@ -205,6 +223,18 @@ CONTAINS
     
   END FUNCTION Create_task_update_time_average_radiation
 
+  ! ======================================================================================================= !
+  !>Constructor for sw_radiation_q_ task
+  !>
+  FUNCTION Create_task_radiation_q_(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_radiation_q_::return_ptr)
+    CALL return_ptr%Construct(name='radiation_q_', process_id=RAD_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_radiation_q_
 
   ! ======================================================================================================= !
   !>Register tasks for radiation process
@@ -219,6 +249,7 @@ CONTAINS
     CALL this%Register_task(tsk_albedo                (model_id))
     CALL this%Register_task(tsk_sw_radiation_q_       (model_id))
     CALL this%Register_task(tsk_time_average_radiation(model_id))
+    CALL this%Register_task(tsk_radiation_q_          (model_id))
 
   END SUBROUTINE Register_rad_tasks
 
@@ -1911,6 +1942,93 @@ CONTAINS
 
   END SUBROUTINE aggregate_time_average_radiation
 
+  ! ======================================================================================================= !
+  !>Implementation of "integrate": radiation_q_ task
+  !>
+  SUBROUTINE update_radiation_q_(tile, options)
+
+    USE mo_rad_update_radiation, ONLY: real_update_radiation => update_radiation
+    dsl4jsb_Use_processes RAD_
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    INTEGER :: iblk
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_radiation_q_'
+
+    iblk = options%iblk
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    CALL real_update_radiation(tile, options)
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE update_radiation_q_
+
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": radiation_q_ task
+  !>
+  SUBROUTINE aggregate_radiation_q_(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_radiation_q_'
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(RAD_)
+    dsl4jsb_Get_memory(VEG_)
+
+    ! RAD_ 2D
+    dsl4jsb_Aggregate_onChunk(RAD_, sw_srf_net                , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, swvis_srf_net             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, swnir_srf_net             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, rad_srf_net               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir                   , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can               , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_soil             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_soil             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_can              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_nir_can              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, appfd                     , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc             , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, albedo                    , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, net_radiation             , weighted_by_fract)
+    ! RAD_ 3D
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_cl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_cl            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_vis_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_vis_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_vis_cl       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_sunlit_nir_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, arad_shaded_nir_cl        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, fleaf_sunlit_nir_cl       , weighted_by_fract)
+    ! VEG_ 3D
+    dsl4jsb_Aggregate_onChunk(VEG_, fleaf_sunlit_cl           , weighted_by_fract)
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE aggregate_radiation_q_
 
 #endif
 END MODULE mo_rad_interface

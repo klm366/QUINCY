@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, A2L_, VEG_, SB_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, A2L_, VEG_, SB_, SPQ_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(NLCC_)
@@ -195,6 +195,7 @@ CONTAINS
     !USE mo_disturb_init,        ONLY: disturb_init
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
+    USE mo_spq_init,            ONLY: spq_init
 
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
@@ -363,53 +364,74 @@ CONTAINS
       ! IF (model%processes(DISTURB_)%p%config%active) THEN
       !    CALL model%Queue_task(DISTURB_, "natural_disturbances")
       ! END IF
-  
-      !!------------------------ tasks that do not change area
-      !!
-      IF(model%config%quincy_model == 'land') THEN
-        CALL model%Queue_task(SB_,   "sb_rate_modifier")            !! quincy - land model
-      END IF
-      CALL model%Queue_task(RAD_,    "sw_radiation_q_")             !! quincy (sw radiation and albedo)
-      CALL model%Queue_task(RAD_,    "surface_radiation")
-      CALL model%Queue_task(PHENO_,  "phenology_q_")                !! quincy
-      CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
-      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
-      CALL model%Queue_task(HYDRO_,  "soil_properties")
-      CALL model%Queue_task(SEB_,    "surface_energy")
-      CALL model%Queue_task(HYDRO_,  "evaporation")
-      CALL model%Queue_task(SEB_,    "surface_fluxes")
-      CALL model%Queue_task(HYDRO_,  "surface_hydrology")
-      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
-      CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
-      CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
-      CALL model%Queue_task(HYDRO_,  "soil_hydrology")
-      CALL model%Queue_task(SEB_,    "snowmelt_correction")
-      CALL model%Queue_task(HYDRO_,  "water_stress")
-      CALL model%Queue_task(ASSIMI_, "canopy_fluxes")               ! quincy
-      CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
-      CALL model%Queue_task(TURB_,   "humidity_scaling")
-      CALL model%Queue_task(TURB_,   "surface_roughness")
-      CALL model%Queue_task(RAD_,    "albedo")
-          ! Note: albedo is updated at the end of the time step, one time step before the radiation is 
-          ! updated in the atmosphere
-      CALL model%Queue_task(HYDRO_,  "water_balance")
-      CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
 
-      ! only land and plant model (i.e., not the canopy model)
-      IF((model%config%quincy_model == 'plant') .OR. (model%config%quincy_model == 'land')) THEN
-        CALL model%Queue_task(VEG_,  "veg_turnover")               !! quincy - land/plant model
-        CALL model%Queue_task(VEG_,  "veg_dynamics")               !! quincy - land/plant model
-        ! land model
+      ! QUINCY soil physics - SPQ_
+      IF (model%config%use_quincy_spq) THEN
+
+        CALL model%Queue_task(SPQ_,     "reset_spq_fluxes")            !! SPQ_
+  
+        CALL model%Queue_task(SB_,      "sb_rate_modifier")            !! quincy - land model
+        CALL model%Queue_task(SPQ_,     "soil_turbulence")             !! SPQ_
+        CALL model%Queue_task(RAD_,     "radiation_q_")                !! quincy (original update_radiation routine)
+        CALL model%Queue_task(PHENO_,   "phenology_q_")                !! quincy
+        CALL model%Queue_task(ASSIMI_,  "canopy_fluxes")               !! quincy  
+        CALL model%Queue_task(SPQ_,     "spq_physics")                 !! SPQ_
+        CALL model%Queue_task(VEG_,     "veg_turnover")                !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,     "veg_dynamics")                !! quincy - land/plant model
+        CALL model%Queue_task(SB_,      "sb_simple_model")             !! quincy - land model
+        CALL model%Queue_task(VEG_,     "veg_growth")                  !! quincy - land/plant model
+        CALL model%Queue_task(VEG_,     "veg_pools")                   !! quincy - land/plant/canopy model
+        CALL model%Queue_task(SB_,      "sb_pools")                    !! quincy - land/plant/canopy/soil model
+
+      ! QUINCY with JSBACH4 processes for soil phsysics
+      ELSE
+        !!------------------------ tasks that do not change area
+        !!
         IF(model%config%quincy_model == 'land') THEN
-          CALL model%Queue_task(SB_,  "sb_simple_model")           !! quincy - land model
+          CALL model%Queue_task(SB_,   "sb_rate_modifier")            !! quincy - land model
         END IF
-        CALL model%Queue_task(VEG_,  "veg_growth")                 !! quincy - land/plant model
-      END IF
-      CALL model%Queue_task(VEG_,    "veg_pools")                  !! quincy - land/plant/canopy model
-      ! only land model
-      IF(model%config%quincy_model == 'land') THEN
-        CALL model%Queue_task(SB_,   "sb_pools")                   !! quincy - land/plant/canopy/soil model
-      END IF
+        CALL model%Queue_task(RAD_,    "sw_radiation_q_")             !! quincy (sw radiation and albedo)
+        CALL model%Queue_task(RAD_,    "surface_radiation")
+        CALL model%Queue_task(PHENO_,  "phenology_q_")                !! quincy
+        CALL model%Queue_task(PHENO_,  "foliage_projected_cover")     !! would be calc in SPQ_
+        CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
+        CALL model%Queue_task(HYDRO_,  "soil_properties")
+        CALL model%Queue_task(SEB_,    "surface_energy")
+        CALL model%Queue_task(HYDRO_,  "evaporation")
+        CALL model%Queue_task(SEB_,    "surface_fluxes")
+        CALL model%Queue_task(HYDRO_,  "surface_hydrology")
+        CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")      ! may be called two times
+        CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
+        CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
+        CALL model%Queue_task(HYDRO_,  "soil_hydrology")
+        CALL model%Queue_task(SEB_,    "snowmelt_correction")
+        CALL model%Queue_task(HYDRO_,  "water_stress")
+        CALL model%Queue_task(ASSIMI_, "canopy_fluxes")               !! quincy
+        CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+        CALL model%Queue_task(TURB_,   "humidity_scaling")
+        CALL model%Queue_task(TURB_,   "surface_roughness")
+        CALL model%Queue_task(RAD_,    "albedo")
+            ! Note: albedo is updated at the end of the time step, one time step before the radiation is 
+            ! updated in the atmosphere
+        CALL model%Queue_task(HYDRO_,  "water_balance")
+        CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
+
+        ! only land and plant model (i.e., not the canopy model)
+        IF((model%config%quincy_model == 'plant') .OR. (model%config%quincy_model == 'land')) THEN
+          CALL model%Queue_task(VEG_,  "veg_turnover")               !! quincy - land/plant model
+          CALL model%Queue_task(VEG_,  "veg_dynamics")               !! quincy - land/plant model
+          ! land model
+          IF(model%config%quincy_model == 'land') THEN
+            CALL model%Queue_task(SB_,  "sb_simple_model")           !! quincy - land model
+          END IF
+          CALL model%Queue_task(VEG_,  "veg_growth")                 !! quincy - land/plant model
+        END IF
+        CALL model%Queue_task(VEG_,    "veg_pools")                  !! quincy - land/plant/canopy model
+        ! only land model
+        IF(model%config%quincy_model == 'land') THEN
+          CALL model%Queue_task(SB_,   "sb_pools")                   !! quincy - land/plant/canopy/soil model
+        END IF
+      END IF  ! SPQ_
       
       ! averaging variables in time at the end of the timestep
       CALL model%Queue_task(RAD_,    "tavrg_radiation")            !! quincy
@@ -498,8 +520,15 @@ CONTAINS
         CALL hydro_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL sse_init(tile)
+      ! either SPQ_ or SSE_
+      IF (model%config%use_quincy_spq) THEN
+        IF (one_of(tile%process_action(SPQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+          CALL spq_init(tile)
+        END IF
+      ELSE 
+        IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+          CALL sse_init(tile)
+        END IF
       END IF
 
       ! Initialize SSE_ & HYDRO_ before SB_

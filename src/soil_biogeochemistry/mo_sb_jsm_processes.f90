@@ -1881,7 +1881,7 @@ CONTAINS
     USE mo_sb_constants,        ONLY: qmax_po4_silt, qmax_po4_sand, qmax_po4_clay, qmax_po4_OM, qmax_po4_mineral, &
       &                               km_adsorpt_silt_po4, km_adsorpt_clay_po4, km_adsorpt_sand_po4, km_adsorpt_OM_po4, &
       &                               km_adsorpt_mineral_po4, km_po4_ph, min_fraction_default_sb
-    USE mo_sse_util,            ONLY: calc_qmax_texture
+    USE mo_spq_util,            ONLY: calc_qmax_texture
     USE mo_jsb_math_constants,  ONLY: eps8
 
     REAL(wp),     INTENT(in)    :: soil_depth_sl                !< soil layer width    
