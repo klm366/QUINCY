@@ -19,6 +19,7 @@ MODULE mo_jsb_tile_class
   USE mo_kind,                ONLY: wp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
+  USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
@@ -113,7 +114,6 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Add_lct
     PROCEDURE                              :: Add_lct_to_parents
     PROCEDURE                              :: Get_parent_memory
-    PROCEDURE                              :: Is_process_active
     PROCEDURE                              :: Set_process_action => Set_process_action_tile
     PROCEDURE                              :: Set_process_action_parents
     PROCEDURE                              :: Register_aggregator
@@ -132,6 +132,7 @@ MODULE mo_jsb_tile_class
     !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    PROCEDURE                              :: Get_children_names
     PROCEDURE                              :: Has_conserved_quantities
     !
     PROCEDURE                              :: Cache_GPU_pointers
@@ -143,6 +144,8 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
     PROCEDURE(Handler_interface),        DEFERRED :: Handler
+    PROCEDURE(Check_on_process),         DEFERRED :: Is_process_calculated
+    PROCEDURE(Check_on_process),         DEFERRED :: Has_process_memory
     PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
 
@@ -175,6 +178,14 @@ MODULE mo_jsb_tile_class
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     END SUBROUTINE Init_vars_interface
+  END INTERFACE
+
+  ABSTRACT INTERFACE
+    LOGICAL FUNCTION Check_on_process(this, iproc)
+      IMPORT :: t_jsb_tile_abstract
+      CLASS(t_jsb_tile_abstract), INTENT(in) :: this
+      INTEGER, INTENT(in) :: iproc 
+    END FUNCTION Check_on_process
   END INTERFACE
 
   ABSTRACT INTERFACE
@@ -263,23 +274,6 @@ CONTAINS
     END IF
 
   END FUNCTION Get_parent_memory
-
-  FUNCTION Is_process_active(this, iproc) RESULT(return_value)
-
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: this
-    INTEGER,                    INTENT(in) :: iproc
-    LOGICAL                                :: return_value
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active'
-
-    return_value = .FALSE.
-
-    SELECT TYPE (this)
-    CLASS IS (t_jsb_tile_abstract)
-      return_value = ASSOCIATED(this%mem(iproc)%p)
-    END SELECT
-
-  END FUNCTION Is_process_active
 
   SUBROUTINE Set_process_action_tile(this, iproc, action, action_to_parents)
 
@@ -410,6 +404,8 @@ CONTAINS
       & fract_old(:),    &
       & fract_max_old(:)
 
+    INTEGER :: ilct
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Set_fraction_1d'
 
     IF (PRESENT(fract)) THEN
@@ -426,6 +422,17 @@ CONTAINS
           WHERE (this%fract(ics:ice, iblk) /= this%fract_old(ics:ice, iblk))
             parent%l_fract_children_changed(ics:ice, iblk) = .TRUE.
           END WHERE
+          IF (ANY(parent%l_fract_children_changed(ics:ice,iblk))) THEN
+            DO ilct=1,SIZE(parent%lcts)
+              IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
+                WHERE (parent%l_fract_children_changed(ics:ice,iblk))
+                  parent%lcts(ilct)%fract(ics:ice,iblk) = &
+                    & parent%lcts(ilct)%fract(ics:ice,iblk) - this%fract_old(ics:ice,iblk) + this%fract(ics:ice,iblk)
+                END WHERE
+                EXIT
+              END IF
+            END DO
+          END IF
         END SELECT
       END IF
     END IF
@@ -489,7 +496,9 @@ CONTAINS
             IF (ANY(parent%l_fract_children_changed(:,:))) THEN
               DO ilct=1,SIZE(parent%lcts)
                 IF (this%lcts(1)%id == parent%lcts(ilct)%id) THEN
-                  parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
+                  WHERE (parent%l_fract_children_changed(:,:))
+                    parent%lcts(ilct)%fract(:,:) = parent%lcts(ilct)%fract(:,:) - this%fract_old(:,:) + this%fract(:,:)
+                  END WHERE
                   EXIT
                 END IF
               END DO
@@ -1167,6 +1176,34 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Could not find next sibling tile')
 
   END FUNCTION Get_next_sibling_tile
+
+  ! ====================================================================================================== !
+  !
+  !> Collect the names of the children of this tile 
+  !
+  SUBROUTINE Get_children_names(this, children_names)
+    CLASS(t_jsb_tile_abstract), INTENT(inout)  :: this
+    CHARACTER(len=SHORT_NAME_LEN), INTENT(inout) :: children_names(:)
+
+    INTEGER :: i_tile, nr_of_children
+    CLASS(t_jsb_tile_abstract),  POINTER :: current_tile
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_children_names'
+
+    nr_of_children = this%Get_no_of_children()
+
+    IF (nr_of_children /= size(children_names)) &
+      & CALL finish(routine, 'Call with invalid array size (size does not equal nr of children).')
+
+    current_tile => this%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+      children_names(i_tile) = current_tile%name
+      current_tile => current_tile%Get_next_sibling_tile()
+    ENDDO
+
+  END SUBROUTINE Get_children_names  
+
 
   ! If conserved quantities were collected for this tile
   FUNCTION Has_conserved_quantities(this) RESULT(return_value)

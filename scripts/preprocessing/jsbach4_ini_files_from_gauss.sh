@@ -33,8 +33,8 @@ rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
   mlogin*|mistralpp*)
     output_root=/pool/data/ICON/grids/public/mpim
-    #output_root=/pool/data/ICON/grids/private/jsbach/mpim
-    #output_root=/work/mj0060/m212005/ini_files
+    # output_root=/pool/data/ICON/grids/private/jsbach/mpim
+    # output_root=/work/mj0060/m212005/ini_files
     ;;
   *)
     output_root=/scratch/local1/m212005/ini_files                          # for local use
@@ -57,7 +57,8 @@ cdo="cdo -s -b F64 -W"
 [[ ${coupled} == "true" ]] && grid_label=$atmGridID-$oceGridID || grid_label=$atmGridID
 output_dir=${output_root}/${grid_label}/land/$revision
 
-workdir=${output_root}/workdir
+cwddir=$(pwd)
+workdir=${output_dir}/workdir
 
 coupled_grid_file=${rootdir}/${atmGridID}/icon_grid_${atmGridID}_${refinement}_G.nc
 coupled_lsf_file=${rootdir}/${atmGridID}-${oceGridID}/fractional_mask/fractional_lsm_${atmGridID}_${oceGridID}.nc
@@ -196,29 +197,22 @@ function generate_land_sea_mask {
 
   temp=$(mktemp -u --tmpdir=.)
 
+  ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+  ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
+    -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
+
   if [[ ${coupled} == "true" ]]
   then
-    ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${coupled_grid_file} -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
+    ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${icon_grid_file} \
+      -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
   else
-    # Note: blend out some grid boxes which are land in FR_LAND_TOPO by masking with cell_sea_land_mask
-    ${cdo} setgrid,${icon_grid_file} -selvar,FR_LAND_TOPO ${extpar_file} ${temp}
-    ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -ifthen -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_notsea.nc
-    ncatted -a long_name,notsea,m,c,'Fraction of land+lake+glacier' ${grid_name}_notsea.nc
+    ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
+      -ifthenelse -setmisstoc,0 -masklonlatbox,0.,360.,-60.,90. -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} \
+      -max ${grid_name}_glac_remap.nc -setgrid,${icon_grid_file} -selvar,FR_LAND_TOPO ${extpar_file} \
+      -setrtoc,-2.1,-0.9,0 -setrtoc,0.9,2.1,1 -selvar,cell_sea_land_mask ${icon_grid_file} \
+      ${grid_name}_notsea.nc
   fi
-
-  # Generate glacier fractions, making sure that fraction is either 0 or 1
-  ${cdo} remapnn,${grid_name}_notsea.nc gauss_${source_res}_glac.nc ${temp}
-  ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 -ifthen ${grid_name}_notsea.nc -gec,0.9 ${temp} ${grid_name}_glac_remap.nc
-
-  # Adjust land sea mask with glacier fraction
-  # Commented this out again since the land-sea mask (at least in coupled experiments) comes from the ocean and should
-  # not be changed afterwards. However, this is not totally correct since JSBACH assumes that glacier fractions (and therefore
-  # land fraction with glacier) are either 0 or 1. To be consistent, this should be taken care of ... TBD
-  #if [[ ${coupled} != "true" ]]
-  # then
-  #   ${cdo} setvar,notsea -ifthenelse -ltc,0.5 ${grid_name}_glac_remap.nc ${grid_name}_notsea.nc ${grid_name}_glac_remap.nc ${temp}
-  #   mv ${temp} ${grid_name}_notsea.nc
-  # fi
+  ncatted -a long_name,notsea,m,c,'Fraction of land+lake+glacier' ${grid_name}_notsea.nc
 
   # Generate lake fractions, making sure that fractional coastal grid points don't contain any lakes
   # Set small lake fractions below 0.01 to zero
@@ -965,6 +959,7 @@ done
 if [[ ${clean} == "true" ]]
 then
   echo "Cleaning up ..."
+  cd ${cwddir}
   rm -rf ${workdir}
 fi
 

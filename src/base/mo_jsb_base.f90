@@ -52,13 +52,17 @@ CONTAINS
     USE mo_moffledac_iface,     ONLY: init_moffledac
 #endif
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_
+
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
+    dsl4jsb_Use_config(FLCC_)
+    dsl4jsb_Use_config(WLCC_)
+    dsl4jsb_Use_config(PPLCC_)
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
@@ -68,6 +72,9 @@ CONTAINS
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(FLCC_)
+    dsl4jsb_Def_config(WLCC_)
+    dsl4jsb_Def_config(PPLCC_)
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
@@ -144,6 +151,9 @@ CONTAINS
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(FUEL_)
       dsl4jsb_Get_config(DISTURB_)
+      dsl4jsb_Get_config(WLCC_)
+      dsl4jsb_Get_config(FLCC_)
+      dsl4jsb_Get_config(PPLCC_)
 
       ! Crosscheck process configs
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
@@ -181,6 +191,26 @@ CONTAINS
         dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
       END IF
 
+      IF (model%Do_fractions_change()) THEN
+        IF (.NOT. dsl4jsb_Config(PPLCC_)%active) THEN
+          CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
+        END IF
+        dsl4jsb_Config(PPLCC_)%active = .TRUE.
+      END IF
+
+      IF (model%config%init_from_ifs) THEN
+        CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
+      END IF
+
+      IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
+        ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
+        dsl4jsb_Config(HYDRO_)%l_infil_subzero = .FALSE.
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature (l_snow=false)')
+      ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
+        ! Print message if infiltration at sub-zero temperature is switched off in namelist
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature')
+      END IF
+
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
         CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
           &                         ' ... therefore no influence of vegetation on albedo')
@@ -188,11 +218,19 @@ CONTAINS
         CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
       END IF
 
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
+      IF (model%Is_process_active(FLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+        dsl4jsb_Config(DISTURB_)%active = .TRUE.
+        CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
+      END IF
+      IF (model%Is_process_active(WLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+        dsl4jsb_Config(DISTURB_)%active = .TRUE.
+        CALL message(TRIM(routine), 'Switching on disturbance process since wind lcc process is active')
+      END IF
+      IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(FUEL_)) THEN
         dsl4jsb_Config(FUEL_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
       END IF
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
+      IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(CARBON_)) THEN
         dsl4jsb_Config(CARBON_)%active = .TRUE.
         CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
       END IF

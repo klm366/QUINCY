@@ -16,7 +16,7 @@ MODULE mo_hydro_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_exception,         ONLY: message_text, message, finish
-  USE mo_util,              ONLY: real2string
+  USE mo_util,              ONLY: real2string, logical2string
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_control,       ONLY: debug_on
@@ -42,7 +42,8 @@ MODULE mo_hydro_config_class
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
-      & l_glac_in_soil         !< Treat glacier as part of soil, not separate glacier tile
+      & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
+      & l_infil_subzero        !< Allow infiltration at soil temperatures below 0°C
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
   END type t_hydro_config
@@ -74,6 +75,7 @@ CONTAINS
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
+    LOGICAL                     :: l_infil_subzero
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -87,7 +89,8 @@ CONTAINS
       & snow_depth_max,             &
       & scheme_stom_cond,           &
       & l_organic,                  &
-      & l_glac_in_soil
+      & l_glac_in_soil,             &
+      & l_infil_subzero
 
     INTEGER :: nml_handler, nml_unit, istat
     REAL(wp), POINTER :: ptr_1D(:)
@@ -120,6 +123,7 @@ CONTAINS
     scheme_stom_cond  = 'echam5'
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
+    l_infil_subzero   = .TRUE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -154,6 +158,7 @@ CONTAINS
     IF (l_organic) CALL message(TRIM(routine), 'Using organic component in soil hydrology')
 
     config%l_glac_in_soil      = l_glac_in_soil
+    config%l_infil_subzero     = l_infil_subzero
 
     CALL close_nml(nml_handler)
 

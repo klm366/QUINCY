@@ -35,8 +35,8 @@ MODULE mo_disturb_memory_class
     cconservation_wind,       &
     burned_fract,             & ! burned fraction of tile
     damaged_fract,            & ! windbreak fraction of tile
-    q_rel_air_climbuf,        & ! Relative humiditiy of lowest air layer smoothed in time.
-    q_rel_air_climbuf_yday,   & ! Relative humiditiy of lowest air layer smoothed in time at the end of the last day.
+    q_rel_air_climbuf,        & ! Relative humidity of lowest air layer smoothed in time.
+    q_rel_air_climbuf_yday,   & ! Relative humidity of lowest air layer smoothed in time at the end of the last day.
                                 ! This is only needed for cbalone forcing!
     prev_day_max_wind_10m,    & ! for windbreak
     max_wind_10m,             & ! for windbreak

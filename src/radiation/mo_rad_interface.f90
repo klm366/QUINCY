@@ -258,8 +258,8 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -516,8 +516,8 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(A2L_)
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
 
     ncanopy                     =  dsl4jsb_Config(ASSIMI_)%ncanopy
     use_alb_veg_simple          =  dsl4jsb_Config(RAD_)%use_alb_veg_simple
@@ -824,7 +824,7 @@ CONTAINS
   
     c_bg_sum => NULL()
     IF (tile%is_bare .OR. tile%is_vegetation) THEN
-      IF (TRIM(use_alb_soil_organic_C) /= '' .AND. .NOT. tile%Is_process_active(CARBON_)) THEN
+      IF (TRIM(use_alb_soil_organic_C) /= '' .AND. .NOT. tile%Has_process_memory(CARBON_)) THEN
         CALL finish(TRIM(routine), 'Carbon process must be active for use_alb_soil_organic_C')
       END IF
 
@@ -1346,7 +1346,7 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(RAD_)) RETURN   ! ask for all processes considered here ?
+    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! only at PFT tiles (i.e. leafs of vegetation tile) because this routine is tailored towards vegetation only

@@ -28,6 +28,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_mvstream,           ONLY: init_mvstream, mvstream_update_cache, mvstream_accumulate
+  USE mo_sub_nml,            ONLY: set_stream_element_nml, set_stream_nml
   USE mo_jsb_time,           ONLY: t_datetime, deallocateDatetime
 
   dsl4jsb_Use_processes SEB_, TURB_, HYDRO_
@@ -328,6 +329,8 @@ PROGRAM jsb4_driver
   ics = 1
 
   CALL init_mvstream('namelist.jsbach')
+  CALL set_stream_element_nml('namelist.jsbach')
+  CALL set_stream_nml('namelist.jsbach')
 
   IF(jsbach_is_restarted()) THEN
 

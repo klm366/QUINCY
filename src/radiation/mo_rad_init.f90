@@ -150,7 +150,7 @@ CONTAINS
 
     dsl4jsb_Get_config(RAD_)
 
-    IF (.NOT. dsl4jsb_Config(RAD_)%active) RETURN
+    IF (.NOT. model%Is_process_active(RAD_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting radiation init vars')
 
@@ -240,7 +240,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
 
-    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
 
     ! model => get_model(tile%owner_model_id)
 
@@ -252,7 +252,7 @@ CONTAINS
 
   END SUBROUTINE rad_init_bc
 
-  RECURSIVE SUBROUTINE rad_init_ic(tile)
+  SUBROUTINE rad_init_ic(tile)
 
     USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
       &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater
@@ -268,7 +268,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 
-    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
 
     model => get_model(tile%owner_model_id)
 
@@ -375,7 +375,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tfrac_mavg_cl
     dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tcnl_mavg_cl
 
-    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Setting initial conditions of radiation memory (quincy) for tile '// &
       &                                   TRIM(tile%name))

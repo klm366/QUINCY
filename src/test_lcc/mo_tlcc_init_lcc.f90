@@ -20,7 +20,7 @@ MODULE mo_tlcc_init_lcc
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
   USE mo_jsb_lcc,             ONLY: init_lcc
-  USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE
+  USE mo_jsb_cqt_class,       ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE
 
   IMPLICIT NONE
   PRIVATE
@@ -31,7 +31,7 @@ MODULE mo_tlcc_init_lcc
   CHARACTER(len=*), PARAMETER :: procname = 'tlcc'
   
   INTEGER, PARAMETER :: nr_of_active_cqts = 1 
-  INTEGER, PARAMETER :: nr_of_passive_cqts = 1
+  INTEGER, PARAMETER :: nr_of_passive_cqts = 2
   INTEGER, PARAMETER :: nr_of_involved_descendant_tiles = 5
 
 CONTAINS
@@ -54,7 +54,7 @@ CONTAINS
     IF (.NOT. tile%name .EQ. 'veg') RETURN
 
     active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
-    passive_cqts = (/ DEAD_CARBON_CQ_TYPE /)
+    passive_cqts = (/ AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE /)
 
     involved_child_tiles = [character(len=SHORT_NAME_LEN) :: 'pft03', 'pft04' , 'pft05', 'pft06', 'pft11' ]
 

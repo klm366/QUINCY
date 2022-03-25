@@ -116,8 +116,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Do_it'
 
-    ! If process the task belongs to is not active on this tile, do nothing.
-    IF (.NOT. tile%Is_process_active(this%process_id)) RETURN
+    ! If process the task belongs to is not to be calculated on this tile, do nothing.
+    IF (.NOT. tile%Is_process_calculated(this%process_id)) RETURN
 
     SELECT TYPE (this)
     CLASS IS (t_jsb_process_task)

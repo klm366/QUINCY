@@ -16,7 +16,7 @@ MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish, message_text
+  USE mo_exception, ONLY: message, finish, message_text, em_warn
 
   IMPLICIT NONE
   PRIVATE
@@ -398,6 +398,7 @@ CONTAINS
   ! @param [in]      dz                 (Fixed) Thicknesses of soil layers [m]
   ! @param [in]      nlat               (Effective) number of latitudes
   ! @param [in]      delta_time         Time step [s]
+  ! @param [in]      l_infil_subzero    Allow infiltration of supercolled water
   ! @param [in]      soil_depth_l       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_l       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      fract_org_l        Fractions per soil layer of organic comonent []
@@ -428,6 +429,7 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                                                &
     ! in
     & nidx, nsoil, dz, nlat, delta_time, ltpe_closed, ltpe_open,                                                 &
+    & l_infil_subzero,                                                                                           &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
     !& sfract_srf, wfract_srf,
@@ -450,6 +452,7 @@ CONTAINS
       & delta_time
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
+    LOGICAL, INTENT(in) :: l_infil_subzero
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_l, root_depth_l, fract_org_l,    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l
@@ -586,7 +589,9 @@ CONTAINS
         runoff(i) = 0._wp
         infilt(i) = water_to_soil(i)
       ELSE
-        IF (t_soil_upper_layer(i) < tmelt) THEN
+        IF (.NOT. l_infil_subzero .AND. (t_soil_upper_layer(i) < tmelt)) THEN
+          !pdv: Temperature dependence should not be included when using the 5-layer snow scheme because:
+          !pdv  when tsurf == 0.C; T_soil < 0.C -- and all snow melt is going to surfcae runoff
           runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
           infilt(i) = 0._wp
         ELSE
@@ -1411,9 +1416,12 @@ CONTAINS
 #ifndef _OPENACC
     IF (ANY(ws_l(:,:) < 0._wp)) THEN
       WRITE (message_text,*) 'negative soil moisture: ', MINVAL(ws_l), ' at ', MINLOC(ws_l)
-      CALL finish ('digest_infilt', message_text)
-      ! CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
-      ! ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
+      IF (ANY(ws_l(:,:) < -EPSILON(1._wp))) THEN
+        CALL finish ('digest_infilt', message_text)
+      ELSE
+        CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
+        ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
+      END IF
     END IF
 #endif
 

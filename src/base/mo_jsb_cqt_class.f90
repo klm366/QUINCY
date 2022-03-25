@@ -27,15 +27,18 @@ MODULE mo_jsb_cqt_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: WATER_CQ_TYPE, LIVE_CARBON_CQ_TYPE, DEAD_CARBON_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
+  PUBLIC :: WATER_CQ_TYPE
+  PUBLIC :: FLUX_C_CQ_TYPE, LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE
   PUBLIC :: Get_number_of_types, Get_cqt_name, t_jsb_consQuan, t_jsb_consQuan_p, max_cqt_name_length
 
   ENUM, BIND(C)
     ENUMERATOR ::                 &
       & WATER_CQ_TYPE = 0,        &
       & LIVE_CARBON_CQ_TYPE,      &
-      & DEAD_CARBON_CQ_TYPE,      & 
+      & AG_DEAD_C_CQ_TYPE,        &
+      & BG_DEAD_C_CQ_TYPE,        & 
       & PRODUCT_CARBON_CQ_TYPE,   &
+      & FLUX_C_CQ_TYPE,           &
       & LAST_CQ_TYPE ! needs to always be the last -- it is only used to determine the max number of types
   END ENUM
 
@@ -87,10 +90,14 @@ CONTAINS
         return_value = 'water'
       CASE (LIVE_CARBON_CQ_TYPE)
         return_value = 'living_carbon'
-      CASE (DEAD_CARBON_CQ_TYPE)
-        return_value = 'dead_carbon'
+      CASE (AG_DEAD_C_CQ_TYPE)
+        return_value = 'ag_dead_carbon'
+      CASE (BG_DEAD_C_CQ_TYPE)
+        return_value = 'bg_dead_carbon'
       CASE (PRODUCT_CARBON_CQ_TYPE)
         return_value = 'product_carbon'
+      CASE (FLUX_C_CQ_TYPE)
+        return_value = 'carbon_flux'
       CASE DEFAULT
         CALL finish(TRIM(routine), 'No name specified for cq type of id '//int2string(id))
     END SELECT

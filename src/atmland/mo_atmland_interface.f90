@@ -516,9 +516,10 @@ CONTAINS
       & q_snocpymlt_ptr, &
       & alb_vis_lnd_ptr, &
       & alb_nir_lnd_ptr, &
-      & cflux_npp_2_atm_ta_ptr, &
-      & cflux_soilresp_2_atm_ta_ptr, &
-      & cflux_herb_2_atm_ta_ptr, &
+      & co2flux_npp_2_atm_ta_ptr, &
+      & co2flux_soilresp_2_atm_ta_ptr, &
+      & co2flux_herb_2_atm_ta_ptr, &
+      & co2flux_fire_all_2_atm_ta_ptr, &
       & t_lwtr_ptr, &
       & t_lice_ptr, &
       & qsat_lwtr_ptr, &
@@ -558,7 +559,7 @@ CONTAINS
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
-    IF (tile%Is_process_active(CARBON_)) THEN
+    IF (tile%Has_process_memory(CARBON_)) THEN
       dsl4jsb_Get_memory(CARBON_)
     END IF
 
@@ -784,17 +785,21 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(CO2_flux)) THEN
-      IF (tile%Is_process_active(CARBON_)) THEN
-        cflux_npp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_npp_2_atm_ta)
-        cflux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_soilresp_2_atm_ta)
-        cflux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,cflux_herb_2_atm_ta)
-        !$acc data present(CO2_flux, fact_land, cflux_npp_2_atm_ta_ptr, cflux_soilresp_2_atm_ta_ptr, cflux_herb_2_atm_ta_ptr)
+      IF (tile%Has_process_memory(CARBON_)) THEN
+        co2flux_npp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_npp_2_atm_ta)
+        co2flux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_soilresp_2_atm_ta)
+        co2flux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_herb_2_atm_ta)
+        co2flux_fire_all_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_fire_all_2_atm_ta)
+
+        !$acc data present(CO2_flux, fact_land, co2flux_npp_2_atm_ta_ptr, co2flux_soilresp_2_atm_ta_ptr, &
+        !$acc              co2flux_herb_2_atm_ta_ptr, co2flux_fire_all_2_atm_ta_ptr)
         !$acc parallel loop
         DO i=1,nc
-          CO2_flux(i) = fact_land(i) *            &
-            & (   cflux_npp_2_atm_ta_ptr(i)       &
-            &   + cflux_soilresp_2_atm_ta_ptr(i)  &
-            &   + cflux_herb_2_atm_ta_ptr(i)      &
+          CO2_flux(i) = fact_land(i) *              &
+            & (   co2flux_npp_2_atm_ta_ptr(i)       &
+            &   + co2flux_soilresp_2_atm_ta_ptr(i)  &
+            &   + co2flux_herb_2_atm_ta_ptr(i)      &
+            &   + co2flux_fire_all_2_atm_ta_ptr(i)  &
             & )
         END DO
         !$acc end data
