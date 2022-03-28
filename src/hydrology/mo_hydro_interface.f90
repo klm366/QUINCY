@@ -1149,7 +1149,6 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_rel,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_sl,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, i_soil_sl,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_sat_sl,   weighted_by_fract)
@@ -1484,6 +1483,7 @@ CONTAINS
     !    arrays are only used with quincy.
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_fc,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_pwp,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_rootzone_rel,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
     ! ASSIMI_
     IF (model%config%use_quincy) THEN
