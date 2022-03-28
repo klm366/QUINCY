@@ -879,19 +879,9 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
 
     ! Pointers to variables in memory
+
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
-
-    dsl4jsb_Real2D_onChunk :: wat_rootzone
-    dsl4jsb_Real2D_onChunk :: rootzone_max
-    dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: soil_wat_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl
-    dsl4jsb_Real3D_onChunk :: root_depth_sl
-    dsl4jsb_Real2D_onChunk :: tpe_overflow
-
 
     ! Locally allocated vectors
 
@@ -902,7 +892,7 @@ CONTAINS
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
 
-    INTEGER  :: iblk, ics, ice, nc, i
+    INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
@@ -941,20 +931,16 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wat_rootzone)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, rootzone_max)
-
-    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)     ! in
-
+    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)   ! in
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
       !$claw acc enter data create(fract_org_sl)
       !$claw expand parallel update
       fract_org_sl(:,:) = 0._wp
     END IF
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wat_rootzone)          ! inout
+
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
@@ -1167,7 +1153,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: wat_rootzone        !< Liquid water content in the root zone
-    dsl4jsb_Real3D_onChunk :: soil_wat_sl         !< Liquid water content in soil layers
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl        !< Water content of soil layers at field capacity
     dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
     dsl4jsb_Real2D_onChunk :: rootzone_fc         !< Water content in root zone at field capacity
@@ -1206,7 +1191,6 @@ CONTAINS
     END IF
     !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_wat_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    rootzone_max)        ! in
@@ -1242,8 +1226,7 @@ CONTAINS
             &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
-    !$claw acc data present(wat_rootzone, soil_wat_sl, soil_depth_sl, root_depth_sl, wat_rootzone_rel)
-    !$claw acc data present(w_soil_pot_scool_sl, wat_rootzone_scool_act)
+    !$claw acc data present(wat_rootzone, soil_depth_sl, root_depth_sl, wat_rootzone_rel)
     !$claw acc parallel loop gang vector
     DO i = 1, nc
       IF (rootzone_max(i) > 0._wp) THEN

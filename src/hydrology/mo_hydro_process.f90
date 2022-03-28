@@ -750,7 +750,7 @@ CONTAINS
 
     !$claw acc data &
     !$claw acc present(dsoil, wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl, &
-    !$claw acc         pore_size_index_sl, p_wilt_sl, dz, soil_wat_sl, drainage, tpe_overflow, soil_ice_sl)      &
+    !$claw acc         pore_size_index_sl, p_wilt_sl, soil_wat_sl, drainage, tpe_overflow, soil_ice_sl)          &
     !$claw acc pcreate(diffus_sl, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_sl, soil_above,       &
     !$claw acc         soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_sl,          &
     !$claw acc         percolation, wslog)
