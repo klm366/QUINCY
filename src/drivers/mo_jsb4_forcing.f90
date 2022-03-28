@@ -1404,7 +1404,6 @@ CONTAINS
             & (/1,1,currentTimeStep/), (/1,1,1/)), routine)
           CALL forcing_input_variable%input_file%Close()
         ENDIF
-        hlp_r(1) =forcing_input_variable%data_read(1,1,1)
 
         IF(my_process_is_mpi_parallel()) THEN
           CALL p_bcast(hlp_r, p_io, mpi_comm)
