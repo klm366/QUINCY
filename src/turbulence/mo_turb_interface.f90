@@ -182,7 +182,7 @@ CONTAINS
     ice     = options%ice
 
     ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
+    IF (.NOT. tile%Is_process_active(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -457,7 +457,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (.NOT. tile%Is_process_calculated(TURB_) .OR. tile%contains_lake) RETURN
+    IF (.NOT. tile%Is_process_active(TURB_) .OR. tile%contains_lake) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 

@@ -29,11 +29,10 @@ MODULE mo_sse_init
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
+  dsl4jsb_Use_processes SSE_, HYDRO_
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
-  dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
 
   IMPLICIT NONE
@@ -53,9 +52,10 @@ MODULE mo_sse_init
       & t_srf_mon   (:,:,:) => NULL(), &
       & ifs_tsoil   (:,:,:) => NULL(), &
       & ifs_tskin   (:,:  ) => NULL()
+    LOGICAL :: initialized = .FALSE.
   END TYPE t_sse_init_vars
 
-  TYPE(t_sse_init_vars) :: sse_init_vars
+  TYPE(t_sse_init_vars), SAVE :: sse_init_vars
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_init'
 
@@ -70,7 +70,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
 
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+    IF (.NOT. sse_init_vars%initialized) THEN
       CALL sse_read_init_vars(tile)
     END IF
 
@@ -145,7 +145,7 @@ CONTAINS
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading soil energy boundary conditions for tile '//TRIM(tile%name))
 
@@ -196,6 +196,8 @@ CONTAINS
 
     END IF
 
+    sse_init_vars%initialized = .TRUE.
+
   END SUBROUTINE sse_read_init_vars
 
   SUBROUTINE sse_init_bc(tile)
@@ -216,7 +218,7 @@ CONTAINS
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting soil energy boundary conditions for tile '//TRIM(tile%name))
 
@@ -267,7 +269,6 @@ CONTAINS
 
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
-    dsl4jsb_Def_memory(SEB_)
 
     INTEGER :: iblk
 
@@ -278,12 +279,11 @@ CONTAINS
 
     ! Get soil memory of the tile
     dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(SEB_)
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing soil energy memory for tile '//TRIM(tile%name))
 
@@ -308,21 +308,6 @@ CONTAINS
     !$acc update device(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
     !$acc end data
 
-    ! IF (TRIM(tile%name) /= 'box') THEN
-    IF (TRIM(tile%name) == 'land') THEN
-      dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
-      dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
-
-      !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
-      !$acc              dsl4jsb_var2D_onDomain(SEB_,t))
-      !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
-      !$acc               dsl4jsb_var2D_onDomain(SEB_,t))
-      !$acc end data
-    END IF
-
-    ! Note: called from model_init now
-    ! CALL init_soil_properties(tile)
-
   END SUBROUTINE sse_init_ic
 
   SUBROUTINE init_soil_properties(tile)
@@ -330,7 +315,7 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, alf, rhoh2o, rhoi, ci, dens_snow_min
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, & ! vol_hcap_snow_min,
       &                                  hcond_ice, hcond_snow !, hcond_snow_min, hcond_org
-    USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
+    USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity
     USE mo_hydro_util,             ONLY: get_water_in_root_zone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -341,7 +326,6 @@ CONTAINS
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(SEB_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
@@ -353,9 +337,6 @@ CONTAINS
       & soil_depth_sl, &
       & w_soil_sl, &
       & w_ice_sl, &
-      & t_soil_sl, &
-      & matrix_pot_sl, &
-      & bclapp_sl, &
       & fract_org_sl, &
       & vol_heat_cap_sl, &
       & heat_cond_sl, &
@@ -365,9 +346,6 @@ CONTAINS
     ! Locally allocated vectors
     ! 
     dsl4jsb_Real3D_onDomain :: &
-      & ws_max_sl,             &
-      & liquid_max,            &
-      & heat_cap_sl,           &
       & fract_water,           &
       & fract_ice,             &
       & soil_e_dz_tmp,         & 
@@ -393,7 +371,6 @@ CONTAINS
     !
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SEB_)
 
     dsl4jsb_Get_var3D_onDomain(SSE_, vol_heat_cap_sl)
     dsl4jsb_Get_var3D_onDomain(SSE_, heat_cond_sl)
@@ -414,111 +391,16 @@ CONTAINS
       RETURN
     END IF
 
+    dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_ice_sl )
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
 
     nproma = SIZE(vol_heat_cap,1)
     nblks  = SIZE(vol_heat_cap,2)
-
-    IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
-
-      dsl4jsb_Get_var3D_onDomain(SSE_,   t_soil_sl)
-      dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
-      dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
-  
-      ALLOCATE( &
-        & liquid_max (nproma, nsoil, nblks), &
-        & ws_max_sl  (nproma, nsoil, nblks), &
-        & heat_cap_sl(nproma, nsoil, nblks)  &
-        & )
-      !$claw acc enter data create(liquid_max, ws_max_sl, heat_cap_sl)
-
-      !$claw expand parallel update
-      ws_max_sl(:,:,:) = soil_depth_sl(:,:,:) * vol_porosity_sl(:,:,:)
-
-      IF (dsl4jsb_Config(SSE_)%l_supercool) THEN
-        !$claw expand parallel update savepoint=ser_jsb_sse_init_get_liquid_max_1 tile_name=tile%name
-        liquid_max(:,:,:) = Get_liquid_max( &
-          & t_soil_sl    (:,:,:), &
-          & ws_max_sl    (:,:,:), &
-          & matrix_pot_sl(:,:,:), &
-          & bclapp_sl    (:,:,:)  &
-          & )
-      ELSE
-        !$claw expand parallel update
-        liquid_max(:,:,:) = 0._wp
-      END IF
-
-      !$claw expand parallel update
-      w_ice_sl(:,:,:) = 0._wp
-
-      DO j = 1, nsoil
-        heat_cap_sl(:,j,:) = soil_e%dz(j) * vol_heat_cap(:,:)
-      END DO
-      !$claw acc update device(heat_cap_sl)
-
-      !$claw acc data present(heat_cap_sl,t_soil_sl,w_soil_sl,liquid_max,w_ice_sl)
-      !$claw acc parallel loop gang vector collapse(3)
-      DO i = 1, nproma
-        DO j = 1, nsoil
-          DO b = 1, nblks
-            IF (t_soil_sl(i,j,b) < tmelt .AND. w_soil_sl(i,j,b) > liquid_max(i,j,b)) THEN
-              w_ice_sl(i,j,b) = MIN(w_soil_sl(i,j,b) - liquid_max(i,j,b),                            &
-                &                   heat_cap_sl(i,j,b) * (tmelt - t_soil_sl(i,j,b)) / (alf * rhoh2o) &
-                &                  )
-            END IF
-          END DO
-        END DO
-      END DO
-      !$claw acc end data
-
-      !$claw expand parallel update
-      w_soil_sl(:,:,:) = w_soil_sl(:,:,:) - w_ice_sl(:,:,:)
-
-      !$claw acc update host(w_soil_sl,w_ice_sl)
-
-      ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + w_ice_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
-      ! IF (TRIM(tile%name) == 'land') THEN
-      !   dsl4jsb_var_ptr(SEB_,t)(:,:)        = t_soil_sl(:,1,:)
-      !   dsl4jsb_var_ptr(SEB_,t_unfilt)(:,:) = t_soil_sl(:,1,:)
-      ! END IF
-
-      !$claw acc exit data delete(liquid_max, ws_max_sl, heat_cap_sl)
-      DEALLOCATE(liquid_max, ws_max_sl, heat_cap_sl)
-
-      ! dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
-      !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
-      ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
-      DO b=1,nblks
-          CALL get_water_in_root_zone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  b)   )
-      END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      END WHERE
-
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
-      END WHERE
-
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column))
-
-    END IF
-
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
-    dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)

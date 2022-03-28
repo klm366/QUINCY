@@ -135,7 +135,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current_year)
 
     ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_calculated(alcc_)) RETURN
+    IF (.NOT. tile%Is_process_active(alcc_)) RETURN
 
     !>
     !> Assert that PPLCC process is active

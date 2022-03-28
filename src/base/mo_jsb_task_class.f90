@@ -40,6 +40,8 @@ MODULE mo_jsb_task_class
     INTEGER                   :: ics     = -1  ! Index of chunk start
     INTEGER                   :: ice     = -1  ! Index of chunk end
     INTEGER                   :: nc      = -1  ! Length of chunk
+    INTEGER                   :: grid_id = -1  ! Grid id
+    LOGICAL                   :: l_aggregate_only = .FALSE. ! Only aggregate
   END TYPE t_jsb_task_options
 
 !!$  TYPE, EXTENDS(t_Message) :: t_jsb_task_msg
@@ -60,6 +62,7 @@ MODULE mo_jsb_task_class
   CONTAINS
     PROCEDURE(Interface_task), DEFERRED, NOPASS :: Integrate
     PROCEDURE(Interface_task), DEFERRED, NOPASS :: Aggregate
+    PROCEDURE                                   :: Aggregate_on_domain
     PROCEDURE                                   :: Do_it
     PROCEDURE                                   :: Construct => Construct_task
   END TYPE t_jsb_process_task
@@ -117,7 +120,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Do_it'
 
     ! If process the task belongs to is not to be calculated on this tile, do nothing.
-    IF (.NOT. tile%Is_process_calculated(this%process_id)) RETURN
+    IF (.NOT. tile%Is_process_active(this%process_id)) RETURN
 
     SELECT TYPE (this)
     CLASS IS (t_jsb_process_task)
@@ -133,21 +136,27 @@ CONTAINS
 !!$
       SELECT CASE(TRIM(msg%action%name))
       CASE ('INTEGRATE')
-        IF (timer_on('detail')) THEN
-          CALL timer_start(timer_integrate(this%owner_model_id))
-          IF (this%timer_integrate > 0) CALL timer_start(this%timer_integrate)
-        END IF
-        CALL this%Integrate(tile, options)
-        IF (timer_on('detail')) THEN
-          IF (this%timer_integrate > 0) CALL timer_stop(this%timer_integrate)
-          CALL timer_stop(timer_integrate(this%owner_model_id))
+        IF (.NOT. options%l_aggregate_only) THEN
+          IF (timer_on('detail')) THEN
+            CALL timer_start(timer_integrate(this%owner_model_id))
+            IF (this%timer_integrate > 0) CALL timer_start(this%timer_integrate)
+          END IF
+          CALL this%Integrate(tile, options)
+          IF (timer_on('detail')) THEN
+            IF (this%timer_integrate > 0) CALL timer_stop(this%timer_integrate)
+            CALL timer_stop(timer_integrate(this%owner_model_id))
+          END IF
         END IF
       CASE ('AGGREGATE')
         IF (timer_on('detail')) THEN
           CALL timer_start(timer_aggregate(this%owner_model_id))
           IF (this%timer_aggregate > 0) CALL timer_start(this%timer_aggregate)
         END IF
-        CALL this%Aggregate(tile, options)
+        IF (options%l_aggregate_only) THEN
+          CALL this%Aggregate_on_domain(tile, options)
+        ELSE
+          CALL this%Aggregate(tile, options)
+        END IF
         IF (timer_on('detail')) THEN
           IF (this%timer_aggregate > 0) CALL timer_stop(this%timer_aggregate)
           CALL timer_stop(timer_aggregate(this%owner_model_id))
@@ -159,6 +168,39 @@ CONTAINS
     END SELECT
 
   END SUBROUTINE Do_it
+
+  SUBROUTINE Aggregate_on_domain(this, tile, options)
+
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    USE mo_jsb_grid,       ONLY: Get_grid
+
+    CLASS(t_jsb_process_task),  INTENT(in)    :: this
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in) :: options
+
+    INTEGER :: blks, blke, blk, jcs, jce
+    TYPE(t_jsb_grid), POINTER :: grid
+    TYPE(t_jsb_task_options) :: tmp_options
+
+    grid => Get_grid(options%grid_id)
+
+    tmp_options = options
+
+    blks = grid%get_blk_start()
+    blke = grid%get_blk_end()
+    DO blk = blks, blke
+      jcs = grid%get_col_start(blk)
+      jce = grid%get_col_end  (blk)
+      tmp_options%iblk = blk
+      tmp_options%ics  = jcs
+      tmp_options%ice  = jce
+      tmp_options%nc   = jce - jcs + 1
+
+      CALL this%Aggregate(tile, tmp_options)
+
+    END DO
+
+  END SUBROUTINE Aggregate_on_domain
 
   SUBROUTINE Append_task(this, task, process_name)
 

@@ -66,6 +66,7 @@ MODULE mo_jsb_memory_class
     INTEGER :: no_of_vars = 0
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
+    LOGICAL :: is_aggregated
     CLASS(t_jsb_param), POINTER :: param => NULL()
     LOGICAL :: in_var_groups = .FALSE.
   CONTAINS
@@ -215,6 +216,7 @@ CONTAINS
     var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default, even though
                                 ! the monitoring variables are not needed in restart files
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .AND. .NOT. mem%is_aggregated ! Aggregated variables don't need to be in restart file
 
     ! As the 1d variables are only intended as diagnostic output variables (monitoring), the corresponding
     ! stream elements only need to be added, if the variables are actually defined as output variables.
@@ -356,11 +358,15 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
+    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .AND. .NOT. mem%is_aggregated ! Aggregated variables don't need to be in restart file
+
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name_loc), var%ptr2d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=var%is_in_restart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, &
@@ -380,9 +386,6 @@ CONTAINS
         var%is_in_output = is_variable_in_output(var%full_name)
       END IF
     END IF
-    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
-    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
-    ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
   
     IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
     IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
@@ -523,11 +526,15 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
+    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+    var%is_in_restart = var%is_in_restart .AND. .NOT. mem%is_aggregated ! Aggregated variables don't need to be in restart file
+
     CALL add_var_list_element_r3d( &
       this_list, TRIM(name_loc), var%ptr3d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
       ldims=ldims, gdims=gdims, levelindx=vgrid%echamZaxisIdx, &
-      loutput=loutput, lcontainer=lcontainer, lrestart=lrestart, lrestart_cont=lrestart_cont, &
+      loutput=loutput, lcontainer=lcontainer, lrestart=var%is_in_restart, lrestart_cont=lrestart_cont, &
       initval_r=initval_r, isteptype=isteptype, resetval_r=resetval_r, &
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
@@ -546,9 +553,6 @@ CONTAINS
         var%is_in_output = is_variable_in_output(var%full_name)
       END IF
     END IF
-    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
-    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
-    ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
     IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
     IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id

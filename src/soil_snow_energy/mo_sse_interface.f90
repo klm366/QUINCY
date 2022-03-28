@@ -200,7 +200,7 @@ CONTAINS
     nc    = options%nc
     dtime = options%dtime
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)

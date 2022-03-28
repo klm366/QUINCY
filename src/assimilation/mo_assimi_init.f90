@@ -83,7 +83,7 @@ CONTAINS
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     model => Get_model(tile%owner_model_id)
-    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
     IF (.NOT. model%config%use_quincy) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of assimi memory (quincy) for tile '// &
       &                          TRIM(tile%name))

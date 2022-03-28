@@ -936,7 +936,7 @@ CONTAINS
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
 
     ! Run tasks in queue
-      CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+      CALL model%Run_tasks(debug = (debug_on('hsm') .AND. iblk == 1))
 
       !!$    IF (iblk == 1)                                                              &
       !!$      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//          &
