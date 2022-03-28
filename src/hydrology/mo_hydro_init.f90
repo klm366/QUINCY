@@ -515,21 +515,9 @@ CONTAINS
         CALL ifs2soil(hydro_init_vars%ifs_smi_sl(:,:,:), ifs_soil_depth(:), &
           &           dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:), soil_w%ubounds(:))
 
-        ! Convert soil moisture index (SMI) in IFS file to water content
-        WHERE (dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) < -999._wp)
-          ! Fill missing values
-          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
-            &  0.5_wp * (dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) + dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:))
-        ELSE WHERE
-          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
-            & MIN(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl)(:,:,:), &
-            &     MAX(0._wp, &
-            &         dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) &
-            &         * (dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:) - dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:)) &
-            &         + dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) &
-            &        ) &
-            &    )
-        END WHERE
+        ! Note: At this point w_soil_sl contains the soil moisture index! Conversion to soil water content
+        ! is done later in init_soil_properties.
+
         dsl4jsb_var_ptr(HYDRO_, w_snow_soil)(:,:) = hydro_init_vars%ifs_w_snow(:,:)
 
       ELSE
@@ -551,65 +539,6 @@ CONTAINS
       ! avoid compiler warnings about pointers not being dereferenced
 
     END IF
-
-    IF (tile%contains_soil) THEN
-      ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
-      ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
-      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
-        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
-      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-          CALL get_water_in_root_zone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
-      END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      END WHERE
-
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
-      END WHERE
-
-      
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
-      !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
-    END IF
-
-    ! IF (tile%contains_vegetation) THEN
-    !   ! Calculate water content and field capacity in the root zone
-    !   DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-    !       CALL get_water_in_root_zone( &
-    !       & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)      (:,:,i), & 
-    !       & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-    !       & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-    !       & dsl4jsb_var_ptr(HYDRO_, w_soil_root)    (:,  i)  )
- 
-    !       CALL get_water_in_root_zone( & 
-    !       & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)   (:,:,i), & 
-    !       & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-    !       & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-    !       & dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc) (:,  i)  )
-          
-    !       CALL get_water_in_root_zone( & 
-    !       & dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl)  (:,:,i), & 
-    !       & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-    !       & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-    !       & dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp)(:,  i)  )
-    !   END DO
-    !   !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_root),     &
-    !   !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc),  &
-    !   !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
-    ! END IF
 
   END SUBROUTINE hydro_init_ic
 
@@ -769,21 +698,77 @@ CONTAINS
           END IF
         END IF
       END IF
-      ! The following can change later depending on the organic layers and soil ice content.
-      ! dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
-      !   & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
-      !   & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_porosity_org
-      ! dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl) =                                                         &
-      !   & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl)  &
-      !   & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_field_cap_org
-      ! dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) =                                                        &
-      !   & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) &
-      !   & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_p_wilt_org
+      ! The following can change later depending on the organic layers and soil ice content (update_soil_hydrology).
+      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
+        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
+        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_porosity_org
+      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl) =                                                         &
+        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl)  &
+        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_field_cap_org
+      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) =                                                        &
+        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) &
+        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_p_wilt_org
       
       !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl))
+    END IF
+
+    IF (tile%contains_soil) THEN
+
+      IF (model%config%init_from_ifs) THEN ! TODO: This does not work with organic layers, yet!
+
+        ! Note: At this point w_soil_sl contains the soil moisture index! Conversion to soil water content
+        ! is done now after w_soil_pwp_sl and w_soil_fc_sl have been potentially updated above.
+
+          ! Convert soil moisture index (SMI) in IFS file to water content
+        WHERE (dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) < -999._wp)
+          ! Fill missing values
+          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
+            &  0.5_wp * (dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) + dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:))
+        ELSE WHERE
+          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
+            & MIN(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl)(:,:,:), &
+            &     MAX(0._wp, &
+            &         dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) &
+            &         * (dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:) - dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:)) &
+            &         + dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) &
+            &        ) &
+            &    )
+        END WHERE
+
+      END IF
+
+      ! todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
+      ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
+      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
+        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
+
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
+          CALL get_water_in_root_zone(                       &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
+      END DO
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
+        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      END WHERE
+
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
+        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = &
+          & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      ELSE WHERE
+        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
+      END WHERE
+
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
+      !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
+
     END IF
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)

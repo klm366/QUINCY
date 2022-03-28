@@ -820,51 +820,6 @@ CONTAINS
         !$acc end data
       END IF
 
-      ! IF (tile%Is_process_active(HYDRO_) .AND. tile%Is_process_active(PHENO_)) THEN
-  
-      !   dsl4jsb_Get_memory(HYDRO_)
-      !   dsl4jsb_Get_memory(PHENO_)
-      !   dsl4jsb_Get_config(HYDRO_)
-
-      !   ! Initialize organic soil layer fractions and modify saturated, field capacity and perm. wilting point capacities accordingly
-      !   ! Note: at the moment, fract_org_sl doesn't change over time, but it could
-      !   IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
-      !     dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
-      !     IF (tile%is_vegetation) THEN
-      !       ! For general VEG tile
-      !       dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
-      !       IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a PFT (otherwise lctlib not defined)
-      !         ! For PFT tiles
-      !         ! Note: in current setup hydrology does not run on PFTs
-      !         IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
-      !           dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)
-      !         END IF
-      !       END IF
-      !     END IF
-      !     ! The following can change later depending on the organic layers and soil ice content.
-      !     dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
-      !       & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
-      !       & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_porosity_org
-      !     dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl) =                                                         &
-      !       & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl)  &
-      !       & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_field_cap_org
-      !     dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) =                                                        &
-      !       & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) &
-      !       & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_p_wilt_org
-          
-      !     !$acc data present (dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl), &
-      !     !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl), &
-      !     !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl), &
-      !     !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl))
-      !     !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl), &
-      !     !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl), &
-      !     !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl), &
-      !     !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl))
-      !     !$acc end data
-      !   END IF
-
-      ! END IF
-
       IF (tile%Is_process_active(HYDRO_) .AND. tile%Contains_soil) THEN
         CALL init_hydro_soil_properties(tile)
       END IF
