@@ -15,24 +15,24 @@
 MODULE mo_sse_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
-  USE mo_jsb_control,       ONLY: debug_on
+  USE mo_kind,               ONLY: wp
+  USE mo_exception,          ONLY: message
+  USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_class,         ONLY: get_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_class,          ONLY: get_model
 #ifdef HAVE_MOFFLEDAC
-  USE mo_timer,             ONLY: timer_start, timer_stop
-  USE mo_moffledac_iface,   ONLY: timer_moffledac
-  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputDimAdd, &
-                                  InputGetData, InputVarReleaseMem, input_file_list
+  USE mo_timer,              ONLY: timer_start, timer_stop
+  USE mo_moffledac_iface,    ONLY: timer_moffledac
+  USE mo_input,              ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputDimAdd, &
+                                   InputGetData, InputVarReleaseMem, input_file_list
 #else
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_io,            ONLY: missval
+  USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
 #endif
+  USE mo_jsb_io,             ONLY: missval
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string
 
@@ -92,6 +92,8 @@ CONTAINS
 
   SUBROUTINE sse_finalize_init_vars
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':sse_finalize_init_vars'
+
 #ifdef HAVE_MOFFLEDAC
     CALL InputVarReleaseMem('heat_capacity')
     CALL InputVarReleaseMem('heat_conductivity')
@@ -105,7 +107,9 @@ CONTAINS
       & )
 #endif
 
+#ifndef HAVE_MOFFLEDAC
     IF (ASSOCIATED(sse_init_vars%t_srf_mon)) DEALLOCATE(sse_init_vars%t_srf_mon)
+#endif
 
     IF (ASSOCIATED(sse_init_vars%ifs_tsoil)) DEALLOCATE(sse_init_vars%ifs_tsoil)
     IF (ASSOCIATED(sse_init_vars%ifs_tskin)) DEALLOCATE(sse_init_vars%ifs_tskin)
@@ -129,8 +133,8 @@ CONTAINS
 
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e
-    INTEGER :: nproma, nblks, isoil
 #endif
+    INTEGER :: nproma, nblks, isoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_read_init_vars'
 
@@ -163,8 +167,8 @@ CONTAINS
     ELSE
       ALLOCATE(sse_init_vars%t_srf_mon(nproma, nblks, 12))
       sse_init_vars%t_srf_mon(:,:,:) = missval
-    END IF
 #endif
+    END IF
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)

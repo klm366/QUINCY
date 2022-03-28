@@ -619,9 +619,7 @@ CONTAINS
 
     END DO
 
-#ifndef HAVE_MOFFLEDAC
     DEALLOCATE(tmp_fract)
-#endif
 
   END SUBROUTINE Init_fractions_on_tile
 
