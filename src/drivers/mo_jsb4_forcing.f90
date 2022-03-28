@@ -530,9 +530,12 @@ CONTAINS
   SUBROUTINE init_forcing(model_id, dtime, steplen)
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
+    USE mo_jsb_io_netcdf_iface, ONLY: t_input_file, netcdf_open_input
 
     INTEGER,  INTENT(in) :: model_id
     REAL(wp), INTENT(in) :: dtime, steplen
+
+    TYPE(t_input_file) :: input_file
 
     ! --- Namelist parameters
     INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
@@ -747,6 +750,16 @@ CONTAINS
         CALL message(TRIM(routine),'Assumption: unit is mol(CO2)/mol(DryAir). Verify your settings!')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
       END SELECT
+      ! --- get dimensions of CO2 data
+      IF (frequency_key_to_constant_val(CO2_varname, forcing_co2_frequ) .EQ. GHG_SCENARIO_) THEN
+        input_file =  netcdf_open_input(TRIM(forcing_co2_file_prefix))
+        IF (input_file%get_dimlen('lon') == 1 .AND. input_file%get_dimlen('lat') == 1) THEN
+          CALL message(TRIM(routine),'CO2 forcing set to a globally constant value')
+        ELSE
+          CALL finish(TRIM(routine),'Dimensions in GHG file differ from expectations')
+        ENDIF
+        CALL input_file%Close()
+      ENDIF
     ENDIF
 
     ! ----- broadcast information
@@ -950,24 +963,23 @@ CONTAINS
               &//'" does not contain the required input year '//TRIM(ADJUSTL(year_label)))
           ENDIF
 
-          ! get the data -- TODO: via mo_jsb_io_netcdf_iface / mo_jsb_io_netcdf functions / mo_input?
           forcing_input_variable%input_file = &
-            & jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)), model%grid_id)
-          !CALL nf(nf_inq_varid(forcing_input_variable%input_file%file_id, CO2_varname, nc_var_id))
-          !CALL nf(nf_get_vara_double(forcing_input_variable%input_file%file_id, nc_var_id, (/1,1,currentTimeStep/), (/1,1,1/), hlp_r ))
-          ! We could add Read_1d_time. However we would have to add 4 funktions for this call. Its probably not worth it to expand the code.
-          return_pointer => forcing_input_variable%input_file%Read_2d_time(forcing_input_variable%variable_name,   & ! variable_name sollte CO2_varname sein
-            &               start_time_step=currentTimeStep, end_time_step=currentTimeStep, &
-            &               fill_array=forcing_input_variable%data_read)
+            & jsb_netcdf_open_input(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)))
+          ! Read globally constant CO2 value
+          CALL nf(nf_inq_varid(forcing_input_variable%input_file%file_id, CO2_varname, nc_var_id), routine)
+          CALL nf(nf_get_vara_double(forcing_input_variable%input_file%file_id, nc_var_id, &
+            & (/1,1,currentTimeStep/), (/1,1,1/), hlp_r), routine)
           CALL forcing_input_variable%input_file%Close()
         ENDIF
-        hlp_r(1) =forcing_input_variable%data_read(1,1,1)
 
         IF(my_process_is_mpi_parallel()) THEN
           CALL p_bcast(hlp_r, p_io, mpi_comm)
         ENDIF
-
         forcing_input_variable%data_read(:,:,1) = hlp_r(1)
+        WRITE (message_text,*) 'Global GHG scenario CO2 value: ', &
+          & forcing_input_variable%data_read(1,1,1)
+        CALL message('----- ', message_text)
+
       ENDIF
 
       current_forcing_array(:,:) = forcing_input_variable%data_read(:,:,1)
