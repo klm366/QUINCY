@@ -820,13 +820,12 @@ CONTAINS
         !$acc end data
       END IF
 
-      IF (tile%Is_process_active(HYDRO_) .AND. tile%Contains_soil) THEN
+      IF (tile%Is_process_calculated(HYDRO_) .AND. tile%Contains_soil) THEN
         CALL init_hydro_soil_properties(tile)
       END IF
 
-
+      ! SSE_ needs to run on the same tiles than HYDRO_, or below!
       IF (tile%Is_process_calculated(SSE_)) THEN
-        ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
         CALL init_sse_soil_properties(tile)
       END IF
 
