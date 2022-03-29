@@ -46,11 +46,7 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
   USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
 #ifdef __ICON__
-#ifdef __NO_RTE_RRTMGP__
-    USE mo_psrad_orbit,       ONLY: inquire_declination
-#else
     USE mo_radiation_orbit,   ONLY: inquire_declination
-#endif
 #else
   USE mo_orbit,                ONLY: inquire_declination
 #endif

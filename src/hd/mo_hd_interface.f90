@@ -261,9 +261,11 @@ CONTAINS
       & outflow_drainage,      &
       & outflow_rivers,        &
       !& outflow_resid,         &
+      !& outflow_count,         &
       & discharge,             &
       & discharge_ocean,       &
-      & internal_drain
+      & internal_drain,        &
+      & nsplit
 
     dsl4jsb_Real3D_onDomain :: &
       & nidx_upstream,         &
@@ -293,7 +295,7 @@ CONTAINS
     REAL(wp), ALLOCATABLE  :: &
       & in_domain       (:,:) ! 1: cell in domain, 0: halo cell
 
-    LOGICAL  :: debug_hd
+    LOGICAL  :: debug_hd,use_bifurcated_rivers
 
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
@@ -324,10 +326,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     !dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
+    !dsl4jsb_Get_var2D_onDomain(HD_, outflow_count)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, bidx_upstream)    ! IN
 
     dsl4jsb_Get_var2D_onDomain(HD_, coast_ocean) ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, nsplit) ! IN
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! OUT
@@ -336,8 +340,9 @@ CONTAINS
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 
     ! Configuration parameters from the namelist
-    routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
-    debug_hd       = dsl4jsb_Config(HD_)%debug_hd
+    routing_scheme        = dsl4jsb_Config(HD_)%routing_scheme
+    debug_hd              = dsl4jsb_Config(HD_)%debug_hd
+    use_bifurcated_rivers = dsl4jsb_Config(HD_)%use_bifurcated_rivers
 
 
     ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
@@ -359,6 +364,12 @@ CONTAINS
       discharge(:,:) = 0._wp
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
+      ! Enable the next five lines for debugging ... but this only works on one (!) processor, i.e. no halos
+      !IF(use_bifurcated_rivers) THEN
+      !  outflow_count(:,:) = nsplit(:,:)
+      !ELSE
+      !  outflow_count(:,:) = 1._wp
+      !END IF 
 
       global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:))*in_domain(:,:))
 
@@ -374,28 +385,29 @@ CONTAINS
             jc_us  =  nidx_upstream(jc,n,blk)
             blk_us =  bidx_upstream(jc,n,blk)
             IF (jc_us > 0 .and. blk_us > 0) THEN
-              discharge(jc,blk) =  discharge(jc,blk)               &
-                                 + outflow_runoff(jc_us,blk_us)    &
-                                 + outflow_drainage(jc_us,blk_us)  &
-                                 + outflow_rivers(jc_us,blk_us)
-              ! Enable the next three lines for debugging ... but this only works on one (!) processor, i.e. no halos
-              ! outflow_runoff  (jc_us,blk_us) = 0._wp
-              ! outflow_drainage(jc_us,blk_us) = 0._wp
-              ! outflow_rivers  (jc_us,blk_us) = 0._wp
+              IF (use_bifurcated_rivers) THEN
+                discharge(jc,blk) =  discharge(jc,blk)                      &
+                                   + ( ( outflow_runoff(jc_us,blk_us)       &
+                                       + outflow_drainage(jc_us,blk_us)     &
+                                       + outflow_rivers(jc_us,blk_us)   )   &
+                                     / nsplit(jc_us,blk_us)               ) 
+              ELSE
+                discharge(jc,blk) =  discharge(jc,blk)               &
+                                   + outflow_runoff(jc_us,blk_us)    &
+                                   + outflow_drainage(jc_us,blk_us)  &
+                                   + outflow_rivers(jc_us,blk_us)
+              END IF
+              ! Enable the next six lines for debugging ... but this only works on one (!) processor, i.e. no halos
+              !outflow_count(jc_us,blk_us) = outflow_count(jc_us,blk_us) - 1._wp
+              !IF (outflow_count(jc_us,blk_us) == 0) THEN
+              !  outflow_runoff  (jc_us,blk_us) = 0._wp
+              !  outflow_drainage(jc_us,blk_us) = 0._wp
+              !  outflow_rivers  (jc_us,blk_us) = 0._wp
+              !END IF
             END IF
           END DO
         END DO
       END DO
-
-      ! Enable this block for debugging ... but this only works on one (!) processor, i.e. no halos
-      ! outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
-      ! DO blk = blks, blke
-      !   jcs = get_col_start(blk, grid%patch)
-      !   jce = get_col_end(blk, grid%patch)
-      !   DO jc = jcs, jce
-      !     IF (outflow_resid(jc,blk) /= 0._wp) print*,'AAA ', jc,blk, outflow_resid(jc,blk)
-      !   END DO
-      ! END DO
 
       WHERE (hd_mask(:,:) == 0._wp)
         ! ocean inflow cells
@@ -410,6 +422,18 @@ CONTAINS
         outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
       END WHERE
+
+      ! Enable this block for debugging ... but this only works on one (!) processor, i.e. no halos
+      !outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
+      !DO blk = blks, blke
+      !  jcs = grid%get_col_start(blk)
+      !  jce = grid%get_col_end(blk)
+      !  DO jc = jcs, jce
+      !    IF (outflow_resid(jc,blk) /= 0._wp) print*,'AAA ', jc,blk, outflow_resid(jc,blk)
+      !    IF (outflow_count(jc,blk) /= 0._wp .AND. &
+      !             hd_mask(jc,blk) == 1._wp ) print*,'BBB ', jc,blk, outflow_count(jc,blk)
+      !  END DO
+      !END DO
 
       ! global integrals
       ! Switch the next two lines for debugging ... but this only works on one (!) processor, i.e. no halos
@@ -518,6 +542,7 @@ CONTAINS
       & runoff          , &
       & drainage        , &
       !& outflow_resid   , &
+      !& outflow_count   , &
       & discharge       , &
       & discharge_ocean , &
       & water_budget    , &
@@ -587,6 +612,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, runoff)          ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, drainage)        ! IN
     !dsl4jsb_Get_var2D_onDomain(HD_   , outflow_resid)   ! IN
+    !dsl4jsb_Get_var2D_onDomain(HD_   , outflow_count)   ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
 

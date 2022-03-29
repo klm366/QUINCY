@@ -419,16 +419,16 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, w_ice_sl )
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
 
     nproma = SIZE(vol_heat_cap,1)
     nblks  = SIZE(vol_heat_cap,2)
 
     IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
 
-      dsl4jsb_Get_var3D_onDomain(SSE_, t_soil_sl)
-
+      dsl4jsb_Get_var3D_onDomain(SSE_,   t_soil_sl)
+      dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
+      dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
+  
       ALLOCATE( &
         & liquid_max (nproma, nsoil, nblks), &
         & ws_max_sl  (nproma, nsoil, nblks), &
@@ -458,10 +458,9 @@ CONTAINS
       DO j = 1, nsoil
         heat_cap_sl(:,j,:) = soil_e%dz(j) * vol_heat_cap(:,:)
       END DO
-      !#claw acc update device(heat_cap_sl)
+      !$claw acc update device(heat_cap_sl)
 
       !$claw acc data present(heat_cap_sl,t_soil_sl,w_soil_sl,liquid_max,w_ice_sl)
-      !$claw acc update device(soil_depth_sl,w_soil_sl,w_ice_sl)
       !$claw acc parallel loop gang vector collapse(3)
       DO i = 1, nproma
         DO j = 1, nsoil
@@ -478,7 +477,8 @@ CONTAINS
 
       !$claw expand parallel update
       w_soil_sl(:,:,:) = w_soil_sl(:,:,:) - w_ice_sl(:,:,:)
-      !$claw acc update host(w_soil_sl)
+
+      !$claw acc update host(w_soil_sl,w_ice_sl)
 
       ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + w_ice_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
       ! IF (TRIM(tile%name) == 'land') THEN
@@ -493,12 +493,12 @@ CONTAINS
       !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
       ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
+      DO b=1,nblks
           CALL get_water_in_root_zone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,b),  &
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,b),  &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,b),  &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  b)   )
       END DO
       !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))

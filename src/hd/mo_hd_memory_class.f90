@@ -47,6 +47,7 @@ MODULE mo_hd_memory_class
       nres_overlflow  , &  !< number of overland flow reservoirs
       nres_baseflow   , &  !< number of baseflow reservoirs
       nres_riverflow  , &  !< number of riverflow reservoirs
+      nsplit          , &  !< number of channels river splits into 
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
@@ -54,7 +55,8 @@ MODULE mo_hd_memory_class
       water_budget_old, &
       water_flux      , &
       water_error     , &
-      outflow_resid        !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
+      outflow_resid   , &  !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
+      outflow_count        !< count of outflows from a given cell - only used for debugging (see mo_hd_interface.f90)
 
     TYPE(t_jsb_var_real3d) :: &
       nidx_upstream,          &  !< 1st dim. of local index of grid cell upstream (nproma)
@@ -176,6 +178,14 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+    CALL mem%Add_var( 'nsplit', mem%nsplit,   &
+      & hgrid, surface,                                                                    &
+      & t_cf('nsplit', '', 'number of channels river splits into'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
     CALL mem%Add_var( 'outflow_runoff', mem%outflow_runoff,           &
       & hgrid, surface,                                                                    &
       & t_cf('outflow_runoff', 'm3/s', 'grid cell outflow due to runoff'),                 &
@@ -202,6 +212,13 @@ CONTAINS
       & t_cf('outflow_resid', 'm3/s', 'grid cell outflow residual'),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & prefix, suffix,                                                                 &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'outflow_count', mem%outflow_count, &
+      & hgrid, surface, &
+      & t_cf('outflow_count', 'm3/s', 'count of outflows from grid cell'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix, &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'overlflow_res', mem%overlflow_res,                           &
