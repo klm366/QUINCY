@@ -711,7 +711,7 @@ CONTAINS
     USE mo_jsb4_forcing,               ONLY: forcing_options, get_interface_variables_from_external_forcing
     USE mo_radiation_orbit,            ONLY: orbit_kepler, orbit_vsop87, get_orbit_times
     USE mo_radiation_solar_parameters, ONLY: solar_parameters
-    USE mo_echam_rad_config,           ONLY: echam_rad_config
+    USE mo_aes_rad_config,             ONLY: aes_rad_config
     USE mo_jsb_physical_constants,     ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,               ONLY: Get_omp_thread
 
@@ -820,10 +820,10 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_memory(HYDRO_)
 
-      l_orbvsop87   => echam_rad_config(1)% l_orbvsop87 ! Default: .TRUE.
-      cecc          => echam_rad_config(1)% cecc
-      cobld         => echam_rad_config(1)% cobld
-      clonp         => echam_rad_config(1)% clonp
+      l_orbvsop87   => aes_rad_config(1)% l_orbvsop87 ! Default: .TRUE.
+      cecc          => aes_rad_config(1)% cecc
+      cobld         => aes_rad_config(1)% cobld
+      clonp         => aes_rad_config(1)% clonp
 
       CALL get_orbit_times(l_orbvsop87, datetime_old, lyr_perp, yr_perp, & ! in
         &                  time_of_day, orbit_date)                        ! out.
@@ -841,9 +841,9 @@ CONTAINS
       coslat => grid%coslat
       sinlat => grid%sinlat
 
-      icosmu0        => echam_rad_config(1)% icosmu0        ! defines if and how cosmu0 is defined for extended sunlit areas
-      ldiur          => echam_rad_config(1)% ldiur          ! .TRUE.
-      l_sph_symm_irr => echam_rad_config(1)% l_sph_symm_irr ! .FALSE.
+      icosmu0        => aes_rad_config(1)% icosmu0        ! defines if and how cosmu0 is defined for extended sunlit areas
+      ldiur          => aes_rad_config(1)% ldiur          ! .TRUE.
+      l_sph_symm_irr => aes_rad_config(1)% l_sph_symm_irr ! .FALSE.
       dt_ext         =  0.0_wp                              ! time interval over which the insolated area is extended, for us =0
 
       ALLOCATE(daylight_frc(nproma,nblks))
