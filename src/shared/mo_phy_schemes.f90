@@ -95,7 +95,8 @@ CONTAINS
 
       !$claw sca routine
 
-      surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
+      ! surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
+      surface_dry_static_energy = t_srf * cpd
 
   END FUNCTION surface_dry_static_energy
 
