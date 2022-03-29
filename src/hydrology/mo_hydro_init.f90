@@ -802,8 +802,8 @@ CONTAINS
     !$acc matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl, &
     !$acc vol_p_wilt_sl)
 
-    IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
-    ! IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+    ! IF (model%config%init_from_ifs .AND. dsl4jsb_Config(SSE_)%l_freeze) THEN
+    IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
 
       dsl4jsb_Get_memory(SSE_)
 
