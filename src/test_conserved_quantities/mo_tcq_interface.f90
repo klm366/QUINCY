@@ -144,8 +144,8 @@ CONTAINS
     
     model => Get_model(tile%owner_model_id)
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(TCQ_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(TCQ_)) RETURN
 
     dsl4jsb_Get_memory(TCQ_)
     dsl4jsb_Get_memory(PHENO_)
@@ -266,7 +266,7 @@ CONTAINS
 
     IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
 
-    ! for tcq the transfer is simple - just put from a_veg to a_dead...
+    ! for tcq the transfer is simple - just put everything from a_veg to a_dead...
     CALL transfer_from_active_to_passive_var_onChunk(                            &
       & lcc_relocations, i_tile, options, tcq_potential_active_vars(1), tcq_required_passive_vars(1))
 

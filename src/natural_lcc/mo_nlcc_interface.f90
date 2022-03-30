@@ -199,8 +199,8 @@ CONTAINS
     dtime   = options%dtime
     !X if necessary: steplen = options%steplen
 
-    ! If process is not active on this tile, do nothing
-    !IF (.NOT. tile%Is_process_active(NLCC_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    !IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -285,7 +285,11 @@ CONTAINS
 !!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
 
-    lstart = is_time_experiment_start(options%current_datetime)
+    IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+      lstart = .TRUE.
+    ELSE
+      lstart = .FALSE.
+    END IF
     new_year = is_newyear(options%current_datetime, options%dtime)
     new_month = is_newmonth(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)

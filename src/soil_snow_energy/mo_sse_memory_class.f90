@@ -363,7 +363,7 @@ CONTAINS
 
     CALL mem%Add_var( 'grnd_hflx', mem%grnd_hflx,                            &
       & hgrid, surface,                                                      &
-      & t_cf('grnd_hflx', '', 'Ground heat flux'),                           &
+      & t_cf('grnd_hflx', 'J m-2 s-1', 'Ground heat flux'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -371,7 +371,7 @@ CONTAINS
 
     CALL mem%Add_var( 'grnd_hflx_old', mem%grnd_hflx_old,                    &
       & hgrid, surface,                                                      &
-      & t_cf('grnd_hflx_old', '', 'Ground heat flux (old)'),                 &
+      & t_cf('grnd_hflx_old', 'J m-2 s-1', 'Ground heat flux (old)'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &

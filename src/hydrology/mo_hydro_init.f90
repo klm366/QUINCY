@@ -15,17 +15,19 @@
 MODULE mo_hydro_init
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message
-  USE mo_jsb_control,       ONLY: debug_on
+  USE mo_kind,               ONLY: wp
+  USE mo_exception,          ONLY: message
+  USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
-  USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-  USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
-  USE mo_jsb_class,         ONLY: get_model
-  USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_io,            ONLY: missval
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_class,          ONLY: get_model
+  USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+  USE mo_jsb_io,             ONLY: missval
+  USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
+  USE mo_util,               ONLY: int2string
 
   dsl4jsb_Use_processes HYDRO_, PHENO_, SSE_
   dsl4jsb_Use_config(HYDRO_)
@@ -40,21 +42,23 @@ MODULE mo_hydro_init
   PUBLIC :: hydro_init
 
   TYPE t_hydro_init_vars
-    REAL(wp), POINTER ::  &
-      & elevation(:,:),       &
-      & oro_stddev(:,:),      &
-      & soil_depth(:,:),      &
-      & max_moist(:,:),       &
-      & vol_porosity(:,:),    &
-      & hyd_cond_sat(:,:),    &
-      & matrix_pot(:,:),      &
-      & bclapp(:,:),          &
-      & pore_size_index(:,:), &
-      & vol_field_cap(:,:),   &
-      & vol_p_wilt(:,:),      &
-      & root_depth(:,:),      &
-      & w_snow_soil(:,:),     &
-      & w_soil_sl(:,:,:)
+    REAL(wp), POINTER ::                &
+      & elevation      (:,:) => NULL(), &
+      & oro_stddev     (:,:) => NULL(), &
+      & soil_depth     (:,:) => NULL(), &
+      & max_moist      (:,:) => NULL(), &
+      & vol_porosity   (:,:) => NULL(), &
+      & hyd_cond_sat   (:,:) => NULL(), &
+      & matrix_pot     (:,:) => NULL(), &
+      & bclapp         (:,:) => NULL(), &
+      & pore_size_index(:,:) => NULL(), &
+      & vol_field_cap  (:,:) => NULL(), &
+      & vol_p_wilt     (:,:) => NULL(), &
+      & root_depth     (:,:) => NULL(), &
+      & w_snow_soil    (:,:) => NULL(), &
+      & w_soil_sl    (:,:,:) => NULL(), &
+      & ifs_smi_sl   (:,:,:) => NULL(), &
+      & ifs_w_snow     (:,:) => NULL()
   END TYPE t_hydro_init_vars
 
   TYPE(t_hydro_init_vars) :: hydro_init_vars
@@ -105,9 +109,11 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   ,       &
       & hydro_init_vars%vol_p_wilt      ,       &
       & hydro_init_vars%root_depth      ,       &
-      & hydro_init_vars%w_snow_soil     ,       &
-      & hydro_init_vars%w_soil_sl               &
-      & )
+      & hydro_init_vars%w_snow_soil)
+
+    IF (ASSOCIATED(hydro_init_vars%w_soil_sl)) DEALLOCATE(hydro_init_vars%w_soil_sl)
+    IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl)) DEALLOCATE(hydro_init_vars%ifs_smi_sl)
+    IF (ASSOCIATED(hydro_init_vars%ifs_w_snow)) DEALLOCATE(hydro_init_vars%ifs_w_snow)
 
   END SUBROUTINE hydro_finalize_init_vars
 
@@ -129,7 +135,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Reading/setting hydrology init vars')
 
@@ -154,8 +160,7 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   (nproma, nblks),       &
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
-      & hydro_init_vars%w_snow_soil     (nproma, nblks),       &
-      & hydro_init_vars%w_soil_sl       (nproma, nsoil, nblks) &
+      & hydro_init_vars%w_snow_soil     (nproma, nblks)        &
       & )
 
       hydro_init_vars%elevation      (:,:)   = missval
@@ -171,9 +176,18 @@ CONTAINS
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
       hydro_init_vars%w_snow_soil    (:,:)   = missval
-      hydro_init_vars%w_soil_sl      (:,:,:) = missval
 
-    ! Get hydrology config
+    IF (model%config%init_from_ifs) THEN
+      ALLOCATE(hydro_init_vars%ifs_smi_sl(nproma,ifs_nsoil,nblks))
+      hydro_init_vars%ifs_smi_sl(:,:,:) = missval
+      ALLOCATE(hydro_init_vars%ifs_w_snow(nproma,nblks))
+      hydro_init_vars%ifs_w_snow(:,:) = missval
+    ELSE
+      ALLOCATE(hydro_init_vars%w_soil_sl(nproma, nsoil, nblks))
+      hydro_init_vars%w_soil_sl(:,:,:) = missval
+    END IF
+
+      ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
 
     !----------
@@ -278,27 +292,42 @@ CONTAINS
 
       ! Initialize hydrology variables from ic file
 
-      input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO_)%ic_filename, model%grid_id)
+      IF (model%config%init_from_ifs) THEN
 
-      ! Initial snow depth
-      IF (input_file%Has_var('snow')) THEN
-        ptr_2D => input_file%Read_2d( &
-          & variable_name='snow',     &
-          & fill_array = hydro_init_vars%w_snow_soil)
-        hydro_init_vars%w_snow_soil = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        DO isoil=1,ifs_nsoil
+          ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
+            & variable_name='SMIL'//int2string(isoil))
+          hydro_init_vars%ifs_smi_sl(:,isoil,:) = ptr_2D(:,:)
+        END DO
+        ptr_3D => model%config%ifs_input_file%Read_2d_time( &
+          & variable_name='W_SNOW', start_time_step=1, end_time_step=1)
+        hydro_init_vars%ifs_w_snow(:,:) = ptr_3D(:,:,1)
+
       ELSE
-        hydro_init_vars%w_snow_soil = 0._wp
-        CALL message(TRIM(routine), 'Initializing snow to zero')
+
+        input_file = jsb_netcdf_open_input(dsl4jsb_Config(HYDRO_)%ic_filename, model%grid_id)
+
+        ! Initial snow depth
+        IF (input_file%Has_var('snow')) THEN
+          ptr_2D => input_file%Read_2d( &
+            & variable_name='snow',     &
+            & fill_array = hydro_init_vars%w_snow_soil)
+          hydro_init_vars%w_snow_soil = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        ELSE
+          hydro_init_vars%w_snow_soil = 0._wp
+          CALL message(TRIM(routine), 'Initializing snow to zero')
+        END IF
+
+        DO isoil=1,nsoil
+          ptr_3D => input_file%Read_2d_extdim( &
+            & variable_name='layer_moist',     &
+            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
+          hydro_init_vars%w_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+        END DO
+
+        CALL input_file%Close()
+
       END IF
-
-      DO isoil=1,nsoil
-        ptr_3D => input_file%Read_2d_extdim( &
-          & variable_name='layer_moist',     &
-          & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-        hydro_init_vars%w_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
-      END DO
-
-      CALL input_file%Close()
 
     END IF
 
@@ -329,7 +358,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_lbound_sl
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Setting  hydrology boundary conditions for tile '//TRIM(tile%name))
 
@@ -483,9 +512,12 @@ CONTAINS
 
   SUBROUTINE hydro_init_ic(tile)
 
+    !-----------------------------------------------------------------------
+    !  DECLARATIONS
     USE mo_hydro_constants,     ONLY: vol_porosity_org, vol_field_cap_org, vol_p_wilt_org
     USE mo_hydro_util,          ONLY: get_water_in_root_zone
     USE mo_jsb_math_constants,  ONLY: eps8
+    USE mo_util,                ONLY: ifs2soil
 
     !-----------------------------------------------------------------------
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -516,7 +548,8 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: w_soil_fc_sl
     dsl4jsb_Real3D_onDomain    :: w_soil_pot_sl
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
+
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
 
     model => Get_model(tile%owner_model_id)
@@ -556,16 +589,42 @@ CONTAINS
 
     IF (tile%contains_soil) THEN
 
-      ! Initialize hydrology variables from ic file
+      IF (model%config%init_from_ifs) THEN
 
-      ! Initial snow depth
-      dsl4jsb_var_ptr(HYDRO_, w_snow_soil) = hydro_init_vars%w_snow_soil
-      dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)
+        CALL ifs2soil(hydro_init_vars%ifs_smi_sl(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:), soil_w%ubounds(:))
+
+        ! Convert soil moisture index (SMI) in IFS file to water content
+        WHERE (dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) < -999._wp)
+          ! Fill missing values
+          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
+            &  0.5_wp * (dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) + dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:))
+        ELSE WHERE
+          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
+            & MIN(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl)(:,:,:), &
+            &     MAX(0._wp, &
+            &         dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) &
+            &         * (dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:) - dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:)) &
+            &         + dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) &
+            &        ) &
+            &    )
+        END WHERE
+        dsl4jsb_var_ptr(HYDRO_, w_snow_soil)(:,:) = hydro_init_vars%ifs_w_snow(:,:)
+        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)
+
+      ELSE
+
+        ! Initialize hydrology variables from ic file
+
+        ! Initial snow depth
+        dsl4jsb_var_ptr(HYDRO_, w_snow_soil) = hydro_init_vars%w_snow_soil
+        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)
+
+        dsl4jsb_var_ptr(HYDRO_,w_soil_sl) (:,:,:) = hydro_init_vars%w_soil_sl(:,:,:)
+
+      END IF
 
       ! Initial w_soil_overflown water
       dsl4jsb_var2D_onDomain(HYDRO_,w_soil_overflow) = 0._wp
-
-      dsl4jsb_var_ptr(HYDRO_,w_soil_sl) (:,:,:) = hydro_init_vars%w_soil_sl(:,:,:)
 
       !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow),       &
       !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil),  &
@@ -754,7 +813,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
-    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (tile%is_lake) RETURN
 

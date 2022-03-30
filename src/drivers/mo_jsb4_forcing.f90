@@ -42,10 +42,10 @@ MODULE mo_jsb4_forcing
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string
-  USE mo_physical_constants,     ONLY: p0sl_bg, rdv
+  USE mo_physical_constants,     ONLY: tmelt, p0sl_bg, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
   USE mo_jsb_physical_constants, ONLY: cvdifts, grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
     & tmelt, rd, amco2, amd, cpd, vtmpc1, cpvd1, ckap, zkappa
-  USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
+  USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
 #ifdef __ICON__
 #ifdef __NO_RTE_RRTMGP__
     USE mo_psrad_orbit,       ONLY: inquire_declination

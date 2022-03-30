@@ -85,8 +85,9 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    ! ---------------------------
+    ! 0.4 Process Activity, Debug Option
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)

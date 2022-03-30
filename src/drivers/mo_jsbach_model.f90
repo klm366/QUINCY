@@ -135,8 +135,7 @@ CONTAINS
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
     USE mo_dynamics_config,         ONLY: iequations
-    USE mo_echam_phy_config,        ONLY: eval_echam_phy_config, eval_echam_phy_tc, print_echam_phy_config
-    USE mo_echam_convect_tables,    ONLY: init_convect_tables
+    USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
 
@@ -351,16 +350,6 @@ CONTAINS
 
     CALL init_convect_tables ! necessary for FUNCTION qsat
 
-  ! ECHAM physics time control
-  ! --------------------------
-  ! Evaluate the ECHAM physics configuration variables echam_phy_config(:)
-  ! and the derived time control variables echam_phy_tc(:) on all grids
-  ! and for all controled processes.
-  !  
-    CALL eval_echam_phy_config
-    CALL eval_echam_phy_tc
-    CALL print_echam_phy_config
-  
     CALL jsbach_setup_grid( 1, p_patch(1), type='icon') !< in
     CALL jsbach_setup_tiles(1)
     CALL jsbach_init(1)

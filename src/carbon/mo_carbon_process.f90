@@ -21,7 +21,7 @@ MODULE mo_carbon_process
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
                                & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
-                               & i_lctlib_nonsoluble, i_lctlib_humus
+                               & i_lctlib_nonsoluble, i_lctlib_humus, molarMassCO2_kg
 
   IMPLICIT NONE
   PRIVATE
@@ -63,7 +63,7 @@ CONTAINS
     & excess_NPP,                 & ! out
     & root_exudates,              & ! out
     & cflux_c_greenwood_2_litter, & ! out
-    & Cflx_herbivory,             & ! out
+    & cflux_herbivory,            & ! out
     & cflux_herb_2_littergreen,   & ! out
     & cflux_herb_2_atm,           & ! out
     & NPP_act,                    & ! out
@@ -152,7 +152,7 @@ CONTAINS
     REAL(wp), INTENT(out)   :: root_exudates          ! Value of NPP_2_rootExudates had to be dropped into the litter_green_bg pool.
                                                      !    [mol(C)/m^2 s]
     REAL(wp), INTENT(out)   :: cflux_c_greenwood_2_litter       ! Total carbon flux from vegetation to litter (green+woody, ag+bg)
-    REAL(wp), INTENT(out)   :: Cflx_herbivory
+    REAL(wp), INTENT(out)   :: cflux_herbivory
     REAL(wp), INTENT(out)   :: cflux_herb_2_littergreen
     REAL(wp), INTENT(out)   :: cflux_herb_2_atm
     REAL(wp), INTENT(out)   :: NPP_act               ! Actual NPP after N-limitation and excess carbon drop [mol(C)/m^2 s]
@@ -312,7 +312,7 @@ CONTAINS
     excess_NPP                 = 0.0_wp
     root_exudates              = 0.0_wp
     cflux_c_greenwood_2_litter = 0.0_wp
-    Cflx_herbivory             = 0.0_wp
+    cflux_herbivory            = 0.0_wp
     cflux_herb_2_littergreen   = 0.0_wp
     cflux_herb_2_atm           = 0.0_wp
     Cflx_2_crop_harvest        = 0.0_wp
@@ -635,7 +635,7 @@ CONTAINS
 
     !! ============== Litter and herbivory diagnostics (flux from day-1 to s-1)
     cflux_c_greenwood_2_litter = cflux_c_greenwood_2_litter /sec_per_day
-    Cflx_herbivory    = Green_2_herbivory / sec_per_day
+    cflux_herbivory    = Green_2_herbivory / sec_per_day
     cflux_herb_2_littergreen = Cflx_faeces_2_LG / sec_per_day   ! DSG: goes into yasso
 
 
@@ -676,10 +676,8 @@ CONTAINS
     & c_green,                           & ! inout
     & c_woods,                           & ! inout
     & c_reserve,                         & ! inout
-    & cflux_dist_greenreserve_2_soil,    & ! inout, because relocate_carbon_fire is
-                                           ! called AFTER relocate_carbon_damage!
-    & cflux_dist_woods_2_soil,           & ! inout, because relocate_carbon_fire is
-                                           ! called AFTER relocate_carbon_damage!
+    & cflux_dist_green_2_soil,           & ! inout
+    & cflux_dist_woods_2_soil,           & ! inout
     & c_acid_ag1,                        & ! inout
     & c_water_ag1,                       & ! inout
     & c_ethanol_ag1,                     & ! inout
@@ -698,7 +696,7 @@ CONTAINS
     & c_nonsoluble_bg2,                  & ! inout
     & c_humus_1,                         & ! inout
     & c_humus_2,                         & ! inout
-    & cflux_fire_all_2_atm               & ! out
+    & co2flux_fire_all_2_atm             & ! out
     & )
 
     ! Arguments
@@ -711,11 +709,11 @@ CONTAINS
     REAL(wp), INTENT(inout) :: c_green(:)                   ! Value of green carbon pool [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_woods(:)                   ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     REAL(wp), INTENT(inout) :: c_reserve(:)                 ! Value of reserve carbon pool [mol(C)/m^2(canopy)]
-    REAL(wp), INTENT(out)   :: cflux_fire_all_2_atm(:)      ! Carbon immedieatly released by fire per tile [mol(C)m-2(canopy)]
-    REAL(wp), INTENT(inout) :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind and fire damage
-                                                                 ! .. to the green litter pools [mol(C)/m^2(canopy)]
+    REAL(wp), INTENT(out)   :: co2flux_fire_all_2_atm(:)    ! CO2 immediately released by fire per tile [kg(CO2)m-2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: cflux_dist_green_2_soil(:)   ! Amount of carbon relocated by wind and fire damage
+                                                            ! .. to the green litter pools [mol(C)/m^2(canopy)s-1]
     REAL(wp), INTENT(inout) :: cflux_dist_woods_2_soil(:)   ! Amount of carbon relocated by wind damage and fire
-                                                            ! .. to the wood litter pools [mol(C)/m^2(canopy)]
+                                                            ! .. to the wood litter pools [mol(C)/m^2(canopy)s-1]
     !   YASSO
     ! SIZE CLASS 1 ; GREEN
     !   above ground C pools
@@ -751,13 +749,13 @@ CONTAINS
 
     !! diagnose amount of carbon released from the green and reserve pool to the green litter pools
     !! diagnose amount of carbon released from the wood pool to the woody litter pools
-    cflux_dist_greenreserve_2_soil(:) = cflux_dist_greenreserve_2_soil(:) + &
-      & (c_green(:) + c_reserve(:)) * (1._wp - fract_green_aboveGround) * burned_fract(:)
+    cflux_dist_green_2_soil(:) = cflux_dist_green_2_soil(:) + &
+      & (c_green(:) + c_reserve(:)) * (1._wp - fract_green_aboveGround) * burned_fract(:) / sec_per_day
     cflux_dist_woods_2_soil(:)  = cflux_dist_woods_2_soil(:) + &
-      & c_woods(:) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(:)
+      & c_woods(:) * (1._wp - fire_fract_wood_2_atmos * fract_wood_aboveGround) * burned_fract(:) / sec_per_day
 
     !! determine amount of carbon released from the wood pool, living tissue pools, and litter pools to the atmosphere
-    cflux_fire_all_2_atm(:) = ( &
+    co2flux_fire_all_2_atm(:) = ( &
         ! take living parts of plants above ground:
       & non_woody_litter(:) * fract_green_aboveGround                      &
         ! now add the YASSO pools above ground:
@@ -767,7 +765,7 @@ CONTAINS
       & + c_nonsoluble_ag2(:)                                              &
         ! now add the fire affected fraction of wood pools above ground:
       & + c_woods(:) * fire_fract_wood_2_atmos * fract_wood_aboveGround    &
-      & ) * burned_fract(:)
+      & ) * burned_fract(:) * molarMassCO2_kg / sec_per_day
 
     ! Lower down density of aboveground litter pools
     fraction(:) = 1._wp - burned_fract(:)
@@ -823,7 +821,7 @@ CONTAINS
     & c_green,                        & ! inout
     & c_woods,                        & ! inout
     & c_reserve,                      & ! inout
-    & cflux_dist_greenreserve_2_soil, & ! inout
+    & cflux_dist_green_2_soil,        & ! inout
     & cflux_dist_woods_2_soil,        & ! inout
     & c_acid_ag1,                     & ! inout
     & c_water_ag1,                    & ! inout
@@ -846,18 +844,18 @@ CONTAINS
     & )
 
     ! Arguments
-    real(wp),intent(in)    :: damaged_fract(:)         ! Fraction of the vegetated area of each tile damaged till the last
+    real(wp),intent(in)    :: damaged_fract(:)         ! Fraction of the vegetated area of each tile damaged since the last
                                                        ! call of this routine
     real(wp),intent(in)    :: LeafLit_coef(:)          ! Factor to spread non woody litter into yasso pools [ ]
     real(wp),intent(in)    :: WoodLit_coef(:)          ! Factor to spread woody litterfall into yasso pools [ ]
     real(wp),intent(inout) :: c_green(:)               ! Value of green carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_woods(:)               ! Value of wood carbon pool [mol(C)/m^2(canopy)]
     real(wp),intent(inout) :: c_reserve(:)             ! Value of reserve carbon pool [mol(C)/m^(canopy)2]
-    real(wp),intent(inout)   :: cflux_dist_greenreserve_2_soil(:) ! Amount of carbon relocated by wind damage
+    real(wp),intent(inout) :: cflux_dist_green_2_soil(:)          ! Amount of carbon relocated by wind damage
                                                                   ! (and later also by fire)
-    real(wp),intent(inout)   :: cflux_dist_woods_2_soil(:)        ! Amount of carbon relocated by wind damage
+    real(wp),intent(inout) :: cflux_dist_woods_2_soil(:)          ! Amount of carbon relocated by wind damage
                                                                   ! (and later also by fire)
-                                                                  ! .. to the green litter pools [mol(C)/m^2(canopy)]
+                                                                  ! .. to the green litter pools [mol(C)/m^2(canopy)s-1]
 
     !   YASSO
     ! Size class 1: green
@@ -895,8 +893,8 @@ CONTAINS
 
     !! transfer carbon from the wood pool to the wood litter pools nd
     !! transfer carbon from the green and reserve pool to the green litter pool
-    cflux_dist_woods_2_soil(:) = cflux_dist_woods_2_soil(:) + c_woods(:) * damaged_fract(:)
-    cflux_dist_greenreserve_2_soil(:) = cflux_dist_greenreserve_2_soil(:) + non_woody_litter(:) * damaged_fract(:)
+    cflux_dist_woods_2_soil(:) = cflux_dist_woods_2_soil(:) + c_woods(:) * damaged_fract(:) / sec_per_day
+    cflux_dist_green_2_soil(:) = cflux_dist_green_2_soil(:) + non_woody_litter(:) * damaged_fract(:) / sec_per_day
 
     ! Add damaged green and reserve
     ! AG

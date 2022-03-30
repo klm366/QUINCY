@@ -19,6 +19,7 @@ MODULE mo_jsb_config_class
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
   USE mo_exception,          ONLY: message
+  USE mo_jsb_io_netcdf,      ONLY: t_input_file
 
   IMPLICIT NONE
   PRIVATE
@@ -48,6 +49,9 @@ MODULE mo_jsb_config_class
     LOGICAL           :: l_do_stand_replacing_harvest
     LOGICAL           :: l_transient_spinup
     ! quincy - end
+    LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
+    CHARACTER(len=:), ALLOCATABLE  :: ifs_filename
+    TYPE(t_input_file)             :: ifs_input_file
 
   END TYPE t_jsb_model_config
 
@@ -57,7 +61,6 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max) :: ic_filename
     CHARACTER(len=filename_max) :: bc_filename
     CHARACTER(LEN=filename_max) :: namelist_filename
-    CHARACTER(len=SHORT_NAME_LEN), ALLOCATABLE :: output_tiles(:)  ! List of tile names for which output should be generated
   CONTAINS
     PROCEDURE (Init_config), DEFERRED, PASS(config) :: Init
   END TYPE t_jsb_config
@@ -103,6 +106,8 @@ CONTAINS
     CHARACTER(len=SHORT_NAME_LEN) :: hsm_mode
     CHARACTER(len=SHORT_NAME_LEN) :: output_tiles(99)
     LOGICAL                       :: relative_fractions_in_file
+    LOGICAL                       :: init_from_ifs
+    CHARACTER(len=filename_max)   :: ifs_filename
 
     NAMELIST /jsb_model_nml/  &
       use_lakes, &
@@ -116,7 +121,9 @@ CONTAINS
       hsm_mode, &
       fract_filename, &
       output_tiles, &
-      relative_fractions_in_file
+      relative_fractions_in_file, &
+      init_from_ifs, &
+      ifs_filename
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
@@ -141,6 +148,8 @@ CONTAINS
     fract_filename             = 'bc_land_frac.nc'
     output_tiles(:)            = ''
     relative_fractions_in_file = .TRUE.
+    init_from_ifs              = .FALSE.
+    ifs_filename               = 'ifs2icon.nc'
 
     ! Read namelist
     nml_handler = open_nml(TRIM(namelist_filename))
@@ -174,6 +183,8 @@ CONTAINS
     model_config%l_do_stand_replacing_harvest = .FALSE.
     model_config%l_transient_spinup           = .FALSE.
     ! quincy - end
+    model_config%init_from_ifs              = init_from_ifs
+    model_config%ifs_filename               = TRIM(ifs_filename)
 
     DO i=1,99
       IF (output_tiles(i) == '') EXIT

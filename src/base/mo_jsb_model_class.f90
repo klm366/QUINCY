@@ -81,6 +81,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Reset_tiles
     PROCEDURE :: Get_tile
     PROCEDURE :: Get_process
+    PROCEDURE :: Is_process_active
     PROCEDURE :: Queue_task
 !!$    PROCEDURE :: Get_process_configs
 !!$    PROCEDURE :: Process_task
@@ -170,6 +171,24 @@ CONTAINS
 
   END FUNCTION Get_process
 
+  LOGICAL FUNCTION Is_process_active(this, iproc)
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+    INTEGER, INTENT(in) :: iproc
+
+    Is_process_active = .FALSE.
+    IF (ASSOCIATED(this%processes(iproc)%p)) THEN
+      IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+        Is_process_active = this%processes(iproc)%p%config%active
+      ELSE 
+        ! If the process is associated but the configuration is not associated 
+        ! we assume here that the process is active on the model -- currently this is the case for l2a and a2l
+        Is_process_active = .TRUE.
+      ENDIF
+    ENDIF
+
+  END FUNCTION Is_process_active
+
   SUBROUTINE Queue_task(this, iproc, name)
 
     CLASS(t_jsb_model),        INTENT(inout) :: this
@@ -203,9 +222,11 @@ CONTAINS
     l_fractions_change = .FALSE.
     DO iproc=1,SIZE(this%processes)
       IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-        IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
-          l_fractions_change = .TRUE.
-          EXIT
+        IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+          IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
+            l_fractions_change = .TRUE.
+            EXIT
+          ENDIF
         END IF
       END IF
     END DO
@@ -650,6 +671,8 @@ CONTAINS
           CYCLE
         END SELECT
 
+        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
+
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
@@ -710,6 +733,8 @@ CONTAINS
         CASE (SKIP_, INHERIT_)
           CYCLE
         END SELECT
+
+        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
 
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
