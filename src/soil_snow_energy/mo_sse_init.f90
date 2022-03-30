@@ -342,7 +342,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_soil_properties(tile)
 
-    USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min
+    USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min, tmelt, alf, rhoh2o
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, &   ! vol_hcap_snow_min,
       &                                  hcond_ice, hcond_snow, &         !, hcond_snow_min, hcond_org
       &                                  soil_heat_cap, soil_therm_cond
@@ -384,7 +384,7 @@ CONTAINS
     ! dsl4jsb_Real3D_onDomain :: heat_capa_sl
     ! dsl4jsb_Real3D_onDomain :: therm_cond_sl
     dsl4jsb_Real3D_onDomain :: volume_min_sl
-    dsl4jsb_Real3D_onDomain :: t_soil_sl
+    ! dsl4jsb_Real3D_onDomain :: t_soil_sl
 
     ! Locally allocated vectors
     ! 
