@@ -145,7 +145,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: volume_min_sl
     dsl4jsb_Real3D_onDomain    :: t_soil_sl
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(SPQ_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
     IF (tile%lcts(1)%lib_id == 0) RETURN            ! run this init only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
@@ -458,7 +458,7 @@ CONTAINS
   ! 
   !   CHARACTER(len=*), PARAMETER :: routine = modname//':spq_read_init_vars'
   ! 
-  !   IF (.NOT. tile%Is_process_active(SPQ_)) RETURN
+  !   IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
   ! 
   !   IF (debug_on()) CALL message(routine, 'Reading/setting SPQ_ init vars')
   ! 

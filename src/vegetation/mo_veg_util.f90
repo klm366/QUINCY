@@ -135,7 +135,7 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
@@ -462,7 +462,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !

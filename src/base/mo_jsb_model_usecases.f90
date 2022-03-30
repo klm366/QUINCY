@@ -303,7 +303,7 @@ CONTAINS
           !
           !         Manche Prozeduren sollen nur ausgeführt werden wenn beide Prozesse aktiv sind.
           !         In DISTURB_ z.B. die dazugehörige C-Umverteilung bei Feuer und Winbruch.
-          !         Dies habe ich mit "IF ( tile%Is_process_active(CARBON_) ) THEN" gemacht.
+          !         Dies habe ich mit "IF ( tile%Is_process_calculated(CARBON_) ) THEN" gemacht.
           !
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)

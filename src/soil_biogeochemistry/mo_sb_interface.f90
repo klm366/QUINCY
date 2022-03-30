@@ -278,7 +278,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_sb_fluxes'
 
     iblk = options%iblk
-    IF (.NOT. tile%Is_process_active(SB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
 
     CALL real_reset_sb_fluxes(tile, options)
@@ -303,7 +303,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_soilbiogeochemistry'
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(SB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SB_)) RETURN
     IF (tile%lcts(1)%lib_id == 0)          RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. options%iblk == 1) &
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')

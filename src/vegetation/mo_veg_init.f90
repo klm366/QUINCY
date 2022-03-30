@@ -192,7 +192,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain     :: fn_oth_cl
     dsl4jsb_Real3D_onDomain     :: leaf_nitrogen_cl
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(VEG_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing QUINCY VEG_ memory for tile '//TRIM(tile%name))
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)

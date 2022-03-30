@@ -1190,7 +1190,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_assimi_fluxes'
 
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     iblk = options%iblk
 
@@ -1258,7 +1258,7 @@ CONTAINS
     INTEGER :: iblk
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggr_canopy_fluxes'
 
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
 
     iblk = options%iblk
 
@@ -1348,7 +1348,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_time_average_assimilation'
     ! ----------------------------------------------------------------------------------------------------- !
-    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
     IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. options%iblk == 1) &
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')

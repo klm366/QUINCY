@@ -194,7 +194,7 @@ CONTAINS
     dsl4jsb_Def_pool(t_plant_pool) :: falloc
 
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
 
     ! iblk  = options%iblk
     ! ics   = options%ics

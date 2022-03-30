@@ -147,7 +147,7 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_active(RAD_)) RETURN   ! ask for all processes considered here ?
+    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN   ! ask for all processes considered here ?
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! only at PFT tiles (i.e. leafs of vegetation tile) because this routine is tailored towards vegetation only
     !  in the "usecase_pfts" RAD_ is defined to run at leafs, which includes also other tiles than PFT
