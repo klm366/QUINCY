@@ -510,11 +510,6 @@ CONTAINS
         CALL hydro_init(tile)
       END IF
 
-      ! ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
-      ! IF (tile%Is_process_calculated(SSE_)) THEN
-      !   CALL init_soil_properties(tile)
-      ! END IF
-
       IF (tile%Is_process_calculated(A2L_)) THEN
         CALL atm2land_init(tile)
       END IF
