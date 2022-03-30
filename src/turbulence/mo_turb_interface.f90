@@ -417,7 +417,8 @@ CONTAINS
       & fract_fpc,            &
       & fract_snow,           &
       & fract_water,          &
-      & max_moist,            &
+      & rz_max_moist,         &
+      & rz_max_moist_mineral, &
       & w_rootzone,           &
       & fact_q_air,           &
       & fact_qsat_srf,        &
@@ -495,7 +496,8 @@ CONTAINS
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  max_moist)           ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  rz_max_moist)        ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  rz_max_moist_mineral)! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  w_rootzone)          ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)           ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  i_soil_sl)           ! in
@@ -524,7 +526,12 @@ CONTAINS
       ELSE
         w_soil_wilt_fract_tmp = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
         !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_1 tile_name=tile%name
-        mask(:) = w_rootzone(:) > w_soil_wilt_fract_tmp * max_moist(:)
+
+        IF (dsl4jsb_Config(HYDRO_)%l_ws_max_depend_on_org) THEN
+          mask(:) = w_rootzone(:) > w_soil_wilt_fract_tmp * rz_max_moist(:)
+        ELSE
+          mask(:) = w_rootzone(:) > w_soil_wilt_fract_tmp * rz_max_moist_mineral(:)          
+        END IF
       END IF
 
       !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)

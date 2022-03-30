@@ -44,7 +44,7 @@ MODULE mo_hydro_init
       & elevation      (:,:) => NULL(), &
       & oro_stddev     (:,:) => NULL(), &
       & soil_depth     (:,:) => NULL(), &
-      & max_moist      (:,:) => NULL(), &
+      & rz_max_moist_mineral(:,:) => NULL(), &
       & vol_porosity   (:,:) => NULL(), &
       & hyd_cond_sat   (:,:) => NULL(), &
       & matrix_pot     (:,:) => NULL(), &
@@ -101,7 +101,7 @@ CONTAINS
       & hydro_init_vars%elevation       ,       &
       & hydro_init_vars%oro_stddev      ,       &
       & hydro_init_vars%soil_depth      ,       &
-      & hydro_init_vars%max_moist       ,       &
+      & hydro_init_vars%rz_max_moist_mineral  , &
       & hydro_init_vars%vol_porosity    ,       &
       & hydro_init_vars%hyd_cond_sat    ,       &
       & hydro_init_vars%matrix_pot      ,       &
@@ -154,7 +154,7 @@ CONTAINS
       & hydro_init_vars%elevation       (nproma, nblks),       &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
       & hydro_init_vars%soil_depth      (nproma, nblks),       &
-      & hydro_init_vars%max_moist       (nproma, nblks),       &
+      & hydro_init_vars%rz_max_moist_mineral(nproma, nblks),   &
       & hydro_init_vars%vol_porosity    (nproma, nblks),       &
       & hydro_init_vars%hyd_cond_sat    (nproma, nblks),       &
       & hydro_init_vars%matrix_pot      (nproma, nblks),       &
@@ -169,7 +169,7 @@ CONTAINS
       hydro_init_vars%elevation      (:,:)   = missval
       hydro_init_vars%oro_stddev     (:,:)   = missval
       hydro_init_vars%soil_depth     (:,:)   = missval
-      hydro_init_vars%max_moist      (:,:)   = missval
+      hydro_init_vars%rz_max_moist_mineral(:,:) = missval
       hydro_init_vars%vol_porosity   (:,:)   = missval
       hydro_init_vars%hyd_cond_sat   (:,:)   = missval
       hydro_init_vars%matrix_pot     (:,:)   = missval
@@ -223,19 +223,6 @@ CONTAINS
         & fill_array = hydro_init_vars%soil_depth)
       hydro_init_vars%soil_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))
 
-      ! Maximum root zone soil moisture
-      ! Note: maxmoist from the initial file corresponds to the field capacity. It is however
-      !    not used as field capacity in a hydrological sense, but rather as maximum soil
-      !    moisture corresponding to a layered bucket scheme, using one bucket for each soil layer.
-      ptr_2D => input_file%Read_2d(                        &
-        & fill_array = hydro_init_vars%max_moist, &
-        & variable_name='maxmoist')
-      ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
-      hydro_init_vars%max_moist = MERGE(ptr_2D, 0.2_wp, ptr_2D > 0._wp)
-      IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        hydro_init_vars%max_moist = MIN(hydro_init_vars%max_moist, dsl4jsb_Config(HYDRO_)%w_soil_limit)
-      END IF
-
       ! Volumetric soil porosity
       ptr_2D => input_file%Read_2d(                            &
         & fill_array = hydro_init_vars%vol_porosity,  &
@@ -271,6 +258,21 @@ CONTAINS
         & variable_name='soil_field_cap', & ! TODO change name in infile to w_soil_fcvol or another name that indicates "volumetric"
         & fill_array = hydro_init_vars%vol_field_cap)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      ! Maximum root zone soil moisture
+      ! Note: maxmoist from the initial file corresponds to the field capacity. It is however
+      !    not used as field capacity in a hydrological sense, but rather as maximum soil
+      !    moisture corresponding to a layered bucket scheme, using one bucket for each soil layer.
+      ptr_2D => input_file%Read_2d(   &
+        & variable_name='root_depth')
+      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+      ptr_2D = MIN(ptr_2D, hydro_init_vars%soil_depth)  ! Temporary fix (root depth sometimes larger then soil depth)
+      ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers      
+      hydro_init_vars%rz_max_moist_mineral = hydro_init_vars%vol_field_cap * ptr_2D(:,:)
+      hydro_init_vars%rz_max_moist_mineral = MERGE(hydro_init_vars%rz_max_moist_mineral, 0.2_wp, hydro_init_vars%rz_max_moist_mineral > 0._wp)
+      IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
+        hydro_init_vars%rz_max_moist_mineral = MIN(hydro_init_vars%rz_max_moist_mineral, dsl4jsb_Config(HYDRO_)%w_soil_limit)
+      END IF
 
       ! Volumetric permanent wilting point
       ! @todo: Do we need this for bare soil tiles?
@@ -408,7 +410,7 @@ CONTAINS
 
       ! Maximum root zone soil moisture
       ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
-      dsl4jsb_var2D_onDomain(HYDRO_, max_moist) = hydro_init_vars%max_moist
+      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral) = hydro_init_vars%rz_max_moist_mineral
 
       ! Volumetric soil porosity
       dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity
@@ -463,7 +465,7 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
       !$acc dsl4jsb_var_ptr(HYDRO_, fract_org_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, max_moist), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) )
@@ -574,6 +576,14 @@ CONTAINS
       ! Initial w_soil_overflown water
       dsl4jsb_var2D_onDomain(HYDRO_,w_soil_overflow) = 0._wp
 
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, rz_max_moist), 2)
+          CALL get_water_in_root_zone( &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)   (:,:,i), & 
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, rz_max_moist)   (:,i)  )
+      END DO
+
       !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow),       &
       !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil),  &
       !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_overflow))
@@ -631,6 +641,15 @@ CONTAINS
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl))
+
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, rz_max_moist), 2)
+          CALL get_water_in_root_zone( &
+          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)   (:,:,i), & 
+          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, rz_max_moist)   (:,i)  )
+      END DO
+
     END IF
 
     IF (tile%contains_soil) THEN
@@ -664,15 +683,15 @@ CONTAINS
       ! Make sure w_rootzone is smaller than max_moist
       ! Note: max_moist corresponds to the maximum possible amount of water in the root zone. This
       !    concept is different from the hydrological understanding of field capacity and saturation.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral))
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral)
       END WHERE
 
       ! Initialization of w_rootzone_rel (completely ignoring ice)
       !    It is re-calculated - considering ice - in update_water_stress.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
+          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral)
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
       END WHERE

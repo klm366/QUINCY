@@ -400,7 +400,6 @@ CONTAINS
   ! @param [in]      delta_time         Time step [s]
   ! @param [in]      l_infil_subzero        Allow infiltration of supercolled water
   ! @param [in]      l_runoff_with_ice      Include soil ice in calculation of runoff and infiltration
-  ! @param [in]      l_ws_max_depend_on_org ws_max re-calculated depending on organic matter
   ! @param [in]      l_correct_ws_from_top  Start soil moisture correction from top level
   ! @param [in]      l_ice_impedance_perc    Account for ice impedance during percolation
   ! @param [in]      l_ice_impedance_drain   Account for ice impedance during drainage
@@ -444,7 +443,7 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                                                &
     ! in
     & nidx, nsoil, nlat, delta_time, ltpe_closed, ltpe_open,                                                     &
-    & l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top,                         &
+    & l_infil_subzero, l_runoff_with_ice, l_correct_ws_from_top,                         &
     & l_ice_impedance_perc, l_ice_impedance_drain, l_scool_impedance_perc, l_scool_impedance_drain,              &
     & l_diffuse_all_ws, l_scool_percolates, l_drain_lat, l_feed_sro,                                             &
     & soil_depth_l, root_depth_l, fract_org_l,                                                                   &
@@ -468,7 +467,7 @@ CONTAINS
       & delta_time
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
-    LOGICAL, INTENT(in) :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top, &
+    LOGICAL, INTENT(in) :: l_infil_subzero, l_runoff_with_ice, l_correct_ws_from_top, &
       & l_ice_impedance_perc, l_ice_impedance_drain, l_scool_impedance_perc, l_scool_impedance_drain,         &
       & l_diffuse_all_ws, l_scool_percolates, l_drain_lat, l_feed_sro
     REAL(wp), INTENT(in), DIMENSION(:,:) ::                         &
@@ -770,7 +769,7 @@ CONTAINS
     LOGICAL, INTENT(IN) :: ltpe_open
 
     INTEGER  :: i, j                          ! looping index
-    REAL(wp) :: percolation(nidx,0:nsoil)     ! downward flux from one soil layer to the layer below [m/s]
+    REAL(wp) :: percolation(nidx,nsoil)     ! downward flux from one soil layer to the layer below [m/s]
                                               !     and later amount of perculation per time step [m]
     REAL(wp) :: diffus_l(nidx,nsoil)          ! diffusivity at mid-depth of the layer
     REAL(wp) :: ws_min_drain(nidx)            ! minimum soil moisture for drainage
