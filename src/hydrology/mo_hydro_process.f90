@@ -1496,7 +1496,7 @@ CONTAINS
     & press_srf,                                 & ! in
     & drag_srf,                                  & ! in
     & q_air,                                     & ! in
-    & w_skin,                                    & ! in
+    & skinres,                                   & ! in
     & snow_soil,                                 & ! in
     & snow_canopy,                               & ! in
     & fract_snow_can,                            & ! inout
@@ -1519,7 +1519,7 @@ CONTAINS
       & drag_srf,           &
       & q_air,              &
       & wsr_max,            &
-      & w_skin,             &
+      & skinres,            &
       & snow_soil,          &
       & snow_canopy
 
@@ -1539,7 +1539,7 @@ CONTAINS
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
     IF (wsr_max > EPSILON(1._wp)) THEN
       fract_snow_can = MIN(1._wp, snow_canopy / wsr_max)
-      fract_water    = MIN(1._wp, w_skin     / wsr_max)
+      fract_water    = MIN(1._wp, skinres     / wsr_max)
     ELSE
       fract_snow_can = 0._wp
       fract_water    = 0._wp
@@ -1566,7 +1566,7 @@ CONTAINS
     END IF
     IF (fract_water > 0._wp ) THEN
       fract_water = fract_water    / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime &
-        &                                       / (rhoh2o * MAX(EPSILON(1._wp), w_skin)) &
+        &                                       / (rhoh2o * MAX(EPSILON(1._wp), skinres)) &
         &                                    )
     END IF
 
@@ -1581,7 +1581,7 @@ CONTAINS
     & press_srf,                                  & ! in
     & drag_srf,                                   & ! in
     & q_air,                                      & ! in
-    & w_skin,                                     & ! in
+    & skinres,                                    & ! in
     & snow_soil,                                  & ! in
     & fract_water,                                & ! out
     & fract_snow_soil                             & ! out
@@ -1602,7 +1602,7 @@ CONTAINS
       & drag_srf,           &
       & q_air,              &
       & wsr_max,            &
-      & w_skin,             &
+      & skinres,            &
       & snow_soil
 
     REAL(wp), INTENT(out) :: &
@@ -1618,7 +1618,7 @@ CONTAINS
     !$claw sca
 
     IF (wsr_max > EPSILON(1._wp)) THEN
-      fract_water = MIN(1._wp, w_skin / wsr_max)
+      fract_water = MIN(1._wp, skinres / wsr_max)
     ELSE
       fract_water = 0._wp
     END IF
@@ -1634,16 +1634,16 @@ CONTAINS
 
     ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy together
-    ! R: In the following lines I just kicked out the contribution of w_skin_can as compared to JSBACH3. For the intension of
+    ! R: In the following lines I just kicked out the contribution of skinres_canopy as compared to JSBACH3. For the intension of
     !    the parametrization this can be done so easily for the bare type and it is consistent with JSBACH3.
     IF (fract_snow_soil > 0._wp .AND. snow_soil > EPSILON(1._wp)) THEN
       fract_snow_soil = fract_snow_soil &
         & / MAX(1._wp, fract_snow_soil * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), snow_soil)))
     END IF
     ! Same for water cover on soil
-    IF (fract_water > 0._wp .AND. w_skin > EPSILON(1._wp)) THEN
+    IF (fract_water > 0._wp .AND. skinres > EPSILON(1._wp)) THEN
       fract_water = fract_water &
-        & / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), w_skin)))
+        & / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), skinres)))
     END IF
 
   END SUBROUTINE calc_wskin_fractions_bare
