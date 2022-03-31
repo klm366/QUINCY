@@ -421,15 +421,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: runoff_glac
-    dsl4jsb_Real2D_onChunk :: water_excess
+    dsl4jsb_Real2D_onChunk :: water_to_soil
     dsl4jsb_Real2D_onChunk :: w_glac
 
 
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
-      & w_skin_max, &
-      & w_skin_canopy_max, &
+      & skinres_max,        &
+      & skinres_canopy_max, &
       & trans_tmp
 
     LOGICAL  :: lstart
@@ -484,7 +484,7 @@ CONTAINS
       RETURN
     END IF
 
-    !$claw acc data pcreate(w_skin_max, w_skin_canopy_max, trans_tmp)
+    !$claw acc data pcreate(skinres_max, skinres_canopy_max, trans_tmp)
 
     dsl4jsb_Get_memory(SSE_)
     IF (tile%contains_vegetation) THEN
@@ -516,7 +516,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_glac)        ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_glac)   ! inout
     ELSE
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_excess)    ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil)   ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin)          ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_accum)      ! out
@@ -542,17 +542,17 @@ CONTAINS
     w_skin_max_config = dsl4jsb_Config(HYDRO_)%w_skin_max
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_1 tile_name=tile%name
-      w_skin_canopy_max(:) = w_skin_max_config * lai(:) * fract_fpc_max(:)
+      skinres_canopy_max(:) = w_skin_max_config * lai(:) * fract_fpc_max(:)
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_2 tile_name=tile%name
-      w_skin_canopy_max(:) = 0._wp
+      skinres_canopy_max(:) = 0._wp
     END IF
     IF (tile%contains_soil) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_3 tile_name=tile%name
-      w_skin_max(:) =  w_skin_max_config + w_skin_canopy_max(:)
+      skinres_max(:) =  w_skin_max_config + skinres_canopy_max(:)
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_4 tile_name=tile%name
-      w_skin_max(:) = 0._wp
+      skinres_max(:) = 0._wp
     END IF
 
     ! snow_soil_old(:) = snow_soil(:) ! Remember old snow on ground for use in snow model
@@ -604,8 +604,8 @@ CONTAINS
         & t_unfilt(:),                    & !< in
         & wind_10m(:),                    & !< in
         & t_air(:),                       & !< in
-        & w_skin_canopy_max(:),           & !< in
-        & w_skin_max(:),                  & !< in
+        & skinres_canopy_max(:),          & !< in
+        & skinres_max(:),                 & !< in
         & fract_snow(:),                  & !< in
         & fract_water(:),                 & !< in
         & hcap_grnd(:),                   & !< in
@@ -624,7 +624,7 @@ CONTAINS
         & evapotrans_soil(:),             & !< out
         & evapo_skin(:),                  & !< out
         & evapo_snow(:),                  & !< out
-        & water_excess(:),                & !< out
+        & water_to_soil(:),               & !< out
         & evapo_deficit(:)                & !< out
         & )
 
@@ -693,7 +693,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_soil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, water_excess,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
@@ -963,7 +963,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, rootzone_max      ), &  !! only used in grid cells without organic fraction
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
       &                                t_soil_sl     (:,1), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ), &
       ! inout
@@ -1736,7 +1736,7 @@ CONTAINS
     !----------------------------
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
-    REAL(wp), DIMENSION(options%nc) :: w_skin_canopy_max, w_skin_max
+    REAL(wp), DIMENSION(options%nc) :: skinres_canopy_max, skinres_max
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_skin_fraction'
 
@@ -1792,9 +1792,9 @@ CONTAINS
     ! Use simple scalar for GPU
     config_w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
 
-    !$claw acc enter data pcreate(w_skin_max, w_skin_canopy_max)
+    !$claw acc enter data pcreate(skinres_max, skinres_canopy_max)
     !$claw expand parallel update
-    w_skin_max(:) = config_w_skin_max
+    skinres_max(:) = config_w_skin_max
 
     dsl4jsb_Get_memory(HYDRO_)
 
@@ -1809,7 +1809,7 @@ CONTAINS
           & fract_snow_lice(:)          & ! out
           & )
       END IF
-      !$claw acc exit data delete(w_skin_max, w_skin_canopy_max)  
+      !$claw acc exit data delete(skinres_max, skinres_canopy_max)
       RETURN
     END IF
 
@@ -1847,17 +1847,17 @@ CONTAINS
     ! Maximum capacity of skin reservoir (soil + canopy)
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_0 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      w_skin_canopy_max(:) = config_w_skin_max * lai(:) * fract_fpc_max(:)
+      skinres_canopy_max(:) = config_w_skin_max * lai(:) * fract_fpc_max(:)
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      w_skin_canopy_max(:) = 0._wp
+      skinres_canopy_max(:) = 0._wp
     END IF
     IF (tile%contains_soil) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_2 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      w_skin_max(:) = config_w_skin_max + w_skin_canopy_max(:)
+      skinres_max(:) = config_w_skin_max + skinres_canopy_max(:)
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_3 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      w_skin_max(:) = 0._wp
+      skinres_max(:) = 0._wp
     END IF
 
     IF (tile%is_glacier) THEN
@@ -1873,7 +1873,7 @@ CONTAINS
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
         & steplen,                   & ! in
-        & w_skin_max(:),             & ! in
+        & skinres_max(:),            & ! in
         & oro_stddev(:),             & ! in
         & t(:),                      & ! in, from the previous time step as long as this is called before the asselin filter
         & press_srf(:),              & ! in
@@ -1896,7 +1896,7 @@ CONTAINS
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in
         & steplen,                    & ! in
-        & w_skin_max,                 & ! in
+        & skinres_max,                & ! in
         & oro_stddev(:),              & ! in
         & t(:),                       & ! in
         & press_srf(:),               & ! in
@@ -1911,7 +1911,7 @@ CONTAINS
       fract_snow(:)  = fract_snow_soil(:)
    END IF
 
-   !$claw acc exit data delete(w_skin_max, w_skin_canopy_max)  
+   !$claw acc exit data delete(skinres_max, skinres_canopy_max)
    !$claw verbatim  task_counter = task_counter + 1
   END SUBROUTINE update_snow_and_skin_fraction
 

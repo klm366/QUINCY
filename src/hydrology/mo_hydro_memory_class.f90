@@ -101,7 +101,7 @@ MODULE mo_hydro_memory_class
       !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
       & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
-      & water_excess,         & !< Water available for infiltration into the soil                           [m water equivalent]
+      & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
       & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
       & wat_rootzone,         & !< Liquid water content in the rootzone                                     [m]
       & wat_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
@@ -651,10 +651,9 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      !Todo: Misleading name: water_excess corresponds to water_to_soil of calc_soil_hydrology
-      CALL mem%Add_var( 'water_excess', mem%water_excess,                      &
+      CALL mem%Add_var( 'water_to_soil', mem%water_to_soil,                    &
         & hgrid, surface,                                                      &
-        & t_cf('water_excess', 'm', 'Amount of water entering the soil'),      &
+        & t_cf('water_to_soil', 'm', 'Amount of water entering the soil'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &

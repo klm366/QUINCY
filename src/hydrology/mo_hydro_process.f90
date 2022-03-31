@@ -64,7 +64,7 @@ CONTAINS
   !! @param [in]     fract_water           skin reservoir fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
-  !! @param [in]     evapopot              potential evaporation [kg m-2 s-1]
+  !! @param [in]     evapopot              potential evaporation (if there was enough water/ice) [kg m-2 s-1]
   !! @param [in]     transpiration         transpiration [kg m-2 s-1]
   !! @param [in]     rain                  liquid precipitation [kg m-2 s-1]
   !! @param [in]     snow                  solid precipitation [kg m-2 s-1]
@@ -708,7 +708,8 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: ilog                       !
     INTEGER,  INTENT(IN)            :: jllog                      !
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
-    REAL(wp), INTENT(IN)            :: wsat_sl(:,:)               ! Maximum storage in each soil layer (porosity) [m]
+    REAL(wp), INTENT(IN)            :: wsat_sl(:,:)               ! Maximum storage in each soil layer (porosity)
+                                                                  !    (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: field_cap_sl(:,:)          ! field capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: hyd_cond_sat_sl(:,:)       ! hydraulic conductivity of saturated soil [m/s]
     REAL(wp), INTENT(IN)            :: vol_porosity_sl(:,:)       ! volumetric soil porosity [m/m]
