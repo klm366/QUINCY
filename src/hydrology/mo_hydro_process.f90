@@ -1468,22 +1468,22 @@ CONTAINS
   !--------------  !!
   ! @brief      Calculates the snow fraction on lake ice.
   !
-  ! @param [in]     w_snow_lice      Snow depth on lake ice [m water equivalent]
+  ! @param [in]     snow_lice        Snow depth on lake ice [m water equivalent]
   ! @param [out]    fract_snow_lice  Fraction of snow on lake ice
   !!
   ELEMENTAL SUBROUTINE calc_wskin_fractions_lice( &
-    & w_snow_lice,                                & ! in
+    & snow_lice,                                  & ! in
     & fract_snow_lice                             & ! out
     & )
 
     !$claw model-data
-    REAL(wp),  INTENT(in)    :: w_snow_lice
+    REAL(wp),  INTENT(in)    :: snow_lice
     REAL(wp),  INTENT(out)   :: fract_snow_lice
     !$claw end model-data
 
     !$claw sca
 
-    fract_snow_lice = TANH(w_snow_lice * 100._wp)
+    fract_snow_lice = TANH(snow_lice * 100._wp)
 
   END SUBROUTINE calc_wskin_fractions_lice
 

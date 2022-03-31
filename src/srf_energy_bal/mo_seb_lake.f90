@@ -78,7 +78,7 @@ CONTAINS
       & fract_lice,           &
       & depth_lice,           &
       & fract_snow_lice,      &
-      & w_snow_lice,          &
+      & snow_lice,            &
       & w_snow,               &
       & rad_net_lwtr,         &
       & rad_net_lice
@@ -161,7 +161,7 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(SEB_, depth_lice)        ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_lice) ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)     ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_lice)       ! inout
 
       dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)   ! in
       dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice) ! in
@@ -280,7 +280,7 @@ CONTAINS
         & latent_hflx_ice(:),                             & !< in;
         & snow(:),                                        & !< in; Snow fall
         & depth_lice(:),                                  &
-        & w_snow_lice(:),                                 &
+        & snow_lice(:),                                   &
         & fract_snow_lice(:),                             &
         & min_ice_depth,                                  &
         & dtime)
@@ -298,7 +298,7 @@ CONTAINS
       s_lice(:)    = surface_dry_static_energy(t_lice(:), qsat_lice(:))
       t(:) = (1._wp - fract_lice(:)) * t_lwtr   (:) + fract_lice(:) * t_lice   (:)
       heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
-      w_snow(:) = fract_lice(:) * w_snow_lice(:)
+      w_snow(:) = fract_lice(:) * snow_lice(:)
       t_unfilt(:) = t(:)
       !$claw end expand
 

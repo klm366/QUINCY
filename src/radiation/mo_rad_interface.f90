@@ -769,7 +769,7 @@ CONTAINS
       & albedo_lwtr,           &
       & fract_lice,            &
       & t_lice,                &
-      & w_snow_lice,           &
+      & snow_lice,             &
       & albedo_lice
 
     ! Set local variables from options argument
@@ -908,14 +908,14 @@ CONTAINS
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)   ! in
-        dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_lice)  ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_lice)    ! in
         dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)  ! inout
 
         !$claw sca forward update savepoint=ser_jsb_rad_calc_alb_lice_1 tile_name=tile%name
         CALL calc_alb_lice( &
           & l_day(:),       & ! in
           & t_lice(:),      & ! in
-          & w_snow_lice(:), & ! in
+          & snow_lice(:),   & ! in
           & albedo_lice(:)  & ! inout
           & )
 

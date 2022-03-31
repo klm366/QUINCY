@@ -1762,7 +1762,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_snow_lice
     dsl4jsb_Real2D_onChunk :: snow_canopy
     dsl4jsb_Real2D_onChunk :: snow_soil
-    dsl4jsb_Real2D_onChunk :: w_snow_lice
+    dsl4jsb_Real2D_onChunk :: snow_lice
     dsl4jsb_Real2D_onChunk :: skinres
     dsl4jsb_Real2D_onChunk :: oro_stddev
     dsl4jsb_Real2D_onChunk :: drag_srf
@@ -1801,11 +1801,11 @@ CONTAINS
     ! First handle LAKE_TYPE lct
     IF (tile%is_lake) THEN
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_lice)      ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_lice)        ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
         !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_lice_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
         CALL calc_wskin_fractions_lice( &
-          & w_snow_lice(:),             & ! in
+          & snow_lice(:),               & ! in
           & fract_snow_lice(:)          & ! out
           & )
       END IF
@@ -1987,7 +1987,7 @@ CONTAINS
       & skinres, &
       & w_snow, &
       & water_flux, &    ! [m3 s-1]
-      & w_land, &        ! [m3]
+      & wat_land, &      ! [m3]
       & water_budget     ! [m3]
     dsl4jsb_Real3D_onChunk :: &
       & wat_soil_sl, &
@@ -2000,7 +2000,7 @@ CONTAINS
     !
     REAL(wp) :: &
       & tile_fract (options%nc), &
-      & w_land_new(options%nc)
+      & wat_land_new(options%nc)
 
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
@@ -2036,12 +2036,12 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    skinres)             ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow)              ! in
     END IF
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_flux)          ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_land)              ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wat_land)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_budget)        ! out
 
-    !$claw acc data create(tile, tile%fract, tile_fract, w_land_new)
+    !$claw acc data create(tile, tile%fract, tile_fract, wat_land_new)
 
     !$claw acc parallel loop gang vector
     DO i=1,nc
@@ -2055,21 +2055,21 @@ CONTAINS
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_1 tile_name=tile%name
-      w_land_new(:) = (  skinres(:) + w_snow(:)                                       &
-        &              + SUM(wat_soil_sl(:,:), DIM=2) + SUM(ice_soil_sl(:,:), DIM=2)  &
-        &             ) * tile_fract(:) * area(:)  ! m -> m^3
+      wat_land_new(:) = (  skinres(:) + w_snow(:)                                       &
+        &                + SUM(wat_soil_sl(:,:), DIM=2) + SUM(ice_soil_sl(:,:), DIM=2)  &
+        &               ) * tile_fract(:) * area(:)  ! m -> m^3
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_2 tile_name=tile%name
-      w_land_new(:) = 0._wp
+      wat_land_new(:) = 0._wp
     END IF
 
     IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
-      water_budget(:) = w_land(:) + water_flux(:) * dtime - w_land_new(:)
+      water_budget(:) = wat_land(:) + water_flux(:) * dtime - wat_land_new(:)
     END IF
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
-    w_land(:) = w_land_new(:)
+    wat_land(:) = wat_land_new(:)
 
     !$claw acc end data
 
@@ -2103,7 +2103,7 @@ CONTAINS
     ! Don't aggregate, but explicitely compute water balance on each tile
     CALL update_water_balance(tile, options)
     ! dsl4jsb_Aggregate_onChunk(HYDRO_, water_flux,       weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(HYDRO_, w_land,           weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(HYDRO_, wat_land,         weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(HYDRO_, water_budget,     weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -2142,7 +2142,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain :: transpiration
     dsl4jsb_Real2D_onDomain :: evapotrans
-    dsl4jsb_Real2D_onDomain :: w_land
+    dsl4jsb_Real2D_onDomain :: wat_land
     dsl4jsb_Real2D_onDomain :: discharge_ocean
     dsl4jsb_Real2D_onDomain :: wat_rootzone_rel
     dsl4jsb_Real2D_onDomain :: fract_snow
@@ -2150,7 +2150,7 @@ CONTAINS
 
     REAL(wp), POINTER       :: trans_gmean(:)
     REAL(wp), POINTER       :: evapotrans_gmean(:)
-    REAL(wp), POINTER       :: w_land_gsum(:)
+    REAL(wp), POINTER       :: wat_land_gsum(:)
     REAL(wp), POINTER       :: discharge_ocean_gsum(:)
     REAL(wp), POINTER       :: wat_rootzone_rel_gmean(:)
     REAL(wp), POINTER       :: fract_snow_gsum(:)
@@ -2170,7 +2170,7 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  transpiration)              ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  evapotrans)                 ! in
-    dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_land)                     ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  wat_land)                   ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  discharge_ocean)            ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  wat_rootzone_rel)           ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  fract_snow)                 ! in
@@ -2179,7 +2179,7 @@ CONTAINS
 
     trans_gmean          => HYDRO__mem%trans_gmean%ptr(:)           ! out
     evapotrans_gmean     => HYDRO__mem%evapotrans_gmean%ptr(:)      ! out
-    w_land_gsum          => HYDRO__mem%w_land_gsum%ptr(:)           ! out
+    wat_land_gsum        => HYDRO__mem%wat_land_gsum%ptr(:)         ! out
     discharge_ocean_gsum => HYDRO__mem%discharge_ocean_gsum%ptr(:)  ! out
     wat_rootzone_rel_gmean => HYDRO__mem%wat_rootzone_rel_gmean%ptr(:)  ! out
     fract_snow_gsum      => HYDRO__mem%fract_snow_gsum%ptr(:)       ! out
@@ -2217,8 +2217,8 @@ CONTAINS
     IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
       &  evapotrans_gmean     = global_sum_array(evapotrans(:,:)      * scaling(:,:)) / global_land_area
     ! Unit transformation from [m3] to [km3]: 1.e-9
-    IF (HYDRO__mem%w_land_gsum%is_in_output)           &
-      &  w_land_gsum   = global_sum_array(w_land(:,:)   * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
+    IF (HYDRO__mem%wat_land_gsum%is_in_output)           &
+      &  wat_land_gsum        = global_sum_array(wat_land(:,:)  * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
     ! Unit transformation from [m3/s] to [Sv] (1 Sv = 1.e6 m3/s)
     IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
       &  discharge_ocean_gsum = global_sum_array(discharge_ocean(:,:) * in_domain(:,:)) * 1.e-6_wp
