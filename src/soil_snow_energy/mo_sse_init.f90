@@ -351,7 +351,7 @@ CONTAINS
       & heat_cond_snow
     dsl4jsb_Real3D_onDomain :: &
       & soil_depth_sl, &
-      & wat_soil_sl, &
+      & wtr_soil_sl, &
       & ice_soil_sl, &
       & t_soil_sl, &
       & matrix_pot_sl, &
@@ -415,7 +415,7 @@ CONTAINS
     END IF
 
     dsl4jsb_Get_var2D_onDomain(SSE_,   vol_heat_cap)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, wat_soil_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
@@ -460,13 +460,13 @@ CONTAINS
       END DO
       !$claw acc update device(heat_cap_sl)
 
-      !$claw acc data present(heat_cap_sl,t_soil_sl,wat_soil_sl,liquid_max,ice_soil_sl)
+      !$claw acc data present(heat_cap_sl,t_soil_sl,wtr_soil_sl,liquid_max,ice_soil_sl)
       !$claw acc parallel loop gang vector collapse(3)
       DO i = 1, nproma
         DO j = 1, nsoil
           DO b = 1, nblks
-            IF (t_soil_sl(i,j,b) < tmelt .AND. wat_soil_sl(i,j,b) > liquid_max(i,j,b)) THEN
-              ice_soil_sl(i,j,b) = MIN(wat_soil_sl(i,j,b) - liquid_max(i,j,b),                         &
+            IF (t_soil_sl(i,j,b) < tmelt .AND. wtr_soil_sl(i,j,b) > liquid_max(i,j,b)) THEN
+              ice_soil_sl(i,j,b) = MIN(wtr_soil_sl(i,j,b) - liquid_max(i,j,b),                         &
                 &                   heat_cap_sl(i,j,b) * (tmelt - t_soil_sl(i,j,b)) / (alf * rhoh2o) &
                 &                  )
             END IF
@@ -476,9 +476,9 @@ CONTAINS
       !$claw acc end data
 
       !$claw expand parallel update
-      wat_soil_sl(:,:,:) = wat_soil_sl(:,:,:) - ice_soil_sl(:,:,:)
+      wtr_soil_sl(:,:,:) = wtr_soil_sl(:,:,:) - ice_soil_sl(:,:,:)
 
-      !$claw acc update host(wat_soil_sl,ice_soil_sl)
+      !$claw acc update host(wtr_soil_sl,ice_soil_sl)
 
       ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + ice_soil_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
       ! IF (TRIM(tile%name) == 'land') THEN
@@ -489,31 +489,31 @@ CONTAINS
       !$claw acc exit data delete(liquid_max, ws_max_sl, heat_cap_sl)
       DEALLOCATE(liquid_max, ws_max_sl, heat_cap_sl)
 
-      ! dsl4jsb_var3D_onDomain(HYDRO_, wat_soil_sl) = &
-      !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wat_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
-      ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wat_soil_sl))
+      ! dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = &
+      !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))
 
       DO b=1,nblks
           CALL get_amount_in_rootzone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, wat_soil_sl)   (:,:,b),  &
+          & dsl4jsb_var_ptr(HYDRO_, wtr_soil_sl)   (:,:,b),  &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,b),  &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, wat_rootzone)  (:,  b)   )
+          & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)  (:,  b)   )
       END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wat_rootzone))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max))
-        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max))
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
       END WHERE
 
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
+          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
       ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone_rel) = 0._wp
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE
 
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone_rel),    &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone))
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel),    &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone))
 
     END IF
 
@@ -540,14 +540,14 @@ CONTAINS
       ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
       !$claw acc enter data pcreate(fract_water,fract_ice)
 
-      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,wat_soil_sl,ice_soil_sl)
-      !$claw acc update device(soil_depth_sl,wat_soil_sl,ice_soil_sl)
+      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,wtr_soil_sl,ice_soil_sl)
+      !$claw acc update device(soil_depth_sl,wtr_soil_sl,ice_soil_sl)
       !$claw acc parallel loop gang vector collapse(3)
       DO i = 1, nproma
         DO j = 1, nsoil
           DO b = 1, nblks
             IF (soil_depth_sl(i,j,b) > 0._wp) THEN
-              fract_water(i,j,b) = wat_soil_sl(i,j,b) / soil_depth_sl(i,j,b)
+              fract_water(i,j,b) = wtr_soil_sl(i,j,b) / soil_depth_sl(i,j,b)
               fract_ice  (i,j,b) = ice_soil_sl(i,j,b) / soil_depth_sl(i,j,b)
             ELSE
               fract_water(i,j,b) = 0._wp
@@ -595,7 +595,7 @@ CONTAINS
       heat_cond_sl (:,:,:) = calc_thermal_conductivity( &
         !&                              SPREAD( heat_cond(:,:),                    DIM=2, ncopies=nsoil)               , &
         &                                      heat_cond_tmp(:,:,:)                                                   , &
-        &                                      wat_soil_sl(:,:,:)                                                     , &
+        &                                      wtr_soil_sl(:,:,:)                                                     , &
         &                                      ice_soil_sl(:,:,:)                                                     , &
         &                                      vol_porosity_sl(:,:,:)                                                 , &
         &                                      vol_field_cap_sl(:,:,:)                                                , &

@@ -54,7 +54,7 @@ MODULE mo_hydro_init
       & vol_p_wilt     (:,:) => NULL(), &
       & root_depth     (:,:) => NULL(), &
       & snow_soil      (:,:) => NULL(), &
-      & wat_soil_sl  (:,:,:) => NULL(), &
+      & wtr_soil_sl  (:,:,:) => NULL(), &
       & ifs_smi_sl   (:,:,:) => NULL(), &
       & ifs_w_snow     (:,:) => NULL()
   END TYPE t_hydro_init_vars
@@ -111,7 +111,7 @@ CONTAINS
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%snow_soil)
 
-    IF (ASSOCIATED(hydro_init_vars%wat_soil_sl)) DEALLOCATE(hydro_init_vars%wat_soil_sl)
+    IF (ASSOCIATED(hydro_init_vars%wtr_soil_sl)) DEALLOCATE(hydro_init_vars%wtr_soil_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl))  DEALLOCATE(hydro_init_vars%ifs_smi_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_w_snow))  DEALLOCATE(hydro_init_vars%ifs_w_snow)
 
@@ -183,8 +183,8 @@ CONTAINS
       ALLOCATE(hydro_init_vars%ifs_w_snow(nproma,nblks))
       hydro_init_vars%ifs_w_snow(:,:) = missval
     ELSE
-      ALLOCATE(hydro_init_vars%wat_soil_sl(nproma, nsoil, nblks))
-      hydro_init_vars%wat_soil_sl(:,:,:) = missval
+      ALLOCATE(hydro_init_vars%wtr_soil_sl(nproma, nsoil, nblks))
+      hydro_init_vars%wtr_soil_sl(:,:,:) = missval
     END IF
 
     ! Get hydrology config
@@ -325,7 +325,7 @@ CONTAINS
           ptr_3D => input_file%Read_2d_extdim( &
             & variable_name='layer_moist',     &
             & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-          hydro_init_vars%wat_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+          hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
         END DO
 
         CALL input_file%Close()
@@ -516,18 +516,18 @@ CONTAINS
       IF (model%config%init_from_ifs) THEN
 
         CALL ifs2soil(hydro_init_vars%ifs_smi_sl(:,:,:), ifs_soil_depth(:),        &
-          &           dsl4jsb_var_ptr(HYDRO_,wat_soil_sl)(:,:,:), soil_w%ubounds(:))
+          &           dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:), soil_w%ubounds(:))
 
         ! Convert soil moisture index (SMI) in IFS file to water content
-        WHERE (dsl4jsb_var_ptr(HYDRO_,wat_soil_sl)(:,:,:) < -999._wp)
+        WHERE (dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:) < -999._wp)
           ! Fill missing values
-          dsl4jsb_var_ptr(HYDRO_,wat_soil_sl)(:,:,:) = &
+          dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:) = &
             &  0.5_wp * (dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) + dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:))
         ELSE WHERE
-          dsl4jsb_var_ptr(HYDRO_,wat_soil_sl)(:,:,:) = &
+          dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:) = &
             & MIN(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl)(:,:,:), &
             &     MAX(0._wp, &
-            &         dsl4jsb_var_ptr(HYDRO_,wat_soil_sl)(:,:,:) &
+            &         dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:) &
             &         * (dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:) - dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:)) &
             &         + dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) &
             &        ) &
@@ -544,7 +544,7 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_, snow_soil) = hydro_init_vars%snow_soil
         dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, snow_soil)
 
-        dsl4jsb_var_ptr(HYDRO_,wat_soil_sl) (:,:,:) = hydro_init_vars%wat_soil_sl(:,:,:)
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl) (:,:,:) = hydro_init_vars%wtr_soil_sl(:,:,:)
 
       END IF
 
@@ -596,9 +596,9 @@ CONTAINS
 
       ! Note: w_soil_fc_sl is not meant as field capacity in a hydrological sense, but as maximum
       !    filling of the specific soil layer.
-      dsl4jsb_var3D_onDomain(HYDRO_, wat_soil_sl) = &
-        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wat_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
-      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wat_soil_sl))
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = &
+        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))
       
       CALL init_soil_properties(tile)
     END IF
@@ -608,34 +608,34 @@ CONTAINS
       ! Initialization of relative root zone soil moisture (ignoring ice).
       !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
 
-      ! wat_rootzone calculated here is only used to calculate relative soil moisture for phenology.
+      ! wtr_rootzone calculated here is only used to calculate relative soil moisture for phenology.
       ! It is re-calculated in update_soil_hydrology.
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, wat_rootzone), 2)
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone), 2)
           CALL get_amount_in_rootzone( &
-          & dsl4jsb_var_ptr(HYDRO_, wat_soil_sl)    (:,:,i), &
+          & dsl4jsb_var_ptr(HYDRO_, wtr_soil_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, wat_rootzone)   (:,  i)  )
+          & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)   (:,  i)  )
       END DO
 
-      ! Make sure wat_rootzone is smaller than rootzone_max
+      ! Make sure wtr_rootzone is smaller than rootzone_max
       ! Note: rootzone_max corresponds to the maximum possible amount of water in the root zone. This
       !    concept is different from the hydrological understanding of field capacity and saturation.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max))
-        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max))
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
       END WHERE
 
-      ! Initialization of wat_rootzone_rel (completely ignoring ice)
+      ! Initialization of wtr_rootzone_rel (completely ignoring ice)
       !    It is re-calculated - considering ice - in update_water_stress.
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
+          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
       ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, wat_rootzone_rel) = 0._wp
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE
 
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wat_rootzone),     &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, wat_rootzone_rel))
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone),     &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel))
     END IF
 
   END SUBROUTINE hydro_init_ic

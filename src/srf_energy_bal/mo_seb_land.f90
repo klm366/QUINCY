@@ -109,7 +109,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: wat_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
@@ -215,7 +215,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wat_soil_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)  ! in
@@ -405,11 +405,11 @@ CONTAINS
         liquid_max(:) = 0._wp
       END IF
 
-      !$claw acc data present(has_snow_layer,is_glacier,wat_soil_sl,liquid_max,t_star,ice_soil_sl)
+      !$claw acc data present(has_snow_layer,is_glacier,wtr_soil_sl,liquid_max,t_star,ice_soil_sl)
       !$claw acc parallel loop gang vector
       DO i=1,size(t_star, dim=1)  
         IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
-          IF (wat_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
+          IF (wtr_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
             ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
             t_star(i) = MAX(t_star(i), tmelt)
           END IF

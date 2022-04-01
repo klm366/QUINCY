@@ -336,7 +336,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: t_air
     dsl4jsb_Real2D_onChunk :: NPP_pot_rate_ca
-    dsl4jsb_Real2D_onChunk :: wat_rootzone_rel
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel
     dsl4jsb_Real2D_onChunk :: lat
     dsl4jsb_Real2D_onChunk :: heat_sum_SG
     dsl4jsb_Real2D_onChunk :: heat_sum_EG
@@ -444,7 +444,7 @@ CONTAINS
     ! Set pointers to variables in memory
     dsl4jsb_Get_var2D_onChunk(A2L_,      t_air)                  ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,   NPP_pot_rate_ca)        ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wat_rootzone_rel)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_mean) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      previous_day_temp_min)  ! in
@@ -493,7 +493,7 @@ CONTAINS
     day_of_year  = INT(get_year_day(options%current_datetime))
 
     !$claw expand parallel update
-    w_soil_filling(:) = wat_rootzone_rel(:)  ! Initialization of w_soil_filling for crops and raingreen
+    w_soil_filling(:) = wtr_rootzone_rel(:)  ! Initialization of w_soil_filling for crops and raingreen
                                        ! R: As in JS3 all soil layers are set to the same relative_moisture(GP,tile) and only the average
                                        !    over all layers or the uppermost layer is used, we do not need soil layers in the phenology.
 
