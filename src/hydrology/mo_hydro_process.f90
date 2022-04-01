@@ -423,7 +423,6 @@ CONTAINS
   ! @param [in]      pot_scool_l        Amount of potentially supercooled water [m]
   ! @param [in]      sfract_srf         Snow cover fraction []
   ! @param [in]      wfract_srf         Wet surface fraction (skin reservoir) []
-  ! @param [in]      ws_max_mineral     Maximum water holding capacity of non-organic soil [m]
   ! @param [in]      oro_stddev         Sub-grid standard deviation of orography [m]
   ! @param [in]      t_soil_upper_layer Temperature of the upper soil layer [K]
   ! @param [in]      water_to_soil      Amount of water going into the soil [m]
@@ -450,7 +449,7 @@ CONTAINS
     & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l, vol_porosity_l, vol_field_cap_l, vol_p_wilt_l,  &
     & pot_scool_l,                                                                                               &
     !& sfract_srf, wfract_srf,
-    & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, evapotrans_soil, transpiration,             &
+    & oro_stddev, t_soil_upper_layer, water_to_soil, evapotrans_soil, transpiration,             &
     ! inout
     & ws_l, soil_ice_l, w_soil_overflow,                                                                         &
     ! out
@@ -476,7 +475,7 @@ CONTAINS
       & vol_porosity_l, vol_field_cap_l, vol_p_wilt_l, pot_scool_l
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       !& sfract_srf, wfract_srf, 
-      & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, &
+      & oro_stddev, t_soil_upper_layer, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & ws, w_soil_overflow

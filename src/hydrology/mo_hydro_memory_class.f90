@@ -87,8 +87,6 @@ MODULE mo_hydro_memory_class
       & soil_depth,           & !< Soil depth derived from textures (bedrock)                          [m]
       !todo: rename max_moist to rootzone_max
       & rz_max_moist,         & !< Maximum root zone moisture content                                  [m]
-      & rz_max_moist_mineral, & !< Maximum root zone moisture content                                  [m]
-      & maxtop_mineral,       & !< Maximum moisture of uppermost soil layer not accounting for organic matter [m]
       & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
       & vol_porosity,         & !< Volumetric porosity of mineral soil                                 [m/m]
@@ -501,25 +499,6 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var( 'rz_max_moist_mineral', mem%rz_max_moist_mineral,                            &
-        & hgrid, surface,                                                      &
-        & t_cf('rz_max_moist_mineral', 'm', 'Maximum mineral root zone moisture'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.TRUE.,                                                     &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      ! todo: maxtop_mineral is only needed with cool ruby switch l_maxtop_depend_on_org,
-      !       should be removed as soon as switch is not needed any more.
-      CALL mem%Add_var( 'maxtop_mineral', mem%maxtop_mineral,                  &
-        & hgrid, surface,                                                      &
-        & t_cf('w_maxtop', 'm', 'Maximum moisture of uppermost soil layer      &
-        & without accounting for organic matter'),                             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL mem%Add_var( 'vol_field_cap', mem%vol_field_cap,                    &
         & hgrid, surface,                                                      &

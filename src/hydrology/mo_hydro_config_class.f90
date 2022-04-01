@@ -46,7 +46,6 @@ MODULE mo_hydro_config_class
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
       & l_hyd_compat420,        & !< Reference version: JSBACH 4.20, i.e. without KoPF changes
       & l_runoff_with_ice,      & !< Include soil ice in runoff and infiltration calculations
-      & l_ws_max_depend_on_org, & !< ws_max re-calculation (in calc_soil_hydrology) depends on organic soil fraction
       & l_correct_ws_from_top,  & !< Start soil water correction from top layer (instead of equal reduction from all layers)
       & l_ice_impedance_perc,   & !< Account for ice impedance during percolation
       & l_ice_impedance_drain,  & !< Account for ice impedance during drainage
@@ -65,8 +64,8 @@ MODULE mo_hydro_config_class
       & l_ice_reduces_maxavail,   & !<   Maximum available water is reduced by the amount of ice
       & l_scool_reduces_maxavail, & !<   Maximum available water is reduced by supercooled water
                                     !< Switches for soil evaporation:
-      & l_ice_reduces_maxtop,     & !<   Maximum amount of top layer water reduced by the amount of ice
-      & l_maxtop_depend_on_org      !<   Maximum amount of top layer water depends on organic matter
+      & l_ice_reduces_maxtop        !<   Maximum amount of top layer water reduced by the amount of ice
+
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -93,11 +92,11 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil, l_socmap
     LOGICAL     :: l_hyd_compat420
-    LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_ws_max_depend_on_org, l_correct_ws_from_top
+    LOGICAL     :: l_infil_subzero, l_runoff_with_ice, l_correct_ws_from_top
     LOGICAL     :: l_ice_impedance_perc, l_ice_impedance_drain, l_scool_impedance_perc, l_scool_impedance_drain
     LOGICAL     :: l_diffuse_all_ws, l_scool_percolates, l_drain_lat, l_percolation_theory
     LOGICAL     :: l_scool_avail_to_plants, l_ice_reduces_maxavail, l_scool_reduces_maxavail
-    LOGICAL     :: l_ice_reduces_maxtop, l_maxtop_depend_on_org, l_feed_sro
+    LOGICAL     :: l_ice_reduces_maxtop, l_feed_sro
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -116,7 +115,6 @@ CONTAINS
       & l_hyd_compat420,            &
       & l_infil_subzero,            &
       & l_runoff_with_ice,          &
-      & l_ws_max_depend_on_org,     &
       & l_correct_ws_from_top,      &
       & l_ice_impedance_perc,       &
       & l_ice_impedance_drain,      &
@@ -130,7 +128,6 @@ CONTAINS
       & l_ice_reduces_maxavail,     &
       & l_scool_reduces_maxavail,   &
       & l_ice_reduces_maxtop,       &
-      & l_maxtop_depend_on_org,     &
       & l_feed_sro
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -162,7 +159,6 @@ CONTAINS
     l_hyd_compat420          = .FALSE.
     l_infil_subzero          = .FALSE.
     l_runoff_with_ice        = .TRUE.
-    l_ws_max_depend_on_org   = .TRUE.
     l_correct_ws_from_top    = .FALSE.
     l_ice_impedance_perc     = .FALSE.
     l_ice_impedance_drain    = .FALSE.
@@ -176,7 +172,6 @@ CONTAINS
     l_ice_reduces_maxavail   = .FALSE.
     l_scool_reduces_maxavail = .FALSE.
     l_ice_reduces_maxtop     = .TRUE.
-    l_maxtop_depend_on_org   = .TRUE.
     l_feed_sro = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -224,12 +219,7 @@ CONTAINS
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_runoff_with_ice=T. Namelist definition of l_runoff_with_ice ignored.')
         l_runoff_with_ice      = .TRUE.
-      END IF
-      IF (l_organic .AND. .NOT. l_ws_max_depend_on_org) THEN
-        CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_ws_max_depend_on_org=T. Namelist definition of l_ws_max_depend_on_org ignored.')
-        l_ws_max_depend_on_org = .TRUE.
-      END IF
+      END IF     
       IF (l_correct_ws_from_top) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_correct_ws_from_top=F. Namelist definition of l_correct_ws_from_top ignored.')
@@ -294,11 +284,6 @@ CONTAINS
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_ice_reduces_maxtop=T. Namelist definition of l_ice_reduces_maxtop ignored.')
         l_ice_reduces_maxtop = .TRUE.
-      END IF
-      IF (l_organic .AND. .NOT. l_maxtop_depend_on_org) THEN
-        CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_maxtop_depend_on_org=T. Namelist definition of l_maxtop_depend_on_org ignored.')
-        l_maxtop_depend_on_org = .TRUE.
       END IF
       IF (l_feed_sro) THEN
         CALL message(TRIM(routine), &
@@ -370,14 +355,11 @@ CONTAINS
     config%l_ice_reduces_maxtop = l_ice_reduces_maxtop
     CALL message(TRIM(routine), &
      & 'Soil evaporation: Reduce maximum top layer water by amount of ice: '//TRIM(logical2string(l_ice_reduces_maxtop)))
-    config%l_ws_max_depend_on_org = l_ws_max_depend_on_org
-    config%l_maxtop_depend_on_org = l_maxtop_depend_on_org
     IF (l_organic) THEN
       CALL message(TRIM(routine), &
-       & 'Re-calculate ws_max from initialfile dep. on organic: '//TRIM(logical2string(l_ws_max_depend_on_org)))
+       & 'Re-calculate ws_max from initialfile dep. on organic')
       CALL message(TRIM(routine), &
-       & 'Soil evaporation: Maximum water in top layer depends on organic matter: ' &
-       & //TRIM(logical2string(l_maxtop_depend_on_org)))
+       & 'Soil evaporation: Maximum water in top layer depends on organic matter')
       config%l_socmap = l_socmap
       CALL message(TRIM(routine), &
        & 'Replace organic carbon fractions with map from bc file: ' &

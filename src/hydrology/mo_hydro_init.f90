@@ -383,15 +383,13 @@ CONTAINS
         & soil_w%dz(:))                                                          ! Soil layer thicknesses
 
       ! Maximum root zone soil moisture
-      ! Note: maxmoist from the initial file corresponds to the field capacity. It is however
-      !    not used as field capacity in a hydrological sense, but rather as maximum soil
-      !    moisture corresponding to a layered bucket scheme, using one bucket for each soil layer.
-      !    max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers      
-      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral) = MAX( &
-          & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth, 0.3_wp)
+      ! rz_max_moist is set to 0.2 for tiles without soil (glaciers, ocean)
+      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MERGE(                   &
+        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth, 0.2_wp, &
+        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth > 0._wp)
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral) = MIN( & 
-          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral), dsl4jsb_Config(HYDRO_)%w_soil_limit)
+        dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MIN( &
+          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
       ! Volumetric soil porosity
@@ -447,7 +445,7 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
       !$acc dsl4jsb_var_ptr(HYDRO_, fract_org_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) )
@@ -585,11 +583,6 @@ CONTAINS
         END IF
       END IF
 
-      IF (.NOT. dsl4jsb_Config(HYDRO_)%l_maxtop_depend_on_org) THEN
-        ! Save top layer water holding capacity of mineral soil for evaporation calculations
-        dsl4jsb_var_ptr(HYDRO_, maxtop_mineral)(:,:) = dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)(:,1,:)
-      END IF
-
       ! The following can change later depending on the organic layers and soil ice content.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
@@ -628,9 +621,10 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, rz_max_moist)   (:,i)  )
       END DO
-      ! Set maximum root zone moisture to a minimum of 0.3m and apply upper soil moisture limit
-      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MAX( &
-          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), 0.3_wp)
+      ! Set maximum root zone moisture to 0.2 for glacier and ocean areas (where rz_max_moist == 0)
+      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MERGE(       &
+          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), 0.2_wp, &
+          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) > 0._wp )
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
         dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MIN( & 
           & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), dsl4jsb_Config(HYDRO_)%w_soil_limit)
@@ -662,26 +656,16 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, w_rootzone)     (:,  i)  )
       END DO
-      ! Set maximum root zone moisture to a minimum of 0.3m and apply upper soil moisture limit
-      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MAX( &
-          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), 0.3_wp)
-      IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MIN( & 
-          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), dsl4jsb_Config(HYDRO_)%w_soil_limit)
-      END IF
 
       ! Make sure w_rootzone is smaller than rz_max_moist
       ! Note: rz_max_moist corresponds to the maximum possible amount of water in the root zone. This
       !    concept is different from the hydrological understanding of field capacity and saturation.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral)
-      END WHERE
 
       ! Initialization of w_rootzone_rel (completely ignoring ice)
       !    It is re-calculated - considering ice - in update_water_stress.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral) > 0._wp)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral)
+          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist)
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
       END WHERE

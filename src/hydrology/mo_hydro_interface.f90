@@ -975,7 +975,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     dsl4jsb_Real2D_onChunk :: w_rootzone
-    dsl4jsb_Real2D_onChunk :: rz_max_moist_mineral
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: w_soil_sl
     dsl4jsb_Real3D_onChunk :: w_soil_fc_sl
@@ -1033,7 +1032,6 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, rz_max_moist_mineral)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pot_scool_sl)   ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, root_depth_sl)         ! in
@@ -1083,7 +1081,6 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &  !! ice not considered
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &  !! ice not considered
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pot_scool_sl), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, rz_max_moist_mineral), &  !! only used in grid cells without organic fraction
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
       &                                t_soil_sl     (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_excess      ), &
@@ -1290,7 +1287,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_rootzone_fc       !< Water content in root zone at field capacity
     dsl4jsb_Real2D_onChunk :: w_rootzone_pwp      !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: rz_max_moist
-    dsl4jsb_Real2D_onChunk :: rz_max_moist_mineral
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: w_rootzone_scool_pot!< Potentially suppercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: w_rootzone_scool_act!< Suppercooled water content in root zone
@@ -1338,7 +1334,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pot_scool_sl) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    i_rootzone)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    rz_max_moist)        ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rz_max_moist_mineral)! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_fc)       ! out
@@ -1390,11 +1385,9 @@ CONTAINS
     ! pdv: Here also the question is how to treat the potential rootzone soil moisture
     !      Definitly ice should be removed -- otherwise plants suffer constant waterstress in pf-regions:
     !      But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in Ws_max
-    IF (dsl4jsb_Config(HYDRO_)%l_ws_max_depend_on_org) THEN
-      w_rootzone_avail_max(:) = rz_max_moist(:)
-    ELSE
-      w_rootzone_avail_max(:) = rz_max_moist_mineral(:)
-    END IF
+
+    w_rootzone_avail_max(:) = rz_max_moist(:)
+
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(HYDRO_)%l_ice_reduces_maxavail) THEN
       w_rootzone_avail_max(:) = w_rootzone_avail_max(:) - i_rootzone(:)
     END IF
