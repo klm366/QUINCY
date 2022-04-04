@@ -310,7 +310,6 @@ CONTAINS
     INTEGER :: day_of_year
 
     REAL(wp), DIMENSION(options%nc) :: &
-      & w_soil_filling,                &
       & t_air_in_Celcius,              &
       & LaiMax_corrected,              &
       & veg_fract_correction_old,      &
@@ -392,7 +391,7 @@ CONTAINS
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
-    !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
+    !$claw acc data create(t_air_in_Celcius)  &
     !$claw create(LaiMax_corrected, veg_fract_correction_old) &
     !$claw create(old_c_state_sum_ta, dummy_flux)
     IF ( .NOT. tile%Has_process_memory(ASSIMI_)) THEN
@@ -493,9 +492,8 @@ CONTAINS
     day_of_year  = INT(get_year_day(options%current_datetime))
 
     !$claw expand parallel update
-    w_soil_filling(:) = wtr_rootzone_rel(:)  ! Initialization of w_soil_filling for crops and raingreen
-                                       ! R: As in JS3 all soil layers are set to the same relative_moisture(GP,tile) and only the average
-                                       !    over all layers or the uppermost layer is used, we do not need soil layers in the phenology.
+    ! R: As in JS3 all soil layers are set to the same relative_moisture(GP,tile) and only the average
+    !    over all layers or the uppermost layer is used, we do not need soil layers in the phenology.
 
     ! R: Note, in JSBACH3 the timestep was 1 day. Except of the former update_growth_phase which is now in the calc_XXX_phenology
     !    procedures the phenology including get_letItDie and get_letItGrow can be called several times a day. Within the
@@ -689,7 +687,7 @@ CONTAINS
         & pseudo_soil_temp(:),             & ! in
         & LaiMax_corrected(:),             & ! in
         & previous_day_NPP_pot_rate_ca(:), & ! in
-        & w_soil_filling(:),               & ! in
+        & wtr_rootzone_rel(:),             & ! in
         & previous_day_temp_min(:),        & ! in
         & previous_day_temp_max(:),        & ! in
         & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
@@ -707,7 +705,7 @@ CONTAINS
       !$claw sca forward update savepoint=ser_jsb_pheno_calc_raingreen_phenology_1 tile_name=tile%name
       CALL calc_raingreen_phenology(        &
         & timestep,                         & ! in
-        & w_soil_filling(:),                & ! in
+        & wtr_rootzone_rel(:),              & ! in
         & LaiMax_corrected(:),              & ! in
         & previous_day_NPP_pot_rate_ca(:),  & ! in
         & lai(:)                            & ! inout
@@ -721,7 +719,7 @@ CONTAINS
        CALL calc_grass_phenology(           &
          & t_air_in_Celcius(:),             & ! in
          & timestep,                        & ! in
-         & w_soil_filling(:),               & ! in
+         & wtr_rootzone_rel(:),             & ! in
          & LaiMax_corrected(:),             & ! in
          & previous_day_NPP_pot_rate_ca(:), & ! in
          & lai(:)                           & ! inout
