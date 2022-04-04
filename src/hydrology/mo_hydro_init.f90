@@ -382,16 +382,6 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth),                          & ! Total soil depth until bedrock (from textures)
         & soil_w%dz(:))                                                          ! Soil layer thicknesses
 
-      ! Maximum root zone soil moisture
-      ! rz_max_moist is set to 0.2 for tiles without soil (glaciers, ocean)
-      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MERGE(                   &
-        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth, 0.2_wp, &
-        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth > 0._wp)
-      IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MIN( &
-          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), dsl4jsb_Config(HYDRO_)%w_soil_limit)
-      END IF
-
       ! Volumetric soil porosity
       dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity
 
@@ -445,7 +435,6 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
       !$acc dsl4jsb_var_ptr(HYDRO_, fract_org_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) )
@@ -459,8 +448,19 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(HYDRO_, root_depth),                          & ! Total rooting depth
         & soil_w%dz(:))    ! Soil layer thicknesses
 
+      ! Maximum root zone soil moisture
+      ! rz_max_moist is set to 0.2 for tiles without soil (glaciers, ocean)
+      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MERGE(                   &
+        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth, 0.2_wp, &
+        & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth > 0._wp)
+      IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
+        dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MIN( &
+          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), dsl4jsb_Config(HYDRO_)%w_soil_limit)
+      END IF
+
       !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, root_depth), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl))
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist))
 
     END IF
 
@@ -583,6 +583,10 @@ CONTAINS
         END IF
       END IF
 
+      WHERE (dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl) <= 1.0e-10_wp)
+        dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
+      ENDWHERE
+
       ! The following can change later depending on the organic layers and soil ice content.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
@@ -613,6 +617,20 @@ CONTAINS
 
     IF (tile%contains_soil) THEN
 
+      ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
+      ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
+
+      ! Note: w_soil_fc_sl is not meant as field capacity in a hydrological sense, but as maximum
+      !    filling of the specific soil layer.
+      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
+        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
+      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
+      
+      CALL init_soil_properties(tile)
+    END IF
+
+    IF (tile%contains_vegetation) THEN
+
       ! Compute maximum root zone moisture based on soil parameters modified by organic fractions
       DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, rz_max_moist), 2)
           CALL get_water_in_root_zone( &
@@ -629,20 +647,6 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MIN( & 
           & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
-
-      ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
-      ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
-
-      ! Note: w_soil_fc_sl is not meant as field capacity in a hydrological sense, but as maximum
-      !    filling of the specific soil layer.
-      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
-        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
-      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-      
-      CALL init_soil_properties(tile)
-    END IF
-
-    IF (tile%contains_vegetation) THEN
 
       ! Initialization of relative root zone soil moisture (ignoring ice).
       !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.

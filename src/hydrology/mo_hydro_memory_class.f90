@@ -488,17 +488,17 @@ CONTAINS
           & t_cf('fract_org_sl', '', 'Fraction of organic material in soil layer'), &
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
           & prefix, suffix,                                                         &
-          & lrestart=.TRUE.,                                                        &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & lrestart=.FALSE.,                                                       &
+          & initval_r=0.0_wp)
       END IF
 
-      CALL mem%Add_var( 'rz_max_moist', mem%rz_max_moist,                            &
+      CALL mem%Add_var( 'rz_max_moist', mem%rz_max_moist,                      &
         & hgrid, surface,                                                      &
-        & t_cf('rz_max_moist', 'm', 'Maximum root zone moisture (mineral + organic)'), &
+        & t_cf('rz_max_moist', 'm', 'Maximum root zone moisture '),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & lrestart=.TRUE.,                                                     &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp)
 
       CALL mem%Add_var( 'vol_field_cap', mem%vol_field_cap,                    &
         & hgrid, surface,                                                      &
