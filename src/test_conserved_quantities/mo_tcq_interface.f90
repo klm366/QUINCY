@@ -145,7 +145,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(TCQ_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(TCQ_)) RETURN
 
     dsl4jsb_Get_memory(TCQ_)
     dsl4jsb_Get_memory(PHENO_)

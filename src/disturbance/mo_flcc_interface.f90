@@ -151,7 +151,7 @@ CONTAINS
     nr_of_tiles = lcc_relocations%nr_of_tiles
     
     ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(FLCC_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(FLCC_)) RETURN
 
     ! If not newday, do nothing
     IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN

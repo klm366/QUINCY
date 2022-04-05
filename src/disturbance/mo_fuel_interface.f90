@@ -159,7 +159,7 @@ CONTAINS
     ice     = options%ice
 
     ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(FUEL_)) RETURN
 
     IF (.NOT. tile%Has_process_memory(CARBON_)) &
       & CALL finish(TRIM(routine), 'FUEL process depends on CARBON process')

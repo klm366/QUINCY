@@ -140,7 +140,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    IF (.NOT. tile%Is_process_active(HD_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(HD_)) RETURN
 
     dsl4jsb_Get_config(HD_)
 

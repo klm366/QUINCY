@@ -196,7 +196,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
@@ -311,7 +311,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
-    IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%is_land) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_) .OR. .NOT. tile%is_land) RETURN
 
     iblk  = options%iblk
     ics   = options%ics
@@ -452,7 +452,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
@@ -517,7 +517,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)

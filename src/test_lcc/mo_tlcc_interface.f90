@@ -138,7 +138,7 @@ CONTAINS
     nr_of_tiles = lcc_relocations%nr_of_tiles
     
     ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(TLCC_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(TLCC_)) RETURN
 
     ! Assert, that PPLCC is active
     IF (.NOT. model%Is_process_active(PPLCC_)) THEN

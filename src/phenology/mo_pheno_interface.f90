@@ -221,7 +221,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
 
@@ -264,7 +264,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_q_'
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
     model => Get_model(tile%owner_model_id)
 
     ! only if the present tile is a pft
@@ -390,7 +390,7 @@ CONTAINS
     ice     = options%ice
 
     ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
     !$claw create(LaiMax_corrected, veg_fract_correction_old) &
@@ -773,7 +773,7 @@ CONTAINS
     ice     = options%ice
 
     ! If process is not to be calculated on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -944,7 +944,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1076,7 +1076,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
 
-    IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
