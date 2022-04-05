@@ -1803,7 +1803,8 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_lice)        ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
-        !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_lice_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
+        !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_lice_1   &
+        !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
         CALL calc_wskin_fractions_lice( &
           & snow_lice(:),               & ! in
           & fract_snow_lice(:)          & ! out
@@ -1846,22 +1847,27 @@ CONTAINS
 
     ! Maximum capacity of skin reservoir (soil + canopy)
     IF (tile%is_vegetation .OR. tile%is_land) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_0 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_0 &
+      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       skinres_canopy_max(:) = config_w_skin_max * lai(:) * fract_fpc_max(:)
     ELSE
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_1 &
+      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       skinres_canopy_max(:) = 0._wp
     END IF
     IF (tile%contains_soil) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_2 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_2 &
+      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       skinres_max(:) = config_w_skin_max + skinres_canopy_max(:)
     ELSE
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_3 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_3 &
+      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       skinres_max(:) = 0._wp
     END IF
 
     IF (tile%is_glacier) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_4 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
+      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_4 &
+      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       fract_snow(:)      = 1._wp
       fract_snow_soil(:) = 1._wp
       !$claw end expand
@@ -1869,7 +1875,8 @@ CONTAINS
 
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_canopy)       ! in
-      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_veg_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
+      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_veg_1 tile_name=tile%name &
+      !$claw dtime=dtime steplen=steplen task_counter=task_counter
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
         & steplen,                   & ! in
@@ -1892,7 +1899,8 @@ CONTAINS
 
 
     IF (tile%is_bare) THEN
-      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_bare_1 tile_name=tile%name dtime=dtime steplen=steplen  task_counter=task_counter
+      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_bare_1 tile_name=tile%name &
+      !$claw dtime=dtime steplen=steplen  task_counter=task_counter
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in
         & steplen,                    & ! in

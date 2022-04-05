@@ -1237,7 +1237,6 @@ CONTAINS
     REAL(wp) :: ws(nc)             ! water and ice within all soil layers
     REAL(wp) :: root_depth(nc)     ! Total depth of rootzone
     REAL(wp) :: deficit_evapotrans(nc) ! water deficit due to evapotranspiration
-    REAL(wp) :: wtr_soil_sl_new(nc)
 
     INTEGER :: max2d(2)
 
