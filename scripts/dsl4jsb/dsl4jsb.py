@@ -182,7 +182,7 @@ def replace_dollar_function(match):
     else:
         if (__current_file.find('_interface.f90') > 0 or __current_file.find('_init.f90') > 0
             or __current_file.find('_veg.f90') > 0
-            or __current_file.find('_land.f90') or __current_file.find('_lake.f90')):
+            or __current_file.find('_land.f90') > 0 or __current_file.find('_lake.f90') > 0):
             match1 = __current_file.split('_')[1] # Get the process name after mo_
         elif __current_file == 'test.f90':
             match1 = 'carbon@sub'
