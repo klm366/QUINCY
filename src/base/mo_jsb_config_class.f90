@@ -41,7 +41,9 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: relative_fractions_in_file  ! true: tile fractions in fract_filename are relative to parent tile
     LOGICAL                        :: init_from_ifs    ! Initialize from IFS analysis
     CHARACTER(len=:), ALLOCATABLE  :: ifs_filename
+#ifndef HAVE_MOFFLEDAC
     TYPE(t_input_file)             :: ifs_input_file
+#endif
 
   END TYPE t_jsb_model_config
 

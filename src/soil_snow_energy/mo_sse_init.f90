@@ -97,22 +97,21 @@ CONTAINS
 #ifdef HAVE_MOFFLEDAC
     CALL InputVarReleaseMem('heat_capacity')
     CALL InputVarReleaseMem('heat_conductivity')
-    CALL InputVarReleaseMem('surf_temp')
     CALL InputVarReleaseMem('fao')
+    IF (ASSOCIATED(sse_init_vars%t_srf_mon)) CALL InputVarReleaseMem('surf_temp')
+    IF (ASSOCIATED(sse_init_vars%ifs_tsoil)) CALL InputVarReleaseMem('ifs_tsoil')
+    IF (ASSOCIATED(sse_init_vars%ifs_tskin)) CALL InputVarReleaseMem('ifs_tskin')
 #else
     DEALLOCATE(                     &
       & sse_init_vars%fao,          &
       & sse_init_vars%vol_heat_cap, &
       & sse_init_vars%heat_cond     &
       & )
-#endif
-
-#ifndef HAVE_MOFFLEDAC
     IF (ASSOCIATED(sse_init_vars%t_srf_mon)) DEALLOCATE(sse_init_vars%t_srf_mon)
-#endif
 
     IF (ASSOCIATED(sse_init_vars%ifs_tsoil)) DEALLOCATE(sse_init_vars%ifs_tsoil)
     IF (ASSOCIATED(sse_init_vars%ifs_tskin)) DEALLOCATE(sse_init_vars%ifs_tskin)
+#endif
 
   END SUBROUTINE sse_finalize_init_vars
       
@@ -155,20 +154,17 @@ CONTAINS
     sse_init_vars%fao         (:,:)   = missval
     sse_init_vars%vol_heat_cap(:,:)   = missval
     sse_init_vars%heat_cond   (:,:)   = missval
-#endif
-! StW: ToDO: Check this new option with MOFFLEDAC
 
     IF (model%config%init_from_ifs) THEN
       ALLOCATE(sse_init_vars%ifs_tsoil(nproma,ifs_nsoil,nblks))
       sse_init_vars%ifs_tsoil(:,:,:) = missval
       ALLOCATE(sse_init_vars%ifs_tskin(nproma,nblks))
       sse_init_vars%ifs_tskin(:,:) = missval
-#ifndef HAVE_MOFFLEDAC
     ELSE
       ALLOCATE(sse_init_vars%t_srf_mon(nproma, nblks, 12))
       sse_init_vars%t_srf_mon(:,:,:) = missval
-#endif
     END IF
+#endif
 
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
@@ -178,23 +174,31 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Reading soil energy boundary conditions for tile '//TRIM(tile%name))
 
 #ifdef HAVE_MOFFLEDAC
-    CALL InputDimAdd('clim_monthly_year',Extent=12)
-    CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_monthly_year')
     CALL InputFileAdd(TRIM(dsl4jsb_Config(SSE_)%bc_filename),file_ref=IFile,dt_file=0)
     CALL InputVarGroupStart('sse_init',IFile=IFile,dt_update=0)
+    IF (model%config%init_from_ifs) THEN
+      CALL InputDimAdd('ifs_nsoil',Extent=ifs_nsoil)
+      CALL InputVarAdd('nproma,ifs_nsoil,nblock',sse_init_vars%ifs_tsoil,'ifs_tsoil',file_name=model%config%ifs_filename)
+      CALL InputVarAdd('nproma,nblock',sse_init_vars%ifs_tskin,'ifs_tskin',file_name=model%config%ifs_filename)
+      CALL InputOptAdd(var_name='ifs_tsoil',var_file_name='STL*=>ifs_nsoil')
+      CALL InputOptAdd(var_name='ifs_tskin',var_file_name='SKT')
+    ELSE
+      CALL InputDimAdd('clim_monthly_year',Extent=12)
+      CALL InputOptAdd(AFile=IFile,dim_name='time=>clim_monthly_year')
+      CALL InputVarAdd('nproma,nblock,clim_monthly_year',sse_init_vars%t_srf_mon, 'surf_temp', &
+      & file_name=TRIM(dsl4jsb_Config(SSE_)%ic_filename))
+      CALL InputOptAdd(file_name=TRIM(dsl4jsb_Config(SSE_)%ic_filename),dim_name='time=>clim_monthly_year')
+      CALL InputOptAdd(var_name='surf_temp',fill_val=280._wp, valid_range=(/0._wp,1.e300_wp/))
+    ENDIF
     CALL InputVarAdd('nproma,nblock',                  sse_init_vars%fao, 'fao')
     CALL InputVarAdd('nproma,nblock', sse_init_vars%vol_heat_cap, 'heat_capacity')
     CALL InputVarAdd('nproma,nblock',                  sse_init_vars%heat_cond, 'heat_conductivity')
-    CALL InputVarAdd('nproma,nblock,clim_monthly_year',sse_init_vars%t_srf_mon, 'surf_temp', &
-      & file_name=TRIM(dsl4jsb_Config(SSE_)%ic_filename))
     CALL InputVarGroupEnd()
-    CALL InputOptAdd(file_name=TRIM(dsl4jsb_Config(SSE_)%ic_filename),dim_name='time=>clim_monthly_year')
     CALL InputOptAdd(var_name='heat_capacity',    fill_val=2.e6_wp, valid_range=(/0._wp,1.e300_wp/))
     CALL InputOptAdd(var_name='heat_conductivity',fill_val= 0.2_wp, valid_range=(/0._wp,1.e300_wp/))
-    CALL InputOptAdd(var_name='surf_temp',        fill_val=280._wp, valid_range=(/0._wp,1.e300_wp/))
     CALL InputOptAdd(var_name='fao',              fill_val=  0._wp, &
       & valid_range=(/REAL(LBOUND(fao_thermal_diff,1),wp),REAL(UBOUND(fao_thermal_diff,1),wp)/))
-    ! Read all 4 variables
+    ! Read all variables
     CALL timer_start(timer_moffledac(model%id))
     CALL InputGetData(msg=TRIM(routine))
     CALL timer_stop(timer_moffledac(model%id))

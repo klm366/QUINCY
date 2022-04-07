@@ -27,8 +27,8 @@ MODULE mo_hydro_init
 #ifdef HAVE_MOFFLEDAC
   USE mo_timer,             ONLY: timer_start, timer_stop
   USE mo_moffledac_iface,   ONLY: timer_moffledac
-  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputGetData, &
-                                  InputVarReleaseMem, input_file_list
+  USE mo_input,             ONLY: InputVarGroupStart, InputVarGroupEnd, InputFileAdd, InputVarAdd, InputOptAdd, InputDimAdd, &
+                                  InputGetData, InputVarReleaseMem, input_file_list
 #else
   USE mo_jsb_io_netcdf,     ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,            ONLY: missval
@@ -117,8 +117,9 @@ CONTAINS
     CALL InputVarReleaseMem('wilting_point')
     CALL InputVarReleaseMem('root_depth')
     CALL InputVarReleaseMem('snow')
-    CALL InputVarReleaseMem('layer_moist')
-! StW: ToDo: Check new ifs-variables with MOFFLEDAC
+    IF (ASSOCIATED(hydro_init_vars%w_soil_sl )) CALL InputVarReleaseMem('layer_moist')
+    IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl)) CALL InputVarReleaseMem('ifs_smi')
+    IF (ASSOCIATED(hydro_init_vars%ifs_w_snow)) CALL InputVarReleaseMem('ifs_w_snow')
 #else
     DEALLOCATE( &
       & hydro_init_vars%elevation       ,       &
@@ -256,8 +257,19 @@ CONTAINS
       CALL InputOptAdd(fill_val=0._wp,   valid_range=(/0._wp,1.e300_wp/))
       CALL InputVarAdd('nproma,nblock',        hydro_init_vars%w_snow_soil, 'snow',       IFile=ICFile)
       CALL InputOptAdd(fill_val=0._wp, valid_range=(/0._wp,1.e300_wp/),def_val=0._wp)
-      CALL InputVarAdd('nproma,soillev,nblock',hydro_init_vars%w_soil_sl, 'layer_moist',IFile=ICFIle)
-      CALL InputOptAdd(fill_val=0._wp,   valid_range=(/0._wp,1.e300_wp/))
+      IF (model%config%init_from_ifs) THEN
+        CALL InputDimAdd('ifs_nsoil',Extent=ifs_nsoil)
+        CALL InputVarAdd('nproma,ifs_nsoil,nblock',hydro_init_vars%ifs_smi_sl,'ifs_smi',&
+                         dt_update=0,file_name=model%config%ifs_filename)
+        CALL InputOptAdd(var_file_name='SMIL*=>ifs_nsoil',init_rec=1,fill_val=-1000._wp)
+        ! StW: This fill value (-1000) is not very appropriate but needed for correct
+        ! further processing (slm mismatch between grid and ifs-file in the ! Kaspian Sea?!)
+        CALL InputVarAdd('nproma,nblock',hydro_init_vars%ifs_w_snow,'ifs_w_snow',dt_update=0,file_name=model%config%ifs_filename)
+        CALL InputOptAdd(var_file_name='W_SNOW',init_rec=1)!,fill_val=0._wp)
+      ELSE
+        CALL InputVarAdd('nproma,soillev,nblock',hydro_init_vars%w_soil_sl, 'layer_moist',IFile=ICFIle)
+        CALL InputOptAdd(fill_val=0._wp,valid_range=(/0._wp,1.e300_wp/))
+      ENDIF
     ENDIF
     IF (tile%contains_vegetation) THEN
       CALL InputVarAdd('nproma,nblock',hydro_init_vars%root_depth,'root_depth')

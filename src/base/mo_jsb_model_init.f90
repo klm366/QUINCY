@@ -494,8 +494,10 @@ CONTAINS
       !>
       !>     2.3 Initialize processes on each tile
       !>
+#ifndef HAVE_MOFFLEDAC
       IF (model%config%init_from_ifs) &
         & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
+#endif
 
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
@@ -563,7 +565,9 @@ CONTAINS
       ! ---------------------------------------------------------------------------------------------- !
     END DO
 
+#ifndef HAVE_MOFFLEDAC
     IF (model%config%ifs_input_file%is_open) CALL model%config%ifs_input_file%Close()
+#endif
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
