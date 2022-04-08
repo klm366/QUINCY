@@ -44,7 +44,7 @@ MODULE mo_hydro_init
       & elevation      (:,:) => NULL(), &
       & oro_stddev     (:,:) => NULL(), &
       & soil_depth     (:,:) => NULL(), &
-      & rootzone_max   (:,:) => NULL(), &
+      & weq_rootzone_max (:,:) => NULL(), &
       & vol_porosity   (:,:) => NULL(), &
       & hyd_cond_sat   (:,:) => NULL(), &
       & matrix_pot     (:,:) => NULL(), &
@@ -100,7 +100,7 @@ CONTAINS
       & hydro_init_vars%elevation       ,       &
       & hydro_init_vars%oro_stddev      ,       &
       & hydro_init_vars%soil_depth      ,       &
-      & hydro_init_vars%rootzone_max    ,       &
+      & hydro_init_vars%weq_rootzone_max ,      &
       & hydro_init_vars%vol_porosity    ,       &
       & hydro_init_vars%hyd_cond_sat    ,       &
       & hydro_init_vars%matrix_pot      ,       &
@@ -151,7 +151,7 @@ CONTAINS
       & hydro_init_vars%elevation       (nproma, nblks),       &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
       & hydro_init_vars%soil_depth      (nproma, nblks),       &
-      & hydro_init_vars%rootzone_max    (nproma, nblks),       &
+      & hydro_init_vars%weq_rootzone_max (nproma, nblks),      &
       & hydro_init_vars%vol_porosity    (nproma, nblks),       &
       & hydro_init_vars%hyd_cond_sat    (nproma, nblks),       &
       & hydro_init_vars%matrix_pot      (nproma, nblks),       &
@@ -166,7 +166,7 @@ CONTAINS
       hydro_init_vars%elevation      (:,:)   = missval
       hydro_init_vars%oro_stddev     (:,:)   = missval
       hydro_init_vars%soil_depth     (:,:)   = missval
-      hydro_init_vars%rootzone_max   (:,:)   = missval
+      hydro_init_vars%weq_rootzone_max(:,:)  = missval
       hydro_init_vars%vol_porosity   (:,:)   = missval
       hydro_init_vars%hyd_cond_sat   (:,:)   = missval
       hydro_init_vars%matrix_pot     (:,:)   = missval
@@ -222,12 +222,13 @@ CONTAINS
       !    not used as field capacity in a hydrological sense, but rather as maximum soil
       !    moisture corresponding to a layered bucket scheme, using one bucket for each soil layer.
       ptr_2D => input_file%Read_2d(                        &
-        & fill_array = hydro_init_vars%rootzone_max, &
+        & fill_array = hydro_init_vars%weq_rootzone_max,   &
         & variable_name='maxmoist')
-      ! rootzone_max is zero over glaciers ... but since we do this only for tiles with soil, we set rootzone_max to 0.2 over glaciers
-      hydro_init_vars%rootzone_max = MERGE(ptr_2D, 0.2_wp, ptr_2D > 0._wp)
+      ! weq_rootzone_max is zero over glaciers ... but since we do this only for tiles with soil, we
+      ! set weq_rootzone_max to 0.2 over glaciers
+      hydro_init_vars%weq_rootzone_max = MERGE(ptr_2D, 0.2_wp, ptr_2D > 0._wp)
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        hydro_init_vars%rootzone_max = MIN(hydro_init_vars%rootzone_max, dsl4jsb_Config(HYDRO_)%w_soil_limit)
+        hydro_init_vars%weq_rootzone_max = MIN(hydro_init_vars%weq_rootzone_max, dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
       ! Volumetric soil porosity
@@ -391,8 +392,9 @@ CONTAINS
         & soil_w%dz(:))                                                          ! Soil layer thicknesses
 
       ! Maximum root zone soil moisture
-      ! rootzone_max is zero over glaciers ... but since we do this only for tiles with soil, we set rootzone_max to 0.2 over glaciers
-      dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max) = hydro_init_vars%rootzone_max
+      !    weq_rootzone_max is zero over glaciers ... but since we do this only for tiles with soil, we
+      !    set weq_rootzone_max to 0.2 over glaciers
+      dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = hydro_init_vars%weq_rootzone_max
 
       ! Volumetric soil porosity
       dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity
@@ -441,7 +443,7 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, matrix_pot), &
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) )
 
@@ -618,18 +620,18 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)   (:,  i)  )
       END DO
 
-      ! Make sure wtr_rootzone is smaller than rootzone_max
-      ! Note: rootzone_max corresponds to the maximum possible amount of water in the root zone. This
-      !    concept is different from the hydrological understanding of field capacity and saturation.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max))
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+      ! Make sure wtr_rootzone is smaller than weq_rootzone_max
+      ! Note: weq_rootzone_max corresponds to the maximum possible amount of water or ice in the root zone.
+      !    This concept is different from the hydrological understanding of field capacity and saturation.
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
       END WHERE
 
       ! Initialization of wtr_rootzone_rel (completely ignoring ice)
       !    It is re-calculated - considering ice - in update_water_stress.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max) > 0._wp)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE

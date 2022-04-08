@@ -501,13 +501,13 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)  (:,  b)   )
       END DO
       !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max))
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
       END WHERE
 
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max) > 0._wp)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rootzone_max)
+          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE

@@ -505,7 +505,8 @@ CONTAINS
     DO i = 1, nc
       !$claw acc loop seq
       DO jl = 1, nsoil
-        ! here we are calculating soil saturation (this does not correspond to rootzone_max, which was calculated from field capacity)
+        ! Note: here we are calculating soil saturation (this does not correspond to weq_rootzone_max, which was
+        !    calculated from field capacity)
         wsat_sl     (i,jl) = MAX(vol_porosity_sl (i,jl) * soil_depth_sl(i,jl) - ice_soil_sl(i,jl), 0._wp)  ! -> diffusion
         field_cap_sl(i,jl) = MAX(vol_field_cap_sl(i,jl) * soil_depth_sl(i,jl) - ice_soil_sl(i,jl), 0._wp)  ! -> percolation
         ! todo: to be discussed: Does it make sense, to reduce water content at wilting point relative to the ice fraction?
@@ -527,7 +528,7 @@ CONTAINS
     !$claw acc data present(fract_org_sl,ws_max,ws_max_mineral)
     !$claw acc parallel loop gang vector
     ! Careful: ws_max just calculated from vol_field_cap_sl (depending on organic matter) is
-    !          overwritten with rootzone_max from the initial file (not depending on organic matter)
+    !          overwritten with weq_rootzone_max from the initial file (not depending on organic matter)
     !          in grid cells with no significant organic fraction. This might lead to unexpected
     !          inconsistencies!
     DO i = 1, nc
