@@ -69,8 +69,8 @@ CONTAINS
   !! @param [in]     rain                  liquid precipitation [kg m-2 s-1]
   !! @param [in]     snow                  solid precipitation [kg m-2 s-1]
   !! @param [in,out] skinres               water content of the skin reservoir (vegetation and bare soil) [m]
-  !! @param [in,out] snow_soil             snow depth at the ground [m water equivalent]
-  !! @param [in,out] snow_canopy           snow depth on the canopy [m water equivalent]
+  !! @param [in,out] weq_snow_soil         snow depth at the ground [m water equivalent]
+  !! @param [in,out] weq_snow_can          snow depth on the canopy [m water equivalent]
   !! @param [in,out] snow_soil_dens        snow density on soil at non-glacier points [m water equivalent]
   !! @param [out]    q_snocpymlt           Heating due to snow melt on canopy [W m-2]
   !! @param [out]    snow_accum            snow budget change within time step [m water equivalent]
@@ -81,13 +81,13 @@ CONTAINS
   !! @param [out]    water_to_soil         Water available for infiltration into the soil [m water equivalent]
   !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
   !
-  PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (          &
-    & lstart, dtime, l_dynsnow, snow_depth_max,                    &
-    & t_unfilt, wind_10m, t_air,                                   &
-    & skinres_canopy_max, skinres_max, fract_snow, fract_water,    &
-    & hcap_grnd, evapotrans, evapopot, transpiration,              &
-    & rain, snow, skinres, snow_soil, snow_canopy, snow_soil_dens, &
-    & q_snocpymlt, snow_accum, snow_melt_soil,                     &
+  PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (           &
+    & lstart, dtime, l_dynsnow, snow_depth_max,                     &
+    & t_unfilt, wind_10m, t_air,                                    &
+    & skinres_canopy_max, skinres_max, fract_snow, fract_water,     &
+    & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
+    & skinres, weq_snow_soil, weq_snow_can, snow_soil_dens,         &
+    & q_snocpymlt, snow_accum, snow_melt_soil,                      &
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
@@ -101,7 +101,7 @@ CONTAINS
       & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,                 &
       & fract_snow, fract_water, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
     REAL(wp), INTENT(inout) :: &
-      & skinres, snow_soil, snow_canopy, snow_soil_dens
+      & skinres, weq_snow_soil, weq_snow_can, snow_soil_dens
     REAL(wp), INTENT(out)   ::                   &
       & q_snocpymlt, snow_accum, snow_melt_soil, &
       & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
@@ -112,7 +112,7 @@ CONTAINS
     REAL(wp) ::               &
       & rain_in_m,            & !< amount of rainfall within time step [m]
       & new_snow,             & !< amount of snowfall within time step [m]
-      & snow_soil_old,        & !< amount of snow prior to update [m]
+      & weq_snow_soil_old,    & !< amount of snow prior to update [m]
       & evapotrans_in_m,      & !< amount of evapotranspiration within time step [m]
       & evapotrans_soil_in_m, & !< amount of evapotranspiration from soil (w/o snow and skin) within time step [m]
       & evapo_soil_in_m,      & !< amount of ground evaporation within time step [m]
@@ -121,7 +121,7 @@ CONTAINS
       & evapo_snow_in_m,      & !< amount of sublimation from snow within time step [m]
       & snow_melt_can,        & !< snow melt from canopy [m]
       & snow_melt_pot_in_m,   & !< potential amount of snow melt [m]
-      & new_snow_canopy,      & !< amount of snowfall on canopy within time step [m]
+      & new_snow_can,         & !< amount of snowfall on canopy within time step [m]
       & new_snow_soil,        & !< amount of snowfall to soil within time step [m]
       & exp_t, exp_w,         & !< exponents needed for unloading of snow due to temperature / wind
       & snow_blown,           & !< amount of snow blown from canopy to the ground
@@ -143,7 +143,7 @@ CONTAINS
     !$claw sca
 
     snow_accum = 0._wp
-    snow_soil_old = snow_soil
+    weq_snow_soil_old = weq_snow_soil
     snow_melt_soil = 0._wp
     evapotrans_soil = 0._wp
     evapo_skin = 0._wp
@@ -168,25 +168,25 @@ CONTAINS
     !---------------------------------------------
 
     ! amount of snow remaining on the canopy
-    new_snow_canopy = MIN(new_snow * InterceptionEfficiency, MAX(skinres_canopy_max - snow_canopy, 0._wp))
+    new_snow_can = MIN(new_snow * InterceptionEfficiency, MAX(skinres_canopy_max - weq_snow_can, 0._wp))
 
     ! remaining snow falls on the ground
-    new_snow_soil = new_snow - new_snow_canopy
+    new_snow_soil = new_snow - new_snow_can
 
     ! update snow on the canopy
     ! Note: evaporation happens from canopy, as long as there is enough snow
-    canopy_pre_snow = snow_canopy
-    snow_canopy = MIN(MAX(0._wp, canopy_pre_snow + new_snow_canopy + evapo_snow_pot_in_m), skinres_canopy_max)
-    evapo_snow_in_m = evapo_snow_pot_in_m - (snow_canopy - canopy_pre_snow - new_snow_canopy)
+    canopy_pre_snow = weq_snow_can
+    weq_snow_can = MIN(MAX(0._wp, canopy_pre_snow + new_snow_can + evapo_snow_pot_in_m), skinres_canopy_max)
+    evapo_snow_in_m = evapo_snow_pot_in_m - (weq_snow_can - canopy_pre_snow - new_snow_can)
     ! unloading of snow from the canopy due to melting
     exp_t = MAX(0._wp, t_air-zc1)/zc2 * dtime
-    snow_melt_can = snow_canopy * (1._wp-EXP(-exp_t))
-    snow_canopy = snow_canopy - snow_melt_can
+    snow_melt_can = weq_snow_can * (1._wp-EXP(-exp_t))
+    weq_snow_can = weq_snow_can - snow_melt_can
 
     ! unloading of snow from the canopy due to wind
     exp_w = wind_10m/zc3 * dtime
-    snow_blown = snow_canopy * (1._wp-EXP(-exp_w))
-    snow_canopy   = snow_canopy   - snow_blown
+    snow_blown = weq_snow_can * (1._wp-EXP(-exp_w))
+    weq_snow_can  = weq_snow_can  - snow_blown
     new_snow_soil = new_snow_soil + snow_blown
 
     ! Heating due to snow melt on canopy
@@ -195,13 +195,13 @@ CONTAINS
 
     !  Snowfall and sublimation
     !-----------------------------------------------
-    snow_soil = snow_soil + new_snow_soil + evapo_snow_in_m
+    weq_snow_soil = weq_snow_soil + new_snow_soil + evapo_snow_in_m
 
     ! Correction if there was too much snow evaporation
-    IF (snow_soil < 0._wp) THEN
-      evapotrans_no_snow = evapotrans_no_snow + snow_soil
-      evapo_deficit = snow_soil
-      snow_soil = 0._wp
+    IF (weq_snow_soil < 0._wp) THEN
+      evapotrans_no_snow = evapotrans_no_snow + weq_snow_soil
+      evapo_deficit = weq_snow_soil
+      weq_snow_soil = 0._wp
     ELSE
       evapo_deficit = 0._wp
     END IF
@@ -212,9 +212,9 @@ CONTAINS
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
       IF (t_unfilt > tmelt) THEN
         snow_melt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o)     !  potential snow and ice melt [m]
-        IF (snow_soil > 0._wp) THEN
-          snow_melt_soil = MAX(MIN(snow_melt_pot_in_m, snow_soil), 0._wp)  ! snow melt limited by actual snow depth [m]
-          snow_soil = snow_soil - snow_melt_soil                           ! reduce snow depth according to melting
+        IF (weq_snow_soil > 0._wp) THEN
+          snow_melt_soil = MAX(MIN(snow_melt_pot_in_m, weq_snow_soil), 0._wp)  ! snow melt limited by actual snow depth [m]
+          weq_snow_soil = weq_snow_soil - snow_melt_soil                       ! reduce snow depth according to melting
         ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
         END IF
       END IF
@@ -229,8 +229,8 @@ CONTAINS
 
     IF (snow_depth_max >= 0._wp) THEN
       ! Limit snow depth to avoid grid cells with infinitely growing snow depths in cooler climates
-      water_to_soil = water_to_soil + MAX(0._wp, snow_soil-snow_depth_max)
-      snow_soil = MIN(snow_depth_max, snow_soil)
+      water_to_soil = water_to_soil + MAX(0._wp, weq_snow_soil-snow_depth_max)
+      weq_snow_soil = MIN(snow_depth_max, weq_snow_soil)
     END IF
 
     !-----------------------------------------------------------
@@ -260,12 +260,14 @@ CONTAINS
 
     ! Compute snow density
     IF (l_dynsnow) THEN
-      IF (snow_soil_old * rhoh2o / snow_soil_dens > snow_depth_min) THEN
+      IF (weq_snow_soil_old * rhoh2o / snow_soil_dens > snow_depth_min) THEN
         ! Update density of old snow following eq. 31 of Verseghy, 1991
         snow_soil_dens = dens_snow_max - (dens_snow_max - snow_soil_dens) * EXP(-0.01_wp * dtime/3600._wp)
         ! Calculate weighted mean density from old and fresh snow
-        IF (snow_soil > snow_soil_old) &
-          & snow_soil_dens = (snow_soil_dens * snow_soil_old + dens_snow_min * (snow_soil - snow_soil_old)) / snow_soil
+        IF (weq_snow_soil > weq_snow_soil_old) THEN
+          snow_soil_dens =  (snow_soil_dens * weq_snow_soil_old + dens_snow_min * (weq_snow_soil - weq_snow_soil_old))  &
+            &              / weq_snow_soil
+        END IF
       ELSE
         snow_soil_dens = dens_snow_min  ! fresh snow
       END IF
@@ -1468,22 +1470,22 @@ CONTAINS
   !--------------  !!
   ! @brief      Calculates the snow fraction on lake ice.
   !
-  ! @param [in]     snow_lice        Snow depth on lake ice [m water equivalent]
+  ! @param [in]     weq_snow_lice    Snow depth on lake ice [m water equivalent]
   ! @param [out]    fract_snow_lice  Fraction of snow on lake ice
   !!
   ELEMENTAL SUBROUTINE calc_wskin_fractions_lice( &
-    & snow_lice,                                  & ! in
+    & weq_snow_lice,                              & ! in
     & fract_snow_lice                             & ! out
     & )
 
     !$claw model-data
-    REAL(wp),  INTENT(in)    :: snow_lice
+    REAL(wp),  INTENT(in)    :: weq_snow_lice
     REAL(wp),  INTENT(out)   :: fract_snow_lice
     !$claw end model-data
 
     !$claw sca
 
-    fract_snow_lice = TANH(snow_lice * 100._wp)
+    fract_snow_lice = TANH(weq_snow_lice * 100._wp)
 
   END SUBROUTINE calc_wskin_fractions_lice
 
@@ -1497,8 +1499,8 @@ CONTAINS
     & drag_srf,                                  & ! in
     & q_air,                                     & ! in
     & skinres,                                   & ! in
-    & snow_soil,                                 & ! in
-    & snow_canopy,                               & ! in
+    & weq_snow_soil,                             & ! in
+    & weq_snow_can,                              & ! in
     & fract_snow_can,                            & ! inout
     & fract_water    ,                           & ! out
     & fract_snow_soil                            & ! out
@@ -1520,8 +1522,8 @@ CONTAINS
       & q_air,              &
       & wsr_max,            &
       & skinres,            &
-      & snow_soil,          &
-      & snow_canopy
+      & weq_snow_soil,      &
+      & weq_snow_can
 
     REAL(wp), INTENT(out) :: &
       & fract_snow_can,      &
@@ -1538,7 +1540,7 @@ CONTAINS
     ! Snow fraction on canopy
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
     IF (wsr_max > EPSILON(1._wp)) THEN
-      fract_snow_can = MIN(1._wp, snow_canopy / wsr_max)
+      fract_snow_can = MIN(1._wp, weq_snow_can / wsr_max)
       fract_water    = MIN(1._wp, skinres     / wsr_max)
     ELSE
       fract_snow_can = 0._wp
@@ -1547,7 +1549,7 @@ CONTAINS
 
     ! Snow fraction on soil
     !$claw sca forward
-    fract_snow_soil = Get_snow_fract_noforest(snow_soil, oro_stddev) ! snow on soil below forest
+    fract_snow_soil = Get_snow_fract_noforest(weq_snow_soil, oro_stddev) ! snow on soil below forest
     fract_snow_soil = MERGE(fract_snow_can, fract_snow_soil, &
                                fract_snow_soil < EPSILON(1._wp) .AND. fract_snow_can > EPSILON(1._wp))
 
@@ -1560,13 +1562,13 @@ CONTAINS
     ! snow water content from soil and canopy; same for skin reservoir
     IF (fract_snow_soil > 0._wp) THEN
       ! @todo Shouldn't one take rhoice here insteady of rhoh2o?
-      fract_snow_soil = fract_snow_soil / MAX(1._wp, fract_snow_soil * evapo_pot * dtime    &
-        &                                            / (rhoh2o * (snow_soil + snow_canopy)) &
+      fract_snow_soil = fract_snow_soil / MAX(1._wp, fract_snow_soil * evapo_pot * dtime         &
+        &                                            / (rhoh2o * (weq_snow_soil + weq_snow_can)) &
         &                                    )
     END IF
     IF (fract_water > 0._wp ) THEN
       fract_water = fract_water    / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime &
-        &                                       / (rhoh2o * MAX(EPSILON(1._wp), skinres)) &
+        &                                       / (rhoh2o * MAX(EPSILON(1._wp), skinres))     &
         &                                    )
     END IF
 
@@ -1582,7 +1584,7 @@ CONTAINS
     & drag_srf,                                   & ! in
     & q_air,                                      & ! in
     & skinres,                                    & ! in
-    & snow_soil,                                  & ! in
+    & weq_snow_soil,                              & ! in
     & fract_water,                                & ! out
     & fract_snow_soil                             & ! out
     & )
@@ -1603,7 +1605,7 @@ CONTAINS
       & q_air,              &
       & wsr_max,            &
       & skinres,            &
-      & snow_soil
+      & weq_snow_soil
 
     REAL(wp), INTENT(out) :: &
       & fract_water,         &
@@ -1625,7 +1627,7 @@ CONTAINS
 
     ! Snow fraction on soil
     !$claw sca forward
-    fract_snow_soil = Get_snow_fract_noforest(snow_soil, oro_stddev) ! snow on soil below forest
+    fract_snow_soil = Get_snow_fract_noforest(weq_snow_soil, oro_stddev) ! snow on soil below forest
 
     ! Potential evaporation using old values of air and surface humidity
     t_srf_old = t_srf
@@ -1636,9 +1638,9 @@ CONTAINS
     ! snow water content from soil and canopy together
     ! R: In the following lines I just kicked out the contribution of skinres_canopy as compared to JSBACH3. For the intension of
     !    the parametrization this can be done so easily for the bare type and it is consistent with JSBACH3.
-    IF (fract_snow_soil > 0._wp .AND. snow_soil > EPSILON(1._wp)) THEN
+    IF (fract_snow_soil > 0._wp .AND. weq_snow_soil > EPSILON(1._wp)) THEN
       fract_snow_soil = fract_snow_soil &
-        & / MAX(1._wp, fract_snow_soil * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), snow_soil)))
+        & / MAX(1._wp, fract_snow_soil * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), weq_snow_soil)))
     END IF
     ! Same for water cover on soil
     IF (fract_water > 0._wp .AND. skinres > EPSILON(1._wp)) THEN

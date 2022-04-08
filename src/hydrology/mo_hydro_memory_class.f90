@@ -47,7 +47,7 @@ MODULE mo_hydro_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow,           & !< Snow fraction of tile                                                []
-      & w_snow,               & !< Water content of snow reservoir                                      [m water equivalent]
+      & weq_snow,             & !< Water content of snow reservoir                                      [m water equivalent]
       & evapo_snow,           & !< Evaporation from snow                                                [kg m-2 s-1]
       & snowmelt,             & !< Snow melt                                                            [kg m-2 s-1]
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
@@ -71,7 +71,7 @@ MODULE mo_hydro_memory_class
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_soil,      & !< Snow fraction on soil                                               []
-      & snow_soil,            & !< Water content of snow reservoir of soil                             [m water equivalent]
+      & weq_snow_soil,        & !< Water content of snow reservoir of soil                             [m water equivalent]
       & snow_soil_dens,       & !< Density of snow on soil                                             [kg m-3]
       & evapotrans_lnd,       & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
       & q_snocpymlt             !< Heating by melting of snow on canopy                                [W m-2]
@@ -132,7 +132,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & root_depth,           & !< Rooting depth [m]
       & fract_snow_can,       & !< Snow fraction on canopy                                                  []
-      & snow_canopy,          & !< Water content of snow reservoir on canopy                                [m water equivalent]
+      & weq_snow_can,         & !< Snow amount on canopy                                                    [m water equivalent]
       & rootzone_fc,          & !< Water content at field capacity in root zone of the soil                 [m]
       & rootzone_pwp,         & !< Water content at permanent wilting point in root zone of the soil        [m]
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
@@ -143,7 +143,7 @@ MODULE mo_hydro_memory_class
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,      & !< Snow fraction on glacier                                                 []
-      & w_glac,               & !< Glacier depth including snow on glacier                                  [m water equivalent]
+      & weq_glac,             & !< Glacier depth including snow on glacier                                  [m water equivalent]
       & runoff_glac             !< Runoff from glacier (rain+melt, no calving)                              [m water equivalent]
 
     ! Additional variables if no separate glacier lct_type is used and glaciers are treated as part of SOIL lct_type
@@ -155,7 +155,7 @@ MODULE mo_hydro_memory_class
       & evapo_wtr,            & !< Evaporation over lake water
       & evapo_ice,            & !< Evaporation over lake ice
       & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
-      & snow_lice               !< Water content of snow on lake ice                                        [m water equivalent]
+      & weq_snow_lice           !< Water content of snow on lake ice                                        [m water equivalent]
 
     !! quincy
     !Soil Water addons for QUINCY in HYDRO
@@ -255,9 +255,9 @@ CONTAINS
     ELSE
       grib2_desc = t_grib2(255, 255, 255, grib_bits)
     END IF
-    CALL mem%Add_var( 'w_snow', mem%w_snow,                                    &
+    CALL mem%Add_var( 'weq_snow', mem%weq_snow,                                &
       & hgrid, surface,                                                        &
-      & t_cf('w_snow', 'm (water equivalent)', 'Snow amount'),                 &
+      & t_cf('weq_snow', 'm (water equivalent)', 'Snow amount'),               &
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix,                                                        &
       & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -391,9 +391,9 @@ CONTAINS
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'snow_soil', mem%snow_soil,                                  &
+      CALL mem%Add_var( 'weq_snow_soil', mem%weq_snow_soil,                          &
         & hgrid, surface,                                                            &
-        & t_cf('snow_soil', 'm (water equivalent)', 'Snow amount on soil'),          &
+        & t_cf('weq_snow_soil', 'm (water equivalent)', 'Snow amount on soil'),      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -775,9 +775,9 @@ CONTAINS
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'snow_canopy', mem%snow_canopy,                                  &
+      CALL mem%Add_var( 'weq_snow_can', mem%weq_snow_can,                                &
         & hgrid, surface,                                                                &
-        & t_cf('snow_canopy', 'm (water equivalent)', 'Snow amount on canopy'),          &
+        & t_cf('weq_snow_can', 'm (water equivalent)', 'Snow amount on canopy'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
@@ -853,9 +853,9 @@ CONTAINS
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'w_glac', mem%w_glac,                                            &
+      CALL mem%Add_var( 'weq_glac', mem%weq_glac,                                        &
         & hgrid, surface,                                                                &
-        & t_cf('w_glac', 'm (water equivalent)', 'Glacier depth (including snow)'),      &
+        & t_cf('weq_glac', 'm (water equivalent)', 'Glacier depth (including snow)'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
@@ -900,12 +900,12 @@ CONTAINS
           & output_level=BASIC,                                                    &
           & initval_r=0.0_wp )
 
-        CALL mem%Add_var( 'snow_lice', mem%snow_lice,                              &
-          & hgrid, surface,                                                        &
-          & t_cf('snow_lice', 'm water equivalent', 'Snow amount on lake ice'),    &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
-          & prefix, suffix,                                                        &
-          & output_level=BASIC,                                                    &
+        CALL mem%Add_var( 'weq_snow_lice', mem%weq_snow_lice,                        &
+          & hgrid, surface,                                                          &
+          & t_cf('weq_snow_lice', 'm water equivalent', 'Snow amount on lake ice'),  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+          & prefix, suffix,                                                          &
+          & output_level=BASIC,                                                      &
           & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
       END IF
 
@@ -974,9 +974,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
-      CALL mem%Add_var('w_snow_gsum', mem%w_snow_gsum,                                   &
+      CALL mem%Add_var('weq_snow_gsum', mem%weq_snow_gsum,                               &
         & hgrid, surface,                                                                &
-        & t_cf('w_snow_gsum', 'Gt', 'Global snow amount on non-glacier land'),           &
+        & t_cf('weq_snow_gsum', 'Gt', 'Global snow amount on non-glacier land'),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
