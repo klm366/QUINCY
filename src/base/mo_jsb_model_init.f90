@@ -180,6 +180,7 @@ CONTAINS
       &                               t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
     USE mo_jsb_io_netcdf,       ONLY: jsb_netcdf_open_input
+    USE mo_jsb_time,            ONLY: get_time_start, get_time_dt
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
@@ -643,10 +644,12 @@ CONTAINS
     IF (.NOT. is_time_restart(get_time_start())) THEN
       CALL model%Reset_tiles()
       CALL model%Set_options(iblk=1) ! Just to get debug info
+      CALL model%Set_options(current_datetime=get_time_start(), dtime=get_time_dt(model_id))
       CALL model%Run_tasks(aggregate_only=.TRUE., debug = (debug_on('hsm')))
       CALL complete_init(model)
       CALL model%Reset_tiles()
       CALL model%Set_options(iblk=1) ! Just to get debug info
+      CALL model%Set_options(current_datetime=get_time_start(), dtime=get_time_dt(model_id))
       CALL model%Run_tasks(aggregate_only=.TRUE., debug = (debug_on('hsm')))
     END IF
 
@@ -839,6 +842,7 @@ CONTAINS
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_carbon_init,         ONLY: carbon_read_cpools
+    USE mo_jsb_time,            ONLY: get_time_start, get_time_dt
     USE mo_util,                ONLY: one_of
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -891,6 +895,7 @@ CONTAINS
     ! Aggregate all variables after restart file has been read
     CALL model%Reset_tiles()
     CALL model%Set_options(iblk=1) ! Just to get debug info
+    CALL model%Set_options(current_datetime=get_time_start(), dtime=get_time_dt(model_id))
     CALL model%Run_tasks(aggregate_only=.TRUE., debug = (debug_on('hsm')))
 
 #ifdef _OPENACC
