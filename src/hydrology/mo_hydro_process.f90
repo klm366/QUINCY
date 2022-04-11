@@ -61,7 +61,7 @@ CONTAINS
   !! @param [in]     skinres_canopy_max    capacity of the canopy skin reservoir [m]
   !! @param [in]     skinres_max
   !! @param [in]     fract_snow            surface snow fraction []
-  !! @param [in]     fract_water           skin reservoir fraction []
+  !! @param [in]     fract_wet             skin reservoir fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
   !! @param [in]     evapopot              potential evaporation (if there was enough water/ice) [kg m-2 s-1]
@@ -84,7 +84,7 @@ CONTAINS
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (           &
     & lstart, dtime, l_dynsnow, snow_depth_max,                     &
     & t_unfilt, wind_10m, t_air,                                    &
-    & skinres_canopy_max, skinres_max, fract_snow, fract_water,     &
+    & skinres_canopy_max, skinres_max, fract_snow, fract_wet,       &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
     & skinres, weq_snow_soil, weq_snow_can, snow_soil_dens,         &
     & q_snocpymlt, snow_accum, snow_melt_soil,                      &
@@ -99,7 +99,7 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                         &
       & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,                 &
-      & fract_snow, fract_water, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
+      & fract_snow, fract_wet, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
     REAL(wp), INTENT(inout) :: &
       & skinres, weq_snow_soil, weq_snow_can, snow_soil_dens
     REAL(wp), INTENT(out)   ::                   &
@@ -161,7 +161,7 @@ CONTAINS
     transpiration_in_m  = transpiration * dtime/rhoh2o
     evapo_snow_pot_in_m = fract_snow    * evapopot * dtime/rhoh2o
     evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
-    evapo_skin_pot_in_m = (1._wp - fract_snow) * fract_water * evapopot * dtime/rhoh2o
+    evapo_skin_pot_in_m = (1._wp - fract_snow) * fract_wet * evapopot * dtime/rhoh2o
 
     !---------------------------------------------
     !  Budgets of snow (canopy, ground)
@@ -1502,7 +1502,7 @@ CONTAINS
     & weq_snow_soil,                             & ! in
     & weq_snow_can,                              & ! in
     & fract_snow_can,                            & ! inout
-    & fract_water    ,                           & ! out
+    & fract_wet    ,                             & ! out
     & fract_snow_soil                            & ! out
     & )
 
@@ -1527,7 +1527,7 @@ CONTAINS
 
     REAL(wp), INTENT(out) :: &
       & fract_snow_can,      &
-      & fract_water    ,     &
+      & fract_wet    ,       &
       & fract_snow_soil
     !$claw end model-data
 
@@ -1541,10 +1541,10 @@ CONTAINS
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
     IF (wsr_max > EPSILON(1._wp)) THEN
       fract_snow_can = MIN(1._wp, weq_snow_can / wsr_max)
-      fract_water    = MIN(1._wp, skinres     / wsr_max)
+      fract_wet      = MIN(1._wp, skinres      / wsr_max)
     ELSE
       fract_snow_can = 0._wp
-      fract_water    = 0._wp
+      fract_wet      = 0._wp
     END IF
 
     ! Snow fraction on soil
@@ -1566,10 +1566,10 @@ CONTAINS
         &                                            / (rhoh2o * (weq_snow_soil + weq_snow_can)) &
         &                                    )
     END IF
-    IF (fract_water > 0._wp ) THEN
-      fract_water = fract_water    / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime &
-        &                                       / (rhoh2o * MAX(EPSILON(1._wp), skinres))     &
-        &                                    )
+    IF (fract_wet > 0._wp ) THEN
+      fract_wet = fract_wet / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime  &
+        &                                    / (rhoh2o * MAX(EPSILON(1._wp), skinres))  &
+        &                                )
     END IF
 
   END SUBROUTINE calc_wskin_fractions_veg
@@ -1585,7 +1585,7 @@ CONTAINS
     & q_air,                                      & ! in
     & skinres,                                    & ! in
     & weq_snow_soil,                              & ! in
-    & fract_water,                                & ! out
+    & fract_wet,                                  & ! out
     & fract_snow_soil                             & ! out
     & )
 
@@ -1608,7 +1608,7 @@ CONTAINS
       & weq_snow_soil
 
     REAL(wp), INTENT(out) :: &
-      & fract_water,         &
+      & fract_wet,           &
       & fract_snow_soil
     !$claw end model-data
 
@@ -1620,9 +1620,9 @@ CONTAINS
     !$claw sca
 
     IF (wsr_max > EPSILON(1._wp)) THEN
-      fract_water = MIN(1._wp, skinres / wsr_max)
+      fract_wet = MIN(1._wp, skinres / wsr_max)
     ELSE
-      fract_water = 0._wp
+      fract_wet = 0._wp
     END IF
 
     ! Snow fraction on soil
@@ -1643,8 +1643,8 @@ CONTAINS
         & / MAX(1._wp, fract_snow_soil * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), weq_snow_soil)))
     END IF
     ! Same for water cover on soil
-    IF (fract_water > 0._wp .AND. skinres > EPSILON(1._wp)) THEN
-      fract_water = fract_water &
+    IF (fract_wet > 0._wp .AND. skinres > EPSILON(1._wp)) THEN
+      fract_wet = fract_wet &
         & / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), skinres)))
     END IF
 

@@ -416,7 +416,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: &
       & fract_fpc,            &
       & fract_snow,           &
-      & fract_water,          &
+      & fract_wet,            &
       & weq_rootzone_max,     &
       & wtr_rootzone,         &
       & fact_q_air,           &
@@ -490,7 +490,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  weq_rootzone_max)    ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)         ! in
@@ -518,18 +518,18 @@ CONTAINS
         mask(:) = wtr_rootzone(:) > w_soil_wilt_fract_tmp * weq_rootzone_max(:)
       END IF
 
-      !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)
+      !$claw acc data present(fract_snow,fract_wet,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)
       !$claw acc parallel loop gang vector
       DO i = 1, size(mask, dim=1)
         IF (mask(i)) THEN
           fact_qsat_veg(i) = fract_snow(i) + (1._wp - fract_snow(i)) *   &
-            & (fract_water(i) + ( 1._wp - fract_water(i)) /                &
+            & (fract_wet(i) + ( 1._wp - fract_wet(i)) /                  &
             & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i))))
           fact_qsat_trans(i) = (1._wp - fract_snow(i)) * &
-            & (1._wp - fract_water(i)) /                  &
+            & (1._wp - fract_wet(i)) /                   &
             & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i)))
         ELSE 
-          fact_qsat_veg(i)   = fract_snow(i) + (1._wp - fract_snow(i)) * fract_water(i)
+          fact_qsat_veg(i)   = fract_snow(i) + (1._wp - fract_snow(i)) * fract_wet(i)
           fact_qsat_trans(i) = 0._wp
         END IF
       END DO
@@ -552,15 +552,15 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_4 tile_name=tile%name
       rel_hum(:) = relative_humidity_soil(wtr_soil_sl(:,1), w_soil_fc_sl(:,1))
 
-      !$claw acc data present(fact_qsat_soil,fact_qair_soil,qsat_star,rel_hum,q_air,fract_snow,fract_water)
+      !$claw acc data present(fact_qsat_soil,fact_qair_soil,qsat_star,rel_hum,q_air,fract_snow,fract_wet)
       !$claw acc parallel loop gang vector
       DO i = 1, size(qsat_star,dim=1)
         IF (qsat_star(i) * rel_hum(i) > q_air(i) .AND. rel_hum(i) > 1.e-10_wp) THEN
           fact_qsat_soil(i) = fract_snow(i) + (1._wp - fract_snow(i)) * &
-            & (fract_water(i) + (1._wp - fract_water(i)) * rel_hum(i))
+            & (fract_wet(i) + (1._wp - fract_wet(i)) * rel_hum(i))
           fact_qair_soil(i) = 1._wp
         ELSE
-          fact_qsat_soil(i) = fract_snow(i) + (1._wp - fract_snow(i)) * fract_water(i)
+          fact_qsat_soil(i) = fract_snow(i) + (1._wp - fract_snow(i)) * fract_wet(i)
           fact_qair_soil(i) = fact_qsat_soil(i)
         END IF
         IF (q_air(i) > qsat_star(i)) THEN

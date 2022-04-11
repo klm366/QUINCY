@@ -94,7 +94,7 @@ MODULE mo_hydro_memory_class
       & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_water,          & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
+      & fract_wet,            & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
       & skinres,              & !< Water content in skin reservoir (soil and canopy)                        [m]
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
@@ -430,9 +430,9 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-      CALL mem%Add_var( 'fract_water', mem%fract_water,                          &
+      CALL mem%Add_var( 'fract_wet', mem%fract_wet,                              &
         & hgrid, surface,                                                        &
-        & t_cf('fract_water', '-', 'Wet surface fraction'),                      &
+        & t_cf('fract_wet', '-', 'Wet surface fraction'),                        &
         & t_grib1(table, 255, grib_bits), grib2_desc,                            &
         & prefix, suffix,                                                        &
         & output_level=BASIC,                                                    &
@@ -621,7 +621,7 @@ CONTAINS
     !   &   .OR. One_of(BARE_TYPE, lct_ids(:)) > 0 &
     !   &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
     !   &  )                                       &
-    !   &  .AND. .NOT. ASSOCIATED(mem%fract_water%ptr) ) THEN
+    !   &  .AND. .NOT. ASSOCIATED(mem%fract_wet%ptr) ) THEN
 
       CALL mem%Add_var( 'evapotrans_soil', mem%evapotrans_soil,                &
         & hgrid, surface,                                                      &

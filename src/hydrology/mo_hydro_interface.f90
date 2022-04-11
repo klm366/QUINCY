@@ -400,7 +400,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
     dsl4jsb_Real2D_onChunk :: skinres
-    dsl4jsb_Real2D_onChunk :: fract_water
+    dsl4jsb_Real2D_onChunk :: fract_wet
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: weq_snow
@@ -517,7 +517,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_glac)     ! inout
     ELSE
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil)   ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)     ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    skinres)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_accum)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_soil) ! out
@@ -607,7 +607,7 @@ CONTAINS
         & skinres_canopy_max(:),          & !< in
         & skinres_max(:),                 & !< in
         & fract_snow(:),                  & !< in
-        & fract_water(:),                 & !< in
+        & fract_wet(:),                   & !< in
         & hcap_grnd(:),                   & !< in
         & evapotrans(:),                  & !< in
         & evapopot(:),                    & !< in
@@ -1755,7 +1755,7 @@ CONTAINS
     ! Declare pointers for variables in memory
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_snow
-    dsl4jsb_Real2D_onChunk :: fract_water
+    dsl4jsb_Real2D_onChunk :: fract_wet
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: fract_snow_can
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
@@ -1829,7 +1829,7 @@ CONTAINS
 
     IF (tile%is_bare .OR. tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    oro_stddev)        ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)       ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)         ! out
     END IF
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)               ! in
@@ -1890,7 +1890,7 @@ CONTAINS
         & weq_snow_soil(:),          & ! in
         & weq_snow_can(:),           & ! in
         & fract_snow_can(:),         & ! out
-        & fract_water(:),            & ! out
+        & fract_wet(:),              & ! out
         & fract_snow_soil(:)         & ! out
         & )
       !$claw expand parallel update
@@ -1912,7 +1912,7 @@ CONTAINS
         & q_air(:),                   & ! in
         & skinres(:),                 & ! in
         & weq_snow_soil(:),           & ! in
-        & fract_water(:),             & ! out
+        & fract_wet(:),               & ! out
         & fract_snow_soil(:)          & ! out
         & )
       !$claw expand parallel update
@@ -1958,7 +1958,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_water,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_wet,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_soil,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, fract_snow_can,   weighted_by_fract)
