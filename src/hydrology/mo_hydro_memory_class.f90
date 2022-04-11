@@ -54,7 +54,7 @@ MODULE mo_hydro_memory_class
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
       & water_flux,           & !< All land water fluxes; needed for water budget check                 [m3/s]
-      & wtr_land,             & !< Total land water content                                             [m3]
+      & weq_land,             & !< Total amount of land water and ice                                   [m3]
       & water_budget            !< Land water balance error within a time step                          [m3]
 
     TYPE(t_jsb_var_real2d) :: &
@@ -167,7 +167,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real1d) :: &
       trans_gmean,            & !< Global mean transpiration                [kg m-2 s-1]
       evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
-      wtr_land_gsum,          & !< Global land water content                [km3]
+      weq_land_gsum,          & !< Global land water and ice content        [km3]
       discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
       wtr_rootzone_rel_gmean, & !< Global mean relative rootzone moisture   [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
@@ -346,9 +346,9 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'wtr_land', mem%wtr_land,                                      &
+    CALL mem%Add_var( 'weq_land', mem%weq_land,                                      &
       & hgrid, surface,                                                              &
-      & t_cf('wtr_land', 'm3', 'Total land water content'),                          &
+      & t_cf('weq_land', 'm3', 'Total land water and ice content'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
@@ -950,9 +950,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
-      CALL mem%Add_var('wtr_land_gsum', mem%wtr_land_gsum,                               &
+      CALL mem%Add_var('weq_land_gsum', mem%weq_land_gsum,                               &
         & hgrid, surface,                                                                &
-        & t_cf('wtr_land_gsum', 'km3', 'Global land water content'),                     &
+        & t_cf('weq_land_gsum', 'km3', 'Global amount of land water and ice'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
