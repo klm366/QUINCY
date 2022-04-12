@@ -1320,6 +1320,7 @@ CONTAINS
   REAL(wp)            :: mul, add
   INTEGER             :: stat, i, st, en
   LOGICAL             :: lset
+  TYPE (input_opt_list), POINTER :: opt
 
   CHARACTER (len=*), PARAMETER :: routine = modname//':CheckInputUnit'
 
@@ -1355,7 +1356,19 @@ CONTAINS
     IF ((i > 0) .AND. (PRESENT(muls) .OR. PRESENT(adds))) THEN
       mul = 1._wp; IF (PRESENT(muls)) mul = muls(i)
       add = 0._wp; IF (PRESENT(adds)) add = adds(i)
-      IF ((mul /= 1._wp) .OR. (add /= 0._wp)) CALL InputOptAdd(AVar=var,mul=mul,add=add)
+      IF ((mul /= 1._wp) .OR. (add /= 0._wp)) THEN
+        IF (InputVarExistInFile(var)) THEN
+          CALL InputOptAdd(AVar=var,mul=mul,add=add)
+        ELSE
+          IF (InputOptIsSet('def_val',var,ref=opt)) THEN
+            opt%def_val = opt%def_val * mul + add
+            IF (my_process_is_stdio()) THEN
+              WRITE(message_text,*) opt%def_val
+              CALL message(routine,'Changing default value of '//TRIM(var%name_var)//' to'//TRIM(message_text))
+            ENDIF
+          ENDIF
+        ENDIF
+      ENDIF
     ENDIF
 
   END SUBROUTINE CheckInputUnit
