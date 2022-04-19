@@ -58,8 +58,8 @@ CONTAINS
   !! @param [in]     t_unfilt              Surface tempemperature [K] (unfiltered)
   !! @param [in]     wind_10m              wind speed at 10m height [m/s]
   !! @param [in]     t_air                 lowest layer atmosphere temperature [K]
-  !! @param [in]     skinres_canopy_max    capacity of the canopy skin reservoir [m]
-  !! @param [in]     skinres_max
+  !! @param [in]     skinres_canopy_max    Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
+  !! @param [in]     skinres_max           Total capacity of the skin reservoirs, i.e. soil and canopy [m]
   !! @param [in]     fract_snow            surface snow fraction []
   !! @param [in]     fract_wet             skin reservoir fraction []
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
@@ -68,7 +68,7 @@ CONTAINS
   !! @param [in]     transpiration         transpiration [kg m-2 s-1]
   !! @param [in]     rain                  liquid precipitation [kg m-2 s-1]
   !! @param [in]     snow                  solid precipitation [kg m-2 s-1]
-  !! @param [in,out] skinres               water content of the skin reservoir (vegetation and bare soil) [m]
+  !! @param [in,out] wtr_skin              water content of the skin reservoir (vegetation and bare soil) [m]
   !! @param [in,out] weq_snow_soil         snow depth at the ground [m water equivalent]
   !! @param [in,out] weq_snow_can          snow depth on the canopy [m water equivalent]
   !! @param [in,out] snow_soil_dens        snow density on soil at non-glacier points [m water equivalent]
@@ -86,7 +86,7 @@ CONTAINS
     & t_unfilt, wind_10m, t_air,                                    &
     & skinres_canopy_max, skinres_max, fract_snow, fract_wet,       &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & skinres, weq_snow_soil, weq_snow_can, snow_soil_dens,         &
+    & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & q_snocpymlt, snow_accum, snow_melt_soil,                      &
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit)
 
@@ -101,7 +101,7 @@ CONTAINS
       & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,                 &
       & fract_snow, fract_wet, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
     REAL(wp), INTENT(inout) :: &
-      & skinres, weq_snow_soil, weq_snow_can, snow_soil_dens
+      & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens
     REAL(wp), INTENT(out)   ::                   &
       & q_snocpymlt, snow_accum, snow_melt_soil, &
       & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
@@ -130,7 +130,7 @@ CONTAINS
       & evapo_snow_pot_in_m,  & !< potential snow evaporation
       & evapo_skin_pot_in_m,  & !< potential evaporation from wet surface (skin reservoir)
       & rain_to_skinres,      & !< amount of rain going into the skin reservoir
-      & skinres_pre_rain        !< amount of water in the skin reservoir prior to the update [m]
+      & wtr_skin_pre_rain       !< amount of water in the skin reservoir prior to the update [m]
 
 
     !
@@ -222,9 +222,9 @@ CONTAINS
 
     !  Snow budget and meltwater
     !-----------------------------------------------------
-    skinres = skinres + snow_melt_can                                    ! Add melt water from canopy to skin reservoir
-    water_to_soil = snow_melt_soil + MAX(0._wp, skinres-skinres_max)     ! Excess water enters the soil, and
-    skinres = MIN(skinres_max, skinres)                                  ! skin reservoir is limited to the maximum
+    wtr_skin = wtr_skin + snow_melt_can                                    ! Add melt water from canopy to skin reservoir
+    water_to_soil = snow_melt_soil + MAX(0._wp, wtr_skin-skinres_max)      ! Excess water enters the soil, and
+    wtr_skin = MIN(skinres_max, wtr_skin)                                  ! skin reservoir is limited to the maximum
     snow_accum = new_snow + evapo_snow_pot_in_m - snow_melt_soil - snow_melt_can
 
     IF (snow_depth_max >= 0._wp) THEN
@@ -237,16 +237,16 @@ CONTAINS
     !  Budget of water in skin reservoir (canopy and ground)
     !-----------------------------------------------------------
     ! Interception of rain
-    rain_to_skinres = MIN(rain_in_m * InterceptionEfficiency, MAX(skinres_max - skinres, 0._wp)) ! Part of rain goes to skin
-                                                                                                 ! reservoir
+    rain_to_skinres = MIN(rain_in_m * InterceptionEfficiency, MAX(skinres_max - wtr_skin, 0._wp)) ! Part of rain goes to skin
+                                                                                                  ! reservoir
     ! Note: the MAX in following line is only to account for apparent precision error (small negative values)
     water_to_soil = water_to_soil + MAX(rain_in_m - rain_to_skinres, 0._wp)        ! Rest of rain goes to soil
-    skinres_pre_rain = skinres
-    skinres = MIN(MAX(0._wp, skinres_pre_rain + rain_to_skinres + evapo_skin_pot_in_m), skinres_max)
+    wtr_skin_pre_rain = wtr_skin
+    wtr_skin = MIN(MAX(0._wp, wtr_skin_pre_rain + rain_to_skinres + evapo_skin_pot_in_m), skinres_max)
 
-    ! note: at this point ignoring the amount of dew that exceeds the skinreservoir
+    ! Note: at this point ignoring the amount of dew that exceeds the skin reservoir
     !       as dew is calculated later based on evapo_soil (f(evapotrans_soil))
-    evapo_skin_in_m = skinres - (skinres_pre_rain + rain_to_skinres)
+    evapo_skin_in_m = wtr_skin - (wtr_skin_pre_rain + rain_to_skinres)
     evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m
     IF (evapo_skin_pot_in_m < 0._wp) THEN
       evapo_deficit = evapo_deficit + evapo_skin_pot_in_m - evapo_skin_in_m
@@ -627,7 +627,7 @@ CONTAINS
     !$claw acc loop gang
     DO i = 1, nc
       transpiration_in_m(i) = transpiration(i)  * dtime / rhoh2o
-      ! note: at this point ignoring the amount of dew that exceeds the skinreservoir
+      ! Note: at this point ignoring the amount of dew that exceeds the skin reservoir
       !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
       evapo_soil_in_m(i) = evapotrans_soil(i) * dtime / rhoh2o - transpiration_in_m(i)
     END DO
@@ -1498,7 +1498,7 @@ CONTAINS
     & press_srf,                                 & ! in
     & drag_srf,                                  & ! in
     & q_air,                                     & ! in
-    & skinres,                                   & ! in
+    & wtr_skin,                                  & ! in
     & weq_snow_soil,                             & ! in
     & weq_snow_can,                              & ! in
     & fract_snow_can,                            & ! inout
@@ -1521,7 +1521,7 @@ CONTAINS
       & drag_srf,           &
       & q_air,              &
       & wsr_max,            &
-      & skinres,            &
+      & wtr_skin,           &
       & weq_snow_soil,      &
       & weq_snow_can
 
@@ -1541,7 +1541,7 @@ CONTAINS
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
     IF (wsr_max > EPSILON(1._wp)) THEN
       fract_snow_can = MIN(1._wp, weq_snow_can / wsr_max)
-      fract_wet      = MIN(1._wp, skinres      / wsr_max)
+      fract_wet      = MIN(1._wp, wtr_skin     / wsr_max)
     ELSE
       fract_snow_can = 0._wp
       fract_wet      = 0._wp
@@ -1567,8 +1567,8 @@ CONTAINS
         &                                    )
     END IF
     IF (fract_wet > 0._wp ) THEN
-      fract_wet = fract_wet / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime  &
-        &                                    / (rhoh2o * MAX(EPSILON(1._wp), skinres))  &
+      fract_wet = fract_wet / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime   &
+        &                                    / (rhoh2o * MAX(EPSILON(1._wp), wtr_skin))  &
         &                                )
     END IF
 
@@ -1583,7 +1583,7 @@ CONTAINS
     & press_srf,                                  & ! in
     & drag_srf,                                   & ! in
     & q_air,                                      & ! in
-    & skinres,                                    & ! in
+    & wtr_skin,                                   & ! in
     & weq_snow_soil,                              & ! in
     & fract_wet,                                  & ! out
     & fract_snow_soil                             & ! out
@@ -1604,7 +1604,7 @@ CONTAINS
       & drag_srf,           &
       & q_air,              &
       & wsr_max,            &
-      & skinres,            &
+      & wtr_skin,           &
       & weq_snow_soil
 
     REAL(wp), INTENT(out) :: &
@@ -1620,7 +1620,7 @@ CONTAINS
     !$claw sca
 
     IF (wsr_max > EPSILON(1._wp)) THEN
-      fract_wet = MIN(1._wp, skinres / wsr_max)
+      fract_wet = MIN(1._wp, wtr_skin / wsr_max)
     ELSE
       fract_wet = 0._wp
     END IF
@@ -1636,16 +1636,14 @@ CONTAINS
 
     ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy together
-    ! R: In the following lines I just kicked out the contribution of skinres_canopy as compared to JSBACH3. For the intension of
-    !    the parametrization this can be done so easily for the bare type and it is consistent with JSBACH3.
     IF (fract_snow_soil > 0._wp .AND. weq_snow_soil > EPSILON(1._wp)) THEN
       fract_snow_soil = fract_snow_soil &
         & / MAX(1._wp, fract_snow_soil * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), weq_snow_soil)))
     END IF
     ! Same for water cover on soil
-    IF (fract_wet > 0._wp .AND. skinres > EPSILON(1._wp)) THEN
+    IF (fract_wet > 0._wp .AND. wtr_skin > EPSILON(1._wp)) THEN
       fract_wet = fract_wet &
-        & / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), skinres)))
+        & / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime / (rhoh2o * MAX(EPSILON(1._wp), wtr_skin)))
     END IF
 
   END SUBROUTINE calc_wskin_fractions_bare

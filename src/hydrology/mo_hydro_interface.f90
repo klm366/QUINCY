@@ -399,7 +399,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wind_10m
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
-    dsl4jsb_Real2D_onChunk :: skinres
+    dsl4jsb_Real2D_onChunk :: wtr_skin
     dsl4jsb_Real2D_onChunk :: fract_wet
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
@@ -518,7 +518,7 @@ CONTAINS
     ELSE
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil)   ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)       ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    skinres)         ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)        ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_accum)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_soil) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_skin)      ! out
@@ -614,7 +614,7 @@ CONTAINS
         & trans_tmp(:),                   & !< in
         & rain(:),                        & !< in
         & snow(:),                        & !< in
-        & skinres(:),                     & !< inout
+        & wtr_skin(:),                    & !< inout
         & weq_snow_soil(:),               & !< inout
         & weq_snow_can(:),                & !< inout
         & snow_soil_dens(:),              & !< inout
@@ -681,7 +681,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, skinres,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_skin,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_can,    weighted_by_fract)
@@ -1763,7 +1763,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_can
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: weq_snow_lice
-    dsl4jsb_Real2D_onChunk :: skinres
+    dsl4jsb_Real2D_onChunk :: wtr_skin
     dsl4jsb_Real2D_onChunk :: oro_stddev
     dsl4jsb_Real2D_onChunk :: drag_srf
     dsl4jsb_Real2D_onChunk :: t
@@ -1838,7 +1838,7 @@ CONTAINS
     END IF
 
     IF (tile%is_vegetation .OR. tile%is_land .OR. tile%is_bare) THEN
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    skinres)           ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)          ! in
     END IF
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)       ! out
@@ -1886,7 +1886,7 @@ CONTAINS
         & press_srf(:),              & ! in
         & drag_srf(:),               & ! in
         & q_air(:),                  & ! in
-        & skinres(:),                & ! in
+        & wtr_skin(:),               & ! in
         & weq_snow_soil(:),          & ! in
         & weq_snow_can(:),           & ! in
         & fract_snow_can(:),         & ! out
@@ -1910,7 +1910,7 @@ CONTAINS
         & press_srf(:),               & ! in
         & drag_srf(:),                & ! in
         & q_air(:),                   & ! in
-        & skinres(:),                 & ! in
+        & wtr_skin(:),                & ! in
         & weq_snow_soil(:),           & ! in
         & fract_wet(:),               & ! out
         & fract_snow_soil(:)          & ! out
@@ -1992,7 +1992,7 @@ CONTAINS
       & runoff, &
       & drainage, &
       & evapotrans, &
-      & skinres, &
+      & wtr_skin, &
       & weq_snow, &
       & water_flux, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
@@ -2041,7 +2041,7 @@ CONTAINS
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)         ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    skinres)             ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)            ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow)            ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
@@ -2063,7 +2063,7 @@ CONTAINS
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_1 tile_name=tile%name
-      weq_land_new(:) = (  skinres(:) + weq_snow(:)                                       &
+      weq_land_new(:) = (  wtr_skin(:) + weq_snow(:)                                       &
         &                + SUM(wtr_soil_sl(:,:), DIM=2) + SUM(ice_soil_sl(:,:), DIM=2)  &
         &               ) * tile_fract(:) * area(:)  ! m -> m^3
     ELSE

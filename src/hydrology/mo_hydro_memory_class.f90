@@ -95,7 +95,7 @@ MODULE mo_hydro_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & fract_wet,            & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
-      & skinres,              & !< Water content in skin reservoir (soil and canopy)                        [m]
+      & wtr_skin,             & !< Water content in skin reservoir (soil and canopy)                        [m]
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
       !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
@@ -599,9 +599,9 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-      CALL mem%Add_var( 'skinres', mem%skinres,                                     &
+      CALL mem%Add_var( 'wtr_skin', mem%wtr_skin,                                   &
         & hgrid, surface,                                                           &
-        & t_cf('skinres', 'm', 'Water content of surface skin reservoir'),          &
+        & t_cf('wtr_skin', 'm', 'Water content of soil and canopy skin reservoir'), &
         & t_grib1(table, 255, grib_bits), grib2_desc,                               &
         & prefix, suffix,                                                           &
         & output_level=BASIC,                                                       &
