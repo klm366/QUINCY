@@ -1895,7 +1895,7 @@ CONTAINS
         & )
       !$claw expand parallel update
       fract_snow(:) = fract_snow_soil(:)
-   END IF
+    END IF
 
 
     IF (tile%is_bare) THEN
