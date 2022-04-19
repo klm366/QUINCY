@@ -1198,6 +1198,10 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    IF (options%l_aggregate_only) THEN
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_background,      weighted_by_fract)
+    END IF
+
     ! for vegetation tiles, already aggregated by aggregate_sw_radiation_q_()
     IF (tile%is_vegetation .AND. .NOT. model%config%use_quincy) THEN
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_lnd,         weighted_by_fract)

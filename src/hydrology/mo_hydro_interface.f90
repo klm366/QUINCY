@@ -844,6 +844,21 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    IF (options%l_aggregate_only) THEN
+      dsl4jsb_Aggregate_onChunk(HYDRO_, soil_depth,       weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, soil_depth_sl,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, root_depth,       weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, root_depth_sl,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, vol_field_cap,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, vol_p_wilt,       weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, vol_porosity,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, pore_size_index,  weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, bclapp,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, matrix_pot,       weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, hyd_cond_sat,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, matrix_pot,       weighted_by_fract)
+    END IF
+
     dsl4jsb_Aggregate_onChunk(HYDRO_, hyd_cond_sat_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, vol_porosity_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, bclapp_sl,          weighted_by_fract)

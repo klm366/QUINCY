@@ -848,6 +848,11 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    IF (options%l_aggregate_only) THEN
+      dsl4jsb_Aggregate_onChunk(SSE_, vol_heat_cap,    weighted_by_fract)  ! Needed by HYDRO_ process init
+      dsl4jsb_Aggregate_onChunk(SSE_, heat_cond,       weighted_by_fract)
+    END IF
+
     dsl4jsb_Aggregate_onChunk(SSE_, vol_heat_cap_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_, heat_cond_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_, vol_heat_cap_snow, weighted_by_fract)

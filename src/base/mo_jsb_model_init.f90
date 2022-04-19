@@ -822,7 +822,7 @@ CONTAINS
         CALL init_hydro_soil_properties(tile)
       END IF
 
-      ! SSE_ needs to run on the same tiles than HYDRO_, or below!
+      ! ATTENTION: SSE_ needs to run on the same tiles than HYDRO_, or below!
       IF (tile%Is_process_calculated(SSE_)) THEN
         CALL init_sse_soil_properties(tile)
       END IF

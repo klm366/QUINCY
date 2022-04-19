@@ -1008,6 +1008,7 @@ CONTAINS
 
     IF (options%l_aggregate_only) THEN
       dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, fract_forest,  weighted_by_fract)
     END IF
 
     dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc, weighted_by_fract)
