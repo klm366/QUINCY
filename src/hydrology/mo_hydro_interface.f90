@@ -1994,9 +1994,9 @@ CONTAINS
       & evapotrans, &
       & wtr_skin, &
       & weq_snow, &
-      & water_flux, &    ! [m3 s-1]
+      & weq_fluxes, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
-      & water_budget     ! [m3]
+      & weq_balance_dev  ! [m3/(time step)]
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &
       & ice_soil_sl
@@ -2045,9 +2045,9 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow)            ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_flux)          ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_budget)        ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_dev)     ! out
 
     !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
 
@@ -2057,8 +2057,8 @@ CONTAINS
     END DO
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
-    water_flux(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
-    water_flux(:) = water_flux(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
+    weq_fluxes(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
+    weq_fluxes(:) = weq_fluxes(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
     !$claw end expand
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
@@ -2073,7 +2073,7 @@ CONTAINS
 
     IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
-      water_budget(:) = weq_land(:) + water_flux(:) * dtime - weq_land_new(:)
+      weq_balance_dev(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
     END IF
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
@@ -2110,9 +2110,9 @@ CONTAINS
 
     ! Don't aggregate, but explicitely compute water balance on each tile
     CALL update_water_balance(tile, options)
-    ! dsl4jsb_Aggregate_onChunk(HYDRO_, water_flux,       weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(HYDRO_, weq_fluxes,       weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(HYDRO_, weq_land,         weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(HYDRO_, water_budget,     weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(HYDRO_, water_balance_dev, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -53,9 +53,9 @@ MODULE mo_hydro_memory_class
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
-      & water_flux,           & !< All land water fluxes; needed for water budget check                 [m3/s]
+      & weq_fluxes,           & !< All land water fluxes; needed for water budget check                 [m3/s]
       & weq_land,             & !< Total amount of land water and ice                                   [m3]
-      & water_budget            !< Land water balance error within a time step                          [m3]
+      & weq_balance_dev         !< Land water balance error within a time step                          [m3/(time step)]
 
     TYPE(t_jsb_var_real2d) :: &
       & runoff,               & !< surface runoff
@@ -337,9 +337,9 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'water_flux', mem%water_flux,                                  &
+    CALL mem%Add_var( 'weq_fluxes', mem%weq_fluxes,                                  &
       & hgrid, surface,                                                              &
-      & t_cf('water_flux', 'm3 s-1',                                                 &
+      & t_cf('weq_fluxes', 'm3 s-1',                                                 &
       &      'All land water fluxes (for water balance check)'),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
@@ -353,9 +353,9 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'water_budget', mem%water_budget,                              &
+    CALL mem%Add_var( 'weq_balance_dev', mem%weq_balance_dev,                        &
       & hgrid, surface,                                                              &
-      & t_cf('water_budget', 'm3', 'Land water balance error'),                      &
+      & t_cf('weq_balance_dev', 'm3/(time step)', 'Land water balance error'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
