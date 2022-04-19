@@ -25,7 +25,8 @@ MODULE mo_rad_memory_class
   USE mo_jsb_lct_class,    ONLY: BARE_TYPE, VEG_TYPE, LAND_TYPE, GLACIER_TYPE, LAKE_TYPE
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_
+  dsl4jsb_Use_processes RAD_, SEB_
+  dsl4jsb_Use_config(RAD_)
   dsl4jsb_Use_config(SEB_)
 
   IMPLICIT NONE
@@ -202,6 +203,7 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
+    dsl4jsb_Def_config(RAD_)
     dsl4jsb_Def_config(SEB_)
 
     TYPE(t_jsb_model), POINTER :: model
@@ -222,6 +224,7 @@ CONTAINS
     canopy_layer => Get_vgrid('canopy_layer')
     vgrid_canopy => Get_vgrid('canopy_layer_q_')  !! quincy
 
+    dsl4jsb_Get_config(RAD_)
     dsl4jsb_Get_config(SEB_)
 
     !! !$acc enter data pcreate(mem)
@@ -381,23 +384,25 @@ CONTAINS
     IF ( (One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) &
       & ) THEN
 
-      CALL mem%Add_var( 'alb_vis_can', mem%alb_vis_can,                      &
-        & hgrid, surface,                                                    &
-        & t_cf('albedo_vis_canopy', '', ''),                                 &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
-        & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp )
+      IF (.NOT. dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+        CALL mem%Add_var( 'alb_vis_can', mem%alb_vis_can,                      &
+          & hgrid, surface,                                                    &
+          & t_cf('albedo_vis_canopy', '', ''),                                 &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & lrestart=.FALSE.,                                                  &
+          & output_level=MEDIUM,                                               &
+          & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'alb_nir_can', mem%alb_nir_can,                      &
-        & hgrid, surface,                                                    &
-        & t_cf('albedo_nir_canpy', '', ''),                                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & lrestart=.FALSE.,                                                  &
-        & output_level=MEDIUM,                                               &
-        & initval_r=0.0_wp )
+        CALL mem%Add_var( 'alb_nir_can', mem%alb_nir_can,                      &
+          & hgrid, surface,                                                    &
+          & t_cf('albedo_nir_canpy', '', ''),                                  &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & lrestart=.FALSE.,                                                  &
+          & output_level=MEDIUM,                                               &
+          & initval_r=0.0_wp )
+      END IF
 
       CALL mem%Add_var( 'snow_age', mem%snow_age,                            &
         & hgrid, surface,                                                    &
