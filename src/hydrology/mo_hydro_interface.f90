@@ -555,8 +555,6 @@ CONTAINS
       w_skin_max(:) = 0._wp
     END IF
 
-    ! w_snow_soil_old(:) = w_snow_soil(:) ! Remember old snow on ground for use in snow model
-
     IF (tile%is_glacier) THEN
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_hydrology_glacier_1 tile_name=tile%name
       CALL calc_surface_hydrology_glacier( &
@@ -577,16 +575,8 @@ CONTAINS
         & )
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_5 tile_name=tile%name
       drainage(:) = 0._wp
-      w_snow_soil(:) = 0._wp
       evapo_snow(:) = evapopot(:)
       !$claw end expand
-      IF (model%config%l_compat401) THEN
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_6 tile_name=tile%name
-        snow_soil_dens(:) = 330._wp
-      ELSE
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_7 tile_name=tile%name
-        snow_soil_dens(:) = dens_snow
-      END IF
     ELSE
       IF (tile%is_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
@@ -1884,8 +1874,6 @@ CONTAINS
     IF (tile%is_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_4 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       fract_snow(:)      = 1._wp
-      fract_snow_soil(:) = 1._wp
-      !$claw end expand
     END IF
 
     IF (tile%is_vegetation .OR. tile%is_land) THEN

@@ -1015,7 +1015,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_can)           ! in (jsbach4: from rad_init | quincy: from calc_sw_srf_net())
       ENDIF
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil)          ! inout
