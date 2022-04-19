@@ -43,9 +43,10 @@ MODULE mo_pheno_init
       & fract_fpc_mon(:,:,:), &
       & fract_forest(:,:), &
       & fract_fpc_max(:,:)
+    LOGICAL :: initialized = .FALSE.
   END TYPE t_pheno_init_vars
 
-  TYPE(t_pheno_init_vars) :: pheno_init_vars
+  TYPE(t_pheno_init_vars), SAVE :: pheno_init_vars
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_init'
 
@@ -67,7 +68,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+    IF (.NOT. pheno_init_vars%initialized) THEN
       CALL pheno_read_init_vars(tile)
     END IF
 
@@ -178,6 +179,8 @@ CONTAINS
     ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
     CALL input_file%Close()
+
+    pheno_init_vars%initialized = .TRUE.
 
   END SUBROUTINE pheno_read_init_vars
 

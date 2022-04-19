@@ -286,7 +286,7 @@ CONTAINS
     NULLIFY(tile)
 
     ! Run tasks in queue
-    CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+    CALL model%Run_tasks(debug = (debug_on('hsm') .AND. iblk == 1))
 
     ! Finally, give the required variables back to the atmosphere
     ! Note: evapopot is an optional parameter, so it has to be passed without the colon!

@@ -220,9 +220,6 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
 
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_acoef)      ! inout
@@ -250,6 +247,9 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)         ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_freeze_sl) ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)    ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
@@ -418,7 +418,7 @@ CONTAINS
       snow_depth_sl(:,:) = 0._wp
 
       !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_9 tile_name=tile%name
-      snow_depth(:) = w_snow_soil(:) * rhoh2o / dens_snow
+      snow_depth(:) = 0._wp
       snow_fract(:) = 0._wp
       t_soil_top(:) = t_unfilt_corrected(:)
       grnd_hflx_snow(:) = 0._wp
@@ -495,7 +495,7 @@ CONTAINS
     !$claw acc data present(grnd_hflx,hcap_grnd,snow_fract,grnd_hflx_snow,grnd_hflx_soil,hcap_grnd_snow,hcap_grnd_soil)
     !$claw acc parallel loop gang vector
     DO i = 1, size(snow_depth_sl, dim=1)
-      IF (snow_depth_sl(i,nsnow) > 0._wp) THEN
+      IF (snow_depth_sl(i,nsnow) > 0._wp) THEN ! This is not the case for glacier tile!
         grnd_hflx(i) = snow_fract(i) * grnd_hflx_snow(i) + (1._wp - snow_fract(i)) * grnd_hflx_soil(i)
         hcap_grnd(i) = snow_fract(i) * hcap_grnd_snow(i) + (1._wp - snow_fract(i)) * hcap_grnd_soil(i)
       ELSE
@@ -847,6 +847,11 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    IF (options%l_aggregate_only) THEN
+      dsl4jsb_Aggregate_onChunk(SSE_, vol_heat_cap,    weighted_by_fract)  ! Needed by HYDRO_ process init
+      dsl4jsb_Aggregate_onChunk(SSE_, heat_cond,       weighted_by_fract)
+    END IF
 
     dsl4jsb_Aggregate_onChunk(SSE_, vol_heat_cap_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_, heat_cond_sl,      weighted_by_fract)

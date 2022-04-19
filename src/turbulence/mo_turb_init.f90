@@ -38,9 +38,10 @@ MODULE mo_turb_init
   TYPE t_turb_init_vars
     REAL(wp), POINTER ::  &
       & rough_m(:,:)
+    LOGICAL :: initialized = .FALSE.
   END TYPE t_turb_init_vars
 
-  TYPE(t_turb_init_vars) :: turb_init_vars
+  TYPE(t_turb_init_vars), SAVE :: turb_init_vars
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_turb_init'
 
@@ -55,7 +56,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':turb_init'
 
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+    IF (.NOT. turb_init_vars%initialized) THEN
       CALL turb_read_init_vars(tile)
     END IF
 
@@ -117,6 +118,8 @@ CONTAINS
     ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
 
     CALL input_file%Close()
+
+    turb_init_vars%initialized = .TRUE.
 
   END SUBROUTINE turb_read_init_vars
 

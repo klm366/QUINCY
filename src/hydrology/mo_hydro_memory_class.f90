@@ -70,10 +70,6 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow_soil,      & !< Snow fraction on soil                                               []
-      & w_snow_soil,          & !< Water content of snow reservoir of soil                             [m water equivalent]
-      ! & w_snow_soil_old,      & !< Water content of snow reservoir of soil (old)                     [m water equivalent]
-      & snow_soil_dens,       & !< Density of snow on soil                                             [kg m-3]
       & evapotrans_lnd,       & !< Evapotranspiration over vegetation and bare soil type               [kg m-2 s-1]
       & q_snocpymlt             !< Heating by melting of snow on canopy                                [W m-2]
 
@@ -95,6 +91,9 @@ MODULE mo_hydro_memory_class
       & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
+      & fract_snow_soil,      & !< Snow fraction on soil                                                    []
+      & w_snow_soil,          & !< Water content of snow reservoir of soil                                  [m water equivalent]
+      & snow_soil_dens,       & !< Density of snow on soil                                                  [kg m-3]
       & fract_water,          & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
       & w_skin,               & !< Water content in skin reservoir (soil and canopy)                        [m]
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
@@ -144,7 +143,6 @@ MODULE mo_hydro_memory_class
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & fract_snow_glac,      & !< Snow fraction on glacier                                                 []
       & w_glac,               & !< Glacier depth including snow on glacier                                  [m water equivalent]
       & runoff_glac             !< Runoff from glacier (rain+melt, no calving)                              [m water equivalent]
 
@@ -385,34 +383,6 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      CALL mem%Add_var( 'fract_snow_soil', mem%fract_snow_soil,                 &
-        & hgrid, surface,                                                       &
-        & t_cf('fraction of snow on soil', '-', ''),                            &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
-        & prefix, suffix,                                                       &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var( 'w_snow_soil', mem%w_snow_soil,                              &
-        & hgrid, surface,                                                            &
-        & t_cf('Water content of snow reservoir on soil', 'm water equivalent', ''), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
-        & prefix, suffix,                                                            &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      ! CALL mem%Add_var( 'w_snow_soil_old', mem%w_snow_soil_old,                            &
-      !   & hgrid, surface,                                                                  &
-      !   & t_cf('Water content of snow reservoir on soil (old)', 'm water equivalent', ''), &
-      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-      !   & prefix, suffix,                                                                  &
-      !   & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var( 'snow_soil_dens', mem%snow_soil_dens,                &
-        & hgrid, surface,                                                    &
-        & t_cf('snow_soil_dens', 'kg m-3', 'Density of snow on soil'),       &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & initval_r=ini_snow_dens, l_aggregate_all=.TRUE. )
-
       ! Total evapotranspiration, including sublimation
       CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                                                     &
         & hgrid, surface,                                                                                         &
@@ -599,6 +569,27 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'fract_snow_soil', mem%fract_snow_soil,                 &
+        & hgrid, surface,                                                       &
+        & t_cf('fraction of snow on soil', '-', ''),                            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+        & prefix, suffix,                                                       &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'w_snow_soil', mem%w_snow_soil,                              &
+        & hgrid, surface,                                                            &
+        & t_cf('Water content of snow reservoir on soil', 'm water equivalent', ''), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'snow_soil_dens', mem%snow_soil_dens,                &
+        & hgrid, surface,                                                    &
+        & t_cf('snow_soil_dens', 'kg m-3', 'Density of snow on soil'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & initval_r=ini_snow_dens, l_aggregate_all=.TRUE. )
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,211, grib_bits)
@@ -850,14 +841,6 @@ CONTAINS
     IF ( (     One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
-
-      CALL mem%Add_var( 'fract_snow_glac', mem%fract_snow_glac,              &
-        & hgrid, surface,                                                    &
-        & t_cf('fraction of snow on glacier', '-', ''),                      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=BASIC,                                                &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'w_glac', mem%w_glac,                                                  &
         & hgrid, surface,                                                                      &

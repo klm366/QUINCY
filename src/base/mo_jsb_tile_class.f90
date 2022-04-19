@@ -144,6 +144,7 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
     PROCEDURE(Handler_interface),        DEFERRED :: Handler
+    PROCEDURE(Check_on_process),         DEFERRED :: Is_process_active
     PROCEDURE(Check_on_process),         DEFERRED :: Is_process_calculated
     PROCEDURE(Check_on_process),         DEFERRED :: Has_process_memory
     PROCEDURE                                     :: Is_last_process_tile

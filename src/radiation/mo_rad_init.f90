@@ -43,9 +43,10 @@ MODULE mo_rad_init
       & alb_nir_soil  (:,:), &
       & alb_vis_can   (:,:), &
       & alb_nir_can   (:,:)
+    LOGICAL :: initialized = .FALSE.
   END TYPE t_rad_init_vars
 
-  TYPE(t_rad_init_vars) :: rad_init_vars
+  TYPE(t_rad_init_vars), SAVE :: rad_init_vars
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_init'
 
@@ -64,7 +65,9 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+    IF (.NOT. model%Is_process_active(RAD_)) RETURN
+
+    IF (.NOT. rad_init_vars%initialized) THEN
       CALL rad_read_init_vars(tile)
     END IF
 
@@ -83,14 +86,19 @@ CONTAINS
 
   SUBROUTINE rad_finalize_init_vars
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_finalize_init_vars'
+
+    IF (debug_on()) CALL message(routine, 'Finalizing radiation init vars')
+
     DEALLOCATE( &
       & rad_init_vars%alb_background, &
       & rad_init_vars%alb_vis_soil,   &
-      & rad_init_vars%alb_nir_soil,   &
-      & rad_init_vars%alb_vis_can,    &
-      & rad_init_vars%alb_nir_can     &
+      & rad_init_vars%alb_nir_soil    &
       & )
-      
+
+    IF (ASSOCIATED(rad_init_vars%alb_vis_can)) DEALLOCATE(rad_init_vars%alb_vis_can)
+    IF (ASSOCIATED(rad_init_vars%alb_nir_can)) DEALLOCATE(rad_init_vars%alb_nir_can)
+
   END SUBROUTINE rad_finalize_init_vars
 
   SUBROUTINE rad_read_init_vars(tile)
@@ -113,26 +121,31 @@ CONTAINS
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
 
+    IF (.NOT. model%Is_process_active(RAD_)) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting radiation init vars')
+
+    dsl4jsb_Get_config(RAD_)
 
     ALLOCATE( &
       & rad_init_vars%alb_background(nproma, nblks), &
       & rad_init_vars%alb_vis_soil  (nproma, nblks), &
-      & rad_init_vars%alb_nir_soil  (nproma, nblks), &
-      & rad_init_vars%alb_vis_can   (nproma, nblks), &
-      & rad_init_vars%alb_nir_can   (nproma, nblks)  &
+      & rad_init_vars%alb_nir_soil  (nproma, nblks)  &
       & )
       
     rad_init_vars%alb_background(:,:) = missval
     rad_init_vars%alb_vis_soil  (:,:) = missval
     rad_init_vars%alb_nir_soil  (:,:) = missval
-    rad_init_vars%alb_vis_can   (:,:) = missval
-    rad_init_vars%alb_nir_can   (:,:) = missval
 
-    dsl4jsb_Get_config(RAD_)
-
-    IF (.NOT. model%Is_process_active(RAD_)) RETURN
-
-    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting radiation init vars')
+    IF (dsl4jsb_Config(RAD_)%use_alb_canopy .AND. .NOT. dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+      ALLOCATE( &
+        & rad_init_vars%alb_vis_can   (nproma, nblks), &
+        & rad_init_vars%alb_nir_can   (nproma, nblks)  &
+        & )
+        
+      rad_init_vars%alb_vis_can   (:,:) = missval
+      rad_init_vars%alb_nir_can   (:,:) = missval
+    END IF
 
     ! TODO: adapt names of variables in input files to names in memory
 
@@ -145,42 +158,35 @@ CONTAINS
     ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
     ! soil albedo
-    IF (tile%contains_soil) THEN
-      ptr_2D => input_file%Read_2d( &
-        & variable_name='albedo_soil_vis',  &
-        & fill_array = rad_init_vars%alb_vis_soil)
-      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    ptr_2D => input_file%Read_2d( &
+      & variable_name='albedo_soil_vis',  &
+      & fill_array = rad_init_vars%alb_vis_soil)
+    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
 
-      ptr_2D => input_file%Read_2d( &
-        & variable_name='albedo_soil_nir',  &
-        & fill_array = rad_init_vars%alb_nir_soil)
+    ptr_2D => input_file%Read_2d( &
+      & variable_name='albedo_soil_nir',  &
+      & fill_array = rad_init_vars%alb_nir_soil)
+    ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    ! Get canopy albedo
+    IF (dsl4jsb_Config(RAD_)%use_alb_canopy .AND. .NOT. dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+        ptr_2D => input_file%Read_2d( &
+        & variable_name='albedo_veg_vis',   &
+        & fill_array = rad_init_vars%alb_vis_can)
       ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
     END IF
-
-    IF (tile%contains_vegetation) THEN
-      ! Get canopy albedo
-      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
-        ptr_2D => input_file%Read_2d( &
-          & variable_name='albedo_veg_vis',   &
-          & fill_array = rad_init_vars%alb_vis_can)
-        ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-      ELSE
-        rad_init_vars%alb_vis_can = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
-      END IF
-      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
-        ptr_2D => input_file%Read_2d( &
-          & variable_name='albedo_veg_nir',   &
-          & fill_array = rad_init_vars%alb_nir_can)
-        ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-      ELSE
-        rad_init_vars%alb_nir_can = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
-      END IF
-
+    IF (dsl4jsb_Config(RAD_)%use_alb_canopy .AND. .NOT. dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+      ptr_2D => input_file%Read_2d( &
+        & variable_name='albedo_veg_nir',   &
+        & fill_array = rad_init_vars%alb_nir_can)
+      ptr_2D = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
     END IF
 
     CALL input_file%Close()
 
     NULLIFY(ptr_2D)
+
+    rad_init_vars%initialized = .TRUE.
 
   END SUBROUTINE rad_read_init_vars
 
@@ -194,7 +200,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
 
-    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
     ! model => get_model(tile%owner_model_id)
 
@@ -222,7 +228,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 
-    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
     model => get_model(tile%owner_model_id)
 
@@ -266,23 +272,21 @@ CONTAINS
       !$acc update device(dsl4jsb_var2D_onDomain(RAD_,alb_nir_soil), dsl4jsb_var2D_onDomain(RAD_, alb_vis_soil))
     END IF
 
-    ! Note: If use_alb_canopy=FALSE and PFTs are used, alb_vis_can and alb_nir_can will be different on the tiles
-    !       where the rad process runs (PFTs => values from lctlib) and the parent tiles (values from ini file). These
-    !       two variables are not aggregated at the moment and should therefore only be used on the tiles where the
-    !       rad process runs! (TODO)
     IF (tile%contains_vegetation) THEN
       ! Get canopy albedo
-      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
-        dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = rad_init_vars%alb_vis_can
-      ELSE
-        dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
+      IF (.NOT. dsl4jsb_Config(RAD_)%use_alb_veg_simple) THEN
+        IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+          dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = rad_init_vars%alb_vis_can
+        ELSE
+          dsl4jsb_var2D_onDomain(RAD_, alb_vis_can) = dsl4jsb_Lctlib_param(AlbedoCanopyVIS)
+        END IF
+        IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
+          dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = rad_init_vars%alb_nir_can
+        ELSE
+          dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
+        END IF
+        !$acc update device(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
       END IF
-      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. tile%lcts(1)%lib_id == 0) THEN
-        dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = rad_init_vars%alb_nir_can
-      ELSE
-        dsl4jsb_var2D_onDomain(RAD_, alb_nir_can) = dsl4jsb_Lctlib_param(AlbedoCanopyNIR)
-      END IF
-      !$acc update device(dsl4jsb_var2D_onDomain(RAD_, alb_nir_can), dsl4jsb_var2D_onDomain(RAD_, alb_vis_can))
 
       ! The albedo of snow on canopy:
       ! R: In the model the albedo of snow is weighted with albedo_age_weight between two albedo schemes (age and temperature).
@@ -329,7 +333,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tfrac_mavg_cl
     dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tcnl_mavg_cl
 
-    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Setting initial conditions of radiation memory (quincy) for tile '// &
       &                                   TRIM(tile%name))

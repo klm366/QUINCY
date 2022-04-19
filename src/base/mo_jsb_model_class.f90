@@ -264,17 +264,18 @@ CONTAINS
 !!$  END SUBROUTINE Process_task
 !!$
 
-  SUBROUTINE Run_tasks(this, debug)
+  SUBROUTINE Run_tasks(this, aggregate_only, debug)
 
     USE mo_jsb_control, ONLY: timer_on, timer_process_msg
     USE mo_timer,       ONLY: timer_start, timer_stop
 
     CLASS(t_jsb_model), INTENT(inout) :: this
+    LOGICAL, OPTIONAL,  INTENT(in)    :: aggregate_only
     LOGICAL, OPTIONAL,  INTENT(in)    :: debug
 
     CLASS(t_Task_queue),  POINTER :: current_queue_element
     CLASS(t_Message), POINTER :: msg
-    LOGICAL :: l_debug
+    LOGICAL :: l_aggregate_only, l_debug
     INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:Run_tasks'
@@ -284,7 +285,12 @@ CONTAINS
     l_debug = .FALSE.
     IF (PRESENT(debug)) l_debug = debug
 
+    l_aggregate_only = .FALSE.
+    IF (PRESENT(aggregate_only)) l_aggregate_only = aggregate_only
+
     msg => t_Message('', this%Get_action('INTEGRATE'))
+
+    IF (l_aggregate_only) CALL this%Set_options(l_aggregate_only=.TRUE.)
 
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
@@ -304,6 +310,8 @@ CONTAINS
       current_queue_element => current_queue_element%next
 
     END DO
+
+    IF (l_aggregate_only) CALL this%Set_options(l_aggregate_only=.FALSE.)
 
     DEALLOCATE(msg)
 
@@ -449,7 +457,7 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, iblk, ics, ice, nc, l_aggregate_only)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -462,6 +470,7 @@ CONTAINS
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
     INTEGER,          OPTIONAL,          INTENT(in)    :: ice
     INTEGER,          OPTIONAL,          INTENT(in)    :: nc
+    LOGICAL,          OPTIONAL,          INTENT(in)    :: l_aggregate_only
 
     INTEGER :: no_omp_thread
 
@@ -473,6 +482,7 @@ CONTAINS
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
     CALL assign_if_present(this%options(no_omp_thread)%nc,      nc)
+    CALL assign_if_present(this%options(no_omp_thread)%l_aggregate_only, l_aggregate_only)
     IF (PRESENT(current_datetime)) this%options(no_omp_thread)%current_datetime => current_datetime
 
   END SUBROUTINE Set_options

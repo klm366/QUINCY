@@ -48,6 +48,7 @@ MODULE mo_jsb_tile
     PROCEDURE :: Init           => Init_tile
     PROCEDURE :: Init_fractions => Init_fractions_on_tile
     PROCEDURE :: Init_vars      => Init_vars_on_tile
+    PROCEDURE :: Is_process_active           => Is_process_active_on_tile
     PROCEDURE :: Is_process_calculated       => Is_process_calculated_on_tile
     PROCEDURE :: Has_process_memory          => Has_process_memory_on_tile
     PROCEDURE :: Count_conserved_quantities  => Count_conserved_quantities_on_tile
@@ -220,7 +221,6 @@ CONTAINS
           SELECT CASE (return_ptr%parent_tile%process_action(iproc))
           CASE (SKIP_, INHERIT_, ON_SUBTREE_, ON_LEAFS_)
             CALL return_ptr%Set_process_action(iproc, return_ptr%parent_tile%process_action(iproc))
-            !return_ptr%parent_tile%process_action(iproc) = AGGREGATE_
           CASE (ON_TILE_)
             IF (iproc == L2A_) THEN
               CALL return_ptr%Set_process_action(iproc, SKIP_)
@@ -281,13 +281,20 @@ CONTAINS
     parent_tile => this%parent_tile
     DO iproc=1,max_no_of_processes
 
+      process_name = Get_process_name(iproc)
+
       this%mem(iproc)%p => NULL()
 
       IF (this%process_action(iproc) == SKIP_) CYCLE
 
       IF (this%process_action(iproc) == ON_LEAFS_) THEN
-        IF (ASSOCIATED(parent_tile)) parent_tile%process_action(iproc) = AGGREGATE_
-        IF (.NOT. this%Has_children()) this%process_action(iproc) = ON_TILE_
+        ! IF (ASSOCIATED(parent_tile)) parent_tile%process_action(iproc) = AGGREGATE_
+        ! IF (.NOT. this%Has_children()) this%process_action(iproc) = ON_TILE_
+        IF (this%Has_children()) THEN
+          this%process_action(iproc) = AGGREGATE_
+        ELSE
+          this%process_action(iproc) = ON_TILE_
+        END IF
       END IF
 
       ! Only create / link memory for processes that have a memory
@@ -297,7 +304,7 @@ CONTAINS
 
       IF (this%process_action(iproc) == INHERIT_) THEN
         this%mem(iproc)%p => parent_tile%mem(iproc)%p
-        this%mem(iproc)%p%in_var_groups = in_var_groups
+        ! this%mem(iproc)%p%in_var_groups = in_var_groups
         __acc_attach(this%mem(iproc)%p)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//&
@@ -309,6 +316,8 @@ CONTAINS
         this%mem(iproc)%p => tmp_ptr
         __acc_attach(this%mem(iproc)%p)
         this%mem(iproc)%p%id = iproc
+
+        this%mem(iproc)%p%is_aggregated = (this%process_action(iproc) == AGGREGATE_)
 
         IF (get_no_of_models() > 1) THEN
           varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
@@ -634,19 +643,36 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Check if a given process is to be calculated (Integrated or aggregated) on the tile: 
+  !> Check if a given process is to be active (Integrated or aggregated) on the tile: 
   !>  i.e. if the process action on this tile is not SKIP_ or INHERIT_
+  !
+  LOGICAL FUNCTION Is_process_active_on_tile(this, iproc)
+
+    USE mo_util,                ONLY: one_of
+
+    CLASS(t_jsb_tile), INTENT(in) :: this  !< tile on which the process activity is to be checked
+    INTEGER,           INTENT(in) :: iproc !< process for which the activity is to be checked
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active_on_tile'
+
+    Is_process_active_on_tile = (one_of(this%process_action(iproc), (/SKIP_, INHERIT_/)) < 0)
+    
+  END FUNCTION Is_process_active_on_tile
+
+  ! ====================================================================================================== !
+  !> Check if a given process is to be integrated on the tile: 
+  !>  i.e. if the process action on this tile is one of ON_TILE_ or ON_SUBTREE_
   !
   LOGICAL FUNCTION Is_process_calculated_on_tile(this, iproc)
 
     USE mo_util,                ONLY: one_of
 
-    CLASS(t_jsb_tile), INTENT(in) :: this !< tile on which the process activity is to be checked
+    CLASS(t_jsb_tile), INTENT(in) :: this  !< tile on which the process activity is to be checked
     INTEGER,           INTENT(in) :: iproc !< process for which the activity is to be checked
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_calculated_on_tile'
 
-    Is_process_calculated_on_tile = (one_of(this%process_action(iproc), (/SKIP_, INHERIT_/)) < 0)
+    Is_process_calculated_on_tile = (one_of(this%process_action(iproc), (/ON_TILE_, ON_SUBTREE_/)) > 0)
     
   END FUNCTION Is_process_calculated_on_tile
 

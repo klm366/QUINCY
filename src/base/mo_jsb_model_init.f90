@@ -180,6 +180,7 @@ CONTAINS
       &                               t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
     USE mo_jsb_io_netcdf,       ONLY: jsb_netcdf_open_input
+    USE mo_jsb_time,            ONLY: get_time_start, get_time_dt
     USE mo_seb_init,            ONLY: seb_init
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
@@ -228,6 +229,8 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
+
+    model%options(:)%grid_id = model%grid_id
 
     dsl4jsb_Get_config(PHENO_)
 
@@ -348,7 +351,7 @@ CONTAINS
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
-      CALL model%Queue_task(TURB_,   "humidity_scaling")
+      CALL model%Queue_task(TURB_,   "humidity_scaling") ! Must be called after soil_hydrology
       CALL model%Queue_task(TURB_,   "surface_roughness")
       CALL model%Queue_task(RAD_,    "albedo")
           ! Albedo is updated at the end of the time step, one time step before the radiation is updated in
@@ -477,62 +480,57 @@ CONTAINS
         & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
 
       ! TBD: Loop over processes instead of explicit
-      IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(RAD_)) THEN
         CALL rad_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(SEB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(SEB_)) THEN
         CALL seb_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(TURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(TURB_)) THEN
         CALL turb_init(tile)
       END IF
 
       ! Initialize PHENO_ before HYDRO_ and VEG_
-      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(PHENO_)) THEN
         CALL pheno_init(tile)
       END IF
 
       IF (model%config%use_quincy) THEN
-        IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(VEG_)) THEN
           CALL veg_init(tile)
         END IF
       END IF
 
-      IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(SSE_)) THEN
         CALL sse_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(HYDRO_)) THEN
         CALL hydro_init(tile)
       END IF
 
-      ! Needs both HYDRO_ and SSE_ to continue soil initialization from IFS
-      IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL init_soil_properties(tile)
-      END IF
-
-      IF (one_of(tile%process_action(A2L_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(A2L_)) THEN
         CALL atm2land_init(tile)
       END IF
       
-      IF (one_of(tile%process_action(ASSIMI_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(ASSIMI_)) THEN
         CALL assimi_init(tile)
         ! CALL assimi_init_bc(tile)
         ! CALL assimi_init_ic(tile)
       END IF
 
-      IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(CARBON_)) THEN
         CALL carbon_init(tile)
       END IF
 
-      IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(TCQ_)) THEN
         CALL tcq_init(tile)
       END IF
 
 #ifndef __NO_JSBACH_HD__
-      IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(HD_)) THEN
         CALL hd_init_bc(tile)
         CALL hd_init_ic(tile)
       END IF
@@ -630,7 +628,7 @@ CONTAINS
 
       ! IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
       IF (.NOT. tile%visited(no_omp_thread)) THEN
-          CALL model%Goto_next_tile(tile)
+        CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
@@ -641,6 +639,19 @@ CONTAINS
       CALL model%Goto_next_tile(tile)
 
     END DO
+
+    ! If this is not a restart run do an initial aggregation of all variables and complete initialization of variables
+    IF (.NOT. is_time_restart(get_time_start())) THEN
+      CALL model%Reset_tiles()
+      CALL model%Set_options(iblk=1) ! Just to get debug info
+      CALL model%Set_options(current_datetime=get_time_start(), dtime=get_time_dt(model_id))
+      CALL model%Run_tasks(aggregate_only=.TRUE., debug = (debug_on('hsm')))
+      CALL complete_init(model)
+      CALL model%Reset_tiles()
+      CALL model%Set_options(iblk=1) ! Just to get debug info
+      CALL model%Set_options(current_datetime=get_time_start(), dtime=get_time_dt(model_id))
+      CALL model%Run_tasks(aggregate_only=.TRUE., debug = (debug_on('hsm')))
+    END IF
 
     ! Iterate over tiles, crosscheck tile structure and collect conserved quantities
     CALL model%Reset_tiles()
@@ -684,19 +695,19 @@ CONTAINS
         CYCLE
       END IF
 
-      IF (one_of(tile%process_action(TLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(TLCC_)) THEN
         CALL tlcc_init_lcc(tile)
       END IF
 
-      IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(ALCC_)) THEN
         CALL alcc_init_lcc(tile)
       END IF
 
-      IF (one_of(tile%process_action(FLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(FLCC_)) THEN
         CALL flcc_init_lcc(tile)
       END IF
 
-      IF (one_of(tile%process_action(WLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(WLCC_)) THEN
         CALL wlcc_init_lcc(tile)
       END IF
 
@@ -738,6 +749,92 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
+  !> Complete initialization after init has been called for all processes (on the "calculated" tiles) and
+  !  the aggregation has been done for all remaining tiles, i.e. all required variables are initialized
+  !  on all tiles for all processes.
+  !  Note: The init subroutines of each process should not USE memory from other processes. If there are
+  !  dependencies this should be done here!
+  !
+  SUBROUTINE complete_init(model)
+
+    USE mo_hydro_constants, ONLY: vol_porosity_org, vol_field_cap_org, vol_p_wilt_org
+    USE mo_sse_init,        ONLY: init_sse_soil_properties => init_soil_properties
+    USE mo_hydro_init,      ONLY: init_hydro_soil_properties => init_soil_properties
+    USE mo_jsb_tile_class,  ONLY: t_jsb_tile_abstract
+
+    dsl4jsb_Use_memory(SSE_)
+    dsl4jsb_Use_memory(SEB_)
+    dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(PHENO_)
+
+    dsl4jsb_Use_config(HYDRO_)
+
+    TYPE(t_jsb_model), INTENT(inout) :: model
+
+    dsl4jsb_Def_memory(SSE_)
+    dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(PHENO_)
+
+    dsl4jsb_Def_config(HYDRO_)
+
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+    INTEGER                             :: no_omp_thread
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':complete_init'
+
+    CALL message(routine, 'Starting ...')
+
+    no_omp_thread = Get_omp_thread()
+
+    IF (.NOT. Is_omp_inside_serial()) THEN
+      CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
+    END IF
+
+    ! Iterate over tiles and call initialization if necessary
+    CALL model%Reset_tiles()
+    CALL model%Get_top_tile(tile)
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        call model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      IF (tile%Is_process_active(SSE_) .AND. tile%Is_process_active(SEB_)) THEN
+        dsl4jsb_Get_memory(SSE_)
+        dsl4jsb_Get_memory(SEB_)
+    
+        dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
+        dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
+
+        !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
+        !$acc              dsl4jsb_var2D_onDomain(SEB_,t))
+        !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
+        !$acc               dsl4jsb_var2D_onDomain(SEB_,t))
+        !$acc end data
+      END IF
+
+      IF (tile%Is_process_calculated(HYDRO_) .AND. tile%Contains_soil) THEN
+        CALL init_hydro_soil_properties(tile)
+      END IF
+
+      ! ATTENTION: SSE_ needs to run on the same tiles than HYDRO_, or below!
+      IF (tile%Is_process_calculated(SSE_)) THEN
+        CALL init_sse_soil_properties(tile)
+      END IF
+
+      CALL model%Goto_next_tile(tile)
+
+    END DO
+
+  END SUBROUTINE complete_init
+
+  ! ====================================================================================================== !
+  !
   !> Do some more initialization after restart files have been read
   !
   SUBROUTINE jsbach_init_after_restart(model_id)
@@ -745,6 +842,7 @@ CONTAINS
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_carbon_init,         ONLY: carbon_read_cpools
+    USE mo_jsb_time,            ONLY: get_time_start, get_time_dt
     USE mo_util,                ONLY: one_of
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -793,6 +891,12 @@ CONTAINS
       CALL model%Goto_next_tile(tile)
 
     END DO
+
+    ! Aggregate all variables after restart file has been read
+    CALL model%Reset_tiles()
+    CALL model%Set_options(iblk=1) ! Just to get debug info
+    CALL model%Set_options(current_datetime=get_time_start(), dtime=get_time_dt(model_id))
+    CALL model%Run_tasks(aggregate_only=.TRUE., debug = (debug_on('hsm')))
 
 #ifdef _OPENACC
     CALL model%cpu_to_gpu()

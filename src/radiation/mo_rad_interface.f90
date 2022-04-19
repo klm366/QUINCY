@@ -1010,13 +1010,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)         ! in
       IF (use_alb_veg_simple) THEN 
         dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_forest)          ! in
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_can)           ! in (jsbach4: from rad_init | quincy: from calc_sw_srf_net())
+        dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_can)           ! in (jsbach4: from rad_init | quincy: from calc_sw_srf_net())
       ENDIF
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_mineralsoil)   ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_mineralsoil)   ! inout
-      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_can)           ! in (jsbach4: from rad_init | quincy: from calc_sw_srf_net())
-      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_can)           ! in (jsbach4: from rad_init | quincy: from calc_sw_srf_net())
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil)          ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil)          ! inout
 
@@ -1186,14 +1186,21 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    ! Update albedo only at experiment start, if model runs standalone or one time step before the radiation time step
-    IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
-      & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
-      & .NOT. jsbach_runs_standalone()) RETURN
+    ! Aggregate albedo only at experiment start, if model runs standalone or one time step before the radiation time step.
+    ! For aggregation after init or restart, always do it.
+    IF (.NOT. options%l_aggregate_only) THEN
+      IF (.NOT. is_time_experiment_start(options%current_datetime) .AND. &
+        & .NOT. is_time_ltrig_rad_m1(options%current_datetime, options%dtime, model%id) .AND. &
+        & .NOT. jsbach_runs_standalone()) RETURN
+    END IF
 
     dsl4jsb_Get_memory(RAD_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    IF (options%l_aggregate_only) THEN
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_background,      weighted_by_fract)
+    END IF
 
     ! for vegetation tiles, already aggregated by aggregate_sw_radiation_q_()
     IF (tile%is_vegetation .AND. .NOT. model%config%use_quincy) THEN
@@ -1205,6 +1212,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can,         weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,             weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,             weighted_by_fract)
     ! for all other tiles (the task sw_radiation_q_() runs for vegetation tiles only)
@@ -1217,6 +1226,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can,         weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can,         weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_vis,             weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, alb_nir,             weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_lwtr,         weighted_by_fract)
