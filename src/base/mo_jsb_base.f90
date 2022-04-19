@@ -49,11 +49,13 @@ CONTAINS
     ! USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, PHENO_, ASSIMI_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
+    dsl4jsb_Use_config(PHENO_)
+    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
@@ -66,6 +68,8 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(RAD_)
+    dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
@@ -140,6 +144,8 @@ CONTAINS
       dsl4jsb_Get_config(SSE_)
       dsl4jsb_Get_config(HYDRO_)
       dsl4jsb_Get_config(RAD_)
+      dsl4jsb_Get_config(PHENO_)
+      dsl4jsb_Get_config(ASSIMI_)
       dsl4jsb_Get_config(CARBON_)
       dsl4jsb_Get_config(FUEL_)
       dsl4jsb_Get_config(DISTURB_)
@@ -183,6 +189,17 @@ CONTAINS
         dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
       END IF
 
+      IF (TRIM(model%config%usecase) == 'jsbach_lite') THEN
+        CALL message(TRIM(routine), 'Forcing settings for jsbach_lite usecase:')
+        CALL message('    ', '... using alb_veg_simple scheme in radiation')
+        CALL message('    ', '... using climatology scheme in phenology')
+        CALL message('    ', '... assimi process not active')
+        dsl4jsb_Config(RAD_)%use_alb_veg_simple = .TRUE.
+        dsl4jsb_Config(RAD_)%use_alb_canopy = .FALSE. ! 
+        dsl4jsb_Config(PHENO_)%scheme = 'climatology'
+        dsl4jsb_Config(ASSIMI_)%active = .FALSE.
+      END IF
+
       IF (model%Do_fractions_change()) THEN
         IF (.NOT. dsl4jsb_Config(PPLCC_)%active) THEN
           CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
@@ -204,6 +221,7 @@ CONTAINS
       END IF
 
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
+        dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
         CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
           &                         ' ... therefore no influence of vegetation on albedo')
       ELSE
