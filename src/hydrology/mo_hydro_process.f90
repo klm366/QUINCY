@@ -245,7 +245,7 @@ CONTAINS
     wtr_skin = MIN(MAX(0._wp, wtr_skin_pre_rain + rain_to_skinres + evapo_skin_pot_in_m), skinres_max)
 
     ! Note: at this point ignoring the amount of dew that exceeds the skin reservoir
-    !       as dew is calculated later based on evapo_soil (f(evapotrans_soil))
+    !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
     evapo_skin_in_m = wtr_skin - (wtr_skin_pre_rain + rain_to_skinres)
     evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m
     IF (evapo_skin_pot_in_m < 0._wp) THEN
@@ -302,10 +302,10 @@ CONTAINS
   !! @param [in]     evapopot              potential evaporation [kg m-2 s-1]
   !! @param [in]     rain                  liquid precipitation [kg m-2 s-1]
   !! @param [in]     snow                  solid precipitation [kg m-2 s-1]
-  !! @param [in,out] glacier_depth         glacier depth (snow and ice) [m water equivalent]
+  !! @param [in,out] weq_glac              glacier depth (snow and ice) [m water equivalent]
   !! @param [out]    q_snocpymlt           Heating due to snow melt on canopy [W m-2]
-  !! @param [out]    glacier_melt          Snow/ice melt at glacier points [kg m-2 s-1]
-  !! @param [out]    glacier_runoff        glacier runoff (rain+snow/ice melt, no calving) [kg m-2 s-1]
+  !! @param [out]    snowmelt              Snow/ice melt at glacier points [kg m-2 s-1]
+  !! @param [out]    runoff_glac           glacier runoff (rain+snow/ice melt, no calving) [kg m-2 s-1]
   !! @param [out]    pme_glacier           precipitation minus sublimation on glacier [kg m-2 s-1]
   !
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_glacier ( &
@@ -313,8 +313,8 @@ CONTAINS
     & t_unfilt,                                              &
     & fract_snow, hcap_grnd,                                 &
     & evapotrans, evapopot, rain, snow,                      &
-    & glacier_depth, q_snocpymlt,                            &
-    & glacier_melt, glacier_runoff,                          &
+    & weq_glac, q_snocpymlt,                                 &
+    & snowmelt, runoff_glac,                                 &
     & pme_glacier)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf
@@ -326,9 +326,9 @@ CONTAINS
       & t_unfilt,                 &
       & fract_snow, hcap_grnd, evapotrans, evapopot, rain, snow
     REAL(wp), INTENT(inout) :: &
-      & glacier_depth
+      & weq_glac
     REAL(wp), INTENT(out)   :: &
-      & q_snocpymlt, glacier_melt, glacier_runoff, pme_glacier
+      & q_snocpymlt, snowmelt, runoff_glac, pme_glacier
     !$claw end model-data
 
     !
@@ -338,11 +338,11 @@ CONTAINS
       & rain_in_m,           & !< amount of rainfall within time step [m]
       & new_snow,            & !< amount of snowfall within time step [m]
       & evapotrans_in_m,     & !< amount of evapotranspiration within time step [m]
-      & snow_melt_pot_in_m,  & !< potential amount of snow melt [m]
+      & snowmelt_pot_in_m,   & !< potential amount of snow melt [m]
       & evapo_snow_pot_in_m, & !< potential snow evaporation
       & pme_glacier_in_m,    & !< P-E in m
-      & glacier_runoff_in_m, & !< Runoff in m
-      & glacier_melt_in_m      !< Snow/ice melt in m
+      & runoff_glac_in_m,    & !< Runoff in m
+      & snowmelt_in_m          !< Snow/ice melt in m
 
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
@@ -366,30 +366,30 @@ CONTAINS
     !  Snowfall and sublimation on glaciers
     !---------------------------------------
 
-    glacier_depth       = glacier_depth + new_snow + evapo_snow_pot_in_m   ! glacier depth [m]
-    pme_glacier_in_m    = rain_in_m     + new_snow + evapotrans_in_m      ! P-E on glaciers [m]
-    glacier_runoff_in_m = rain_in_m                                       ! there is no infiltration on glaciers
+    weq_glac         = weq_glac  + new_snow + evapo_snow_pot_in_m   ! glacier depth [m]
+    pme_glacier_in_m = rain_in_m + new_snow + evapotrans_in_m       ! P-E on glaciers [m]
+    runoff_glac_in_m = rain_in_m                                    ! there is no infiltration on glaciers
 
 
     !  Snow and glacier melt
     !------------------------
 
-    glacier_melt_in_m = 0._wp
+    snowmelt_in_m = 0._wp
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
       IF (t_unfilt > tmelt) THEN
-        snow_melt_pot_in_m  = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o) !  potential snow and ice melt [m]
-        glacier_melt_in_m   = snow_melt_pot_in_m                       ! there is an unlimited amount of snow
-        glacier_depth       = glacier_depth - glacier_melt_in_m        ! reduce glacier depth according to melting
-        glacier_runoff_in_m = glacier_runoff_in_m + glacier_melt_in_m  ! add melt water to the runoff
+        snowmelt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o) !  potential snow and ice melt [m]
+        snowmelt_in_m     = snowmelt_pot_in_m                       ! there is an unlimited amount of snow
+        weq_glac          = weq_glac - snowmelt_in_m                ! reduce glacier depth according to melting
+        runoff_glac_in_m  = runoff_glac_in_m + snowmelt_in_m        ! add melt water to the runoff
         ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
       END IF
     END IF
 
     q_snocpymlt = 0._wp
 
-    glacier_melt   = glacier_melt_in_m   * rhoh2o / dtime
-    glacier_runoff = glacier_runoff_in_m * rhoh2o / dtime
-    pme_glacier    = pme_glacier_in_m    * rhoh2o / dtime
+    snowmelt    = snowmelt_in_m    * rhoh2o / dtime
+    runoff_glac = runoff_glac_in_m * rhoh2o / dtime
+    pme_glacier = pme_glacier_in_m * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_glacier
 
@@ -1200,7 +1200,7 @@ CONTAINS
     & dsoil,                    &
     & field_cap_sl,             &
     & transpiration_in_m,       &
-    & evapo_soil,               &
+    & evapo_soil_in_m,          &
     & wtr_soil_sl, ice_soil_sl  &
     & )
 
@@ -1222,7 +1222,7 @@ CONTAINS
     REAL(wp), INTENT(in)     :: dsoil(:,:)              ! soil depth until bedrock within layer [m]
     REAL(wp), INTENT(in)     :: field_cap_sl(:,:)       ! field capacity of the layer (reduced by ice)
     REAL(wp), INTENT(in)     :: transpiration_in_m(:)   ! transpiration [m]
-    REAL(wp), INTENT(in)     :: evapo_soil(:)           ! bare soil evaporation [m]
+    REAL(wp), INTENT(in)     :: evapo_soil_in_m(:)      ! bare soil evaporation [m]
 
     REAL(wp), INTENT(inout)  :: wtr_soil_sl(:,:)        ! water content of the soil layer [m]
     REAL(wp), INTENT(inout)  :: ice_soil_sl(:,:)        ! ice content of the soil layer [m]
@@ -1251,7 +1251,7 @@ CONTAINS
     !  update soil moisture due to evaporation and transpiration fluxes
     !----------------------------------------------------------------------------------------------
 
-    !$claw acc data present(droot, dsoil, field_cap_sl, transpiration_in_m, evapo_soil, &
+    !$claw acc data present(droot, dsoil, field_cap_sl, transpiration_in_m, evapo_soil_in_m, &
     !$claw acc wtr_soil_sl, ice_soil_sl) pcreate(deficit_evapo, deficit_trans, deficit_sl, &
     !$claw acc remaining, rootfract, fixed, trans_layer, ws, root_depth, deficit_evapotrans)
 
@@ -1261,11 +1261,11 @@ CONTAINS
     !$claw acc loop gang vector
     DO i = 1, nc
       deficit_evapo(i) = 0._wp   ! water missing for evaporation due to limited soil water
-      IF (evapo_soil(i) < 0._wp) THEN          ! pos. evaporation flux (not dew)
-        wtr_soil_sl(i,1) = wtr_soil_sl(i,1) + evapo_soil(i) ! take water from uppermost soil layer
-        IF (wtr_soil_sl(i,1) < 0._wp) THEN                  ! if there is not enough soil water
-          deficit_evapo(i) = wtr_soil_sl(i,1)               !    this is the amount of water missing
-          wtr_soil_sl(i,1) = 0._wp                          !    soil moisture cannot be negative
+      IF (evapo_soil_in_m(i) < 0._wp) THEN          ! pos. evaporation flux (not dew)
+        wtr_soil_sl(i,1) = wtr_soil_sl(i,1) + evapo_soil_in_m(i) ! take water from uppermost soil layer
+        IF (wtr_soil_sl(i,1) < 0._wp) THEN                    ! if there is not enough soil water
+          deficit_evapo(i) = wtr_soil_sl(i,1)                 !    this is the amount of water missing
+          wtr_soil_sl(i,1) = 0._wp                            !    soil moisture cannot be negative
         END IF
       END IF
 
@@ -1492,7 +1492,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
     & dtime,                                     & ! in
     & steplen,                                   & ! in
-    & wsr_max,                                   & ! in
+    & skinres_max,                               & ! in
     & oro_stddev,                                & ! in
     & t_srf_old,                                 & ! in
     & press_srf,                                 & ! in
@@ -1520,7 +1520,7 @@ CONTAINS
       & press_srf,          &
       & drag_srf,           &
       & q_air,              &
-      & wsr_max,            &
+      & skinres_max,        &
       & wtr_skin,           &
       & weq_snow_soil,      &
       & weq_snow_can
@@ -1539,9 +1539,9 @@ CONTAINS
 
     ! Snow fraction on canopy
     ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
-    IF (wsr_max > EPSILON(1._wp)) THEN
-      fract_snow_can = MIN(1._wp, weq_snow_can / wsr_max)
-      fract_wet      = MIN(1._wp, wtr_skin     / wsr_max)
+    IF (skinres_max > EPSILON(1._wp)) THEN
+      fract_snow_can = MIN(1._wp, weq_snow_can / skinres_max)
+      fract_wet      = MIN(1._wp, wtr_skin     / skinres_max)
     ELSE
       fract_snow_can = 0._wp
       fract_wet      = 0._wp
@@ -1577,7 +1577,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_wskin_fractions_bare( &
     & dtime,                                      & ! in
     & steplen,                                    & ! in
-    & wsr_max,                                    & ! in
+    & skinres_max,                                & ! in
     & oro_stddev,                                 & ! in
     & t_srf,                                      & ! in
     & press_srf,                                  & ! in
@@ -1603,7 +1603,7 @@ CONTAINS
       & press_srf,          &
       & drag_srf,           &
       & q_air,              &
-      & wsr_max,            &
+      & skinres_max,        &
       & wtr_skin,           &
       & weq_snow_soil
 
@@ -1619,8 +1619,8 @@ CONTAINS
 
     !$claw sca
 
-    IF (wsr_max > EPSILON(1._wp)) THEN
-      fract_wet = MIN(1._wp, wtr_skin / wsr_max)
+    IF (skinres_max > EPSILON(1._wp)) THEN
+      fract_wet = MIN(1._wp, wtr_skin / skinres_max)
     ELSE
       fract_wet = 0._wp
     END IF

@@ -573,7 +573,7 @@ CONTAINS
         & q_snocpymlt(:),                  & !< out
         & snowmelt(:),                     & !< out
         & runoff_glac(:),                  & !< out
-        & runoff(:)                        & !< out, P-E ... used as runoff for HD model
+        & pme_glacier = runoff(:)          & !< out, P-E ... used as runoff for HD model
         & )
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_5 tile_name=tile%name
       drainage(:) = 0._wp
