@@ -74,7 +74,7 @@ CONTAINS
   !! @param [in,out] snow_soil_dens        snow density on soil at non-glacier points [m water equivalent]
   !! @param [out]    q_snocpymlt           Heating due to snow melt on canopy [W m-2]
   !! @param [out]    snow_accum            snow budget change within time step [m water equivalent]
-  !! @param [out]    snow_melt_soil        snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
+  !! @param [out]    snowmelt_soil         snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
   !! @param [out]    evapotrans_soil       evapotranspiration from soil w/o skin and snow reservoirs [kg m-2 s-1]
   !! @param [out]    evapo_skin             evaporation from skin reservoir [kg m-2 s-1]
   !! @param [out]    evapo_snow             evaporation from snow [kg m-2 s-1]
@@ -87,7 +87,7 @@ CONTAINS
     & skinres_canopy_max, skinres_max, fract_snow, fract_wet,       &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
-    & q_snocpymlt, snow_accum, snow_melt_soil,                      &
+    & q_snocpymlt, snow_accum, snowmelt_soil,                       &
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
@@ -103,7 +103,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens
     REAL(wp), INTENT(out)   ::                   &
-      & q_snocpymlt, snow_accum, snow_melt_soil, &
+      & q_snocpymlt, snow_accum, snowmelt_soil,  &
       & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
     !$claw end model-data
     !
@@ -119,8 +119,8 @@ CONTAINS
       & evapo_skin_in_m,      & !< amount of evaporation from skin reservoir within time step [m]
       & transpiration_in_m,   & !< amount of transpiration within time step [m]
       & evapo_snow_in_m,      & !< amount of sublimation from snow within time step [m]
-      & snow_melt_can,        & !< snow melt from canopy [m]
-      & snow_melt_pot_in_m,   & !< potential amount of snow melt [m]
+      & snowmelt_can,         & !< snow melt from canopy [m]
+      & snowmelt_pot_in_m,    & !< potential amount of snow melt [m]
       & new_snow_can,         & !< amount of snowfall on canopy within time step [m]
       & new_snow_soil,        & !< amount of snowfall to soil within time step [m]
       & exp_t, exp_w,         & !< exponents needed for unloading of snow due to temperature / wind
@@ -144,7 +144,7 @@ CONTAINS
 
     snow_accum = 0._wp
     weq_snow_soil_old = weq_snow_soil
-    snow_melt_soil = 0._wp
+    snowmelt_soil = 0._wp
     evapotrans_soil = 0._wp
     evapo_skin = 0._wp
     evapo_snow = 0._wp
@@ -180,8 +180,8 @@ CONTAINS
     evapo_snow_in_m = evapo_snow_pot_in_m - (weq_snow_can - canopy_pre_snow - new_snow_can)
     ! unloading of snow from the canopy due to melting
     exp_t = MAX(0._wp, t_air-zc1)/zc2 * dtime
-    snow_melt_can = weq_snow_can * (1._wp-EXP(-exp_t))
-    weq_snow_can = weq_snow_can - snow_melt_can
+    snowmelt_can = weq_snow_can * (1._wp-EXP(-exp_t))
+    weq_snow_can = weq_snow_can - snowmelt_can
 
     ! unloading of snow from the canopy due to wind
     exp_w = wind_10m/zc3 * dtime
@@ -191,7 +191,7 @@ CONTAINS
 
     ! Heating due to snow melt on canopy
     ! @Todo Why is heating only computed for canopy?
-    q_snocpymlt = snow_melt_can * rhoh2o * alf / dtime
+    q_snocpymlt = snowmelt_can * rhoh2o * alf / dtime
 
     !  Snowfall and sublimation
     !-----------------------------------------------
@@ -211,10 +211,10 @@ CONTAINS
 
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
       IF (t_unfilt > tmelt) THEN
-        snow_melt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o)     !  potential snow and ice melt [m]
+        snowmelt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o)     !  potential snow and ice melt [m]
         IF (weq_snow_soil > 0._wp) THEN
-          snow_melt_soil = MAX(MIN(snow_melt_pot_in_m, weq_snow_soil), 0._wp)  ! snow melt limited by actual snow depth [m]
-          weq_snow_soil = weq_snow_soil - snow_melt_soil                       ! reduce snow depth according to melting
+          snowmelt_soil = MAX(MIN(snowmelt_pot_in_m, weq_snow_soil), 0._wp)   ! snow melt limited by actual snow depth [m]
+          weq_snow_soil = weq_snow_soil - snowmelt_soil                       ! reduce snow depth according to melting
         ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
         END IF
       END IF
@@ -222,10 +222,10 @@ CONTAINS
 
     !  Snow budget and meltwater
     !-----------------------------------------------------
-    wtr_skin = wtr_skin + snow_melt_can                                    ! Add melt water from canopy to skin reservoir
-    water_to_soil = snow_melt_soil + MAX(0._wp, wtr_skin-skinres_max)      ! Excess water enters the soil, and
-    wtr_skin = MIN(skinres_max, wtr_skin)                                  ! skin reservoir is limited to the maximum
-    snow_accum = new_snow + evapo_snow_pot_in_m - snow_melt_soil - snow_melt_can
+    wtr_skin = wtr_skin + snowmelt_can                                    ! Add melt water from canopy to skin reservoir
+    water_to_soil = snowmelt_soil + MAX(0._wp, wtr_skin-skinres_max)      ! Excess water enters the soil, and
+    wtr_skin = MIN(skinres_max, wtr_skin)                                 ! skin reservoir is limited to the maximum
+    snow_accum = new_snow + evapo_snow_pot_in_m - snowmelt_soil - snowmelt_can
 
     IF (snow_depth_max >= 0._wp) THEN
       ! Limit snow depth to avoid grid cells with infinitely growing snow depths in cooler climates
@@ -276,7 +276,7 @@ CONTAINS
     END IF
 
     ! Transform fluxes in output from [m] to [kg m-2 s-1]
-    snow_melt_soil = snow_melt_soil * rhoh2o / dtime
+    snowmelt_soil = snowmelt_soil * rhoh2o / dtime
 
     evapotrans_soil = evapotrans_soil_in_m * rhoh2o / dtime
     evapo_skin = evapo_skin_in_m  * rhoh2o / dtime
