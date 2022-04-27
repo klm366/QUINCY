@@ -611,7 +611,9 @@ CONTAINS
   SUBROUTINE init_forcing(model_id, dtime, steplen)
 
     USE mo_jsb_namelist_iface, ONLY: POSITIONED, open_nml, position_nml
+#ifndef HAVE_MOFFLEDAC
     USE mo_jsb_io_netcdf_iface, ONLY: t_input_file, netcdf_open_input
+#endif
 
     INTEGER,  INTENT(in) :: model_id
     REAL(wp), INTENT(in) :: dtime, steplen
