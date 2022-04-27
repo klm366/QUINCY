@@ -12,7 +12,7 @@ MODULE mo_moffledac_iface
   INTEGER, SAVE, POINTER :: timer_moffledac(:) => NULL()
   INTEGER, SAVE :: nmoffledac_models = 1
 
-  PUBLIC :: init_moffledac, init_moffledac_grids, get_jsb_var_name, get_var_name_add, timer_moffledac
+  PUBLIC :: init_moffledac, init_moffledac_grids, get_jsb_var_name, get_var_name_add, timer_moffledac, var_has_fill
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_moffledac_iface'
 
@@ -270,6 +270,32 @@ CONTAINS
     ENDIF
 
   END FUNCTION get_var_name_add
+
+  LOGICAL FUNCTION var_has_fill(var,val)
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input, ONLY: input_var_list, InputDataGetSpecified, INPUT_DATA_FILL,INPUT_DATA_NO_STEP
+  TYPE (input_var_list), POINTER  :: var
+#else
+  INTEGER, POINTER :: var
+#endif
+  REAL(wp), INTENT(out), OPTIONAL :: val
+
+  REAL(wp), POINTER :: fill_val(:,:,:,:,:,:,:)
+
+#ifdef HAVE_MOFFLEDAC
+    fill_val => InputDataGetSpecified(var%aux_data,INPUT_DATA_FILL,INPUT_DATA_NO_STEP)
+#else
+    NULLIFY(fill_val)
+#endif
+    IF (ASSOCIATED(fill_val)) THEN
+      IF (PRESENT(val)) val = fill_val(1,1,1,1,1,1,1)
+      var_has_fill = .TRUE.
+    ELSE
+      var_has_fill = .FALSE.
+      IF (PRESENT(val)) val = 0._wp
+    ENDIF
+
+  END FUNCTION var_has_fill
 
 #endif
 

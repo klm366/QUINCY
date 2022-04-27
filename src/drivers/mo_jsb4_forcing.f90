@@ -59,18 +59,22 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
+  USE mo_jsb_class,              ONLY: get_model
+#ifdef HAVE_MOFFLEDAC
+  USE mo_input_calendar,         ONLY: TICKS_PER_SEC, TICKS_PER_DAY
+  USE mo_input_strings,          ONLY: UnitConvert, UnitIndex, CSSScanStart, CSSScanNext
+  USE mo_input_filetype,         ONLY: InputFileTypeGetRecTime
+  USE mo_input,                  ONLY: input_var_list, input_file_list, input_opt_list, INPUT_VAR_FILE_TIME_STEP,     &
+                                       InputFileInq, InputDimInq, InputVarExistInFile, InputVarIsRead, InputOptIsSet, &
+                                       InputFileAdd, InputVarAdd, InputOptAdd, InputVarGroupStart, InputVarGroupEnd,  &
+                                       InputAttrGet, InputOptUserGet, InputVarGetInterpolData, InputVarAssignNextData
+  USE mo_moffledac_iface,        ONLY: var_has_fill
+#else
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io_netcdf_iface,    ONLY:           &
     & nf, nf_get_vara_double,                    & ! former nf_check
     & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, & ! from netcdf.inc
     & NF_MAX_NAME, nf_get_att_text, NF_NOERR       ! from netcdf.inc
-
-  USE mo_jsb_class,              ONLY: get_model
-#ifdef HAVE_MOFFLEDAC
-  USE mo_input_strings
-  USE mo_input_arrays
-  USE mo_input_calendar
-  USE mo_input
 #endif
 
   dsl4jsb_Use_processes HYDRO_, A2L_
@@ -145,11 +149,18 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: exp_unit_radiation = 'W/m2'
   CHARACTER(len=*), PARAMETER :: exp_unit_qair = 'g/g'
   CHARACTER(len=*), PARAMETER :: exp_unit_wspeed = 'm/s'
-  CHARACTER(len=*), PARAMETER :: exp_unit_precip = 'mm/day;kg/m2s'
+  CHARACTER(len=*), PARAMETER :: exp_units_precip = 'kg/m2s;mm/s;mm/day'
+  CHARACTER(len=*), PARAMETER :: exp_units_temperature = 'degC;C;Celcius;K;Kelvin'
   CHARACTER(len=*), PARAMETER :: unit_precip_mm_day = 'mm/day'
-  CHARACTER(len=*), PARAMETER :: exp_unit_CO2 = 'ppmv'
+  CHARACTER(len=*), PARAMETER :: exp_units_CO2 = 'ppmv;1.e-6;mol/mol;kg/kg'
+  CHARACTER(len=*), PARAMETER :: exp_units_longwave = 'W/m2'
+  CHARACTER(len=*), PARAMETER :: exp_units_shortwave = 'W/m2'
   CHARACTER(len=*), PARAMETER :: unspecified_exp_unit = ''
-  REAL(wp), PARAMETER :: unit_mul_precip(2) = (/1._wp,conv_prec_day/)
+  ! conversion constants in case a variable have multiple supported units
+  REAL(wp), PARAMETER :: CO2_2_DryAir = molarMassCO2_kg / molarMassDryAir_kg
+  REAL(wp), PARAMETER :: unit_mul_precip(3)      = (/1._wp,1._wp,conv_prec_day/)
+  REAL(wp), PARAMETER :: unit_add_temperature(5) = (/0._wp,0._wp,0._wp,tmelt,tmelt/)
+  REAL(wp), PARAMETER :: unit_mul_CO2(4)       = (/CO2_2_DryAir*1.e-6_wp,CO2_2_DryAir*1.e-6_wp,CO2_2_DryAir,1._wp/)
 
   ! options controlling types of forcing data
   INTEGER,PARAMETER  :: DAILY_    = 1
@@ -166,15 +177,19 @@ MODULE mo_jsb4_forcing
   ! --- Structures for handling input data
   ! options relating forcing read from namelist
   TYPE forcing_options_type
+#ifndef HAVE_MOFFLEDAC
+    ! These parameters are functionally replaced by functions within MofFlEDAc
     INTEGER  :: cyclic_nyears                  !! Number of years for cyclic forcing; default: 0 = no cyclic forcing
     INTEGER  :: cyclic_start_year              !! First year for cyclic forcing; default: 9999, i.e. use experiment start year
-    INTEGER  :: forcing_synchron_factor      
     INTEGER  :: forcing_steps_per_file
     LOGICAL  :: forcing_set_ocean_to_constants !! Specifies if external forcing is only defined for land cells (true)
     LOGICAL  :: air_temperature_as_timestep    !! Specifies if the air temperatures are given per timestep
-    INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
     LOGICAL  :: precip_in_mm_per_day           !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
     REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
+#endif
+    INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
+                                               !! With MofFlEDAc this is set internally - no namelist version available
+    INTEGER  :: forcing_synchron_factor
     REAL(wp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
     REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
   END TYPE forcing_options_type
@@ -182,6 +197,10 @@ MODULE mo_jsb4_forcing
 
   ! information for single forcing variable and the file it is read from
   TYPE input_variable_type
+#ifdef HAVE_MOFFLEDAC
+    TYPE(input_var_list),  POINTER :: var_forc
+    REAL(wp), POINTER        :: data2d(:,:) => NULL()
+#else
     CHARACTER(NF_MAX_NAME)   :: variable_name=""       !! Name of the variable (name in netcdf-data file)
     CHARACTER(NF_MAX_NAME)   :: file_name_prefix = ""  !! Prefix of files in which the variable is located
     CHARACTER(NF_MAX_NAME)   :: expectedUnit = ""      !! Unit for the variable expected in the file
@@ -191,13 +210,10 @@ MODULE mo_jsb4_forcing
     INTEGER                  :: currentDayStart = 0    !! First time step in file corresponding to the current day
     INTEGER                  :: currentDayEnd = 0      !! Last time step in file corresponding to the current day
     INTEGER                  :: length_time_series     !! The number of time steps found in the data (only if my_process_is_stdio())
-#ifdef HAVE_MOFFLEDAC
-    TYPE(input_var_list),  POINTER :: var_forc
-    REAL(wp), POINTER        :: data2d(:,:) => NULL()
-#endif
     REAL(wp), POINTER        :: data_read(:,:,:) => NULL()  !! Pointer to read data
     REAL(wp), POINTER        :: timevalues(:) => NULL()     !! The values of the time variable (only if my_process_is_stdio())
     TYPE(t_input_file)       :: input_file
+#endif
   END TYPE input_variable_type
 
   ! All theoretically possible input data, i.e. some are not used. (Input data is controlled by jsb_forcing_nml)
@@ -214,7 +230,7 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: rel_humidity  !! relative humidity [%]
      TYPE(input_variable_type) :: qair          !! specific humidity [kg/kg]
 #ifdef HAVE_MOFFLEDAC
-    TYPE(input_file_list), POINTER :: file_forc
+     TYPE(input_file_list), POINTER :: file_forc
 #endif
   END TYPE forcing_input_type
   TYPE(forcing_input_type),SAVE :: forcing_input
@@ -281,12 +297,18 @@ CONTAINS
     INTEGER  :: ic, iblk
     INTEGER  :: day_of_year
 
-    REAL(wp), ALLOCATABLE :: t_air_C(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), &
-      &                      sat_spec_humidity(:,:), rel_humidity(:,:)
-    REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
+    REAL(wp), ALLOCATABLE :: t_air_C(:,:), rad_uv_down(:,:), sat_spec_humidity(:,:), rel_humidity(:,:)
+    REAL(wp), POINTER     :: temporary_data1(:,:)
+    REAL(wp), POINTER     :: tmax_data(:,:), tmin_data(:,:)
 
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
     REAL(wp), ALLOCATABLE :: help1(:,:), help2(:,:)
+    REAL(wp), POINTER     :: help_ptr(:,:)
+
+#ifdef HAVE_MOFFLEDAC
+    INTEGER :: i, dt, time_steps_per_day
+    REAL(wp), POINTER :: tmp(:,:,:,:,:,:,:)
+#endif
 
 #ifdef __ICON__
     lstart  = is_time_experiment_start(current_datetime)
@@ -329,26 +351,59 @@ CONTAINS
     model => get_model(model_id)
     CALL model%Get_top_tile(tile)
 
+    ALLOCATE(t_air_C(ice, nblks))
+#ifdef HAVE_MOFFLEDAC
+    CALL InputFileInq(ref=forcing_input%file_forc,dt_file=dt)
+    ! --- temperature
+    tmin_data => forcing_input%air_temp_min%data2d
+    tmax_data => forcing_input%air_temp_max%data2d
+    IF (InputVarExistInFile(forcing_input%air_temp_min%var_forc)) THEN
+      IF (var_has_fill(forcing_input%air_temp_min%var_forc,hlp_r)) &
+        CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,forcing_input%air_temp_min%data2d)
+      IF (var_has_fill(forcing_input%air_temp_max%var_forc,hlp_r)) &
+        CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,forcing_input%air_temp_max%data2d)
+      CALL instantly_from_daily_temp_2(nblks, ice, ics, lon, sinlat, coslat, &
+        forcing_input%air_temp_min%data2d, forcing_input%air_temp_max%data2d, next_datetime, t_air_C)
+    ELSE
+      ! For time step data, we need to get air temp min/max from time step data
+      CALL InputVarAssignNextData(forcing_input%air_temp%var_forc,.TRUE.) ! Only active in timestep forcing case
+      t_air_C = forcing_input%air_temp%data2d
+      ! Calculate daily min and max temperatures from time step data if needed
+      IF ((dt>0) .AND. (dt<TICKS_PER_DAY) .AND. InputVarIsRead(forcing_input%air_temp%var_forc)) THEN
+        time_steps_per_day = TICKS_PER_DAY / dt
+        forcing_input%air_temp_min%data2d = t_air_C
+        forcing_input%air_temp_max%data2d = t_air_C
+        DO i=1,time_steps_per_day-1 ! Last time step in the wheel is already in t_air_C
+          CALL InputVarGetInterpolData(forcing_input%air_temp%var_forc,(/i/),d1=tmp)
+          WHERE (forcing_input%air_temp_min%data2d > tmp(:,:,1,1,1,1,1))
+            forcing_input%air_temp_min%data2d = tmp(:,:,1,1,1,1,1)
+          ENDWHERE
+          WHERE (forcing_input%air_temp_max%data2d < tmp(:,:,1,1,1,1,1))
+            forcing_input%air_temp_max%data2d = tmp(:,:,1,1,1,1,1)
+          ENDWHERE
+        ENDDO
+      ENDIF
+    ENDIF
+#else
     ! --- temperature
     ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data; t_air_C for timestep
-    ALLOCATE(t_air_C(ice, nblks))
+    ALLOCATE(tmin_data(ice, nblks))
+    ALLOCATE(tmax_data(ice, nblks))
     IF(forcing_options%air_temperature_as_timestep) THEN
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%air_temp, t_air_C)
+      tmin_data(:,:) = MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3)
+      tmax_data(:,:) = MAXVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3)
     ELSE
-      ALLOCATE(tmin_data(ice, nblks))
-      ALLOCATE(tmax_data(ice, nblks))
-
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
-        & forcing_input%air_temp_min, tmin_data)
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
-        & forcing_input%air_temp_max, tmax_data)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%air_temp_min, tmin_data)
+      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%air_temp_max, tmax_data)
       ! estimate temperature at time step from daily temperature maximum and temperature minimum
       CALL instantly_from_daily_temp_2(nblks, ice, icz, lon, sinlat, coslat, tmin_data, tmax_data, next_datetime, t_air_C)
     ENDIF
+#endif
     ! convert degC to Kelvin
     t_air(:,:) = t_air_C(:,:) + tmelt
 
-   ! get elevation
+    ! get elevation
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_var2D_onDomain(HYDRO_, elevation)  ! in
 
@@ -359,7 +414,6 @@ CONTAINS
       ELSE
         ic = ice
       END IF
-
       press_srf(1:ic,iblk) = bottom_pressure(elevation(1:ic,iblk), t_air_C(1:ic,iblk))
     ENDDO
 
@@ -369,27 +423,28 @@ CONTAINS
     SELECT CASE(forcing_options%type_of_qair_forcing)
     CASE(NONE_)
       ! ratio of actual to potential evapotranspiration from the previous day
-      IF (forcing_options%air_temperature_as_timestep) THEN
-        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), &
-          & MINVAL(forcing_input%air_temp%data_read(:,:,:), DIM=3), t_air_C(:,:))
-      ELSE
-        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
-      ENDIF
+      temporary_data1 = vapour_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
       q_air(:,:) = fun_specific_humidity(temporary_data1(:,:), press_srf(:,:))
 
     CASE(RH_)
       ALLOCATE(rel_humidity(ice, nblks))
+#ifdef HAVE_MOFFLEDAC
+      rel_humidity = forcing_input%rel_humidity%data2d
+      IF (var_has_fill(forcing_input%precipitation%var_forc,hlp_r)) CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,rel_humidity)
+#else
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
         &                            forcing_input%rel_humidity, rel_humidity)
+#endif
       ! check data
       hlp_r = MAXVAL(MAXVAL(rel_humidity,DIM=2))
       IF(hlp_r < 1._wp) THEN
         WRITE (message_text,*) 'Maximum value of relative humidity is ', hlp_r
         CALL message(TRIM(routine), TRIM(message_text))
-        CALL message(TRIM(routine),'relative humidity data probably represent fractions instead of percentages.')
+        CALL message(TRIM(routine),'relative humidity data is assumed to represent fractions instead of percentages.')
+      ELSE
+        ! Convert percentage data to fractional data:
+        rel_humidity = rel_humidity/100._wp
       ENDIF
-      ! Convert percentage data to fractional data:
-      rel_humidity = rel_humidity/100._wp
       ! Get saturation spec. humidity from air temperature
       DO iblk = 1, nblks
         IF (iblk == nblks) THEN
@@ -400,38 +455,33 @@ CONTAINS
         CALL sat_specific_humidity(ice, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
       ENDDO
       ! Get specific humidity
+#ifdef HAVE_MOFFLEDAC
+      IF ((dt>0) .AND. (dt<TICKS_PER_DAY)) THEN
+#else
       IF (forcing_input%rel_humidity%frequency .EQ. TIMESTEP_) THEN
+#endif
         q_air(:,:) = rel_humidity(:,:) * sat_spec_humidity(:,:) !TODO: Why *?
       ELSE
-        IF (forcing_options%air_temperature_as_timestep) THEN
-          DO iblk = 1, nblks
-            IF (iblk == nblks) THEN
-              ic = icz
-            ELSE
-              ic = ice
-            END IF
-            CALL spec_humidity_from_rel_humidity(ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), &
-              & rel_humidity(1:ic,iblk), MINVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), &
-              & MAXVAL(forcing_input%air_temp%data_read(1:ic,iblk,:),DIM=2), elevation(1:ic,iblk), q_air(1:ic,iblk))
-          ENDDO
-        ELSE
-          DO iblk = 1, nblks
-            IF (iblk == nblks) THEN
-              ic = icz
-            ELSE
-              ic = ice
-            END IF
-            CALL spec_humidity_from_rel_humidity( &
-              & ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), rel_humidity(1:ic,iblk), &
-              & tmin_data(1:ic,iblk), tmax_data(1:ic,iblk), elevation(1:ic,iblk), q_air(1:ic,iblk))
-          ENDDO
-        ENDIF
-        ! constrain daily specific humidity to be lower than or equal to the saturation spec. humidity
+        DO iblk = 1, nblks
+          IF (iblk == nblks) THEN
+            ic = icz
+          ELSE
+            ic = ice
+          END IF
+          CALL spec_humidity_from_rel_humidity( &
+            & ic, sinlat(1:ic,iblk), coslat(1:ic,iblk), rel_humidity(1:ic,iblk), &
+            & tmin_data(1:ic,iblk), tmax_data(1:ic,iblk), elevation(1:ic,iblk), q_air(1:ic,iblk))
+        ENDDO
         q_air(:,:) = MIN(q_air, sat_spec_humidity)
       ENDIF
       DEALLOCATE(rel_humidity)
     CASE(QAIR_)
+#ifdef HAVE_MOFFLEDAC
+      q_air = forcing_input%qair%data2d
+      IF (var_has_fill(forcing_input%qair%var_forc,hlp_r)) CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,q_air)
+#else
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%qair, q_air(:,:))
+#endif
       ! constrain specific humidity to be lower than or equal to the saturation spec. humidity
       DO iblk = 1, nblks
         IF (iblk == nblks) THEN
@@ -448,8 +498,13 @@ CONTAINS
     ! --- compute shortwave radiation
     day_of_year=day_in_year(next_datetime)
     ALLOCATE(rad_uv_down(ice, nblks))
+#ifdef HAVE_MOFFLEDAC
+    temporary_data1 = forcing_input%shortwave%data2d
+    IF (var_has_fill(forcing_input%shortwave%var_forc,hlp_r)) CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,temporary_data1)
+#else
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
       & forcing_input%shortwave, temporary_data1)
+#endif
     CALL shortwave_from_direct_shortwave( &
       ! in
       & day_of_year,            &
@@ -470,70 +525,57 @@ CONTAINS
     DEALLOCATE(rad_uv_down)
 
     ! --- compute longwave radiation
+    ! jsbach3 driver: diurnal longwave downward radiation is generated such that the average radiation matches the
+    ! observations but the diurnal cycle follows temperature to help calculation of a correct
+    ! net radiation flux. Note that reduces biases resulting from assuming a constant flux, but
+    ! this introduces uncertainty due to biases in the assumed dial course of temperature
+#ifdef HAVE_MOFFLEDAC
+    temporary_data1 = forcing_input%longwave%data2d
+    IF (var_has_fill(forcing_input%longwave%var_forc,hlp_r)) CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,temporary_data1)
+    IF ((dt>0) .AND. (dt<TICKS_PER_DAY)) THEN
+#else
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, & forcing_input%longwave, temporary_data1)
     IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
-        & forcing_input%longwave, lw_srf_down)
+#endif
+      lw_srf_down = temporary_data1
     ELSE
-      ! jsbach3 driver: diurnal longwave downward radiation is generated such that the average radiation matches the
-      ! observations but the diurnal cycle follows temperature to help calculation of a correct
-      ! net radiation flux. Note that reduces biases resulting from assuming a constant flux, but
-      ! this introduces uncertainty due to biases in the assumed dial course of temperature
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
-        &                            forcing_input%longwave, temporary_data1)
-
-      IF (forcing_options%air_temperature_as_timestep) THEN
-        lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), &
-          & MAXVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3), t_air_C(:,:))
-      ELSE
-        lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), tmin_data(:,:), tmax_data(:,:), t_air_C(:,:))
-      ENDIF
+      lw_srf_down = longwave_from_daily_longwave(temporary_data1(:,:), tmin_data(:,:), tmax_data(:,:), t_air_C(:,:))
     ENDIF
 
+    ! --- precipitation
 #ifdef HAVE_MOFFLEDAC
-    ! --- precipitation
-! TODO: Presently assumes daily data for t_air and precip
-    CALL set_ocean_cells(nblks,ics,ice,model_id,forcing_input%precipitation%ocean_value,forcing_input%precipitation%data2d)
-    CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), forcing_input%precipitation%data2d, &
-                                   0.5_wp*(tmax_data(:,:) + tmin_data(:,:)))
-
-    ! --- CO2 concentration
-    CO2_air = forcing_input%CO2_concentr%data2d * forcing_options%conv_CO2_2_MassRatio
-!    CALL set_ocean_cells(nblks,ics,ice,model_id,forcing_input%CO2_concentr%ocean_value,CO2_air)
-
-    ! --- wind
-    wind_air = forcing_input%wind_speed%data2d
-    CALL set_ocean_cells(nblks,ics,ice,model_id,forcing_input%wind_speed%ocean_value,wind_air)
-    wind_10m = wind_air
-
-!    call inputfiledisp(forcing_input%file_forc,1,pe=0,level=4,msg='Forcing file')
-
+    IF (var_has_fill(forcing_input%precipitation%var_forc,hlp_r)) &
+      CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,forcing_input%precipitation%data2d)
+    help_ptr => forcing_input%precipitation%data2d
+    IF ((dt>0) .AND. (dt<TICKS_PER_DAY)) THEN
 #else
-    ! --- precipitation
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
       &                            forcing_input%precipitation, temporary_data1)
     ! convert if required
     IF(forcing_options%precip_in_mm_per_day) temporary_data1 = temporary_data1 * conv_prec_day
-
+    help_ptr => temporary_data1
+    IF(forcing_input%precipitation%frequency .EQ. TIMESTEP_) THEN
+#endif
     ! compute rain and snow
-    IF(forcing_options%air_temperature_as_timestep) THEN
-      IF(forcing_input%precipitation%frequency .EQ. DAILY_) THEN
-        ! In case of daily precipitation the minimum and maximum read for air_temp are used
-        CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), &
-          & 0.5_wp*(MAXVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3) + MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3)))
-      ELSE
-        ! else currentvalue
-        CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), t_air_C(:,:))
-      ENDIF
+      CALL snow_and_rain_from_precip(rain(:,:),snow(:,:),help_ptr,t_air_C(:,:))
     ELSE
-      CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), &
-        & 0.5_wp*(tmax_data(:,:) + tmin_data(:,:)))
+      CALL snow_and_rain_from_precip(rain(:,:),snow(:,:),help_ptr,0.5_wp*(tmax_data(:,:)+tmin_data(:,:)))
     ENDIF
 
     ! --- wind
+#ifdef HAVE_MOFFLEDAC
+    wind_air = forcing_input%wind_speed%data2d
+    IF (var_has_fill(forcing_input%wind_speed%var_forc,hlp_r)) CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,wind_air)
+#else
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%wind_speed, wind_air)
+#endif
     wind_10m = wind_air
 
+#ifdef HAVE_MOFFLEDAC
     ! --- CO2 concentration
+    CO2_air = forcing_input%CO2_concentr%data2d
+    IF (var_has_fill(forcing_input%CO2_concentr%var_forc,hlp_r)) CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,CO2_air)
+#else
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%CO2_concentr, CO2_air)
     ! and convert to correct unit
     CO2_air = CO2_air * forcing_options%conv_CO2_2_MassRatio
@@ -545,12 +587,14 @@ CONTAINS
       & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
 
     ! ---- clean up
-    DEALLOCATE(t_air_C)
+#ifndef HAVE_MOFFLEDAC
     IF(.NOT. forcing_options%air_temperature_as_timestep) THEN
       DEALLOCATE(tmin_data)
       DEALLOCATE(tmax_data)
     ENDIF
+#endif
 
+    DEALLOCATE(t_air_C)
     DEALLOCATE(temporary_data1)
     DEALLOCATE(help1, help2)
 
@@ -572,15 +616,16 @@ CONTAINS
     REAL(wp), INTENT(in) :: dtime, steplen
 
     ! --- Namelist parameters
-    INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
-    INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
                                         ! each atmospheric forcing time step that is read in      
+    REAL(wp) :: forcing_height_wind     ! jsb3: Lowest layer height-> where measurements are taken // -1: ECHAM lowest layer values
+    REAL(wp) :: forcing_height_humidity ! jsb3: Lowest layer height-> where measurements are taken // -1: ECHAM lowest layer values
+#ifndef HAVE_MOFFLEDAC
+    INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
+    INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72
-    LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
-    !! false: forcing is expected for all variables and cells (e.g. echam)
-    REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
-    REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
+    LOGICAL  :: forcing_set_ocean_to_constants !! Some external forcing is only defined for land cells (= true)
+                                               !! false: forcing is expected for all variables and cells (e.g. echam)
 
     !! ++ as in jsb3: "HeightHumidity and HeightTemperature have to be equal"
     CHARACTER(NF_MAX_NAME) :: forcing_temp_file_prefix         !! Prefix for files with temperature forcing data
@@ -631,12 +676,17 @@ CONTAINS
     REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
-#ifdef HAVE_MOFFLEDAC
+#else
+    INTEGER :: dt, nproma, nblock
+    INTEGER :: read_time(4)
     CHARACTER(len=*), PARAMETER :: dim2d = 'nproma,nblock'
 #endif
-
+real(wp), pointer :: ptnr(:,:)
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
+#ifdef HAVE_MOFFLEDAC
+    NAMELIST /jsb_forcing_nml/ forcing_synchron_factor, forcing_height_wind, forcing_height_humidity
+#else
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_file,             &
       & forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,                                         &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
@@ -649,14 +699,9 @@ CONTAINS
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
       & forcing_qair_unit
-
+#endif
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
-
-#ifdef HAVE_MOFFLEDAC
-    CALL InputFileAdd('climate_<yyyy>.nc',file_ref=forcing_input%file_forc)
-    CALL InputVarGroupStart('forcing',IFile=forcing_input%file_forc,dt_update=INPUT_VAR_FILE_TIME_STEP,reads_per=1)
-#endif
 
     !------------------------------------------------------------------------------------
 
@@ -670,15 +715,17 @@ CONTAINS
 
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
-      cyclic_nyears = 0             ! No cyclic forcing
-      cyclic_start_year = 9999      ! Use year of experiment start for first cyclic year
       forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
                                     ! each atmospheric forcing time step that is read in
+      forcing_height_wind = defHeightWind
+      forcing_height_humidity = defHeightHumidity
+
+#ifndef HAVE_MOFFLEDAC
+      cyclic_nyears = 0             ! No cyclic forcing
+      cyclic_start_year = 9999      ! Use year of experiment start for first cyclic year
       forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72
   
       forcing_set_ocean_to_constants = .TRUE.
-      forcing_height_wind = defHeightWind
-      forcing_height_humidity = defHeightHumidity
 
       forcing_temp_file_prefix = 'climate_'
       forcing_temp_frequ = 'DAILY'
@@ -722,6 +769,7 @@ CONTAINS
       forcing_qair_const_rh = 100._wp
       forcing_qair_ocean = 1.0e-05
       forcing_qair_unit = exp_unit_qair
+#endif
 
       ! ----- read the namelist
       model => get_model(model_id)
@@ -731,6 +779,7 @@ CONTAINS
       f_unit = position_nml ('jsb_forcing_nml', nml_handler, status=read_status)
       IF (read_status .EQ. POSITIONED) READ(f_unit, jsb_forcing_nml)
 
+#ifndef HAVE_MOFFLEDAC
       forcing_options%cyclic_nyears           = cyclic_nyears
       IF (cyclic_start_year == 9999) cyclic_start_year = get_year_at_experiment_start()
       forcing_options%cyclic_start_year       = cyclic_start_year
@@ -741,10 +790,12 @@ CONTAINS
         CALL message(routine, 'Using cyclic forcing from ' // TRIM(int2string(cyclic_nyears)) // ' years ' // &
           &                   'starting in ' // TRIM(int2string(cyclic_start_year)))
       END IF
+#endif
 
         ! ----- derive options - forcing heights: as in jsb3 it is expected that "HeightHumidity and HeightTemperature have to be equal"
       forcing_options%heightWind = forcing_height_wind
       forcing_options%heightHumidity = forcing_height_humidity
+#ifndef HAVE_MOFFLEDAC
       ! --- Temperature timestep (if daily two variables - max and min - need to be read)
       forcing_options%air_temperature_as_timestep &
         & = (frequency_key_to_constant_val('temperature', forcing_temp_frequ) .EQ. TIMESTEP_)
@@ -759,11 +810,13 @@ CONTAINS
       ENDIF
       ! --- Precipitation unit
       forcing_options%precip_in_mm_per_day = forcing_precip_in_mm_per_day
+
       IF(forcing_options%precip_in_mm_per_day) THEN
         CALL message(TRIM(routine),'Precipitation forcing in mm/day')
       ELSE
         CALL message(TRIM(routine),'Precipitation forcing in kg/m2/s')
       ENDIF
+
       ! --- QAIR type
       SELECT CASE(TRIM(tolower(forcing_qair_type)))
       CASE("rh")
@@ -777,6 +830,7 @@ CONTAINS
         CALL finish(TRIM(routine),'Please specifiy either rh, qair or none for "FORCING_QAIR_TYPE" in jsb_forcing_nml')
       END SELECT
       CALL message(TRIM(routine),"Type of air humidity forcing: "//TRIM(forcing_qair_type))
+
       ! --- CO2 unit
       SELECT CASE(TRIM(tolower(forcing_co2_unit)))
       CASE("ppmv","1.e-6")
@@ -793,22 +847,24 @@ CONTAINS
         CALL message(TRIM(routine),'Assumption: unit is mol(CO2)/mol(DryAir). Verify your settings!')
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
       END SELECT
+#endif
     ENDIF
 
     ! ----- broadcast information
     IF (my_process_is_mpi_parallel()) THEN
       ! forcing options
+      CALL p_bcast(forcing_synchron_factor, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%heightWind, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%heightHumidity, p_io, mpi_comm)
+#ifndef HAVE_MOFFLEDAC
       CALL p_bcast(forcing_options%cyclic_nyears, p_io, mpi_comm)
       CALL p_bcast(forcing_options%cyclic_start_year, p_io, mpi_comm)
-      CALL p_bcast(forcing_synchron_factor, p_io, mpi_comm)
       CALL p_bcast(forcing_steps_per_file, p_io, mpi_comm)
       CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io, mpi_comm)
       CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io, mpi_comm)
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io, mpi_comm)
       CALL p_bcast(forcing_options%type_of_qair_forcing, p_io, mpi_comm)
       CALL p_bcast(forcing_options%conv_CO2_2_MassRatio, p_io, mpi_comm)
-      CALL p_bcast(forcing_options%heightWind, p_io, mpi_comm)
-      CALL p_bcast(forcing_options%heightHumidity, p_io, mpi_comm)
 
       ! other namelist parameters
       CALL p_bcast(forcing_temp_file_prefix, p_io, mpi_comm)
@@ -851,23 +907,84 @@ CONTAINS
       CALL p_bcast(forcing_qair_const_rh, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_unit, p_io, mpi_comm)
+#endif
     ENDIF
 
     ! ----- init forcing_input
-    ! --- temperature
-    IF(forcing_options%air_temperature_as_timestep) THEN
-      CALL init_forcing_input_variable(air_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
-        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmax, forcing_input%air_temp)
+#ifdef HAVE_MOFFLEDAC
+    CALL InputFileAdd('climate_<yyyy>.nc',file_ref=forcing_input%file_forc)
+    ! Check timestep. Notice that this is not safe when (all) variables are mapped to other files
+    CALL InputFileInq(ref=forcing_input%file_forc,dt_file=dt)
+    CALL InputVarGroupStart('forcing',IFile=forcing_input%file_forc,dt_update=INPUT_VAR_FILE_TIME_STEP)
+    IF (dt > 0) dt = dt/TICKS_PER_SEC
+    IF (dt==86400) THEN ! Daily data
+      ! Secure that data are read at midnight regardless of the exact time stamp definition
+      read_time = InputFileTypeGetRecTime(.TRUE.,forcing_input%file_forc,1)
+      CALL InputOptAdd(AFile=forcing_input%file_forc,offset_sec=-read_time(4))
+      ! --- Air temperature
+      CALL InputVarAdd(dim2d,forcing_input%air_temp_min%data2d,min_temp_varname,var_ref=forcing_input%air_temp_min%var_forc)
+      IF (InputVarExistInFile(forcing_input%air_temp_min%var_forc)) THEN
+        ! Existing: Use day min/max temperatures
+        CALL InputVarAdd(dim2d,forcing_input%air_temp_max%data2d,max_temp_varname,var_ref=forcing_input%air_temp_max%var_forc)
+        CALL CheckInputUnit(forcing_input%air_temp_min%var_forc,exp_units_temperature,adds=unit_add_temperature(:))
+        CALL CheckInputUnit(forcing_input%air_temp_max%var_forc,exp_units_temperature,adds=unit_add_temperature(:))
+      ELSE
+        ! Otherwise we'll use instantaneous air temperatures at whatever temporal resolution they are available
+        CALL InputVarAdd(dim2d,forcing_input%air_temp%data2d,air_temp_varname,var_ref=forcing_input%air_temp%var_forc)
+        CALL CheckInputUnit(forcing_input%air_temp%var_forc,exp_units_temperature,adds=unit_add_temperature(:))
+      ENDIF
+    ELSEIF (dt==-1) THEN ! Monthly data
+    ELSEIF (dt==INT(dtime)) THEN ! Timestep data
+      ! --- Airtemp for every time step for the whole day
+      ! This needs different time scheduling than other variables, thus outside the forcing group and from another file
+      CALL InputVarGroupEnd()
+      CALL InputVarAdd(dim2d,forcing_input%air_temp%data2d,air_temp_varname,file_name='air_temp_ts.nc', &
+                       var_ref=forcing_input%air_temp%var_forc,nAtOnce=time_steps_per_day,nIntrp=time_steps_per_day,nFuture=1)
+      CALL InputDimInq('nproma',local=nproma)
+      CALL InputDimInq('nblock',local=nblock)
+      ALLOCATE(forcing_input%air_temp_min%data2d(nproma,nblock), &
+               forcing_input%air_temp_max%data2d(nproma,nblock))
+      CALL InputVarGroupStart('forcing')
     ELSE
-      CALL init_forcing_input_variable(min_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
-        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmin, forcing_input%air_temp_min)
-      CALL init_forcing_input_variable(max_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
-        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmax, forcing_input%air_temp_max)
+      CALL finish(routine,'Forcing file has an unsupported time step')
     ENDIF
-!    ! --- precipitation
-!    CALL init_forcing_input_variable(precipitation_varname, forcing_precip_frequ, forcing_precip_ocean, &
-!      & forcing_precip_file_prefix, forcing_precip_unit, forcing_precip_const_precip, forcing_input%precipitation)
-    ! --- atmospheric humidity
+
+    ! --- Relative humidity
+    forcing_options%type_of_qair_forcing = NONE_
+    CALL InputVarAdd(dim2d,forcing_input%qair%data2d,qair_varname,var_ref=forcing_input%qair%var_forc)
+    IF (InputVarExistInFile(forcing_input%qair%var_forc)) THEN
+      forcing_options%type_of_qair_forcing = QAIR_
+    ELSE
+      CALL InputVarAdd(dim2d,forcing_input%rel_humidity%data2d,rel_humidity_varname,var_ref=forcing_input%rel_humidity%var_forc)
+      IF (InputVarExistInFile(forcing_input%rel_humidity%var_forc)) forcing_options%type_of_qair_forcing = RH_
+    ENDIF
+
+    ! --- shortwave radiation
+    CALL InputVarAdd(dim2d,forcing_input%shortwave%data2d,shortwave_varname,var_ref=forcing_input%shortwave%var_forc)
+    CALL CheckInputUnit(forcing_input%shortwave%var_forc,exp_units_shortwave)
+
+    ! --- longwave radiation
+    CALL InputVarAdd(dim2d,forcing_input%longwave%data2d,longwave_varname,var_ref=forcing_input%longwave%var_forc)
+    CALL CheckInputUnit(forcing_input%longwave%var_forc,exp_units_longwave)
+
+    ! --- precipitation
+    CALL InputVarAdd(dim2d,forcing_input%precipitation%data2d,precipitation_varname,var_ref=forcing_input%precipitation%var_forc)
+    CALL CheckInputUnit(forcing_input%precipitation%var_forc,exp_units_precip,muls=unit_mul_precip(:))
+
+    ! --- CO2
+    CALL InputVarAdd(dim2d,forcing_input%CO2_concentr%data2d,CO2_varname,var_ref=forcing_input%CO2_concentr%var_forc)
+    IF (.NOT. dt==INT(dtime)) THEN
+      CALL InputOptAdd(action_dim_mis='spread,warn',dt_update_unit='1d') !  Assuming ts data contains 2d fields, else add namelist
+    ENDIF
+    CALL CheckInputUnit(forcing_input%CO2_concentr%var_forc,exp_units_CO2,muls=unit_mul_CO2)
+
+    ! --- Wind
+    CALL InputVarAdd(dim2d,forcing_input%wind_speed%data2d,wspeed_varname,var_ref=forcing_input%wind_speed%var_forc)
+    CALL InputOptAdd(def_val=0._wp) ! Some forcings have nan for ocean cells
+    CALL CheckInputUnit(forcing_input%wind_speed%var_forc,exp_unit_wspeed)
+
+    CALL InputVarGroupEnd()
+#else
     SELECT CASE(forcing_options%type_of_qair_forcing)
     CASE(RH_)
       CALL init_forcing_input_variable(rel_humidity_varname, forcing_qair_frequ, forcing_qair_ocean, &
@@ -886,24 +1003,16 @@ CONTAINS
     ! --- longwave radiation
     CALL init_forcing_input_variable(longwave_varname, forcing_lw_frequ, forcing_lw_ocean, &
       & forcing_lw_file_prefix, forcing_lw_unit, forcing_lw_const_longwave, forcing_input%longwave)
-#ifdef HAVE_MOFFLEDAC
-
-    ! --- precipitation
-    CALL InputVarAdd(dim2d,forcing_input%precipitation%data2d,precipitation_varname,var_ref=forcing_input%precipitation%var_forc)
-    CALL CheckInputUnit(forcing_input%precipitation%var_forc,exp_unit_precip,muls=unit_mul_precip(:))
-
-    ! --- CO2
-    CALL InputVarAdd(dim2d,forcing_input%CO2_concentr%data2d,CO2_varname,var_ref=forcing_input%CO2_concentr%var_forc)
-    CALL InputOptAdd(action_dim_mis='spread,warn',dt_update_unit='1d') ! How does this fit with timestep forcing?
-    CALL CheckInputUnit(forcing_input%CO2_concentr%var_forc,exp_unit_CO2)
-
-    ! --- Wind
-    CALL InputVarAdd(dim2d,forcing_input%wind_speed%data2d,wspeed_varname,var_ref=forcing_input%wind_speed%var_forc)
-    CALL InputOptAdd(def_val=0._wp) ! Some forcings have nan for ocean cells
-    CALL CheckInputUnit(forcing_input%wind_speed%var_forc,exp_unit_wspeed)
-
-    CALL InputVarGroupEnd()
-#else
+    ! --- temperature
+    IF(forcing_options%air_temperature_as_timestep) THEN
+      CALL init_forcing_input_variable(air_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
+        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmax, forcing_input%air_temp)
+    ELSE
+      CALL init_forcing_input_variable(min_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
+        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmin, forcing_input%air_temp_min)
+      CALL init_forcing_input_variable(max_temp_varname, forcing_temp_frequ, forcing_temp_ocean, &
+        & forcing_temp_file_prefix, forcing_temp_unit, forcing_temp_const_tmax, forcing_input%air_temp_max)
+    ENDIF
     ! --- precipitation
     CALL init_forcing_input_variable(precipitation_varname, forcing_precip_frequ, forcing_precip_ocean, &
       & forcing_precip_file_prefix, forcing_precip_unit, forcing_precip_const_precip, forcing_input%precipitation)
@@ -917,6 +1026,7 @@ CONTAINS
 
   END SUBROUTINE init_forcing
 
+#ifndef HAVE_MOFFLEDAC
   !>
   !! @brief Provides forcing data for const, timestep or daily forcing (reads data from netcdf if required)
   !!
@@ -1199,6 +1309,9 @@ CONTAINS
     forcing_input_variable%constantValue = constantValue
     IF (ASSOCIATED(forcing_input_variable%timevalues)) DEALLOCATE(forcing_input_variable%timevalues)
     NULLIFY(forcing_input_variable%timevalues)
+!#ifdef HAVE_MOFFLEDAC
+!    NULLIFY(forcing_input_variable%var_forc)
+!#endif
 
   END SUBROUTINE init_forcing_input_variable
 
@@ -1308,6 +1421,7 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE test_unit
+#endif
 
 #ifdef HAVE_MOFFLEDAC
   SUBROUTINE CheckInputUnit(var,var_unit,muls,adds)
@@ -1376,6 +1490,7 @@ CONTAINS
 
   SUBROUTINE finalize_external_forcing
 
+#ifndef HAVE_MOFFLEDAC
     IF(forcing_options%air_temperature_as_timestep) THEN
       IF (forcing_input%air_temp%input_file%is_open) CALL forcing_input%air_temp%input_file%Close()
     ELSE
@@ -1396,11 +1511,10 @@ CONTAINS
 
     IF (forcing_input%longwave%input_file%is_open) CALL forcing_input%longwave%input_file%Close()
 
-#ifndef HAVE_MOFFLEDAC
     IF (forcing_input%wind_speed%input_file%is_open) CALL forcing_input%wind_speed%input_file%Close()
-#endif
 
     IF (forcing_input%CO2_concentr%input_file%is_open) CALL forcing_input%CO2_concentr%input_file%Close()
+#endif
 
   END SUBROUTINE finalize_external_forcing
 
@@ -1910,7 +2024,9 @@ CONTAINS
 
     REAL(wp) :: fract(ice-ics+1)
 
+#ifndef HAVE_MOFFLEDAC
     IF (.NOT. forcing_options%forcing_set_ocean_to_constants) RETURN
+#endif
 
     model => Get_model(model_id)
     CALL model%Get_top_tile(tile)
@@ -2289,7 +2405,7 @@ CONTAINS
       & 1.000110_wp+3.4221E-2_wp*COS(day_angle)+1.280E-3_wp*SIN(day_angle)+7.19E-4_wp*COS(hlp_r)+7.7E-5_wp*SIN(hlp_r)
     K=13750.98708_wp
 
-    IF (forcing_input%shortwave%frequency .NE. TIMESTEP_) THEN
+!    IF (forcing_input%shortwave%frequency .NE. TIMESTEP_) THEN
       ! today's sum of top of the atmosphere radiation
       delta=-23.4_wp*pi/180._wp*COS(day_angle)
       u=sin_lat*SIN(delta)
@@ -2310,10 +2426,10 @@ CONTAINS
       ENDIF
       rad_sw = rad_sw_in_corr * cos_zenith
 
-    ELSE
-      ! time step forcing, use radiation directly
-      rad_sw = rad_sw_in
-    ENDIF
+!    ELSE
+!      ! time step forcing, use radiation directly
+!      rad_sw = rad_sw_in
+!    ENDIF
 
     IF(cos_zenith > 0.017452406_wp) THEN! zenith angle smaller than 89 degrees  (cos(89) = 0.017452406)
       Rpar_top   = solar_const*cos_zenith*r_sun_earth_2       ! Eq. (2) from above

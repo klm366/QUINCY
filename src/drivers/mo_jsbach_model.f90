@@ -789,6 +789,7 @@ CONTAINS
     END IF
 
     datetime_forcing => newDatetime(datetime_old)
+#ifndef HAVE_MOFFLEDAC
     IF (l_first_forcing_file) THEN
       IF (forcing_options%forcing_steps_per_file == 1  .AND. .NOT. l_force_from_obs ) THEN
         ! Go to next time step of next file
@@ -802,6 +803,7 @@ CONTAINS
         datetime_forcing = datetime_new
       END IF
     END IF
+#endif
 
     CALL jsbach_start_timestep(1, datetime_old, dtime)
 
