@@ -59,13 +59,13 @@ MODULE mo_hydro_config_class
       & l_percolation_theory,   & !< The saturated hydraulic conductivity is calculated following
                                   !  the percolation theory
       & l_scool_avail_to_plants,  & !< Consider supercooled water to be available to plants
-      & l_feed_sro,             &   !< Fraction of water going into surface runoff even if it could infiltrate
                                     !< Switches for water stress:
       & l_ice_reduces_maxavail,   & !<   Maximum available water is reduced by the amount of ice
       & l_scool_reduces_maxavail, & !<   Maximum available water is reduced by supercooled water
                                     !< Switches for soil evaporation:
-      & l_ice_reduces_maxtop        !<   Maximum amount of top layer water reduced by the amount of ice
-
+      & l_ice_reduces_maxtop,     & !<   Maximum amount of top layer water reduced by the amount of ice
+      & l_hydro_pf_wet,           & !< Switch for setting wet pf regions
+      & l_hydro_pf_dry              !< Switch for setting dry pf regions
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -96,7 +96,8 @@ CONTAINS
     LOGICAL     :: l_ice_impedance_perc, l_ice_impedance_drain, l_scool_impedance_perc, l_scool_impedance_drain
     LOGICAL     :: l_diffuse_all_ws, l_scool_percolates, l_drain_lat, l_percolation_theory
     LOGICAL     :: l_scool_avail_to_plants, l_ice_reduces_maxavail, l_scool_reduces_maxavail
-    LOGICAL     :: l_ice_reduces_maxtop, l_feed_sro
+    LOGICAL     :: l_ice_reduces_maxtop
+    LOGICAL     :: l_hydro_pf_wet, l_hydro_pf_dry
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -128,7 +129,8 @@ CONTAINS
       & l_ice_reduces_maxavail,     &
       & l_scool_reduces_maxavail,   &
       & l_ice_reduces_maxtop,       &
-      & l_feed_sro
+      & l_hydro_pf_wet,             &
+      & l_hydro_pf_dry
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -172,7 +174,8 @@ CONTAINS
     l_ice_reduces_maxavail   = .FALSE.
     l_scool_reduces_maxavail = .FALSE.
     l_ice_reduces_maxtop     = .TRUE.
-    l_feed_sro = .FALSE.
+    l_hydro_pf_wet           = .FALSE.
+    l_hydro_pf_dry           = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -219,7 +222,7 @@ CONTAINS
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_runoff_with_ice=T. Namelist definition of l_runoff_with_ice ignored.')
         l_runoff_with_ice      = .TRUE.
-      END IF     
+      END IF
       IF (l_correct_ws_from_top) THEN
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_correct_ws_from_top=F. Namelist definition of l_correct_ws_from_top ignored.')
@@ -284,11 +287,6 @@ CONTAINS
         CALL message(TRIM(routine), &
          & 'WARNING: with l_hyd_compat420  l_ice_reduces_maxtop=T. Namelist definition of l_ice_reduces_maxtop ignored.')
         l_ice_reduces_maxtop = .TRUE.
-      END IF
-      IF (l_feed_sro) THEN
-        CALL message(TRIM(routine), &
-         & 'WARNING: with l_hyd_compat420  l_feed_sro=F. Namelist definition of l_feed_sro ignored.')
-        l_feed_sro = .FALSE.
       END IF
       IF (l_socmap) THEN
         CALL message(TRIM(routine), &
@@ -357,18 +355,20 @@ CONTAINS
      & 'Soil evaporation: Reduce maximum top layer water by amount of ice: '//TRIM(logical2string(l_ice_reduces_maxtop)))
     IF (l_organic) THEN
       CALL message(TRIM(routine), &
-       & 'Re-calculate ws_max from initialfile dep. on organic')
+       & 'Re-calculate maximum root zone moisture using organic soil content')
       CALL message(TRIM(routine), &
        & 'Soil evaporation: Maximum water in top layer depends on organic matter')
       config%l_socmap = l_socmap
       CALL message(TRIM(routine), &
        & 'Replace organic carbon fractions with map from bc file: ' &
        & //TRIM(logical2string(l_socmap)))
-      config%l_feed_sro = l_feed_sro
-      CALL message(TRIM(routine), &
-       & 'Assign minimum fraction of water to surface runoff: ' &
-       & //TRIM(logical2string(l_feed_sro)))
     END IF
+    IF (l_hydro_pf_wet .AND. l_hydro_pf_dry) THEN
+      CALL finish(TRIM(routine), &
+       & 'Wet and dry arctic setup cannot both be true')
+    END IF
+    config%l_hydro_pf_wet = l_hydro_pf_wet
+    config%l_hydro_pf_dry = l_hydro_pf_dry
     CALL close_nml(nml_handler)
 
     IF (.NOT. active) RETURN

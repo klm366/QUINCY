@@ -40,7 +40,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 90
+  INTEGER, PARAMETER :: max_no_of_vars = 100
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
@@ -87,6 +87,9 @@ MODULE mo_hydro_memory_class
       & soil_depth,           & !< Soil depth derived from textures (bedrock)                          [m]
       !todo: rename max_moist to rootzone_max
       & rz_max_moist,         & !< Maximum root zone moisture content                                  [m]
+      & rz_max_moist_mineral, & !< Maximum root zone moisture content                                  [m]
+      & pf_mask,              & !< Maximum root zone moisture content                                  [m]
+      & maxtop_mineral,       & !< Maximum moisture of uppermost soil layer not accounting for organic matter [m]
       & vol_field_cap,        & !< Volumetric soil field capacity                                      [m/m]
       & vol_p_wilt,           & !< Volumetric permanent wilting point                                  [m/m]
       & vol_porosity,         & !< Volumetric porosity of mineral soil                                 [m/m]
@@ -182,6 +185,15 @@ MODULE mo_hydro_memory_class
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       w_snow_gsum,            & !< Global snow amount on non-glacier land   [Gt]
       water_budget_gsum         !< Global land water budget                 [m3]
+
+    ! USED ONLY FOR WET & DRY ARCTIC RUNS
+    TYPE(t_jsb_var_real2d) :: &
+      lmask_ws_max_depend_on_org, & 
+      lmask_maxtop_depend_on_org, & 
+      lmask_ice_impedance_drain,  & 
+      lmask_scool_impedance_drain,& 
+      lmask_scool_percolates,     & 
+      lmask_feed_sro               
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -489,16 +501,91 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
           & prefix, suffix,                                                         &
           & lrestart=.FALSE.,                                                       &
-          & initval_r=0.0_wp)
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT)
       END IF
 
       CALL mem%Add_var( 'rz_max_moist', mem%rz_max_moist,                      &
         & hgrid, surface,                                                      &
-        & t_cf('rz_max_moist', 'm', 'Maximum root zone moisture '),            &
+        & t_cf('rz_max_moist', 'm', 'Maximum root zone moisture'),             &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT)
+
+      CALL mem%Add_var( 'rz_max_moist_mineral', mem%rz_max_moist_mineral,      &
+        & hgrid, surface,                                                      &
+        & t_cf('rz_max_moist_mineral', 'm', 'Maximum root zone moisture for purely mineral soil'),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT)
+
+      CALL mem%Add_var( 'pf_mask', mem%pf_mask,                                &
+        & hgrid, surface,                                                      &
+        & t_cf('pf_mask', '/', 'permafrost regions mask'),                     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'lmask_ws_max_depend_on_org', mem%lmask_ws_max_depend_on_org,  &
+        & hgrid, surface,                                                      &
+        & t_cf('lmask_ws_max_depend_on_org', '/', 'lmask_ws_max_depend_on_org'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'lmask_maxtop_depend_on_org', mem%lmask_maxtop_depend_on_org,  &
+        & hgrid, surface,                                                      &
+        & t_cf('lmask_maxtop_depend_on_org', '/', 'lmask_maxtop_depend_on_org'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'lmask_ice_impedance_drain', mem%lmask_ice_impedance_drain,  &
+        & hgrid, surface,                                                      &
+        & t_cf('lmask_ice_impedance_drain', '/', 'lmask_ice_impedance_drain'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'lmask_scool_impedance_drain', mem%lmask_scool_impedance_drain,  &
+        & hgrid, surface,                                                      &
+        & t_cf('lmask_scool_impedance_drain', '/', 'lmask_scool_impedance_drain'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'lmask_scool_percolates', mem%lmask_scool_percolates,  &
+        & hgrid, surface,                                                      &
+        & t_cf('lmask_scool_percolates', '/', 'lmask_scool_percolates'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      CALL mem%Add_var( 'lmask_feed_sro', mem%lmask_feed_sro,  &
+        & hgrid, surface,                                                      &
+        & t_cf('lmask_feed_sro', '/', 'lmask_feed_sro'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE., l_aggregate_all=.TRUE.,                            &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+      ! todo: maxtop_mineral is only needed with cool ruby switch l_maxtop_depend_on_org,
+      !       should be removed as soon as switch is not needed any more.
+      CALL mem%Add_var( 'maxtop_mineral', mem%maxtop_mineral,                  &
+        & hgrid, surface,                                                      &
+        & t_cf('w_maxtop', 'm', 'Maximum moisture of uppermost soil layer      &
+        & without accounting for organic matter'),                             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp)
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
       CALL mem%Add_var( 'vol_field_cap', mem%vol_field_cap,                    &
         & hgrid, surface,                                                      &

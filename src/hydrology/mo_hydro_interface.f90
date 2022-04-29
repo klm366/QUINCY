@@ -938,13 +938,24 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, hyd_cond_sat_sl,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, vol_porosity_sl,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, bclapp_sl,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, matrix_pot_sl,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, pore_size_index_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, vol_field_cap_sl,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, vol_p_wilt_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, hyd_cond_sat_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, vol_porosity_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, bclapp_sl,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, matrix_pot_sl,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pore_size_index_sl,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, vol_field_cap_sl,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, vol_p_wilt_sl,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pf_mask,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_org_sl,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, rz_max_moist,         weighted_by_fract)
+    ! Only necessary for Arctic wet/dry setup version
+    dsl4jsb_Aggregate_onChunk(HYDRO_, rz_max_moist_mineral,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, lmask_ws_max_depend_on_org,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, lmask_maxtop_depend_on_org,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, lmask_ice_impedance_drain,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, lmask_scool_impedance_drain, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, lmask_scool_percolates,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, lmask_feed_sro,              weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -996,6 +1007,11 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
     INTEGER  :: nsoil
+
+    LOGICAL :: hlp_ice_impedance_drain(options%nc)     ! helper
+    LOGICAL :: hlp_scool_impedance_drain(options%nc)   ! helper
+    LOGICAL :: hlp_scool_percolates(options%nc)        ! helper
+    LOGICAL :: hlp_feed_sro(options%nc)                ! helper
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1051,6 +1067,26 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_pwp_sl)         ! out
 
 
+    hlp_ice_impedance_drain   = .FALSE.
+    hlp_scool_impedance_drain = .FALSE.
+    hlp_scool_percolates      = .FALSE.
+    hlp_feed_sro              = .FALSE.
+    
+    ! Translate numerical switches masks to logical ones (easier to handle in the processes)
+    WHERE(dsl4jsb_var2D_onChunk (HYDRO_, lmask_ice_impedance_drain) > 0.5_wp)
+      hlp_ice_impedance_drain = .TRUE.
+    END WHERE
+    WHERE(dsl4jsb_var2D_onChunk (HYDRO_, lmask_scool_impedance_drain) > 0.5_wp)
+      hlp_scool_impedance_drain = .TRUE.
+    END WHERE
+    WHERE(dsl4jsb_var2D_onChunk (HYDRO_, lmask_scool_percolates) > 0.5_wp)
+      hlp_scool_percolates = .TRUE.
+    END WHERE
+    WHERE(dsl4jsb_var2D_onChunk (HYDRO_, lmask_feed_sro) > 0.5_wp)
+      hlp_feed_sro = .TRUE.
+    END WHERE
+
+
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
@@ -1063,13 +1099,13 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%l_runoff_with_ice,           &
       & dsl4jsb_Config(HYDRO_)%l_correct_ws_from_top,       &
       & dsl4jsb_Config(HYDRO_)%l_ice_impedance_perc,        &
-      & dsl4jsb_Config(HYDRO_)%l_ice_impedance_drain,       &
+      & hlp_ice_impedance_drain,                            &
       & dsl4jsb_Config(HYDRO_)%l_scool_impedance_perc,      &
-      & dsl4jsb_Config(HYDRO_)%l_scool_impedance_drain,     &
+      & hlp_scool_impedance_drain,                          &
       & dsl4jsb_Config(HYDRO_)%l_diffuse_all_ws,            &
-      & dsl4jsb_Config(HYDRO_)%l_scool_percolates,          &
+      & hlp_scool_percolates,                               &
       & dsl4jsb_Config(HYDRO_)%l_drain_lat,                 &
-      & dsl4jsb_Config(HYDRO_)%l_feed_sro,                  &
+      & hlp_feed_sro,                                       &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
       &                                fract_org_sl  (:,:), &
@@ -1287,6 +1323,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_rootzone_fc       !< Water content in root zone at field capacity
     dsl4jsb_Real2D_onChunk :: w_rootzone_pwp      !< Water content in root zone at permanent wilting point
     dsl4jsb_Real2D_onChunk :: rz_max_moist
+    dsl4jsb_Real2D_onChunk :: rz_max_moist_mineral
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: w_rootzone_scool_pot!< Potentially suppercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: w_rootzone_scool_act!< Suppercooled water content in root zone
@@ -1295,6 +1332,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_rootzone_avail_max !< Maximum plant available water content in root zone
     dsl4jsb_Real3D_onChunk :: w_soil_pot_scool_sl
     dsl4jsb_Real2D_onChunk :: w_rootzone_rel      !< Relative root zone soil moisture
+    dsl4jsb_Real2D_onChunk :: lmask_ws_max_depend_on_org
 
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk :: beta_soil_gs
@@ -1334,6 +1372,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pot_scool_sl) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    i_rootzone)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    rz_max_moist)        ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rz_max_moist_mineral)! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_fc)       ! out
@@ -1344,6 +1383,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_avail)    ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_avail_max) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_rootzone_rel)      ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    lmask_ws_max_depend_on_org)      ! out
     !
     IF (model%config%use_quincy) THEN
       dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
@@ -1386,8 +1426,11 @@ CONTAINS
     !      Definitly ice should be removed -- otherwise plants suffer constant waterstress in pf-regions:
     !      But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in Ws_max
 
-    w_rootzone_avail_max(:) = rz_max_moist(:)
-
+    WHERE (lmask_ws_max_depend_on_org(:) > 0.5_wp)
+      w_rootzone_avail_max(:) = rz_max_moist(:)
+    ELSEWHERE
+      w_rootzone_avail_max(:) = rz_max_moist_mineral(:)
+    END WHERE
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(HYDRO_)%l_ice_reduces_maxavail) THEN
       w_rootzone_avail_max(:) = w_rootzone_avail_max(:) - i_rootzone(:)
     END IF

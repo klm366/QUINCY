@@ -467,8 +467,10 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero, l_runoff_with_ice, l_correct_ws_from_top, &
-      & l_ice_impedance_perc, l_ice_impedance_drain, l_scool_impedance_perc, l_scool_impedance_drain,         &
-      & l_diffuse_all_ws, l_scool_percolates, l_drain_lat, l_feed_sro
+      & l_ice_impedance_perc, l_scool_impedance_perc, &
+      & l_diffuse_all_ws, l_drain_lat
+    LOGICAL, INTENT(in), DIMENSION(:):: l_ice_impedance_drain, l_scool_impedance_drain, &
+      & l_scool_percolates, l_feed_sro
     REAL(wp), INTENT(in), DIMENSION(:,:) ::                         &
       & soil_depth_l, root_depth_l, fract_org_l,                    &
       & hyd_cond_sat_l, matrix_pot_l, bclapp_l, pore_size_index_l,  &
@@ -608,7 +610,7 @@ CONTAINS
           END IF
           !tost: assign minimum water fraction to surface runoff
           ! independent of soil state over organic top layer
-          IF (l_feed_sro .AND. fract_org_l(i,1) > 0.9_wp) THEN
+          IF (l_feed_sro(i) .AND. fract_org_l(i,1) > 0.9_wp) THEN
             sromin(i) = water_to_soil(i) * 0.2_wp
           ELSE
             sromin(i) = 0._wp
@@ -741,12 +743,12 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: ilog                       !
     INTEGER,  INTENT(IN)            :: jllog                      !
     LOGICAL,  INTENT(IN)            :: l_ice_impedance_perc       ! Account for ice impedance during percolation
-    LOGICAL,  INTENT(IN)            :: l_ice_impedance_drain      ! Account for ice impedance during drainage
+    LOGICAL,  INTENT(IN)            :: l_ice_impedance_drain(:)   ! Account for ice impedance during drainage
     LOGICAL,  INTENT(IN)            :: l_scool_impedance_perc     ! Account for impedance by supercooled water during percolation
-    LOGICAL,  INTENT(IN)            :: l_scool_impedance_drain    ! Account for impedance by supercooled water during drainage
+    LOGICAL,  INTENT(IN)            :: l_scool_impedance_drain(:) ! Account for impedance by supercooled water during drainage
     LOGICAL,  INTENT(IN)            :: l_diffuse_all_ws           ! Calculate soil water diffusion of all
                                                                   !   soil water, including immobile
-    LOGICAL,  INTENT(IN)            :: l_scool_percolates         ! Supercooled water percolate
+    LOGICAL,  INTENT(IN)            :: l_scool_percolates(:)      ! Supercooled water percolate
     LOGICAL,  INTENT(IN)            :: l_drain_lat                ! Lateral drainage, i.e. from upper soil layers
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wsat_l(:,:)                ! Maximum storage in each soil layer (porosity) [m]
@@ -838,7 +840,7 @@ CONTAINS
 
       ! Calculate amount of immobile water
       DO i = 1, nsoil
-        IF (.NOT. l_scool_percolates) THEN
+        IF (.NOT. l_scool_percolates(j)) THEN
           ! Supercooled water in the soil should not be able to move vertically
           ws_immo_l(j,i) = MAX(pot_scool_l(j,i), p_wilt_l(j,i))
         ELSE
@@ -925,7 +927,7 @@ CONTAINS
             ! Note: here we use wsat_l (from porosity, reduced by amount of soil ice) and no longer
             !    field_cap_l as in the above drainage calculations.
 
-            IF (l_scool_percolates) THEN
+            IF (l_scool_percolates(j)) THEN
               IF (ws_l(j,i) > ws_crit(j)) THEN  ! enough liquid water for fast drainage
                 drain_crit(j) = (zdrmax-zdrmin)  &
                   &            * ((ws_l(j,i)-ws_crit(j)) / (wsat_l(j,i) - ws_crit(j)))**zdrexp
@@ -957,9 +959,9 @@ CONTAINS
           ! Calculate ice impedance factor (i.e. blocking of the pores by ice)
           !    The factor is calculated with respect to the current soil layer and all below
           !    layers until bedrock (vertical sums).
-          IF (l_ice_impedance_drain .AND. &
+          IF (l_ice_impedance_drain(j) .AND. &
             & SUM(field_cap_l(j,i:nsoil) + soil_ice_l(j,i:nsoil)) > 0._wp ) THEN
-            IF (l_scool_impedance_drain) THEN
+            IF (l_scool_impedance_drain(j)) THEN
               ! Ice and supercooled water are considerred to block water movement.
               ice_impede(j)= 10._wp**(-6._wp *                                             &
                               ( (SUM(soil_ice_l(j,i:nsoil)) + SUM(pot_scool_l(j,i:nsoil))) &

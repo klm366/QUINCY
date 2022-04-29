@@ -53,6 +53,7 @@ MODULE mo_hydro_init
       & vol_p_wilt     (:,:) => NULL(), &
       & root_depth     (:,:) => NULL(), &
       & w_snow_soil    (:,:) => NULL(), &
+      & pf_mask        (:,:) => NULL(), &
       & fract_org_sl (:,:,:) => NULL(), &
       & w_soil_sl    (:,:,:) => NULL(), &
       & ifs_smi_sl   (:,:,:) => NULL(), &
@@ -109,6 +110,7 @@ CONTAINS
       & hydro_init_vars%vol_p_wilt      ,       &
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%w_snow_soil     ,       &
+      & hydro_init_vars%pf_mask         ,       &
       & hydro_init_vars%fract_org_sl            &
       & )
 
@@ -188,6 +190,9 @@ CONTAINS
 
     ALLOCATE(hydro_init_vars%fract_org_sl(nproma, nsoil, nblks))
     hydro_init_vars%fract_org_sl(:,:,:) = missval
+
+    ALLOCATE(hydro_init_vars%pf_mask(nproma, nblks))
+    hydro_init_vars%pf_mask(:,:) = missval
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
@@ -278,6 +283,12 @@ CONTAINS
           hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
         END DO
       END IF
+
+      ! Mask of Arctic and subarctic permafrost region
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='pf_mask',                                  &
+        & fill_array=hydro_init_vars%pf_mask)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
       CALL input_file%Close()
 
@@ -423,6 +434,9 @@ CONTAINS
       IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
       END IF
+ 
+      ! Mask of Arctic and subarctic permafrost region
+      dsl4jsb_var_ptr(HYDRO_, pf_mask) = hydro_init_vars%pf_mask
 
       !$acc update device(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl), &
@@ -450,17 +464,17 @@ CONTAINS
 
       ! Maximum root zone soil moisture
       ! rz_max_moist is set to 0.2 for tiles without soil (glaciers, ocean)
-      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MERGE(                   &
+      dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral) = MERGE(                   &
         & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth, 0.2_wp, &
         & hydro_init_vars%vol_field_cap * hydro_init_vars%root_depth > 0._wp)
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) = MIN( &
-          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist), dsl4jsb_Config(HYDRO_)%w_soil_limit)
+        dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral) = MIN( &
+          & dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
       !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, root_depth), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist))
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral))
 
     END IF
 
@@ -587,6 +601,9 @@ CONTAINS
         dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
       ENDWHERE
 
+      ! Save top layer water holding capacity of mineral soil for evaporation calculations
+      dsl4jsb_var_ptr(HYDRO_, maxtop_mineral)(:,:) = dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)(:,1,:)
+
       ! The following can change later depending on the organic layers and soil ice content.
       dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
         & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
@@ -614,8 +631,43 @@ CONTAINS
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl))
 
     END IF
+    
+    ! Set defaults for wet/dry hydro switches for the whole globe
+    dsl4jsb_var_ptr(HYDRO_, lmask_ws_max_depend_on_org) (:,:)  = 1._wp
+    dsl4jsb_var_ptr(HYDRO_, lmask_maxtop_depend_on_org) (:,:)  = 1._wp
+    dsl4jsb_var_ptr(HYDRO_, lmask_feed_sro)             (:,:)  = 0._wp
+    dsl4jsb_var_ptr(HYDRO_, lmask_ice_impedance_drain)  (:,:)  = MERGE(1._wp, 0._wp, &
+      & dsl4jsb_Config(HYDRO_)%l_ice_impedance_drain)
+    dsl4jsb_var_ptr(HYDRO_, lmask_scool_impedance_drain)(:,:)  = MERGE(1._wp, 0._wp, &
+      & dsl4jsb_Config(HYDRO_)%l_scool_impedance_drain)
+    dsl4jsb_var_ptr(HYDRO_, lmask_scool_percolates)     (:,:)  = MERGE(1._wp, 0._wp, &
+      & dsl4jsb_Config(HYDRO_)%l_scool_percolates)
 
     IF (tile%contains_soil) THEN
+      
+      ! Set hydrology switches in arctic region depending on wet and dry setup
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, lmask_ws_max_depend_on_org), 2)
+        IF (dsl4jsb_Config(HYDRO_)%l_hydro_pf_wet) THEN      
+          WHERE (dsl4jsb_var_ptr(HYDRO_, pf_mask)(:,i) > 0.5_wp)
+            dsl4jsb_var_ptr(HYDRO_,lmask_ws_max_depend_on_org) (:,i) = 0._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_maxtop_depend_on_org) (:,i) = 0._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_ice_impedance_drain)  (:,i) = 1._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_scool_impedance_drain)(:,i) = 1._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_scool_percolates)     (:,i) = 0._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_feed_sro)             (:,i) = 0._wp
+          END WHERE
+        END IF
+        IF (dsl4jsb_Config(HYDRO_)%l_hydro_pf_dry) THEN
+          WHERE (dsl4jsb_var_ptr(HYDRO_, pf_mask)(:,i) > 0.5_wp)
+            dsl4jsb_var_ptr(HYDRO_,lmask_ws_max_depend_on_org) (:,i) = 1._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_maxtop_depend_on_org) (:,i) = 1._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_ice_impedance_drain)  (:,i) = 0._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_scool_impedance_drain)(:,i) = 0._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_scool_percolates)     (:,i) = 1._wp
+            dsl4jsb_var_ptr(HYDRO_,lmask_feed_sro)             (:,i) = 1._wp
+          END WHERE    
+        END IF 
+      END DO
 
       ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
@@ -664,12 +716,15 @@ CONTAINS
       ! Make sure w_rootzone is smaller than rz_max_moist
       ! Note: rz_max_moist corresponds to the maximum possible amount of water in the root zone. This
       !    concept is different from the hydrological understanding of field capacity and saturation.
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral))
+        dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral)
+      END WHERE
 
       ! Initialization of w_rootzone_rel (completely ignoring ice)
       !    It is re-calculated - considering ice - in update_water_stress.
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist) > 0._wp)
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral) > 0._wp)
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist)
+          & dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, rz_max_moist_mineral)
       ELSE WHERE
         dsl4jsb_var2D_onDomain(HYDRO_, w_rootzone_rel) = 0._wp
       END WHERE

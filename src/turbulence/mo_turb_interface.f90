@@ -418,6 +418,7 @@ CONTAINS
       & fract_snow,           &
       & fract_water,          &
       & rz_max_moist,         &
+      & rz_max_moist_mineral, &
       & w_rootzone,           &
       & fact_q_air,           &
       & fact_qsat_srf,        &
@@ -426,8 +427,10 @@ CONTAINS
       & canopy_cond_limited,  &
       & pch,                  &
       & wind_air,             &
-      & q_air
-
+      & q_air,                &
+      & maxtop_mineral,       &
+      & lmask_ws_max_depend_on_org, &
+      & lmask_maxtop_depend_on_org
 
     dsl4jsb_Real3D_onChunk :: &
       & w_soil_sl,            &
@@ -496,12 +499,16 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_water)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  rz_max_moist)        ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  rz_max_moist_mineral)! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  w_rootzone)          ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_sl)           ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  i_soil_sl)           ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pot_scool_sl) ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_fc_sl)        ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  w_soil_pwp_sl)       ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  maxtop_mineral)      ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, lmask_ws_max_depend_on_org)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, lmask_maxtop_depend_on_org)
     END IF
 
     ! ---------------------------
@@ -521,7 +528,11 @@ CONTAINS
       ELSE
         w_soil_wilt_fract_tmp = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
         !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_1 tile_name=tile%name
-        mask(:) = w_rootzone(:) > w_soil_wilt_fract_tmp * rz_max_moist(:)
+        WHERE (lmask_ws_max_depend_on_org > 0.5_wp)
+          mask(:) = w_rootzone(:) > w_soil_wilt_fract_tmp * rz_max_moist(:)
+        ELSEWHERE
+          mask(:) = w_rootzone(:) > w_soil_wilt_fract_tmp * rz_max_moist_mineral(:)          
+        END WHERE
       END IF
 
       !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)
@@ -555,10 +566,20 @@ CONTAINS
     END IF
 
     IF (tile%contains_soil) THEN
+      ! Note: In contrast to maxtop_mineral w_soil_fc_sl has been reduced by the amount of soil
+      !       ice. It defines the maximum possible amount of liquid water.
       IF (dsl4jsb_Config(HYDRO_)%l_ice_reduces_maxtop) THEN
-        w_maxtop(:)=w_soil_fc_sl(:,1)
+        WHERE (lmask_maxtop_depend_on_org > 0.5_wp)
+          w_maxtop(:)=w_soil_fc_sl(:,1)
+        ELSEWHERE
+          w_maxtop(:)=maxtop_mineral(:) - i_soil_sl(:,1)         
+        END WHERE
       ELSE   ! w_maxtop does not depend on soil ice
-        w_maxtop(:)=w_soil_fc_sl(:,1) + i_soil_sl(:,1)
+        WHERE (lmask_maxtop_depend_on_org > 0.5_wp)
+          w_maxtop(:)=w_soil_fc_sl(:,1) + i_soil_sl(:,1)
+        ELSEWHERE
+          w_maxtop(:)=maxtop_mineral(:)       
+        END WHERE
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_4 tile_name=tile%name
