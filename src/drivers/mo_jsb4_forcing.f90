@@ -1493,6 +1493,14 @@ CONTAINS
               WRITE(message_text,*) opt%def_val
               CALL message(routine,'Changing default value of '//TRIM(var%name_var)//' to'//TRIM(message_text))
             ENDIF
+            IF (ASSOCIATED(var%dta)) THEN
+              IF (ASSOCIATED(var%dta%dta)) THEN
+                var%dta%dta = opt%def_val ! Need to associate new value here, since mo_input does it only when new file opened
+                IF (my_process_is_stdio()) THEN
+                  CALL message(routine,'Setting data of '//TRIM(var%name_var)//' to'//TRIM(message_text))
+                ENDIF
+              ENDIF
+            ENDIF
           ENDIF
         ENDIF
       ENDIF
