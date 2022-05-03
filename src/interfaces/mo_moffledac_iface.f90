@@ -21,7 +21,6 @@ CONTAINS
   SUBROUTINE init_moffledac(model,model_id)
 #ifdef HAVE_MOFFLEDAC
     USE mo_jsb_time_iface,     ONLY: get_date_components, get_time_dt, get_time_start, get_time_experiment_start, get_year_length
-    USE mo_mpi,                ONLY: get_my_mpi_work_communicator, get_my_mpi_work_comm_size, get_my_mpi_work_id
 !    USE mo_jsb_parallel_iface, ONLY: get_workgroup_parallel_setup
     USE mo_exception,          ONLY: finish
     USE mo_input_calendar,     ONLY: INPUT_CALENDAR_DAY360, INPUT_CALENDAR_DAY365, INPUT_CALENDAR_DAY366, &
@@ -34,9 +33,12 @@ CONTAINS
 #ifdef __ICON__
     USE mo_io_units,           ONLY: nnml, find_next_free_unit
     USE mo_time_config,        ONLY: time_config
+    USE mo_mpi,                ONLY: get_my_mpi_work_communicator, get_my_mpi_work_comm_size, get_my_mpi_work_id
 #else
     USE mo_filename,           ONLY: find_next_free_unit
-! TODO: need some alt ref for "time_config"
+    USE mo_time_control,       ONLY: delta_time
+    USE mo_io,                 ONLY: IO_timestep
+    USE mo_mpi,                ONLY: p_pe, p_nprocs, p_all_comm
     INTEGER :: nnml = 10
 #endif
 #endif
@@ -50,7 +52,15 @@ CONTAINS
     REAL(wp) :: rtmp
 
     ! Get time parameters
+#ifdef __ICON__
     rtmp = time_config%dt_dyn_sec(model_id) !get_time_dt(model_id)
+#else
+   IF (delta_time /= 0._wp) THEN
+      rtmp = delta_time
+    ELSE
+      rtmp = REAL(IO_timestep,wp)
+    ENDIF
+#endif
     IF (rtmp*TICKS_PER_SEC /= FLOOR(rtmp*TICKS_PER_SEC)) CALL finish(routine,'Sorry - timesteps must be an integer number of ticks')
     dt = INT(rtmp)
     CALL get_date_components(get_time_experiment_start(),tmp(1),tmp(2),tmp(3),tmp(4),tmp(5),tmp(6))
@@ -77,9 +87,15 @@ CONTAINS
 
     ! Get parallel parameters
 !    CALL get_workgroup_parallel_setup(comm,npe,mype,iope)
+#ifdef __ICON__
     comm = get_my_mpi_work_communicator()
     npe  = get_my_mpi_work_comm_size()
     mype = get_my_mpi_work_id()
+#else
+    comm = p_all_comm
+    npe  = p_nprocs
+    mype = p_pe
+#endif
     iope = 0 ! StW: TODO: This shouldn't be hardcoded?!
   !------------------------------------------------------------------------------
 
@@ -116,23 +132,22 @@ CONTAINS
 
   SUBROUTINE init_moffledac_grids(model,patch,decomp)
 #ifdef __ICON__
-    USE mo_jsb_domain_iface,   ONLY: t_patch
     USE mo_parallel_config,    ONLY: nproma
     USE mo_input,              ONLY: InputFileAdd, InputDimInq, input_file_list
 #else
     USE mo_decomposition,      ONLY: pe_decomposed
     USE mo_input,              ONLY: InputDimLocalSetMulti, input_dim_list
 #endif
+    USE mo_jsb_domain_iface,   ONLY: t_patch
     USE mo_jsb_vertical_axes,  ONLY: jsbach_vgrids
     USE mo_exception,          ONLY: finish
     USE mo_input,              ONLY: InputDimLocalSet, InputDimEquivalence, InputDimAdd
 #ifdef __ICON__
-    TYPE (t_patch),       INTENT(in), OPTIONAL :: patch
     INTEGER,              INTENT(in), OPTIONAL :: decomp ! Dummy placeholder for ECHAM compsition
 #else
-    INTEGER,              INTENT(in), OPTIONAL :: patch  ! Dummy placeholder for ICON composition
     TYPE (pe_decomposed), INTENT(in), OPTIONAL :: decomp
 #endif
+    TYPE (t_patch),       INTENT(in), OPTIONAL :: patch
     TYPE (t_jsb_model),   POINTER              :: model
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':init_moffledac_grids'
 
