@@ -371,12 +371,6 @@ PROGRAM jsb4_driver
   ! - Main loop
   main_loop:DO
 
-#ifdef HAVE_MOFFLEDAC
-    CALL timer_start(timer_moffledac(model_id)
-    CALL InputUpdate()
-    CALL timer_stop(timer_moffledac(model_id))
-#endif
-
     CALL time_set   !(echam!)
     CALL manager_state(echam_time, current_datetime)
     ALLOCATE(current_datetime_ptr, source=current_datetime)
