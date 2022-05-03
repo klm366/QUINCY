@@ -358,12 +358,9 @@ CONTAINS
     tmin_data => forcing_input%air_temp_min%data2d
     tmax_data => forcing_input%air_temp_max%data2d
     IF (InputVarExistInFile(forcing_input%air_temp_min%var_forc)) THEN
-      IF (var_has_fill(forcing_input%air_temp_min%var_forc,hlp_r)) &
-        CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,forcing_input%air_temp_min%data2d)
-      IF (var_has_fill(forcing_input%air_temp_max%var_forc,hlp_r)) &
-        CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,forcing_input%air_temp_max%data2d)
-      CALL instantly_from_daily_temp_2(nblks, ice, ics, lon, sinlat, coslat, &
-        forcing_input%air_temp_min%data2d, forcing_input%air_temp_max%data2d, next_datetime, t_air_C)
+      IF (var_has_fill(forcing_input%air_temp_min%var_forc,hlp_r)) CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,tmin_data)
+      IF (var_has_fill(forcing_input%air_temp_max%var_forc,hlp_r)) CALL set_ocean_cells(nblks,ics,ice,model_id,hlp_r,tmax_data)
+      CALL instantly_from_daily_temp_2(nblks, ice, icz, lon, sinlat, coslat, tmin_data, tmax_data, next_datetime, t_air_C)
     ELSE
       ! For time step data, we need to get air temp min/max from time step data
       CALL InputVarAssignNextData(forcing_input%air_temp%var_forc,.TRUE.) ! Only active in timestep forcing case
@@ -390,7 +387,7 @@ CONTAINS
     ALLOCATE(tmin_data(ice, nblks))
     ALLOCATE(tmax_data(ice, nblks))
     IF(forcing_options%air_temperature_as_timestep) THEN
-      CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%air_temp, t_air_C)
+      CALL get_data_and_update_field(nblks, ics, icz, current_datetime, model_id, forcing_input%air_temp, t_air_C)
       tmin_data(:,:) = MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3)
       tmax_data(:,:) = MAXVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3)
     ELSE
