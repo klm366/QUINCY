@@ -304,7 +304,6 @@ CONTAINS
     ! Pointers to variables in memory
 
     dsl4jsb_Real2D_onChunk ::  &
-      & volume_lake_max,    &
       & height_oro_min,     &
       & basin_mask,         & 
       & height_lake,        &
@@ -380,7 +379,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HD_, heights_lake)     ! IN
     dsl4jsb_Get_var3D_onChunk(HD_, areas_lake)       ! IN
     dsl4jsb_Get_var3D_onChunk(HD_, volumes_lake)     ! IN
-    dsl4jsb_Get_var2D_onChunk(HD_, volume_lake_max)  ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, height_oro_min)   ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, height_lake)      ! OUT
@@ -416,7 +414,10 @@ CONTAINS
       volume_mask_high(:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)<=volumes_lake(:,:)
       volume_mask(:) = basin_mask(:) > 0._wp .AND. volume_lake(:)>=MINVAL(volumes_lake(:,:), DIM=2)
 
-      WHERE      ( volume_mask(:)  .AND. volume_lake(:)< MAXVAL(volumes_lake(:,:), DIM=2) )
+      WHERE      ( volume_mask(:)  .AND. volume_lake(:)<MINVAL(volumes_lake(:,:), DIM=2) .AND. volume_lake(:)>0._wp )
+         height_lake(:)= volume_lake(:) * heights_lake(:,1) / volumes_lake(:,1)
+         area_lake  (:)= volume_lake(:) * areas_lake  (:,1) / volumes_lake(:,1)
+      ELSE  WHERE ( volume_mask(:)  .AND. volume_lake(:)<MAXVAL(volumes_lake(:,:), DIM=2) )
         height_low (:)=MAXVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_low (:,:))
         height_high(:)=MINVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
         area_low   (:)=MAXVAL(areas_lake  (:,:), DIM=2, MASK=volume_mask_low (:,:))
@@ -435,21 +436,19 @@ CONTAINS
       height_dyn(:) = height_oro_min(:) + height_lake(:)
 
       ! update lake fraction [%]
-      IF (model%config%use_sizelakes) THEN
-        WHERE (basin_mask(:) > 0._wp)
-          ! lake and land fraction changes [%]
-          fract_lake_changes(:) = MIN( MAX(area_lake(:), 0._wp), 1._wp) - lake_fract(:)
-        ELSE WHERE
-          fract_lake_changes(:) = 0._wp
-        END WHERE
-      ELSE
+      WHERE (basin_mask(:) > 0._wp)
+        ! lake and land fraction changes [%]
+        fract_lake_changes(:) = MIN( MAX(area_lake(:), 0._wp), 1._wp) - lake_fract(:)
+      ELSE WHERE
         fract_lake_changes(:) = 0._wp
-      END IF
+      END WHERE
 
       ! update fractions of lake tile, land tile and their children
       CALL model%Get_top_tile(fract_tile)
       IF (ASSOCIATED(fract_tile%parent)) CALL finish(routine, 'Should only run on box tile!')
+      IF (model%config%use_sizelakes) THEN
       CALL do_stuff_on_tree(fract_tile, options, iblk, ics, ice, fract_lake_changes, land_fract(:))
+      END IF
 
     CASE ('weighted_to_coast')
       WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
@@ -502,8 +501,10 @@ CONTAINS
       CALL cur%Get_fraction(ics, ice, iblk, fract=fract(:))
       IF(cur%is_lake) THEN
         fract(:) = fract(:) + fract_lake_changes(:)
+      ELSE IF(cur%is_land) THEN
+        fract(:) = fract(:) - fract_lake_changes(:)
       ELSE
-        fract(:) = fract(:) - fract_lake_changes(:) * fract(:)/fract_land(:)
+        fract(:) = fract(:) - fract_lake_changes(:) * fract(:) / MAX(EPSILON(1._wp),fract_land(:))
       ENDIF
       CALL cur%Set_fraction(ics, ice, iblk, fract=fract(:))
 
@@ -851,10 +852,7 @@ CONTAINS
       & drainage_lake
 
     REAL(wp) ::                &
-      & dyn_min,               &
-      & volume_lake_low,       &
       & height_lake_diff,      &
-      & volume_lake_diff,      &
       & u_lake,                &
       & k_lake,                &
       & global_lake_volume,    &  ! water budget change within the time step
@@ -1036,7 +1034,7 @@ CONTAINS
       volume_lake(:,:) = volume_lake(:,:) + ( lake_outflow(:,:) + lake_inflow(:,:) ) * steplen
       global_lateral_flow_error = global_sum_array((lake_outflow(:,:)+lake_inflow(:,:))*in_domain(:,:))
       global_lateral_flow_abs   = global_sum_array((ABS(lake_outflow(:,:))+ABS(lake_inflow(:,:)))*in_domain(:,:))
-      IF (ABS(global_lateral_flow_error)/global_lateral_flow_abs > 10._wp*EPSILON(1._wp)) THEN
+      IF (ABS(global_lateral_flow_error)/MAX(EPSILON(1._wp),global_lateral_flow_abs) > 10._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
              global_lateral_flow_error,' m3'
         CALL finish (TRIM(routine), message_text)
@@ -1144,16 +1142,16 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
-      & runoff          , &
-      & drainage        , &
+      & runoff,           &
+      & drainage,         &
       !& outflow_resid   , &
-      & discharge       , &
-      & drainage_lake  , &
+      & discharge,        &
+      & drainage_lake,    &
       & discharge_ocean , &
-      & discharge_lake      , &
-      & water_budget    , &
+      & discharge_lake,   &
+      & water_budget,     &
       & water_budget_old, &
-      & water_error     , &
+      & water_error,      &
       & water_flux
 
     dsl4jsb_Real3D_onDomain :: &
@@ -1226,7 +1224,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, water_budget_old)   ! out
     dsl4jsb_Get_var2D_onDomain(HD_, water_flux)         ! out
     dsl4jsb_Get_var2D_onDomain(HD_, water_error)        ! out
-    dsl4jsb_Get_var2D_onDomain(HD_, discharge_lake)         ! in
+    dsl4jsb_Get_var2D_onDomain(HD_, discharge_lake)     ! in
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma, nblks))
@@ -1290,19 +1288,20 @@ CONTAINS
       WRITE(message_text,*) '-   runoff (incl. P-E on glacier/lakes) : ', &
            global_sum_array(runoff/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-   drainage              : ', &
+      WRITE(message_text,*) '-   drainage                            : ', &
            global_sum_array(drainage/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-   outlet              : ', &
+      WRITE(message_text,*) '-   outlet                              : ', &
            global_sum_array(drainage_lake*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-   discharge_ocean (neg.): ', &
+      WRITE(message_text,*) '-   discharge_ocean (neg.)              : ', &
            global_sum_array(discharge_ocean*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-   discharge_lake (neg.): ', &
+      WRITE(message_text,*) '-   discharge_lake (neg.)               : ', &
            global_sum_array(discharge_lake*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
-      WRITE(message_text,*) '-->      sum of the fluxes: ', global_water_flux*steplen, ' m3'
+      WRITE(message_text,*) '-->      sum of the fluxes              : ', &
+           global_water_flux*steplen, ' m3'
       CALL message(routine, message_text)
     END IF
 
