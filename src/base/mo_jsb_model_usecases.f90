@@ -192,38 +192,38 @@ CONTAINS
         END IF
 
         ! default jsb4: HYDRO_ is active at veg tile only to save runtime
-        IF (.NOT. model%config%use_quincy) THEN
-          veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
-            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
-            & fract_varname='fract_veg')
+        ! IF (.NOT. model%config%use_quincy) THEN
+        !   veg_tile => t_jsb_tile('veg', 'Veg tile', &
+        !     & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+        !     & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+        !     & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+        !     & fract_varname='fract_veg')
 
-          IF (model%processes(ALCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
-          END IF
-          IF (model%processes(FLCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
-          END IF
-          IF (model%processes(WLCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
-          END IF
-          !
-          IF (model%processes(NLCC_)%p%config%active) THEN
-            CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
-          END IF
-          !
-          ! use_quincy: 
-        !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
-        !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
-        !  VEG_ is active
-        ELSE
+        !   IF (model%processes(ALCC_)%p%config%active) THEN
+        !     CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
+        !   END IF
+        !   IF (model%processes(FLCC_)%p%config%active) THEN
+        !     CALL veg_tile%Set_process_action(FLCC_, ON_TILE_, AGGREGATE_)
+        !   END IF
+        !   IF (model%processes(WLCC_)%p%config%active) THEN
+        !     CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
+        !   END IF
+        !   !
+        !   IF (model%processes(NLCC_)%p%config%active) THEN
+        !     CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
+        !   END IF
+        !   !
+        !   ! use_quincy: 
+        ! !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
+        ! !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
+        ! !  VEG_ is active
+        ! ELSE
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   PHENO_,    VEG_   /), &
             & process_actions = (/ON_LEAFS_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
-        ENDIF
+        ! ENDIF
 
         IF (model%processes(TLCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(TLCC_, ON_TILE_, AGGREGATE_)
