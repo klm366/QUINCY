@@ -875,6 +875,7 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
+    USE mo_hydro_constants,        ONLY: NOFLOW_, UPLAND_, LOWLAND_
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -907,6 +908,8 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
     INTEGER  :: nsoil
+
+    INTEGER  ::  hydrotiles_type
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -958,6 +961,20 @@ CONTAINS
       fract_org_sl(:,:) = 0._wp
     END IF
 
+    ! As testcase PFTs are used as source and sink of lateral flows. Later, topographic tiles
+    ! will be used
+    IF (dsl4jsb_Config(HYDRO_)%l_hydrotiles) THEN
+      IF (tile%name == 'pft04') THEN      ! Extra-tropical deciduous trees are used as source
+        hydrotiles_type = UPLAND_
+      ELSE IF (tile%name == 'pft07') THEN ! C3 grass is used as sink
+        hydrotiles_type = LOWLAND_
+      ELSE
+        hydrotiles_type = NOFLOW_
+      ENDIF
+    ELSE
+      hydrotiles_type = NOFLOW_
+    ENDIF
+
     !$claw acc update device(soil_w%dz) ! TODO move if possible
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
@@ -969,6 +986,7 @@ CONTAINS
       & dtime, &
       & ltpe_closed, ltpe_open,                             &
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,             &
+      & hydrotiles_type,                                    &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
       &                                fract_org_sl  (:,:), &

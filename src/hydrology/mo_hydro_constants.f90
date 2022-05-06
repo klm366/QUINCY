@@ -59,5 +59,11 @@ MODULE mo_hydro_constants
                                              ! (value for peat from Beringer, 2001)
     & pore_size_index_org = 0.7_wp           !< Pore size distribution index of organic part of soil layer []
 
+  INTEGER, PARAMETER ::                    &
+    ! Configuration states, used to define HydroTile states
+    & NOFLOW_ = 0,                         & !< ignores lateral transport
+    & UPLAND_ = 1,                         & !< source tiles of lateral water flow
+    & LOWLAND_ = 2                           !< sink tiles of lateral water flow
+
 #endif
 END MODULE mo_hydro_constants
