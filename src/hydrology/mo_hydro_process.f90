@@ -435,7 +435,7 @@ CONTAINS
     !& sfract_srf, wfract_srf,
     & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, evapotrans_soil, transpiration,             &
     ! inout
-    & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                     &
+    & ws, ws_l, soil_ice_l, w_soil_overflow, w_pond,                                                             &
     ! out
     & wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                                            &
     & )
@@ -461,7 +461,7 @@ CONTAINS
       & ws_max_mineral, oro_stddev, t_soil_upper_layer, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & ws, w_soil_overflow
+      & ws, w_soil_overflow, w_pond
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & ws_l, soil_ice_l
     REAL(wp), INTENT(out), DIMENSION(:) :: &

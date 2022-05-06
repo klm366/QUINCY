@@ -990,12 +990,13 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sl         ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_ice_sl          ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, w_soil_overflow   ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, w_pond            ), & ! Tost: should rather be part of surface hydrology
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sat_sl     ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_fc_sl      ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pwp_sl     ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          )  &
       & )
 
     !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
@@ -1058,6 +1059,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_sat_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_fc_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pwp_sl,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_pond,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 

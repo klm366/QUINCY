@@ -105,7 +105,8 @@ MODULE mo_hydro_memory_class
       & water_excess,         & !< Water available for infiltration into the soil                           [m water equivalent]
       & w_soil_overflow,      & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
       & w_soil_column,        & !< Water content in the whole soil column (root zone)                       [m]
-      & w_soil_rel              !< Filling of the soil water bucket relative to MaxMoisture (=field capacity?) TODO
+      & w_soil_rel,           & !< Filling of the soil water bucket relative to MaxMoisture (=field capacity?) TODO
+      & w_pond                  !< Water ponding on the soil surface                                        [m water equivalent]
 
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
@@ -742,6 +743,15 @@ CONTAINS
         &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
         & prefix, suffix,                                                           &
         & initval_r=0.0_wp )
+
+      CALL mem%Add_var('w_pond', mem%w_pond,                                        &
+        & hgrid, surface,                                                           &
+        & t_cf('water ponding on the soil surface', 'm water equivalent', ''),      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.TRUE., lrestart_cont=.TRUE.,                                    &
+        & loutput=.TRUE., output_level=BASIC,                                       &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
 

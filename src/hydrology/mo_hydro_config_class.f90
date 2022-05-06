@@ -43,7 +43,8 @@ MODULE mo_hydro_config_class
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero        !< Allow infiltration at soil temperatures below 0°C
+      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
+      & l_hydrotiles           !< Using Hydro-Tile approach with lateral water transport between tiles
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
   END type t_hydro_config
@@ -69,6 +70,7 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_glac_in_soil
     LOGICAL                     :: l_infil_subzero
+    LOGICAL                     :: l_hydrotiles
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -83,7 +85,8 @@ CONTAINS
       & scheme_stom_cond,           &
       & l_organic,                  &
       & l_glac_in_soil,             &
-      & l_infil_subzero
+      & l_infil_subzero,            &
+      & l_hydrotiles
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -111,6 +114,7 @@ CONTAINS
     l_organic         = .FALSE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
+    l_hydrotiles      = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -146,6 +150,9 @@ CONTAINS
 
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
+
+    config%l_hydrotiles        = l_hydrotiles
+    IF (l_hydrotiles) CALL message(TRIM(routine), 'Using hydro-tile approach')
 
     CALL close_nml(nml_handler)
 
