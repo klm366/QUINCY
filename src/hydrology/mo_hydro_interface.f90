@@ -1070,6 +1070,8 @@ CONTAINS
           dsl4jsb_var2D_onChunk(HYDRO_, w_pond) = lat_flow(:) / sink_trans_fract(:)
         END WHERE
 
+        dsl4jsb_var2D_onChunk (HYDRO_, w_latflow) = dsl4jsb_var2D_onChunk(HYDRO_, w_pond) / dtime
+
       ENDIF
 
     ENDIF
@@ -1121,6 +1123,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_fc_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pwp_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_pond,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_latflow,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 

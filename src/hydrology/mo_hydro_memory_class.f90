@@ -106,7 +106,8 @@ MODULE mo_hydro_memory_class
       & w_soil_overflow,      & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
       & w_soil_column,        & !< Water content in the whole soil column (root zone)                       [m]
       & w_soil_rel,           & !< Filling of the soil water bucket relative to MaxMoisture (=field capacity?) TODO
-      & w_pond                  !< Water ponding on the soil surface                                        [m water equivalent]
+      & w_pond,               & !< Water ponding on the soil surface                                        [m water equivalent]
+      & w_latflow               !< Lateral water transport between tiles                                    [kg m-2 s-1]
 
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
@@ -750,6 +751,15 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.TRUE., lrestart_cont=.TRUE.,                                    &
+        & loutput=.TRUE., output_level=BASIC,                                       &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('w_latflow', mem%w_latflow,                                  &
+        & hgrid, surface,                                                           &
+        & t_cf('lateral water transport between tiles', 'kg m-2 s-1', ''),          &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.FALSE.,                                                         &
         & loutput=.TRUE., output_level=BASIC,                                       &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
