@@ -590,8 +590,8 @@ CONTAINS
 
       ! Add lateral flow from upland tiles
       IF (hydrotiles_type == LOWLAND_) THEN
-          water_to_soil(i) = water_to_soil(i) + w_pond(i)
-          w_pond(i) = 0._wp
+          water_to_soil(i) = water_to_soil(i) + 0.9_wp * w_pond(i)
+          w_pond(i) = 0.1_wp * w_pond(i)
       END IF
 
       !  surface runoff and infiltration

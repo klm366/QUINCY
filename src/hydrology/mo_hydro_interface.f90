@@ -877,8 +877,10 @@ CONTAINS
 
     USE mo_hydro_constants,        ONLY: NOFLOW_, UPLAND_, LOWLAND_
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_jsb_process_class,      ONLY: Get_process_id
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), POINTER       :: pft_tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
@@ -886,6 +888,7 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory_tile(HYDRO_, pft_tile)
 
     ! Pointers to variables in memory
     dsl4jsb_Real3D_onChunk :: fract_org_sl
@@ -894,6 +897,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_soil_rel
     dsl4jsb_Real2D_onChunk :: w_soil_column
     dsl4jsb_Real2D_onChunk :: max_moist
+    dsl4jsb_Real2D_onChunk :: w_pond_pft_tile
 
 
     ! Locally allocated vectors
@@ -910,6 +914,8 @@ CONTAINS
     INTEGER  :: nsoil
 
     INTEGER  ::  hydrotiles_type
+    REAL(wp), DIMENSION(options%nc)      :: source_trans_fract, sink_trans_fract, lat_flow
+    INTEGER  :: ipft, npft
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1030,6 +1036,43 @@ CONTAINS
       END IF
     END DO
     !$claw acc end data
+
+    IF (dsl4jsb_Config(HYDRO_)%l_hydrotiles) THEN
+      ! TODO First attempt to realize lateral transport between tiles of one grid cell. The actual test case
+      ! uses PFTs but later topography tiles should be used and the transport should be implemented as
+      ! a separate task.
+      IF (tile%name == 'pft07') THEN
+
+        ! Get inflow data from source tile
+        npft = tile%parent_tile%Get_no_of_children()
+        DO ipft=1,npft
+          IF (ipft == 1) THEN
+            pft_tile => tile%parent_tile%Get_first_child_tile()
+          ELSE
+            pft_tile => pft_tile%Get_next_sibling_tile()
+          END IF
+
+          IF (pft_tile%name == 'pft04') THEN
+            ! Source tile found
+            ! Get fraction for this PFT
+            CALL pft_tile%Get_fraction(ics, ice, iblk, fract=source_trans_fract(:))
+            ! Get water from w_pond of the pft child tile but leave 10% there for diagnostic reasons\
+            dsl4jsb_Get_memory_tile(HYDRO_, pft_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, w_pond, pft_tile)
+            lat_flow(:) = 0.9_wp * w_pond_pft_tile(:) * source_trans_fract(:)
+            w_pond_pft_tile(:) = 0.1_wp * w_pond_pft_tile(:)
+          END IF
+        ENDDO
+
+        ! Add inflow from source to sink
+        CALL tile%Get_fraction(ics, ice, iblk, fract=sink_trans_fract(:))
+        WHERE (sink_trans_fract(:) > 1.0e-9_wp)
+          dsl4jsb_var2D_onChunk(HYDRO_, w_pond) = lat_flow(:) / sink_trans_fract(:)
+        END WHERE
+
+      ENDIF
+
+    ENDIF
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
       !$claw acc exit data delete(fract_org_sl)
