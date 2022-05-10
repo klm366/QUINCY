@@ -31,6 +31,9 @@ MODULE mo_a2l_memory_class
 
   INTEGER, PARAMETER :: max_no_of_vars = 60
 
+  ! ======================================================================================================= !
+  !>Type definition for atm2land memory
+  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_a2l_memory
 
     TYPE(t_jsb_var_real2d) :: &
@@ -126,6 +129,7 @@ MODULE mo_a2l_memory_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_a2l_memory_class'
 
+
 CONTAINS
 
   ! ======================================================================================================= !
@@ -220,6 +224,9 @@ CONTAINS
         & initval_r = 0.0_wp)
 #endif
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! default jsbach4 memory
+    !
     CALL mem%Add_var( 'DEBUG_VAR', mem%DEBUG_VAR,                            &
       & hgrid, surface,                                                      &
       & t_cf('DEBUG_VAR', '', ''),                                           &
@@ -229,6 +236,38 @@ CONTAINS
       & output_level=BASIC, &
       & initval_r=777.7_wp )
 
+    CALL mem%Add_var( 'fract_par_diffuse', mem%fract_par_diffuse,            &
+      & hgrid, surface,                                                      &
+      & t_cf('fract_par_diffuse', '', ''),                                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'co2_air', mem%CO2_air,                                                      &
+      & hgrid, surface,                                                                            &
+      & t_cf('CO2_air', '[kg(CO2)/kg(air)]', 'CO2 mass mixing ratio of lowest atmosphere level'),  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
+      & prefix, suffix,                                                                            &
+      & output_level=BASIC, &
+      & lrestart=.FALSE., initval_r=6.077E-4_wp ) ! R: I just freely choosed this value. Corresponds to 400 ppm:
+                                                  !    CO2:44.011 g/mol; dry air: 28,97 g/mol
+                                                  !    400 ppm => 6.077*10^-4
+
+    CALL mem%Add_var( 'co2_air_mol', mem%CO2_air_mol,                                                  &
+      & hgrid, surface,                                                                                &
+      & t_cf('CO2_air_mol', '[mol(CO2)/mol(air)]', 'CO2 mol mixing ratio of lowest atmosphere level'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                             &
+      & prefix, suffix,                                                                                &
+      & output_level=BASIC, &
+      & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
+
+    ! --------------------------------------------------------------------------------------------------- !
+    ! variables used with jsbach4 & quincy
+    ! jsbach4 init
+    IF (model%config%model_scheme == MODEL_JSBACH) THEN
+    
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
       & hgrid, surface,                                                      &
       & t_cf('air_temperature', 'K', ''),                                    &
@@ -313,15 +352,6 @@ CONTAINS
     CALL mem%Add_var( 'swpar_srf_down', mem%swpar_srf_down,                  &
       & hgrid, surface,                                                      &
       & t_cf('downward_par_shortwave_radiation', 'W/m2', ''),                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'fract_par_diffuse', mem%fract_par_diffuse,            &
-      & hgrid, surface,                                                      &
-      & t_cf('fract_par_diffuse', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &

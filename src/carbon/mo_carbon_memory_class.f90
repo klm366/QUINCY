@@ -14,16 +14,18 @@
 MODULE mo_carbon_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
-  USE mo_util, ONLY: One_of
+  USE mo_kind,             ONLY: wp
+  USE mo_exception,        ONLY: finish
+  USE mo_util,             ONLY: One_of
+  USE mo_jsb_utils_iface,  ONLY: assign_if_present_allocatable
 
-  USE mo_jsb_model_class,        ONLY: t_jsb_model
-  USE mo_jsb_class,              ONLY: Get_model
-  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
-  USE mo_jsb_cqt_class,          ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
-    &                                  BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
-  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_class,        ONLY: Get_model
+  USE mo_jsb_memory_class, ONLY: t_jsb_memory
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_lct_class,    ONLY: LAND_TYPE, BARE_TYPE, VEG_TYPE
+  USE mo_jsb_cqt_class,    ONLY: LIVE_CARBON_CQ_TYPE, AG_DEAD_C_CQ_TYPE, &
+    &                            BG_DEAD_C_CQ_TYPE, PRODUCT_CARBON_CQ_TYPE, FLUX_C_CQ_TYPE
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes PHENO_, CARBON_
@@ -37,10 +39,11 @@ MODULE mo_carbon_memory_class
 
   PUBLIC :: t_carbon_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 155
+  INTEGER, PARAMETER :: max_no_of_vars = 300
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_carbon_memory
+
     ! 1d reals:
     !REAL(wp) ::            &
     TYPE(t_jsb_var_real2d) ::     &
@@ -280,6 +283,7 @@ CONTAINS
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_memory'
+
     IF (lct_ids(1) > 0) CONTINUE ! avoid compiler warning about dummy argument not being used
 
     IF (lct_ids(1) > 0) CONTINUE ! avoid compiler warning about dummy argument not being used

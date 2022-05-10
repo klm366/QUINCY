@@ -638,7 +638,6 @@ CONTAINS
 
     ! Finally, give the required variables back to the atmosphere
     CALL model%Get_top_tile(tile)
-
     CALL update_land2atm(                        &
       & tile,                                    &
       & model%options(no_omp_thread),            &

@@ -126,6 +126,7 @@ MODULE mo_pheno_memory_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_memory_class'
 
+
 CONTAINS
 
   ! ======================================================================================================= !
@@ -160,12 +161,11 @@ CONTAINS
 
     dsl4jsb_Get_config(PHENO_)
 
-    !! do not add these variables if use_quincy=.TRUE.
-    !! some of these var are added to memory anyway, as they are needed also for quincy, see below
-    IF (.NOT. model%config%use_quincy) THEN
-    
     !! !$acc enter data pcreate(mem)
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! default jsbach4 memory
+    !
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  ) ) THEN
@@ -177,19 +177,6 @@ CONTAINS
         !$ACC ENTER DATA ATTACH(mem%lai_mon, mem%fract_fpc_mon)
       ! END IF
 
-      IF (TRIM(mem%owner_tile_name) == 'box') THEN
-        grib2_desc = t_grib2(2,0,28, grib_bits)
-      ELSE
-        grib2_desc = t_grib2(255, 255, 255, grib_bits)
-      END IF
-      CALL mem%Add_var( 'lai', mem%lai,                                        &
-        & hgrid, surface,                                                      &
-        & t_cf('leaf_area_index', '', ''),                                     &
-        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
-        & prefix, suffix,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                  &
-        & initval_r=0.0_wp )
-
       CALL mem%Add_var( 'lai_ta', mem%lai_ta,                                  &
         & hgrid, surface,                                                      &
         & t_cf('leaf_area_index', '', ''),                                     &
@@ -198,11 +185,13 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      ! setting for: fract_fpc
       IF (TRIM(mem%owner_tile_name) == 'veg') THEN
         grib2_desc = t_grib2(2,0,228, grib_bits)
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
+      
       CALL mem%Add_var( 'fract_fpc', mem%fract_fpc,                            &
         & hgrid, surface,                                                      &
         & t_cf('foliage_projected_cover', '', ''),                             &
@@ -235,6 +224,8 @@ CONTAINS
         & lrestart=.TRUE.,                                                     &
         & initval_r=0.0_wp )
 
+      ! --------------------------------------------------------------------------------------------------- !
+      ! logrop
       IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
 
         CALL mem%Add_var('growth_phase_sg', mem%growth_phase_SG,               &
@@ -342,6 +333,8 @@ CONTAINS
           & prefix, suffix,                                                    &
           & loutput=.FALSE., lrestart=.TRUE., initval_r=0._wp)
 
+        ! ------------------------------------------------------------------------------------------------- !
+        ! l_forestRegrowth
         IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
 
           CALL mem%Add_var('maxLAI_allom', mem%maxLAI_allom,                     &
@@ -378,6 +371,7 @@ CONTAINS
       END IF ! logrop
 
 #ifdef __ICON__
+      ! --------------------------------------------------------------------------------------------------- !
       ! Diagnostic global carbon sums for experiment monitoring
       !   (1d stream variables are not supported with echam)
       IF (TRIM(suffix) == 'box') THEN

@@ -163,6 +163,11 @@ MODULE mo_hydro_memory_class
       & canopy_cond_limited,    & !< Canopy conductance with water limit [m/s] (mean value)
       & transpiration             !< Transpiration
 
+    ! quincy - Soil Water addons for QUINCY in HYDRO
+    TYPE(t_jsb_var_real2d) :: &
+      & w_soil_root_theta, &      !< root zone integrated plant available water, fraction of maximum 
+      & w_soil_root_pot           !< soil water potential [MPa]
+
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,      & !< Snow fraction on glacier                                                 []
@@ -190,12 +195,6 @@ MODULE mo_hydro_memory_class
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       weq_snow_gsum,          & !< Global snow amount on non-glacier land   [Gt]
       weq_balance_err_gsum      !< Global water balance error sum           [m3/timestep]
-
-    !! quincy
-    !Soil Water addons for QUINCY in HYDRO
-    TYPE(t_jsb_var_real2d) :: &
-      & w_soil_root_theta,    & !< root zone integrated plant available water, fraction of maximum 
-      & w_soil_root_pot         !< soil water potential [MPa]
 
     !! quincy
     !Soil Water addons for QUINCY in HYDRO
@@ -262,6 +261,7 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     soil_w       => Get_vgrid('soil_depth_water')
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -1093,6 +1093,26 @@ CONTAINS
         & lrestart=.FALSE.,                                                              &
         & loutput=.TRUE., output_level=BASIC,                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var('w_soil_root_theta', mem%w_soil_root_theta, &
+        & hgrid, surface, &
+        & t_cf('w_soil_root_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('w_soil_root_pot', mem%w_soil_root_pot, &
+        & hgrid, surface, &
+        & t_cf('w_soil_root_pot', 'MPa', 'soil water potential'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
 
     END IF
 

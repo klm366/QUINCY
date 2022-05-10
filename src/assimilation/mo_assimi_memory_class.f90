@@ -32,15 +32,18 @@ MODULE mo_assimi_memory_class
   !> Type definition for assimi memory
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_assimi_memory
-     ! t_canopy_sum variables
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>1.0 jsbach4
+    !>
+    
+    ! t_canopy_sum variables
     TYPE(t_jsb_var_real2d) ::     &
       gross_assimilation_ca,      & ! Gross photosynthesis at each time step
                                     ! [mol(co2) / ( m^2(canopy ground) * s) ]  (mean value)
                                     ! Note, this is the gross assimilation on the ground below canopy area.
                                     ! This area is independent of the LAI. So even when the LAI is below 1 this area remains
                                     ! the same (it is still "covered").
-      gross_assimilation,         & ! ...on tile area
-                                    ! quincy: canopy-integrated gross assimilation rate [µmol CO2 m-2 s-1] 
       dark_respiration_ca,        & ! Dark respiration of leaf at each time step
                                     ! [mol(co2) / (m^2(canopy ground) * s) ]  (mean value)
       dark_respiration,           & ! see above but here on tile area
@@ -85,7 +88,6 @@ MODULE mo_assimi_memory_class
 !                                                                           ! (disturbance?)
 !
 
-
     ! t_canopy variables
     TYPE(t_jsb_var_real3d) ::     &
       & scaling_fact_cl,          &
@@ -100,9 +102,7 @@ MODULE mo_assimi_memory_class
       & carbox_rate_max_cl,       & ! [ mol(co2)/(m^2(leaf area) * s) ]
       & e_transport_rate_max_cl,  &
       & carbox_rate_cl,           &
-      & e_transport_rate_cl,      &
-      & CO2_conc_leaf_cl            ! CO2 concentration inside leaf [ mol(CO2)/ mol(AIR) ]
-                                    ! quincy: internal leaf CO2 concentration per canopy layer [ppm]
+      & e_transport_rate_cl
 
     TYPE(t_jsb_var_real2d) ::     &
       & canopy_cond_unlimited,    & ! Canopy conductance without water limit  [m/s] (mean value)
@@ -113,64 +113,89 @@ MODULE mo_assimi_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & cover_fract_pot             ! Potential Natural Land Cover Fraction
 
+    !------------------------------------------------------------------------------------------------------ !
+    !>2.0 jsbach4 & quincy
+    !>
 
-    !!---------------------------------------------------------------------------------------------
-    !! quincy - additional variables
-    !! 
+    TYPE(t_jsb_var_real2d) ::     &
+      & gross_assimilation          !< jsbach4: Gross photosynthesis on tile area at each time step
+                                    !<          [mol(co2) / ( m^2(canopy ground) * s) ]  (mean value)
+                                    !< quincy: canopy-integrated gross assimilation rate [µmol CO2 m-2 s-1] 
+
+    TYPE(t_jsb_var_real3d) ::     &
+      & gross_assimilation_cl,    & !< jsbach4: Gross photosynthesis [ mol(co2) / (m^2(leaf area) * s) ]
+                                    !<          Note, this is the gross assimilation on the leaf area that actually exists.
+                                    !<          The influence of the lai on the existing leaf area is aready included.
+                                    !<          It is not the ground area below canopy!
+                                    !< quincy:  gross assimilation rate per canopy layer [µmol CO2 m-2 s-1]
+      & canopy_cond_cl,           & !< jsbach4: Canopy conductance per layer and per leaf area
+                                    !< quincy:  conductance for water per canopy layer [m s-1]
+      & co2_conc_leaf_cl            !< jsbach4: CO2 concentration inside leaf [ mol(CO2)/ mol(AIR) ]
+                                    !< quincy:  internal leaf CO2 concentration per canopy layer [ppm]
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>3.0 quincy
+    !>
+
     ! fluxes
     TYPE(t_jsb_var_real2d)    :: &
-                              gross_assimilation_C13    , &  !< canopy-integrated gross assimilation rate [µmol 13CO2 m-2 s-1]
-                              gross_assimilation_C14    , &  !< canopy-integrated gross assimilation rate [µmol 14CO2 m-2 s-1]
-                              net_assimilation          , &  !< canopy-integrated net assimilation rate [µmol CO2 m-2 s-1] 
-                              net_assimilation_boc      , &  !< net assimilation rate at the bottom of the canopy [µmol CO2 m-2 s-1] 
-                              maint_respiration_leaf         !< canopy-integrated foliar respiration rate [µmol CO2 m-2 s-1]
+      & gross_assimilation_C13    , &  !< canopy-integrated gross assimilation rate [µmol 13CO2 m-2 s-1]
+      & gross_assimilation_C14    , &  !< canopy-integrated gross assimilation rate [µmol 14CO2 m-2 s-1]
+      & net_assimilation          , &  !< canopy-integrated net assimilation rate [µmol CO2 m-2 s-1] 
+      & net_assimilation_boc      , &  !< net assimilation rate at the bottom of the canopy [µmol CO2 m-2 s-1] 
+      & maint_respiration_leaf         !< canopy-integrated foliar respiration rate [µmol CO2 m-2 s-1]
 
     TYPE(t_jsb_var_real3d)    :: &
-                              net_assimilation_cl       , &  !< net assimilation rate per canopy layer [µmol CO2 m-2 s-1]
-                              maint_respiration_leaf_cl      !< foliar respiration rate per canopy layer [µmol CO2 m-2 s-1]
+      & net_assimilation_cl       , &  !< net assimilation rate per canopy layer [µmol CO2 m-2 s-1]
+      & maint_respiration_leaf_cl      !< foliar respiration rate per canopy layer [µmol CO2 m-2 s-1]
 
     ! other 
     TYPE(t_jsb_var_real2d)    :: &
-                              beta_air                  , &  !< scaling factor to account for air humidity effects on conductance [unitless]
-                              beta_soa                  , &  !< scaling factor to account for spring in coniferous forests [unitless]
-                              beta_soil_ps              , &  !< scaling factor to account for soil moisture constraints on photosynthesis [unitless]
-                              beta_soil_gs              , &  !< scaling factor to account for soil moisture constraints on conductance [unitless]
-                              canopy_cond               , &  !< canopy-integrated conductance for water [m s-1]
-                              co2_conc_leaf             , &  !< canopy-integrated internal leaf CO2 concentration [ppm]
-                              t_jmax_opt                     !< optimal temperature for electron transport of photosynthesis [°C]
+      & beta_air       , &  !< scaling factor to account for air humidity effects on conductance [unitless]
+      & beta_soa       , &  !< scaling factor to account for the 'state of acclimation' of evergreen conifers in spring, calculated from soa_tsoa_mavg [unitless]
+      & beta_soil_ps   , &  !< scaling factor to account for soil moisture constraints on photosynthesis [unitless]
+      & beta_soil_gs   , &  !< scaling factor to account for soil moisture constraints on conductance [unitless]
+      & canopy_cond    , &  !< canopy-integrated conductance for water [m s-1]
+      & co2_conc_leaf  , &  !< canopy-integrated internal leaf CO2 concentration [ppm]
+      & t_jmax_opt     , &  !< optimal temperature for electron transport of photosynthesis [°C]
+      & vpd                 !< 2m air vapour pressure deficit [Pa]
 
     ! diagnostics
     TYPE(t_jsb_var_real3d)    :: &
-                              jmax_cl                   , &  !< maximum rate of electron transport [µmol CO2 m-2 s-1]
-                              vcmax_cl                       !< maximum rate of carboxylation [µmol CO2 m-2 s-1]
+      & jmax_cl                   , &  !< maximum rate of electron transport [µmol CO2 m-2 s-1]
+      & vcmax_cl                       !< maximum rate of carboxylation [µmol CO2 m-2 s-1]
 
     ! averaging
     TYPE(t_jsb_var_real2d)    :: &
-                              soa_tsoa_mavg                  !< state of acclimation, used in calculation of beta_soa time-averaged
+      & soa_tsoa_mavg                  !< state of acclimation, used to calculate beta_soa
 
     TYPE(t_jsb_var_real2d)    :: &
-                              beta_air_daytime          , &  !< scaling factor to account for air humidity effects on conductance average of the previous day [unitless]
-                              beta_air_daytime_dacc     , &  !< scaling factor to account for air humidity effects on conductance average of the previous day [unitless]
-                              beta_air_tfrac_mavg       , &  !< scaling factor to account for air humidity effects on conductance time-averaged [unitless]
-                              beta_air_tcnl_mavg        , &  !< scaling factor to account for air humidity effects on conductance time-averaged [unitless]
-                              beta_soa_tphen_mavg            !< scaling factor to account for spring in coniferous forests time-averaged [unitless]
+      & beta_air_daytime          , &  !< scaling factor to account for air humidity effects on conductance average of the previous day [unitless]
+      & beta_air_daytime_dacc     , &  !< scaling factor to account for air humidity effects on conductance average of the previous day [unitless]
+      & beta_air_tfrac_mavg       , &  !< scaling factor to account for air humidity effects on conductance time-averaged [unitless]
+      & beta_air_tcnl_mavg        , &  !< scaling factor to account for air humidity effects on conductance time-averaged [unitless]
+      & beta_soa_tphen_mavg            !< scaling factor to account for the 'state of acclimation' of evergreen conifers in spring, time-averaged from beta_soa [unitless]
 
     TYPE(t_jsb_var_real2d)    :: &
-                              beta_soil_ps_daytime      , &  !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
-                              beta_soil_ps_daytime_dacc , &  !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
-                              beta_soil_ps_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on photosynthesis time-averaged [unitless]
-                              beta_soil_ps_tcnl_mavg    , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
-                              beta_soil_gs_daytime      , &  !< scaling factor to account for soil moisture constraints on conductance average of the previous day [unitless]
-                              beta_soil_gs_daytime_dacc , &  !< scaling factor to account for soil moisture constraints on conductance average of the previous day [unitless]
-                              beta_soil_gs_tphen_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
-                              beta_soil_gs_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
-                              beta_soil_gs_tcnl_mavg         !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+      & beta_soil_ps_daytime      , &  !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
+      & beta_soil_ps_daytime_dacc , &  !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
+      & beta_soil_ps_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on photosynthesis time-averaged [unitless]
+      & beta_soil_ps_tcnl_mavg    , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+      & beta_soil_gs_daytime      , &  !< scaling factor to account for soil moisture constraints on conductance average of the previous day [unitless]
+      & beta_soil_gs_daytime_dacc , &  !< scaling factor to account for soil moisture constraints on conductance average of the previous day [unitless]
+      & beta_soil_gs_tphen_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+      & beta_soil_gs_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+      & beta_soil_gs_tcnl_mavg         !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
+
+    TYPE(t_jsb_var_real2d)    :: &   
+      & daytime_counter                !< number of timesteps of current day with light available [#]
 
   CONTAINS
     PROCEDURE :: Init => Init_assimi_memory
   END TYPE t_assimi_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_memory_class'
+
 
 CONTAINS
 
@@ -179,33 +204,35 @@ CONTAINS
   !>
   SUBROUTINE Init_assimi_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
-
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, canopy_layer        ! Vertical grid
     TYPE(t_jsb_model), POINTER :: model
-    INTEGER :: table
-
+    INTEGER                    :: table
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_assimi_memory'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
     IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
-
-    table = tables(1)
-
-    hgrid   => Get_grid(mem%grid_id)
-    surface => Get_vgrid('surface')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model        => Get_model(model_id)
+    table        = tables(1)
+    hgrid        => Get_grid(mem%grid_id)
+    surface      => Get_vgrid('surface')
+#ifdef __QUINCY_STANDALONE__
+    vgrid_canopy => Get_vgrid('canopy_layer')
+#else
     canopy_layer => Get_vgrid('canopy_layer')
     model   => Get_model(model_id)
 

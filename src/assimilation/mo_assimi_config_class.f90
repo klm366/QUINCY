@@ -37,6 +37,7 @@ MODULE mo_assimi_config_class
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
+    CHARACTER(15)           :: canopy_conductance_scheme  !< select scheme to calculate canopy conductance [medlyn|ballberry]
    CONTAINS
      PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
@@ -139,6 +140,20 @@ CONTAINS
 
       CASE DEFAULT
         WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme',canopy_layer_scheme
+        CALL finish(routine, message_text) 
+    END SELECT
+
+    !< check canopy-conductance scheme
+    !! 
+    SELECT CASE(TRIM(config%canopy_conductance_scheme))
+      CASE ("medlyn")
+        CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
+          &                         ' the local lctlib_g1 variable is set to lctlib%g1_medlyn')
+      CASE ("ballberry")
+        CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
+          &                         ' the local lctlib_g1 variable is set to lctlib%g1_bberry')
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme)
         CALL finish(routine, message_text) 
     END SELECT
 

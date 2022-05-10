@@ -18,7 +18,7 @@ MODULE mo_atmland_interface
   USE mo_kind,            ONLY: wp
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid,           ONLY: Get_grid
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
@@ -45,8 +45,13 @@ MODULE mo_atmland_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_interface'
 
+
 CONTAINS
 
+
+  ! ======================================================================================================= !
+  !> update atm2land
+  !>
   SUBROUTINE update_atm2land( &
     & tile, options,          &
     & t_air,                  &
@@ -177,7 +182,6 @@ CONTAINS
     tile_contains_lake = tile%contains_lake
 
     model => Get_model(tile%owner_model_id)
-    use_quincy = model%config%use_quincy
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
@@ -359,7 +363,9 @@ CONTAINS
     IF (PRESENT(CO2_air)) THEN
       CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
-      IF (use_quincy) CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
+      IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+        CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
+      END IF
     END IF
     IF (PRESENT(drag_wtr)) THEN
       drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
@@ -390,6 +396,11 @@ CONTAINS
     END IF
     IF (PRESENT(q_bcoef_ice)) THEN
       q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
+    END IF
+
+    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+      prev_one_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
+      prev_two_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
     END IF
 
     !$acc parallel default(present)
@@ -616,6 +627,10 @@ CONTAINS
 
   END SUBROUTINE update_atm2land
 
+
+  ! ======================================================================================================= !
+  !> update land2atm
+  !>
   SUBROUTINE update_land2atm(tile, options,                                          &
     & t_srf, t_srf_rad, t_eff_srf, qsat_srf, s_srf,                                  &
     & fact_q_air, fact_qsat_srf, evapopot,                                           &

@@ -14,29 +14,32 @@
 MODULE mo_sse_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish
-
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
-  USE mo_jsb_class,        ONLY: Get_model
-  USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: finish
+  USE mo_util,                   ONLY: One_of
+  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
+  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE, BARE_TYPE
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes SSE_
-
-  ! Use process configurations
-  dsl4jsb_Use_config(SSE_)
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 80
 
+  ! ======================================================================================================= !
+  !>Type definition for soil_snow_energy memory
+  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
-    !
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>1.0 jsbach4
+    !>
+    
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
       & vol_heat_cap,         & !< Volumetric heat capacity of soil solids (from input file) [J m-3 K-1]
@@ -62,22 +65,134 @@ MODULE mo_sse_memory_class
       & grnd_hflx_old,        & !< ground heat flux (old)
       & thaw_depth              !< Thawing depth [m]
 
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>2.0 quincy
+    !>
+    ! present in HYDRO_ or not used outside quincy SSE_ tasks, maybe used in SB_
+    TYPE(t_jsb_var_real2d)          :: &
+                                    soil_depth      , & !< Soil depth derived from textures (bedrock) (for hydrology) [m]
+                                    root_depth      , & !< actual rooting depth [m]
+                                    t_srf_old       , & !< previous surface temperature [K]
+                                    zril_old            !< previous timestep's Reynold's number
+
+    ! present in HYDRO_ or not used outside quincy SSE_ tasks, maybe used in SB_
+    TYPE(t_jsb_var_real3d)          :: &
+                                    ! soil_depth_sl, &            !< Width ! of each soil layer that can be saturated with water (until bedrock) [m]
+                                    soil_lay_width_sl, &        !< width of each soil layer that can be saturated with water, identical with soil_depth_sl (until bedrock) [m]
+                                    soil_lay_depth_center_sl, & !< depth at the center of each soil layer that can be saturated with water (until bedrock) [m]
+                                    soil_lay_depth_ubound_sl, & !< depth at the upper bounddary (ubound > lbound !) of each soil layer that can be saturated with water (until bedrock) [m]
+                                    soil_lay_depth_lbound_sl    !< depth at the lower bounddary (ubound > lbound !) of each soil layer that can be saturated with water (until bedrock) [m]
+
+    ! present in HYDRO_ or not used outside quincy SSE_ tasks, maybe used in SB_
+    ! JSBACH HYDRO MEMORY (temporary here to get rid of vegsoil construct)
+    TYPE(t_jsb_var_real2d)          :: &
+                                    interception,     & !< surface interception evaporation  [kg m-2 s-1]
+                                    pet,              & !< potential evaporation  [kg m-2 s-1]
+                                    evaporation,      & !< surface evaporation  [kg m-2 s-1]
+                                    runoff,           & !< surface runoff  [kg m-2 s-1]
+                                    drainage,         & !< drainage        [kg m-2 s-1]
+                                    drainage_fraction   !< water mass fraction lost from the soil column by drainage [1 s-1] 
+
+    TYPE(t_jsb_var_real2d)          :: &
+                                    ! present in HYDRO_, not used outside quincy SSE_
+                                    w_skin,           & !< Water content in skin reservoir                                          [m]
+                                    ! present in HYDRO_, used in ASSIMI_ and VEG_
+                                    ! w_soil_root,      & !< Water content in root zone of the soil                                   [m]
+                                    ! w_soil_root_fc,   & !< Water content at field capacity in root zone of the soil                 [m]
+                                    ! w_soil_root_pwp,  & !< Water content at permanent wilting point in root zone of the soil        [m]
+                                    ! not present in jsb4, calculated in quincy SSE_, calc & var moved to jsb4 SSE_ "soil_and_snow_temperature" task
+                                    t_soil_root         !< Temperature of fine roots in the soil                                    [K]
+
+    TYPE(t_jsb_var_real3d)          :: &
+                                    ! used in quincy SSE_ & SB_, not present in jsb4
+                                    percolation_sl,   & !< fraction of mass transferred to below layer                              [fraction s-1]
+                                    drainage_sl!,      & !< drainage of soil layers                                                  [kg m-2 s-1]
+                                    ! present in HYDRO_,  not used outside quincy SSE_
+                                    ! w_soil_sl,        & !< Water content in soil layers                                             [m]
+                                    ! w_soil_sat_sl,    & !< Water content of soil layers at saturation 
+                                    !                     !< (derived from volumetric capacity at saturation)                         [m]
+                                    ! w_soil_fc_sl,     & !< Water content of soil layers at field capacity
+                                    !                     !< (derived from volumetric field capacity)                                 [m]
+                                    ! w_soil_pwp_sl,    & !< Water content of soil layers at permanent wilting point
+                                    !                     !< (derived from vol. perm wilt point)                                      [m]
+                                    ! not present in HYDRO_, needed in jsb4 HYDRO_ for quincy for calc of w_soil_root_pot
+                                    ! saxtonA,          & !< coefficient in moisture-tension relationship
+                                    ! saxtonB,          & !< coefficient in moisture-tension relationship
+                                    ! saxtonC ,          & !< exponent of moisture-conductivity relationship
+                                    ! not present in HYDRO_, needed only in quincy SSE_
+                                    ! kdiff_sat_sl        !< saturated hydraulic conductivity                                         [m s-1]
+
+    ! not present in HYDRO_ and not used outside quincy SSE_
+    ! heat fluxes
+    TYPE(t_jsb_var_real2d)          :: &                              
+                                    sensible_heat_flx     , &  !< sensible heat flux [W m-2]
+                                    latent_heat_flx       , &  !< latent heat flux [W m-2]
+                                    ground_heat_flx       , &  !< ground heat flux [W m-2]
+                                    ground_heat_flx_old        !< ground heat flux of previous timestep [W m-2]
+
+    ! present in HYDRO_ and used by quincy in VEG_
+    ! ! transpiration
+    ! TYPE(t_jsb_var_real2d)          :: &
+    !                                 transpiration       !< transpiration in [kg m-2 s-1]
+
+    ! moved to HYDRO_, needed outside quincy SSE_
+    !Soil Water addons for QUINCY in HYDRO
+    ! TYPE(t_jsb_var_real2d)          :: &
+    !                                 w_soil_root_theta, & !< root zone integrated plant available water, fraction of maximum 
+    !                                 w_soil_root_pot      !< soil water potential [MPa]
+
+    ! not present in HYDRO_, not used outside quincy SSE_
+    ! TYPE(t_jsb_var_real3d)          :: &
+    !                                 w_soil_pot_sl        !< soil water potential per layer [MPa]
+
+    ! present in jsb4 SSE_ too
+    ! soil energy 
+    ! TYPE(t_jsb_var_real3d)          :: &
+    !                                 t_soil_sl            !< soil temperature [K] 
+
+    ! not present in HYDRO_, not used outside quincy SSE_
+    ! soil physical properties
+    TYPE(t_jsb_var_real3d)          :: & 
+                                    ! heat_capa_sl,         &  !< soil heat capacity [J kg-1]
+                                    bulk_dens_sl!,         &  !< soil bulk density [kg m-3]
+                                    ! therm_cond_sl            !< soil thermal conductivity [W m-2 K-1]
+
+    TYPE(t_jsb_var_real3d)          :: & 
+                                    ! not present in HYDRO_, used outside quincy SSE_
+                                    sand_sl             , &  !< soil sand proportion of mineral soil
+                                    silt_sl             , &  !< soil silt proportion of mineral soil
+                                    clay_sl             , &  !< soil clay proportion of mineral soil(re-calculated as: clay = 1.0 -sand -silt)
+                                    ! not present in HYDRO_, used in quincy SSE_ & SB_
+                                    volume_min_sl       , &  !< soil mineral volumetric fraction
+                                    qmax_org_min_sl     , &  !< maximum OM sorption capacity of mineral soil, [mol C kg-1 mineral soil]
+                                    qmax_po4_min_sl     , &  !< maximum po4 sorption capacity of mineral soil, [mol P kg-1 mineral soil]
+                                    qmax_nh4_min_sl     , &  !< maximum nh4 sorption capacity of mineral soil, [mol N kg-1 mineral soil]
+                                    qmax_po4_om_sl           !< maximum po4 sorption capacity of SOM, [mol P kg-1 SOM]
+
   CONTAINS
     PROCEDURE :: Init => Init_sse_memory
   END TYPE t_sse_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sse_memory_class'
 
+
 CONTAINS
 
+
+  ! ======================================================================================================= !
+  !>initialize memory (variables) for the process: soil_snow_energy
+  !>
   SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM !, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, tables
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_class,         ONLY: Get_model
+    dsl4jsb_Use_config(SSE_)
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sse_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)            :: prefix
     CHARACTER(len=*),    INTENT(in)            :: suffix
@@ -85,26 +200,24 @@ CONTAINS
     INTEGER,             INTENT(in)            :: model_id
 
     dsl4jsb_Def_config(SSE_)
-
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, snow_e      ! Vertical grids
-    INTEGER :: table
-
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface, soil_e, snow_e      ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb                ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_snow_e                 ! Vertical grid
+    INTEGER                     :: table
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_memory'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (SIZE(lct_ids) < 1) CALL finish(routine, 'lcd_ids not specified')
-
-    model => Get_model(model_id)
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    model         => Get_model(model_id)
     dsl4jsb_Get_Config(SSE_)
-
-    table = tables(1)
-
-    hgrid => Get_grid(mem%grid_id)
-
-    surface => Get_vgrid('surface')
-    soil_e  => Get_vgrid('soil_depth_energy')
+    table         = tables(1)
+    hgrid         => Get_grid(mem%grid_id)
+    surface       => Get_vgrid('surface')
+    soil_e        => Get_vgrid('soil_depth_energy')
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    vgrid_snow_e  => Get_vgrid('snow_depth_energy')
     IF( dsl4jsb_Config(SSE_)%l_snow) THEN
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
@@ -190,6 +303,7 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
+    ! snow
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       CALL mem%Add_var( 'snow_depth_sl', mem%snow_depth_sl,                    &
         & hgrid, snow_e,                                                       &
@@ -265,6 +379,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=MEDIUM, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+#endif
 
   END SUBROUTINE Init_sse_memory
 

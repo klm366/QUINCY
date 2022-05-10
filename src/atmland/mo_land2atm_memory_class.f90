@@ -26,6 +26,7 @@ MODULE mo_l2a_memory_class
 #endif
 
   dsl4jsb_Use_processes CARBON_
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -67,6 +68,7 @@ MODULE mo_l2a_memory_class
   END TYPE t_l2a_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_l2a_memory_class'
+
 
 CONTAINS
 
@@ -263,6 +265,7 @@ CONTAINS
     END IF ! lake
 
     IF (model%processes(CARBON_)%p%config%active) THEN
+      
       CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
         & hgrid, surface,                                                              &
         & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
@@ -278,6 +281,53 @@ CONTAINS
         & prefix, suffix,                                                                          &
         & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
         & initval_r=0.0_wp )
+        
+    END IF
+#endif
+
+    ! lake 
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
+      
+      CALL mem%Add_var('latent_hflx_wtr', mem%latent_hflx_wtr, &
+        & hgrid, surface, &
+        & t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over water'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sensible_hflx_wtr', mem%sensible_hflx_wtr, &
+        & hgrid, surface, &
+        & t_cf('sensible_hflx_wtr', 'W m-2', 'sensible heat flux over water'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('latent_hflx_ice', mem%latent_hflx_ice, &
+        & hgrid, surface, &
+        & t_cf('latent_hflx_ice', 'W m-2', 'latent heat flux over ice'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('sensible_hflx_ice', mem%sensible_hflx_ice, &
+        & hgrid, surface, &
+        & t_cf('sensible_hflx_ice', 'W m-2', 'sensible heat flux over ice'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
     END IF
 
   END SUBROUTINE Init_l2a_memory

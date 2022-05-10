@@ -221,6 +221,7 @@ CONTAINS
 
     USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
+    USE mo_spq_init,            ONLY: spq_init
     USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
     USE mo_wlcc_init_lcc,       ONLY: wlcc_init_lcc
 
@@ -641,6 +642,11 @@ CONTAINS
       END SELECT
 #endif
 
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+          CALL tcq_init(tile)
+        END IF
 #ifndef __NO_JSBACH_HD__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
@@ -650,6 +656,7 @@ CONTAINS
         END IF
       END SELECT
 #endif
+      END SELECT
 
       CALL model%Goto_next_tile(tile)
       ! ---------------------------------------------------------------------------------------------- !
@@ -841,17 +848,18 @@ CONTAINS
         END IF
       END SELECT
 
-      IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL alcc_init_lcc(tile)
-      END IF
+        IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+          CALL alcc_init_lcc(tile)
+        END IF
 
-      IF (one_of(tile%process_action(FLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL flcc_init_lcc(tile)
-      END IF
+        IF (one_of(tile%process_action(FLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+          CALL flcc_init_lcc(tile)
+        END IF
 
-      IF (one_of(tile%process_action(WLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
-        CALL wlcc_init_lcc(tile)
-      END IF
+        IF (one_of(tile%process_action(WLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+          CALL wlcc_init_lcc(tile)
+        END IF
+      END SELECT
 
       CALL model%Goto_next_tile(tile)
     ENDDO

@@ -15,6 +15,7 @@
 !!
 
 MODULE mo_hermetic
+#ifndef __NO_JSBACH__
 
   IMPLICIT NONE
 
@@ -72,4 +73,5 @@ CONTAINS
 
   END SUBROUTINE CleanTemp
 
+#endif
 END MODULE mo_hermetic
