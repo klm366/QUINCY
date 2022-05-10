@@ -213,7 +213,8 @@ CONTAINS
 
         ! - add damaged area of current child to lost area
         CALL disturbed_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-        dsl4jsb_Get_memory_tile(DISTURB_, disturbed_tile)
+  ! this ugly indentation is needed to avoid a too long line after dsl macro application
+  dsl4jsb_Get_memory_tile(DISTURB_, disturbed_tile)
         dsl4jsb_Get_var2d_onChunk_tile_name(DISTURB_, damaged_fract, disturbed_tile)
         dsl4jsb_Get_memory_tile(PHENO_, disturbed_tile)
         dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_fract_correction, disturbed_tile)

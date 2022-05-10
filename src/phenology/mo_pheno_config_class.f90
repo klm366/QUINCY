@@ -24,7 +24,7 @@ MODULE mo_pheno_config_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_pheno_config, Init_pheno_config
+  PUBLIC :: t_pheno_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
     LOGICAL :: l_forestRegrowth ! If TRUE, the maxLAI is derived from biomass via allometric relationships

@@ -333,6 +333,7 @@ PROGRAM jsb4_driver
 
     CALL IO_read_streams
 
+    ! processes not active when using SPQ_
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
@@ -345,6 +346,7 @@ PROGRAM jsb4_driver
       END IF
       CALL model%Set_options(ics=ics, ice=ice, iblk=iblk)
 
+      ! processes not active and variables not available when using SPQ_
       t_srf_proc(ics:ice,iblk) = dsl4jsb_var2D_onChunk(SEB_, t)
       fact_q_air_proc(ics:ice,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_q_air)
       fact_qsat_srf_proc(ics:ice,iblk) = dsl4jsb_var2D_onChunk(TURB_, fact_qsat_srf)
