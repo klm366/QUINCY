@@ -206,6 +206,14 @@ MODULE mo_carbon_memory_class
       NPP_act_yDayMean_ta,           & ! mean value of actual NPP-Rate yesterday, i.e. after N-limitation.
                                        ! Actual NPP (after N-limitation and) excess carbon drop.
                                        ! [mol(CO2)/(m^2(tile area) s)]
+      ! use_alb_soil_npp <
+      mon_act_NPP,                   & ! value of actual NPP-Rateaveraged of the actual month
+                                       ! [mol(CO2)/(m^2(tile area) month)]      
+      mean_5year_NPP,                & ! mean value of actual NPP-Rateaveraged over the last 5 years
+                                       ! [mol(CO2)/(m^2(tile area) year)]
+      ratio_NPP,                     & ! ratio of 5-year averaged NPP-rate (mean_5year_NPP) and NPP-rate needed to produce an 
+                                       ! leaf area equal to the gird box area (mean_dark_NPP)
+      ! use_alb_soil_npp >
       GPP_yDayMean_ta,               & !
       root_exudates_ta,              & ! Total root exudates entering to the litter green pools [mol(C)/m^2(tile area) s]
       cflux_c_green_2_herb_ta,            & ! Total carbon flux from C pool green to herbivory.
@@ -224,6 +232,11 @@ MODULE mo_carbon_memory_class
       co2flux_herb_2_atm_ta,         & ! fluxes due to grazing
       co2flux_fire_all_2_atm_ta,     & ! Carbon immediatly released by fire per tile
       co2flux_npp_2_atm_yday_ta        ! previous day CO2 flux from actual NPP, required for C conservation test
+    ! use_alb_soil_npp >
+    TYPE(t_jsb_var_real3d) :: &
+    mon_5year_NPP                      ! monthly value of actual NPP-Rateaveraged of the last 5 years
+                                       ! [mol(CO2)/(m^2(tile area) month)]
+    ! use_alb_soil_npp >
 
 
     ! Diagnostic global carbon sums e.g. for monitoring (only available with ICON)
@@ -265,7 +278,10 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid     ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface   ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: surface, &
+    ! use_alb_soil_npp <
+      &                           mon_5y    ! Vertical grids
+    ! use_alb_soil_npp >
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_carbon_memory'
@@ -277,7 +293,10 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
-    
+    ! use_alb_soil_npp <
+    mon_5y  => Get_vgrid('month_of_last_5years')    
+    ! use_alb_soil_npp >
+
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(CARBON_)
 
@@ -985,7 +1004,44 @@ CONTAINS
       & lrestart=.FALSE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3. Initializing to zero would result
                                                   ! in a zero divide in the first time step of an initialized run.
 
-    CALL mem%Add_var('gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                             &
+    ! use_alb_soil_npp <
+    CALL mem%Add_var( 'mon_act_npp_act', mem%mon_act_NPP,                                            &
+      & hgrid, surface,                                                                              &
+      & t_cf('mon_act_NPP', 'mol(C) m-2 mon-1', 'Actual NPP Rate of the actual month.'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
+      & output_level=BASIC,                                                                          &
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
+
+
+    CALL mem%Add_var( 'mon_5year_npp', mem%mon_5year_NPP,                                            &
+      & hgrid, mon_5y,                                                                               &
+      & t_cf('mon_5year_NPP', 'mol(C) m-2 mon-1', 'Actual monthly NPP Rate of the last 5 years.'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
+      & output_level=BASIC,                                                                          &
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
+
+
+    CALL mem%Add_var( 'mean_5year_npp', mem%mean_5year_NPP,                                           &
+      & hgrid, surface,                                                                               &
+      & t_cf('mean_5year_NPP', 'mol(C) m-2 yr-1', 'Actual NPP Rate averaged over the last 5 years.'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                            &
+      & prefix, suffix,                                                                               &
+      & output_level=BASIC,                                                                           &
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. ) 
+    ! use_alb_soil_npp > in a zero divide in the first time step of an initialized run.
+
+    CALL mem%Add_var( 'ratio_npp', mem%ratio_NPP,                                                    &
+      & hgrid, surface,                                                                              &
+      & t_cf('ratio_NPP', 'none', 'Ratio of 5-year mean NPP rate and mean dark NPP Rate.'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
+      & prefix, suffix,                                                                              &
+      & output_level=BASIC,                                                                          &
+      & lrestart=.TRUE., initval_r=1.0E-13_wp, l_aggregate_all=.TRUE. )
+    ! use_alb_soil_npp > in a zero divide in the first time step of an initialized run.
+
+    CALL mem%Add_var( 'gpp_ydaymean_ta', mem%GPP_yDayMean_ta,                            &
       & hgrid, surface,                                                                  &
       & t_cf('GPP_yDayMean_ta', 'mol(C) m-2 s-1', 'Mean GPP Rate of the previous day.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &

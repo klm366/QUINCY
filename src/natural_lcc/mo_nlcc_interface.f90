@@ -115,7 +115,7 @@ CONTAINS
 
     USE mo_nlcc_process,   ONLY: calc_climbuf, bioclim_limits, potential_tree_fpc, fpc_to_cover_fract_pot, &
                                  cover_fract_pot_to_cover_fract, desert_fraction, fpc_daily, scale_fpc
-    USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday
+    USE mo_jsb_time,       ONLY: is_newyear, is_newmonth, is_newday, get_year_at_experiment_start, get_year
     USE mo_jsb_grid,       ONLY: Get_grid
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
@@ -129,8 +129,10 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER  ::  grid
     CLASS(t_jsb_tile_abstract),  POINTER  ::  ptr_tile
     LOGICAL  :: lstart, init_running_means, init_mmtemp20
+    INTEGER  :: init_running_mean_years
     INTEGER  :: iblk, ics, ice, nc, no_children
     INTEGER  :: i, itile
+    INTEGER  :: iniyear, currentyear
     REAL(wp) :: dtime
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
@@ -190,6 +192,10 @@ CONTAINS
 
     ! Local variables
     LOGICAL :: new_year, new_month, new_day
+
+    ! Inital and current year of the simulation
+    iniyear = get_year_at_experiment_start()
+    currentyear = get_year(options%current_datetime)
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -325,7 +331,12 @@ CONTAINS
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
 
-    init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
+    init_running_mean_years = dsl4jsb_Config(NLCC_)%init_running_mean_years
+    IF (init_running_mean_years > currentyear-iniyear) THEN
+       init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
+    ELSE
+       init_running_means = .FALSE.
+    ENDIF
     init_mmtemp20 = .TRUE.
     IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
     CALL calc_climbuf(lstart, init_running_means, new_day, new_month, new_year, dtime, t_air, &

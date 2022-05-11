@@ -31,6 +31,7 @@ MODULE mo_assimi_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
      LOGICAL               :: init_running_means ! initialize npp buffer for NLCC process
+     INTEGER               :: init_running_mean_years ! number of years for npp buffer
      INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
                                                ! R: could be different for other processes e.g. for radiation
      REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
@@ -64,6 +65,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
+    INTEGER                     :: init_running_mean_years
     INTEGER                     :: ncanopy, i
     TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
     !! quincy
@@ -83,6 +85,7 @@ CONTAINS
      & ic_filename,            &
      & bc_filename,            &
      & init_running_means,     &
+     & init_running_mean_years,&
      !! quincy
        flag_optimal_Nfraction,    &
        flag_t_resp_acclimation,   &
@@ -105,6 +108,7 @@ CONTAINS
     bc_filename         = 'bc_land_assimi.nc'
     ic_filename         = 'ic_land_assimi.nc'
     init_running_means  = .FALSE.
+    init_running_mean_years = 2
     ncanopy             = 3
     !X e.g: use_alb_veg_simple        = .FALSE.
     !! quincy
@@ -125,6 +129,7 @@ CONTAINS
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means
+    config%init_running_mean_years = init_running_mean_years
     config%ncanopy             = ncanopy
     !! quincy
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction

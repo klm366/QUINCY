@@ -37,6 +37,8 @@ MODULE mo_rad_config_class
                                       !   Use the complex calculations of the soil albedo from carbon in and
                                       !   on the soil (accounts for the soil under vegetation and for bare soil)
                                       !   if vegetation tile: only used if use_alb_veg_simple=.FALSE.
+      & use_alb_soil_npp,          &  !< For vegetation and bare soil tiles:
+                                      !   calculate soil albedo depending on NPP 
       & use_alb_mineralsoil_const, &  !< For vegetation and bare soil tiles:
                                       !   if TRUE constant parameter values are used for albedo of the mineral soil
                                       !   if FALSE values for albedo of the mineral soil are taken from
@@ -91,6 +93,7 @@ CONTAINS
     CHARACTER(len=10)           :: use_alb_soil_organic_C
     LOGICAL                     :: use_alb_soil_litter
     LOGICAL                     :: use_alb_soil_scheme
+    LOGICAL                     :: use_alb_soil_npp
     LOGICAL                     :: use_alb_canopy
     REAL(wp)                    :: albedo_age_weight
 
@@ -103,6 +106,7 @@ CONTAINS
          use_alb_soil_organic_C,      &
          use_alb_soil_litter,         &
          use_alb_soil_scheme,         &
+         use_alb_soil_npp,            &
          use_alb_canopy,              &
          albedo_age_weight
 
@@ -121,6 +125,7 @@ CONTAINS
     use_alb_soil_organic_C    = ''
     use_alb_soil_litter       = .FALSE.
     use_alb_soil_scheme       = .FALSE.
+    use_alb_soil_npp          = .FALSE.
     use_alb_canopy            = .FALSE.
     albedo_age_weight         = 0.5_wp
 
@@ -141,6 +146,7 @@ CONTAINS
     config%use_alb_soil_organic_C    = use_alb_soil_organic_C
     config%use_alb_soil_litter       = use_alb_soil_litter
     config%use_alb_soil_scheme       = use_alb_soil_scheme
+    config%use_alb_soil_npp          = use_alb_soil_npp
     config%use_alb_canopy            = use_alb_canopy
     config%albedo_age_weight         = albedo_age_weight
 
