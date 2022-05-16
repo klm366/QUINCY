@@ -124,6 +124,15 @@ MODULE mo_hydro_memory_class
                                 !! (derived from volumetric field capacity)                                 [m]
       & w_soil_pwp_sl           !< Water content of soil layers at permanent wilting point
                                 !! (derived from vol. perm wilt point)                                      [m]
+    ! quincy
+    TYPE(t_jsb_var_real3d) :: &
+      & w_soil_pot_sl           !< soil water potential per layer [MPa]    
+
+    ! quincy
+    TYPE(t_jsb_var_real3d) :: &
+      & saxtonA,              & !< coefficient in moisture-tension relationship
+      & saxtonB,              & !< coefficient in moisture-tension relationship
+      & saxtonC                 !< exponent of moisture-conductivity relationship
 
     ! Additional variables for PFT lct_type
 
@@ -142,6 +151,11 @@ MODULE mo_hydro_memory_class
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
       & transpiration           !< Transpiration
 
+    ! quincy - Soil Water addons for QUINCY in HYDRO
+    TYPE(t_jsb_var_real2d) :: &
+      & w_soil_root_theta, &      !< root zone integrated plant available water, fraction of maximum 
+      & w_soil_root_pot           !< soil water potential [MPa]
+
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,      & !< Snow fraction on glacier                                                 []
@@ -158,12 +172,6 @@ MODULE mo_hydro_memory_class
       & evapo_ice,            & !< Evaporation over lake ice
       & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
       & w_snow_lice             !< Water content of snow on lake ice                                        [m water equivalent]
-
-    !! quincy
-    !Soil Water addons for QUINCY in HYDRO
-    TYPE(t_jsb_var_real2d) :: &
-      & w_soil_root_theta,    & !< root zone integrated plant available water, fraction of maximum 
-      & w_soil_root_pot         !< soil water potential [MPa]
 
     ! Diagnostic global land means/sums e.g. for monitoring (only available with ICON)
     TYPE(t_jsb_var_real1d) :: &
@@ -208,6 +216,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_w  ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb    ! Vertical grid
     INTEGER :: table
     TYPE(t_grib2) :: grib2_desc
 
@@ -222,6 +231,7 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     soil_w       => Get_vgrid('soil_depth_water')
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -736,6 +746,46 @@ CONTAINS
         & loutput=.TRUE., &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var('w_soil_pot_sl', mem%w_soil_pot_sl, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('w_soil_pot_sl', 'MPa', 'soil water potential per layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('saxtonA', mem%saxtonA, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('saxtonA', '', 'coefficient in moisture-tension relationship'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('saxtonB', mem%saxtonB, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('saxtonB', '', 'coefficient in moisture-tension relationship'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('saxtonC', mem%saxtonC, &
+        & hgrid, vgrid_soil_sb, &
+        & t_cf('saxtonC', '', 'exponent of moisture-conductivity relationship'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
       CALL mem%Add_var('w_soil_rel', mem%w_soil_rel,                                &
         &  hgrid, surface,                                                          &
         &  t_cf('water_soil_relative', '', ''),                                     &
@@ -844,6 +894,26 @@ CONTAINS
         & loutput=.TRUE., &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var('w_soil_root_theta', mem%w_soil_root_theta, &
+        & hgrid, surface, &
+        & t_cf('w_soil_root_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('w_soil_root_pot', mem%w_soil_root_pot, &
+        & hgrid, surface, &
+        & t_cf('w_soil_root_pot', 'MPa', 'soil water potential'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
     END IF
 
     ! Additional variables for GLACIER lct
@@ -915,27 +985,6 @@ CONTAINS
       END IF
 
     END IF
-
-    !! quincy
-    IF (model%config%use_quincy) THEN
-      CALL mem%Add_var('w_soil_root_theta', mem%w_soil_root_theta,                                           &
-        & hgrid, surface,                                                                                    &
-        & t_cf('w_soil_root_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
-        & t_grib1(table, 255, grib_bits),                                                                    &
-        & t_grib2(255, 255, 255, grib_bits),                                                                 &
-        & prefix, suffix,                                                                                    &
-        & loutput=.TRUE., lrestart=.TRUE.,                                                                   &
-        & initval_r=0.0_wp) ! initvalue
-
-      CALL mem%Add_var('w_soil_root_pot', mem%w_soil_root_pot,                                               &
-        & hgrid, surface,                                                                                    &
-        & t_cf('w_soil_root_pot', 'MPa', 'soil water potential'),                                            &
-        & t_grib1(table, 255, grib_bits),                                                                    &
-        & t_grib2(255, 255, 255, grib_bits),                                                                 &
-        & prefix, suffix,                                                                                    &
-        & loutput=.TRUE., lrestart=.TRUE.,                                                                   &
-        & initval_r=0.0_wp) ! initvalue
-    ENDIF
 
 #ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring

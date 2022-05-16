@@ -126,15 +126,15 @@ CONTAINS
   !! constants for the calculation of atmospheric water content at saturation
   !! from Campell and Norman's Introduction to Environmental Biophysics
   !-----------------------------------------------------------------------------------------------------
-  PURE ELEMENTAL FUNCTION calc_spec_humidity_sat(temp,press_srf) RESULT(q_sat)
+  PURE ELEMENTAL FUNCTION calc_spec_humidity_sat(t_air, press_srf) RESULT(q_sat)
 
     USE mo_atmland_constants,       ONLY: eps_vpd
-    USE mo_jsb_physical_constants,  ONLY: tmelt
+    USE mo_jsb_physical_constants,  ONLY: Tzero
 
     IMPLICIT NONE 
     ! ---------------------------
     ! 0.1 InOut
-    REAL(wp), INTENT(in) :: temp            !< temperature (K)
+    REAL(wp), INTENT(in) :: t_air           !< air temperature (K)
     REAL(wp), INTENT(in) :: press_srf       !< atmospheric pressure (Pa) 
     REAL(wp)             :: q_sat           !< saturating specific humidity (g/g) 
     ! ---------------------------
@@ -158,13 +158,13 @@ CONTAINS
     tmin = 150._wp   ! for temperatures lower 50 K esat gets unreasonable numbers from the below calculations (very large / very small)
 
     ! calculating saturating vapour pressure [Pa] (Campbell & Norman)
-    IF(temp >= tmin) THEN
-       esat = a * exp(b * (temp - tmelt)/(temp - tmelt + c))
+    IF(t_air >= tmin) THEN
+       esat = a * EXP(b * (t_air - Tzero) / (t_air - Tzero + c))
     ELSE
-       esat = a * exp(b * (tmin - tmelt)/(tmin - tmelt + c))
+       esat = a * EXP(b * (tmin - Tzero) / (tmin - Tzero + c))
     ENDIF
     ! conversion to saturating specific humidity [kg kg-1]
-    q_sat = eps_vpd * esat/(press_srf - (1.0_wp - eps_vpd) * esat)
+    q_sat = eps_vpd * esat / (press_srf - (1.0_wp - eps_vpd) * esat)
 
   END FUNCTION calc_spec_humidity_sat
 

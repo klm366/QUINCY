@@ -1,4 +1,22 @@
 !>
+!!  @par Copyright
+!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+!!
+!!    This file is part of the QUINCY model.
+!!    The QUINCY model is free software: you can redistribute it and/or modify
+!!    it under the terms of the GNU General Public License version 3,
+!!    as published by the Free Software Foundation.
+!!
+!!    The QUINCY model is distributed in the hope that it will be useful,
+!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!    GNU General Public License for more details.
+!!
+!!    You should have received a copy of the GNU General Public License
+!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!! 
 !! @brief Contains constants for the vegetation process
 !!
 !! @author
@@ -19,21 +37,23 @@ MODULE mo_veg_constants
   ! Respiration parameters
   REAL(wp), SAVE :: & 
       ! growth respiration per unit new biomass
-      fresp_growth      , &   !< growth respiration per unit new biomass 
+      fresp_growth          , &   !< growth respiration per unit new biomass 
       ! N-specific foliar maintenance respiration rate (µmol CO2 / mol N / s)
       ! Taken from Sprugel et al. Respiration from the organ level to the stand. 
       ! In: Smith WK, Hinckley, T.M., editor. Physiological Ecology of Coniferous Forests.
       ! San Diego, CA, USA: Academic Press; 1996.
       ! Note converted from 7.4 e-7 to 1.25 e-6 to account for the different values of the Lloyd&Taylor equation
       ! such that the applied rates a comparable at 15-20°C
-      fmaint_rate_base  , &   !< N-specific maintenance respiration rate for roots and leaves (µmol CO2 / mmol N / s) 
-      fmaint_rate_wood  , &   !< N-specific maintenance respiration rate for wood (µmol CO2 / mmol N / s) 
+      fmaint_rate_base      , &   !< N-specific maintenance respiration rate for roots and leaves (µmol CO2 / mmol N / s) 
+      fmaint_rate_wood      , &   !< N-specific maintenance respiration rate for wood (µmol CO2 / mmol N / s) 
       ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
-      t_maint_k1        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      t_maint_k2        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      t_maint_k3        , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
-      f_resp_acclim     , &   !< respiration temperature acclimation factor 
-      t_acclim_zero           !< base temperature for respiration acclimation 
+      t_maint_k1            , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      t_maint_k2            , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      t_maint_k3            , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
+      ! 
+      f_resp_acclim         , &   !< respiration temperature acclimation factor 
+      t_acclim_zero         , &   !< base temperature for respiration acclimation 
+      k_maint_resp_suppress       !< factor reduce maintentance respiration [unitless]
 
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
   REAL(wp), SAVE :: &      
@@ -105,7 +125,6 @@ MODULE mo_veg_constants
       f_nacq_nh4           , &
       vmax_bnf             , & !< maximum rate of N fixation (µmol N / mol C fine root / s )
       k_bnf                , & !< half_saturating cost of the response of N fixation (mol C / mol N) 
-      offset_bnf           , & !< factor for BNF response in resistance approach (mol C / mol N)
       eta_nfixation        , & !< fractionation of N15 due to N fixation (per mill), parameter value from Robinson, Tree 2001
       f_myc_exudation_max  , & !< maximum fraction of current growth allocated to mycorrhiza
       f_mycorrhization_min , & !< minimum root mycorrhization 
@@ -212,6 +231,7 @@ CONTAINS
       t_maint_k3                  = 227.13_wp 
       f_resp_acclim               = -0.008_wp
       t_acclim_zero               = 283.15_wp 
+      k_maint_resp_suppress       = 1.0_wp        ! set to 1.0 on purpose, not reducing maint_respiration; ticket https://projects.bgc-jena.mpg.de/QUINCY/ticket/594
 
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
       k0_fn_pepc_C3               = 0.0_wp 
@@ -268,12 +288,11 @@ CONTAINS
       transform_cost_org          = 1.0_wp    / (molar_mass_C/molar_mass_N)
       f_nacq_nh4                  = transform_cost_no3 / (transform_cost_no3 + transform_cost_nh4)
       f_nacq_no3                  = transform_cost_nh4 / (transform_cost_no3 + transform_cost_nh4)
-      vmax_bnf                    = 5.0_wp * 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day*one_year) * 1.e6_wp
-      k_bnf                       = 50.0_wp   / (molar_mass_C/molar_Mass_N)
-      offset_bnf                  = 6.0_wp * (f_nacq_nh4 * transform_cost_nh4 + f_nacq_no3 * transform_cost_no3)
+      vmax_bnf                    = 0.0225_wp / (molar_mass_N/molar_mass_C) / (one_day * one_year) * 1.e6_wp
+      k_bnf                       = 5.0_wp    / (molar_mass_C/molar_Mass_N)
       eta_nfixation               = 3.0_wp                   ! Robinson, Tree 2001
       f_myc_exudation_max         = 0.3_wp
-      f_mycorrhization_min        = 0.01_wp
+      f_mycorrhization_min        = 0.1_wp
       f_mycorrhization_max        = 0.5_wp
 
   ! parameters to describe the varying fraction of N in chlorophyll through the canopy

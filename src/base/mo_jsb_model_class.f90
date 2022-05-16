@@ -34,6 +34,7 @@ MODULE mo_jsb_model_class
 
   PUBLIC :: t_jsb_model_m, t_jsb_model
   PUBLIC :: new_model, print_model, delete_model
+  PUBLIC :: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
 
   !>
   !! Type for model structure
@@ -104,6 +105,15 @@ MODULE mo_jsb_model_class
   TYPE t_jsb_model_m
     TYPE(t_jsb_model), POINTER :: m
   END TYPE t_jsb_model_m
+
+
+  !>model schemes
+  !!  model_scheme namlist option in mo_jsb_config_class:t_jsb_model_config
+  !!  NOTE in mo_jsb_config_class:new_model_config this ENUM is not used, but replaced by INTEGER, to avoid a dependency cycle
+  ENUM, BIND(C)
+    ENUMERATOR :: MODEL_JSBACH=1, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  END ENUM
+
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_class'
 
@@ -569,6 +579,9 @@ CONTAINS
             var%subset_type = itype
           END SELECT
         END DO
+
+        IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
+          & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
 
       END DO
 

@@ -222,10 +222,6 @@ MODULE mo_jsb_var_class
     CLASS(t_jsb_var), POINTER :: p => NULL()
   END TYPE t_jsb_var_p
 
-!!$  INTERFACE t_jsb_var
-!!$    PROCEDURE :: Create_jsb_var
-!!$  END INTERFACE t_jsb_var
-
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_var_class'
 
 CONTAINS
