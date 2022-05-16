@@ -291,7 +291,7 @@ CONTAINS
 !!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
 
-    IF (is_time_experiment_start(options%current_datetime) .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+    IF (is_time_experiment_start(options%current_datetime)) THEN
       lstart = .TRUE.
     ELSE
       lstart = .FALSE.
