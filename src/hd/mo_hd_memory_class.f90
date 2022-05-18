@@ -51,11 +51,12 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
-      water_budget    , &
-      water_budget_old, &
-      water_flux      , &
-      water_error     , &
-      outflow_resid   , &  !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
+      local_budget    , &  !< discharge from upstream cells
+      local_fluxes    , &  !< discharge from upstream cells
+      local_wbal_error, &  !< discharge from upstream cells
+      water_budget    , &  !< HD water budget
+      water_budget_change, & !< water budget change within the time step
+      outflow_resid        !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
       outflow_count        !< count of outflows from a given cell - only used for debugging (see mo_hd_interface.f90)
 
     TYPE(t_jsb_var_real3d) :: &
@@ -209,7 +210,7 @@ CONTAINS
 
     CALL mem%Add_var( 'outflow_resid', mem%outflow_resid,                          &
       & hgrid, surface,                                                                       &
-      & t_cf('outflow_resid', 'm3/s', 'grid cell outflow residual'),                    &
+      & t_cf('outflow_resid', 'm3/s', 'grid cell outflow residual: should be zero.'),         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                    &
       & prefix, suffix,                                                                 &
       & initval_r=0.0_wp )
@@ -242,6 +243,29 @@ CONTAINS
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
+    CALL mem%Add_var( 'local_budget', mem%local_budget,                                  &
+      & hgrid, surface,                                                                  &
+      & t_cf('local_budget', 'm3/s', 'Total HD reservoir content'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'local_fluxes', mem%local_fluxes,                                  &
+      & hgrid, surface,                                                                  &
+      & t_cf('local_fluxes', 'm3/s', 'Fluxes for local water balance check'),            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.FALSE.,                                                                &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'local_wbal_error', mem%local_wbal_error,                          &
+      & hgrid, surface,                                                                  &
+      & t_cf('local_wbal_error', 'm3', 'Local water balance error'),                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.FALSE.,                                                                &
+      & initval_r=0.0_wp )
+
     CALL mem%Add_var( 'water_budget', mem%water_budget,                             &
       & hgrid, surface,                                                                  &
       & t_cf('hd_water_budget', 'm3', 'HD water budget'),                                &
@@ -250,25 +274,9 @@ CONTAINS
       & lrestart=.TRUE.,                                                                 &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'water_budget_old', mem%water_budget_old,                     &
+    CALL mem%Add_var( 'water_budget_change', mem%water_budget_change,                    &
       & hgrid, surface,                                                                  &
-      & t_cf('hd_water_budget_old', 'm3', 'HD water budget (prev. time step)'),          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-      & prefix, suffix,                                                                  &
-      & lrestart=.FALSE.,                                                                &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'water_flux', mem%water_flux,                                 &
-      & hgrid, surface,                                                                  &
-      & t_cf('hd_water_flux', 'm3/s', 'HD water flux'),                                  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
-      & prefix, suffix,                                                                  &
-      & lrestart=.FALSE.,                                                                &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'water_error', mem%water_error,                               &
-      & hgrid, surface,                                                                  &
-      & t_cf('hd_water_error', 'm3', 'HD water imbalance during time step'),             &
+      & t_cf('hd_water_budget_change', 'm3', 'HD water budget change within time step'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
       & lrestart=.FALSE.,                                                                &
