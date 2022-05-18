@@ -55,12 +55,12 @@ MODULE mo_veg_memory_class
             Deallocate_var_veg_pools_elements_a                                   ! mo_veg_memory_class_util
   PUBLIC :: veg_pool, veg_growth, veg_litterfall, veg_falloc, veg_total_flux      ! mo_veg_memory_class_util
   PUBLIC :: veg_exudation, veg_establishment, veg_reserve_use, veg_total_biomass  ! mo_veg_memory_class_util
-  INTEGER, PARAMETER :: max_no_of_vars      = 250  !> TYPE t_jsb_var
-  INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct
-  INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct
+  INTEGER, PARAMETER :: max_no_of_vars      = 250  !< TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_structs   = 20   !< TYPE t_jsb_struct
+  INTEGER, PARAMETER :: max_no_of_n_structs = 20   !< TYPE t_jsb_n_struct
 #else
   PUBLIC :: t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
-  INTEGER, PARAMETER :: max_no_of_vars      = 530    !> TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
+  INTEGER, PARAMETER :: max_no_of_vars      = 530    !< TYPE t_jsb_var | 'normal' var: ~ 220 | 5 pools: 270 var | 4 tissues: 24
 #endif
 
   ! ======================================================================================================= !
@@ -352,11 +352,11 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_veg_memory),  INTENT(inout), TARGET  :: mem             !> veg memory
-    CHARACTER(len=*),     INTENT(in)             :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)             :: suffix          !> tile name
-    INTEGER,              INTENT(in)             :: lct_ids(:)      !> vector of land cover type IDs
-    INTEGER,              INTENT(in)             :: model_id        !> model ID model\%id
+    CLASS(t_veg_memory),  INTENT(inout), TARGET  :: mem             !< veg memory
+    CHARACTER(len=*),     INTENT(in)             :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)             :: suffix          !< tile name
+    INTEGER,              INTENT(in)             :: lct_ids(:)      !< vector of land cover type IDs
+    INTEGER,              INTENT(in)             :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     TYPE(t_jsb_grid),           POINTER :: hgrid                        ! Horizontal grid

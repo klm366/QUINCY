@@ -722,11 +722,11 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_quincy_struct_veg_element), INTENT(inout) :: this 
-    CHARACTER(len=*),                   INTENT(in)    :: prefix          !> process name
-    CHARACTER(len=*),                   INTENT(in)    :: suffix          !> tile name
-    INTEGER,                            INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,                            INTENT(in)    :: model_id        !> model ID model\%id
-    CHARACTER(len=*),                   INTENT(in)    :: unit            !> unit of the variables in the elements
+    CHARACTER(len=*),                   INTENT(in)    :: prefix          !< process name
+    CHARACTER(len=*),                   INTENT(in)    :: suffix          !< tile name
+    INTEGER,                            INTENT(in)    :: lct_ids !(:)    !< in jsbach4: vector of land cover type IDs
+    INTEGER,                            INTENT(in)    :: model_id        !< model ID model\%id
+    CHARACTER(len=*),                   INTENT(in)    :: unit            !< unit of the variables in the elements
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
@@ -826,11 +826,11 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_quincy_struct_veg_pool),  INTENT(inout) :: this 
-    CHARACTER(len=*),                 INTENT(in)    :: prefix          !> ?
-    CHARACTER(len=*),                 INTENT(in)    :: suffix          !> ?
-    INTEGER,                          INTENT(in)    :: lct_ids !(:)    !> in jsbach4: vector of land cover type IDs
-    INTEGER,                          INTENT(in)    :: model_id        !> model ID model\%id
-    CHARACTER(len=*),                 INTENT(in)    :: unit            !> unit of the variables in the elements
+    CHARACTER(len=*),                 INTENT(in)    :: prefix          !< ?
+    CHARACTER(len=*),                 INTENT(in)    :: suffix          !< ?
+    INTEGER,                          INTENT(in)    :: lct_ids !(:)    !< in jsbach4: vector of land cover type IDs
+    INTEGER,                          INTENT(in)    :: model_id        !< model ID model\%id
+    CHARACTER(len=*),                 INTENT(in)    :: unit            !< unit of the variables in the elements
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER  :: model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid

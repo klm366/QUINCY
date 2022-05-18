@@ -107,10 +107,10 @@ MODULE mo_spq_memory_class
 
     ! heat fluxes
     TYPE(t_jsb_var_real2d)          :: &                              
-                                    sensible_heat_flx     , &  !> sensible heat flux [W m-2]
-                                    latent_heat_flx       , &  !> latent heat flux [W m-2]
-                                    ground_heat_flx       , &  !> ground heat flux [W m-2]
-                                    ground_heat_flx_old        !> ground heat flux of previous timestep [W m-2]
+                                    sensible_heat_flx     , &  !< sensible heat flux [W m-2]
+                                    latent_heat_flx       , &  !< latent heat flux [W m-2]
+                                    ground_heat_flx       , &  !< ground heat flux [W m-2]
+                                    ground_heat_flx_old        !< ground heat flux of previous timestep [W m-2]
 
     ! transpiration
     TYPE(t_jsb_var_real2d)          :: &
@@ -170,11 +170,11 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_spq_memory), INTENT(inout), TARGET  :: mem             !> spq memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
-    INTEGER,              INTENT(in)            :: lct_ids(:)      !> in jsbach4: vector of land cover type IDs
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    CLASS(t_spq_memory), INTENT(inout), TARGET  :: mem             !< spq memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
+    INTEGER,              INTENT(in)            :: lct_ids(:)      !< in jsbach4: vector of land cover type IDs
+    INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid

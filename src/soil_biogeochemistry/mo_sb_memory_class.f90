@@ -55,12 +55,12 @@ MODULE mo_sb_memory_class
             Deallocate_var_sb_pools_elements_a              ! mo_sb_memory_class_util
   PUBLIC :: sb_pool, sb_formation, sb_loss, sb_transport    ! mo_sb_memory_class_util
   PUBLIC :: sb_delta_pools, sb_mycorrhiza_export            ! mo_sb_memory_class_util
-  INTEGER, PARAMETER :: max_no_of_vars      = 200  !> TYPE t_jsb_var
-  INTEGER, PARAMETER :: max_no_of_structs   = 20   !> TYPE t_jsb_struct
-  INTEGER, PARAMETER :: max_no_of_n_structs = 20   !> TYPE t_jsb_n_struct
+  INTEGER, PARAMETER :: max_no_of_vars      = 200  !< TYPE t_jsb_var
+  INTEGER, PARAMETER :: max_no_of_structs   = 20   !< TYPE t_jsb_struct
+  INTEGER, PARAMETER :: max_no_of_n_structs = 20   !< TYPE t_jsb_n_struct
 #else
   PUBLIC :: t_sb_main_pool, t_sb_components_pool, t_sb_elements_pool
-  INTEGER, PARAMETER :: max_no_of_vars      = 480  !> TYPE t_jsb_var | 'normal' var: ~ 200 | 4 pools: 240 var | 2 tissues: 12
+  INTEGER, PARAMETER :: max_no_of_vars      = 480  !< TYPE t_jsb_var | 'normal' var: ~ 200 | 4 pools: 240 var | 2 tissues: 12
 #endif
 
   ! ======================================================================================================= !
@@ -333,11 +333,11 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !> SB_ memory
-    CHARACTER(len=*),     INTENT(in)            :: prefix          !> process name
-    CHARACTER(len=*),     INTENT(in)            :: suffix          !> tile name
-    INTEGER,              INTENT(in)            :: lct_ids(:)      !> vector of land cover type IDs
-    INTEGER,              INTENT(in)            :: model_id        !> model ID model\%id
+    CLASS(t_sb_memory),   INTENT(inout), TARGET :: mem             !< SB_ memory
+    CHARACTER(len=*),     INTENT(in)            :: prefix          !< process name
+    CHARACTER(len=*),     INTENT(in)            :: suffix          !< tile name
+    INTEGER,              INTENT(in)            :: lct_ids(:)      !< vector of land cover type IDs
+    INTEGER,              INTENT(in)            :: model_id        !< model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),          POINTER :: model
     TYPE(t_jsb_grid),           POINTER :: hgrid                        ! Horizontal grid
