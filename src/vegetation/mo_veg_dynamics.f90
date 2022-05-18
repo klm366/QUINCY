@@ -64,7 +64,9 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     ! USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, HYDRO_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
     USE mo_jsb_process_class,     ONLY: A2L_, L2A_, SEB_, TURB_, SPQ_, VEG_, HD_, RAD_, ASSIMI_, PHENO_, SB_
+#ifdef __QUINCY_STANDALONE__
     USE mo_jsb4_forcing,          ONLY: forcing_options
+#endif
     USE mo_veg_constants,         ONLY: itree
 
     ! Use of process configurations (t_PROC_config)
@@ -216,6 +218,7 @@ CONTAINS
     !> 1.1 check stand harvest year (if this functionality is enabled: model%config\%flag_stand_harvest)
     !! 
     !! but enable harvesting only after transient spinup, i.e., when l_transient_spinup=FALSE
+#ifdef __QUINCY_STANDALONE__
     IF (model%config%flag_stand_harvest .AND. .NOT. model%config%l_transient_spinup) THEN
       model%config%l_do_stand_replacing_harvest = .FALSE.                                      ! per default this flag is FALSE
       ! set stand_harvest to TRUE for the 1st timestep of the stand_replacing_year only
@@ -225,7 +228,7 @@ CONTAINS
         model%config%l_do_stand_replacing_harvest = .TRUE. 
       END IF
     END IF
-
+#endif
 
     !> 1.2 Increase age of the cohort [years] & check if cohort harvest is reached
     !! 
