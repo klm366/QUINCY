@@ -763,10 +763,9 @@ CONTAINS
     ! Arguments
     !$claw model-data
     LOGICAL,  INTENT(in)  :: l_day
-    REAL(wp), INTENT(in)  ::                    & !
-                             fract_snow_soil,   & ! Fraction of snow covered ground
-                             snow_age,          & ! non-dimensional age of snow
-                             cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
+    REAL(wp), INTENT(in)  :: fract_snow_soil,   & !< Fraction of snow covered ground
+                             snow_age,          & !< non-dimensional age of snow
+                             cos_zenith_angle,  & !< cosinus of zenith angle of incoming radiation
                              t_srf
     !$claw end model-data
 
