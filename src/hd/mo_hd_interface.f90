@@ -1055,4 +1055,3 @@ CONTAINS
     !$ACC WAIT(1)
 
   END SUBROUTINE hd_check_water_budget
-
