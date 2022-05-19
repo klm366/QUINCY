@@ -58,7 +58,7 @@ MODULE mo_jsb_lct_class
       & LAKE_TYPE        !< Lake
   END ENUM
 
-  TYPE t_jsb_lct
+   TYPE t_jsb_lct
     INTEGER           :: id = 0               !< Id for lct, one of enumeration above
     CHARACTER(LEN=5)  :: name = ""            !< Short name for lct
     CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
@@ -120,7 +120,7 @@ CONTAINS
 !!$    INTEGER,         INTENT(in) :: lct_type
 !!$    LOGICAL                     :: return_value
 !!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains'
+!!$    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains'
 !!$
 !!$    return_value = Contains_lct(this%id, lct_type)
 !!$
