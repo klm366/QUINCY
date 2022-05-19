@@ -81,7 +81,7 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
     INTEGER,           INTENT(in), OPTIONAL :: processes(:)
-    TYPE(t_jsb_lct),   INTENT(in), OPTIONAL :: lct
+    TYPE(t_jsb_lct),   INTENT(in), OPTIONAL :: lct            !< primary lct of this tile
     INTEGER,           INTENT(in), OPTIONAL :: process_actions(:)
     CLASS(t_jsb_tile), POINTER,    OPTIONAL :: parent
     INTEGER,           INTENT(in), OPTIONAL :: model_id       !< Only needed if parent is not present
@@ -152,6 +152,7 @@ CONTAINS
       CALL return_ptr%Add_lct(lct)
       CALL return_ptr%Add_lct_to_parents(lct)
     ELSE
+      ! If no lct is passed upon tile construction the primary lct of the parent tile is used
       IF (ASSOCIATED(return_ptr%parent_tile)) THEN
         CALL return_ptr%Add_lct(return_ptr%parent_tile%lcts(1))
       END IF

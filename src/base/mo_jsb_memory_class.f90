@@ -104,7 +104,7 @@ MODULE mo_jsb_memory_class
       IMPORT :: t_jsb_memory, t_jsb_config
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
-      INTEGER,             INTENT(in)    :: lct_ids(:)
+      INTEGER,             INTENT(in)    :: lct_ids(:)     !< Primary lct (1) and lcts of descendant tiles
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE

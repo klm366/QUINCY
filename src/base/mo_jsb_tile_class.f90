@@ -72,17 +72,17 @@ MODULE mo_jsb_tile_class
     TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:)              !< List of land cover types for tile
                                                                    !! The first entry is always the primary LCT for this tile;
                                                                    !! the remaining lcts are those inherited for aggregation
-    LOGICAL                                :: is_vegetation = .FALSE.
-    LOGICAL                                :: is_bare = .FALSE.
-    LOGICAL                                :: is_land = .FALSE.
-    LOGICAL                                :: is_glacier = .FALSE.
-    LOGICAL                                :: is_lake = .FALSE.
-    LOGICAL                                :: contains_vegetation = .FALSE.
-    LOGICAL                                :: contains_bare = .FALSE.
-    LOGICAL                                :: contains_land = .FALSE.
-    LOGICAL                                :: contains_glacier = .FALSE.
-    LOGICAL                                :: contains_lake = .FALSE.
-    LOGICAL                                :: contains_soil = .FALSE.
+    LOGICAL                                :: is_vegetation = .FALSE.         !< whether primary lct is VEG_TYPE
+    LOGICAL                                :: is_bare = .FALSE.               !< whether primary lct is BARE_TYPE
+    LOGICAL                                :: is_land = .FALSE.               !< whether primary lct is LAND_TYPE
+    LOGICAL                                :: is_glacier = .FALSE.            !< whether primary lct is GLACIER_TYPE
+    LOGICAL                                :: is_lake = .FALSE.               !< whether primary lct is LAKE_TYPE
+    LOGICAL                                :: contains_vegetation = .FALSE.   !< whether any lct of tile is VEG_TYPE
+    LOGICAL                                :: contains_bare = .FALSE.         !< whether any lct of tile is BARE_TYPE
+    LOGICAL                                :: contains_land = .FALSE.         !< whether any lct of tile is LAND_TYPE
+    LOGICAL                                :: contains_glacier = .FALSE.      !< whether any lct of tile is GLACIER_TYPE
+    LOGICAL                                :: contains_lake = .FALSE.         !< whether any lct of tile is LAKE_TYPE
+    LOGICAL                                :: contains_soil = .FALSE.         !< whether any lct of tile is one that has soil
     INTEGER,                ALLOCATABLE    :: process_action(:)
     ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
     REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
@@ -312,21 +312,26 @@ CONTAINS
 
   END SUBROUTINE Set_process_action_parents
 
+  ! ====================================================================================================== !
+  !
+  !> adds given lct to this tile and sets the "is" and/or "contains" properties on the tile accordingly
+  !
   SUBROUTINE Add_lct(this, lct)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    TYPE(t_jsb_lct),            INTENT(in)    :: lct
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this  !< this tile
+    TYPE(t_jsb_lct),            INTENT(in)    :: lct   !< the landcover type to add for this tile
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lct), ALLOCATABLE :: temp_lcts(:)
     INTEGER :: ilct, nlct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (.NOT. ALLOCATED(this%lcts)) THEN
 
       ALLOCATE(this%lcts(1))
       this%lcts(1) = lct
 
+      ! the "is" properties are only set for the primary lct
       IF (ASSOCIATED(this%parent)) THEN    ! Root tile has no primary LCT
         SELECT CASE (lct%id)
         CASE (VEG_TYPE)
@@ -354,8 +359,9 @@ CONTAINS
       temp_lcts(nlct+1) = lct
       CALL MOVE_ALLOC(temp_lcts, this%lcts)
 
-    END IF
+    END IF !(.NOT. ALLOCATED(this%lcts))
 
+    ! the "contains" properties are set according to all lcts of this tile
     SELECT CASE (lct%id)
     CASE (VEG_TYPE)
       this%contains_vegetation = .TRUE.
@@ -373,15 +379,19 @@ CONTAINS
 
   END SUBROUTINE Add_lct
 
+  ! ====================================================================================================== !
+  !
+  !> adds given lct to all parent tiles of this tile
+  !
   SUBROUTINE Add_lct_to_parents(this, lct)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    TYPE(t_jsb_lct),            INTENT(in)    :: lct
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this  !< tile whose parent is to be considered
+    TYPE(t_jsb_lct),            INTENT(in)    :: lct   !< the landcover type to add to the parent tiles
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_State), POINTER :: current
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct_to_parents'
-
+    ! -------------------------------------------------------------------------------------------------- !
     current => this%parent
 
     DO WHILE (ASSOCIATED(current))
