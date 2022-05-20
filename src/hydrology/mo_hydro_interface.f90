@@ -24,7 +24,7 @@ MODULE mo_hydro_interface
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
@@ -972,9 +972,9 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ), &
       ! out
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_rootzone      ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_sat_sl     ), &  !! ice volume is substracted
-      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_fc_sl      ), &  !! ice volume is substracted
-      & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pwp_sl     ), &  !! reduced relative to ice fraction
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ), &  !! ice volume is substracted
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ), &  !! ice volume is substracted
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ), &  !! reduced relative to ice fraction
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
       & )
@@ -1021,9 +1021,9 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_sat_sl,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_fc_sl,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pwp_sl,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_fc_sl,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 
@@ -1139,6 +1139,10 @@ CONTAINS
     USE mo_hydro_process,      ONLY: get_water_stress_factor
     USE mo_hydro_util,         ONLY: get_amount_in_rootzone
 
+    ! quincy_jsbach: will be removed and re-implemented
+    USE mo_hydro_constants,    ONLY: wpot_min
+    ! quincy_jsbach<<<
+
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1153,10 +1157,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: wtr_rootzone        !< Liquid water content in the root zone
-    dsl4jsb_Real3D_onChunk :: w_soil_fc_sl        !< Water content of soil layers at field capacity
-    dsl4jsb_Real3D_onChunk :: w_soil_pwp_sl       !< Water content of soil layers at permanent wilting point
-    dsl4jsb_Real2D_onChunk :: rootzone_fc         !< Water content in root zone at field capacity
-    dsl4jsb_Real2D_onChunk :: rootzone_pwp        !< Water content in root zone at permanent wilting point
+    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl      !< Water content of soil layers at field capacity (reduced by ice)
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl     !< Water content of soil layers at perm. wilting point (excl. ice)
     dsl4jsb_Real2D_onChunk :: weq_rootzone_max    !< Maximum possible amount of water/ice in the rootzone
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel    !< Relative root zone soil moisture
@@ -1164,8 +1166,25 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: beta_soil_gs
     dsl4jsb_Real2D_onChunk :: beta_soil_ps
 
-    INTEGER :: iblk, ics, ice, nc, i
+    ! quincy_jsbach: will be removed and re-implemented
+    ! QUINCY - HYDRO_ 2D
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_fc     !< Water content in root zone at field capacity (excluding ice)
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_pwp    !< Water content in root zone at permanent wilting point
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_theta
+    dsl4jsb_Real2D_onChunk :: rootzone_wpot
+    dsl4jsb_Real2D_onChunk :: root_depth  
+    ! QUINCY - HYDRO_ 3D
+    dsl4jsb_Real3D_onChunk :: saxtonA
+    dsl4jsb_Real3D_onChunk :: saxtonB
+    ! quincy_jsbach<<<
+
+    INTEGER :: iblk, ics, ice, ic, nc
+
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
+
+    ! quincy_jsbach: will be removed and re-implemented
+    REAL(wp), DIMENSION(options%nc) :: hlp1     !< helper variable
+    ! quincy_jsbach<<<
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1185,26 +1204,26 @@ CONTAINS
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
-
-    IF (model%config%use_quincy) THEN
-      dsl4jsb_Get_memory(ASSIMI_)
-    END IF
     !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_fc_sl)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_pwp_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_fc_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pwp_sl)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rootzone_fc)         ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rootzone_pwp)        ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)    ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_theta)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rootzone_wpot)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    root_depth)          ! in
     !
-    IF (model%config%use_quincy) THEN
-      dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs)        ! out   ! quincy
-      dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)        ! out   ! quincy
-    END IF
+
+    ! quincy_jsbach: will be removed and re-implemented
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    saxtonA)             ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    saxtonB)             ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_fc)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_pwp)    ! out
+    ! quincy_jsbach<<<
     
     ! Get water stress
 
@@ -1214,12 +1233,6 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
-    ! todo: rootzone_fc and rootzone_pwp are updated within this routine (intent out), and only
-    !    used within the routine and only with quincy! Do we need rootzone_fc and rootzone_pwp
-    !    as state (and output) variables without quincy? And with quincy?
-    CALL get_amount_in_rootzone(w_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), rootzone_fc (:))
-    CALL get_amount_in_rootzone(w_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), rootzone_pwp(:))
-
     ! Calculate water stress
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
     water_stress(:) = get_water_stress_factor(wtr_rootzone(:), weq_rootzone_max(:), &
@@ -1228,34 +1241,47 @@ CONTAINS
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
     !$claw acc data present(wtr_rootzone, soil_depth_sl, root_depth_sl, wtr_rootzone_rel)
     !$claw acc parallel loop gang vector
-    DO i = 1, nc
-      IF (weq_rootzone_max(i) > 0._wp) THEN
-        wtr_rootzone_rel(i) =  MIN(wtr_rootzone(i) / weq_rootzone_max(i), 1._wp)
+    DO ic= 1, nc
+      IF (weq_rootzone_max(ic) > 0._wp) THEN
+        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone(ic) / weq_rootzone_max(ic), 1._wp)
       ELSE
         ! weq_rootzone_max is zero over glaciers
-        wtr_rootzone_rel(i) = 0._wp
+        wtr_rootzone_rel(ic) = 0._wp
       END IF
     END DO
 
+    ! quincy_jsbach: will be removed and re-implemented
+    ! calculate plant fractional water availability 
+    IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
 
-    !! quincy calculation of beta_soil_*  (soil moisture constraints scaling factor)
-    !!
-    !! the below calc are somewhat preliminary, the original quincy code is kept below, but outcommented
-    IF (model%config%use_quincy) THEN
-      WHERE ((wtr_rootzone(:) - rootzone_pwp(:)) > eps8)
-        beta_soil_gs(:) = MIN( MAX( 0.0_wp, 2.0_wp * (wtr_rootzone(:) - rootzone_pwp(:)) / &
-                                            (rootzone_fc(:) - rootzone_pwp(:))), 1.0_wp)
-      ELSEWHERE
-        beta_soil_gs(:) = 0.0_wp
-      END WHERE
-      beta_soil_ps(:) = beta_soil_gs(:)
-          !! original way of calc beta_soil_* in quincy
-          !beta_soil_gs(:) = calc_soil_moisture_stress(wtr_rootzone_pot(:), lctlib%phi_leaf_min)
-          !beta_soil_ps(:) = calc_soil_moisture_stress(wtr_rootzone_pot(:), lctlib%phi_leaf_min)
-      ! catch beta_soil_ps getting zero
-      ! this is very neccessary, because with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 
-      !   become zero, and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
-      WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
+      ! todo: rootzone_fc and wtr_rootzone_pwp are updated within this routine (intent out), and only
+      !    used within the routine and only with quincy! Do we need rootzone_fc and wtr_rootzone_pwp
+      !    as state (and output) variables without quincy? And with quincy?
+      CALL get_amount_in_rootzone(wtr_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_fc (:))
+      CALL get_amount_in_rootzone(wtr_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_pwp(:))
+
+      ! catch "no water"
+      DO ic = 1,nc
+        IF ((wtr_rootzone_fc(ic) - wtr_rootzone_pwp(ic)) > eps8 .OR. &
+          & (wtr_rootzone_fc(ic) - wtr_rootzone_pwp(ic)) < -eps8) THEN
+          wtr_rootzone_theta(ic) = ( wtr_rootzone(ic) - wtr_rootzone_pwp(ic) ) / &
+                                  ( wtr_rootzone_fc(ic) - wtr_rootzone_pwp(ic) ) 
+        END IF
+      END DO
+      wtr_rootzone_theta(:) = MAX(wtr_rootzone_theta(:), 0.0_wp)
+
+      ! Calculate root zone and layer soil water potential according to Campbell et al 1974 
+      ! catch "no roots"
+      DO ic = 1,nc
+        IF (root_depth(ic) > eps8) THEN
+          hlp1(ic) = MIN(wtr_rootzone_fc(ic), wtr_rootzone(ic)) / root_depth(ic)
+          ! for numerical reasons, constrain to minimum water potential 
+          hlp1(ic) = MAX( EXP( LOG(wpot_min / saxtonA(ic,1)) / saxtonB(ic,1)), hlp1(ic)) 
+          rootzone_wpot(ic) = saxtonA(ic,1) * (hlp1(ic) ** saxtonB(ic,1))
+        END IF
+      END DO
+    ! quincy_jsbach<<<
+
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1293,25 +1319,22 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(HYDRO_)
-    IF (model%config%use_quincy) THEN
-      dsl4jsb_Get_memory(ASSIMI_)
-    END IF
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     ! HYDRO_
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,        weighted_by_fract)
-    ! todo: Do we need rootzone_fc and rootzone_pwp aggregated or in the output without quincy? Both
-    !    arrays are only used with quincy.
-    dsl4jsb_Aggregate_onChunk(HYDRO_, rootzone_fc,         weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, rootzone_pwp,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
-    ! ASSIMI_
-    IF (model%config%use_quincy) THEN
-      dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs      , weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps      , weighted_by_fract)
+
+    ! quincy_jsbach: will be removed and re-implemented
+    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
+      dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_fc,   weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_pwp,  weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_theta, weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(HYDRO_, rootzone_wpot,     weighted_by_fract)
     END IF
+    ! quincy_jsbach<<<
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

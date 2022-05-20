@@ -872,7 +872,7 @@ CONTAINS
       !$claw acc parallel loop gang vector collapse(2)
       DO jl=1,nidx
         DO jk=1,nsnow
-          IF (itop(jl) <= jk .AND. jk <= itop_old(jl)) THEN          ! zero+ new snow layers: layers from new top layer to top prev layer
+          IF (itop(jl) <= jk .AND. jk <= itop_old(jl)) THEN          ! zero+ new snow layers: from new top layer to top prev layer
             t_snow(jl,jk) = t_unfilt(jl)
           ELSE IF (itop(jl) > itop_old(jl) .AND. jk == itop(jl)) THEN ! snow present but fewer snow layers : new top layer
             t_snow(jl,jk) = t_unfilt(jl)
@@ -933,7 +933,8 @@ CONTAINS
       END DO
     END DO
 
-    !$claw acc data present(zdz1,zdz2,vol_heat_cap_soil,dz_soil,zd1,heat_cond_soil,z1,t_soil_bcoef,t_snow_acoef,t_snow_bcoef,t_soil_sl1,t_soil_acoef)
+    !$claw acc data present(zdz1,zdz2,vol_heat_cap_soil,dz_soil,zd1,heat_cond_soil,z1,t_soil_bcoef, &
+    !$claw acc t_snow_acoef,t_snow_bcoef, t_soil_sl1,t_soil_acoef)
     !$claw acc parallel loop gang vector
     DO jl=1,nidx
       zdz2(jl,nsnow+1) = vol_heat_cap_soil(jl) * dz_soil(1) / delta_time

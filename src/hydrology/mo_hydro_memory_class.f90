@@ -118,11 +118,19 @@ MODULE mo_hydro_memory_class
       & ice_soil_sl,          & !< Ice content in soil layers                                               [m]
       & wtr_freeze_sl,        & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
       & ice_melt_sl,          & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
-      & w_soil_sat_sl,        & !< Water content of soil layers at saturation (derived from soil porosity)  [m]
-      & w_soil_fc_sl,         & !< Water content of soil layers at field capacity
-                                !! (derived from volumetric field capacity)                                 [m]
-      & w_soil_pwp_sl           !< Water content of soil layers at permanent wilting point
-                                !! (derived from vol. perm wilt point)                                      [m]
+      & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
+      & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity
+                                !! (derived from volumetric field capacity, reduced by ice)                 [m]
+      & wtr_soil_pwp_sl         !< Water content of soil layers at permanent wilting point
+                                !! (derived from vol. perm wilt point, reduced relative to ice content)     [m]
+
+    ! quincy_jsbach: will be removed and re-implemented>>>
+    TYPE(t_jsb_var_real3d) :: &
+      & soil_wpot_sl,         & !< soil water potential per layer [MPa]    
+      & saxtonA,              & !< coefficient in moisture-tension relationship
+      & saxtonB,              & !< coefficient in moisture-tension relationship
+      & saxtonC                 !< exponent of moisture-conductivity relationship
+    ! quincy_jsbach<<<
 
     ! Additional variables for PFT lct_type
 
@@ -133,12 +141,19 @@ MODULE mo_hydro_memory_class
       & root_depth,           & !< Rooting depth [m]
       & fract_snow_can,       & !< Snow fraction on canopy                                                  []
       & weq_snow_can,         & !< Snow amount on canopy                                                    [m water equivalent]
-      & rootzone_fc,          & !< Water content at field capacity in root zone of the soil                 [m]
-      & rootzone_pwp,         & !< Water content at permanent wilting point in root zone of the soil        [m]
       & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
       & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
       & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
       & transpiration           !< Transpiration
+
+    ! quincy_jsbach: will be removed and re-implemented>>>
+    ! quincy - Soil Water addons for QUINCY in HYDRO
+    TYPE(t_jsb_var_real2d) :: &
+      & wtr_rootzone_fc,      & !< Water content at field capacity in root zone of the soil                 [m]
+      & wtr_rootzone_pwp,     & !< Water content at permanent wilting point in root zone of the soil        [m]
+      & wtr_rootzone_theta,   & !< root zone integrated plant available water, fraction of maximum 
+      & rootzone_wpot           !< soil water potential [MPa]
+    ! quincy_jsbach<<<
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -156,12 +171,6 @@ MODULE mo_hydro_memory_class
       & evapo_ice,            & !< Evaporation over lake ice
       & fract_snow_lice,      & !< Fraction of swow on lake ice                                             []
       & weq_snow_lice           !< Water content of snow on lake ice                                        [m water equivalent]
-
-    !! quincy
-    !Soil Water addons for QUINCY in HYDRO
-    TYPE(t_jsb_var_real2d) :: &
-      & w_soil_root_theta,    & !< root zone integrated plant available water, fraction of maximum 
-      & w_soil_root_pot         !< soil water potential [MPa]
 
     ! Diagnostic global land means/sums e.g. for monitoring (only available with ICON)
     TYPE(t_jsb_var_real1d) :: &
@@ -206,6 +215,11 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_w  ! Vertical grids
+
+    ! quincy_jsbach: will be removed and re-implemented>>>
+    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb    ! Vertical grid
+    ! quincy_jsbach<<<
+
     INTEGER :: table
     TYPE(t_grib2) :: grib2_desc
 
@@ -220,6 +234,10 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     soil_w       => Get_vgrid('soil_depth_water')
+
+    ! quincy_jsbach: will be removed and re-implemented>>>
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    ! quincy_jsbach<<<
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -712,25 +730,25 @@ CONTAINS
         & lrestart=.FALSE.,                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'w_soil_sat_sl', mem%w_soil_sat_sl,                              &
+      CALL mem%Add_var( 'wtr_soil_sat_sl', mem%wtr_soil_sat_sl,                          &
         & hgrid, soil_w,                                                                 &
-        & t_cf('w_soil_sat_sl', 'm', 'Water content in soil layers at saturation'),      &
+        & t_cf('wtr_soil_sat_sl', 'm', 'Water content in soil layers at saturation'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & loutput=.TRUE.,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'w_soil_fc_sl', mem%w_soil_fc_sl,                                &
+      CALL mem%Add_var( 'wtr_soil_fc_sl', mem%wtr_soil_fc_sl,                            &
         & hgrid, soil_w,                                                                 &
-        & t_cf('w_soil_fc_sl', 'm', 'Water content in soil layers at field capacity'),   &
+        & t_cf('wtr_soil_fc_sl', 'm', 'Water content in soil layers at field capacity'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & loutput=.TRUE.,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'w_soil_pwp_sl', mem%w_soil_pwp_sl,                              &
+      CALL mem%Add_var( 'wtr_soil_pwp_sl', mem%wtr_soil_pwp_sl,                          &
         & hgrid, soil_w,                                                                 &
-        & t_cf('w_soil_pwp_sl', 'm',                                                     &
+        & t_cf('wtr_soil_pwp_sl', 'm',                                                   &
         &      'Water content in soil layers at permanent wilting point'),               &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
@@ -738,11 +756,56 @@ CONTAINS
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
-        &  hgrid, surface,                                                               &
-        &  t_cf('wtr_rootzone_rel', '-', 'Relative root zone moisture'),                 &
-        &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
+        & hgrid, surface,                                                                &
+        & t_cf('wtr_rootzone_rel', '-', 'Relative root zone moisture'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & initval_r=0.0_wp )
+
+      ! quincy_jsbach: will be removed and re-implemented>>>
+      CALL mem%Add_var('soil_wpot_sl', mem%soil_wpot_sl,                                 &
+        & hgrid, vgrid_soil_sb,                                                          &
+        & t_cf('soil_wpot_sl', 'MPa', 'soil water potential per layer'),                 &
+        & t_grib1(table, 255, grib_bits),                                                &
+        & t_grib2(255, 255, 255, grib_bits),                                             &
+        & prefix, suffix,                                                                &
+        & loutput = .TRUE.,                                                              &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('saxtonA', mem%saxtonA,                                           &
+        & hgrid, vgrid_soil_sb,                                                          &
+        & t_cf('saxtonA', '', 'coefficient in moisture-tension relationship'),           &
+        & t_grib1(table, 255, grib_bits),                                                &
+        & t_grib2(255, 255, 255, grib_bits),                                             &
+        & prefix, suffix,                                                                &
+        & loutput = .TRUE.,                                                              &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('saxtonB', mem%saxtonB,                                           &
+        & hgrid, vgrid_soil_sb,                                                          &
+        & t_cf('saxtonB', '', 'coefficient in moisture-tension relationship'),           &
+        & t_grib1(table, 255, grib_bits),                                                &
+        & t_grib2(255, 255, 255, grib_bits),                                             &
+        & prefix, suffix,                                                                &
+        & loutput = .TRUE.,                                                              &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('saxtonC', mem%saxtonC,                                           &
+        & hgrid, vgrid_soil_sb,                                                          &
+        & t_cf('saxtonC', '', 'exponent of moisture-conductivity relationship'),         &
+        & t_grib1(table, 255, grib_bits),                                                &
+        & t_grib2(255, 255, 255, grib_bits),                                             &
+        & prefix, suffix,                                                                &
+        & loutput = .TRUE.,                                                              &
+        & initval_r = 0.0_wp)
+
+!vg       CALL mem%Add_var('weq_soil_rel', mem%weq_soil_rel,                            &
+!vg         &  hgrid, surface,                                                          &
+!vg         &  t_cf('water_soil_relative', '', ''),                                     &
+!vg         &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
+!vg         & prefix, suffix,                                                           &
+!vg         & initval_r=0.0_wp )
+      ! quincy_jsbach<<<
 
     END IF
 
@@ -783,26 +846,24 @@ CONTAINS
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      ! todo: Currently only used with quincy, only in update_water_sress, where it could also be defined
-      !    as local variable. Do we need that in the output without quincy? Do we need it at all?
-      CALL mem%Add_var( 'rootzone_fc', mem%rootzone_fc,                                  &
+      ! quincy_jsbach: will be removed and re-implemented>>>
+      CALL mem%Add_var( 'wtr_rootzone_fc', mem%wtr_rootzone_fc,                          &
         & hgrid, surface,                                                                &
-        & t_cf('rootzone_fc', 'm', 'Root zone water content at field capacity'),         &
+        & t_cf('wtr_rootzone_fc', 'm', 'Root zone water content at field capacity'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &
         & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      ! todo: Currently only used with quincy, only in update_water_sress, where it could also be defined
-      !    as local variable. Do we need that in the output without quincy? Do we need it at all?
-      CALL mem%Add_var( 'rootzone_pwp', mem%rootzone_pwp,                                &
+      CALL mem%Add_var( 'wtr_rootzone_pwp', mem%wtr_rootzone_pwp,                        &
         & hgrid, surface,                                                                &
-        & t_cf('rootzone_pwp', 'm',                                                      &
+        & t_cf('wtr_rootzone_pwp', 'm',                                                  &
         &      'Root zone water content at permanent wilting point'),                    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &
         & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      ! quincy_jsbach<<<
 
       CALL mem%Add_var( 'water_stress', mem%water_stress,                                &
         & hgrid, surface,                                                                &
@@ -838,6 +899,30 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    ! quincy_jsbach: will be removed and re-implemented>>>
+    !vg: same as wtr_rootzone_rel???
+      CALL mem%Add_var('wtr_rootzone_theta', mem%wtr_rootzone_theta, &
+        & hgrid, surface, &
+        & t_cf('wtr_rootzone_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      !vg: Same as matrix_potential???
+      CALL mem%Add_var('rootzone_wpot', mem%rootzone_wpot, &
+        & hgrid, surface, &
+        & t_cf('rootzone_wpot', 'MPa', 'soil water potential'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+    ! quincy_jsbach<<<
+ 
     END IF
 
     ! Additional variables for GLACIER lct
@@ -910,28 +995,6 @@ CONTAINS
       END IF
 
     END IF
-
-    !! quincy
-    IF (model%config%use_quincy) THEN
-      CALL mem%Add_var('w_soil_root_theta', mem%w_soil_root_theta,                       &
-        & hgrid, surface,                                                                &
-        & t_cf('w_soil_root_theta', '',                                                  &
-        &      'root zone integrated plant available water, fraction of maximum '),      &
-        & t_grib1(table, 255, grib_bits),                                                &
-        & t_grib2(255, 255, 255, grib_bits),                                             &
-        & prefix, suffix,                                                                &
-        & loutput=.TRUE., lrestart=.TRUE.,                                               &
-        & initval_r=0.0_wp) ! initvalue
-
-      CALL mem%Add_var('w_soil_root_pot', mem%w_soil_root_pot,                           &
-        & hgrid, surface,                                                                &
-        & t_cf('w_soil_root_pot', 'MPa', 'soil water potential'),                        &
-        & t_grib1(table, 255, grib_bits),                                                &
-        & t_grib2(255, 255, 255, grib_bits),                                             &
-        & prefix, suffix,                                                                &
-        & loutput=.TRUE., lrestart=.TRUE.,                                               &
-        & initval_r=0.0_wp) ! initvalue
-    ENDIF
 
 #ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring
