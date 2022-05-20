@@ -1213,14 +1213,14 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)    ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_theta)  ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rootzone_wpot)       ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    root_depth)          ! in
     !
 
     ! quincy_jsbach: will be removed and re-implemented
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    root_depth)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    saxtonA)             ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    saxtonB)             ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_theta)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    rootzone_wpot)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_fc)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_pwp)    ! out
     ! quincy_jsbach<<<
@@ -1280,9 +1280,8 @@ CONTAINS
           rootzone_wpot(ic) = saxtonA(ic,1) * (hlp1(ic) ** saxtonB(ic,1))
         END IF
       END DO
-    ! quincy_jsbach<<<
-
     END IF
+    ! quincy_jsbach<<<
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

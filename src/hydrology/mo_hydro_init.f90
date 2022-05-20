@@ -560,12 +560,12 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
     TYPE(t_jsb_grid),  POINTER              :: grid
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: hlp1
-    INTEGER                                 :: i, j, k
+    INTEGER                                 :: j, k
     ! quincy_jsbach<<<
 
     TYPE(t_jsb_model), POINTER              :: model
     TYPE(t_jsb_vgrid), POINTER              :: soil_w
-    INTEGER                                 :: nsoil, nproma, nblks
+    INTEGER                                 :: i, nsoil, nproma, nblks
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_ic'
     !-----------------------------------------------------------------------
     ! quincy_jsbach: will be removed and re-implemented
@@ -904,9 +904,12 @@ CONTAINS
     ! quincy_jsbach: will be removed and re-implemented
     IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
       ! SSE_ 3D
-      dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem (HYDRO_ init needs to be done before SSE_ init)
-      dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem (HYDRO_ init needs to be done before SSE_ init)
-      dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem (HYDRO_ init needs to be done before SSE_ init)
+      dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
+                                                      !          (HYDRO_ init needs to be done before SSE_ init)
+      dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
+                                                      !          (HYDRO_ init needs to be done before SSE_ init)
+      dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
+                                                      !          (HYDRO_ init needs to be done before SSE_ init)
       ! HYDRO_ 3D
       dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonA)     ! out
       dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonB)     ! out
