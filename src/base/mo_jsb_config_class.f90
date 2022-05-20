@@ -139,7 +139,7 @@ CONTAINS
     ! define here as INTEGER replacing the ENUM "USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY"
     ! this is needed to avoid a dependency cycle, creating an compile error (tested with NAG):
     !  stating that in mo_jsb_memory_class the mo_jsb_config_class is not available for "USE mo_jsb_config_class,  ONLY: t_jsb_config"
-    TODO: namelist parameter should be character, corresponding integer for usage within the model.
+    !TODO: namelist parameter should be character, corresponding integer for usage within the model.
     MODEL_JSBACH               = 1
     MODEL_JSBACH_QUINCY        = 2
     MODEL_QUINCY               = 3
