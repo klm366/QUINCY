@@ -451,31 +451,30 @@ CONTAINS
       ! Volumetric field capacity [m/m]
       dsl4jsb_var_ptr(HYDRO_, vol_field_cap) = hydro_init_vars%vol_field_cap
 
-!vg: Is this needed? Intent out of calc_soil_hydrology
-!vg       ! Get water content at field capacity by multiplying volumetric field capacity with soil layer thicknesses
-!vg       ! Note: At this point a potential ice fraction is ignored.
-!vg       DO i=1,nsoil
-!vg         dsl4jsb_var_ptr(HYDRO_,wtr_soil_fc_sl) (:,i,:) = hydro_init_vars%vol_field_cap(:,:) * &
-!vg           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
-!vg       END DO
+      ! Get water content at field capacity by multiplying volumetric field capacity with soil layer thicknesses
+      ! Note: At this point a potential ice fraction is ignored.
+      DO i=1,nsoil
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_fc_sl) (:,i,:) = hydro_init_vars%vol_field_cap(:,:) * &
+          & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
+      END DO
 
       ! Volumetric permanent wilting point
       ! @todo: Do we need this for bare soil tiles?
       dsl4jsb_var_ptr(HYDRO_, vol_p_wilt) = hydro_init_vars%vol_p_wilt
 
-!vg       ! Get permanent wilting point by multiplying with soil layer thicknesses
-!vg       ! Note: At this point a potential ice fraction is ignored.
-!vg       DO i=1,nsoil
-!vg         dsl4jsb_var_ptr(HYDRO_,wtr_soil_pwp_sl) (:,i,:) = hydro_init_vars%vol_p_wilt(:,:) * &
-!vg           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
-!vg       END DO
+      ! Get permanent wilting point by multiplying with soil layer thicknesses
+      ! Note: At this point a potential ice fraction is ignored.
+      DO i=1,nsoil
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_pwp_sl) (:,i,:) = hydro_init_vars%vol_p_wilt(:,:) * &
+          & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
+      END DO
 
-!vg       ! Get water holding capacity (water content at saturation) by multiplying volumetric porosity with soil layer thicknesses
-!vg       ! Note: At this point a potential ice fraction is ignored.
-!vg       DO i=1,nsoil
-!vg         dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
-!vg           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
-!vg       END DO
+      ! Get water holding capacity (water content at saturation) by multiplying volumetric porosity with soil layer thicknesses
+      ! Note: At this point a potential ice fraction is ignored.
+      DO i=1,nsoil
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
+          & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
+      END DO
 
       !$acc update device(dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_, wtr_soil_pwp_sl), &
