@@ -21,7 +21,7 @@ display: public
          protected
          private
 source: true
-proc_internals: false
+proc_internals: true
 search: true
 warn: false
 graph: false
@@ -29,6 +29,8 @@ coloured_edges: true
 md_extensions: markdown.extensions.toc
                markdown.extensions.extra
                markdown.extensions.footnotes
+print_creation_date: true
+creation_date: %Y-%m-%d %H:%M %z
 ---
 
 ------------------------------

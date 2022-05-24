@@ -49,37 +49,37 @@ MODULE mo_pheno_memory_class
                                           !  (fraction of ground area occupied by the vertical projection of foliage)
       & fract_fpc_max,                  & !< Maximum fraction of tile that can be covered by leaves (assuming infinite lai)
       & fract_forest,                   & !< Forest fraction
-      & growth_phase_SG,                & ! For summergreen only: values are:
-                                          !   -1.0  .. during rest phase (i.e. from autumn event to spring event)
-                                          !    0.0  .. during growth phase (i.e. some weeks after spring event)
-                                          !    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)
-                                          ! Updated every day by the subroutine "update_growth_phase()".
-      & growth_phase_EG,                & ! For evergreen only: values are:
-                                          !    0.0  .. during growth phase (i.e. some weeks after spring event)
-                                          !    1.0  .. in vegetative phase (i.e. from ent of growth phase to spring event)
-                                          ! Updated every day by the subroutine "update_growth_phase()".
-      & growth_phase_CRP,               & ! For extra-tropical crops only: values are:
-                                          !     -2.0  .. during rest phase of winter crops (i.e. from spring to autumn)
-                                          !     -1.0  .. during rest phase of summer crops (i.e. from autumn to spring)
-                                          !      0.0  .. during growth phase of summer crops (i.e. from spring to autumn)
-                                          !      1.0  .. during growth phase of second crop (i.e. from summer to autumn)
-                                          !      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
-                                          ! Updated every day by the subroutine "update_growth_phase()".
-      & days_since_growth_begin_EG,     & ! For summergreen and evergreen only: serves to remember the number of
-                                          ! days elapsed since the growth phase began
-      & days_since_growth_begin_SG,     & ! (as real numbers to save it in a stream).
-      & previous_day_NPP_pot_rate_ca,   & ! The mean primary production rate [mol(CO2)/(m^2 s)] at each grid point
-                                          ! at previous day, because not known for current day; updated at ..
-                                          ! the beginning of each new day (stream)
+      & growth_phase_SG,                & !< For summergreen only: values are:
+                                          !<   -1.0  .. during rest phase (i.e. from autumn event to spring event)
+                                          !<    0.0  .. during growth phase (i.e. some weeks after spring event)
+                                          !<    1.0  .. in vegetative phase (i.e. from end of growth phase to autum event)
+                                          !< Updated every day by the subroutine "update_growth_phase()".
+      & growth_phase_EG,                & !< For evergreen only: values are:
+                                          !<    0.0  .. during growth phase (i.e. some weeks after spring event)
+                                          !<    1.0  .. in vegetative phase (i.e. from ent of growth phase to spring event)
+                                          !< Updated every day by the subroutine "update_growth_phase()".
+      & growth_phase_CRP,               & !< For extra-tropical crops only: values are:
+                                          !<     -2.0  .. during rest phase of winter crops (i.e. from spring to autumn)
+                                          !<     -1.0  .. during rest phase of summer crops (i.e. from autumn to spring)
+                                          !<      0.0  .. during growth phase of summer crops (i.e. from spring to autumn)
+                                          !<      1.0  .. during growth phase of second crop (i.e. from summer to autumn)
+                                          !<      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
+                                          !< Updated every day by the subroutine "update_growth_phase()".
+      & days_since_growth_begin_EG,     & !< For summergreen and evergreen only: serves to remember the number of
+                                          !< days elapsed since the growth phase began
+      & days_since_growth_begin_SG,     & !< (as real numbers to save it in a stream).
+      & previous_day_NPP_pot_rate_ca,   & !< The mean primary production rate [mol(CO2)/(m^2 s)] at each grid point
+                                          !< at previous day, because not known for current day; updated at ..
+                                          !< the beginning of each new day (stream)
 
                                           !! JN: variables required when l_forestRegrowth = true, i.e. when the
                                           !      maxLAI is derived from biomass via allometric relationships
-      & number_of_individuals,          & ! Number of individuals in last calculation [trees ha-1]
-      & biomass_per_individual,         & ! Biomass per individual according to allometric relationships [kg/tree]
+      & number_of_individuals,          & !< Number of individuals in last calculation [trees ha-1]
+      & biomass_per_individual,         & !< Biomass per individual according to allometric relationships [kg/tree]
 
-      & cconservation_allom,            & ! Tester for c conservation upon rescaling due to changed max lai
-      & maxLAI_allom,                   & ! dynamical maximum LAI [m^2(leaf)/m^2(ground)]:
-                                          ! Current max LAI according to allometric relationships --> only changes ones a year!
+      & cconservation_allom,            & !< Tester for c conservation upon rescaling due to changed max lai
+      & maxLAI_allom,                   & !< dynamical maximum LAI [m^2(leaf)/m^2(ground)]:
+                                          !< Current max LAI according to allometric relationships --> only changes ones a year!
 
       ! & laiMax_dyn,                    & ! Dynamical maximum LAI [m^2(leaf)/m^2(ground)]-- not larger than the maximum  lai
       !                                    ! coming from JSBACH, but smaller than that value when NPP is negative for more
@@ -87,17 +87,17 @@ MODULE mo_pheno_memory_class
       ! & year_NPP_sum,                  & ! This field sums the NPP-rate during the whole year, starting on Jan,1, in the
       !                                    ! northern hemisphere and at July,1, in the southern hemisphere. A negative value
       !                                    ! indicates that summation has not yet started.
-      & day_NPP_sum,                    & ! sum of NPP since midnight (needed to compute previous_day_NPP_pot_rate_ca(:,:)) [mol(CO2)/m^2]
-      & heat_sum_EG,                    & ! Heat sums --- needed for the phenology of summergreens, evergreens and crops.
-      & heat_sum_SG,                    & ! Where heat summation has not yet started, "heat_sum" is set to a value < -1.
-      & heat_sum_CRP,                   & ! For summer crops heat summation starts with "0".
-      & heat_sum_winter,                & ! For winter crops heat summation starts with EPSILON(1.) and is positive in the
-                                          ! growing period (autumn to spring) and negative during summer. (stream)
-      & chill_days_SG,                  & ! Number of chill days --- needed for the phenology of summer- and
-      & chill_days_EG,                  & ! evergreens (stream)
-      & veg_fract_correction              ! Factor representing clumpyness of vegetation (for each tile type).
-                                          ! To write it in the output file we define it as 2d even when there is no change
-                                          ! between gridcells as it is in fact a 1d constant for each tile.
+      & day_NPP_sum,                    & !< sum of NPP since midnight (needed to compute previous_day_NPP_pot_rate_ca(:,:)) [mol(CO2)/m^2]
+      & heat_sum_EG,                    & !< Heat sums --- needed for the phenology of summergreens, evergreens and crops.
+      & heat_sum_SG,                    & !< Where heat summation has not yet started, "heat_sum" is set to a value < -1.
+      & heat_sum_CRP,                   & !< For summer crops heat summation starts with "0".
+      & heat_sum_winter,                & !< For winter crops heat summation starts with EPSILON(1.) and is positive in the
+                                          !< growing period (autumn to spring) and negative during summer. (stream)
+      & chill_days_SG,                  & !< Number of chill days --- needed for the phenology of summer- and
+      & chill_days_EG,                  & !< evergreens (stream)
+      & veg_fract_correction              !< Factor representing clumpyness of vegetation (for each tile type).
+                                          !< To write it in the output file we define it as 2d even when there is no change
+                                          !< between gridcells as it is in fact a 1d constant for each tile.
                                           !   JN: with l_forestRegrowth = true veg_fract_correction can change over time
                                           !       and is spatially variable
                                           !       if l_forestRegrowth = false there is still no change between gridcells
@@ -111,8 +111,8 @@ MODULE mo_pheno_memory_class
 
     ! Diagnostic land mean phenology e.g. for monitoring (only available with ICON)
     TYPE(t_jsb_var_real1d) ::           &
-      & lai_ta_gmean,                   & ! Global Land mean LAI (box tile)
-      & fract_fpc_gmean                   ! Global Land mean foliage cover (box tile)
+      & lai_ta_gmean,                   & !< Global Land mean LAI (box tile)
+      & fract_fpc_gmean                   !< Global Land mean foliage cover (box tile)
 
     REAL(wp), POINTER :: lai_mon(:,:,:)       => NULL()   !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14> !
     REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL()   !< Monthly fpc (per year or climatology) <nproma x nblks x 14> !
