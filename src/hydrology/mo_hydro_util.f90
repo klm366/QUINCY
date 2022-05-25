@@ -21,18 +21,18 @@ MODULE mo_hydro_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: get_water_in_root_zone
+  PUBLIC :: get_amount_in_rootzone
 
-  INTERFACE get_water_in_root_zone
-    !MODULE PROCEDURE get_water_in_root_zone_1d
-    MODULE PROCEDURE get_water_in_root_zone_2d
+  INTERFACE get_amount_in_rootzone
+    !MODULE PROCEDURE get_amount_in_rootzone_1d
+    MODULE PROCEDURE get_amount_in_rootzone_2d
   END INTERFACE
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hydro_util'
 
 CONTAINS
 
-  SUBROUTINE get_water_in_root_zone_1d(ws, dz, dz_root, ws_root)
+  SUBROUTINE get_amount_in_rootzone_1d(ws, dz, dz_root, ws_root)
 
     REAL(wp), INTENT(in) :: &
       & ws     (:),       &        !< Water content of soil layers
@@ -43,11 +43,11 @@ CONTAINS
     REAL(wp) ::                       &
       & bottom    , &   !< Cumulative depth of soil down to a layer (bottom depth of layer)
       & bottom_m1  , &  !< Cumulative depth of soil down to previous layer
-      & root_depth      !< Total depth of root_zone
+      & root_depth      !< Total depth of root zone
 
     INTEGER :: n, i
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_water_in_root_zone_d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_d'
 
     !$claw acc routine seq
 
@@ -73,11 +73,11 @@ CONTAINS
       END DO
     END IF
 
-  END SUBROUTINE get_water_in_root_zone_1d
+  END SUBROUTINE get_amount_in_rootzone_1d
 
 
 
-  SUBROUTINE get_water_in_root_zone_2d(ws, dz, dz_root, ws_root)
+  SUBROUTINE get_amount_in_rootzone_2d(ws, dz, dz_root, ws_root)
 
     REAL(wp), INTENT(in) :: &
       & ws     (:,:),       &        !< Water content of soil layers
@@ -89,11 +89,11 @@ CONTAINS
     REAL(wp) ::                       &
       & bottom     (SIZE(ws     ,1)), & !< Cumulative depth of soil down to a layer (bottom depth of layer)
       & bottom_m1  (SIZE(ws_root,1)), & !< Cumulative depth of soil down to previous layer
-      & root_depth (SIZE(ws,1))         !< Total depth of root_zone
+      & root_depth (SIZE(ws,1))         !< Total depth of root zone
 
     INTEGER :: n, i, j
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':get_water_in_root_zone_2d'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_2d'
 
     n  = SIZE(dz,2)       ! Number of soil layers
 
@@ -127,7 +127,7 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
-  END SUBROUTINE get_water_in_root_zone_2d
+  END SUBROUTINE get_amount_in_rootzone_2d
 
 #endif
 END MODULE mo_hydro_util
