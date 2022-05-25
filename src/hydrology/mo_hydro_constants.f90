@@ -92,7 +92,7 @@ MODULE mo_hydro_constants
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
     & beta_perc               = 0.139_wp         !< Parameter from percolation theory
 
-  ! quincy
+  ! quincy_jsbach: will be removed and re-implemented >>>
   ! constants in pedo-transfer functions according to Saxton & Rawls 2006
   REAL(wp) :: & 
     & wpot_pwp, &                 !< water potential at permanent wilitng point (Pa)
@@ -161,6 +161,7 @@ CONTAINS
     kdiff_sat_max   = 1930.0_wp / 1000.0_wp / 3600._wp ! m/s
 
   END SUBROUTINE init_hydro_constants
+  ! quincy_jsbach<<<
 
 #endif
 END MODULE mo_hydro_constants

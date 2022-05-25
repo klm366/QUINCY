@@ -163,10 +163,14 @@ MODULE mo_hydro_memory_class
       & canopy_cond_limited,    & !< Canopy conductance with water limit [m/s] (mean value)
       & transpiration             !< Transpiration
 
+    ! quincy_jsbach: will be removed and re-implemented>>>
     ! quincy - Soil Water addons for QUINCY in HYDRO
     TYPE(t_jsb_var_real2d) :: &
-      & w_soil_root_theta, &      !< root zone integrated plant available water, fraction of maximum 
-      & w_soil_root_pot           !< soil water potential [MPa]
+      & wtr_rootzone_fc,      & !< Water content at field capacity in root zone of the soil                 [m]
+      & wtr_rootzone_pwp,     & !< Water content at permanent wilting point in root zone of the soil        [m]
+      & wtr_rootzone_theta,   & !< root zone integrated plant available water, fraction of maximum 
+      & rootzone_wpot           !< soil water potential [MPa]
+    ! quincy_jsbach<<<
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -206,11 +210,11 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real1d) :: &
       trans_gmean,            & !< Global mean transpiration                [kg m-2 s-1]
       evapotrans_gmean,       & !< Global land mean evapotranspiration      [kg m-2 s-1]
-      water_content_gsum,     & !< Global land water content                [km3]
+      weq_land_gsum,          & !< Global land water and ice content        [km3]
       discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
-      w_soil_rel_gmean,       & !< Global mean relative soil moisture       [1]
+      wtr_rootzone_rel_gmean, & !< Global mean relative rootzone moisture   [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
-      w_snow_gsum               !< Global snow amount on non-glacier land   [Gt]
+      snow_gsum                 !< Global snow amount on non-glacier land   [Gt]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -261,7 +265,10 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     soil_w       => Get_vgrid('soil_depth_water')
+
+    ! quincy_jsbach: will be removed and re-implemented>>>
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    ! quincy_jsbach<<<
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -503,13 +510,14 @@ CONTAINS
         & initval_r=ini_snow_dens, l_aggregate_all=.TRUE. )
 
       ! Total evapotranspiration, including sublimation
-      CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                                                     &
-        & hgrid, surface,                                                                                         &
-        & t_cf('surface_evapotranspiration_lnd', 'kg m-2 s-1', 'Evapotranspiration from land surface w/o lakes'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-        & prefix, suffix,                                                                                         &
-        & lrestart=.FALSE.,                                                                                       &
-        & loutput=.TRUE., output_level=BASIC,                                                                     &
+      CALL mem%Add_var( 'evapotrans_lnd', mem%evapotrans_lnd,                    &
+        & hgrid, surface,                                                        &
+        & t_cf('evapotrans_lnd', 'kg m-2 s-1',                                   &
+        &      'Evapotranspiration from land surface w/o lakes'),                &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),     &
+        & prefix, suffix,                                                        &
+        & lrestart=.FALSE.,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       IF (.NOT. model%config%use_tmx) THEN
@@ -1094,9 +1102,11 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var('w_soil_root_theta', mem%w_soil_root_theta, &
+    ! quincy_jsbach: will be removed and re-implemented>>>
+    !vg: same as wtr_rootzone_rel???
+      CALL mem%Add_var('wtr_rootzone_theta', mem%wtr_rootzone_theta, &
         & hgrid, surface, &
-        & t_cf('w_soil_root_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
+        & t_cf('wtr_rootzone_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1104,16 +1114,18 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('w_soil_root_pot', mem%w_soil_root_pot, &
+      !vg: Same as matrix_potential???
+      CALL mem%Add_var('rootzone_wpot', mem%rootzone_wpot, &
         & hgrid, surface, &
-        & t_cf('w_soil_root_pot', 'MPa', 'soil water potential'), &
+        & t_cf('rootzone_wpot', 'MPa', 'soil water potential'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-
+    ! quincy_jsbach<<<
+ 
     END IF
 
     ! Additional variables for GLACIER lct

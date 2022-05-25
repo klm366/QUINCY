@@ -560,7 +560,7 @@ CONTAINS
       RETURN
     END IF
 
-    !$claw acc data pcreate(w_skin_max, w_skin_canopy_max, trans_tmp)
+    !$claw acc data pcreate(skinres_max, skinres_canopy_max, trans_tmp)
 
     dsl4jsb_Get_memory(SSE_)
     IF (tile%contains_vegetation) THEN
@@ -1227,11 +1227,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real2D_onChunk :: weq_pond
 
-    dsl4jsb_Real2D_onChunk :: w_soil_rel
-    dsl4jsb_Real2D_onChunk :: w_soil_column
-    dsl4jsb_Real2D_onChunk :: max_moist
-
-
     ! Locally allocated vectors
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1295,7 +1290,6 @@ CONTAINS
     !$ACC UPDATE DEVICE(l_fract, tile_fract) ASYNC(1)
     !$ACC WAIT(1)
 
-    !$claw acc update device(soil_w%dz) ! TODO move if possible
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
@@ -1742,31 +1736,50 @@ CONTAINS
       WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
     END IF
 
-    ! quincy
-    ! needed for quincy only (i.e., two variables not used in jsb4 at the moment)
-    ! copy/paste from mo_sse_update_physics:calc_soil_hydrology() 
+    ! Calculate relative soil moisture (used in LoGro-P Phenology)
+    !$claw acc data present(wtr_rootzone, soil_depth_sl, root_depth_sl, wtr_rootzone_rel)
+    !$claw acc parallel loop gang vector
+    DO ic= 1, nc
+      IF (weq_rootzone_max(ic) > 0._wp) THEN
+        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone(ic) / weq_rootzone_max(ic), 1._wp)
+      ELSE
+        ! weq_rootzone_max is zero over glaciers
+        wtr_rootzone_rel(ic) = 0._wp
+      END IF
+    END DO
+
+    ! quincy_jsbach: will be removed and re-implemented
     ! calculate plant fractional water availability 
     IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
+
+      ! todo: rootzone_fc and wtr_rootzone_pwp are updated within this routine (intent out), and only
+      !    used within the routine and only with quincy! Do we need rootzone_fc and wtr_rootzone_pwp
+      !    as state (and output) variables without quincy? And with quincy?
+      CALL get_amount_in_rootzone(wtr_soil_fc_sl  (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_fc (:))
+      CALL get_amount_in_rootzone(wtr_soil_pwp_sl (:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_pwp(:))
+
       ! catch "no water"
       DO ic = 1,nc
-        IF ((w_soil_root_fc(ic) - w_soil_root_pwp(ic)) > eps8 .OR. &
-          & (w_soil_root_fc(ic) - w_soil_root_pwp(ic)) < -eps8) THEN
-          w_soil_root_theta(ic) = ( w_soil_root(ic) - w_soil_root_pwp(ic) ) / &
-                                  ( w_soil_root_fc(ic) - w_soil_root_pwp(ic) ) 
+        IF ((wtr_rootzone_fc(ic) - wtr_rootzone_pwp(ic)) > eps8 .OR. &
+          & (wtr_rootzone_fc(ic) - wtr_rootzone_pwp(ic)) < -eps8) THEN
+          wtr_rootzone_theta(ic) = ( wtr_rootzone(ic) - wtr_rootzone_pwp(ic) ) / &
+                                  ( wtr_rootzone_fc(ic) - wtr_rootzone_pwp(ic) ) 
         END IF
       END DO
-      w_soil_root_theta(:) = MAX(w_soil_root_theta(:), 0.0_wp)
-      ! calculate root zone and layer soil water potential according to Campbell et al 1974 
+      wtr_rootzone_theta(:) = MAX(wtr_rootzone_theta(:), 0.0_wp)
+
+      ! Calculate root zone and layer soil water potential according to Campbell et al 1974 
       ! catch "no roots"
       DO ic = 1,nc
         IF (root_depth(ic) > eps8) THEN
-          hlp1(ic) = MIN(w_soil_root_fc(ic), w_soil_root(ic)) / root_depth(ic)
+          hlp1(ic) = MIN(wtr_rootzone_fc(ic), wtr_rootzone(ic)) / root_depth(ic)
           ! for numerical reasons, constrain to minimum water potential 
           hlp1(ic) = MAX( EXP( LOG(wpot_min / saxtonA(ic,1)) / saxtonB(ic,1)), hlp1(ic)) 
-          w_soil_root_pot(ic) = saxtonA(ic,1) * (hlp1(ic) ** saxtonB(ic,1))
+          rootzone_wpot(ic) = saxtonA(ic,1) * (hlp1(ic) ** saxtonB(ic,1))
         END IF
       END DO
     END IF
+    ! quincy_jsbach<<<
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2375,7 +2388,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
         !$ACC WAIT(1)
       END IF
-      !$claw acc exit data delete(w_skin_max, w_skin_canopy_max)  
+      !$claw acc exit data delete(skinres_max, skinres_canopy_max)
       RETURN
     END IF
 
