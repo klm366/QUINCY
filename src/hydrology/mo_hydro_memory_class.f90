@@ -180,7 +180,7 @@ MODULE mo_hydro_memory_class
       discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
       wtr_rootzone_rel_gmean, & !< Global mean relative rootzone moisture   [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
-      snow_gsum                 !< Global snow amount on non-glacier land   [Gt]
+      weq_snow_gsum             !< Global snow amount on non-glacier land   [Gt]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
