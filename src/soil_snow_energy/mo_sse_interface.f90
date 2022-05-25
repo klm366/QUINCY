@@ -167,18 +167,18 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: grnd_hflx_old
     dsl4jsb_Real3D_onChunk :: snow_depth_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_ice_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_freeze_sl
-    dsl4jsb_Real3D_onChunk :: w_ice_melt_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_freeze_sl
+    dsl4jsb_Real3D_onChunk :: ice_melt_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: thaw_depth
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
-    dsl4jsb_Real2D_onChunk :: t_soil_root
-    dsl4jsb_Real2D_onChunk :: w_snow_soil
+    dsl4jsb_Real2D_onChunk :: t_soil_root    ! quincy
+    dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
     ! quincy
@@ -248,7 +248,7 @@ CONTAINS
     END IF
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)
 
@@ -274,10 +274,10 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)    ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)        ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)        ! inout
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)         ! inout
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_freeze_sl) ! out
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_melt_sl)    ! out
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_freeze_sl)    ! out
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_melt_sl)      ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
@@ -326,7 +326,7 @@ CONTAINS
         & dtime,                                       &
         & lstart,                                      &
         & t_unfilt_corrected(:)                     ,  &
-        & w_snow_soil(:)                            ,  &
+        & weq_snow_soil(:)                          ,  &
         & heat_cond(:)                              ,  &
         & vol_heat_cap(:)                           ,  &
         & t_soil_acoef                          (:,:), &
@@ -351,10 +351,10 @@ CONTAINS
       ! Calculate snow depth in m (no longer in m water equivalent)
       IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
         !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_3 tile_name=tile%name
-        snow_depth(:) = w_snow_soil(:) * rhoh2o / snow_soil_dens(:)
+        snow_depth(:) = weq_snow_soil(:) * rhoh2o / snow_soil_dens(:)
       ELSE
         !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_4 tile_name=tile%name
-        snow_depth(:) = w_snow_soil(:) * rhoh2o / dens_snow
+        snow_depth(:) = weq_snow_soil(:) * rhoh2o / dens_snow
       END IF
 
       ! Calculate top snow layer for previous time step
@@ -452,7 +452,7 @@ CONTAINS
       snow_depth_sl(:,:) = 0._wp
 
       !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_9 tile_name=tile%name
-      snow_depth(:) = w_snow_soil(:) * rhoh2o / dens_snow
+      snow_depth(:) = weq_snow_soil(:) * rhoh2o / dens_snow
       snow_fract(:) = 0._wp
       t_soil_top(:) = t_unfilt_corrected(:)
       grnd_hflx_snow(:) = 0._wp
@@ -516,11 +516,11 @@ CONTAINS
         & matrix_pot_sl                       (:,:), &
         & bclapp_sl                           (:,:), &
         ! optional, inout
-        & w_soil_sl                           (:,:), &
-        & w_ice_sl                            (:,:), &
+        & wtr_soil_sl                         (:,:), &
+        & ice_soil_sl                         (:,:), &
         ! optional, out
-        & w_soil_freeze_sl                    (:,:), &
-        & w_ice_melt_sl                       (:,:)  &
+        & wtr_freeze_sl                       (:,:), &
+        & ice_melt_sl                         (:,:)  &
         & )
       !$claw acc exit data delete(ws_max_sl)
       DEALLOCATE(ws_max_sl)
@@ -597,8 +597,8 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_bcoef,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SSE_,   t_snow,           weighted_by_fract)
     END IF
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_freeze_sl,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
     IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .AND. tile%contains_vegetation) THEN
       dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_root,      weighted_by_fract)
@@ -640,8 +640,8 @@ CONTAINS
       & fract_org_sl,         &
       & vol_heat_cap_sl,      &
       & heat_cond_sl,         & 
-      & w_soil_sl,            &
-      & w_ice_sl,             &
+      & wtr_soil_sl,          &
+      & ice_soil_sl,          &
       & vol_porosity_sl,      &
       & vol_field_cap_sl
 
@@ -718,8 +718,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap)
     dsl4jsb_Get_var2D_onChunk(SSE_, heat_cond)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)  
 
@@ -736,13 +736,13 @@ CONTAINS
       ALLOCATE(fract_water(nc, nsoil), fract_ice(nc, nsoil))
       !$claw acc enter data pcreate(fract_water, fract_ice)
 
-      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,w_ice_sl)
+      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,wtr_soil_sl,ice_soil_sl)
       !$claw acc parallel loop gang vector collapse(2)
       DO i = 1, size(soil_depth_sl, dim=1)
         DO j = 1, size(soil_depth_sl, dim=2)
           IF (soil_depth_sl(i,j) > 0._wp) THEN
-            fract_water(i,j) = w_soil_sl(i,j) / soil_depth_sl(i,j)
-            fract_ice  (i,j) = w_ice_sl(i,j) / soil_depth_sl(i,j)
+            fract_water(i,j) = wtr_soil_sl(i,j) / soil_depth_sl(i,j)
+            fract_ice  (i,j) = ice_soil_sl(i,j) / soil_depth_sl(i,j)
           ELSE
             fract_water(i,j) = 0._wp
             fract_ice  (i,j) = 0._wp
@@ -797,8 +797,8 @@ CONTAINS
       heat_cond_sl (:,:) = calc_thermal_conductivity( &
         !&                        SPREAD( heat_cond(:),                    DIM=2, ncopies=nsoil)             , &
         &                                heat_cond_tmp(:,:)                                                 , &
-        &                                w_soil_sl(:,:)                                                     , &
-        &                                w_ice_sl(:,:)                                                      , &
+        &                                wtr_soil_sl(:,:)                                                   , &
+        &                                ice_soil_sl(:,:)                                                   , &
         &                                vol_porosity_sl(:,:)                                               , &
         &                                vol_field_cap_sl(:,:)                                              , &
         &                                fract_org_sl(:,:)                                                  , &

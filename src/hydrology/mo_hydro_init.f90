@@ -46,7 +46,7 @@ MODULE mo_hydro_init
       & elevation      (:,:) => NULL(), &
       & oro_stddev     (:,:) => NULL(), &
       & soil_depth     (:,:) => NULL(), &
-      & max_moist      (:,:) => NULL(), &
+      & weq_rootzone_max (:,:) => NULL(), &
       & vol_porosity   (:,:) => NULL(), &
       & hyd_cond_sat   (:,:) => NULL(), &
       & matrix_pot     (:,:) => NULL(), &
@@ -55,10 +55,10 @@ MODULE mo_hydro_init
       & vol_field_cap  (:,:) => NULL(), &
       & vol_p_wilt     (:,:) => NULL(), &
       & root_depth     (:,:) => NULL(), &
-      & w_snow_soil    (:,:) => NULL(), &
-      & w_soil_sl    (:,:,:) => NULL(), &
+      & weq_snow_soil  (:,:) => NULL(), &
+      & wtr_soil_sl  (:,:,:) => NULL(), &
       & ifs_smi_sl   (:,:,:) => NULL(), &
-      & ifs_w_snow     (:,:) => NULL()
+      & ifs_weq_snow   (:,:) => NULL()
   END TYPE t_hydro_init_vars
 
   TYPE(t_hydro_init_vars) :: hydro_init_vars
@@ -100,7 +100,7 @@ CONTAINS
       & hydro_init_vars%elevation       ,       &
       & hydro_init_vars%oro_stddev      ,       &
       & hydro_init_vars%soil_depth      ,       &
-      & hydro_init_vars%max_moist       ,       &
+      & hydro_init_vars%weq_rootzone_max ,      &
       & hydro_init_vars%vol_porosity    ,       &
       & hydro_init_vars%hyd_cond_sat    ,       &
       & hydro_init_vars%matrix_pot      ,       &
@@ -109,11 +109,11 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   ,       &
       & hydro_init_vars%vol_p_wilt      ,       &
       & hydro_init_vars%root_depth      ,       &
-      & hydro_init_vars%w_snow_soil)
+      & hydro_init_vars%weq_snow_soil)
 
-    IF (ASSOCIATED(hydro_init_vars%w_soil_sl)) DEALLOCATE(hydro_init_vars%w_soil_sl)
-    IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl)) DEALLOCATE(hydro_init_vars%ifs_smi_sl)
-    IF (ASSOCIATED(hydro_init_vars%ifs_w_snow)) DEALLOCATE(hydro_init_vars%ifs_w_snow)
+    IF (ASSOCIATED(hydro_init_vars%wtr_soil_sl))  DEALLOCATE(hydro_init_vars%wtr_soil_sl)
+    IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl))   DEALLOCATE(hydro_init_vars%ifs_smi_sl)
+    IF (ASSOCIATED(hydro_init_vars%ifs_weq_snow)) DEALLOCATE(hydro_init_vars%ifs_weq_snow)
 
   END SUBROUTINE hydro_finalize_init_vars
 
@@ -151,7 +151,7 @@ CONTAINS
       & hydro_init_vars%elevation       (nproma, nblks),       &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
       & hydro_init_vars%soil_depth      (nproma, nblks),       &
-      & hydro_init_vars%max_moist       (nproma, nblks),       &
+      & hydro_init_vars%weq_rootzone_max (nproma, nblks),      &
       & hydro_init_vars%vol_porosity    (nproma, nblks),       &
       & hydro_init_vars%hyd_cond_sat    (nproma, nblks),       &
       & hydro_init_vars%matrix_pot      (nproma, nblks),       &
@@ -160,13 +160,13 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   (nproma, nblks),       &
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
-      & hydro_init_vars%w_snow_soil     (nproma, nblks)        &
+      & hydro_init_vars%weq_snow_soil   (nproma, nblks)        &
       & )
 
       hydro_init_vars%elevation      (:,:)   = missval
       hydro_init_vars%oro_stddev     (:,:)   = missval
       hydro_init_vars%soil_depth     (:,:)   = missval
-      hydro_init_vars%max_moist      (:,:)   = missval
+      hydro_init_vars%weq_rootzone_max(:,:)  = missval
       hydro_init_vars%vol_porosity   (:,:)   = missval
       hydro_init_vars%hyd_cond_sat   (:,:)   = missval
       hydro_init_vars%matrix_pot     (:,:)   = missval
@@ -175,19 +175,19 @@ CONTAINS
       hydro_init_vars%vol_field_cap  (:,:)   = missval
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
-      hydro_init_vars%w_snow_soil    (:,:)   = missval
+      hydro_init_vars%weq_snow_soil  (:,:)   = missval
 
     IF (model%config%init_from_ifs) THEN
       ALLOCATE(hydro_init_vars%ifs_smi_sl(nproma,ifs_nsoil,nblks))
       hydro_init_vars%ifs_smi_sl(:,:,:) = missval
-      ALLOCATE(hydro_init_vars%ifs_w_snow(nproma,nblks))
-      hydro_init_vars%ifs_w_snow(:,:) = missval
+      ALLOCATE(hydro_init_vars%ifs_weq_snow(nproma,nblks))
+      hydro_init_vars%ifs_weq_snow(:,:) = missval
     ELSE
-      ALLOCATE(hydro_init_vars%w_soil_sl(nproma, nsoil, nblks))
-      hydro_init_vars%w_soil_sl(:,:,:) = missval
+      ALLOCATE(hydro_init_vars%wtr_soil_sl(nproma, nsoil, nblks))
+      hydro_init_vars%wtr_soil_sl(:,:,:) = missval
     END IF
 
-      ! Get hydrology config
+    ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
 
     !----------
@@ -218,13 +218,17 @@ CONTAINS
       hydro_init_vars%soil_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))
 
       ! Maximum root zone soil moisture
+      ! Note: maxmoist from the initial file corresponds to the field capacity. It is however
+      !    not used as field capacity in a hydrological sense, but rather as maximum soil
+      !    moisture corresponding to a layered bucket scheme, using one bucket for each soil layer.
       ptr_2D => input_file%Read_2d(                        &
-        & fill_array = hydro_init_vars%max_moist, &
+        & fill_array = hydro_init_vars%weq_rootzone_max,   &
         & variable_name='maxmoist')
-      ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
-      hydro_init_vars%max_moist = MERGE(ptr_2D, 0.2_wp, ptr_2D > 0._wp)
+      ! weq_rootzone_max is zero over glaciers ... but since we do this only for tiles with soil, we
+      ! set weq_rootzone_max to 0.2 over glaciers
+      hydro_init_vars%weq_rootzone_max = MERGE(ptr_2D, 0.2_wp, ptr_2D > 0._wp)
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        hydro_init_vars%max_moist = MIN(hydro_init_vars%max_moist, dsl4jsb_Config(HYDRO_)%w_soil_limit)
+        hydro_init_vars%weq_rootzone_max = MIN(hydro_init_vars%weq_rootzone_max, dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
       ! Volumetric soil porosity
@@ -281,6 +285,7 @@ CONTAINS
       ptr_2D => input_file%Read_2d(   &
         & variable_name='root_depth', &
         & fill_array = hydro_init_vars%root_depth)
+!vg: Wollen wir das??
       hydro_init_vars%root_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))           ! min root_depth is 0.1 m, consistent with soil_depth
       hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)  ! Temporary fix (root depth sometimes larger then soil depth)
 
@@ -301,7 +306,7 @@ CONTAINS
         END DO
         ptr_3D => model%config%ifs_input_file%Read_2d_time( &
           & variable_name='W_SNOW', start_time_step=1, end_time_step=1)
-        hydro_init_vars%ifs_w_snow(:,:) = ptr_3D(:,:,1)
+        hydro_init_vars%ifs_weq_snow(:,:) = ptr_3D(:,:,1)
 
       ELSE
 
@@ -311,10 +316,10 @@ CONTAINS
         IF (input_file%Has_var('snow')) THEN
           ptr_2D => input_file%Read_2d( &
             & variable_name='snow',     &
-            & fill_array = hydro_init_vars%w_snow_soil)
-          hydro_init_vars%w_snow_soil = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+            & fill_array = hydro_init_vars%weq_snow_soil)
+          hydro_init_vars%weq_snow_soil = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
         ELSE
-          hydro_init_vars%w_snow_soil = 0._wp
+          hydro_init_vars%weq_snow_soil = 0._wp
           CALL message(TRIM(routine), 'Initializing snow to zero')
         END IF
 
@@ -322,7 +327,7 @@ CONTAINS
           ptr_3D => input_file%Read_2d_extdim( &
             & variable_name='layer_moist',     &
             & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-          hydro_init_vars%w_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+          hydro_init_vars%wtr_soil_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
         END DO
 
         CALL input_file%Close()
@@ -336,27 +341,36 @@ CONTAINS
   SUBROUTINE hydro_init_bc(tile)
 
     USE mo_util,                  ONLY: soil_depth_to_layers_2d
+
+    ! quincy_jsbach: will be removed and re-implemented
     USE mo_hydro_constants,       ONLY: kdiff_sat_max
-    
+    ! quincy_jsbach<<<
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
+
+    ! quincy_jsbach: will be removed and re-implemented
     dsl4jsb_Def_memory(SSE_)
+    ! quincy_jsbach<<<
 
     TYPE(t_jsb_model), POINTER        :: model
     TYPE(t_jsb_vgrid), POINTER        :: soil_w
-    TYPE(t_jsb_vgrid), POINTER        :: vgrid_soil_sb        !< Vertical grid
     INTEGER                           :: i, nsoil
-    INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
-    INTEGER                           :: isoil, iblk, nblks
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
 
+    ! quincy_jsbach: will be removed and re-implemented
+    TYPE(t_jsb_vgrid), POINTER        :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
+    INTEGER                           :: isoil, iblk, nblks
     ! SSE_ 3D
     dsl4jsb_Real3D_onDomain    :: soil_lay_width_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_center_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
     dsl4jsb_Real3D_onDomain    :: soil_lay_depth_lbound_sl
+    ! quincy_jsbach<<<
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
@@ -366,8 +380,11 @@ CONTAINS
 
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+
+    ! quincy_jsbach: will be removed and re-implemented
     vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
     nsoil_sb       =  vgrid_soil_sb%n_levels
+    ! quincy_jsbach<<<
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
@@ -375,6 +392,7 @@ CONTAINS
     ! Get hydrology memory of the tile
     dsl4jsb_Get_memory(HYDRO_)
 
+    ! quincy_jsbach: will be removed and re-implemented
     IF (tile%contains_soil .AND. model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
       ! get SSE_ memory
       dsl4jsb_Get_memory(SSE_)
@@ -385,6 +403,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_lbound_sl)   ! out
       nblks = SIZE(soil_lay_width_sl, 3)
     END IF
+    ! quincy_jsbach<<<
 
     !----------
 
@@ -410,8 +429,9 @@ CONTAINS
         & soil_w%dz(:))                                                          ! Soil layer thicknesses
 
       ! Maximum root zone soil moisture
-      ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
-      dsl4jsb_var2D_onDomain(HYDRO_, max_moist) = hydro_init_vars%max_moist
+      !    weq_rootzone_max is zero over glaciers ... but since we do this only for tiles with soil, we
+      !    set weq_rootzone_max to 0.2 over glaciers
+      dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = hydro_init_vars%weq_rootzone_max
 
       ! Volumetric soil porosity
       dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity
@@ -432,8 +452,9 @@ CONTAINS
       dsl4jsb_var_ptr(HYDRO_, vol_field_cap) = hydro_init_vars%vol_field_cap
 
       ! Get water content at field capacity by multiplying volumetric field capacity with soil layer thicknesses
+      ! Note: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
-        dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,i,:) = hydro_init_vars%vol_field_cap(:,:) * &
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_fc_sl) (:,i,:) = hydro_init_vars%vol_field_cap(:,:) * &
           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
@@ -442,20 +463,22 @@ CONTAINS
       dsl4jsb_var_ptr(HYDRO_, vol_p_wilt) = hydro_init_vars%vol_p_wilt
 
       ! Get permanent wilting point by multiplying with soil layer thicknesses
+      ! Note: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
-        dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl) (:,i,:) = hydro_init_vars%vol_p_wilt(:,:) * &
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_pwp_sl) (:,i,:) = hydro_init_vars%vol_p_wilt(:,:) * &
           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
       ! Get water holding capacity (water content at saturation) by multiplying volumetric porosity with soil layer thicknesses
+      ! Note: At this point a potential ice fraction is ignored.
       DO i=1,nsoil
-        dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
           & dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
-      !$acc update device(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl), &
-      !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl), &
-      !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl), &
+      !$acc update device(dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, wtr_soil_pwp_sl), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_field_cap), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_p_wilt), &
       !$acc dsl4jsb_var_ptr(HYDRO_, pore_size_index), &
@@ -463,7 +486,7 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, matrix_pot), &
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, max_moist), &
+      !$acc dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) )
 
@@ -480,6 +503,7 @@ CONTAINS
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl))
     END IF
 
+    ! quincy_jsbach: will be removed and re-implemented
     ! quincy
     IF (tile%contains_soil .AND. model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
       ! pass soil-layer values to a SSE_ variable with a more intuitive variable-name
@@ -507,6 +531,7 @@ CONTAINS
         END DO
       END DO
     END IF  ! tile%contains_soil & quincy
+    ! quincy_jsbach<<<
 
   END SUBROUTINE hydro_init_bc
 
@@ -516,77 +541,93 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  DECLARATIONS
     USE mo_hydro_constants,     ONLY: vol_porosity_org, vol_field_cap_org, vol_p_wilt_org
-    USE mo_hydro_util,          ONLY: get_water_in_root_zone
-    USE mo_jsb_math_constants,  ONLY: eps8
+    USE mo_hydro_util,          ONLY: get_amount_in_rootzone
     USE mo_util,                ONLY: ifs2soil
+
+    ! quincy_jsbach: will be removed and re-implemented
+    USE mo_jsb_math_constants,  ONLY: eps8
+    ! quincy_jsbach<<<
 
     !-----------------------------------------------------------------------
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     !-----------------------------------------------------------------------
     dsl4jsb_Def_config(HYDRO_)
-    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
 
-    TYPE(t_jsb_model), POINTER              :: model
+    ! quincy_jsbach: will be removed and re-implemented
+    dsl4jsb_Def_config(SSE_)
     TYPE(t_jsb_grid),  POINTER              :: grid
-    TYPE(t_jsb_vgrid), POINTER              :: soil_w
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: hlp1
+    INTEGER                                 :: j, k
+    ! quincy_jsbach<<<
+
+    TYPE(t_jsb_model), POINTER              :: model
+    TYPE(t_jsb_vgrid), POINTER              :: soil_w
     INTEGER                                 :: i, nsoil, nproma, nblks
-    INTEGER                                 :: j,k
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_ic'
     !-----------------------------------------------------------------------
+    ! quincy_jsbach: will be removed and re-implemented
     ! HYDRO_ 2D
     dsl4jsb_Real2D_onDomain    :: root_depth
-    dsl4jsb_Real2D_onDomain    :: w_soil_root
-    dsl4jsb_Real2D_onDomain    :: w_soil_root_fc
-    dsl4jsb_Real2D_onDomain    :: w_soil_root_theta
-    dsl4jsb_Real2D_onDomain    :: w_soil_root_pot
+    dsl4jsb_Real2D_onDomain    :: wtr_rootzone
+    dsl4jsb_Real2D_onDomain    :: wtr_rootzone_fc
+    dsl4jsb_Real2D_onDomain    :: wtr_rootzone_theta
+    dsl4jsb_Real2D_onDomain    :: rootzone_wpot
     ! HYDRO_ 3D
     dsl4jsb_Real3D_onDomain    :: saxtonA 
     dsl4jsb_Real3D_onDomain    :: saxtonB 
     dsl4jsb_Real3D_onDomain    :: soil_depth_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_fc_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_pot_sl
+    dsl4jsb_Real3D_onDomain    :: wtr_soil_sl
+    dsl4jsb_Real3D_onDomain    :: wtr_soil_fc_sl
+    dsl4jsb_Real3D_onDomain    :: soil_wpot_sl
+    ! quincy_jsbach<<<
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
 
     model  => Get_model(tile%owner_model_id)
-    grid   => Get_grid(model%grid_id)
-    nproma = grid%Get_nproma()
-    nblks  = grid%Get_nblks()
+
     soil_w => Get_vgrid('soil_depth_water')
     nsoil  = soil_w%n_levels
 
+    ! quincy_jsbach: will be removed and re-implemented
+    dsl4jsb_Get_config(SSE_)
+    grid   => Get_grid(model%grid_id)
+    nproma = grid%Get_nproma()
+    nblks  = grid%Get_nblks()
+    ! quincy_jsbach<<<
+
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
-    dsl4jsb_Get_config(SSE_)
+
     ! Get memory of the tile
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
     END IF
 
+    ! quincy_jsbach: will be removed and re-implemented
     IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! HYDRO_ 2D
+
       dsl4jsb_Get_var2D_onDomain(HYDRO_,  root_depth)          ! in
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_soil_root)         ! in
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_soil_root_fc)      ! in
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_soil_root_theta)   ! out
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  w_soil_root_pot)     ! out
-      ! HYDRO_ 3D
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  saxtonA)             ! calculated in init_soil_properties(), used as input here
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  saxtonB)             ! calculated in init_soil_properties(), used as input here
+      dsl4jsb_Get_var2D_onDomain(HYDRO_,  wtr_rootzone)        ! in
+      dsl4jsb_Get_var2D_onDomain(HYDRO_,  wtr_rootzone_fc)     ! in
+
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,  saxtonA)             ! in  (calculated in init_soil_properties)
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,  saxtonB)             ! in  (calculated in init_soil_properties)
       dsl4jsb_Get_var3D_onDomain(HYDRO_,  soil_depth_sl)       ! in
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  w_soil_sl)           ! in
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  w_soil_fc_sl)        ! in
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  w_soil_pot_sl)       ! out
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,  wtr_soil_sl)         ! in
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,  wtr_soil_fc_sl)      ! in
+
+      dsl4jsb_Get_var2D_onDomain(HYDRO_,  wtr_rootzone_theta)  ! out
+      dsl4jsb_Get_var2D_onDomain(HYDRO_,  rootzone_wpot)       ! out
+      dsl4jsb_Get_var3D_onDomain(HYDRO_,  soil_wpot_sl)        ! out
       ! allocate local var
       ALLOCATE(hlp1(nproma, nsoil, nblks))
     END IF
+    ! quincy_jsbach<<<
 
     !----------
 
@@ -594,44 +635,45 @@ CONTAINS
 
       IF (model%config%init_from_ifs) THEN
 
-        CALL ifs2soil(hydro_init_vars%ifs_smi_sl(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:), soil_w%ubounds(:))
+        CALL ifs2soil(hydro_init_vars%ifs_smi_sl(:,:,:), ifs_soil_depth(:),        &
+          &           dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:), soil_w%ubounds(:))
 
         ! Convert soil moisture index (SMI) in IFS file to water content
-        WHERE (dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) < -999._wp)
+        WHERE (dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:) < -999._wp)
           ! Fill missing values
-          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
-            &  0.5_wp * (dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) + dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:))
+          dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:) = &
+            &  0.5_wp * (dsl4jsb_var_ptr(HYDRO_,wtr_soil_pwp_sl)(:,:,:) + dsl4jsb_var_ptr(HYDRO_,wtr_soil_fc_sl) (:,:,:))
         ELSE WHERE
-          dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) = &
-            & MIN(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl)(:,:,:), &
+          dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:) = &
+            & MIN(dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl)(:,:,:), &
             &     MAX(0._wp, &
-            &         dsl4jsb_var_ptr(HYDRO_,w_soil_sl)(:,:,:) &
-            &         * (dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,:,:) - dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:)) &
-            &         + dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl)(:,:,:) &
+            &         dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl)(:,:,:) &
+            &         * (dsl4jsb_var_ptr(HYDRO_,wtr_soil_fc_sl) (:,:,:) - dsl4jsb_var_ptr(HYDRO_,wtr_soil_pwp_sl)(:,:,:)) &
+            &         + dsl4jsb_var_ptr(HYDRO_,wtr_soil_pwp_sl)(:,:,:) &
             &        ) &
             &    )
         END WHERE
-        dsl4jsb_var_ptr(HYDRO_, w_snow_soil)(:,:) = hydro_init_vars%ifs_w_snow(:,:)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)
+        dsl4jsb_var_ptr(HYDRO_, weq_snow_soil)(:,:) = hydro_init_vars%ifs_weq_snow(:,:)
+        dsl4jsb_var2D_onDomain(HYDRO_, weq_snow) = dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)
 
       ELSE
 
         ! Initialize hydrology variables from ic file
 
         ! Initial snow depth
-        dsl4jsb_var_ptr(HYDRO_, w_snow_soil) = hydro_init_vars%w_snow_soil
-        dsl4jsb_var2D_onDomain(HYDRO_, w_snow) = dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil)
+        dsl4jsb_var_ptr(HYDRO_, weq_snow_soil) = hydro_init_vars%weq_snow_soil
+        dsl4jsb_var2D_onDomain(HYDRO_, weq_snow) = dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)
 
-        dsl4jsb_var_ptr(HYDRO_,w_soil_sl) (:,:,:) = hydro_init_vars%w_soil_sl(:,:,:)
+        dsl4jsb_var_ptr(HYDRO_,wtr_soil_sl) (:,:,:) = hydro_init_vars%wtr_soil_sl(:,:,:)
 
       END IF
 
-      ! Initial w_soil_overflown water
-      dsl4jsb_var2D_onDomain(HYDRO_,w_soil_overflow) = 0._wp
+      ! Initial soil water overflow (used in terra planet experiments)
+      dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow) = 0._wp
 
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_snow),       &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_snow_soil),  &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_overflow))
+      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow),       &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil),  &
+      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow))
       ! avoid compiler warnings about pointers not being dereferenced
 
     END IF
@@ -652,132 +694,132 @@ CONTAINS
         END IF
       END IF
       ! The following can change later depending on the organic layers and soil ice content.
-      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) =                                                        &
-        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl) &
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl) =                                                        &
+        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl) &
         & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_porosity_org
-      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl) =                                                         &
-        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl)  &
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl) =                                                         &
+        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)  &
         & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_field_cap_org
-      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) =                                                        &
-        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl) &
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl) =                                                        &
+        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl) &
         & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) * vol_p_wilt_org
       
       !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sat_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, w_soil_pwp_sl))
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
     END IF
 
     IF (tile%contains_soil) THEN
       ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
-      dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl) = &
-        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
-      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
 
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-          CALL get_water_in_root_zone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)     (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,i),  &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_column) (:,  i)   )
-      END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_column))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) > dsl4jsb_var2D_onDomain(HYDRO_, max_moist))
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) = dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      END WHERE
-
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, max_moist) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column) / dsl4jsb_var2D_onDomain(HYDRO_, max_moist)
-      ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
-      END WHERE
-
+      ! Note: wtr_soil_fc_sl is not meant as field capacity in a hydrological sense, but as maximum
+      !    filling of the specific soil layer.
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = &
+        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl))
+      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))
       
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column), &
-      !$acc               dsl4jsb_var3D_onDomain(HYDRO_, w_soil_sl))
-
       CALL init_soil_properties(tile)
     END IF
 
-    ! if vegetation (assuming there is also soil)
-    IF (tile%contains_vegetation) THEN
-      ! Calculate water content and field capacity in the root zone
-      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, w_soil_root), 2)
-          CALL get_water_in_root_zone( &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_sl)      (:,:,i), & 
+    IF (tile%contains_vegetation) THEN   ! Assuming there is also soil and roots
+
+      ! Initialization of relative root zone soil moisture (ignoring ice).
+      !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
+
+      ! wtr_rootzone calculated here is only used to calculate relative soil moisture for phenology.
+      ! It is re-calculated in update_soil_hydrology.
+      DO i=1,SIZE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone), 2)
+          CALL get_amount_in_rootzone( &
+          & dsl4jsb_var_ptr(HYDRO_, wtr_soil_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_root)    (:,  i)  )
- 
-          CALL get_water_in_root_zone( & 
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_fc_sl)   (:,:,i), & 
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc) (:,  i)  )
-          
-          CALL get_water_in_root_zone( & 
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_pwp_sl)  (:,:,i), & 
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
-          & dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp)(:,  i)  )
+          & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)   (:,  i)  )
       END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, w_soil_root),     &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_fc),  &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, w_soil_root_pwp))
+
+      ! Make sure wtr_rootzone is smaller than weq_rootzone_max
+      ! Note: weq_rootzone_max corresponds to the maximum possible amount of water or ice in the root zone.
+      !    This concept is different from the hydrological understanding of field capacity and saturation.
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
+      END WHERE
+
+      ! Initialization of wtr_rootzone_rel (completely ignoring ice)
+      !    It is re-calculated - considering ice - in update_water_stress.
+      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp)
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
+          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
+      ELSE WHERE
+        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
+      END WHERE
+
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone),     &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel))
       
-      ! quincy
+      ! quincy_jsbach: will be removed and re-implemented
+      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_fc),  &
+      !$acc             dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_pwp))
       IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
         ! adjust initial water amount to prescribed theta
-        ! w_soil_root(:)        = w_soil_root_pwp(:) + & 
-        !                         dsl4jsb_Config(SSE_)%soil_theta_prescribe * (w_soil_root_fc(:) - w_soil_root_pwp(:)) 
-        w_soil_root_theta(:,:) = dsl4jsb_Config(SSE_)%soil_theta_prescribe
+        ! wtr_rootzone(:)        = wtr_rootzone_pwp(:) + & 
+        !                         dsl4jsb_Config(SSE_)%soil_theta_prescribe * (wtr_rootzone_fc(:) - wtr_rootzone_pwp(:)) 
+        wtr_rootzone_theta(:,:) = dsl4jsb_Config(SSE_)%soil_theta_prescribe
         ! in case there is no water in the root zone
-        WHERE (MIN(w_soil_root_fc(:,:), w_soil_root(:,:)) > eps8)
-          w_soil_root_pot(:,:) = saxtonA(:,1,:) * &
-            & (MIN(w_soil_root_fc(:,:), w_soil_root(:,:)) / root_depth(:,:)) ** saxtonB(:,1,:)
+        WHERE (MIN(wtr_rootzone_fc(:,:), wtr_rootzone(:,:)) > eps8)
+          rootzone_wpot(:,:) = saxtonA(:,1,:) * &
+            & (MIN(wtr_rootzone_fc(:,:), wtr_rootzone(:,:)) / root_depth(:,:)) ** saxtonB(:,1,:)
         ELSEWHERE
-          w_soil_root_pot(:,:) = 0.0_wp
+          rootzone_wpot(:,:) = 0.0_wp
         ENd WHERE
         
         !> 7.2 soil water potential per layer
         !! 
-        ! in case a soil-layer width (soil_depth_sl) is zero AND w_soil_fc_sl & w_soil_sl is zero (hlp1 should not become zero)
+        ! in case a soil-layer width (soil_depth_sl) is zero AND wtr_soil_fc_sl & wtr_soil_sl is zero (hlp1 should not become zero)
         ! (it seem that these two are always zero at the same time, i.e., not useing .OR.)
-        WHERE((soil_depth_sl(:,:,:) > eps8) .AND. (MIN(w_soil_fc_sl(:,:,:), w_soil_sl(:,:,:)) > eps8))
-          hlp1(:,:,:)          = MIN(w_soil_fc_sl(:,:,:), w_soil_sl(:,:,:)) / soil_depth_sl(:,:,:)
-          w_soil_pot_sl(:,:,:) = saxtonA(:,:,:) * hlp1(:,:,:) ** saxtonB(:,:,:)
+        WHERE((soil_depth_sl(:,:,:) > eps8) .AND. (MIN(wtr_soil_fc_sl(:,:,:), wtr_soil_sl(:,:,:)) > eps8))
+          hlp1(:,:,:)          = MIN(wtr_soil_fc_sl(:,:,:), wtr_soil_sl(:,:,:)) / soil_depth_sl(:,:,:)
+          soil_wpot_sl(:,:,:) = saxtonA(:,:,:) * hlp1(:,:,:) ** saxtonB(:,:,:)
         ELSEWHERE
-          w_soil_pot_sl(:,:,:) = 0.0_wp 
+          soil_wpot_sl(:,:,:) = 0.0_wp 
         END WHERE
       END IF ! quincy
-    END IF ! vegetation
+    ! quincy_jsbach<<<
+
+    END IF ! Tile with vegetation
 
   END SUBROUTINE hydro_init_ic
 
 
   SUBROUTINE init_soil_properties(tile)
+    ! This routine is needed because soil snow and energy (SSE) processes are calculated before
+    ! the soil properties are calculated the first time within the hydrology in update_soil_properties.
 
     USE mo_hydro_constants, ONLY: vol_porosity_org, hyd_cond_sat_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
       & vol_field_cap_org, vol_p_wilt_org
+
+
+    ! quincy_jsbach: will be removed and re-implemented
     USE mo_hydro_constants, ONLY: k_pwp_s, k_pwp_c, k_pwp_sc, k_pwp_a, k_pwp_at, k_pwp_bt, &
       & k_fc_s, k_fc_c, k_fc_sc, k_fc_a, k_fc_at, k_fc_bt, k_fc_ct, &
       & k_sat_s, k_sat_c, k_sat_sc, k_sat_a, k_sat_at, k_sat_bt, k_sat_ct, k_sat_dt, &
       & wpot_pwp, wpot_fc, wpot_fc
+    ! quincy_jsbach<<<
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     ! Local variables
     !
     dsl4jsb_Def_config(HYDRO_)
-    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
+
+    ! quincy_jsbach: will be removed and re-implemented
+    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     INTEGER                                          :: nproma, nblks
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: hlp1
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: theta_pwp_sl, theta_fc_sl
+    ! quincy_jsbach<<<
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
@@ -798,6 +840,7 @@ CONTAINS
       & vol_field_cap_sl,      &
       & vol_p_wilt_sl
 
+    ! quincy_jsbach: will be removed and re-implemented
     ! SSE_ 3D
     dsl4jsb_Real3D_onDomain    :: sand_sl
     dsl4jsb_Real3D_onDomain    :: silt_sl
@@ -806,6 +849,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: saxtonA 
     dsl4jsb_Real3D_onDomain    :: saxtonB 
     dsl4jsb_Real3D_onDomain    :: saxtonC 
+    ! quincy_jsbach<<<
 
     ! Locally allocated vectors
     !
@@ -826,34 +870,45 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
+
+    ! quincy_jsbach: will be removed and re-implemented
     dsl4jsb_Get_config(SSE_)
+    ! quincy_jsbach<<<
 
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
+
+    ! quincy_jsbach: will be removed and re-implemented
     dsl4jsb_Get_memory(SSE_)
+    ! quincy_jsbach<<<
 
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_porosity)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, bclapp)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, matrix_pot)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, pore_size_index)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_field_cap)
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_p_wilt)
-    IF (dsl4jsb_Config(HYDRO_)%l_organic) dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)       ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_porosity)       ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, bclapp)             ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, matrix_pot)         ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, pore_size_index)    ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_field_cap)      ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_p_wilt)         ! in
+    IF (dsl4jsb_Config(HYDRO_)%l_organic)   &
+     &   dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)  ! in
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, hyd_cond_sat_sl)    ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)    ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)          ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)      ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl) ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)   ! out
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)      ! out
 
+    ! quincy_jsbach: will be removed and re-implemented
     IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
       ! SSE_ 3D
-      dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem (HYDRO_ init needs to be done before SSE_ init)
-      dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem (HYDRO_ init needs to be done before SSE_ init)
-      dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem (HYDRO_ init needs to be done before SSE_ init)
+      dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
+                                                      !          (HYDRO_ init needs to be done before SSE_ init)
+      dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
+                                                      !          (HYDRO_ init needs to be done before SSE_ init)
+      dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
+                                                      !          (HYDRO_ init needs to be done before SSE_ init)
       ! HYDRO_ 3D
       dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonA)     ! out
       dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonB)     ! out
@@ -866,7 +921,7 @@ CONTAINS
       ALLOCATE(theta_pwp_sl(nproma, nsoil, nblks))
       ALLOCATE(theta_fc_sl(nproma, nsoil, nblks))
     END IF
-
+    ! quincy_jsbach<<<
 
     hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
     vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
@@ -876,6 +931,7 @@ CONTAINS
     vol_field_cap_sl  (:,:,:) = SPREAD(vol_field_cap  (:,:), DIM=2, ncopies=nsoil)
     vol_p_wilt_sl     (:,:,:) = SPREAD(vol_p_wilt     (:,:), DIM=2, ncopies=nsoil)
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+      ! Attention: hyd_cond_sat_sl is calculated differently (correct) in update_soil_properties
       hyd_cond_sat_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * hyd_cond_sat_sl   (:,:,:) + fract_org_sl(:,:,:) * hyd_cond_sat_org
       vol_porosity_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_porosity_sl   (:,:,:) + fract_org_sl(:,:,:) * vol_porosity_org
       bclapp_sl         (:,:,:) = (1 - fract_org_sl(:,:,:)) * bclapp_sl         (:,:,:) + fract_org_sl(:,:,:) * bclapp_org
@@ -889,7 +945,7 @@ CONTAINS
     !$acc matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl, &
     !$acc vol_p_wilt_sl)
 
-    ! quincy
+    ! quincy_jsbach: will be removed and re-implemented
     IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
       ! init soil properties
       sand_sl(:,:,:)      = dsl4jsb_Config(SSE_)%soil_sand
@@ -925,6 +981,7 @@ CONTAINS
       ! kdiff_sat_sl(:,:,:) = kdiff_sat_max * (theta_sat_sl(:,:,:) - theta_fc_sl(:,:,:)) ** (3.0_wp + 1._wp / saxtonB(:,:,:))
       saxtonC(:,:,:)      = 3.0_wp - 2._wp * saxtonB(:,:,:)
     END IF
+    ! quincy_jsbach<<<
 
   END SUBROUTINE init_soil_properties
 

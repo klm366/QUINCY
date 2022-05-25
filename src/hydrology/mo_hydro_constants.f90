@@ -26,7 +26,7 @@ MODULE mo_hydro_constants
     & wsn2fract_sigfac = 0.15_wp,          &
     & wsn2fract_const  = 0.95_wp,          & !< Inverse of snow height when snow is considered to completely cover the ground
 
-    & InterceptionEfficiency = 0.25_wp,    & !< Efficiency of interception of precipitation as rain
+    & InterceptionEfficiency = 0.25_wp,    & !< Efficiency of interception of precipitation (rain and snow)
 
     & Epar                   = 2.2E5_wp,   & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1.  R: for update_par
     & SoilReflectivityParMin = 0.0_wp,     & ! Minimum soil reflectivity in PAR region.  R: for update_par
@@ -59,7 +59,7 @@ MODULE mo_hydro_constants
                                              ! (value for peat from Beringer, 2001)
     & pore_size_index_org = 0.7_wp           !< Pore size distribution index of organic part of soil layer []
 
-  ! quincy
+  ! quincy_jsbach: will be removed and re-implemented >>>
   ! constants in pedo-transfer functions according to Saxton & Rawls 2006
   REAL(wp) :: & 
     & wpot_pwp, &                 !< water potential at permanent wilitng point (Pa)
@@ -128,6 +128,7 @@ CONTAINS
     kdiff_sat_max   = 1930.0_wp / 1000.0_wp / 3600._wp ! m/s
 
   END SUBROUTINE init_hydro_constants
+  ! quincy_jsbach<<<
 
 #endif
 END MODULE mo_hydro_constants
