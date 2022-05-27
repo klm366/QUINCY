@@ -2018,7 +2018,7 @@ CONTAINS
       & weq_snow, &
       & weq_fluxes, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
-      & weq_balance_dev  ! [m3/(time step)]
+      & weq_balance_err  ! [m3/(time step)]
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &
       & ice_soil_sl
@@ -2069,7 +2069,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_dev)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
 
     !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
 
@@ -2095,7 +2095,7 @@ CONTAINS
 
     IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
-      weq_balance_dev(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
+      weq_balance_err(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
     END IF
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
@@ -2134,7 +2134,7 @@ CONTAINS
     CALL update_water_balance(tile, options)
     ! dsl4jsb_Aggregate_onChunk(HYDRO_, weq_fluxes,       weighted_by_fract)
     ! dsl4jsb_Aggregate_onChunk(HYDRO_, weq_land,         weighted_by_fract)
-    ! dsl4jsb_Aggregate_onChunk(HYDRO_, water_balance_dev, weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(HYDRO_, weq_balance_err,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

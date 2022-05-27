@@ -55,7 +55,7 @@ MODULE mo_hydro_memory_class
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
       & weq_fluxes,           & !< All land water fluxes; needed for water budget check                 [m3/s]
       & weq_land,             & !< Total amount of land water and ice                                   [m3]
-      & weq_balance_dev         !< Land water balance error within a time step                          [m3/(time step)]
+      & weq_balance_err         !< Land water balance error within a time step                          [m3/(time step)]
 
     TYPE(t_jsb_var_real2d) :: &
       & runoff,               & !< surface runoff
@@ -371,9 +371,9 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'weq_balance_dev', mem%weq_balance_dev,                        &
+    CALL mem%Add_var( 'weq_balance_err', mem%weq_balance_err,                        &
       & hgrid, surface,                                                              &
-      & t_cf('weq_balance_dev', 'm3/(time step)', 'Land water balance error'),       &
+      & t_cf('weq_balance_err', 'm3/(time step)', 'Land water balance error'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
