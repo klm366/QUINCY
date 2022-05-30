@@ -28,6 +28,10 @@
 MODULE mo_sb_util
 #ifndef __NO_JSBACH__
 
+#ifdef __QUINCY_STANDALONE__
+#include "dsl_jsbach.inc"
+#endif
+
   USE mo_kind,                        ONLY: wp
   USE mo_jsb_control,                 ONLY: debug_on
   USE mo_exception,                   ONLY: message, finish
@@ -37,7 +41,6 @@ MODULE mo_sb_util
   PUBLIC :: reset_sb_fluxes, update_time_average_soilbiogeochemistry
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
-
 
 CONTAINS
 
@@ -86,10 +89,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: leaching_nh4_solute
     dsl4jsb_Real2D_onChunk :: leaching_no3_solute
     dsl4jsb_Real2D_onChunk :: leaching_po4_solute
-    dsl4jsb_Real2D_onChunk :: emission_nh3
-    dsl4jsb_Real2D_onChunk :: emission_noy
-    dsl4jsb_Real2D_onChunk :: emission_n2o
-    dsl4jsb_Real2D_onChunk :: emission_n2
     dsl4jsb_Real2D_onChunk :: leaching_dom_carbon
     dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen
     dsl4jsb_Real2D_onChunk :: leaching_dom_phosphorus
@@ -98,6 +97,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: leaching_dom_nitrogen15
     dsl4jsb_Real2D_onChunk :: leaching_nh4_n15_solute
     dsl4jsb_Real2D_onChunk :: leaching_no3_n15_solute
+    dsl4jsb_Real2D_onChunk :: emission_nh3
+    dsl4jsb_Real2D_onChunk :: emission_noy
+    dsl4jsb_Real2D_onChunk :: emission_n2o
+    dsl4jsb_Real2D_onChunk :: emission_n2
     dsl4jsb_Real2D_onChunk :: emission_nh3_n15
     dsl4jsb_Real2D_onChunk :: emission_noy_n15
     dsl4jsb_Real2D_onChunk :: emission_n2o_n15
@@ -201,106 +204,103 @@ CONTAINS
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! SB_ 2D
-    dsl4jsb_Get_var2D_onChunk(SB_,    total_flux_carbon)        
-    dsl4jsb_Get_var2D_onChunk(SB_,    total_flux_nitrogen)      
-    dsl4jsb_Get_var2D_onChunk(SB_,    total_flux_phosphorus)    
-    dsl4jsb_Get_var2D_onChunk(SB_,    total_flux_carbon13)      
-    dsl4jsb_Get_var2D_onChunk(SB_,    total_flux_carbon14)      
-    dsl4jsb_Get_var2D_onChunk(SB_,    total_flux_nitrogen15)    
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_nh4_solute)      
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_no3_solute)      
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_po4_solute)      
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_dom_carbon)      
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_dom_nitrogen)    
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_dom_phosphorus)  
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_dom_carbon13)    
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_dom_carbon14)    
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_dom_nitrogen15)  
-    dsl4jsb_Get_var2D_onChunk(SB_,    emission_nh3)             
-    dsl4jsb_Get_var2D_onChunk(SB_,    emission_noy)             
-    dsl4jsb_Get_var2D_onChunk(SB_,    emission_n2o)             
-    dsl4jsb_Get_var2D_onChunk(SB_,    emission_n2)              
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon)           ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_phosphorus)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon13)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_carbon14)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       total_flux_nitrogen15)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon)         ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_phosphorus)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon13)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_carbon14)       ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_dom_nitrogen15)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)     ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o)                ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2)                 ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_nh3_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_noy_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2o_n15)            ! out
+    dsl4jsb_Get_var2D_onChunk(SB_,       emission_n2_n15)             ! out
     ! SB_ 3D
-    dsl4jsb_Get_var3D_onChunk(SB_,    het_respiration)             
-    dsl4jsb_Get_var3D_onChunk(SB_,    het_respiration_c13)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    het_respiration_c14)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    myc_respiration)             
-    dsl4jsb_Get_var3D_onChunk(SB_,    myc_respiration_c13)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    myc_respiration_c14)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    net_mineralisation_nh4)      
-    dsl4jsb_Get_var3D_onChunk(SB_,    net_mineralisation_no3)      
-    dsl4jsb_Get_var3D_onChunk(SB_,    net_mineralisation_po4)      
-    dsl4jsb_Get_var3D_onChunk(SB_,    plant_uptake_nh4_sl)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    plant_uptake_no3_sl)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    plant_uptake_po4_sl)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    weathering_po4)              
-    dsl4jsb_Get_var3D_onChunk(SB_,    occlusion_po4)               
-    dsl4jsb_Get_var3D_onChunk(SB_,    slow_exchange_po4)           
-    dsl4jsb_Get_var3D_onChunk(SB_,    fast_exchange_po4)           
-    dsl4jsb_Get_var3D_onChunk(SB_,    fast_exchange_nh4)           
-    dsl4jsb_Get_var3D_onChunk(SB_,    fast_adsorpt_po4)            
-    dsl4jsb_Get_var3D_onChunk(SB_,    fast_adsorpt_nh4)            
-    dsl4jsb_Get_var3D_onChunk(SB_,    biochem_mineralisation_po4)  
-    dsl4jsb_Get_var3D_onChunk(SB_,    gross_mineralisation_po4)    
-    dsl4jsb_Get_var3D_onChunk(SB_,    microbial_uptake_nh4_sl)     
-    dsl4jsb_Get_var3D_onChunk(SB_,    microbial_uptake_no3_sl)     
-    dsl4jsb_Get_var3D_onChunk(SB_,    microbial_uptake_nh4_n15_sl) 
-    dsl4jsb_Get_var3D_onChunk(SB_,    microbial_uptake_no3_n15_sl) 
-    dsl4jsb_Get_var3D_onChunk(SB_,    microbial_uptake_po4_sl)     
-    dsl4jsb_Get_var3D_onChunk(SB_,    mycorrhiza_uptake_nh4_sl)    
-    dsl4jsb_Get_var3D_onChunk(SB_,    mycorrhiza_uptake_no3_sl)    
-    dsl4jsb_Get_var3D_onChunk(SB_,    mycorrhiza_uptake_norg_sl)   
-    dsl4jsb_Get_var3D_onChunk(SB_,    mycorrhiza_uptake_norg_n15_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,    mycorrhiza_uptake_po4_sl)    
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_nh4_solute)        
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_nh4_assoc)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_no3_solute)        
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_po4_solute)        
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_po4_assoc_fast)    
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_po4_assoc_slow)    
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_po4_occluded)      
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_po4_primary)       
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_noy)               
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_n2o)               
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_n2)                
-    dsl4jsb_Get_var3D_onChunk(SB_,    volatilisation_nh4)          
-    dsl4jsb_Get_var3D_onChunk(SB_,    nitrification_no3)           
-    dsl4jsb_Get_var3D_onChunk(SB_,    nitrification_noy)           
-    dsl4jsb_Get_var3D_onChunk(SB_,    nitrification_n2o)           
-    dsl4jsb_Get_var3D_onChunk(SB_,    denitrification_noy)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    denitrification_n2o)         
-    dsl4jsb_Get_var3D_onChunk(SB_,    denitrification_n2)          
-    dsl4jsb_Get_var3D_onChunk(SB_,    asymb_n_fixation)            
-    dsl4jsb_Get_var3D_onChunk(SB_,    net_mineralisation_nh4_n15)  
-    dsl4jsb_Get_var3D_onChunk(SB_,    net_mineralisation_no3_n15)  
-    dsl4jsb_Get_var3D_onChunk(SB_,    plant_uptake_nh4_n15_sl)     
-    dsl4jsb_Get_var3D_onChunk(SB_,    plant_uptake_no3_n15_sl)     
-    dsl4jsb_Get_var3D_onChunk(SB_,    mycorrhiza_uptake_nh4_n15_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,    mycorrhiza_uptake_no3_n15_sl)
-    dsl4jsb_Get_var3D_onChunk(SB_,    volatilisation_nh4_n15)      
-    dsl4jsb_Get_var3D_onChunk(SB_,    nitrification_no3_n15)       
-    dsl4jsb_Get_var3D_onChunk(SB_,    nitrification_noy_n15)       
-    dsl4jsb_Get_var3D_onChunk(SB_,    nitrification_n2o_n15)       
-    dsl4jsb_Get_var3D_onChunk(SB_,    denitrification_noy_n15)     
-    dsl4jsb_Get_var3D_onChunk(SB_,    denitrification_n2o_n15)     
-    dsl4jsb_Get_var3D_onChunk(SB_,    denitrification_n2_n15)      
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_nh4_n15_solute)    
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_nh4_n15_assoc)     
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_no3_n15_solute)    
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_noy_n15)           
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_n2o_n15)           
-    dsl4jsb_Get_var3D_onChunk(SB_,    transport_n2_n15)            
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_nh4_n15_solute)     
-    dsl4jsb_Get_var2D_onChunk(SB_,    leaching_no3_n15_solute)     
-    dsl4jsb_Get_var2D_onChunk(SB_,    emission_nh3_n15)            
-    dsl4jsb_Get_var2D_onChunk(SB_,    emission_noy_n15)            
-    dsl4jsb_Get_var2D_onChunk(SB_,    emission_n2o_n15)            
-    dsl4jsb_Get_var2D_onChunk(SB_,    emission_n2_n15)             
-    dsl4jsb_Get_var3D_onChunk(SB_,    asymb_n_fixation_n15)        
-
-    ! -------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! -------------------------------------------------------------------------------------------------------
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c13)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       het_respiration_c14)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration)             ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c13)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       myc_respiration_c14)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_po4)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_po4_sl)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       weathering_po4)              ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       occlusion_po4)               ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       slow_exchange_po4)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_exchange_po4)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_exchange_nh4)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorpt_po4)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       fast_adsorpt_nh4)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       biochem_mineralisation_po4)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       gross_mineralisation_po4)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_nh4_n15_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_no3_n15_sl) ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       microbial_uptake_po4_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_sl)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_sl)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_sl)   ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_norg_n15_sl)! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_po4_sl)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_assoc)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_solute)        ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_fast)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_assoc_slow)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_occluded)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_po4_primary)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy)               ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o)               ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2)                ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_nh4)          ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2)          ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_nh4_n15)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       net_mineralisation_no3_n15)  ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_nh4_n15_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       plant_uptake_no3_n15_sl)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_nh4_n15_sl)! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       mycorrhiza_uptake_no3_n15_sl)! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       volatilisation_nh4_n15)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_no3_n15)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_noy_n15)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       nitrification_n2o_n15)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_noy_n15)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2o_n15)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       denitrification_n2_n15)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_nh4_n15_assoc)     ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_no3_n15_solute)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_noy_n15)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2o_n15)           ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       transport_n2_n15)            ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       asymb_n_fixation_n15)        ! out
+    ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 pools
     !>
@@ -337,10 +337,16 @@ CONTAINS
     leaching_dom_carbon13(:)          = zero
     leaching_dom_carbon14(:)          = zero
     leaching_dom_nitrogen15(:)        = zero
+    leaching_nh4_n15_solute(:)        = zero
+    leaching_no3_n15_solute(:)        = zero
     emission_nh3(:)                   = zero
     emission_noy(:)                   = zero
     emission_n2o(:)                   = zero
     emission_n2(:)                    = zero
+    emission_nh3_n15(:)               = zero
+    emission_noy_n15(:)               = zero
+    emission_n2o_n15(:)               = zero
+    emission_n2_n15(:)                = zero
     ! 3D
     het_respiration(:,:)                  = zero
     het_respiration_c13(:,:)              = zero
@@ -411,12 +417,6 @@ CONTAINS
     denitrification_noy_n15(:,:)          = zero
     denitrification_n2o_n15(:,:)          = zero
     denitrification_n2_n15(:,:)           = zero
-    leaching_nh4_n15_solute(:)            = zero
-    leaching_no3_n15_solute(:)            = zero
-    emission_nh3_n15(:)                   = zero
-    emission_noy_n15(:)                   = zero
-    emission_n2o_n15(:)                   = zero
-    emission_n2_n15(:)                    = zero
     asymb_n_fixation_n15(:,:)             = zero
 
   END SUBROUTINE reset_sb_fluxes
