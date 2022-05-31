@@ -29,7 +29,7 @@ MODULE mo_hd_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_time,           ONLY: is_time_experiment_start
-  USE mo_jsb_math_constants, ONLY: deg2rad
+  USE mo_jsb_math_constants, ONLY: deg2rad, pi
   USE mo_jsb_parallel,       ONLY: Get_omp_thread
 
   USE mo_model_domain,       ONLY: p_patch
@@ -39,7 +39,7 @@ MODULE mo_hd_interface
   dsl4jsb_Use_memory(HD_)
   dsl4jsb_Use_memory(HYDRO_)
 
-  USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade
+  USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade, reservoir_evapo
   USE mo_jsb_physical_constants, ONLY: rhoh2o
 
   IMPLICIT NONE
@@ -114,7 +114,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    CLASS(t_jsb_tile_abstract), POINTER       :: box_tile, lake_tile, land_tile
+    CLASS(t_jsb_tile_abstract), POINTER       :: box_tile, lake_tile, land_tile, veg_tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
@@ -131,6 +131,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: discharge
+    dsl4jsb_Real2D_onChunk :: w_river
+    dsl4jsb_Real2D_onChunk :: w_overl
+    dsl4jsb_Real2D_onChunk :: evapo_river
+    dsl4jsb_Real2D_onChunk :: evapo_overl
+    dsl4jsb_Real2D_onChunk :: oro_stddev
     dsl4jsb_Real2D_onChunk :: overflow_lake
     dsl4jsb_Real2D_onChunk :: outflow_runoff
     dsl4jsb_Real2D_onChunk :: outflow_drainage
@@ -143,6 +148,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: nres_riverflow
     dsl4jsb_Real2D_onChunk :: basin_mask
     dsl4jsb_Real2D_onChunk :: runoff_lake
+    dsl4jsb_Real2D_onChunk :: w_river_res
+    dsl4jsb_Real2D_onChunk :: w_overl_res
+    dsl4jsb_Real2D_onChunk :: fract_river
+    dsl4jsb_Real2D_onChunk :: fract_overl
     dsl4jsb_Real3D_onChunk :: overlflow_res
     dsl4jsb_Real3D_onChunk :: baseflow_res
     dsl4jsb_Real3D_onChunk :: riverflow_res
@@ -152,10 +161,15 @@ CONTAINS
     REAL(wp), POINTER :: land_runoff(:)
     REAL(wp), POINTER :: lake_fract(:)
     REAL(wp), POINTER :: land_fract(:)
+    REAL(wp), POINTER :: veg_fract(:)
 
     REAL(wp), DIMENSION(options%nc) :: &
       & tile_fract, &
-      & inflow
+      & inflow,     &
+      & w_river_res_old, &
+      & w_overl_res_old, &
+      & w_river_res_new, &
+      & w_overl_res_new
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -164,7 +178,7 @@ CONTAINS
     CHARACTER(len=32) :: routing_scheme
 
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, crit_stddev
 
     iblk    = options%iblk
     ics     = options%ics
@@ -193,6 +207,8 @@ CONTAINS
     CALL model%Get_top_tile(box_tile)
     lake_tile => box_tile%first_child_tile
     land_tile => lake_tile%next_sibling_tile
+    veg_tile => land_tile%first_child_tile%next_sibling_tile
+
 
     ! Get reference to variables in memory
     !
@@ -206,6 +222,7 @@ CONTAINS
     land_runoff => land_hydro__mem%runoff%ptr(ics:ice,iblk)
     lake_fract => lake_tile%fract(ics:ice,iblk)
     land_fract => land_tile%fract(ics:ice,iblk)
+    veg_fract => veg_tile%fract(ics:ice,iblk)
 
     area => grid %area (ics:ice, iblk)
 
@@ -214,8 +231,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, discharge)   ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_river) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_overl) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_river)     ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_overl)     ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, oro_stddev)  ! in
 
-    dsl4jsb_Get_var2D_onChunk(HD_, overflow_lake)   ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, overflow_lake)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_overlflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_overlflow)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_baseflow)     ! in
@@ -223,16 +245,29 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HD_, ret_riverflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_riverflow)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! in
-    dsl4jsb_Get_var2D_onChunk(HD_, runoff_lake)       ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, runoff_lake)      ! in
     dsl4jsb_Get_var3D_onChunk(HD_, overlflow_res)    ! inout
     dsl4jsb_Get_var3D_onChunk(HD_, baseflow_res)     ! inout
     dsl4jsb_Get_var3D_onChunk(HD_, riverflow_res)    ! inout
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_runoff)   ! out
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_drainage) ! out
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_rivers)   ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, w_river_res)      ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, w_overl_res)      ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, fract_river)      ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, fract_overl)      ! out
 
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
+
+      w_river_res_old(:) = SUM(riverflow_res(:,:), DIM=2, MASK=riverflow_res(:,:)>0._wp)/area
+      w_overl_res_old(:) = SUM(overlflow_res(:,:), DIM=2, MASK=overlflow_res(:,:)>0._wp)/area
+
+      IF (model%config%use_wetskins) THEN
+        ! river reservoir evaporation [m3]
+        CALL reservoir_evapo (w_river(:), veg_fract(:), nc, riverflow_res(:,:))
+        CALL reservoir_evapo (w_overl(:), veg_fract(:), nc, overlflow_res(:,:))
+      ENDIF
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
       ! use_dynlake = .FALSE.:  basin_mask is set to zero
@@ -250,6 +285,23 @@ CONTAINS
 
       inflow(:) = discharge(:)
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_riverflow(:), nres_riverflow(:), riverflow_res(:,:), outflow_rivers(:))
+
+      ! river reservoir water content: [m3] 
+      WHERE (veg_fract(:) > 0._wp)
+         w_river_res(:) = SUM(riverflow_res(:,:), DIM=2, MASK=riverflow_res(:,:)>0._wp)
+         w_overl_res(:) = SUM(overlflow_res(:,:), DIM=2, MASK=overlflow_res(:,:)>0._wp)
+      ELSE WHERE
+         w_river_res(:) = 0._wp
+         w_overl_res(:) = 0._wp
+      END WHERE
+
+      w_river_res_new(:) = SUM(riverflow_res(:,:), DIM=2, MASK=riverflow_res(:,:)>0._wp)/area 
+      w_overl_res_new(:) = SUM(overlflow_res(:,:), DIM=2, MASK=overlflow_res(:,:)>0._wp)/area
+ 
+      IF (model%config%use_wetskins) THEN
+        fract_river(:) = update_wetland(fract_river(:),w_river_res_old(:),w_river_res_new(:),area,oro_stddev(:),veg_fract(:))
+        fract_overl(:) = update_wetland(fract_overl(:),w_overl_res_old(:),w_overl_res_new(:),area,oro_stddev(:),veg_fract(:))
+      ENDIF
 
     CASE ('weighted_to_coast')
       !
@@ -285,6 +337,83 @@ CONTAINS
     ! Nothing to do because the HD model only runs on the top tile
 
   END SUBROUTINE aggregate_hd
+
+
+  ELEMENTAL FUNCTION update_wetland(fract_old,reservoir_old,reservoir_new, &
+    area,oro_stddev,fract_veg) &
+    RESULT (fract_new)
+
+    ! Inputdata
+    REAL(wp), INTENT(in) :: fract_old                !< Old pond fraction [/]
+    REAL(wp), INTENT(in) :: reservoir_new            !< New cell average pond depth  [m]
+    REAL(wp), INTENT(in) :: reservoir_old            !< Old cell average pond depth  [m]
+    REAL(wp), INTENT(in) :: area                     !< Surface area of grid cell    [m2]
+    REAL(wp), INTENT(in) :: oro_stddev               !< Subgrid orographic STD [m]
+    REAL(wp), INTENT(in) :: fract_veg                !< Vegetation tile fraction [/]
+
+    ! Result
+    REAL(wp)             :: fract_new                !< New pond fraction [/]
+
+    ! Local variables
+    REAL(wp)             :: d_vol                    !< Change in pond volume [m3]
+    REAL(wp)             :: d_area                   !< Change in pond area [m2]
+    REAL(wp)             :: d_depth                  !< Change in pond depth [m]
+    REAL(wp)             :: depth_new                !< New specific pond depth [m]
+    REAL(wp)             :: depth_old                !< Old specific pond depth [m]
+
+    REAL(wp), PARAMETER  :: crit_oro = 5.0e+4_wp     !< Orographic scaling factor parameter [-]
+    REAL(wp), PARAMETER  :: eps = EPSILON(1.0_wp)    !< Really small value
+
+    REAL(wp)             :: d_mean, slope_fact
+
+    d_mean      = 1/SQRT(area/pi)                             !< Mean diameter of grid cell [m]
+    slope_fact = d_mean * MAX(1.0_wp, oro_stddev) / crit_oro  !< Orographic scaling factor [-]
+
+
+    IF (fract_veg > 0._wp) THEN              ! valid grid cell
+
+       ! 1. Pond dessicated
+      IF (reservoir_new < eps) THEN 
+        fract_new = 0.0_wp
+
+      ELSE
+        ! 2. Compute pond volume change
+        d_vol = (reservoir_new - reservoir_old) * area
+
+        IF (ABS(d_vol) < eps) THEN
+          ! Stable pond and does not change surface area
+          fract_new = fract_old
+
+        ELSE
+          ! Pond surface area changes
+          d_depth           = SIGN((ABS(d_vol) * slope_fact)**(1.0/3.0), d_vol) ! Compute depth change
+          d_area            = d_vol / d_depth                                   ! Compute area change
+          fract_new = MIN(1.0_wp, MAX(0.0_wp, fract_old + fract_veg*(d_area / area)))     ! Compute new pond fraction
+        END IF
+      END IF
+
+      ! 3. Sanity checks
+      IF (fract_old > eps .AND. fract_new > eps) THEN
+        depth_new = reservoir_new / fract_new
+        depth_old = reservoir_old / fract_old
+ 
+        ! If fraction changes are too intensive and lead to opposing changes in
+        ! depth ...
+        IF ((fract_new > fract_old .AND. depth_new < depth_old) .OR. &
+           (fract_new < fract_old .AND. depth_new > depth_old)) THEN
+          ! Rescale new pond fraction to keep specific depth constant
+          fract_new = MIN(1.0_wp, MAX(0.0_wp, reservoir_new / depth_old))
+        END IF
+      END IF
+
+    ELSE 
+
+      fract_new = 0._wp
+
+    END IF
+
+  END FUNCTION update_wetland
+
 
   SUBROUTINE update_dynlake(tile, options)
 
@@ -1152,7 +1281,9 @@ CONTAINS
       & water_budget,     &
       & water_budget_old, &
       & water_error,      &
-      & water_flux
+      & water_flux,       &
+      & evapo_river,      &
+      & evapo_overl
 
     dsl4jsb_Real3D_onDomain :: &
       & overlflow_res ,        &
@@ -1219,6 +1350,8 @@ CONTAINS
     !dsl4jsb_Get_var2D_onDomain(HD_   , outflow_resid)   ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, evapo_river)     ! IN
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, evapo_overl)     ! IN
 
     dsl4jsb_Get_var2D_onDomain(HD_, water_budget)       ! out
     dsl4jsb_Get_var2D_onDomain(HD_, water_budget_old)   ! out
@@ -1277,6 +1410,8 @@ CONTAINS
     water_flux(:,:) = &
       &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
       & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
+      & + evapo_river    (:,:) * in_domain(:,:)/steplen                           & !< river evaporation [m3] -> [m3/s] 
+      & + evapo_overl    (:,:) * in_domain(:,:)/steplen                           & !< river evaporation [m3] -> [m3/s] 
       & + drainage_lake  (:,:) * in_domain(:,:)                                   & !< drainge from the lakes (outlet overflow)
       & - discharge_ocean(:,:) * in_domain(:,:)                                   & !< discharge to the ocean
       & - discharge_lake (:,:) * in_domain(:,:)                                     !< discharge to the lakes
@@ -1290,6 +1425,12 @@ CONTAINS
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   drainage                            : ', &
            global_sum_array(drainage/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
+      CALL message(routine, message_text)
+      WRITE(message_text,*) '-   river evaporation                   : ', &
+           global_sum_array(evapo_river*in_domain), ' m3'
+      CALL message(routine, message_text)
+      WRITE(message_text,*) '-   overfland evaporation               : ', &
+           global_sum_array(evapo_overl*in_domain), ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   outlet                              : ', &
            global_sum_array(drainage_lake*in_domain*steplen), ' m3'

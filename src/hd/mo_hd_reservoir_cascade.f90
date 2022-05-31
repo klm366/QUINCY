@@ -23,7 +23,7 @@ MODULE mo_hd_reservoir_cascade
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: reservoir_cascade
+  PUBLIC :: reservoir_cascade, reservoir_evapo 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_reservoir_cascade'
 
@@ -84,6 +84,44 @@ CONTAINS
     outflow(:) = outflow(:) / steplen
 
   END SUBROUTINE reservoir_cascade
+
+
+  !------------------------------------------------------------------------------------------------
+  SUBROUTINE reservoir_evapo(w_river, fract, nc, res_content_sl)
+  !------------------------------------------------------------------------------------------------
+  ! by Nora Specht
+  !------------------------------------------------------------------------------------------------
+
+    REAL(wp),  INTENT(in)    :: w_river(:)       !< water content in river reservoir [m3]
+    REAL(wp),  INTENT(in)    :: fract(:)         !< veg_tile fraction
+    INTEGER,   INTENT(in)    :: nc               !< current block size
+    REAL(wp),  INTENT(inout) :: res_content_sl(:,:) !< intermediate content of reservoir [m3]
+    ! local variables
+    ! ---------------
+
+    REAL(wp) :: res_content(nc)       !< w_river into each level of the cascade
+  
+    INTEGER  :: nres_max
+
+    LOGICAL, ALLOCATABLE  ::  mask(:,:)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':reservoir_evapo'
+
+    res_content(:) = SUM(res_content_sl(:,:), DIM=2, MASK=res_content_sl(:,:)>0._wp)
+
+    nres_max = SIZE(res_content_sl(1,:))  
+
+    ALLOCATE (mask(nc,nres_max))
+    mask(:,:) = SPREAD(fract         (:), DIM=2, NCOPIES=nres_max) > 0._wp .AND. &
+              & SPREAD(res_content   (:), DIM=2, NCOPIES=nres_max) > 0._wp .AND. &
+              &        res_content_sl(:,:)                         > 0._wp
+
+    WHERE (mask(:,:))
+      res_content_sl(:,:) = res_content_sl(:,:) * SPREAD(w_river(:)/MAX(res_content(:), EPSILON(1._wp)), DIM=2, NCOPIES=nres_max)
+    END WHERE
+
+
+  END SUBROUTINE reservoir_evapo
 
 #endif
 END MODULE mo_hd_reservoir_cascade

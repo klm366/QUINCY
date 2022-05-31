@@ -213,8 +213,6 @@ CONTAINS
           & variable_name='VOLUMES',                   &
           & start_extdim=n, end_extdim=n,    &
           & extdim_name='lev')
-        PRINT *, SHAPE(return_pointer3d(:,:,1))
-        PRINT *, SHAPE(dsl4jsb_var_ptr(HD_,volumes_lake)(:,n,:))
         dsl4jsb_var_ptr(HD_,volumes_lake)(:,n,:) = return_pointer3d(:,:,1)
 
         return_pointer3d => input_file%Read_2d_extdim(  &

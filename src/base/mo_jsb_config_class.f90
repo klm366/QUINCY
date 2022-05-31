@@ -34,6 +34,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_dynlakes
     LOGICAL                        :: use_sizelakes
+    LOGICAL                        :: use_wetskins
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme       ! For terraplanet setup: open/closed
@@ -90,6 +91,7 @@ CONTAINS
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_dynlakes
     LOGICAL                       :: use_sizelakes
+    LOGICAL                       :: use_wetskins
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
     LOGICAL                       :: l_compat401
@@ -106,6 +108,7 @@ CONTAINS
       use_lakes, &
       use_dynlakes, &
       use_sizelakes, &
+      use_wetskins, &
       use_glacier, &
       use_quincy, &
       l_compat401, &
@@ -130,6 +133,7 @@ CONTAINS
     use_lakes                  = .TRUE.
     use_dynlakes               = .FALSE.
     use_sizelakes              = .TRUE.
+    use_wetskins               = .TRUE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
     l_compat401                = .FALSE.
@@ -161,6 +165,7 @@ CONTAINS
     model_config%use_lakes                  = use_lakes
     model_config%use_dynlakes               = use_dynlakes
     model_config%use_sizelakes              = use_sizelakes
+    model_config%use_wetskins               = use_wetskins
     model_config%use_glacier                = use_glacier
     model_config%use_quincy                 = use_quincy
     model_config%l_compat401                = l_compat401

@@ -97,10 +97,14 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & fract_water,          & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
       & w_skin,               & !< Water content in skin reservoir (soil and canopy)                        [m]
+      & w_river,              & !< Water content in river reservoir                                         [m3]
+      & w_overl,              & !< Water content in overl reservoir                                         [m3]
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
       !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
       & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
+      & evapo_river,          & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
+      & evapo_overl,          & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_excess,         & !< Water available for infiltration into the soil                           [m water equivalent]
       & w_soil_overflow,      & !< Water content of reservoir for w_soil_overflown soil water (terraplanet) [m]
@@ -281,6 +285,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
       & prefix, suffix,                                                                            &
       & lrestart=.TRUE.,                                                                           &
+      & output_level=BASIC,                                                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'evapo_snow', mem%evapo_snow,                            &
@@ -613,6 +618,24 @@ CONTAINS
         & output_level=BASIC,                                                                         &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    CALL mem%Add_var( 'w_river', mem%w_river,&
+        & hgrid, surface,&
+        & t_cf('w_river', 'm3', 'Evaporation from skin reservoir'),&
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),&
+        & prefix, suffix,&
+        & output_level=BASIC,&
+        & lrestart=.TRUE.,&
+        & initval_r=0.0_wp)
+
+    CALL mem%Add_var( 'w_overl', mem%w_overl,&
+        & hgrid, surface,&
+        & t_cf('w_overl', 'm3', 'Evaporation from skin reservoir'),&
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),&
+        & prefix, suffix,&
+        & output_level=BASIC,&
+        & lrestart=.TRUE.,&
+        & initval_r=0.0_wp)
+
       CALL mem%Add_var( 'snow_accum', mem%snow_accum,                                                        &
         & hgrid, surface,                                                                                    &
         & t_cf('snow_accum', 'm water equivalent', 'Snow accumulation at non-glacier/non-lake land points'), &
@@ -644,6 +667,24 @@ CONTAINS
         & prefix, suffix,                                                         &
         & lrestart=.FALSE.,                                                       &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'evapo_river', mem%evapo_river,&
+        & hgrid, surface,&
+        & t_cf('evapo_river', 'kg m-2 s-1', 'Evaporation from skin reservoir'),&
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),&
+        & prefix, suffix,&
+        & output_level=BASIC,&
+        & lrestart=.TRUE.,&
+        & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'evapo_overl', mem%evapo_overl,&
+        & hgrid, surface,&
+        & t_cf('evapo_overl', 'kg m-2 s-1', 'Evaporation from skin reservoir'),&
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),&
+        & prefix, suffix,&
+        & output_level=BASIC,&
+        & lrestart=.TRUE.,&
+        & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'evapo_deficit', mem%evapo_deficit,                      &
         & hgrid, surface,                                                      &

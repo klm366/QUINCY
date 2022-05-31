@@ -33,12 +33,13 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_, HD_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(HD_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(A2L_)
@@ -48,6 +49,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
+  dsl4jsb_Use_memory(HD_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -380,17 +382,21 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: dens_snow
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), POINTER       :: box_tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    TYPE(t_jsb_grid),           POINTER       :: grid
 
     ! Local variables
     !
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(SSE_)
+    dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(HD_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -399,8 +405,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wind_10m
     dsl4jsb_Real2D_onChunk :: rain
     dsl4jsb_Real2D_onChunk :: snow
+    dsl4jsb_Real2D_onChunk :: w_river_res
+    dsl4jsb_Real2D_onChunk :: w_overl_res
     dsl4jsb_Real2D_onChunk :: w_skin
+    dsl4jsb_Real2D_onChunk :: w_river
+    dsl4jsb_Real2D_onChunk :: w_overl
     dsl4jsb_Real2D_onChunk :: fract_water
+    dsl4jsb_Real2D_onChunk :: fract_river
+    dsl4jsb_Real2D_onChunk :: fract_overl
     dsl4jsb_Real2D_onChunk :: w_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: w_snow
@@ -409,6 +421,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_snow_can
     dsl4jsb_Real2D_onChunk :: evapotrans_soil
     dsl4jsb_Real2D_onChunk :: evapo_skin
+    dsl4jsb_Real2D_onChunk :: evapo_river
+    dsl4jsb_Real2D_onChunk :: evapo_overl
     dsl4jsb_Real2D_onChunk :: evapo_deficit
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
@@ -436,6 +450,9 @@ CONTAINS
     INTEGER  :: iblk, ics, ice
     REAL(wp) :: dtime, w_skin_max_config
 
+
+    REAL(wp), POINTER :: area(:)
+
     TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
@@ -450,15 +467,22 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+    area => grid%area (ics:ice, iblk)
+
+    !!! Nora
+    CALL model%Get_top_tile(box_tile)
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
+    dsl4jsb_Get_config(HD_)
 
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HD_)
 
     IF (tile%is_lake) THEN
       ! compute runoff (P-E) for lakes here and exit
@@ -498,6 +522,12 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! in
 
+    dsl4jsb_Get_var2D_onChunk(HD_,    w_river_res)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD_,    w_overl_res)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD_,    fract_river)    ! in
+    dsl4jsb_Get_var2D_onChunk(HD_,    fract_overl)    ! in
+ 
+
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)         ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow_soil)    ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! inout
@@ -519,9 +549,13 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_excess)    ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_skin)          ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_river)         ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_overl)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_accum)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_soil) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_skin)      ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_river)     ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_overl)     ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)   ! out
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   w_snow_can)    ! inout
@@ -608,22 +642,31 @@ CONTAINS
         & w_skin_max(:),                  & !< in
         & fract_snow(:),                  & !< in
         & fract_water(:),                 & !< in
+        & fract_river(:),                 & !< in
+        & fract_overl(:),                 & !< in
+        & area(:),                        & !< in
         & hcap_grnd(:),                   & !< in
         & evapotrans(:),                  & !< in
         & evapopot(:),                    & !< in
         & trans_tmp(:),                   & !< in
         & rain(:),                        & !< in
         & snow(:),                        & !< in
+        & w_river_res(:),                 & !< in
+        & w_overl_res(:),                 & !< in
         & w_skin(:),                      & !< inout
         & w_snow_soil(:),                 & !< inout
         & w_snow_can(:),                  & !< inout
         & snow_soil_dens(:),              & !< inout
+        & w_river(:),                     & !< out
+        & w_overl(:),                     & !< out
         & q_snocpymlt(:),                 & !< out
         & snow_accum(:),                  & !< out
         & snowmelt(:),                    & !< out
         & evapotrans_soil(:),             & !< out
         & evapo_skin(:),                  & !< out
         & evapo_snow(:),                  & !< out
+        & evapo_river(:),                 & !< out
+        & evapo_overl(:),                 & !< out
         & water_excess(:),                & !< out
         & evapo_deficit(:)                & !< out
         & )
@@ -664,6 +707,7 @@ CONTAINS
 
 
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(HD_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
@@ -678,11 +722,14 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(HD_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_skin,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_river,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, w_overl,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow_soil,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_snow_can,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snowmelt,        weighted_by_fract)
@@ -693,6 +740,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_soil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_river,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_overl,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_excess,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
@@ -1751,12 +1800,20 @@ CONTAINS
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), POINTER       :: box_tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    TYPE(t_jsb_grid),           POINTER       :: grid
 
     !----------------------------
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
-    REAL(wp), DIMENSION(options%nc) :: w_skin_canopy_max, w_skin_max
+    REAL(wp), DIMENSION(options%nc) :: &
+        & w_skin_canopy_max,           &
+        & w_skin_max
+
+    REAL(wp) :: tile_fract(options%nc)
+
+    REAL(wp), POINTER :: area(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_skin_fraction'
 
@@ -1768,14 +1825,18 @@ CONTAINS
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(HD_)
 
     ! Declare pointers for variables in memory
     dsl4jsb_Real2D_onChunk :: lai
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: fract_water
+    dsl4jsb_Real2D_onChunk :: fract_river
+    dsl4jsb_Real2D_onChunk :: fract_overl
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
     dsl4jsb_Real2D_onChunk :: fract_snow_can
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
@@ -1784,6 +1845,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_snow_soil
     dsl4jsb_Real2D_onChunk :: w_snow_lice
     dsl4jsb_Real2D_onChunk :: w_skin
+    dsl4jsb_Real2D_onChunk :: w_river_res
+    dsl4jsb_Real2D_onChunk :: w_overl_res
     dsl4jsb_Real2D_onChunk :: oro_stddev
     dsl4jsb_Real2D_onChunk :: drag_srf
     dsl4jsb_Real2D_onChunk :: t
@@ -1804,10 +1867,15 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+    area => grid%area (ics:ice, iblk)
+
+    CALL model%Get_top_tile(box_tile)
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(HD_)
 
     ! Use simple scalar for GPU
     config_w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
@@ -1835,6 +1903,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HD_)
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_memory(PHENO_)
     END IF
@@ -1848,9 +1917,13 @@ CONTAINS
 
     IF (tile%is_bare .OR. tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    oro_stddev)       ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)  ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_water)      ! out
     END IF
     IF (tile%is_vegetation .OR. tile%is_land) THEN
+      dsl4jsb_Get_var2D_onChunk(HD_,       w_river_res)      ! in
+      dsl4jsb_Get_var2D_onChunk(HD_,       w_overl_res)      ! in
+      dsl4jsb_Get_var2D_onChunk(HD_,       fract_river)      ! in
+      dsl4jsb_Get_var2D_onChunk(HD_,       fract_overl)      ! in
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)              ! in
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)    ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)   ! out
@@ -1893,6 +1966,7 @@ CONTAINS
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
         & steplen,                   & ! in
+        & area(:),                   & ! in
         & w_skin_max(:),             & ! in
         & oro_stddev(:),             & ! in
         & t(:),                      & ! in, from the previous time step as long as this is called before the asselin filter
@@ -1900,8 +1974,12 @@ CONTAINS
         & drag_srf(:),               & ! in
         & q_air(:),                  & ! in
         & w_skin(:),                 & ! in
+        & w_river_res(:),            & ! in
+        & w_overl_res(:),            & ! in
         & w_snow_soil(:),            & ! in
         & w_snow_can(:),             & ! in
+        & fract_river(:),            & ! inout
+        & fract_overl(:),            & ! inout
         & fract_snow_can(:),         & ! out
         & fract_water(:),            & ! out
         & fract_snow_soil(:)         & ! out

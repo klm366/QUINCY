@@ -320,6 +320,9 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif
+      IF (model%config%use_wetskins) THEN
+        CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
+      END IF
       CALL model%Queue_task(SEB_,    "snowmelt_correction")
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         ! Normally called before update_canopy_cond_unstressed and update_assimilation

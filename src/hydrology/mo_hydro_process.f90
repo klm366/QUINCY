@@ -61,33 +61,42 @@ CONTAINS
   !! @param [in]     skinres_max
   !! @param [in]     sfract_srf            surface snow fraction []
   !! @param [in]     wfract_srf            skin reservoir fraction []
+  !! @param [in]     fract_river            river reservoir fraction []
+  !! @param [in]     fract_overl            overl reservoir fraction []
+  !! @param [in]     area                  grid cell area [m2]
   !! @param [in]     hcap_grnd             heat capacity of the uppermost soil layer [J m-2 K-1]
   !! @param [in]     evapotrans            evapotranspiration (including sublimation) [kg m-2 s-1]
   !! @param [in]     evapopot              potential evaporation [kg m-2 s-1]
   !! @param [in]     transpiration         transpiration [kg m-2 s-1]
   !! @param [in]     rain                  liquid precipitation [kg m-2 s-1]
   !! @param [in]     snow                  solid precipitation [kg m-2 s-1]
+  !! @param [in]     w_river_res                 river reservoir content [m]
+  !! @param [in]     w_overl_res                 overl reservoir content [m]
   !! @param [in,out] skinres               water content of the skin reservoir (vegetation and bare soil) [m]
   !! @param [in,out] snow_soil             snow depth at the ground [m water equivalent]
   !! @param [in,out] canopy_snow           snow depth on the canopy [m water equivalent]
   !! @param [in,out] snow_soil_dens        snow density on soil at non-glacier points [m water equivalent]
+  !! @param [out]    w_river              water content of the skin reservoir (vegetation and bare soil) [m]
+  !! @param [out]    w_overl              water content of the skin reservoir (vegetation and bare soil) [m]
   !! @param [out]    q_snocpymlt           Heating due to snow melt on canopy [W m-2]
   !! @param [out]    snow_accum            snow budget at non-glacier points [m water equivalent]
   !! @param [out]    snow_melt_soil        snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
   !! @param [out]    evapotrans_soil       evapotranspiration from soil w/o skin and snow reservoirs [kg m-2 s-1]
   !! @param [out]    evapo_skin             evaporation from skin reservoir [kg m-2 s-1]
   !! @param [out]    evapo_snow             evaporation from snow [kg m-2 s-1]
+  !! @param [out]    evapo_river             evaporation from river reservoir [kg m-2 s-1]
+  !! @param [out]    evapo_overl             evaporation from overl reservoir [kg m-2 s-1]
   !! @param [out]    water_to_soil         Water available for infiltration into the soil [m water equivalent]
   !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
   !
   PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (          &
     & lstart, delta_time, l_dynsnow, snow_depth_max,               &
     & t_srf_unfilt, wind_10m, t_air,                               &
-    & skinres_canopy_max, skinres_max, sfract_srf, wfract_srf,     &
+    & skinres_canopy_max, skinres_max, sfract_srf, wfract_srf, fract_river, fract_overl, area, &
     & hcap_grnd, evapotrans, evapopot, transpiration,              &
-    & rain, snow, skinres, snow_soil, canopy_snow, snow_soil_dens, &
-    & q_snocpymlt, snow_accum, snow_melt_soil,                     &
-    & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit)
+    & rain, snow, w_river_res, w_overl_res, skinres, snow_soil, canopy_snow, snow_soil_dens, &
+    & w_river, w_overl, q_snocpymlt, snow_accum, snow_melt_soil,                     &
+    & evapotrans_soil, evapo_skin, evapo_snow, evapo_river, evapo_overl, water_to_soil, evapo_deficit)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
@@ -98,12 +107,12 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                         &
       & t_srf_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,             &
-      & sfract_srf, wfract_srf, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
+      & sfract_srf, wfract_srf, fract_river, fract_overl, area, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow, w_river_res, w_overl_res
     REAL(wp), INTENT(inout) :: &
       & skinres, snow_soil, canopy_snow, snow_soil_dens
     REAL(wp), INTENT(out)   ::                   &
-      & q_snocpymlt, snow_accum, snow_melt_soil, &
-      & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
+      & w_river, w_overl, q_snocpymlt, snow_accum, snow_melt_soil, &
+      & evapotrans_soil, evapo_skin, evapo_snow, evapo_river, evapo_overl, water_to_soil, evapo_deficit
     !$claw end model-data
     !
     !  local variables
@@ -128,6 +137,8 @@ CONTAINS
       & evapotrans_no_snow,   & !< evapotranspiration without snow evaporation [m]
       & evapo_snow_pot_in_m,  & !< potential snow evaporation
       & evapo_skin_pot_in_m,  & !< potential evaporation from wet surface (skin reservoir)
+      & evapo_river_pot,      & !< potential evaporation from wet surface (river reservoir)
+      & evapo_overl_pot,      & !< potential evaporation from wet surface (overl reservoir)
       & rain_to_skinres,      & !< amount of rain going into the skin reservoir
       & skinres_pre_rain        !< amount of water in the skin reservoir prior to the update [m]
 
@@ -147,6 +158,8 @@ CONTAINS
     evapotrans_soil = 0._wp
     evapo_skin = 0._wp
     evapo_snow = 0._wp
+    evapo_river = 0._wp
+    evapo_overl = 0._wp
     water_to_soil = 0._wp
     evapo_deficit = 0._wp
 
@@ -160,7 +173,9 @@ CONTAINS
     transpiration_in_m  = transpiration * delta_time/rhoh2o
     evapo_snow_pot_in_m = sfract_srf    * evapopot * delta_time/rhoh2o
     evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
-    evapo_skin_pot_in_m = (1._wp - sfract_srf) * wfract_srf * evapopot * delta_time/rhoh2o
+    evapo_skin_pot_in_m = (1._wp - sfract_srf) * (wfract_srf-fract_river-fract_overl) * evapopot * delta_time/rhoh2o
+    evapo_river_pot = (1._wp - sfract_srf) * fract_river * evapopot * delta_time/rhoh2o * area
+    evapo_overl_pot = (1._wp - sfract_srf) * fract_overl * evapopot * delta_time/rhoh2o * area
 
     !---------------------------------------------
     !  Budgets of snow (canopy, ground)
@@ -242,6 +257,10 @@ CONTAINS
     water_to_soil = water_to_soil + MAX(rain_in_m - rain_to_skinres, 0._wp)        ! Rest of rain goes to soil
     skinres_pre_rain = skinres
     skinres = MIN(MAX(0._wp, skinres_pre_rain + rain_to_skinres + evapo_skin_pot_in_m), skinres_max)
+    w_river = MAX(0._wp, w_river_res + evapo_river_pot)
+    w_overl = MAX(0._wp, w_overl_res + evapo_overl_pot)
+    evapo_river = w_river - w_river_res     
+    evapo_overl = w_overl - w_overl_res
 
     ! note: at this point ignoring the amount of dew that exceeds the skinreservoir
     !       as dew is calculated later based on evapo_soil (f(evapotrans_soil))
@@ -1447,6 +1466,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
     & dtime,                                     & ! in
     & steplen,                                   & ! in
+    & area,                                      & ! in
     & wsr_max,                                   & ! in
     & oro_stddev,                                & ! in
     & t_srf_old,                                 & ! in
@@ -1454,10 +1474,14 @@ CONTAINS
     & drag_srf,                                  & ! in
     & q_air,                                     & ! in
     & w_skin,                                    & ! in
+    & w_river_res,                               & ! in
+    & w_overl_res,                               & ! in
     & w_snow_soil,                               & ! in
     & w_snow_can,                                & ! in
+    & fract_river,                               & ! inout
+    & fract_overl,                               & ! inout
     & fract_snow_can,                            & ! inout
-    & fract_water    ,                           & ! out
+    & fract_water,                               & ! out
     & fract_snow_soil                            & ! out
     & )
 
@@ -1470,6 +1494,7 @@ CONTAINS
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
+      & area,               &
       & oro_stddev,         &
       & t_srf_old,          &
       & press_srf,          &
@@ -1477,12 +1502,18 @@ CONTAINS
       & q_air,              &
       & wsr_max,            &
       & w_skin,             &
+      & w_river_res,        &
+      & w_overl_res,        &
       & w_snow_soil,        &
       & w_snow_can
 
+    REAL(wp), INTENT(inout) :: &
+      & fract_river,           &
+      & fract_overl
+
     REAL(wp), INTENT(out) :: &
       & fract_snow_can,      &
-      & fract_water    ,     &
+      & fract_water,         &
       & fract_snow_soil
     !$claw end model-data
 
@@ -1506,8 +1537,8 @@ CONTAINS
     !$claw sca forward
     fract_snow_soil = Get_snow_fract_noforest(w_snow_soil, oro_stddev) ! snow on soil below forest
     fract_snow_soil = MERGE(fract_snow_can, fract_snow_soil, &
-                               fract_snow_soil < EPSILON(1._wp) .AND. fract_snow_can > EPSILON(1._wp))
-
+                               fract_snow_soil < EPSILON(1._wp) .AND. fract_snow_can > EPSILON(1._wp)) 
+ 
 
     ! Potential evaporation using old values of air and surface humidity
     qsat_srf_old = qsat(t_srf_old, press_srf)
@@ -1527,6 +1558,12 @@ CONTAINS
         &                                    )
     END IF
 
+    fract_river    = MIN(1._wp-fract_water, fract_river)
+    fract_water    = fract_water + fract_river
+    fract_overl    = MIN(1._wp-fract_water, fract_overl)
+    fract_water    = fract_water + fract_overl
+  
+  
   END SUBROUTINE calc_wskin_fractions_veg
 
   ELEMENTAL SUBROUTINE calc_wskin_fractions_bare( &
