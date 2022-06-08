@@ -17,7 +17,7 @@ MODULE mo_jsb_base
 
   USE mo_jsb_class,   ONLY: jsbach
   USE mo_jsb_control, ONLY: debug_on
-  USE mo_exception,   ONLY: message
+  USE mo_exception,   ONLY: message, finish
   USE mo_util,        ONLY: int2string
 
   IMPLICIT NONE
@@ -80,6 +80,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
 
     INTEGER :: no_of_models, model_idx, iproc
+    INTEGER :: model_scheme
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models'
 
@@ -114,6 +115,13 @@ CONTAINS
        NULLIFY(model)
        model => jsbach%models(model_idx)%m
        model%config => new_model_config(model%namelist_filename)
+
+       ! Require that only one model_scheme is used!
+       IF (model_idx == 1) THEN
+         model_scheme = model%config%model_scheme
+       ELSE IF (model%config%model_scheme /= model_scheme) THEN
+          CALL finish(routine, 'Only one model_scheme allowed!')
+       END IF
 
        CALL message(TRIM(routine), 'New jsbach model: '//TRIM(model%shortname))
        CALL message('     ', '... ID: '//TRIM(int2string(model%id)))
@@ -241,14 +249,14 @@ CONTAINS
     !>quincy constants init
     !>
     ! assuming the shared/constants/ modules are available here already (impl, math, physical)
-    SELECT CASE (model%config%model_scheme)
+    SELECT CASE (model_scheme)
     CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
       CALL message(TRIM(routine), 'starting init of QUINCY process constants')
       CALL init_rad_constants      
       CALL init_assimi_constants   
       CALL init_veg_constants    
       ! either SPQ_ or SSE_
-      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      IF (model_scheme == MODEL_QUINCY) THEN
         CALL init_spq_constants
       ELSE ! MODEL_JSBACH_QUINCY
         CALL init_sse_constants
@@ -257,7 +265,7 @@ CONTAINS
       CALL init_pheno_constants    
       CALL init_atmland_constants  
     END SELECT
-    SELECT CASE (model%config%model_scheme)
+    SELECT CASE (model_scheme)
     CASE (MODEL_JSBACH_QUINCY)
       CALL init_hydro_constants
     END SELECT

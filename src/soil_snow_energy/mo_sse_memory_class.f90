@@ -217,8 +217,6 @@ CONTAINS
     hgrid         => Get_grid(mem%grid_id)
     surface       => Get_vgrid('surface')
     soil_e        => Get_vgrid('soil_depth_energy')
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    vgrid_snow_e  => Get_vgrid('snow_depth_energy')
     IF( dsl4jsb_Config(SSE_)%l_snow) THEN
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
@@ -395,6 +393,9 @@ CONTAINS
       !   &   .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 &
       !   &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0)) THEN
         
+        vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+        vgrid_snow_e  => Get_vgrid('snow_depth_energy')
+  
         CALL mem%Add_var('soil_depth', mem%soil_depth, &
           & hgrid, surface, &
           & t_cf('soil_depth', 'm', 'Soil depth derived from textures (bedrock), for hydrology'), &
