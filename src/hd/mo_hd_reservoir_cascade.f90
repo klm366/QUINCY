@@ -23,7 +23,7 @@ MODULE mo_hd_reservoir_cascade
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: reservoir_cascade, reservoir_evapo 
+  PUBLIC :: reservoir_cascade, evapo_wetskin 
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_reservoir_cascade'
 
@@ -87,7 +87,7 @@ CONTAINS
 
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE reservoir_evapo(w_river, fract, nc, res_content_sl)
+  SUBROUTINE evapo_wetskin(w_river, fract, nc, res_content_sl)
   !------------------------------------------------------------------------------------------------
   ! by Nora Specht
   !------------------------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ CONTAINS
 
     LOGICAL, ALLOCATABLE  ::  mask(:,:)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':reservoir_evapo'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':evapo_wetskin'
 
     res_content(:) = SUM(res_content_sl(:,:), DIM=2, MASK=res_content_sl(:,:)>0._wp)
 
@@ -121,7 +121,7 @@ CONTAINS
     END WHERE
 
 
-  END SUBROUTINE reservoir_evapo
+  END SUBROUTINE evapo_wetskin
 
 #endif
 END MODULE mo_hd_reservoir_cascade

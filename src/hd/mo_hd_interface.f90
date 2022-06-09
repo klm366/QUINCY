@@ -39,7 +39,7 @@ MODULE mo_hd_interface
   dsl4jsb_Use_memory(HD_)
   dsl4jsb_Use_memory(HYDRO_)
 
-  USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade, reservoir_evapo
+  USE mo_hd_reservoir_cascade, ONLY: reservoir_cascade, evapo_wetskin
   USE mo_jsb_physical_constants, ONLY: rhoh2o
 
   IMPLICIT NONE
@@ -165,11 +165,9 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: &
       & tile_fract, &
-      & inflow,     &
-      & w_river_res_old, &
-      & w_overl_res_old, &
-      & w_river_res_new, &
-      & w_overl_res_new
+      & inflow
+!      & w_river_res_new, &
+!      & w_overl_res_new
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -260,13 +258,11 @@ CONTAINS
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
 
-      w_river_res_old(:) = SUM(riverflow_res(:,:), DIM=2, MASK=riverflow_res(:,:)>0._wp)/area
-      w_overl_res_old(:) = SUM(overlflow_res(:,:), DIM=2, MASK=overlflow_res(:,:)>0._wp)/area
 
       IF (model%config%use_wetskins) THEN
-        ! river reservoir evaporation [m3]
-        CALL reservoir_evapo (w_river(:), veg_fract(:), nc, riverflow_res(:,:))
-        CALL reservoir_evapo (w_overl(:), veg_fract(:), nc, overlflow_res(:,:))
+        ! reservoir wetskin evaporation [m3]
+        CALL evapo_wetskin (w_river(:), veg_fract(:), nc, riverflow_res(:,:))
+        CALL evapo_wetskin (w_overl(:), veg_fract(:), nc, overlflow_res(:,:))
       ENDIF
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
@@ -295,12 +291,10 @@ CONTAINS
          w_overl_res(:) = 0._wp
       END WHERE
 
-      w_river_res_new(:) = SUM(riverflow_res(:,:), DIM=2, MASK=riverflow_res(:,:)>0._wp)/area 
-      w_overl_res_new(:) = SUM(overlflow_res(:,:), DIM=2, MASK=overlflow_res(:,:)>0._wp)/area
- 
       IF (model%config%use_wetskins) THEN
-        fract_river(:) = update_wetland(fract_river(:),w_river_res_old(:),w_river_res_new(:),area,oro_stddev(:),veg_fract(:))
-        fract_overl(:) = update_wetland(fract_overl(:),w_overl_res_old(:),w_overl_res_new(:),area,oro_stddev(:),veg_fract(:))
+        ! update reservoir wetskin fraction
+        fract_river(:) = update_wetskin (fract_river(:),w_river_res(:)/area,oro_stddev(:),veg_fract(:))
+        fract_overl(:) = update_wetskin (fract_overl(:),w_overl_res(:)/area,oro_stddev(:),veg_fract(:))
       ENDIF
 
     CASE ('weighted_to_coast')
@@ -339,15 +333,12 @@ CONTAINS
   END SUBROUTINE aggregate_hd
 
 
-  ELEMENTAL FUNCTION update_wetland(fract_old,reservoir_old,reservoir_new, &
-    area,oro_stddev,fract_veg) &
+  ELEMENTAL FUNCTION update_wetskin(fract_old,reservoir,oro_stddev,fract_veg) &
     RESULT (fract_new)
 
     ! Inputdata
     REAL(wp), INTENT(in) :: fract_old                !< Old pond fraction [/]
-    REAL(wp), INTENT(in) :: reservoir_new            !< New cell average pond depth  [m]
-    REAL(wp), INTENT(in) :: reservoir_old            !< Old cell average pond depth  [m]
-    REAL(wp), INTENT(in) :: area                     !< Surface area of grid cell    [m2]
+    REAL(wp), INTENT(in) :: reservoir                !< New cell average pond depth  [m]
     REAL(wp), INTENT(in) :: oro_stddev               !< Subgrid orographic STD [m]
     REAL(wp), INTENT(in) :: fract_veg                !< Vegetation tile fraction [/]
 
@@ -355,64 +346,22 @@ CONTAINS
     REAL(wp)             :: fract_new                !< New pond fraction [/]
 
     ! Local variables
-    REAL(wp)             :: d_vol                    !< Change in pond volume [m3]
-    REAL(wp)             :: d_area                   !< Change in pond area [m2]
-    REAL(wp)             :: d_depth                  !< Change in pond depth [m]
-    REAL(wp)             :: depth_new                !< New specific pond depth [m]
-    REAL(wp)             :: depth_old                !< Old specific pond depth [m]
-
-    REAL(wp), PARAMETER  :: crit_oro = 5.0e+4_wp     !< Orographic scaling factor parameter [-]
     REAL(wp), PARAMETER  :: eps = EPSILON(1.0_wp)    !< Really small value
 
-    REAL(wp)             :: d_mean, slope_fact
 
-    d_mean      = 1/SQRT(area/pi)                             !< Mean diameter of grid cell [m]
-    slope_fact = d_mean * MAX(1.0_wp, oro_stddev) / crit_oro  !< Orographic scaling factor [-]
-
-
-    IF (fract_veg > 0._wp) THEN              ! valid grid cell
-
+    IF (fract_veg > 0._wp) THEN                      ! valid grid cell
        ! 1. Pond dessicated
-      IF (reservoir_new < eps) THEN 
+      IF (reservoir < eps) THEN 
         fract_new = 0.0_wp
-
       ELSE
-        ! 2. Compute pond volume change
-        d_vol = (reservoir_new - reservoir_old) * area
-
-        IF (ABS(d_vol) < eps) THEN
-          ! Stable pond and does not change surface area
-          fract_new = fract_old
-
-        ELSE
-          ! Pond surface area changes
-          d_depth           = SIGN((ABS(d_vol) * slope_fact)**(1.0/3.0), d_vol) ! Compute depth change
-          d_area            = d_vol / d_depth                                   ! Compute area change
-          fract_new = MIN(1.0_wp, MAX(0.0_wp, fract_old + fract_veg*(d_area / area)))     ! Compute new pond fraction
-        END IF
+        ! Pond surface area
+        fract_new = MIN(1.0_wp, MAX(0.0_wp, reservoir/MAX(1.0_wp, oro_stddev)))**(1._wp/3._wp)
       END IF
-
-      ! 3. Sanity checks
-      IF (fract_old > eps .AND. fract_new > eps) THEN
-        depth_new = reservoir_new / fract_new
-        depth_old = reservoir_old / fract_old
- 
-        ! If fraction changes are too intensive and lead to opposing changes in
-        ! depth ...
-        IF ((fract_new > fract_old .AND. depth_new < depth_old) .OR. &
-           (fract_new < fract_old .AND. depth_new > depth_old)) THEN
-          ! Rescale new pond fraction to keep specific depth constant
-          fract_new = MIN(1.0_wp, MAX(0.0_wp, reservoir_new / depth_old))
-        END IF
-      END IF
-
     ELSE 
-
       fract_new = 0._wp
-
     END IF
 
-  END FUNCTION update_wetland
+  END FUNCTION update_wetskin
 
 
   SUBROUTINE update_dynlake(tile, options)

@@ -1519,7 +1519,10 @@ CONTAINS
 
     REAL(wp) ::       &
       & qsat_srf_old, &
-      & evapo_pot
+      & evapo_pot,    &
+      & eps
+
+    eps = EPSILON(1._wp)
 
     !$claw sca
 
@@ -1556,6 +1559,14 @@ CONTAINS
       fract_water = fract_water    / MAX(1._wp, (1._wp - fract_snow_soil) * evapo_pot * dtime &
         &                                       / (rhoh2o * MAX(EPSILON(1._wp), w_skin)) &
         &                                    )
+    END IF
+
+    IF (evapo_pot>eps) THEN
+      fract_river    = MAX(0.0_wp, MIN(fract_river, w_river_res / (evapo_pot / rhoh2o * dtime * area)))
+      fract_overl    = MAX(0.0_wp, MIN(fract_overl, w_overl_res / (evapo_pot / rhoh2o * dtime * area)))
+    ELSE
+      fract_river    = MAX(0.0_wp, MIN(1._wp, fract_river))
+      fract_overl    = MAX(0.0_wp, MIN(1._wp, fract_overl))
     END IF
 
     fract_river    = MIN(1._wp-fract_water, fract_river)
