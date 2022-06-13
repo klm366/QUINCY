@@ -134,8 +134,7 @@ CONTAINS
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
-     & is_lake,                       &
-     & is_ocean,                      &
+     & tile_fract_zero,               &
      & has_snow_layer
 
     REAL(wp) ::    & ! Avoid compute in param
@@ -225,7 +224,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
-    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,is_ocean,is_lake, & 
+    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,tile_fract_zero, 
     !$claw acc has_snow_layer,soil_depth_sl_vol_porosity_sl_tmp)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
@@ -243,11 +242,12 @@ CONTAINS
     !$claw acc update device(is_glacier) ! 
     !$claw acc end data
 
-    !$claw acc data present(is_ocean, is_lake)
+    ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
+    ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
+    !$claw acc data present(tile_fract_zero)
     CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
-    is_ocean(:) = fract(:) <= 0._wp
-    is_lake(:)  = tile%fract(ics:ice,iblk) <= 0._wp
-    !$claw acc update device(is_ocean, is_lake)
+    tile_fract_zero(:) = fract(:) <= 0._wp .OR. tile%fract(ics:ice,iblk) <= 0._wp
+    !$claw acc update device(tile_fract_zero)
     !$claw acc end data
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
@@ -291,12 +291,11 @@ CONTAINS
     t_old   (:) = t(:)
     !$claw end expand
 
-    ! Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
-    ! leading to a crash in convect_tables
-    !$claw acc data present(is_ocean,is_lake,t_unfilt_old,t_old)
+    ! Fix needed for numerical reasons on grid cells without real land fraction
+    !$claw acc data present(tile_fract_zero,t_unfilt_old,t_old)
     !$claw acc parallel loop gang vector
     DO i=1, size(s_star,dim=1)
-      IF (is_ocean(i) .OR. is_lake(i)) THEN
+      IF (tile_fract_zero(i)) THEN
         t_unfilt_old(i) = 280._wp
         t_old(i)        = 280._wp
       END IF
@@ -348,12 +347,11 @@ CONTAINS
         & s_star(:))                             ! out
     END IF
 
-    ! Todo: Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
-    ! leading to a crash in convect_tables (lake and land tiles need to be direct children of root tile!)
-    !$claw acc data present(is_ocean,is_lake,s_star,t2s_conv)
+    ! Fix needed for numerical reasons on grid cells without real land fraction
+    !$claw acc data present(tile_fract_zero,s_star,t2s_conv)
     !$claw acc parallel loop gang vector
     DO i=1, size(s_star,dim=1)
-      IF (is_ocean(i) .OR. is_lake(i)) THEN
+      IF (tile_fract_zero(i)) THEN
         ! s_star(:) = s_old(:)
         s_star(i) = 280._wp * t2s_conv(i)
       END IF
