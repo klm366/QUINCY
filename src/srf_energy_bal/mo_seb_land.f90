@@ -305,11 +305,12 @@ CONTAINS
     !$claw acc update device(is_glacier) ! 
     !$claw acc end data
 
-    !$claw acc data present(is_ocean, is_lake)
+    ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
+    ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
+    !$claw acc data present(tile_fract_zero)
     CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
-    is_ocean(:) = fract(:) <= 0._wp
-    is_lake(:)  = tile%fract(ics:ice,iblk) <= 0._wp
-    !$claw acc update device(is_ocean, is_lake)
+    tile_fract_zero(:) = fract(:) <= 0._wp .OR. tile%fract(ics:ice,iblk) <= 0._wp
+    !$claw acc update device(tile_fract_zero)
     !$claw acc end data
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
