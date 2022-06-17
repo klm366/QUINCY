@@ -711,8 +711,11 @@ CONTAINS
   !!
   SUBROUTINE update_soil_properties(tile, options)
 
-    USE mo_hydro_constants, ONLY: vol_porosity_org, hyd_cond_sat_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
-      & vol_field_cap_org, vol_p_wilt_org
+    USE mo_hydro_constants, ONLY: vol_porosity_org_top, hyd_cond_sat_org_top, bclapp_org_top, matrix_pot_org_top, &
+      & pore_size_index_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, vol_porosity_org_below, &
+      & hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, pore_size_index_org_below, &
+      & vol_field_cap_org_below, vol_p_wilt_org_below, thresh_org, beta_perc
+
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -748,6 +751,19 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, i
     INTEGER  :: nsoil
+
+    REAL(wp) :: N_perc
+    REAL(wp), ALLOCATABLE ::  fract_perc(:,:)          ! fraction of the soil with connected organic pathways
+    REAL(wp), ALLOCATABLE ::  fract_uncon(:,:)         ! fraction of the soil with unconnected organic matter
+    REAL(wp), ALLOCATABLE ::  hyd_cond_sat_uncon(:,:)  ! saturated hydraulic conductivity of 'unconnected' fraction
+
+    REAL(wp), ALLOCATABLE ::  hyd_cond_sat_org(:,:)
+    REAL(wp), ALLOCATABLE ::  vol_porosity_org(:,:)
+    REAL(wp), ALLOCATABLE ::  bclapp_org(:,:)
+    REAL(wp), ALLOCATABLE ::  matrix_pot_org(:,:)
+    REAL(wp), ALLOCATABLE ::  pore_size_index_org(:,:)
+    REAL(wp), ALLOCATABLE ::  vol_field_cap_org(:,:)
+    REAL(wp), ALLOCATABLE ::  vol_p_wilt_org(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_properties'
 
@@ -800,15 +816,89 @@ CONTAINS
       vol_p_wilt_sl     (:,i) = vol_p_wilt(:)
       !$claw end expand
     END DO
+
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+      ALLOCATE(hyd_cond_sat_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(vol_porosity_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(bclapp_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(matrix_pot_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(pore_size_index_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(vol_field_cap_org(SIZE(hyd_cond_sat),nsoil))
+      ALLOCATE(vol_p_wilt_org(SIZE(hyd_cond_sat),nsoil))
+
+      ! Use different parameters for top layer and deeper layers
+      hyd_cond_sat_org(:,1) = hyd_cond_sat_org_top
+      vol_porosity_org(:,1) = vol_porosity_org_top
+      bclapp_org(:,1) = bclapp_org_top
+      matrix_pot_org(:,1) = matrix_pot_org_top
+      pore_size_index_org(:,1) = pore_size_index_org_top
+      vol_field_cap_org(:,1) = vol_field_cap_org_top
+      vol_p_wilt_org(:,1) = vol_p_wilt_org_top
+
+      DO i=2,nsoil
+        hyd_cond_sat_org(:,i) = hyd_cond_sat_org_below
+        vol_porosity_org(:,i) = vol_porosity_org_below
+        bclapp_org(:,i) = bclapp_org_below
+        matrix_pot_org(:,i) = matrix_pot_org_below
+        pore_size_index_org(:,i) = pore_size_index_org_below
+        vol_field_cap_org(:,i) = vol_field_cap_org_below
+        vol_p_wilt_org(:,i) = vol_p_wilt_org_below
+      END DO
+
+      ! Saturated hydraulic conductivity following percolation theory 
+      ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
+      ! @todo: add CLAW directives
+
+      N_perc = (1._wp - thresh_org)**(-beta_perc)
+
+      ALLOCATE(fract_perc(SIZE(hyd_cond_sat),nsoil))          ! fraction of the soil with connected organic pathways
+      ALLOCATE(fract_uncon(SIZE(hyd_cond_sat),nsoil))         ! fraction of the soil with unconnected organic matter
+      ALLOCATE(hyd_cond_sat_uncon(SIZE(hyd_cond_sat),nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
+
+      WHERE(fract_org_sl(:,:) > thresh_org)
+        ! Connected flow pathways consisting of organic material only exist
+        fract_perc(:,:)  = MIN(1._wp, N_perc * fract_org_sl(:,:) * (fract_org_sl(:,:)-thresh_org)**beta_perc)
+        fract_uncon(:,:) = 1._wp - fract_perc(:,:)
+      ELSEWHERE
+        ! No connected organic matter pathways exist, and flow passes mineral and organic soil components in series
+        fract_perc(:,:)  = 0._wp
+        fract_uncon(:,:) = 1._wp
+      END WHERE
+
+      WHERE(fract_org_sl(:,:) > 0._wp)
+        hyd_cond_sat_uncon(:,:) = fract_uncon(:,:)                                           &
+          &                       * ( (1._wp - fract_org_sl(:,:)) / hyd_cond_sat_sl(:,:)     &
+          &                            + (fract_org_sl(:,:) - fract_perc(:,:)) / hyd_cond_sat_org(:,:) )**(-1._wp)
+        hyd_cond_sat_sl(:,:)    = fract_uncon(:,:) * hyd_cond_sat_uncon(:,:)  &
+          &                       + fract_perc(:,:) * hyd_cond_sat_org(:,:)
+      END WHERE
+
+      DEALLOCATE(fract_perc)
+      DEALLOCATE(fract_uncon)
+      DEALLOCATE(hyd_cond_sat_uncon)
+
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_2 tile_name=tile%name soil=i
-      hyd_cond_sat_sl   (:,:) = (1._wp - fract_org_sl(:,:)) * hyd_cond_sat_sl   (:,:) + fract_org_sl(:,:) * hyd_cond_sat_org
-      vol_porosity_sl   (:,:) = (1._wp - fract_org_sl(:,:)) * vol_porosity_sl   (:,:) + fract_org_sl(:,:) * vol_porosity_org
-      bclapp_sl         (:,:) = (1._wp - fract_org_sl(:,:)) * bclapp_sl         (:,:) + fract_org_sl(:,:) * bclapp_org
-      matrix_pot_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * matrix_pot_sl     (:,:) + fract_org_sl(:,:) * matrix_pot_org
-      pore_size_index_sl(:,:) = (1._wp - fract_org_sl(:,:)) * pore_size_index_sl(:,:) + fract_org_sl(:,:) * pore_size_index_org
-      vol_field_cap_sl  (:,:) = (1._wp - fract_org_sl(:,:)) * vol_field_cap_sl  (:,:) + fract_org_sl(:,:) * vol_field_cap_org
-      vol_p_wilt_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * vol_p_wilt_sl     (:,:) + fract_org_sl(:,:) * vol_p_wilt_org
+      vol_porosity_sl   (:,:) = (1._wp - fract_org_sl(:,:)) * vol_porosity_sl   (:,:) &
+        &                       + fract_org_sl(:,:) * vol_porosity_org(:,:)
+      bclapp_sl         (:,:) = (1._wp - fract_org_sl(:,:)) * bclapp_sl         (:,:) &
+        &                       + fract_org_sl(:,:) * bclapp_org(:,:)
+      matrix_pot_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * matrix_pot_sl     (:,:) &
+        &                       + fract_org_sl(:,:) * matrix_pot_org(:,:)
+      pore_size_index_sl(:,:) = (1._wp - fract_org_sl(:,:)) * pore_size_index_sl(:,:) &
+        &                       + fract_org_sl(:,:) * pore_size_index_org(:,:)
+      vol_field_cap_sl  (:,:) = (1._wp - fract_org_sl(:,:)) * vol_field_cap_sl  (:,:) &
+        &                       + fract_org_sl(:,:) * vol_field_cap_org(:,:)
+      vol_p_wilt_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * vol_p_wilt_sl     (:,:) &
+        &                       + fract_org_sl(:,:) * vol_p_wilt_org(:,:)
+
+      DEALLOCATE(hyd_cond_sat_org)
+      DEALLOCATE(vol_porosity_org)
+      DEALLOCATE(bclapp_org)
+      DEALLOCATE(matrix_pot_org)
+      DEALLOCATE(pore_size_index_org)
+      DEALLOCATE(vol_field_cap_org)
+      DEALLOCATE(vol_p_wilt_org)
+
       !$claw end expand
     END IF
 
@@ -960,7 +1050,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &  !! ice not considered
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &  !! ice not considered
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &  !! ice not considered
-      & dsl4jsb_var2D_onChunk (HYDRO_, weq_rootzone_max  ), &  !! only used in grid cells without organic fraction
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
       &                                t_soil_sl     (:,1), &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ), &
@@ -1149,6 +1239,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(SSE_)
 
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(ASSIMI_)
@@ -1156,12 +1247,19 @@ CONTAINS
     ! HYDRO_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
-    dsl4jsb_Real2D_onChunk :: wtr_rootzone        !< Liquid water content in the root zone
-    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl      !< Water content of soil layers at field capacity (reduced by ice)
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl     !< Water content of soil layers at perm. wilting point (excl. ice)
-    dsl4jsb_Real2D_onChunk :: weq_rootzone_max    !< Maximum possible amount of water/ice in the rootzone
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone           !< Liquid water content in the root zone
+    dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Froozen water content in the root zone
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl            !< Liquid water content in soil column
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl  !< Potentially suppercooled water content in soil column
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_scool_pot !< Potentially suppercooled water content in root zone
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_scool_act !< Actual supercooled water content in root zone
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail     !< Plant available water content in root zone
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail_max !< Maximum plant available water content in root zone
+    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl         !< Water content of soil layers at field capacity (reduced by ice)
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl        !< Water content of soil layers at perm. wilting point (excl. ice)
+    dsl4jsb_Real2D_onChunk :: weq_rootzone_max       !< Maximum possible amount of water/ice in the rootzone
     dsl4jsb_Real2D_onChunk :: water_stress
-    dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel    !< Relative root zone soil moisture
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk :: beta_soil_gs
     dsl4jsb_Real2D_onChunk :: beta_soil_ps
@@ -1200,19 +1298,27 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(SSE_)
 
     ! Get reference to variables for current block
     !
     dsl4jsb_Get_memory(HYDRO_)
     !
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_fc_sl)      ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pwp_sl)     ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)        ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)       ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)        ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)    ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_fc_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pwp_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)           ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_rootzone)           ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)          ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)           ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_pot) ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_act) ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail_max) ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_rel)       ! out
     !
 
     ! quincy_jsbach: will be removed and re-implemented
@@ -1233,17 +1339,45 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
+    ! Calculate actual plant available water
+    !   Meant here is all liquid water (without supercooled water) in the root zone. Water
+    !   below the wilting point is not subtracted, so calling it available water might be misleading.
+    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+      ! Supercooled water is not available to plants
+      CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl(:,:),  &
+                               &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_pot(:))
+      CALL get_amount_in_rootzone(MIN(wtr_soil_pot_scool_sl(:,:), wtr_soil_sl(:,:)),  &
+                               &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
+      wtr_rootzone_avail(:) = MAX(wtr_rootzone(:) - wtr_rootzone_scool_act(:), 0._wp)
+    ELSE
+      ! Available water in the root zone, including supercooled water
+      wtr_rootzone_avail(:) = wtr_rootzone(:)
+    END IF
+
+    ! Calculate maximum plant available water
+    !   As in the the available water calculation above, water below the wilting point is not
+    !   subtracted.
+    ! pdv: Here also the question is how to treat the potential rootzone soil moisture
+    !   Definitly ice should be removed - otherwise plants suffer constant waterstress in permafrost-regions:
+    !   But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in wtr_rootzone_avail_max
+
+    IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+      wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:) - wtr_rootzone_scool_pot(:), 0._wp)
+    ELSE
+      wtr_rootzone_avail_max(:) = weq_rootzone_max(:)
+    END IF
+
     ! Calculate water stress
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    water_stress(:) = get_water_stress_factor(wtr_rootzone(:), weq_rootzone_max(:), &
+    water_stress(:) = get_water_stress_factor(wtr_rootzone_avail(:), wtr_rootzone_avail_max(:), &
             &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
-    !$claw acc data present(wtr_rootzone, soil_depth_sl, root_depth_sl, wtr_rootzone_rel)
+    !$claw acc data present(wtr_rootzone_avail, wtr_rootzone_avail_max, soil_depth_sl, root_depth_sl, wtr_rootzone_rel)
     !$claw acc parallel loop gang vector
     DO ic= 1, nc
-      IF (weq_rootzone_max(ic) > 0._wp) THEN
-        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone(ic) / weq_rootzone_max(ic), 1._wp)
+      IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
+        wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
       ELSE
         ! weq_rootzone_max is zero over glaciers
         wtr_rootzone_rel(ic) = 0._wp

@@ -50,7 +50,7 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
-      local_budget    , & !< discharge from upstream cells
+      local_budget    , &  !< discharge from upstream cells
       local_fluxes    , &  !< discharge from upstream cells
       local_wbal_error, &  !< discharge from upstream cells
       water_budget    , &
