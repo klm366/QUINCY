@@ -355,7 +355,7 @@ CONTAINS
         fract_new = 0.0_wp
       ELSE
         ! Pond surface area
-        fract_new = MIN(1.0_wp, MAX(0.0_wp, reservoir/MAX(1.0_wp, oro_stddev)))**(1._wp/3._wp)
+        fract_new = MIN(1.0_wp, MAX(0.0_wp, reservoir/MAX(1.0_wp, oro_stddev)))**(2._wp/1._wp)
       END IF
     ELSE 
       fract_new = 0._wp
@@ -492,7 +492,7 @@ CONTAINS
       volume_mask_high(:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)<=volumes_lake(:,:)
       volume_mask(:) = basin_mask(:) > 0._wp .AND. volume_lake(:)>=MINVAL(volumes_lake(:,:), DIM=2)
 
-      WHERE      ( volume_mask(:)  .AND. volume_lake(:)<MINVAL(volumes_lake(:,:), DIM=2) .AND. volume_lake(:)>0._wp )
+      WHERE      ( basin_mask(:) > 0._wp  .AND. volume_lake(:)<MINVAL(volumes_lake(:,:), DIM=2) .AND. volume_lake(:)>0._wp )
          height_lake(:)= volume_lake(:) * heights_lake(:,1) / volumes_lake(:,1)
          area_lake  (:)= volume_lake(:) * areas_lake  (:,1) / volumes_lake(:,1)
       ELSE  WHERE ( volume_mask(:)  .AND. volume_lake(:)<MAXVAL(volumes_lake(:,:), DIM=2) )
@@ -637,9 +637,9 @@ CONTAINS
       & discharge_ocean,       &
       & internal_drain,        &
       & discharge_lake,           &
-      & runoff_land,           &
-      & drainage_land,         &
-      & discharge_river,       &
+      & overlflow_lake,           &
+      & baseflow_lake,         &
+      & riverflow_lake,       &
       & runoff_lake,           &
       & volume_lake
 
@@ -705,9 +705,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, discharge_lake)   ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, runoff_land)      ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, drainage_land)    ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, discharge_river)  ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, overlflow_lake)      ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, baseflow_lake)    ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, riverflow_lake)  ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, runoff_lake)      ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
@@ -748,9 +748,9 @@ CONTAINS
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
       discharge_lake(:,:) = 0._wp
-      runoff_land(:,:) = 0._wp
-      drainage_land(:,:) = 0._wp
-      discharge_river(:,:) = 0._wp
+      overlflow_lake(:,:) = 0._wp
+      baseflow_lake(:,:) = 0._wp
+      riverflow_lake(:,:) = 0._wp
 
       global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:)+runoff_lake(:,:))*in_domain(:,:))
 
@@ -803,15 +803,15 @@ CONTAINS
         discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
         ! lake water drained into internal lake
-        runoff_land(:,:) = outflow_runoff(:,:)
-        drainage_land(:,:) = outflow_drainage(:,:)
-        discharge_river(:,:) = discharge(:,:)
+        overlflow_lake(:,:) = outflow_runoff(:,:)
+        baseflow_lake(:,:) = outflow_drainage(:,:)
+        riverflow_lake(:,:) = discharge(:,:)
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
       END WHERE
       ! inflow at lake sink points
-      discharge_lake(:,:) = runoff_land(:,:) + drainage_land(:,:) + discharge_river(:,:) + runoff_lake(:,:)
+      discharge_lake(:,:) = overlflow_lake(:,:) + baseflow_lake(:,:) + riverflow_lake(:,:) + runoff_lake(:,:)
       ! lake water storage [m3]
       volume_lake(:,:) = volume_lake(:,:) + discharge_lake(:,:) * steplen
 
