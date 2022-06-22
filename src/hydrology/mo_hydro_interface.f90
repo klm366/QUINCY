@@ -1456,9 +1456,12 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     ! HYDRO_
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_rootzone,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_rel,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone_avail_max, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, water_stress,           weighted_by_fract)
 
     ! quincy_jsbach: will be removed and re-implemented
     IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN

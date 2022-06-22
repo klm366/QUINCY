@@ -698,12 +698,22 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
+
       CALL mem%Add_var( 'wtr_rootzone', mem%wtr_rootzone,                      &
         & hgrid, surface,                                                      &
         & t_cf('wtr_rootzone', 'm', 'Liquid water content of the root zone'),  &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'ice_rootzone', mem%ice_rootzone,                                &
+        & hgrid, surface,                                                                &
+        & t_cf('ice_rootzone', 'm water equivalent', 'Ice content in the root zone'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
+        & lrestart=.FALSE.,                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_soil_sl', mem%wtr_soil_sl,                        &
@@ -768,7 +778,6 @@ CONTAINS
         & t_cf('wtr_soil_pot_scool_sl', 'm', 'Potentially supercooled water on soil layers'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
         & prefix, suffix,                                                                     &
-        & loutput=.TRUE.,                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
@@ -776,6 +785,7 @@ CONTAINS
         & t_cf('wtr_rootzone_rel', '-', 'Relative root zone moisture'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
         & initval_r=0.0_wp )
 
       ! quincy_jsbach: will be removed and re-implemented>>>
@@ -881,14 +891,6 @@ CONTAINS
         & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
       ! quincy_jsbach<<<
 
-      CALL mem%Add_var( 'ice_rootzone', mem%ice_rootzone,                                &
-        & hgrid, surface,                                                                &
-        & t_cf('ice_rootzone', 'm water equivalent', 'Ice content in the root zone'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-        & prefix, suffix,                                                                &
-        & lrestart=.FALSE.,                                                              &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
       CALL mem%Add_var( 'wtr_rootzone_scool_pot', mem%wtr_rootzone_scool_pot,                        &
         & hgrid, surface,                                                                            &
         & t_cf('wtr_rootzone_scool_pot', 'm', 'Potentially supercooled water content in root zone'), &
@@ -903,7 +905,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &
-        & loutput=.TRUE.,                                                                &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_rootzone_avail', mem%wtr_rootzone_avail,                    &
@@ -911,6 +912,7 @@ CONTAINS
         & t_cf('wtr_rootzone_avail', 'm', 'Plant available water content in root zone'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
         & lrestart=.FALSE.,                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -919,6 +921,7 @@ CONTAINS
         & t_cf('wtr_rootzone_avail_max', 'm', 'Maximum plant available water content in root zone'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
         & prefix, suffix,                                                                            &
+        & output_level=BASIC,                                                            &
         & lrestart=.FALSE.,                                                                          &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
