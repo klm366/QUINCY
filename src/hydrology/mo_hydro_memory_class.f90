@@ -186,7 +186,8 @@ MODULE mo_hydro_memory_class
       discharge_ocean_gsum,   & !< Global water discharge to the oceans     [Sv]
       wtr_rootzone_rel_gmean, & !< Global mean relative rootzone moisture   [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
-      weq_snow_gsum             !< Global snow amount on non-glacier land   [Gt]
+      weq_snow_gsum,          & !< Global snow amount on non-glacier land   [Gt]
+      weq_balance_err_gsum      !< Global accumulated water balance error   [m3/timestep]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -382,6 +383,7 @@ CONTAINS
       & t_cf('weq_balance_err', 'm3/(time step)', 'Land water balance error'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & loutput=.TRUE., output_level=BASIC,                                          &
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp )
 
@@ -1095,6 +1097,12 @@ CONTAINS
       CALL mem%Add_var('weq_snow_gsum', mem%weq_snow_gsum,                               &
         & hgrid, surface,                                                                &
         & t_cf('weq_snow_gsum', 'Gt', 'Global snow amount on non-glacier land'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+      CALL mem%Add_var('weq_balance_err_gsum', mem%weq_balance_err_gsum,                 &
+        & hgrid, surface,                                                                &
+        & t_cf('weq_balance_err_gsum', 'm3/timestep', 'Global land water balance error'),&
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp )
