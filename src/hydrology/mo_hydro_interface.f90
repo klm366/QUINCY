@@ -1248,9 +1248,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: wtr_rootzone           !< Liquid water content in the root zone
-    dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Frozen water content in the root zone
+    dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Froozen water content in the root zone
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl            !< Liquid water content in soil column
-    dsl4jsb_Real3D_onChunk :: ice_soil_sl            !< Frozen water content in soil column
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl  !< Potentially suppercooled water content in soil column
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_scool_pot !< Potentially suppercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_scool_act !< Actual supercooled water content in root zone
@@ -1307,15 +1306,14 @@ CONTAINS
     !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)            ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_fc_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pwp_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)           ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_rootzone)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)           ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_rootzone)           ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_pot) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_act) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail)     ! out
@@ -1364,8 +1362,6 @@ CONTAINS
     !   But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in wtr_rootzone_avail_max
 
     IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
-                               &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
       wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:) - wtr_rootzone_scool_pot(:), 0._wp)
     ELSE
       wtr_rootzone_avail_max(:) = weq_rootzone_max(:)
