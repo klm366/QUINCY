@@ -261,8 +261,8 @@ CONTAINS
 
       IF (model%config%use_wetskins) THEN
         ! reservoir wetskin evaporation [m3]
-        CALL evapo_wetskin (w_river(:), veg_fract(:), nc, riverflow_res(:,:))
-        CALL evapo_wetskin (w_overl(:), veg_fract(:), nc, overlflow_res(:,:))
+        CALL evapo_wetskin (w_river(:)*area, veg_fract(:), nc, riverflow_res(:,:))
+        CALL evapo_wetskin (w_overl(:)*area, veg_fract(:), nc, overlflow_res(:,:))
       ENDIF
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
@@ -284,8 +284,8 @@ CONTAINS
 
       ! river reservoir water content: [m3] 
       WHERE (veg_fract(:) > 0._wp)
-         w_river_res(:) = SUM(riverflow_res(:,:), DIM=2, MASK=riverflow_res(:,:)>0._wp)
-         w_overl_res(:) = SUM(overlflow_res(:,:), DIM=2, MASK=overlflow_res(:,:)>0._wp)
+         w_river_res(:) = SUM(riverflow_res(:,:), DIM=2, MASK=riverflow_res(:,:)>0._wp)/area
+         w_overl_res(:) = SUM(overlflow_res(:,:), DIM=2, MASK=overlflow_res(:,:)>0._wp)/area
       ELSE WHERE
          w_river_res(:) = 0._wp
          w_overl_res(:) = 0._wp
@@ -293,8 +293,8 @@ CONTAINS
 
       IF (model%config%use_wetskins) THEN
         ! update reservoir wetskin fraction
-        fract_river(:) = update_wetskin (fract_river(:),w_river_res(:)/area,oro_stddev(:),veg_fract(:))
-        fract_overl(:) = update_wetskin (fract_overl(:),w_overl_res(:)/area,oro_stddev(:),veg_fract(:))
+        fract_river(:) = update_wetskin (fract_river(:),w_river_res(:),oro_stddev(:),veg_fract(:))
+        fract_overl(:) = update_wetskin (fract_overl(:),w_overl_res(:),oro_stddev(:),veg_fract(:))
       ENDIF
 
     CASE ('weighted_to_coast')
@@ -347,6 +347,8 @@ CONTAINS
 
     ! Local variables
     REAL(wp), PARAMETER  :: eps = EPSILON(1.0_wp)    !< Really small value
+    REAL(wp), PARAMETER  :: scale_par = 0.5_wp
+    REAL(wp), PARAMETER  :: shape_par = 0.6_wp
 
 
     IF (fract_veg > 0._wp) THEN                      ! valid grid cell
@@ -355,7 +357,7 @@ CONTAINS
         fract_new = 0.0_wp
       ELSE
         ! Pond surface area
-        fract_new = MIN(1.0_wp, MAX(0.0_wp, reservoir/MAX(1.0_wp, oro_stddev)))**(2._wp/1._wp)
+        fract_new = MIN(1.0_wp, MAX(0.0_wp, reservoir/MAX(1.0_wp, scale_par * oro_stddev)))**(shape_par)
       END IF
     ELSE 
       fract_new = 0._wp
@@ -1359,8 +1361,8 @@ CONTAINS
     water_flux(:,:) = &
       &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
       & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
-      & + evapo_river    (:,:) * in_domain(:,:)/steplen                           & !< river evaporation [m3] -> [m3/s] 
-      & + evapo_overl    (:,:) * in_domain(:,:)/steplen                           & !< river evaporation [m3] -> [m3/s] 
+      & + evapo_river    (:,:) * area(:,:)/steplen*in_domain(:,:)                 & !< river evaporation [m] -> [m3/s] 
+      & + evapo_overl    (:,:) * area(:,:)/steplen*in_domain(:,:)                 & !< river evaporation [m] -> [m3/s] 
       & + drainage_lake  (:,:) * in_domain(:,:)                                   & !< drainge from the lakes (outlet overflow)
       & - discharge_ocean(:,:) * in_domain(:,:)                                   & !< discharge to the ocean
       & - discharge_lake (:,:) * in_domain(:,:)                                     !< discharge to the lakes
@@ -1376,10 +1378,10 @@ CONTAINS
            global_sum_array(drainage/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   river evaporation                   : ', &
-           global_sum_array(evapo_river*in_domain), ' m3'
+           global_sum_array(evapo_river*area*in_domain), ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   overfland evaporation               : ', &
-           global_sum_array(evapo_overl*in_domain), ' m3'
+           global_sum_array(evapo_overl*area*in_domain), ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   outlet                              : ', &
            global_sum_array(drainage_lake*in_domain*steplen), ' m3'

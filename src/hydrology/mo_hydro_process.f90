@@ -137,8 +137,8 @@ CONTAINS
       & evapotrans_no_snow,   & !< evapotranspiration without snow evaporation [m]
       & evapo_snow_pot_in_m,  & !< potential snow evaporation
       & evapo_skin_pot_in_m,  & !< potential evaporation from wet surface (skin reservoir)
-      & evapo_river_pot,      & !< potential evaporation from wet surface (river reservoir)
-      & evapo_overl_pot,      & !< potential evaporation from wet surface (overl reservoir)
+      & evapo_river_pot_in_m,      & !< potential evaporation from wet surface (river reservoir)
+      & evapo_overl_pot_in_m,      & !< potential evaporation from wet surface (overl reservoir)
       & rain_to_skinres,      & !< amount of rain going into the skin reservoir
       & skinres_pre_rain        !< amount of water in the skin reservoir prior to the update [m]
 
@@ -174,8 +174,8 @@ CONTAINS
     evapo_snow_pot_in_m = sfract_srf    * evapopot * delta_time/rhoh2o
     evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
     evapo_skin_pot_in_m = (1._wp - sfract_srf) * (wfract_srf-fract_river-fract_overl) * evapopot * delta_time/rhoh2o
-    evapo_river_pot = (1._wp - sfract_srf) * fract_river * evapopot * delta_time/rhoh2o * area
-    evapo_overl_pot = (1._wp - sfract_srf) * fract_overl * evapopot * delta_time/rhoh2o * area
+    evapo_river_pot_in_m = (1._wp - sfract_srf) * fract_river * evapopot * delta_time/rhoh2o
+    evapo_overl_pot_in_m = (1._wp - sfract_srf) * fract_overl * evapopot * delta_time/rhoh2o
 
     !---------------------------------------------
     !  Budgets of snow (canopy, ground)
@@ -257,8 +257,8 @@ CONTAINS
     water_to_soil = water_to_soil + MAX(rain_in_m - rain_to_skinres, 0._wp)        ! Rest of rain goes to soil
     skinres_pre_rain = skinres
     skinres = MIN(MAX(0._wp, skinres_pre_rain + rain_to_skinres + evapo_skin_pot_in_m), skinres_max)
-    w_river = MAX(0._wp, w_river_res + evapo_river_pot)
-    w_overl = MAX(0._wp, w_overl_res + evapo_overl_pot)
+    w_river = MAX(0._wp, w_river_res + evapo_river_pot_in_m)
+    w_overl = MAX(0._wp, w_overl_res + evapo_overl_pot_in_m)
     evapo_river = w_river - w_river_res     
     evapo_overl = w_overl - w_overl_res
 
@@ -1562,8 +1562,8 @@ CONTAINS
     END IF
 
     IF (evapo_pot>eps) THEN
-      fract_river    = MAX(0.0_wp, MIN(fract_river, w_river_res / (evapo_pot / rhoh2o * dtime * area)))
-      fract_overl    = MAX(0.0_wp, MIN(fract_overl, w_overl_res / (evapo_pot / rhoh2o * dtime * area)))
+      fract_river    = MAX(0.0_wp, MIN(fract_river, w_river_res / (evapo_pot / rhoh2o * dtime)))
+      fract_overl    = MAX(0.0_wp, MIN(fract_overl, w_overl_res / (evapo_pot / rhoh2o * dtime)))
     ELSE
       fract_river    = MAX(0.0_wp, MIN(1._wp, fract_river))
       fract_overl    = MAX(0.0_wp, MIN(1._wp, fract_overl))

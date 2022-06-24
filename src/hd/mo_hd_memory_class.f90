@@ -68,8 +68,8 @@ MODULE mo_hd_memory_class
       height_dyn      , &  !< minimum dynamic height within ICON grid cell [m]
       basin_mask      , &  !< endorheic lake basin grid points flagged with [0;>0] 
       outlets         , &  !< endorheic lake outlet grid points flagged with [0;>0] 
-      w_river_res     , &  !< river reservoir water content [m3] 
-      w_overl_res     , &  !< overland reservoir water content [m3] 
+      w_river_res     , &  !< river reservoir water content [m] 
+      w_overl_res     , &  !< overland reservoir water content [m] 
       fract_river     , &  !< river reservoir wetskin fraction [m]
       fract_overl     , &  !< overland reservoir wetskin fraction [m]
       water_budget    , &
@@ -364,7 +364,7 @@ CONTAINS
 
     CALL mem%Add_var( 'w_river_res', mem%w_river_res,                        &
       & hgrid, surface,                                                      &
-      & t_cf('w_river_res', 'm3', 'water conten in river reservoir'),        &
+      & t_cf('w_river_res', 'm', 'river reservoir water content'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
@@ -373,7 +373,7 @@ CONTAINS
 
     CALL mem%Add_var( 'w_overl_res', mem%w_overl_res,                        &
       & hgrid, surface,                                                      &
-      & t_cf('w_overl_res', 'm3', 'water conten in overland reservoir'),     &
+      & t_cf('w_overl_res', 'm', 'overland reservoir water content'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
