@@ -718,7 +718,7 @@ CONTAINS
     LOGICAL, INTENT(IN) :: ltpe_open
 
     INTEGER  :: i, j                        ! looping index
-    REAL(wp) :: percolation(nc,0:nsoil)     ! downward flux from one soil layer to the layer below [m/s]
+    REAL(wp) :: percolation(nc,nsoil)       ! downward flux from one soil layer to the layer below [m/s]
                                             !     and later amount of perculation per time step [m]
     REAL(wp) :: diffus_sl(nc,nsoil)         ! diffusivity at mid-depth of the layer
     REAL(wp) :: ws_min_drain(nc)            ! minimum soil moisture for drainage
@@ -801,8 +801,7 @@ CONTAINS
           !      ksat should be reduced accordingly (see e.g. CLM documentation)
           ice_impede(j)    = 10._wp**(-6._wp * (ice_soil_sl(j,i)  + wtr_soil_pot_scool_sl(j,i) ) &
             &                                / (field_cap_sl(j,i) + ice_soil_sl(j,i)))
-          ws_rel(j,i) = MAX(wtr_soil_sl(j,i) - ws_immo_sl(j,i), 0._wp) / (field_cap_sl(j,i) - ws_immo_sl(j,i))
-          ws_rel(j,i) = MIN(ws_rel(j,i), 1._wp)
+          ws_rel(j,i) = MIN(MAX(wtr_soil_sl(j,i) - ws_immo_sl(j,i), 0._wp) / (field_cap_sl(j,i) - ws_immo_sl(j,i)), 1._wp)
           percolation(j,i) = ice_impede(j) * hyd_cond_sat_sl(j,i) * SQRT(ws_rel(j,i))                       &
             &                  * (1._wp - (1._wp - ws_rel(j,i)**(1._wp/zmvg_sl(j,i)))**zmvg_sl(j,i))**2._wp &
             &                  * dtime     ! [m/s] -> [m]

@@ -69,8 +69,7 @@ CONTAINS
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
-    LOGICAL                     :: l_organic, l_socmap
-    LOGICAL                     :: l_glac_in_soil, l_infil_subzero
+    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &

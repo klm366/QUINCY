@@ -974,6 +974,17 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
+    ! @todo check if this declaration is even necessary
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl
+    dsl4jsb_Real3D_onChunk :: root_depth_sl
+    dsl4jsb_Real2D_onChunk :: tpe_overflow
+
+
     ! Locally allocated vectors
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1022,15 +1033,25 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
+    ! @todo check if all of these imports are even necessary
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, root_depth_sl)         ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl)             ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)   ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)        ! in
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
       !$claw acc enter data create(fract_org_sl)
       !$claw expand parallel update
       fract_org_sl(:,:) = 0._wp
     END IF
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone)          ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)           ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, tpe_overflow)          ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)        ! out
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)       ! out
+
 
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
@@ -1351,7 +1372,7 @@ CONTAINS
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
       wtr_rootzone_avail(:) = MAX(wtr_rootzone(:) - wtr_rootzone_scool_act(:), 0._wp)
     ELSE
-      ! Available water in the root zone, including supercooled water
+      ! Available water in the root zone
       wtr_rootzone_avail(:) = wtr_rootzone(:)
     END IF
 
@@ -1360,10 +1381,12 @@ CONTAINS
     !   subtracted.
     ! pdv: Here also the question is how to treat the potential rootzone soil moisture
     !   Definitly ice should be removed - otherwise plants suffer constant waterstress in permafrost-regions:
-    !   But if supercooled water is asssumed to be unavailable for plants then this should also be accounted for in wtr_rootzone_avail_max
+    !   If supercooled water is asssumed to be unavailable for plants then this should also be accounted for in wtr_rootzone_avail_max
 
-    IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
       wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:) - wtr_rootzone_scool_pot(:), 0._wp)
+    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
+      wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:), 0._wp)
     ELSE
       wtr_rootzone_avail_max(:) = weq_rootzone_max(:)
     END IF
@@ -1375,12 +1398,13 @@ CONTAINS
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
     !$claw acc data present(wtr_rootzone_avail, wtr_rootzone_avail_max, soil_depth_sl, root_depth_sl, wtr_rootzone_rel)
+    !$claw acc data present(wtr_soil_pot_scool_sl, wtr_rootzone_scool_act, wtr_rootzone_avail)
     !$claw acc parallel loop gang vector
     DO ic= 1, nc
       IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
         wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
       ELSE
-        ! weq_rootzone_max is zero over glaciers
+        ! weq_rootzone_max is zero for glacier tiles
         wtr_rootzone_rel(ic) = 0._wp
       END IF
     END DO

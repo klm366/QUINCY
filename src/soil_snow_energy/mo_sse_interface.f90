@@ -600,10 +600,10 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_bcoef,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SSE_,   t_snow,           weighted_by_fract)
     END IF
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_freeze_sl,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_freeze_sl,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
     IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .AND. tile%contains_vegetation) THEN
       dsl4jsb_Aggregate_onChunk(SSE_,   t_soil_root,      weighted_by_fract)
     END IF

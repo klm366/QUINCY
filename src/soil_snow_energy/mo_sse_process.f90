@@ -500,8 +500,8 @@ CONTAINS
 
     IF (PRESENT(ws)) THEN
       !$claw expand parallel update
-      frozen(:,:)   = 0._wp
-      melt  (:,:)   = 0._wp
+      frozen    (:,:) = 0._wp
+      melt      (:,:) = 0._wp
       liquid_max(:,:) = 0._wp
       !$claw end expand
     END IF

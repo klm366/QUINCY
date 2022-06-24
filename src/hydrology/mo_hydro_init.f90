@@ -476,6 +476,7 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, matrix_pot), &
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, fract_org_sl), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) )
