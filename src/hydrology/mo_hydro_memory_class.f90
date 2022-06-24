@@ -497,7 +497,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
           & prefix, suffix,                                                          &
           & lrestart=.TRUE.,                                                         &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & initval_r=0.0_wp )
       END IF
 
       CALL mem%Add_var( 'weq_rootzone_max', mem%weq_rootzone_max,                    &
@@ -574,7 +574,7 @@ CONTAINS
 
       CALL mem%Add_var( 'bclapp', mem%bclapp,                                  &
         & hgrid, surface,                                                      &
-        & t_cf('bclapp_sl', '', 'Clapp and Hornberger (1978) exponent b'),     &
+        & t_cf('bclapp', '', 'Clapp and Hornberger (1978) exponent b'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -586,7 +586,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'matrix_pot', mem%matrix_pot,                          &
         & hgrid, surface,                                                      &
@@ -618,7 +618,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                         &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp )
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,211, grib_bits)
