@@ -31,13 +31,13 @@ ggrids=""                       # disable gaussian grids
 
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
-  mlogin*|mistralpp*)
+  mlogin*|mistralpp*|levante*)
     output_root=/pool/data/ICON/grids/public/mpim
     # output_root=/pool/data/ICON/grids/private/jsbach/mpim
     # output_root=/work/mj0060/m212005/ini_files
     ;;
   *)
-    output_root=/scratch/local1/m212005/ini_files                          # for local use
+    output_root=/scratch/local1/m214103/LocalData/BoundaryData/ICON-LAND    # for local use
     ;;
 esac
 
@@ -430,6 +430,7 @@ function generate_fractions {
   ${cdo} setvar,land -mul ${grid_name}_notsea.nc ${grid_name}_fract_land.nc ${grid_name}_land.nc
   ncatted -a long_name,land,m,c,'Fraction of land' ${grid_name}_land.nc
   debug_file ${grid_name}_land.nc
+
   # Generate PFT fractions
   local i=1
   for npfts in $npfts_list
@@ -463,7 +464,6 @@ function generate_fractions {
       done        
     fi
   done
-
 }
 
 function crosscheck_vars {
@@ -579,7 +579,6 @@ function generate_output_files {
       ${grid_name}_soil_porosity_remap.nc \
       ${grid_name}_wilting_point_remap.nc \
       ${grid_name}_fao_remap.nc \
-      ${grid_name}_maxmoist_remap.nc \
       ${outfile}
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
@@ -671,6 +670,8 @@ function modify_soil_and_root_depth {
 
   local soil_depth=${grid_name}_soil_depth_remap.nc
   local root_depth=${grid_name}_root_depth_remap.nc
+  local maxmoist=${grid_name}_maxmoist_remap.nc
+  local soil_field_cap=${grid_name}_soil_field_cap_remap.nc
 
   local temp=temp_$$
 
@@ -688,12 +689,8 @@ function modify_soil_and_root_depth {
   ${cdo} add ${temp}_soil_depth_EQ.nc ${temp}_soil_depth_NH.nc ${temp}_soil_depth_EQ_NH.nc
   ${cdo} add ${temp}_soil_depth_EQ_NH.nc ${temp}_soil_depth_SH.nc ${temp}_soil_depth_all.nc
 
-  # root depth
-  ${cdo} mulc,0.7 -mul ${root_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_root_depth_EQ.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_root_depth_NH.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_root_depth_SH.nc
-  ${cdo} add ${temp}_root_depth_EQ.nc ${temp}_root_depth_NH.nc ${temp}_root_depth_EQ_NH.nc
-  ${cdo} add ${temp}_root_depth_EQ_NH.nc ${temp}_root_depth_SH.nc ${temp}_root_depth_all.nc
+  # compute root depth based on maximum root zone moisture and field capacity
+  ${cdo} -setname,root_depth -div ${maxmoist} ${soil_field_cap} ${temp}_root_depth_all.nc
 
   # keep minimum values (0.3m for root depth and 0.5m for soil depth)
   ${cdo} gtc,0.5 ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc
@@ -813,8 +810,8 @@ do
   # svn -r 9561 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
   # svn has been moved to git, thus ...
 
-  git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
-  # git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
+  # git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
+  git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
   cd mpiesm-landveg
   git config core.sparseCheckout true
   echo /contrib/initial_tarfiles >> .git/info/sparse-checkout

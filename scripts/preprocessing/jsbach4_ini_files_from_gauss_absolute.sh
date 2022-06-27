@@ -573,7 +573,6 @@ function generate_output_files {
       ${grid_name}_soil_porosity_remap.nc \
       ${grid_name}_wilting_point_remap.nc \
       ${grid_name}_fao_remap.nc \
-      ${grid_name}_maxmoist_remap.nc \
       ${outfile}
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
@@ -665,6 +664,8 @@ function modify_soil_and_root_depth {
 
   local soil_depth=${grid_name}_soil_depth_remap.nc
   local root_depth=${grid_name}_root_depth_remap.nc
+  local maxmoist=${grid_name}_maxmoist_remap.nc
+  local soil_field_cap=${grid_name}_soil_field_cap_remap.nc
 
   local temp=temp_$$
 
@@ -682,12 +683,8 @@ function modify_soil_and_root_depth {
   ${cdo} add ${temp}_soil_depth_EQ.nc ${temp}_soil_depth_NH.nc ${temp}_soil_depth_EQ_NH.nc
   ${cdo} add ${temp}_soil_depth_EQ_NH.nc ${temp}_soil_depth_SH.nc ${temp}_soil_depth_all.nc
 
-  # root depth
-  ${cdo} mulc,0.7 -mul ${root_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_root_depth_EQ.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_root_depth_NH.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_root_depth_SH.nc
-  ${cdo} add ${temp}_root_depth_EQ.nc ${temp}_root_depth_NH.nc ${temp}_root_depth_EQ_NH.nc
-  ${cdo} add ${temp}_root_depth_EQ_NH.nc ${temp}_root_depth_SH.nc ${temp}_root_depth_all.nc
+  # compute root depth based on maximum root zone moisture and field capacity
+  ${cdo} -setname,root_depth -div ${maxmoist} ${soil_field_cap} ${temp}_root_depth_all.nc
 
   # keep minimum values (0.3m for root depth and 0.5m for soil depth)
   ${cdo} gtc,0.5 ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc
