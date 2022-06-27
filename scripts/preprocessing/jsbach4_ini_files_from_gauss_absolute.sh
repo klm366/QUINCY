@@ -32,9 +32,9 @@ ggrids=""                       # disable gaussian grids
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
   mlogin*|mistralpp*)
-    # output_root=/pool/data/ICON/grids/public/mpim
-    #output_root=/pool/data/ICON/grids/private/jsbach/mpim
-    output_root=/work/mj0060/m212005/ini_files
+    output_root=/pool/data/ICON/grids/public/mpim
+    # output_root=/pool/data/ICON/grids/private/jsbach/mpim
+    # output_root=/work/mj0060/m212005/ini_files
     ;;
   *)
     output_root=/scratch/local1/m212005/ini_files                          # for local use
@@ -93,7 +93,7 @@ varlist="glac lake init_moist snow roughness_length albedo elevation
 fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max 
 albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
 soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity 
-moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
+moisture_pot hyd_cond_sat wilting_point bclapp fract_org_sl root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
 
@@ -278,6 +278,11 @@ function extrapolate_var {
       ${cdo} setvar,${var} -setmisstoc,0 -setmissval,-9.e33 -fillmiss -ifnotthen gauss_${source_res}_glac.nc \
              -ifthen gauss_${source_res}_notsea_miss.nc  ${temp} gauss_${source_res}_${var}_ext.nc
       rm ${temp}
+      ;;
+    fract_org_sl )
+      echo "Extrapolating $var ..."
+      ${cdo} setmissval,-9.e33 -remapcon,${source_res}grid \
+          ${pool_prepare}/05/wise_som-fract_05deg_jsbsoillayers.nc ${cdo_files#* }
       ;;
     #* ) echo "Not extrapolating $var ..."
     #   ;;
@@ -563,6 +568,7 @@ function generate_output_files {
   ${cdo} merge \
       ${grid_name}_soil_depth_remap.nc \
       ${grid_name}_root_depth_remap.nc \
+      ${grid_name}_fract_org_sl_remap.nc \
       ${grid_name}_bclapp_remap.nc \
       ${grid_name}_soil_field_cap_remap.nc \
       ${grid_name}_heat_capacity_remap.nc \
