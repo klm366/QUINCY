@@ -350,7 +350,6 @@ CONTAINS
       &                                  hcond_org_top, hcond_dry_org_top, hcond_org_below, hcond_dry_org_below
     USE mo_hydro_constants,        ONLY: vol_porosity_org_top, vol_porosity_org_below
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     ! Local variables
@@ -522,28 +521,6 @@ CONTAINS
       ! dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = &
       !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
       ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))
-
-      DO b=1,nblks
-          CALL get_amount_in_rootzone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, wtr_soil_sl)   (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)  (:,  b)   )
-      END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
-      END WHERE
-
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
-      ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
-      END WHERE
-
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel),    &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone))
 
     END IF
 

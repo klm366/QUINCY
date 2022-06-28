@@ -975,7 +975,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     ! @todo check if this declaration is even necessary
-    dsl4jsb_Real2D_onChunk :: wtr_rootzone
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
@@ -1046,7 +1045,6 @@ CONTAINS
       !$claw expand parallel update
       fract_org_sl(:,:) = 0._wp
     END IF
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_rootzone)          ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, tpe_overflow)          ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)        ! out
@@ -1083,7 +1081,6 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ), &
       ! out
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_rootzone      ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ), &  !! ice volume is substracted
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ), &  !! ice volume is substracted
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ), &  !! reduced relative to ice fraction
@@ -1270,13 +1267,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: wtr_rootzone           !< Liquid water content in the root zone
-    dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Froozen water content in the root zone
+    dsl4jsb_Real2D_onChunk :: ice_rootzone           !< Frozen water content in the root zone
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl            !< Liquid water content in soil column
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl            !< Frozen water content in soil column
     dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl  !< Potentially suppercooled water content in soil column
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_scool_pot !< Potentially suppercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_scool_act !< Actual supercooled water content in root zone
-    dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail     !< Plant available water content in root zone
-    dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail_max !< Maximum plant available water content in root zone
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail     !< Plant available liquid water content in root zone
+    dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail_max !< Maximum plant available liquid water content in root zone
     dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl         !< Water content of soil layers at field capacity (reduced by ice)
     dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl        !< Water content of soil layers at perm. wilting point (excl. ice)
     dsl4jsb_Real2D_onChunk :: weq_rootzone_max       !< Maximum possible amount of water/ice in the rootzone
@@ -1328,14 +1326,15 @@ CONTAINS
     !
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)            ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_fc_sl)         ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pwp_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)           ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_rootzone)           ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_stress)           ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_rootzone)           ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_pot) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_scool_act) ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone_avail)     ! out
@@ -1364,6 +1363,13 @@ CONTAINS
     ! Calculate actual plant available water
     !   Meant here is all liquid water (without supercooled water) in the root zone. Water
     !   below the wilting point is not subtracted, so calling it available water might be misleading.
+
+    ! Formerly, the root zone moisture was computed as part of the soil hydrology prior to diffusion
+    !   and percolation. This seems wrong as the actual water stress should be the result of the
+    !   updated soil state and not of the one at the start of the time step.
+    CALL get_amount_in_rootzone(wtr_soil_sl(:,:),  &
+                             &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
+
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
       ! Supercooled water is not available to plants
       CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl(:,:),  &
@@ -1372,7 +1378,7 @@ CONTAINS
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
       wtr_rootzone_avail(:) = MAX(wtr_rootzone(:) - wtr_rootzone_scool_act(:), 0._wp)
     ELSE
-      ! Available water in the root zone
+      ! Available liquid water in the root zone
       wtr_rootzone_avail(:) = wtr_rootzone(:)
     END IF
 
@@ -1384,7 +1390,11 @@ CONTAINS
     !   If supercooled water is asssumed to be unavailable for plants then this should also be accounted for in wtr_rootzone_avail_max
 
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
+      CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
+                               &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
       wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:) - wtr_rootzone_scool_pot(:), 0._wp)
+      CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
+                               &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
     ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:), 0._wp)
     ELSE

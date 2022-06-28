@@ -419,7 +419,6 @@ CONTAINS
   ! @param [in]      wtr_soil_pot_scool_sl Amount of potentially supercooled water [m]
   ! @param [in,out]  wtr_soil_sl         Content un-frozen water of soil layers in rooting zone [m]
   ! @param [in,out]  ice_soil_sl         Content of frozen water of soil layers in rooting zone [m]
-  ! @param [out]     wtr_rootzone        Liquid water content of the root zone [m]
   ! @param [out]     wsat_sl             Maximum possible amount of liquid water in soil layer
   !                                        - reduced by amount of ice [m]
   ! @param [out]     field_cap_sl        Liquid water content at field capacity in soil layer [m]
@@ -439,7 +438,7 @@ CONTAINS
     ! inout
     & wtr_soil_sl, ice_soil_sl, tpe_overflow,                                            &
     ! out
-    & wtr_rootzone, wsat_sl, field_cap_sl, p_wilt_sl, runoff, drainage                   &
+    & wsat_sl, field_cap_sl, p_wilt_sl, runoff, drainage                                 &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -460,7 +459,7 @@ CONTAINS
       & oro_stddev, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & wtr_rootzone, tpe_overflow
+      & tpe_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -485,6 +484,7 @@ CONTAINS
       & ws_max(nc),          & ! water holding capacity of the soil [m]
       & ws_min_drain(nc),    & ! minimum soil moisture for drainage
       & ws_incl_ice(nc),     & ! soil moisture including ice [m]
+      & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
       & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
     
     REAL(wp) ::              &
