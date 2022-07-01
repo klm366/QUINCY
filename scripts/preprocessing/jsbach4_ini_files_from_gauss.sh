@@ -31,7 +31,7 @@ ggrids=""                       # disable gaussian grids
 
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
-  mlogin*|mistralpp*)
+  mlogin*|mistralpp*|levante*)
     output_root=/pool/data/ICON/grids/public/mpim
     # output_root=/pool/data/ICON/grids/private/jsbach/mpim
     # output_root=/work/mj0060/m212005/ini_files
@@ -112,6 +112,14 @@ set +u
 . ${MODULESHOME}/init/bash
 module unload cdo nco netcdf nag
 case `hostname` in
+  levante*)
+    module unload netcdf-c
+    module load cdo/2.0.5-gcc-11.2.0
+    module load nco/5.0.6-gcc-11.2.0
+    module load netcdf-c/4.8.1-gcc-11.2.0
+    module load nag/7.1-gcc-11.2.0
+    module list
+    ;;
   mlogin*|mistralpp*)
     module load cdo/1.9.6-magicsxx-gcc64
     module load nco/4.6.7-gcc48
@@ -189,6 +197,12 @@ function generate_gauss_data {
   ./jsbach_init_file.ksh #vg >& /dev/null
   mv jsbach_*.nc ../
 
+  # Add fields from different source
+  if [[ $varlist == *"fract_org_sl"* ]]; then
+    ${cdo} -remapcon,${source_res}grid ${pool_prepare}05/wise_som-fract_05deg_jsbsoillayers.nc \
+        ../gauss_${source_res}_fract_org_sl.nc
+  fi
+
 }
 
 function generate_land_sea_mask {
@@ -264,7 +278,7 @@ function extrapolate_var {
       ;;
     lai_clim | veg_fract | veg_ratio_max | roughness_length_oro | \
     soil_depth | bclapp | soil_field_cap | heat_capacity | heat_conductivity | hyd_cond_sat | \
-    moisture_pot | pore_size_index | soil_porosity | wilting_point )
+    moisture_pot | pore_size_index | soil_porosity | wilting_point | fract_org_sl )
       echo "Extrapolating $var ..."
       ${cdo} setvar,${var} -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc \
              gauss_${source_res}_${var}.nc gauss_${source_res}_${var}_ext.nc
@@ -278,11 +292,6 @@ function extrapolate_var {
       ${cdo} setvar,${var} -setmisstoc,0 -setmissval,-9.e33 -fillmiss -ifnotthen gauss_${source_res}_glac.nc \
              -ifthen gauss_${source_res}_notsea_miss.nc  ${temp} gauss_${source_res}_${var}_ext.nc
       rm ${temp}
-      ;;
-    fract_org_sl )
-      echo "Extrapolating $var ..."
-      ${cdo} setmissval,-9.e33 -remapcon,${source_res}grid \
-          ${pool_prepare}/05/wise_som-fract_05deg_jsbsoillayers.nc ${cdo_files#* }
       ;;
     #* ) echo "Not extrapolating $var ..."
     #   ;;
@@ -387,9 +396,11 @@ function remap_var {
   #     ${cdo} gec,0.5 ${grid_name}_glac_remap.nc ${temp}
   #     mv ${temp} ${grid_name}_glac_remap.nc
   # fi
-  # Copy attributes
-  [[ -f gauss_${source_res}_${var}.nc ]] && \
+  # Copy attributes but delete CDI_grid_type otherwise it messes up icon grid files (only necessary with new nco version on levante)
+  if [ -f gauss_${source_res}_${var}.nc ]; then
       ncks -A -C -H -v ${var} gauss_${source_res}_${var}.nc ${grid_name}_${var}_remap.nc >& /dev/null
+      ncatted -O -a CDI_grid_type,,d,, ${grid_name}_${var}_remap.nc >& /dev/null
+  fi
   [[ -f ${grid_name}_${var}_remap.nc ]] && debug_file ${grid_name}_${var}_remap.nc
   return 0
 }
@@ -821,7 +832,7 @@ do
   cd mpiesm-landveg
   git config core.sparseCheckout true
   echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
-  git checkout 83462fbc
+  git checkout 5fd38a895
   mv contrib/initial_tarfiles/ ..
   cd ../initial_tarfiles
   rm -rf ../mpiesm-landveg
