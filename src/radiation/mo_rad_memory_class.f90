@@ -1013,7 +1013,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
 
         ! ------------------------------------------------------------------------------------------------- !
         ! variables used with jsbach4 & quincy
@@ -1427,7 +1427,7 @@ CONTAINS
           & initval_r = 0.0_wp)
   
       END IF
-    END IF
+    END IF ! IF (model%config%model_scheme == MODEL_QUINCY)
 
   END SUBROUTINE Init_rad_memory
 

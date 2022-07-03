@@ -163,15 +163,6 @@ MODULE mo_hydro_memory_class
       & canopy_cond_limited,    & !< Canopy conductance with water limit [m/s] (mean value)
       & transpiration             !< Transpiration
 
-    ! quincy_jsbach: will be removed and re-implemented>>>
-    ! quincy - Soil Water addons for QUINCY in HYDRO
-    TYPE(t_jsb_var_real2d) :: &
-      & wtr_rootzone_fc,      & !< Water content at field capacity in root zone of the soil                 [m]
-      & wtr_rootzone_pwp,     & !< Water content at permanent wilting point in root zone of the soil        [m]
-      & wtr_rootzone_theta,   & !< root zone integrated plant available water, fraction of maximum 
-      & rootzone_wpot           !< soil water potential [MPa]
-    ! quincy_jsbach<<<
-
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow_glac,      & !< Snow fraction on glacier                                                 []
@@ -265,10 +256,6 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     soil_w       => Get_vgrid('soil_depth_water')
-
-    ! quincy_jsbach: will be removed and re-implemented>>>
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    ! quincy_jsbach<<<
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -1102,30 +1089,6 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    ! quincy_jsbach: will be removed and re-implemented>>>
-    !vg: same as wtr_rootzone_rel???
-      CALL mem%Add_var('wtr_rootzone_theta', mem%wtr_rootzone_theta, &
-        & hgrid, surface, &
-        & t_cf('wtr_rootzone_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      !vg: Same as matrix_potential???
-      CALL mem%Add_var('rootzone_wpot', mem%rootzone_wpot, &
-        & hgrid, surface, &
-        & t_cf('rootzone_wpot', 'MPa', 'soil water potential'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-    ! quincy_jsbach<<<
- 
     END IF
 
     ! Additional variables for GLACIER lct

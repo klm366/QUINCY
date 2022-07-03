@@ -208,7 +208,7 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem

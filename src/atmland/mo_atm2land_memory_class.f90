@@ -265,7 +265,8 @@ CONTAINS
 
     ! --------------------------------------------------------------------------------------------------- !
     ! variables used with jsbach4 & quincy
-    ! jsbach4 init
+    ! jsbach4 settings
+    ! 
     IF (model%config%model_scheme == MODEL_JSBACH) THEN
     
     CALL mem%Add_var( 't_air', mem%t_air,                                    &

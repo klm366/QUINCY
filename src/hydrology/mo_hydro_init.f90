@@ -18,7 +18,7 @@ MODULE mo_hydro_init
   USE mo_exception,          ONLY: message, message_text, warning, finish
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -793,35 +793,16 @@ CONTAINS
 
     USE mo_util,                  ONLY: soil_depth_to_layers_2d
 
-    ! quincy_jsbach: will be removed and re-implemented
-    USE mo_hydro_constants,       ONLY: kdiff_sat_max
-    ! quincy_jsbach<<<
-
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
-
-    ! quincy_jsbach: will be removed and re-implemented
-    dsl4jsb_Def_memory(SSE_)
-    ! quincy_jsbach<<<
 
     TYPE(t_jsb_model), POINTER        :: model
     TYPE(t_jsb_vgrid), POINTER        :: soil_w
     INTEGER                           :: i, nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
-
-    ! quincy_jsbach: will be removed and re-implemented
-    TYPE(t_jsb_vgrid), POINTER        :: vgrid_soil_sb        !< Vertical grid
-    INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
-    INTEGER                           :: isoil, iblk, nblks
-    ! SSE_ 3D
-    dsl4jsb_Real3D_onDomain    :: soil_lay_width_sl
-    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_center_sl
-    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_ubound_sl
-    dsl4jsb_Real3D_onDomain    :: soil_lay_depth_lbound_sl
-    ! quincy_jsbach<<<
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
@@ -832,29 +813,11 @@ CONTAINS
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
 
-    ! quincy_jsbach: will be removed and re-implemented
-    vgrid_soil_sb  => Get_vgrid('soil_layer_sb')
-    nsoil_sb       =  vgrid_soil_sb%n_levels
-    ! quincy_jsbach<<<
-
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
 
     ! Get hydrology memory of the tile
     dsl4jsb_Get_memory(HYDRO_)
-
-    ! quincy_jsbach: will be removed and re-implemented
-    IF (tile%contains_soil .AND. model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! get SSE_ memory
-      dsl4jsb_Get_memory(SSE_)
-      ! SSE_ 3D
-      dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_width_sl)          ! out
-      dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_center_sl)   ! out
-      dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_ubound_sl)   ! out
-      dsl4jsb_Get_var3D_onDomain(SSE_, soil_lay_depth_lbound_sl)   ! out
-      nblks = SIZE(soil_lay_width_sl, 3)
-    END IF
-    ! quincy_jsbach<<<
 
     !----------
 
@@ -986,36 +949,6 @@ CONTAINS
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
     END IF
 
-    ! quincy_jsbach: will be removed and re-implemented
-    ! quincy
-    IF (tile%contains_soil .AND. model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! pass soil-layer values to a SSE_ variable with a more intuitive variable-name
-      ! soil_depth_sl is the width of each soil layer until bedrock
-      soil_lay_width_sl(:,:,:) = dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)
-
-      ! calc more metrics of the soil layers
-      !   i)  lower & upper boundary
-      !   ii) depth at the center of each layer
-      DO iblk = 1,nblks
-        DO isoil = 1,nsoil_sb
-          ! lower & upper boundary
-          IF (isoil == 1) THEN
-            soil_lay_depth_lbound_sl(:,isoil,iblk) = 0.0_wp
-            soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_width_sl(:,isoil,iblk)
-          ELSE
-            soil_lay_depth_lbound_sl(:,isoil,iblk) = soil_lay_depth_lbound_sl(:,isoil-1,iblk) + &
-              & soil_lay_width_sl(:,isoil-1,iblk)
-            soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_depth_ubound_sl(:,isoil-1,iblk) + &
-              & soil_lay_width_sl(:,isoil,iblk)
-          END IF                                
-          ! soil-layer center ['(lower_bound + upper_bound) * 0.5']
-          soil_lay_depth_center_sl(:,isoil,iblk)   = (soil_lay_depth_lbound_sl(:,isoil,iblk) + &
-            & soil_lay_depth_ubound_sl(:,isoil,iblk)) * 0.5_wp 
-        END DO
-      END DO
-    END IF  ! tile%contains_soil & quincy
-    ! quincy_jsbach<<<
-
   END SUBROUTINE hydro_init_bc
 
 
@@ -1025,11 +958,6 @@ CONTAINS
     !  DECLARATIONS
     USE mo_hydro_util,          ONLY: get_amount_in_rootzone
     USE mo_util,                ONLY: ifs2soil
-
-    ! quincy_jsbach: will be removed and re-implemented
-    USE mo_jsb_math_constants,  ONLY: eps8
-    ! quincy_jsbach<<<
-
     !-----------------------------------------------------------------------
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     !-----------------------------------------------------------------------
@@ -1042,22 +970,6 @@ CONTAINS
     INTEGER                                 :: i
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_ic'
     !-----------------------------------------------------------------------
-    ! quincy_jsbach: will be removed and re-implemented
-    ! HYDRO_ 2D
-    dsl4jsb_Real2D_onDomain    :: root_depth
-    dsl4jsb_Real2D_onDomain    :: wtr_rootzone
-    dsl4jsb_Real2D_onDomain    :: wtr_rootzone_fc
-    dsl4jsb_Real2D_onDomain    :: wtr_rootzone_theta
-    dsl4jsb_Real2D_onDomain    :: rootzone_wpot
-    ! HYDRO_ 3D
-    dsl4jsb_Real3D_onDomain    :: saxtonA 
-    dsl4jsb_Real3D_onDomain    :: saxtonB 
-    dsl4jsb_Real3D_onDomain    :: soil_depth_sl
-    dsl4jsb_Real3D_onDomain    :: wtr_soil_sl
-    dsl4jsb_Real3D_onDomain    :: wtr_soil_fc_sl
-    dsl4jsb_Real3D_onDomain    :: soil_wpot_sl
-    ! quincy_jsbach<<<
-
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing hydrology memory for tile '//TRIM(tile%name))
@@ -1074,27 +986,6 @@ CONTAINS
     IF (tile%contains_vegetation) THEN
       dsl4jsb_Get_memory(PHENO_)
     END IF
-
-    ! quincy_jsbach: will be removed and re-implemented
-    IF (tile%contains_vegetation .AND. model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  root_depth)          ! in
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  wtr_rootzone)        ! in
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  wtr_rootzone_fc)     ! in
-
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  saxtonA)             ! in  (calculated in init_soil_properties)
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  saxtonB)             ! in  (calculated in init_soil_properties)
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  soil_depth_sl)       ! in
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  wtr_soil_sl)         ! in
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  wtr_soil_fc_sl)      ! in
-
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  wtr_rootzone_theta)  ! out
-      dsl4jsb_Get_var2D_onDomain(HYDRO_,  rootzone_wpot)       ! out
-      dsl4jsb_Get_var3D_onDomain(HYDRO_,  soil_wpot_sl)        ! out
-      ! allocate local var
-      ALLOCATE(hlp1(nproma, nsoil, nblks))
-    END IF
-    ! quincy_jsbach<<<
 
     !----------
 
@@ -1305,14 +1196,6 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
 
-    ! quincy_jsbach: will be removed and re-implemented
-    dsl4jsb_Def_config(SSE_)
-    dsl4jsb_Def_memory(SSE_)
-    INTEGER                                          :: nproma, nblks
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: hlp1
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)          :: theta_pwp_sl, theta_fc_sl
-    ! quincy_jsbach<<<
-
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
       & hyd_cond_sat,          &
@@ -1333,17 +1216,6 @@ CONTAINS
       & vol_field_cap_sl,      &
       & vol_p_wilt_sl,         &
       & vol_wres_sl
-
-    ! quincy_jsbach: will be removed and re-implemented
-    ! SSE_ 3D
-    dsl4jsb_Real3D_onDomain    :: sand_sl
-    dsl4jsb_Real3D_onDomain    :: silt_sl
-    dsl4jsb_Real3D_onDomain    :: clay_sl
-    ! HYDRO_ 3D
-    dsl4jsb_Real3D_onDomain    :: saxtonA 
-    dsl4jsb_Real3D_onDomain    :: saxtonB 
-    dsl4jsb_Real3D_onDomain    :: saxtonC 
-    ! quincy_jsbach<<<
 
     ! Locally allocated vectors
     !
@@ -1367,10 +1239,6 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
-
-    ! quincy_jsbach: will be removed and re-implemented
-    dsl4jsb_Get_config(SSE_)
-    ! quincy_jsbach<<<
 
     ! Get reference to variables for current block
     !
@@ -1396,10 +1264,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)      ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_wres_sl)        ! out
 
-    ! quincy_jsbach: will be removed and re-implemented
-    dsl4jsb_Get_memory(SSE_)
-    ! quincy_jsbach<<<
-
     dsl4jsb_Get_var2D_onDomain(HYDRO_, hyd_cond_sat)       ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, vol_porosity)       ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_, bclapp)             ! in
@@ -1416,29 +1280,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(HYDRO_, pore_size_index_sl) ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)   ! out
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_p_wilt_sl)      ! out
-
-    ! quincy_jsbach: will be removed and re-implemented
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! SSE_ 3D
-      dsl4jsb_Get_var3D_onDomain(SSE_, sand_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
-                                                      !          (HYDRO_ init needs to be done before SSE_ init)
-      dsl4jsb_Get_var3D_onDomain(SSE_, silt_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
-                                                      !          (HYDRO_ init needs to be done before SSE_ init)
-      dsl4jsb_Get_var3D_onDomain(SSE_, clay_sl)       ! out  <- run init here (instead of SSE_) to resolve dependency problem
-                                                      !          (HYDRO_ init needs to be done before SSE_ init)
-      ! HYDRO_ 3D
-      dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonA)     ! out
-      dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonB)     ! out
-      dsl4jsb_Get_var3D_onDomain(HYDRO_, saxtonC)     ! out
-      ! ----------------------------------------------------------------------------------------------------- !
-      nproma = SIZE(sand_sl,1)
-      nblks  = SIZE(sand_sl,3)
-      ! ----------------------------------------------------------------------------------------------------- !
-      ALLOCATE(hlp1(nproma, nsoil, nblks))
-      ALLOCATE(theta_pwp_sl(nproma, nsoil, nblks))
-      ALLOCATE(theta_fc_sl(nproma, nsoil, nblks))
-    END IF
-    ! quincy_jsbach<<<
 
     hyd_cond_sat_sl   (:,:,:) = SPREAD(hyd_cond_sat   (:,:), DIM=2, ncopies=nsoil)
     vol_porosity_sl   (:,:,:) = SPREAD(vol_porosity   (:,:), DIM=2, ncopies=nsoil)
@@ -1495,44 +1336,6 @@ CONTAINS
     !$ACC   DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl)         &
     !$ACC   DEVICE(matric_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
     !$ACC   DEVICE(vol_p_wilt_sl, vol_wres_sl)
-
-    ! quincy_jsbach: will be removed and re-implemented
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! init soil properties
-      sand_sl(:,:,:)      = dsl4jsb_Config(SSE_)%soil_sand
-      silt_sl(:,:,:)      = dsl4jsb_Config(SSE_)%soil_silt
-      clay_sl(:,:,:)      = dsl4jsb_Config(SSE_)%soil_clay
-      ! soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
-      ! fractional water holding capacity at permanent wilting point
-      !
-      ! note: this assumes that the soil hydraulic properties are identical between the layers
-      hlp1(:,:,:)         = k_pwp_s * sand_sl(:,:,:) + & 
-                            k_pwp_c * clay_sl(:,:,:) + &
-                            k_pwp_sc * sand_sl(:,:,:) * clay_sl(:,:,:) + &
-                            k_pwp_a
-      theta_pwp_sl(:,:,:) = k_pwp_at + (1.0_wp + k_pwp_bt) * hlp1(:,:,:) 
-
-      !>  fractional water holding capacity at field capacity 
-      !>
-      hlp1(:,:,:)         = k_fc_s * sand_sl(:,:,:) + &
-                            k_fc_c * clay_sl(:,:,:) + &
-                            k_fc_sc * sand_sl(:,:,:) * clay_sl(:,:,:) + &
-                            k_fc_a
-      theta_fc_sl(:,:,:)  = k_fc_at + (1.0_wp + k_fc_bt) * hlp1(:,:,:) + k_fc_ct * hlp1(:,:,:) ** 2._wp
-      
-      !>parameters describing the moisture-tension curve                 
-      !>
-      ! note that for convenience, B has a negative sign and A is in MPa 
-      saxtonB(:,:,:)      = -(LOG(wpot_pwp) - LOG(wpot_fc)) / (LOG(theta_fc_sl(:,:,:)) - LOG(theta_pwp_sl(:,:,:)))
-      saxtonA(:,:,:)      = -(EXP(LOG(wpot_fc) - saxtonB(:,:,:) * LOG(theta_fc_sl(:,:,:)) )) / 1000.0_wp
-
-      !>parameters describing the moisture-diffusivity curve
-      !>
-      ! kdiff_sat_sl & k_diff are not used in jsbach4/quincy
-      ! kdiff_sat_sl(:,:,:) = kdiff_sat_max * (theta_sat_sl(:,:,:) - theta_fc_sl(:,:,:)) ** (3.0_wp + 1._wp / saxtonB(:,:,:))
-      saxtonC(:,:,:)      = 3.0_wp - 2._wp * saxtonB(:,:,:)
-    END IF
-    ! quincy_jsbach<<<
 
   END SUBROUTINE init_soil_properties
 

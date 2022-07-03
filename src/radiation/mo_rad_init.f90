@@ -18,7 +18,7 @@ MODULE mo_rad_init
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid
   USE mo_jsb_grid,          ONLY: Get_grid
   USE mo_jsb_class,         ONLY: Get_model
@@ -65,7 +65,7 @@ CONTAINS
 
     ! init differs between model_scheme
     SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH, MODEL_JSBACH_QUINCY)
+    CASE (MODEL_JSBACH)
       IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
         CALL rad_read_init_vars(tile)
       END IF
@@ -76,10 +76,7 @@ CONTAINS
       IF (tile%Is_last_process_tile(RAD_)) THEN
         CALL rad_finalize_init_vars()
       END IF
-    END SELECT
-
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
+    CASE (MODEL_QUINCY)
       IF (tile%contains_vegetation) THEN
         CALL rad_init_ic_q_(tile)
       ENDIF

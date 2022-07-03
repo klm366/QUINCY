@@ -363,7 +363,7 @@ CONTAINS
 
   SUBROUTINE jsbach_setup_tiles(model_id)
 
-    USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
     USE mo_jsb_model_usecases, ONLY: init_usecase
     USE mo_jsb_lctlib_class,   ONLY: Read_lctlib
