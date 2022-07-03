@@ -683,73 +683,58 @@ CONTAINS
 
     END IF
 
-    ! Initialize organic soil layer fractions and modify saturated, field capacity and perm. wilting point capacities accordingly
-    ! Note: at the moment, fract_org_sl doesn't change over time, but it could
-    IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
-      IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN
-        ! Compute soil organic carbon fraction from forest fraction instead of using map from bc file
-        dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
-        IF (tile%is_vegetation) THEN
-          ! For general VEG tile
-          dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
-          IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a PFT (otherwise lctlib not defined)
-            ! For PFT tiles
-            ! Note: in current setup hydrology does not run on PFTs
-            IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
-              dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)
+    IF (tile%contains_soil) THEN
+      ! Initialize organic soil layer fractions and modify saturated, field capacity and perm. wilting point capacities accordingly
+      ! Note: at the moment, fract_org_sl doesn't change over time, but it could
+      IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
+        IF (.NOT. dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+          ! Compute soil organic carbon fraction from forest fraction instead of using map from bc file
+          dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
+          IF (tile%is_vegetation) THEN
+            ! For general VEG tile
+            dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_forest)
+            IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a PFT (otherwise lctlib not defined)
+              ! For PFT tiles
+              ! Note: in current setup hydrology does not run on PFTs
+              IF (dsl4jsb_Lctlib_param(ForestFlag)) THEN
+                dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:) = dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max)
+              END IF
             END IF
           END IF
         END IF
+
+        WHERE (dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl) <= 1.0e-10_wp)
+          dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
+        ENDWHERE
+        !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl))
       END IF
 
-      WHERE (dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl) <= 1.0e-10_wp)
-        dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
-      ENDWHERE
+      ! update soil properties with organic layer fractions
+      CALL init_soil_properties(tile)
 
       ! The following can change later depending on the organic layers and soil ice content.
-      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl) =                                                        &
-        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl) &
-        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)   &
-        &      * vol_porosity_org_below
-      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl) =                                                         &
-        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)  &
-        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)   &
-        &      * vol_field_cap_org_below
-      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl) =                                                        &
-        & (1 - dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)) * dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl) &
-        & +    dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)   &
-        &      * vol_p_wilt_org_below
-      ! Modify values for uppermost soil layer
-      dsl4jsb_var_ptr(HYDRO_, wtr_soil_sat_sl)(:,1,:) =                                                        &
-        & (1 - dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)) * dsl4jsb_var_ptr(HYDRO_, wtr_soil_sat_sl)(:,1,:) &
-        & +    dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)  * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,1,:)   &
-        &      * vol_porosity_org_top
-      dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl)(:,1,:) =                                                         &
-        & (1 - dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)) * dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl)(:,1,:)  &
-        & +    dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)  * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,1,:)   &
-        &      * vol_field_cap_org_top
-      dsl4jsb_var_ptr(HYDRO_, wtr_soil_pwp_sl)(:,1,:) =                                                        &
-        & (1 - dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)) * dsl4jsb_var_ptr(HYDRO_, wtr_soil_pwp_sl)(:,1,:) &
-        & +    dsl4jsb_var_ptr(HYDRO_, fract_org_sl)(:,1,:)  * dsl4jsb_var_ptr(HYDRO_, soil_depth_sl)(:,1,:)   &
-        &      * vol_p_wilt_org_top
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl) = MAX(0._wp,                                          &
+        & dsl4jsb_var3D_onDomain(HYDRO_, vol_porosity_sl)  * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
+        & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl) =  MAX(0._wp,                                          &
+        & dsl4jsb_var3D_onDomain(HYDRO_, vol_field_cap_sl) * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
+        & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl) = MAX(0._wp,                                          &
+        & dsl4jsb_var3D_onDomain(HYDRO_, vol_p_wilt_sl)    * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
+        & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
       
-      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
-    END IF
-
-    IF (tile%contains_soil) THEN
       ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
 
       ! Note: wtr_soil_fc_sl is not meant as field capacity in a hydrological sense, but as maximum
       !    filling of the specific soil layer.
-      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = &
-        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl))
-      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))
-      
-      CALL init_soil_properties(tile)
+      dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = MAX(0._wp, &
+        & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)))
+
+      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl), &
+      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
     END IF
 
     IF (tile%contains_vegetation) THEN   ! Assuming there is also soil and roots
@@ -903,7 +888,10 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
-    INTEGER  :: nsoil
+    REAL(wp) ::  hyd_cond_sat_org, vol_porosity_org, bclapp_org, matrix_pot_org, pore_size_index_org, &
+      & vol_field_cap_org, vol_p_wilt_org
+
+    INTEGER  :: nsoil, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_soil_properties'
 
@@ -980,35 +968,40 @@ CONTAINS
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       ! Update soil parameters with organic fractions for deep and top soil layers
       ! Attention: hyd_cond_sat_sl is calculated differently (correct) in update_soil_properties
-      hyd_cond_sat_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * hyd_cond_sat_sl   (:,:,:) &
-        & + fract_org_sl(:,:,:) * hyd_cond_sat_org_below
-      vol_porosity_sl   (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_porosity_sl   (:,:,:) &
-        & + fract_org_sl(:,:,:) * vol_porosity_org_below
-      bclapp_sl         (:,:,:) = (1 - fract_org_sl(:,:,:)) * bclapp_sl         (:,:,:) &
-        & + fract_org_sl(:,:,:) * bclapp_org_below
-      matrix_pot_sl     (:,:,:) = (1 - fract_org_sl(:,:,:)) * matrix_pot_sl     (:,:,:) &
-        & + fract_org_sl(:,:,:) * matrix_pot_org_below
-      pore_size_index_sl(:,:,:) = (1 - fract_org_sl(:,:,:)) * pore_size_index_sl(:,:,:) &
-        & + fract_org_sl(:,:,:) * pore_size_index_org_below
-      vol_field_cap_sl  (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_field_cap_sl  (:,:,:) &
-        & + fract_org_sl(:,:,:) * vol_field_cap_org_below
-      vol_p_wilt_sl     (:,:,:) = (1 - fract_org_sl(:,:,:)) * vol_p_wilt_sl     (:,:,:) &
-        & + fract_org_sl(:,:,:) * vol_p_wilt_org_below
+      DO i=1,nsoil
+        IF (i == 1) THEN
+          hyd_cond_sat_org    = hyd_cond_sat_org_top
+          vol_porosity_org    = vol_porosity_org_top
+          bclapp_org          = bclapp_org_top
+          matrix_pot_org      = matrix_pot_org_top
+          pore_size_index_org = pore_size_index_org_top
+          vol_field_cap_org   = vol_field_cap_org_top
+          vol_p_wilt_org      = vol_p_wilt_org_top
+        ELSE
+          hyd_cond_sat_org    = hyd_cond_sat_org_below
+          vol_porosity_org    = vol_porosity_org_below
+          bclapp_org          = bclapp_org_below
+          matrix_pot_org      = matrix_pot_org_below
+          pore_size_index_org = pore_size_index_org_below
+          vol_field_cap_org   = vol_field_cap_org_below
+          vol_p_wilt_org      = vol_p_wilt_org_below
+        END IF
 
-      hyd_cond_sat_sl   (:,1,:) = (1 - fract_org_sl(:,1,:)) * hyd_cond_sat_sl   (:,1,:) &
-        & + fract_org_sl(:,1,:) * hyd_cond_sat_org_top
-      vol_porosity_sl   (:,1,:) = (1 - fract_org_sl(:,1,:)) * vol_porosity_sl   (:,1,:) &
-        & + fract_org_sl(:,1,:) * vol_porosity_org_top
-      bclapp_sl         (:,1,:) = (1 - fract_org_sl(:,1,:)) * bclapp_sl         (:,1,:) &
-        & + fract_org_sl(:,1,:) * bclapp_org_top
-      matrix_pot_sl     (:,1,:) = (1 - fract_org_sl(:,1,:)) * matrix_pot_sl     (:,1,:) &
-        & + fract_org_sl(:,1,:) * matrix_pot_org_top
-      pore_size_index_sl(:,1,:) = (1 - fract_org_sl(:,1,:)) * pore_size_index_sl(:,1,:) &
-        & + fract_org_sl(:,1,:) * pore_size_index_org_top
-      vol_field_cap_sl  (:,1,:) = (1 - fract_org_sl(:,1,:)) * vol_field_cap_sl  (:,1,:) &
-        & + fract_org_sl(:,1,:) * vol_field_cap_org_top
-      vol_p_wilt_sl     (:,1,:) = (1 - fract_org_sl(:,1,:)) * vol_p_wilt_sl     (:,1,:) &
-        & + fract_org_sl(:,1,:) * vol_p_wilt_org_top
+        hyd_cond_sat_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * hyd_cond_sat_sl   (:,i,:) &
+          & + fract_org_sl(:,i,:) * hyd_cond_sat_org
+        vol_porosity_sl   (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_porosity_sl   (:,i,:) &
+          & + fract_org_sl(:,i,:) * vol_porosity_org
+        bclapp_sl         (:,i,:) = (1 - fract_org_sl(:,i,:)) * bclapp_sl         (:,i,:) &
+          & + fract_org_sl(:,i,:) * bclapp_org
+        matrix_pot_sl     (:,i,:) = (1 - fract_org_sl(:,i,:)) * matrix_pot_sl     (:,i,:) &
+          & + fract_org_sl(:,i,:) * matrix_pot_org
+        pore_size_index_sl(:,i,:) = (1 - fract_org_sl(:,i,:)) * pore_size_index_sl(:,i,:) &
+          & + fract_org_sl(:,i,:) * pore_size_index_org
+        vol_field_cap_sl  (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_field_cap_sl  (:,i,:) &
+          & + fract_org_sl(:,i,:) * vol_field_cap_org
+        vol_p_wilt_sl     (:,i,:) = (1 - fract_org_sl(:,i,:)) * vol_p_wilt_sl     (:,i,:) &
+          & + fract_org_sl(:,i,:) * vol_p_wilt_org
+      END DO
     END IF
 
     !$acc update device(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, &

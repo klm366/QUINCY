@@ -1397,11 +1397,7 @@ CONTAINS
       WRITE (message_text,*) 'liquid water content above field capacity at ', max2d(:), &
         &   ': wtr_soil_sl: ', wtr_soil_sl(max2d(1),max2d(2)),                          &
         &   ' field_cap_sl: ', field_cap_sl(max2d(1),max2d(2))
-      ! @todo currently, this fails at simulation start for 4 grid cells. Check, repair and reanable
-      !       finish statement
-      ! CALL finish ('digest_evapotrans', message_text)
-      CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      wtr_soil_sl(:,:) = MIN(wtr_soil_sl(:,:), field_cap_sl(:,:))
+      CALL finish ('digest_evapotrans', message_text)
     END IF
 #endif
 
