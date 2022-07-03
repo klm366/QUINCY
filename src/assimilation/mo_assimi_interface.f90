@@ -314,7 +314,7 @@ CONTAINS
   ! @param[in]     model_id  Model id
   SUBROUTINE Register_assimi_tasks(this, model_id)
 
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
 
     ! in/out
@@ -334,7 +334,7 @@ CONTAINS
       CALL this%Register_task(tsk_canopy_cond_stressed(model_id))
       CALL this%Register_task(tsk_assimilation(model_id))
       CALL this%Register_task(tsk_npp_buffer(model_id))
-    CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
+    CASE (MODEL_QUINCY)
       CALL this%Register_task(tsk_reset_assimi_fluxes(model_id))
       CALL this%Register_task(tsk_update_canopy_fluxes(model_id))
       CALL this%Register_task(tsk_time_average_assimilation(model_id))

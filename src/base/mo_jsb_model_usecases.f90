@@ -24,7 +24,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_exception,           ONLY: message, finish
 
-  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
     &                               FUEL_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
@@ -268,7 +268,7 @@ CONTAINS
         !    and needed by the quincy tasks because the lctlib is used
         !  VEG_ is active
         !  SB_  is active
-        CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
+        CASE (MODEL_QUINCY)
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes       = (/HYDRO_,    SSE_,      ASSIMI_,   PHENO_,    VEG_,      SB_,       SPQ_/), &
             & process_actions = (/ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &

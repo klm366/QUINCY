@@ -33,7 +33,7 @@ CONTAINS
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
     USE mo_jsb_parallel,        ONLY: init_parallel_iface, Get_omp_no_of_threads
-    USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_subset,          ONLY: jsbach_subsets
     USE mo_jsb_config_class,    ONLY: new_model_config
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
@@ -45,8 +45,6 @@ CONTAINS
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_assimi_constants,    ONLY: init_assimi_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
-    USE mo_sse_constants,       ONLY: init_sse_constants
-    USE mo_hydro_constants,     ONLY: init_hydro_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
     USE mo_spq_constants,       ONLY: init_spq_constants
@@ -149,7 +147,7 @@ CONTAINS
 
       dsl4jsb_Get_config(RAD_)
       SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH, MODEL_JSBACH_QUINCY)
+      CASE (MODEL_JSBACH)
         dsl4jsb_Get_config(SSE_)
         dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(CARBON_)
@@ -176,7 +174,7 @@ CONTAINS
       END IF
 
       SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH, MODEL_JSBACH_QUINCY)
+      CASE (MODEL_JSBACH)
 
         IF (model%config%l_compat401) THEN
           CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
@@ -250,24 +248,15 @@ CONTAINS
     !>
     ! assuming the shared/constants/ modules are available here already (impl, math, physical)
     SELECT CASE (model_scheme)
-    CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
+    CASE (MODEL_QUINCY)
       CALL message(TRIM(routine), 'starting init of QUINCY process constants')
       CALL init_rad_constants      
       CALL init_assimi_constants   
       CALL init_veg_constants    
-      ! either SPQ_ or SSE_
-      IF (model_scheme == MODEL_QUINCY) THEN
-        CALL init_spq_constants
-      ELSE ! MODEL_JSBACH_QUINCY
-        CALL init_sse_constants
-      END IF
+      CALL init_spq_constants
       CALL init_sb_constants
       CALL init_pheno_constants    
       CALL init_atmland_constants  
-    END SELECT
-    SELECT CASE (model_scheme)
-    CASE (MODEL_JSBACH_QUINCY)
-      CALL init_hydro_constants
     END SELECT
 
     CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')
@@ -276,7 +265,7 @@ CONTAINS
 
   SUBROUTINE jsbach_setup_tiles(model_id)
 
-    USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
     USE mo_jsb_model_usecases, ONLY: init_usecase
     USE mo_jsb_lctlib_class,   ONLY: Read_lctlib
@@ -290,6 +279,7 @@ CONTAINS
     model => Get_model(model_id)
 
     ! select lctlib file depending on the usecase
+    ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model (8 PFT tiles)
     CASE ('quincy_eight_pfts')

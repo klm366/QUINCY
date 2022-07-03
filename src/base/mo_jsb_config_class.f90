@@ -181,6 +181,7 @@ CONTAINS
     CASE ("jsbach_quincy")
       model_config%model_scheme = MODEL_JSBACH_QUINCY
       CALL message(TRIM(routine), 'Use model_scheme JSBACH with QUINCY')
+      CALL finish(TRIM(routine),  'The model_scheme JSBACH with QUINCY (MODEL_JSBACH_QUINCY) is not yet implemented.')
     CASE ("quincy")
       model_config%model_scheme = MODEL_QUINCY
       CALL message(TRIM(routine), 'Use model_scheme QUINCY')

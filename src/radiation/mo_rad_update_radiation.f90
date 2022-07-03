@@ -152,7 +152,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! run only at PFT tiles (i.e. leafs of vegetation tile) because this routine is tailored towards vegetation only
     !  in the "usecase_pfts" RAD_ is defined to run at leafs, which includes also other tiles than PFT
-    !  hence, the jsbach4 task "surface_radiation" needs to run at leafs other than PFT if model_scheme == MODEL_JSBACH_QUINCY or MODEL_QUINCY
     IF (tile%lcts(1)%lib_id == 0) THEN
       IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Run only at PFT tiles. '//TRIM(tile%name)//' is not a PFT. ')
       RETURN

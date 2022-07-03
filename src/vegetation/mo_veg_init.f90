@@ -53,7 +53,7 @@ CONTAINS
 
     USE mo_jsb_class,                       ONLY: Get_model
     USE mo_jsb_tile_class,                  ONLY: t_jsb_tile_abstract
-    USE mo_jsb_model_class,                 ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,                 ONLY: t_jsb_model, MODEL_JSBACH
     USE mo_jsb_lctlib_class,                ONLY: t_lctlib_element
     USE mo_jsb_grid_class,                  ONLY: t_jsb_vgrid
     USE mo_jsb_grid,                        ONLY: Get_vgrid
