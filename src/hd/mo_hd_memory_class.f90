@@ -21,7 +21,8 @@ MODULE mo_hd_memory_class
   !USE mo_jsb_model_class,  ONLY: t_jsb_model
   !USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_var_class,    ONLY: t_jsb_var_real1d, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_varlist,      ONLY: BASIC !, MEDIUM, FULL
 
   ! Use of prcesses in this module
   !dsl4jsb_Use_processes HD_
@@ -50,7 +51,7 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
-      local_budget    , & !< discharge from upstream cells
+      local_budget    , &  !< discharge from upstream cells
       local_fluxes    , &  !< discharge from upstream cells
       local_wbal_error, &  !< discharge from upstream cells
       water_budget    , &
@@ -63,6 +64,10 @@ MODULE mo_hd_memory_class
       overlflow_res,          &  !< content of overland flow reservoir cascade
       baseflow_res,           &  !< content of baseflow reservoir cascade
       riverflow_res              !< content of groundflow reservoir cascade
+
+    ! Diagnostic global land means/sums e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) :: &
+      water_error_gsum           !< Total HD water imbalance during time step       [m3]
 
     INTEGER ::               &
       nneigh,                &  !< maximum number of neighboring (inflow) cells
@@ -246,6 +251,7 @@ CONTAINS
       & t_cf('local_wbal_error', 'm3', 'Local water balance error'),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & loutput=.TRUE., output_level=BASIC,                                              &
       & lrestart=.FALSE.,                                                                &
       & initval_r=0.0_wp )
 
@@ -264,6 +270,21 @@ CONTAINS
       & prefix, suffix,                                                                  &
       & lrestart=.FALSE.,                                                                &
       & initval_r=0.0_wp )
+
+#ifdef __ICON__
+    ! Diagnostic 1d global land variables for experiment monitoring
+    !       (1d stream variables are not supported with echam)
+    !
+    IF ( TRIM(suffix) == 'box' ) THEN
+      CALL mem%Add_var( 'water_error_gsum', mem%water_error_gsum,                          &
+        & hgrid, surface,                                                                  &
+        & t_cf('hd_water_error_gsum', 'm3', 'Total HD water imbalance during time step'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+        & prefix, suffix,                                                                  &
+        & lrestart=.FALSE.,                                                                &
+        & initval_r=0.0_wp )
+    ENDIF
+#endif  
 
   END SUBROUTINE Init_hd_memory
 

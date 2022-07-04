@@ -611,6 +611,8 @@ CONTAINS
       & global_water_error,       &  ! water budget change within the time step
       & global_water_flux            ! water fluxes changing the budget
 
+    REAL(wp), POINTER :: water_error_gsum(:)
+
     LOGICAL :: debug_hd, diag_water_budget
 
     model => Get_model(tile%owner_model_id)
@@ -658,6 +660,8 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(HD_, water_budget)       ! out
     dsl4jsb_Get_var2D_onDomain(HD_, water_budget_change)    ! out
+
+    water_error_gsum => HD__mem%water_error_gsum%ptr(:) ! out
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma, nblks))
@@ -759,6 +763,10 @@ CONTAINS
         END IF
       END IF
     END IF
+
+    ! No unit transformation [m3]: 1
+    IF (HD__mem%water_error_gsum%is_in_output) &
+      & water_error_gsum = global_water_error
 
     DEALLOCATE (in_domain, tile_fract, water_budget_old, water_flux)
 

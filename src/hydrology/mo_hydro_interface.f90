@@ -2094,6 +2094,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: wtr_rootzone_rel
     dsl4jsb_Real2D_onDomain :: fract_snow
     dsl4jsb_Real2D_onDomain :: weq_snow
+    dsl4jsb_Real2D_onDomain :: weq_balance_err
 
     REAL(wp), POINTER       :: trans_gmean(:)
     REAL(wp), POINTER       :: evapotrans_gmean(:)
@@ -2102,6 +2103,7 @@ CONTAINS
     REAL(wp), POINTER       :: wtr_rootzone_rel_gmean(:)
     REAL(wp), POINTER       :: fract_snow_gsum(:)
     REAL(wp), POINTER       :: weq_snow_gsum(:)
+    REAL(wp), POINTER       :: weq_balance_err_gsum(:)
 
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_jsb_grid),  POINTER      :: grid
@@ -2122,6 +2124,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  wtr_rootzone_rel)           ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  fract_snow)                 ! in
     dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_snow)                   ! in
+    dsl4jsb_Get_var2D_onDomain(HYDRO_,  weq_balance_err)            ! in
 
 
     trans_gmean          => HYDRO__mem%trans_gmean%ptr(:)           ! out
@@ -2131,6 +2134,7 @@ CONTAINS
     wtr_rootzone_rel_gmean => HYDRO__mem%wtr_rootzone_rel_gmean%ptr(:)  ! out
     fract_snow_gsum      => HYDRO__mem%fract_snow_gsum%ptr(:)       ! out
     weq_snow_gsum        => HYDRO__mem%weq_snow_gsum%ptr(:)         ! out
+    weq_balance_err_gsum => HYDRO__mem%weq_balance_err_gsum%ptr(:)  ! out
 
 
     model => Get_model(tile%owner_model_id)
@@ -2177,6 +2181,9 @@ CONTAINS
     ! Unit transformation from [m water equivalent](= [t]) to [Gt]: 1.e-9
     IF (HYDRO__mem%weq_snow_gsum%is_in_output)           &
       &  weq_snow_gsum        = global_sum_array(weq_snow(:,:)        * scaling(:,:)) * 1.e-9_wp
+    ! No unit transformation [m3]: 1
+    IF (HYDRO__mem%weq_balance_err_gsum%is_in_output)     &
+      &  weq_balance_err_gsum    = global_sum_array(weq_balance_err(:,:)    * notsea(:,:) * in_domain(:,:))
 
     DEALLOCATE (scaling, in_domain)
 #endif
