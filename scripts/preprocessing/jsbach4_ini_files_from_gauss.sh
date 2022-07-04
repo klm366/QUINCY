@@ -29,6 +29,13 @@ end_year=1850
 #ggrids="T63"                   # additional gaussian grids for jsbach4 (to run with echam6)
 ggrids=""                       # disable gaussian grids
 
+if [[ `hostname` == *"levante"* ]]; then
+    echo "Error: script is not yet finilized for use with levante!!"
+    echo "       it runs, but produces results different from running"
+    echo "       on the workstation for unknown reasons"
+    exit 1
+fi
+
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
   mlogin*|mistralpp*|levante*)
