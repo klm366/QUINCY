@@ -110,8 +110,8 @@ CONTAINS
     w_soil_wilt_fract = 0.35_wp
     snow_depth_max    = -1.0_wp             ! -1: no limitation
     scheme_stom_cond  = 'echam5'
-    l_organic         = .FALSE.
-    l_socmap          = .FALSE.
+    l_organic         = .TRUE.
+    l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
 
