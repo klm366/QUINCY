@@ -1032,11 +1032,6 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
-    ! @todo check if all of these imports are even necessary
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)         ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, root_depth_sl)         ! in
-    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil_sl)             ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)        ! in
     ELSE
@@ -1045,11 +1040,6 @@ CONTAINS
       !$claw expand parallel update
       fract_org_sl(:,:) = 0._wp
     END IF
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)           ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, tpe_overflow)          ! inout
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl)        ! out
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)       ! out
-
 
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
@@ -1058,34 +1048,34 @@ CONTAINS
       & nsoil, &
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
-      & ltpe_closed, ltpe_open,                             &
-      & dsl4jsb_Config(HYDRO_)%l_infil_subzero,             &
-      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ), &
-      &                                fract_org_sl  (:,:), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, matrix_pot_sl     ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, pore_size_index_sl), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ), &  !! ice not considered
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ), &  !! ice not considered
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ), &  !! ice not considered
+      & ltpe_closed, ltpe_open,                                 &
+      & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
+      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
+      &                                fract_org_sl  (:,:),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, matrix_pot_sl     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, pore_size_index_sl),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ), &
-      &                                t_soil_sl     (:,1), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ),     &
+      &                                t_soil_sl     (:,1),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ), &
-      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ), &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
       ! out
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ), &  !! ice volume is substracted
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ), &  !! ice volume is substracted
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ), &  !! reduced relative to ice fraction
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          )      &
       & )
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
@@ -1256,7 +1246,6 @@ CONTAINS
     dsl4jsb_Def_config(SSE_)
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(ASSIMI_)
 
     ! HYDRO_
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -1270,14 +1259,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_scool_act !< Actual supercooled water content in root zone
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail     !< Plant available liquid water content in root zone
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_avail_max !< Maximum plant available liquid water content in root zone
-    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl         !< Water content of soil layers at field capacity (reduced by ice)
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl        !< Water content of soil layers at perm. wilting point (excl. ice)
     dsl4jsb_Real2D_onChunk :: weq_rootzone_max       !< Maximum possible amount of water/ice in the rootzone
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
-    ! ASSIMI_
-    dsl4jsb_Real2D_onChunk :: beta_soil_gs
-    dsl4jsb_Real2D_onChunk :: beta_soil_ps
 
     INTEGER :: iblk, ics, ice, ic, nc
 
@@ -1306,8 +1290,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)            ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)            ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_fc_sl)         ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pwp_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl)  ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_rootzone_max)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_rootzone)           ! in
