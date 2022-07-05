@@ -29,13 +29,6 @@ end_year=1850
 #ggrids="T63"                   # additional gaussian grids for jsbach4 (to run with echam6)
 ggrids=""                       # disable gaussian grids
 
-if [[ `hostname` == *"levante"* ]]; then
-    echo "Error: script is not yet finilized for use with levante!!"
-    echo "       it runs, but produces results different from running"
-    echo "       on the workstation for unknown reasons"
-    exit 1
-fi
-
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
   mlogin*|mistralpp*|levante*)
@@ -48,7 +41,7 @@ case `hostname` in
     ;;
 esac
 
-debug=false             # true/false
+debug=false   # true/false
 debug_remap_scheme=nn
 
 dryrun=false  # Process files in workdir, but don't copy them to the destination folder (true/false)
@@ -206,7 +199,7 @@ function generate_gauss_data {
 
   # Add fields from different source
   if [[ $varlist == *"fract_org_sl"* ]]; then
-    ${cdo} -remapcon,${source_res}grid ${pool_prepare}05/wise_som-fract_05deg_jsbsoillayers.nc \
+    ${cdo} remapycon,${source_res}grid ${pool_prepare}05/wise_som-fract_05deg_jsbsoillayers.nc \
         ../gauss_${source_res}_fract_org_sl.nc
   fi
 
@@ -416,10 +409,10 @@ function pseudo_remap_var {
 
   local var=$1     # Variable name
 
-  [[ ! -f ${grid_name}_notsea.nc ]] && cdo setvar,notsea gauss_${grid_name}_slm.nc ${grid_name}_notsea.nc
+  [[ ! -f ${grid_name}_notsea.nc ]] && ${cdo} setvar,notsea gauss_${grid_name}_slm.nc ${grid_name}_notsea.nc
   if [[ ${var} == oro* ]]; then
   	VAR=$(echo ${var} | tr -s 'a-z' 'A-Z')
-	  cdo -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
+	  ${cdo} -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
   else 
 	  ln -s gauss_${grid_name}_${var}.nc ${grid_name}_${var}_remap.nc
   fi
@@ -559,9 +552,8 @@ function generate_output_files {
           ${grid_name}_glac.nc \
           ${outfile}
     fi
-    cdo showattribute,comment ${input_file} | tail -n +2 > comment.txt
-    cdo setattribute,FILE=comment.txt ${outfile} ${temp} && mv ${temp} ${outfile}
-    rm comment.txt
+    comment=$(cdo -s showattribute,comment ${input_file} | sed -e 's/\\n//g' -e 's/\"//g' | tr '\n' '; ' | tr -s " " | cut -d "=" -f2)
+    ${cdo} setattribute,comment="${comment}" ${outfile} ${temp} && mv ${temp} ${outfile}
 
     #ncrename -d cell,ncells ${outfile} >& /dev/null
     copy_uuid ${outfile}
@@ -679,8 +671,8 @@ function generate_frac_output_files {
           ${grid_name}_glac.nc \
           ${outfile}
     fi
-    cdo showattribute,comment ${input_file} | tail -n +2 > comment.txt
-    cdo setattribute,FILE=comment.txt ${outfile} ${temp} && mv ${temp} ${outfile}
+    comment=$(cdo -s showattribute,comment ${input_file} | sed -e 's/\\n//g' -e 's/\"//g' | tr '\n' '; ' | tr -s " " | cut -d "=" -f2)
+    ${cdo} setattribute,comment="${comment}" ${outfile} ${temp} && mv ${temp} ${outfile}
     rm comment.txt
 
     #ncrename -d cell,ncells ${outfile} >& /dev/null
