@@ -138,7 +138,7 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
     ! quincy - needed for init of variables @TODO move to actual init routine
     USE mo_atmland_constants, ONLY: def_wind, def_co2_deltaC13, def_co2_deltaC14, def_t_air, standard_press_srf, def_vpd, &
@@ -185,7 +185,7 @@ CONTAINS
     surface      => Get_vgrid('surface')
     ! ----------------------------------------------------------------------------------------------------- !
     ! move to atm2land_init and init a2l variables there  @TODO
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
       C13C12_mixing_ratio         = calc_mixing_ratio_C13C12(def_co2_deltaC13) 
       C14C_mixing_ratio           = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)
       t_air_init                  = def_t_air
@@ -248,7 +248,8 @@ CONTAINS
 
     ! --------------------------------------------------------------------------------------------------- !
     ! variables used with jsbach4 & quincy
-    ! jsbach4 init
+    ! jsbach4 settings
+    ! 
     IF (model%config%model_scheme == MODEL_JSBACH) THEN
     
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
@@ -512,11 +513,12 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
       
       ! ------------------------------------------------------------------------------------------------- !
       ! variables used with jsbach4 & quincy
-      ! quincy init
+      ! quincy settings
+      ! 
       CALL mem%Add_var('t_air', mem%t_air, &
         & hgrid, surface, &
         & t_cf('t_air', 'K', '2m air temperature'), &
@@ -804,6 +806,7 @@ CONTAINS
 
       ! ------------------------------------------------------------------------------------------------- !
       ! variables used only with quincy  
+      ! 
       CALL mem%Add_var('swpar_fdiffuse', mem%swpar_fdiffuse, &
         & hgrid, surface, &
         & t_cf('swpar_fdiffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
@@ -924,7 +927,7 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-    END IF ! IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    END IF ! IF (model%config%model_scheme == MODEL_QUINCY) THEN
 
   END SUBROUTINE Init_a2l_memory
 

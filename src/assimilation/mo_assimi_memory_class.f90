@@ -202,7 +202,7 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables !, TSTEP_CONSTANT
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_assimi_memory), INTENT(inout), TARGET :: mem
@@ -406,7 +406,8 @@ CONTAINS
         
     ! --------------------------------------------------------------------------------------------------- !
     ! variables used with jsbach4 & quincy
-    ! jsbach4 init (e.g. different vgrid)
+    ! jsbach4 settings
+    ! 
     IF (model%config%model_scheme == MODEL_JSBACH) THEN
       CALL mem%Add_var('gross_assimilation', mem%gross_assimilation,                                                &
         & hgrid, surface,                                                                                           &
@@ -442,13 +443,14 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
       IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
          & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
 
         ! ------------------------------------------------------------------------------------------------- !
         ! variables used with jsbach4 & quincy
-        ! quincy init (e.g. different vgrid)
+        ! quincy settings
+        ! 
         CALL mem%Add_var('gross_assimilation', mem%gross_assimilation, &
           & hgrid, surface, &
           & t_cf('gross_assimilation', 'µmol CO2 m-2 s-1', 'canopy-integrated gross assimilation rate'), &
@@ -491,6 +493,7 @@ CONTAINS
    
         ! ------------------------------------------------------------------------------------------------- !
         ! variables used only with quincy
+        ! 
         CALL mem%Add_var('gross_assimilation_C13', mem%gross_assimilation_C13, &
           & hgrid, surface, &
           & t_cf('gross_assimilation_C13', 'µmol 13CO2 m-2 s-1', 'canopy-integrated gross assimilation rate'), &

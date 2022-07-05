@@ -18,7 +18,7 @@ MODULE mo_jsb_config_class
   USE mo_kind,               ONLY: wp
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
   USE mo_io_units,           ONLY: filename_max
-  USE mo_exception,          ONLY: message
+  USE mo_exception,          ONLY: message, finish
   USE mo_jsb_io_netcdf,      ONLY: t_input_file
   ! USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY   ! comment out to avoid dependency cycle
 
@@ -33,9 +33,8 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max)    :: fract_filename
     CHARACTER(len=30)              :: grid_name
     CHARACTER(len=40)              :: usecase
-    CHARACTER(len=20)              :: model_scheme_char   !< model_scheme as character, from namelist (used in mo_jsb_lctlib_class)
-    INTEGER                        :: model_scheme        !< model_scheme as ENUM (mo_jsb_model_class), used in model code
-                                                          !! models schemes: jsbach, jsbach combined with quincy, quincy
+    CHARACTER(len=20)              :: model_scheme_char   !< model_scheme from namelist (used in mo_jsb_lctlib_class)
+    INTEGER                        :: model_scheme        !< model_scheme as integer
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
@@ -85,6 +84,7 @@ CONTAINS
   FUNCTION new_model_config(namelist_filename) RESULT(model_config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_util_string,        ONLY: tolower
 
     CHARACTER(len=*),         INTENT(in) :: namelist_filename
     TYPE(t_jsb_model_config), POINTER    :: model_config
@@ -97,8 +97,7 @@ CONTAINS
       grid_filename,          &
       grid_name
 
-    CHARACTER(len=20)             :: model_scheme_char            !< model_scheme as character, read from namelist
-    INTEGER                       :: model_scheme                 !< model_scheme as ENUM (mo_jsb_model_class), used in model
+    CHARACTER(len=20)             :: model_scheme     !< model_scheme: jsbach / jsbach_quincy / quincy
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
     CHARACTER(len=10)             :: quincy_model
@@ -113,7 +112,7 @@ CONTAINS
     CHARACTER(len=filename_max)   :: ifs_filename
 
     NAMELIST /jsb_model_nml/  &
-      model_scheme_char, &
+      model_scheme, &
       use_lakes, &
       use_glacier, &
       quincy_model, &
@@ -139,14 +138,12 @@ CONTAINS
     ! define here as INTEGER replacing the ENUM "USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY"
     ! this is needed to avoid a dependency cycle, creating an compile error (tested with NAG):
     !  stating that in mo_jsb_memory_class the mo_jsb_config_class is not available for "USE mo_jsb_config_class,  ONLY: t_jsb_config"
-    !TODO: namelist parameter should be character, corresponding integer for usage within the model.
     MODEL_JSBACH               = 1
     MODEL_JSBACH_QUINCY        = 2
     MODEL_QUINCY               = 3
 
     ! Set defaults
-    model_scheme_char          = "jsbach"       ! jsbach, jsbach_quincy, quincy
-    model_scheme               = MODEL_JSBACH   ! ENUM: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    model_scheme               = "jsbach"
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     quincy_model               = 'land'
@@ -176,21 +173,20 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
     CALL close_nml(nml_handler)
 
-    model_config%model_scheme_char = model_scheme_char
-    ! set model_scheme (character -> ENUM)
-    SELECT CASE (TRIM(model_scheme_char))
+    model_config%model_scheme_char = tolower(model_scheme)
+    SELECT CASE (TRIM(model_config%model_scheme_char))
     CASE ("jsbach")
       model_config%model_scheme = MODEL_JSBACH
       CALL message(TRIM(routine), 'Use model_scheme JSBACH')
     CASE ("jsbach_quincy")
       model_config%model_scheme = MODEL_JSBACH_QUINCY
       CALL message(TRIM(routine), 'Use model_scheme JSBACH with QUINCY')
+      CALL finish(TRIM(routine),  'The model_scheme JSBACH with QUINCY (MODEL_JSBACH_QUINCY) is not yet implemented.')
     CASE ("quincy")
       model_config%model_scheme = MODEL_QUINCY
       CALL message(TRIM(routine), 'Use model_scheme QUINCY')
     CASE DEFAULT
-      CALL message(TRIM(routine), 'You selected model_scheme: '//model_scheme_char)
-      CALL message(TRIM(routine), 'No such model_scheme available. Using the default scheme: JSBACH.')  
+      CALL finish(TRIM(routine), 'Selected model_scheme '//TRIM(model_scheme)//' not available.')
     END SELECT
     ! set other namelist options
     model_config%use_lakes                  = use_lakes

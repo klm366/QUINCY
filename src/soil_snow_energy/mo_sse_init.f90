@@ -19,7 +19,7 @@ MODULE mo_sse_init
   USE mo_exception,          ONLY: message
   USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -256,14 +256,6 @@ CONTAINS
     !$acc dsl4jsb_var2D_onDomain(SSE_,heat_cond))
     !$acc end data
 
-    ! quincy
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! soil texture - currently simply using default values, no ic/bc from input files
-      dsl4jsb_var3D_onDomain(SSE_, sand_sl) = dsl4jsb_Config(SSE_)%soil_sand
-      dsl4jsb_var3D_onDomain(SSE_, silt_sl) = dsl4jsb_Config(SSE_)%soil_silt
-      dsl4jsb_var3D_onDomain(SSE_, clay_sl) = dsl4jsb_Config(SSE_)%soil_clay
-    END IF
-
   END SUBROUTINE sse_init_bc
 
   SUBROUTINE sse_init_ic(tile)
@@ -346,7 +338,6 @@ CONTAINS
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, &   ! vol_hcap_snow_min,
       &                                  vol_hcap_org_top, vol_hcap_org_below, &
       &                                  hcond_ice, hcond_snow, &         !, hcond_snow_min, hcond_org
-      &                                  soil_heat_cap, soil_therm_cond, &
       &                                  hcond_org_top, hcond_dry_org_top, hcond_org_below, hcond_dry_org_below
     USE mo_hydro_constants,        ONLY: vol_porosity_org_top, vol_porosity_org_below
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
@@ -378,14 +369,6 @@ CONTAINS
       & heat_cond_sl, &
       & vol_porosity_sl, &
       & vol_field_cap_sl
-    ! SSE_ 2D
-    dsl4jsb_Real2D_onDomain :: t_srf_old
-    ! SSE_ 3D
-    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
-    ! dsl4jsb_Real3D_onDomain :: heat_capa_sl
-    ! dsl4jsb_Real3D_onDomain :: therm_cond_sl
-    dsl4jsb_Real3D_onDomain :: volume_min_sl
-    ! dsl4jsb_Real3D_onDomain :: t_soil_sl
 
     ! Locally allocated vectors
     ! 
@@ -528,16 +511,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
     nproma = SIZE(heat_cond,1)
     nblks  = SIZE(heat_cond,2)
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! SSE_ 2D
-      dsl4jsb_Get_var2D_onDomain(SSE_, t_srf_old)      ! out
-      ! SSE_ 3D
-      dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)   ! out
-      ! dsl4jsb_Get_var3D_onDomain(SSE_, heat_capa_sl)   ! out
-      ! dsl4jsb_Get_var3D_onDomain(SSE_, therm_cond_sl)  ! out
-      dsl4jsb_Get_var3D_onDomain(SSE_, volume_min_sl)  ! out
-      dsl4jsb_Get_var3D_onDomain(SSE_, t_soil_sl)      ! out
-    END IF
     
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
@@ -695,24 +668,6 @@ CONTAINS
       !$claw acc update host(vol_heat_cap_snow, heat_cond_snow)
     ! ELSE
     !   vol_heat_cap_snow and heat_cond_snow are fixed in calc_soiltemp_old
-    END IF
-
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! init soil-property variables
-      ! one site-specific value for all soil layers
-      bulk_dens_sl(:,:,:)   = dsl4jsb_Config(SSE_)%bulk_density 
-      ! not used here in jsb4 right now
-      ! moreover, see jsb4 implementation (diff units than in quincy) for these two input values
-      ! heat_capa_sl(:,:,:)   = soil_heat_cap
-      ! therm_cond_sl(:,:,:)  = soil_therm_cond
-      
-      ! this is done in the HYDRO_ init to resolve process_init dependency problem
-      ! sand_sl(:,:,:)        = dsl4jsb_Config(SSE_)%soil_sand
-      ! silt_sl(:,:,:)        = dsl4jsb_Config(SSE_)%soil_silt
-      ! clay_sl(:,:,:)        = dsl4jsb_Config(SSE_)%soil_clay
-      t_srf_old(:,:)        = 273.15_wp
-      volume_min_sl(:,:,:)  = 1._wp
-      t_soil_sl(:,:,:)      = 273.15_wp
     END IF
 
     !$acc exit data delete(soil_e_dz_tmp,vol_heat_cap_tmp,heat_cond_tmp)

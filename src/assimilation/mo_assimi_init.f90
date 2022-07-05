@@ -14,7 +14,7 @@ MODULE mo_assimi_init
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
-  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_QUINCY
   USE mo_jsb_class,           ONLY: get_model
 
   IMPLICIT NONE
@@ -85,8 +85,8 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
     SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
-      IF (debug_on()) CALL message(TRIM(routine), 'Use model_scheme MODEL_JSBACH_QUINCY or MODEL_QUINCY')
+    CASE (MODEL_QUINCY)
+      IF (debug_on()) CALL message(TRIM(routine), 'Use model_scheme MODEL_QUINCY')
     CASE DEFAULT
       RETURN
     END SELECT

@@ -163,7 +163,7 @@ CONTAINS
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_pheno_memory), INTENT(inout), TARGET :: mem
@@ -196,7 +196,7 @@ CONTAINS
     !! !$acc enter data pcreate(mem)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    ! default jsbach4 memory
+    ! variables used with jsbach4
     !
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
@@ -427,7 +427,8 @@ CONTAINS
       
       ! --------------------------------------------------------------------------------------------------- !
       ! variables used with jsbach4 & quincy
-      ! jsbach4 init
+      ! jsbach4 settings
+      ! 
       IF (model%config%model_scheme == MODEL_JSBACH) THEN
         ! setting for: lai
         IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -457,13 +458,14 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
       IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
          & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
 
         ! ------------------------------------------------------------------------------------------------- !
         ! variables used with jsbach4 & quincy
-        ! quincy init
+        ! quincy settings
+        ! 
         
         ! setting for: lai
         IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -493,7 +495,8 @@ CONTAINS
           & initval_r = 0.0_wp)
           
         ! ------------------------------------------------------------------------------------------------- !
-        ! variables used only with quincy      
+        ! variables used only with quincy
+        !    
         CALL mem%Add_var('growing_season', mem%growing_season, &
           & hgrid, surface, &
           & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &

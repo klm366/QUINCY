@@ -25,7 +25,7 @@ MODULE mo_pheno_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -169,15 +169,10 @@ CONTAINS
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
       CALL this%Register_task(tsk_phenology(model_id))
-    CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
+      CALL this%Register_task(tsk_foliage_projected_cover(model_id))
+    CASE (MODEL_QUINCY)
       CALL this%Register_task(tsk_phenology_q_(model_id))
     END SELECT
-
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH, MODEL_JSBACH_QUINCY)
-      CALL this%Register_task(tsk_foliage_projected_cover(model_id))
-    END SELECT
-
 
   END SUBROUTINE Register_pheno_tasks
 
