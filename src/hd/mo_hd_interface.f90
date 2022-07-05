@@ -293,8 +293,8 @@ CONTAINS
 
       IF (model%config%use_wetskins) THEN
         ! update reservoir wetskin fraction
-        fract_river(:) = update_wetskin (fract_river(:),w_river_res(:),oro_stddev(:),veg_fract(:))
-        fract_overl(:) = update_wetskin (fract_overl(:),w_overl_res(:),oro_stddev(:),veg_fract(:))
+        fract_river(:) = update_wetskin (fract_river(:),w_river_res(:),oro_stddev(:),veg_fract(:),area)
+        fract_overl(:) = update_wetskin (fract_overl(:),w_overl_res(:),oro_stddev(:),veg_fract(:),area)
       ENDIF
 
     CASE ('weighted_to_coast')
@@ -333,23 +333,29 @@ CONTAINS
   END SUBROUTINE aggregate_hd
 
 
-  ELEMENTAL FUNCTION update_wetskin(fract_old,reservoir,oro_stddev,fract_veg) &
+  ELEMENTAL FUNCTION update_wetskin(fract_old,reservoir,oro_stddev,fract_veg,area) &
     RESULT (fract_new)
 
     ! Inputdata
     REAL(wp), INTENT(in) :: fract_old                !< Old pond fraction [/]
-    REAL(wp), INTENT(in) :: reservoir                !< New cell average pond depth  [m]
-    REAL(wp), INTENT(in) :: oro_stddev               !< Subgrid orographic STD [m]
+    REAL(wp), INTENT(in) :: reservoir                !< Average pond depth  [m]
+    REAL(wp), INTENT(in) :: oro_stddev               !< Subgrid orographic standard deviation [m]
     REAL(wp), INTENT(in) :: fract_veg                !< Vegetation tile fraction [/]
+    REAL(wp), INTENT(in) :: area                     !< Grid cell area [m3]
 
     ! Result
     REAL(wp)             :: fract_new                !< New pond fraction [/]
+    REAL(wp)             :: h_max                    !< New pond fraction [/]
+    REAL(wp)             :: a_max                    !< New pond fraction [/]
+    REAL(wp)             :: v                        !< New pond fraction [/]
 
     ! Local variables
     REAL(wp), PARAMETER  :: eps = EPSILON(1.0_wp)    !< Really small value
-    REAL(wp), PARAMETER  :: scale_par = 0.5_wp
-    REAL(wp), PARAMETER  :: shape_par = 0.6_wp
+    REAL(wp), PARAMETER  :: shape_par = 3._wp      !< General shape of all basins (cone: 1; parabolic: =< 2.0)
 
+    h_max = MAX(1.0_wp, 2._wp * oro_stddev)
+    a_max = area
+    v     = reservoir * area
 
     IF (fract_veg > 0._wp) THEN                      ! valid grid cell
        ! 1. Pond dessicated
@@ -357,7 +363,7 @@ CONTAINS
         fract_new = 0.0_wp
       ELSE
         ! Pond surface area
-        fract_new = MIN(1.0_wp, MAX(0.0_wp, reservoir/MAX(1.0_wp, scale_par * oro_stddev)))**(shape_par)
+        fract_new = MIN(1.0_wp, MAX(0.0001_wp, v / (h_max*a_max / (1._wp+2._wp/shape_par)) )) ** ( 2._wp / (2._wp+2._wp/shape_par) )
       END IF
     ELSE 
       fract_new = 0._wp
