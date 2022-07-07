@@ -50,6 +50,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER       :: model
     TYPE(t_jsb_grid),  POINTER       :: grid
     TYPE(t_jsb_vgrid),  POINTER      :: dl_l
+    TYPE(t_jsb_vgrid),  POINTER      :: dg_n
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
@@ -63,7 +64,7 @@ CONTAINS
     TYPE(t_input_file)  :: input_file
 
     INTEGER, ALLOCATABLE :: cells_up(:,:,:)
-    INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx, nlev
+    INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx, nlev, nedge
     INTEGER :: nblks, nproma
 
     CHARACTER(len=*),  PARAMETER     :: routine = modname//':hd_init_bc'
@@ -71,7 +72,9 @@ CONTAINS
     model => get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
     dl_l => Get_vgrid('dynamic_lake_level')
-    nlev = dl_l%n_levels
+    dg_n => Get_vgrid('edge_neighbors')
+    nlev  = dl_l%n_levels
+    nedge = dg_n%n_levels
 
     ! Get hd config
     dsl4jsb_Get_config(HD_)
@@ -226,6 +229,17 @@ CONTAINS
           & start_extdim=n, end_extdim=n,    &
           & extdim_name='lev')
         dsl4jsb_var_ptr(HD_,heights_lake)(:,n,:) = return_pointer3d(:,:,1)
+
+      END DO
+
+
+      DO n = 1,nedge
+
+        return_pointer3d => input_file%Read_2d_extdim(  &
+          & variable_name='OUTFL_MIN',                   &
+          & start_extdim=n, end_extdim=n,    &
+          & extdim_name='nv')
+        dsl4jsb_var_ptr(HD_,outflow_min)(:,n,:) = return_pointer3d(:,:,1)
 
       END DO
 

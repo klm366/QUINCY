@@ -72,9 +72,9 @@ CONTAINS
       routing_scheme,              &
       read_initial_reservoirs
 
-    INTEGER :: nml_handler, nml_unit, istat, nlev
+    INTEGER :: nml_handler, nml_unit, istat, nlev, nedge
 
-    TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r, dl_l  ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r, dl_l, dg_n  ! Vertical grids
     TYPE(t_input_file)         :: input_file
     REAL(wp),          POINTER :: ptr_1D(:)
 
@@ -118,6 +118,8 @@ CONTAINS
     ptr_1D => input_file%Read_1d(variable_name='lev')    ! dynamic lake level
     nlev = SIZE(ptr_1D)
 
+    nedge = SIZE((/1._wp,2._wp,3._wp/))
+
     hd_o  => new_vgrid('hd_nres_overlflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
     CALL Register_vgrid(hd_o)
 
@@ -130,6 +132,8 @@ CONTAINS
     dl_l  => new_vgrid('dynamic_lake_level', ZAXIS_GENERIC, nlev, levels=ptr_1D(:), units='')
     CALL Register_vgrid(dl_l)
 
+    dg_n  => new_vgrid('edge_neighbors', ZAXIS_GENERIC, nedge, levels=(/1._wp,2._wp,3._wp/), units='')
+    CALL Register_vgrid(dg_n)
 
   END SUBROUTINE Init_hd_config
 

@@ -86,7 +86,8 @@ MODULE mo_hd_memory_class
       riverflow_res,          &  !< content of groundflow reservoir cascade
       volumes_lake,           &  !< lake volumes from lookup table [m3]
       areas_lake,             &  !< lake areas from looup table [m2]
-      heights_lake               !< lake heights from loopup tbale [m]
+      heights_lake,           &  !< lake heights from loopup tbale [m]
+      outflow_min                !< outflow minimum height [m]
 
     INTEGER ::               &
       nneigh,                &  !< maximum number of neighboring (inflow) cells
@@ -118,7 +119,7 @@ CONTAINS
     !dsl4jsb_Def_config(HD_)
 
     TYPE(t_jsb_grid),  POINTER :: hgrid                           ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface, hd_o, hd_b, hd_r, dl_l ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: surface, hd_o, hd_b, hd_r, dl_l, dg_n ! Vertical grids
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hd_memory'
@@ -136,7 +137,7 @@ CONTAINS
     hd_b => get_vgrid('hd_nres_baseflow')
     hd_r => get_vgrid('hd_nres_riverflow')
     dl_l => get_vgrid('dynamic_lake_level')
-
+    dg_n => get_vgrid('edge_neighbors')
 
     CALL mem%Add_var( 'hd_mask', mem%hd_mask,     &
       & hgrid, surface,                                                                    &
@@ -450,6 +451,13 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &           
       & prefix, suffix,                                                      &           
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )                                     
+
+    CALL mem%Add_var( 'outflow_min', mem%outflow_min,                      &
+      & hgrid, dg_n,                                                       &
+      & t_cf('outflow_min', 'm', 'outflow minimum height'),                   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
     CALL mem%Add_var( 'water_budget', mem%water_budget,                             &
       & hgrid, surface,                                                                  &
