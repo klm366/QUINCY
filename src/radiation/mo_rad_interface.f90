@@ -12,6 +12,10 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+!NEC$ options "-finline-file=externals/jsbach/src/radiation/mo_rad_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+!NEC$ options "-finline-max-function-size=100"
+
 MODULE mo_rad_interface
 #ifndef __NO_JSBACH__
 
@@ -577,6 +581,7 @@ CONTAINS
        ! canopy layer)
        canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
        !$claw sca forward update savepoint=ser_jsb_rad_calc_par_1 tile_name=tile%name canopy_lvl=icanopy
+       !NEC$ ivdep
        CALL calc_par(                 &
          & ncanopy,                   & ! in
          & icanopy,                   & ! in
@@ -968,6 +973,7 @@ CONTAINS
 
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in
         !$claw sca forward update savepoint=ser_jsb_rad_calc_soil_albedo_1 tile_name=tile%name
+        !NEC$ ivdep
         CALL calc_soil_albedo(                        &
           & l_day(:),                                 & ! in
           & use_alb_mineralsoil_const,                & ! in
@@ -1055,6 +1061,7 @@ CONTAINS
           dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in (Note: c_humus_1 is part of green litter.)
 
           !$claw sca forward update savepoint=ser_jsb_rad_calc_soil_albedo_2 tile_name=tile%name
+          !NEC$ ivdep
           CALL calc_soil_albedo(                        &
             & l_day(:),                                 & ! in
             & use_alb_mineralsoil_const,                & ! in

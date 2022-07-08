@@ -12,6 +12,8 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+
 MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
