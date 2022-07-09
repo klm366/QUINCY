@@ -337,24 +337,26 @@ CONTAINS
     RESULT (fract_new)
 
     ! Inputdata
-    REAL(wp), INTENT(in) :: fract_old                !< Old pond fraction [/]
-    REAL(wp), INTENT(in) :: reservoir                !< Average pond depth  [m]
+    REAL(wp), INTENT(in) :: fract_old                !< Old pond fraction        [/]
+    REAL(wp), INTENT(in) :: reservoir                !< Average flooding height  [m]
     REAL(wp), INTENT(in) :: oro_stddev               !< Subgrid orographic standard deviation [m]
     REAL(wp), INTENT(in) :: fract_veg                !< Vegetation tile fraction [/]
-    REAL(wp), INTENT(in) :: area                     !< Grid cell area [m3]
+    REAL(wp), INTENT(in) :: area                     !< Grid cell area           [m2]
 
     ! Result
-    REAL(wp)             :: fract_new                !< New pond fraction [/]
-    REAL(wp)             :: h_max                    !< New pond fraction [/]
-    REAL(wp)             :: a_max                    !< New pond fraction [/]
-    REAL(wp)             :: v                        !< New pond fraction [/]
+    REAL(wp)             :: fract_new                !< New flooding fraction   [/]
+    REAL(wp)             :: h_max                    !< Maximum flooding height [m]
+    REAL(wp)             :: a_max                    !< Maximum flooding area   [m2]
+    REAL(wp)             :: v_max                    !< Maximum flooding volume [m3]
+    REAL(wp)             :: v                        !< Current flooding volume [m3]
 
     ! Local variables
     REAL(wp), PARAMETER  :: eps = EPSILON(1.0_wp)    !< Really small value
-    REAL(wp), PARAMETER  :: shape_par = 3._wp      !< General shape of all basins (cone: 1; parabolic: =< 2.0)
+    REAL(wp), PARAMETER  :: shape_par = 2._wp        !< General shape of all basins (cone: 1; parabolic: =< 2.0)
 
     h_max = MAX(1.0_wp, 2._wp * oro_stddev)
     a_max = area
+    v_max = h_max * a_max
     v     = reservoir * area
 
     IF (fract_veg > 0._wp) THEN                      ! valid grid cell
@@ -363,7 +365,7 @@ CONTAINS
         fract_new = 0.0_wp
       ELSE
         ! Pond surface area
-        fract_new = MIN(1.0_wp, MAX(0.0001_wp, v / (h_max*a_max / (1._wp+2._wp/shape_par)) )) ** ( 2._wp / (2._wp+2._wp/shape_par) )
+        fract_new = MIN(1.0_wp, MAX(0.0005_wp, (v / (v_max / (1._wp+2._wp/shape_par))) ** ( 2._wp / (2._wp+2._wp/shape_par) )))
       END IF
     ELSE 
       fract_new = 0._wp
@@ -937,6 +939,9 @@ CONTAINS
       & lake_outflow,          &
       & drainage_lake
 
+    dsl4jsb_Real3D_onDomain :: &
+      & outflow_min
+
     REAL(wp) ::                &
       & height_lake_diff,      &
       & u_lake,                &
@@ -952,7 +957,7 @@ CONTAINS
     INTEGER  :: jc, jcs, jce       ! grid cells
     INTEGER  :: blk, blks, blke    ! blocks
     INTEGER  :: njc(3), nblk(3)    ! beighbor grid cell block and cell index
-    INTEGER  :: n, nm, nnm, ncount ! count neighbors
+    INTEGER  :: n, m, l, nm, nl, nnm, ncount ! count neighbors
     INTEGER  :: nnjc(3), nnblk(3)
     INTEGER  :: nproma, nblks
 
@@ -972,7 +977,8 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE  ::  &
       & in_domain       (:,:), &  ! 1: cell in domain, 0: halo cell
-      & volume_from_lake(:,:)
+      & volume_from_lake(:,:), &
+      & outflow_mins(:,:)
 
     REAL(wp) :: outlets_max(p_patch(1)%nblks_c)
 
@@ -1013,7 +1019,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, lake_inflow)      ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, lake_outflow)     ! OUT
     dsl4jsb_Get_var2D_onDomain(HD_, drainage_lake)    ! OUT
-
+    dsl4jsb_Get_var3D_onDomain(HD_, outflow_min)      ! IN
 
     ! Configuration parameters from the namelist
     routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
@@ -1038,10 +1044,13 @@ CONTAINS
 !      CALL sync_patch_array(sync_c, grid%patch, height_lake_max(:,:))
       CALL sync_patch_array(sync_c, grid%patch, volume_lake(:,:))
 !      CALL sync_patch_array(sync_c, grid%patch, volume_lake_max(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, outflow_min(:,:,:))
+
 
 
       ALLOCATE (neigh_mask(nproma, nblks))
       ALLOCATE (nneigh_mask(nproma, nblks))
+      ALLOCATE (outflow_mins(nproma, nblks))
 
       lake_outflow(:,:) = 0._wp
       lake_inflow(:,:) = 0._wp
@@ -1067,51 +1076,75 @@ CONTAINS
             IF (basin_mask(jc,blk)==basin_mask(njc(nm),nblk(nm))) THEN
               neigh_mask(njc(nm),nblk(nm)) = .TRUE.
             END IF
-          END DO
+          END DO          
+
           DO n = 1, SIZE(njc)
 
-            ! neighbor's 3 neighbor cells: block and cell index 
-            nnjc =  grid%patch%cells%neighbor_idx(njc(n),nblk(n),:)
-            nnblk = grid%patch%cells%neighbor_blk(njc(n),nblk(n),:)
-            nneigh_mask(:,:) = .FALSE.
-            ! mask neighbor's neighbor grid cells of the current basin with .TRUE.
-            DO nnm = 1, SIZE(nnjc)
-              IF (basin_mask(jc,blk)==basin_mask(nnjc(nnm),nnblk(nnm))) THEN
-                nneigh_mask(nnjc(nnm),nnblk(nnm)) = .TRUE.
+            IF(basin_mask(jc,blk) > 0._wp                       .AND. &    
+               basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))) THEN
+          
+              ! neighbor's 3 neighbor cells: block and cell index 
+              nnjc =  grid%patch%cells%neighbor_idx(njc(n),nblk(n),:)
+              nnblk = grid%patch%cells%neighbor_blk(njc(n),nblk(n),:)
+              nneigh_mask(:,:) = .FALSE.
+              ! mask neighbor's neighbor grid cells of the current basin with .TRUE.
+              DO nnm = 1, SIZE(nnjc)
+                IF (basin_mask(jc,blk)==basin_mask(nnjc(nnm),nnblk(nnm))) THEN
+                  nneigh_mask(nnjc(nnm),nnblk(nnm)) = .TRUE.
+                END IF
+              END DO
+              ! 3 neighbor cells minimum outflow height
+              outflow_mins(:,:) = 0._wp
+              DO nm = 1, SIZE(njc)
+                ! neighbor cells minimum outflow height
+                l = FINDLOC(grid%patch%cells%neighbor_idx(njc(nm),nblk(nm),:), jc, DIM=1)
+                IF (outflow_min(njc(nm),nblk(nm),nl) /= 0._wp) THEN
+                   outflow_mins(njc(nm),nblk(nm))= outflow_min(njc(nm),nblk(nm),nl)
+                   ! neighbor's 3 neighbor cells minimum outflow height
+                   DO nnm = 1, SIZE(nnjc)
+                     nl =  FINDLOC(grid%patch%cells%neighbor_idx(nnjc(nnm),nnblk(nnm),:), njc(nm), DIM=1)
+                     IF (outflow_min(nnjc(nnm),nnblk(nnm),nl) /= 0._wp) THEN
+                       outflow_mins(nnjc(nnm),nnblk(nnm)) = outflow_min(nnjc(nnm),nnblk(nnm),nl)
+                     END IF
+                   END DO
+                END IF
+              END DO
+
+              ! inflow 
+              IF(height_dyn(jc,blk) == MINVAL(PACK(height_dyn(:,:),nneigh_mask(:,:))) .AND. &
+                 height_dyn(jc,blk) < height_dyn(njc(n),nblk(n))                      .AND. &
+                 height_dyn(njc(n),nblk(n)) > outflow_mins(njc(n),nblk(n))            .AND. &
+                 volume_lake(njc(n),nblk(n)) > 0._wp)                                  THEN
+                height_lake_diff = MIN(height_lake(njc(n),nblk(n)), height_dyn(njc(n),nblk(n)) - height_dyn(jc,blk))
+                CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
+                u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
+                k_lake           = neigh_dist/u_lake
+  !              ncount = COUNT(height_dyn(jc,blk)          == PACK(height_dyn(:,:)  ,nneigh_mask(:,:)))
+                ncount = COUNT(height_dyn(jc,blk)           == PACK(height_dyn(:,:)  ,nneigh_mask(:,:)) .AND. &
+                               outflow_mins(njc(n),nblk(n)) >= PACK(outflow_mins(:,:),nneigh_mask(:,:)))
+                lake_inflow(jc,blk) = lake_inflow(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, &
+                                                                 volume_lake(njc(n),nblk(n))/steplen ) / ncount
               END IF
-            END DO
+                
+              ! outflow
+              IF ( height_dyn(njc(n),nblk(n)) == MINVAL(PACK(height_dyn(:,:),neigh_mask(:,:))) .AND. &
+                   height_dyn(njc(n),nblk(n)) < height_dyn(jc,blk)                             .AND. & 
+                   height_dyn(jc,blk) > outflow_mins(jc,blk)                                   .AND. &
+                   volume_lake(jc,blk)> 0._wp)                                                  THEN               
+                height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
+                CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
+                u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
+                k_lake           = neigh_dist/u_lake
+                ! make sure neighbor cells have different dynamic height
+                ! (water outflow only into one neighboring grid cells allowed)
+  !              ncount = COUNT(height_dyn(njc(n),nblk(n)) == PACK(height_dyn(:,:)  ,neigh_mask(:,:)))
+                ncount = COUNT(height_dyn(njc(n),nblk(n)) == PACK(height_dyn(:,:)  ,neigh_mask(:,:)) .AND. &
+                               outflow_mins(jc,blk)       >= PACK(outflow_mins(:,:),neigh_mask(:,:)))
+                lake_outflow(jc,blk) = lake_outflow(jc,blk) - MIN( volume_lake(jc,blk)/k_lake, &
+                                                                   volume_lake(jc,blk)/steplen ) / ncount
+              END IF
 
-            ! inflow 
-            IF(height_dyn(jc,blk) == MINVAL(PACK(height_dyn(:,:),nneigh_mask(:,:))) .AND. &
-               height_dyn(jc,blk) < height_dyn(njc(n),nblk(n))      .AND. &
-               volume_lake(njc(n),nblk(n)) > 0._wp                  .AND. &
-               basin_mask(jc,blk) > 0._wp                           .AND. &
-               basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))    ) THEN
- 
-              height_lake_diff = MIN(height_lake(njc(n),nblk(n)), height_dyn(njc(n),nblk(n)) - height_dyn(jc,blk))
-              CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
-              u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
-              k_lake           = neigh_dist/u_lake
-              ncount = COUNT(height_dyn(jc,blk)==PACK(height_dyn(:,:),nneigh_mask(:,:)))
-              lake_inflow(jc,blk) = lake_inflow(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, volume_lake(njc(n),nblk(n))/steplen ) / ncount
             END IF
-             
-            ! outflow
-            IF ( height_dyn(njc(n),nblk(n)) == MINVAL(PACK(height_dyn(:,:),neigh_mask(:,:))) .AND. &
-                 height_dyn(njc(n),nblk(n)) < height_dyn(jc,blk)            .AND. & 
-                 volume_lake(jc,blk) > 0._wp                                .AND. & 
-                 basin_mask(jc,blk) > 0._wp                                 .AND. &                        
-                 basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))         ) THEN               
-              height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
-              CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
-              u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
-              k_lake           = neigh_dist/u_lake
-              ! make sure neighbor cells have different dynamic height
-              ! (water outflow only into one neighboring grid cells allowed)
-              ncount = COUNT(height_dyn(njc(n),nblk(n))==PACK(height_dyn(:,:),neigh_mask(:,:)))
-              lake_outflow(jc,blk) = lake_outflow(jc,blk) - MIN( volume_lake(jc,blk)/k_lake, volume_lake(jc,blk)/steplen ) / ncount
-            END IF
-
           END DO
         END DO
       END DO
