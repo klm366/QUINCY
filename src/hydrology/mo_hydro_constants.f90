@@ -26,7 +26,7 @@ MODULE mo_hydro_constants
     & wsn2fract_sigfac = 0.15_wp,          &
     & wsn2fract_const  = 0.95_wp,          & !< Inverse of snow height when snow is considered to completely cover the ground
 
-    & InterceptionEfficiency = 0.25_wp,    & !< Efficiency of interception of precipitation as rain
+    & InterceptionEfficiency = 0.25_wp,    & !< Efficiency of interception of precipitation (rain and snow)
 
     & Epar                   = 2.2E5_wp,   & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1.  R: for update_par
     & SoilReflectivityParMin = 0.0_wp,     & ! Minimum soil reflectivity in PAR region.  R: for update_par
@@ -64,6 +64,8 @@ MODULE mo_hydro_constants
     & NOFLOW_ = 0,                         & !< ignores lateral transport
     & UPLAND_ = 1,                         & !< source tiles of lateral water flow
     & LOWLAND_ = 2                           !< sink tiles of lateral water flow
+
+  CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
 
 #endif
 END MODULE mo_hydro_constants

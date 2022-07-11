@@ -138,9 +138,9 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_assimi_constants
 
-    USE mo_jsb_physical_constants,  ONLY: molar_mass_N, &   !< parameter from mo_jsb_phys_constants
-                                          Dwv, &            !< parameter from mo_jsb_phys_constants - diffusion coefficient for water vapour in air
-                                          Dco2              !< parameter from mo_jsb_phys_constants - diffusion coefficient for CO2 in air
+    USE mo_jsb_physical_constants,  ONLY: molar_mass_N, &   !< 
+                                          Dwv, &            !< diffusion coefficient for water vapour in air
+                                          Dco2              !< diffusion coefficient for CO2 in air
 
     IMPLICIT NONE
     ! ---------------------------

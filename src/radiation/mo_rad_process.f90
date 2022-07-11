@@ -106,41 +106,33 @@ CONTAINS
     & canopy_bound_lai,         & ! in
     & canopy_bound_lai_delta,   & ! in
     & B4_layer_above,           & ! inout
-    & par_down_mol,             & ! output, used outside for photosynthesis
-    & soil_reflectivity_par,    & ! output, R: could also be local as it is not used outside in the moment,
-                                  ! however I want it in the model output and thus it has to be updated by returning it
-    & faPAR_cl,                 & ! output, R: could also be local as it is not used outside in the moment,
-                                  ! however I want it in the model output and thus it has to be updated by returning it
-    & lai_cl,                   & ! output, R: could also be local as it is not used outside in the moment,
-                                  ! however I want it in the model output and thus it has to be updated by returning it
-    & apar_per_lai_cl  )          ! output, used outside for assimilation
+    & par_down_mol,             & ! out
+    & soil_reflectivity_par,    & ! out
+    & faPAR_cl,                 & ! out
+    & lai_cl,                   & ! out
+    & apar_per_lai_cl  )          ! out
 
-    ! Use declarations
     USE mo_rad_constants,  ONLY: &
       & Epar,                    & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1
       & SoilReflectivityParMin,  & ! Minimum soil reflectivity in PAR region
-      & FcMax, FcMin, ZenithMinPar, LaiMin, LaiLimit
+      & FcMax,                   &
+      & FcMin,                   &
+      & ZenithMinPar,            &
+      & LaiMin,                  &
+      & LaiLimit
 
-    ! Arguments
-    INTEGER,  INTENT(in)     :: ncanopy, &
+    INTEGER,   INTENT(in)    :: ncanopy, &
                                 icanopy
-
-    LOGICAL,  INTENT(in)     :: use_alb_veg_simple
-
-    REAL(wp),  INTENT(in)    ::                        &
-                                canopy_bound_lai,      &
+    LOGICAL,   INTENT(in)    :: use_alb_veg_simple
+    REAL(wp),  INTENT(in)    :: canopy_bound_lai,      &
                                 canopy_bound_lai_delta
-
     !$claw model-data
-    REAL(wp),  INTENT(in)    ::                        &
-                                par,                   &
+    REAL(wp),  INTENT(in)    :: par,                   &
                                 alb_vis_soil,          &
                                 lai,                   &
                                 cos_zenith_angle,      &
                                 fract_par_direct
-
     REAL(wp),  INTENT(inout) :: B4_layer_above
-
     REAL(wp),  INTENT(out)   :: par_down_mol,          &
                                 soil_reflectivity_par, &
                                 faPAR_cl,              &
@@ -477,10 +469,10 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   !
   PURE ELEMENTAL SUBROUTINE calc_alb_lice( &
-    & l_day,       &
-    & t,           &
-    & w_snow_lice, &
-    & alb_lice     &
+    & l_day,         &
+    & t,             &
+    & weq_snow_lice, &
+    & alb_lice       &
     & )
 
     ! Use declarations
@@ -493,7 +485,7 @@ CONTAINS
       & l_day
     REAL(wp), INTENT(in)    :: &
       & t,                     &
-      & w_snow_lice
+      & weq_snow_lice
     REAL(wp), INTENT(inout) :: &
       & alb_lice
     !$claw end model-data
@@ -510,7 +502,7 @@ CONTAINS
 
     t_upper_limit = tmelt - 1._wp
 
-    IF (w_snow_lice > 0.01_wp) THEN
+    IF (weq_snow_lice > 0.01_wp) THEN
       alb_min = AlbedoLakeSnowMin
       alb_max = AlbedoLakeSnowMax
     ELSE
@@ -771,10 +763,9 @@ CONTAINS
     ! Arguments
     !$claw model-data
     LOGICAL,  INTENT(in)  :: l_day
-    REAL(wp), INTENT(in)  ::                    & !
-                             fract_snow_soil,   & ! Fraction of snow covered ground
-                             snow_age,          & ! non-dimensional age of snow
-                             cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
+    REAL(wp), INTENT(in)  :: fract_snow_soil,   & !< Fraction of snow covered ground
+                             snow_age,          & !< non-dimensional age of snow
+                             cos_zenith_angle,  & !< cosinus of zenith angle of incoming radiation
                              t_srf
     !$claw end model-data
 
@@ -1233,7 +1224,7 @@ CONTAINS
     REAL(wp)                                :: temp1,temp2,radf3b              ! dummy variables
     REAL(wp)                                :: lctlib_sigma_hlp, &             ! hlp for local lctlib variable, differentiating vis/nir
                                                kbl0, kdf0                      ! hlp for local rad_constants variables, differentiating vis/nir
-    INTEGER                                 :: icanopy, ichunk                 ! iteration over canopy layers
+    INTEGER                                 :: icanopy, ic                     ! iteration over canopy layers
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_sw_srf_net'
 
 
@@ -1260,16 +1251,16 @@ CONTAINS
     ! inout var
     ! set output to zero where new values are calculated, otherwise the old values are returned
     !  this is consistent with jsbach4 and may be done to avoid zero values (zeros' would hamper the output calculations)
-    DO ichunk = 1,nc
-      IF (l_day(ichunk)) THEN
-        arad_sunlit_cl(ichunk,1:ncanopy)   = 0.0_wp 
-        arad_shaded_cl(ichunk,1:ncanopy)   = 0.0_wp
-        fleaf_sunlit_cl(ichunk,1:ncanopy)  = 0.0_wp
-        arad_can(ichunk)                   = 0.0_wp
-        arad_soil(ichunk)                  = 0.0_wp
-        alb_can(ichunk)                    = 0.0_wp
-        alb(ichunk)                        = 0.0_wp
-        sw_srf_net(ichunk)                 = 0.0_wp
+    DO ic = 1,nc
+      IF (l_day(ic)) THEN
+        arad_sunlit_cl(ic,1:ncanopy)   = 0.0_wp 
+        arad_shaded_cl(ic,1:ncanopy)   = 0.0_wp
+        fleaf_sunlit_cl(ic,1:ncanopy)  = 0.0_wp
+        arad_can(ic)                   = 0.0_wp
+        arad_soil(ic)                  = 0.0_wp
+        alb_can(ic)                    = 0.0_wp
+        alb(ic)                        = 0.0_wp
+        sw_srf_net(ic)                 = 0.0_wp
       ENDIF
     ENDDO
 
@@ -1286,54 +1277,54 @@ CONTAINS
     temp2  = 2.0_wp * (1.0_wp - temp1)/(1.0_wp + temp1)
    
     !> @par IF only do calculations if daylight is available, either direct or diffuse (in case of negative cos_zenith_angle)
-    DO ichunk = 1,nc
-      IF(l_day(ichunk)) THEN
+    DO ic = 1,nc
+      IF(l_day(ic)) THEN
     
         !> Downwelling direct radiation 
-        irad_dir_down(ichunk) = (1.0_wp - sw_fdiffuse(ichunk)) * sw_srf_down(ichunk)
+        irad_dir_down(ic) = (1.0_wp - sw_fdiffuse(ic)) * sw_srf_down(ic)
         !> Downwelling diffuse radiation 
-        irad_dif_down(ichunk) = sw_fdiffuse(ichunk) * sw_srf_down(ichunk)
+        irad_dif_down(ic) = sw_fdiffuse(ic) * sw_srf_down(ic)
 
         !> @par IF lai > eps8
-        IF(lai(ichunk) > eps8) THEN
+        IF(lai(ic) > eps8) THEN
 
           !> Eq.1  Fraction of radiation reflected by green closed canopy (fraction)
-          rho(ichunk) = temp2/(1.0_wp + rho2sbeta * tmp_cos_zenith_angle(ichunk))
+          rho(ic) = temp2/(1.0_wp + rho2sbeta * tmp_cos_zenith_angle(ic))
   
           !> clumping factor (eq 15.35) Campbell & Norman (1998) as a function of sun-angle
-          omega(ichunk) = lctlib_omega_clumping / (lctlib_omega_clumping + (1.0_wp - lctlib_omega_clumping) * & 
-                  exp(-k_csf * ACOS(tmp_cos_zenith_angle(ichunk))**lctlib_crown_shape_factor)) 
+          omega(ic) = lctlib_omega_clumping / (lctlib_omega_clumping + (1.0_wp - lctlib_omega_clumping) * & 
+                  exp(-k_csf * ACOS(tmp_cos_zenith_angle(ic))**lctlib_crown_shape_factor)) 
  
           !> Extinction coefficient for radiation over black leaves in canopy
-          kdf(ichunk)   = kdf0 * temp1 * omega(ichunk) ! temp1 == SQRT(1.0_wp - lctlib_sigma_hlp)
-          kbl(ichunk)   = kbl0 * kdf(ichunk)/(0.8_wp * temp1 * tmp_cos_zenith_angle(ichunk)) 
+          kdf(ic)   = kdf0 * temp1 * omega(ic) ! temp1 == SQRT(1.0_wp - lctlib_sigma_hlp)
+          kbl(ic)   = kbl0 * kdf(ic)/(0.8_wp * temp1 * tmp_cos_zenith_angle(ic)) 
           
           !> Eq.10 & 11 Some factors for radiation calculations that change with time
-          radf1(ichunk) = (1.0_wp - rho(ichunk)) * irad_dif_down(ichunk) * kdf(ichunk)            ! eq 10
-          radf2(ichunk) = (1.0_wp - rho(ichunk)) * temp1 * irad_dir_down(ichunk) * kbl(ichunk)    ! eq 11
+          radf1(ic) = (1.0_wp - rho(ic)) * irad_dif_down(ic) * kdf(ic)            ! eq 10
+          radf2(ic) = (1.0_wp - rho(ic)) * temp1 * irad_dir_down(ic) * kbl(ic)    ! eq 11
           
           !> Eq.12 absorbed direct radiation
-          radf3(ichunk) = radf3b * irad_dir_down(ichunk) * kbl(ichunk)                    ! eq 12
-          radf4(ichunk) = -temp1 * kbl(ichunk)
+          radf3(ic) = radf3b * irad_dir_down(ic) * kbl(ic)                    ! eq 12
+          radf4(ic) = -temp1 * kbl(ic)
    
           !> light intensity at bottom of canopy
-          irad_dif_down_bc(ichunk) = (1.0_wp - rho(ichunk)) * irad_dif_down(ichunk) * exp(-kdf(ichunk)  * lai(ichunk))
-          irad_dir_down_bc(ichunk) = (1.0_wp - rho(ichunk)) * irad_dir_down(ichunk) * exp(radf4(ichunk) * lai(ichunk))
+          irad_dif_down_bc(ic) = (1.0_wp - rho(ic)) * irad_dif_down(ic) * exp(-kdf(ic)  * lai(ic))
+          irad_dir_down_bc(ic) = (1.0_wp - rho(ic)) * irad_dir_down(ic) * exp(radf4(ic) * lai(ic))
    
           !> diffuse upward shortwave flux from soil reflection and absorbed radiation of the soil
-          irad_dif_up(ichunk) = alb_snow_soil(ichunk) * (irad_dif_down_bc(ichunk) + irad_dir_down_bc(ichunk))
-          arad_soil(ichunk)   = (1.0_wp - alb_snow_soil(ichunk)) * (irad_dif_down_bc(ichunk) + irad_dir_down_bc(ichunk))
+          irad_dif_up(ic) = alb_snow_soil(ic) * (irad_dif_down_bc(ic) + irad_dir_down_bc(ic))
+          arad_soil(ic)   = (1.0_wp - alb_snow_soil(ic)) * (irad_dif_down_bc(ic) + irad_dir_down_bc(ic))
           
           !> factor for the absorption calculation of the upward stream
-          radf5(ichunk) = (1.0_wp - rho(ichunk)) * irad_dif_up(ichunk) * kdf(ichunk)            ! eq 10
+          radf5(ic) = (1.0_wp - rho(ic)) * irad_dif_up(ic) * kdf(ic)            ! eq 10
           
           !> upward shortwave diffuse flux reaching the top of the canopy
-          irad_dif_up(ichunk) = (1.0_wp - rho(ichunk)) * irad_dif_up(ichunk) * exp(-kdf(ichunk)*lai(ichunk))
+          irad_dif_up(ic) = (1.0_wp - rho(ic)) * irad_dif_up(ic) * exp(-kdf(ic)*lai(ic))
 
         ELSE
           !> case of no LAI: absorped radiation and upward flux from soil only 
-          arad_soil(ichunk)   = (1.0_wp - alb_snow_soil(ichunk) ) * (irad_dif_down(ichunk) + irad_dir_down(ichunk))
-          irad_dif_up(ichunk) = alb_snow_soil(ichunk)             * (irad_dif_down(ichunk) + irad_dir_down(ichunk)) 
+          arad_soil(ic)   = (1.0_wp - alb_snow_soil(ic) ) * (irad_dif_down(ic) + irad_dir_down(ic))
+          irad_dif_up(ic) = alb_snow_soil(ic)             * (irad_dif_down(ic) + irad_dir_down(ic)) 
         ENDIF
       ENDIF
     ENDDO
@@ -1341,51 +1332,51 @@ CONTAINS
     !> @par loop over canopy layers. All fluxes are evaluated at the centre of the canopy layer
     DO icanopy = 1,ncanopy
       !> @par IF leaf area index of canopy layer > eps8: Integrate absorbed radiation over actually existing canopy layers
-      DO ichunk = 1,nc
-        IF(l_day(ichunk) .AND. lai_cl(ichunk,icanopy) > eps8) THEN
+      DO ic = 1,nc
+        IF(l_day(ic) .AND. lai_cl(ic,icanopy) > eps8) THEN
         
           !> @par IF radf2 <= eps8
-          IF(radf2(ichunk) <= eps8) THEN ! case of only diffuse radiation
+          IF(radf2(ic) <= eps8) THEN ! case of only diffuse radiation
             !> Eq.10 Mean radiation penetrating foliage at lc 
-            arad_shaded_cl(ichunk,icanopy)    = radf1(ichunk) * exp(-kdf(ichunk) * cumm_lai_cl(ichunk,icanopy)) + &    ! eq 10
-                                                  radf5(ichunk) * exp(-kdf(ichunk) * &
-                                                  (MAX(lai(ichunk)-cumm_lai_cl(ichunk,icanopy),0.0_wp)))
+            arad_shaded_cl(ic,icanopy)    = radf1(ic) * exp(-kdf(ic) * cumm_lai_cl(ic,icanopy)) + &    ! eq 10
+                                                  radf5(ic) * exp(-kdf(ic) * &
+                                                  (MAX(lai(ic)-cumm_lai_cl(ic,icanopy),0.0_wp)))
             !> radiation penetrating foliage from below for albedo cacumm_lai_cl(icanopy)ulation
-            arad_shaded_up_cl(ichunk,icanopy) = radf5(ichunk) * exp(-kdf(ichunk) * &
-                                                  (MAX(lai(ichunk)-cumm_lai_cl(ichunk,icanopy),0.0_wp)))
+            arad_shaded_up_cl(ic,icanopy) = radf5(ic) * exp(-kdf(ic) * &
+                                                  (MAX(lai(ic)-cumm_lai_cl(ic,icanopy),0.0_wp)))
           !> @par ELSE Case of direct and diffuse radiation
           ELSE
             !> Sunlit foliage at cumm_lai_cl(icanopy) (fraction)
             !! kbl: Extinction coefficient for radiation over black leaves in canopy
-            fleaf_sunlit_cl(ichunk,icanopy) = exp(-kbl(ichunk) * cumm_lai_cl(ichunk,icanopy))
+            fleaf_sunlit_cl(ic,icanopy) = exp(-kbl(ic) * cumm_lai_cl(ic,icanopy))
             !> Eq.10 Diffuse radiation penetrating foliage at cumm_lai_cl(icanopy) 
-            idfa(ichunk) = radf1(ichunk) * exp(-kdf(ichunk) * cumm_lai_cl(ichunk,icanopy)) + & 
-                             radf5(ichunk) * exp(-kdf(ichunk) * (MAX(lai(ichunk)-cumm_lai_cl(ichunk,icanopy),0.0_wp)))
+            idfa(ic) = radf1(ic) * exp(-kdf(ic) * cumm_lai_cl(ic,icanopy)) + & 
+                             radf5(ic) * exp(-kdf(ic) * (MAX(lai(ic)-cumm_lai_cl(ic,icanopy),0.0_wp)))
             !> radiation penetrating foliage from below for albedo accumulation ?
-            arad_shaded_up_cl(ichunk,icanopy) = radf5(ichunk) * exp(-kdf(ichunk) * &
-                                                  (MAX(lai(ichunk)-cumm_lai_cl(ichunk,icanopy),0.0_wp)))
+            arad_shaded_up_cl(ic,icanopy) = radf5(ic) * exp(-kdf(ic) * &
+                                                  (MAX(lai(ic)-cumm_lai_cl(ic,icanopy),0.0_wp)))
             !> Direct radiation penetrating sunlit foliage at cumm_lai_cl(icanopy) 
-            idra(ichunk) = radf2(ichunk) * exp(radf4(ichunk) * cumm_lai_cl(ichunk,icanopy))
+            idra(ic) = radf2(ic) * exp(radf4(ic) * cumm_lai_cl(ic,icanopy))
             !> Eq.12 Mean direct radiation remaining direct at cumm_lai_cl(icanopy) 
             !! radf4 replaced by -kbl according to Wang2003 (error in Spitters 1986 Eqn.12)
-            idrdra(ichunk) = radf3(ichunk) * exp(-kbl(ichunk) * cumm_lai_cl(ichunk,icanopy))  
+            idrdra(ic) = radf3(ic) * exp(-kbl(ic) * cumm_lai_cl(ic,icanopy))  
             !> Radiation penetrating shaded foliage at cumm_lai_cl(icanopy) (umol/m2/s)
             !! Eq.13 Sum of diffuse radiation and diffuse component of direct flux
-            arad_shaded_cl(ichunk,icanopy) = idfa(ichunk) + MAX((idra(ichunk) - idrdra(ichunk)),0.0_wp)
+            arad_shaded_cl(ic,icanopy) = idfa(ic) + MAX((idra(ic) - idrdra(ic)),0.0_wp)
             !> Radiation penetrating sunlit foliage at lc (umol/m2/s)
             !! sum of diffuse and direct radiation
-            arad_sunlit_cl(ichunk,icanopy) = arad_shaded_cl(ichunk,icanopy) + radf3(ichunk)
+            arad_sunlit_cl(ic,icanopy) = arad_shaded_cl(ic,icanopy) + radf3(ic)
             !> correct for snow-covered canopy
             !! @TODO Jan would argue that only sunlit leaves can be covered by snow
-            arad_sunlit_cl(ichunk,icanopy) = arad_sunlit_cl(ichunk,icanopy) - &
-                                             arad_sunlit_cl(ichunk,icanopy) * fract_snow_can(ichunk)
+            arad_sunlit_cl(ic,icanopy) = arad_sunlit_cl(ic,icanopy) - &
+                                             arad_sunlit_cl(ic,icanopy) * fract_snow_can(ic)
           ENDIF
           
           !> total absorbed radiation
-          arad_can(ichunk) = arad_can(ichunk) + ( arad_shaded_cl(ichunk,icanopy) * (1.0_wp-fleaf_sunlit_cl(ichunk,icanopy)) + & 
-                               arad_sunlit_cl(ichunk,icanopy) * fleaf_sunlit_cl(ichunk,icanopy) ) * lai_cl(ichunk,icanopy)
+          arad_can(ic) = arad_can(ic) + ( arad_shaded_cl(ic,icanopy) * (1.0_wp-fleaf_sunlit_cl(ic,icanopy)) + & 
+                               arad_sunlit_cl(ic,icanopy) * fleaf_sunlit_cl(ic,icanopy) ) * lai_cl(ic,icanopy)
           !> for albedo calculation: radiation absorbed from the upward stream
-          arad_can_up(ichunk) = arad_can_up(ichunk) + arad_shaded_up_cl(ichunk,icanopy) * lai_cl(ichunk,icanopy)
+          arad_can_up(ic) = arad_can_up(ic) + arad_shaded_up_cl(ic,icanopy) * lai_cl(ic,icanopy)
         ENDIF
       ENDDO
     ENDDO
@@ -1443,9 +1434,9 @@ CONTAINS
                                               leaf_nitrogen_cl, &
                                               fn_chl_cl, &
                                               lai_cl, &
-                                              fract_snow_can, &
-                                              albedo, &               ! out
-                                              sw_srf_net, &
+                                              fract_snow_can, &       ! in
+                                              albedo, &               ! inout
+                                              sw_srf_net, &           ! out
                                               rad_srf_net, &
                                               net_radiation, &
                                               fleaf_sunlit_cl, &
@@ -1495,7 +1486,7 @@ CONTAINS
 
 
     ! ------------------------------------------------------------------------------------------------------------
-    !! code from update_radiation() sections 5.0 to 7.0 of the quincy model
+    !! code from update_radiation() sections 4.0 to 7.0 of the quincy model
 
 
     !> 4.0 calculate albedo and net radiation for total shortwave radiation

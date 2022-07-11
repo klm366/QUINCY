@@ -5,6 +5,9 @@
 .env
 .idea/
 .vscode
+.DS_Store
+__pycache__
+3rdparty
 /doc/html
 /doc/latex
 /public

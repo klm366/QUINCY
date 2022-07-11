@@ -702,7 +702,7 @@ CONTAINS
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
     USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart
-    USE mo_jsb_model_class,           ONLY: t_jsb_model
+    USE mo_jsb_model_class,           ONLY: t_jsb_model, MODEL_QUINCY
     USE mo_jsb_class,                 ONLY: get_model
     USE mo_jsb_grid,                  ONLY: Get_grid
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
@@ -714,6 +714,7 @@ CONTAINS
     USE mo_echam_rad_config,          ONLY: echam_rad_config
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
+    USE mo_jsb_subset,                ONLY: ON_CHUNK
 
     dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
@@ -905,8 +906,10 @@ CONTAINS
 
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
       dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) = dsl4jsb_var2D_onDomain(A2L_, CO2_air) * molarMassDryAir / molarMassCO2
-      IF (model%config%use_quincy) &
-        & dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
+      END SELECT
 
       DEALLOCATE(evapo_act2pot)
 
@@ -934,6 +937,8 @@ CONTAINS
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
+      CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+      CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Run tasks in queue
       CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)

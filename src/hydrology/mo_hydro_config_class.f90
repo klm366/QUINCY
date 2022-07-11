@@ -30,7 +30,8 @@ MODULE mo_hydro_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
     REAL(wp)            :: &
-      & w_skin_max,        & !< Water holding capacity of ground skin reservoir [m water equivalent]
+      & w_skin_max,        & !< Maximum water holding capacity of the soil and canopy skins, as well as
+                             !  maximum snow depth on leaves  [m water equivalent]
       & w_soil_limit,      & !< Upper limit for maximum soil moisture content
       & w_soil_crit_fract, & !< Fraction of field capacity at which soil starts to dry,
                              !  i.e. at which water stress starts to be above zero
@@ -105,7 +106,7 @@ CONTAINS
     bc_filename       = 'bc_land_hydro.nc'  !R: gibts im Moment noch nicht
     ic_filename       = 'ic_land_hydro.nc'  !R: gibts im Moment noch nicht
     bc_sso_filename   = 'bc_land_sso.nc'
-    w_skin_max        = 2.E-4_wp
+    w_skin_max        = 2.E-4_wp            ! 0.2 mm corresponds to Roesch et al. 2001
     w_soil_limit      = -1.0_wp
     w_soil_crit_fract = 0.75_wp
     w_soil_wilt_fract = 0.35_wp
@@ -127,7 +128,7 @@ CONTAINS
     config%bc_sso_filename     = bc_sso_filename
 
     config%w_skin_max          = w_skin_max
-    CALL message(TRIM(routine), 'Maximum content of soil skin reservoir: '//TRIM(real2string(w_skin_max)))
+    CALL message(TRIM(routine), 'Maximum water holding capacity of soil or canopy skin: '//TRIM(real2string(w_skin_max)))
 
     config%w_soil_limit        = w_soil_limit
     CALL message(TRIM(routine), 'Upper limit for maximum soil moisture content: '//TRIM(real2string(w_soil_limit)))

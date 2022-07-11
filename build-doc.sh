@@ -17,16 +17,33 @@ if [[ $# > 0 ]]; then
   esac
 fi
 
+if ! hash python3 2>/dev/null; then
+  echo "python3 not found"
+  exit 1
+fi
+
+if grep 'graph: *true' ${FORD_MD}; then
+  if ! hash dot; then
+    echo "graph: true set in ${FORD_MD} but no installation of graphviz found"
+    exit 1
+  fi
+fi
+
+mkdir 3rdparty || true
+cd 3rdparty
+git clone https://github.com/RMShur/ford.git
+cd ford
+git checkout fix-continuation-lines-with-inline-docu
+git pull --rebase
+pip3 install --user -r requirements.txt
+cd ../..
+
 output_dir=$(grep output_dir project.md | cut -d' ' -f2)
 
-if hash ford 2>/dev/null; then
-  echo "Building documentation ..."
-  mkdir pp_temp$$
-  python3 scripts/dsl4jsb/dsl4jsb.py -n -d src -t pp_temp$$ -k
-  ford $no_search $quiet -d pp_temp$$ ${FORD_MD}
-  find $output_dir -type f -name '*.html' -exec sed -i 's/was developed by/is currently developed by/' '{}' \;
-  rm -rf pp_temp$$
-else
-  echo "FORD not found! Cannot build documentation"
-fi
+echo "Building documentation ..."
+mkdir pp_temp$$
+python3 scripts/dsl4jsb/dsl4jsb.py -n -d src -t pp_temp$$ -k
+python3 ./ford.py $no_search $quiet -d pp_temp$$ ${FORD_MD}
+find $output_dir -type f -name '*.html' -exec sed -i 's/was developed by/is currently developed by/' '{}' \;
+rm -rf pp_temp$$
 
