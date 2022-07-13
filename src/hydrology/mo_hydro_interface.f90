@@ -869,7 +869,6 @@ CONTAINS
 
     USE mo_hydro_constants,        ONLY: NOFLOW_, UPLAND_, LOWLAND_
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
-    USE mo_jsb_process_class,      ONLY: Get_process_id
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     CLASS(t_jsb_tile_abstract), POINTER       :: pft_tile
@@ -1006,20 +1005,6 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          )  &
       & )
-
-    !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
-    !$claw acc parallel loop gang vector
-    DO i = 1, nc
-      IF (max_moist(i) > 0._wp) THEN
-        w_soil_rel(i) = MIN(w_soil_column(i) / max_moist(i), 1._wp)
-          ! @todo - in jsbach3, taking the MIN with 1 is not nessecary. Here, w_soil_column can be larger than
-          ! max_moist (in some places) ... this should be investigated, maybe it has to do with the interpolated input fields
-      ELSE
-        ! max_moist is zero over glaciers
-        w_soil_rel(i) = 0._wp
-      END IF
-    END DO
-    !$claw acc end data
 
     IF (dsl4jsb_Config(HYDRO_)%l_hydrotiles) THEN
       ! TODO First attempt to realize lateral transport between tiles of one grid cell. The actual test case

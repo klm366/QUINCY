@@ -80,9 +80,9 @@ CONTAINS
       CALL pheno_init_q_(tile)                 ! contains code parts of jsbach4 pheno init
     END SELECT
 
-    IF (tile%Is_last_process_tile(PHENO_)) THEN
-        CALL pheno_finalize_init_vars()
-    END IF
+    ! IF (tile%Is_last_process_tile(PHENO_)) THEN
+    !     CALL pheno_finalize_init_vars()
+    ! END IF
 
   END SUBROUTINE pheno_init
 

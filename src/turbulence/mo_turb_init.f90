@@ -62,9 +62,9 @@ CONTAINS
     CALL turb_init_bc(tile)
     CALL turb_init_ic(tile)
 
-    IF (tile%Is_last_process_tile(TURB_)) THEN
-      CALL turb_finalize_init_vars()
-    END IF
+    ! IF (tile%Is_last_process_tile(TURB_)) THEN
+    !   CALL turb_finalize_init_vars()
+    ! END IF
 
   END SUBROUTINE turb_init
 

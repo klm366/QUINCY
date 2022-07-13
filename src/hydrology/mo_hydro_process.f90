@@ -436,7 +436,7 @@ CONTAINS
     & soil_depth_sl, root_depth_sl, fract_org_sl,                                        &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, ws_max_mineral, oro_stddev, t_soil_sl1,           &
-    & water_to_soil, evapotrans_soil, transpiration,                                     &
+    & water_to_soil_tile, evapotrans_soil, transpiration,                                &
     ! inout
     & wtr_soil_sl, ice_soil_sl, tpe_overflow, w_pond,                                    &
     ! out
@@ -460,7 +460,7 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, fract_org_sl,    &
       & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & ws_max_mineral, oro_stddev, t_soil_sl1, water_to_soil, &
+      & ws_max_mineral, oro_stddev, t_soil_sl1, water_to_soil_tile, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & wtr_rootzone, tpe_overflow, w_pond
@@ -482,7 +482,8 @@ CONTAINS
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
       & transpiration_in_m(nc),       & !< transpiration within time step [m]
       & ws_rel(nc),                   & !< relative soil moisture (0: wilting point, 1: field capacity)
-      & infilt(nc)                      !< infiltration [m]
+      & infilt(nc),                   & !< infiltration [m]
+      & water_to_soil(nc)               !< water available at soil surface [m]
 
     REAL(wp) ::              &
       & ws_max(nc),          & ! water holding capacity of the soil [m]
@@ -580,8 +581,10 @@ CONTAINS
 
       ! Add lateral flow from upland tiles
       IF (hydrotiles_type == LOWLAND_) THEN
-          water_to_soil(i) = water_to_soil(i) + 0.9_wp * w_pond(i)
+          water_to_soil(i) = water_to_soil_tile(i) + 0.9_wp * w_pond(i)
           w_pond(i) = 0.1_wp * w_pond(i)
+      ELSE
+          water_to_soil(i) = water_to_soil_tile(i)
       END IF
 
       !>  1.1 Surface runoff and infiltration

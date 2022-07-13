@@ -44,7 +44,7 @@ MODULE mo_jsb_lct_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+  PUBLIC :: LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE, UPLAND_TYPE, LOWLAND_TYPE
   PUBLIC :: max_no_of_lct, t_jsb_lct, Contains_lct
 
   INTEGER, PARAMETER :: max_no_of_lct = 10
@@ -55,7 +55,9 @@ MODULE mo_jsb_lct_class
       & VEG_TYPE,      & !< Vegetated
       & BARE_TYPE,     & !< Bare soil -- currently not used
       & GLACIER_TYPE,  & !< Glacier
-      & LAKE_TYPE        !< Lake
+      & LAKE_TYPE,     & !< Lake
+      & UPLAND_TYPE,   & !< Upland area (source of interal water transport)
+      & LOWLAND_TYPE     !< Lowland area (sink for internal water transport)
   END ENUM
 
    TYPE t_jsb_lct
@@ -177,6 +179,10 @@ CONTAINS
         return_value = 'glac'
       CASE (LAKE_TYPE)
         return_value = 'lake'
+      CASE (UPLAND_TYPE)
+        return_value = 'upland'
+      CASE (LOWLAND_TYPE)
+        return_value = 'lowland'
       END SELECT
     END IF
 
@@ -207,6 +213,10 @@ CONTAINS
         return_value = 'Glacier'
       CASE (LAKE_TYPE)
         return_value = 'Lake'
+      CASE (UPLAND_TYPE)
+        return_value = 'Upland'
+      CASE (LOWLAND_TYPE)
+        return_value = 'Lowland'
       END SELECT
     END IF
 

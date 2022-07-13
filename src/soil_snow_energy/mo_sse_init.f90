@@ -80,9 +80,9 @@ CONTAINS
     CALL sse_init_bc(tile)
     CALL sse_init_ic(tile)
 
-    IF (tile%Is_last_process_tile(SSE_)) THEN
-      CALL sse_finalize_init_vars()
-    END IF
+    ! IF (tile%Is_last_process_tile(SSE_)) THEN
+    !   CALL sse_finalize_init_vars()
+    ! END IF
 
   END SUBROUTINE sse_init
 

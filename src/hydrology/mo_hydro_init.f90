@@ -88,9 +88,9 @@ CONTAINS
     CALL hydro_init_ic(tile)
 
     ! TODO This is not correct if hydro runs on veg tile!
-    IF (tile%Is_last_process_tile(HYDRO_)) THEN
-      CALL hydro_finalize_init_vars()
-    END IF
+    ! IF (tile%Is_last_process_tile(HYDRO_)) THEN
+    !   CALL hydro_finalize_init_vars()
+    ! END IF
 
   END SUBROUTINE hydro_init
 

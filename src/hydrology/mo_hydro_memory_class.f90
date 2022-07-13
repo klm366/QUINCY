@@ -104,7 +104,7 @@ MODULE mo_hydro_memory_class
       & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
       & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
       & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
-      & wtr_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
+      & wtr_rootzone_rel,     & !< Water content of the rootzone relative to the maximum possible amout     [1]
       & w_pond,               & !< Water ponding on the soil surface                                        [m water equivalent]
       & w_latflow               !< Lateral water transport between tiles                                    [kg m-2 s-1]
 

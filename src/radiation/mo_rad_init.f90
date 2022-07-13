@@ -74,9 +74,9 @@ CONTAINS
       CALL rad_init_bc(tile)
       CALL rad_init_ic(tile)
 
-      IF (tile%Is_last_process_tile(RAD_)) THEN
-        CALL rad_finalize_init_vars()
-      END IF
+      ! IF (tile%Is_last_process_tile(RAD_)) THEN
+      !   CALL rad_finalize_init_vars()
+      ! END IF
     CASE (MODEL_QUINCY)
       IF (tile%contains_vegetation) THEN
         CALL rad_init_ic_q_(tile)
