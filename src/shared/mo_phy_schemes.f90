@@ -86,8 +86,7 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
 
     USE mo_jsb_physical_constants, ONLY: &
-      & cpd,       & !< Specific heat of dry air at constant pressure
-      & cpvd1        !< cpv/cpd-1
+      & cvd, cvv !< Specific heats of dry and moist air at constant volume
 
     REAL(wp), INTENT(in) :: &
       & t_srf,                      & !< Surface temperature
@@ -96,7 +95,7 @@ CONTAINS
       !$claw sca routine
 
       ! surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
-      surface_dry_static_energy = t_srf * cpd
+      surface_dry_static_energy = t_srf * ( cvd + (cvv - cvd) * qsat_srf)
 
   END FUNCTION surface_dry_static_energy
 
