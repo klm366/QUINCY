@@ -81,8 +81,8 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_soil_texture
-    LOGICAL  :: l_freeze, l_supercool
+    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map
+    LOGICAL  :: l_freeze, l_supercool, l_soil_texture
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
@@ -121,8 +121,8 @@ CONTAINS
     l_heat_cap_map   = .FALSE.
     l_heat_cond_map  = .FALSE.
     l_soil_texture   = .FALSE.
-    l_freeze         = .FALSE.
-    l_supercool      = .FALSE.
+    l_freeze         = .TRUE.
+    l_supercool      = .TRUE.
     w_soil_critical  = 5.85036E-3_wp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'

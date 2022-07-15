@@ -99,7 +99,7 @@ varlist="glac lake init_moist snow roughness_length albedo elevation
 fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max 
 albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
 soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity 
-moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
+moisture_pot hyd_cond_sat wilting_point bclapp fract_org_sl root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
 
@@ -196,6 +196,12 @@ function generate_gauss_data {
   # sed -i '/info=/s/false/true/' ./jsbach_init_file.ksh
   ./jsbach_init_file.ksh #vg >& /dev/null
   mv jsbach_*.nc ../
+
+  # Add fields from different source
+  if [[ $varlist == *"fract_org_sl"* ]]; then
+    ${cdo} remapycon,${source_res}grid ${pool_prepare}05/wise_som-fract_05deg_jsbsoillayers.nc \
+        ../gauss_${source_res}_fract_org_sl.nc
+  fi
 
 }
 
@@ -294,7 +300,7 @@ function extrapolate_var {
       ;;
     lai_clim | veg_fract | veg_ratio_max | roughness_length_oro | \
     soil_depth | bclapp | soil_field_cap | heat_capacity | heat_conductivity | hyd_cond_sat | \
-    moisture_pot | pore_size_index | soil_porosity | wilting_point )
+    moisture_pot | pore_size_index | soil_porosity | wilting_point | fract_org_sl )
       echo "Extrapolating $var ..."
       ${cdo} setvar,${var} -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc \
              gauss_${source_res}_${var}.nc gauss_${source_res}_${var}_ext.nc
@@ -611,6 +617,7 @@ function generate_output_files {
   ${cdo} merge \
       ${grid_name}_soil_depth_remap.nc \
       ${grid_name}_root_depth_remap.nc \
+      ${grid_name}_fract_org_sl_remap.nc \
       ${grid_name}_bclapp_remap.nc \
       ${grid_name}_soil_field_cap_remap.nc \
       ${grid_name}_heat_capacity_remap.nc \
@@ -621,7 +628,6 @@ function generate_output_files {
       ${grid_name}_soil_porosity_remap.nc \
       ${grid_name}_wilting_point_remap.nc \
       ${grid_name}_fao_remap.nc \
-      ${grid_name}_maxmoist_remap.nc \
       ${outfile}
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
@@ -713,6 +719,8 @@ function modify_soil_and_root_depth {
 
   local soil_depth=${grid_name}_soil_depth_remap.nc
   local root_depth=${grid_name}_root_depth_remap.nc
+  local maxmoist=${grid_name}_maxmoist_remap.nc
+  local soil_field_cap=${grid_name}_soil_field_cap_remap.nc
 
   local temp=temp_$$
 
@@ -730,12 +738,8 @@ function modify_soil_and_root_depth {
   ${cdo} add ${temp}_soil_depth_EQ.nc ${temp}_soil_depth_NH.nc ${temp}_soil_depth_EQ_NH.nc
   ${cdo} add ${temp}_soil_depth_EQ_NH.nc ${temp}_soil_depth_SH.nc ${temp}_soil_depth_all.nc
 
-  # root depth
-  ${cdo} mulc,0.7 -mul ${root_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_root_depth_EQ.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_root_depth_NH.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_root_depth_SH.nc
-  ${cdo} add ${temp}_root_depth_EQ.nc ${temp}_root_depth_NH.nc ${temp}_root_depth_EQ_NH.nc
-  ${cdo} add ${temp}_root_depth_EQ_NH.nc ${temp}_root_depth_SH.nc ${temp}_root_depth_all.nc
+  # compute root depth based on maximum root zone moisture and field capacity
+  ${cdo} -setname,root_depth -div ${maxmoist} ${soil_field_cap} ${temp}_root_depth_all.nc
 
   # keep minimum values (0.3m for root depth and 0.5m for soil depth)
   ${cdo} gtc,0.5 ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc

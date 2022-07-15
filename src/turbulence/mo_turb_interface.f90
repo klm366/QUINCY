@@ -413,19 +413,19 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: &
-      & fract_fpc,            &
-      & fract_snow,           &
-      & fract_wet,            &
-      & weq_rootzone_max,     &
-      & wtr_rootzone,         &
-      & fact_q_air,           &
-      & fact_qsat_srf,        &
-      & fact_qsat_trans_srf,  &
-      & qsat_star,            &
-      & canopy_cond_limited,  &
-      & pch,                  &
-      & wind_air,             &
+    dsl4jsb_Real2D_onChunk ::   &
+      & fract_fpc,              &
+      & fract_snow,             &
+      & fract_wet,              &
+      & wtr_rootzone_avail_max, &
+      & wtr_rootzone_avail,     &
+      & fact_q_air,             &
+      & fact_qsat_srf,          &
+      & fact_qsat_trans_srf,    &
+      & qsat_star,              &
+      & canopy_cond_limited,    &
+      & pch,                    &
+      & wind_air,               &
       & q_air
 
     dsl4jsb_Real3D_onChunk :: &
@@ -489,13 +489,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)       ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
     IF (tile%contains_soil) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)           ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  weq_rootzone_max)    ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone)        ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)         ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)      ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)     ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)              ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)              ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
     END IF
 
     ! ---------------------------
@@ -515,7 +515,7 @@ CONTAINS
       ELSE
         w_soil_wilt_fract_tmp = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
         !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_1 tile_name=tile%name
-        mask(:) = wtr_rootzone(:) > w_soil_wilt_fract_tmp * weq_rootzone_max(:)
+        mask(:) = wtr_rootzone_avail(:) > w_soil_wilt_fract_tmp * wtr_rootzone_avail_max(:)
       END IF
 
       !$claw acc data present(fract_snow,fract_wet,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)

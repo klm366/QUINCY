@@ -123,39 +123,28 @@ MODULE mo_hydro_memory_class
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity
                                 !! (derived from volumetric field capacity, reduced by ice)                 [m]
-      & wtr_soil_pwp_sl         !< Water content of soil layers at permanent wilting point
+      & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point
                                 !! (derived from vol. perm wilt point, reduced relative to ice content)     [m]
-
-    ! quincy_jsbach: will be removed and re-implemented>>>
-    TYPE(t_jsb_var_real3d) :: &
-      & soil_wpot_sl,         & !< soil water potential per layer [MPa]    
-      & saxtonA,              & !< coefficient in moisture-tension relationship
-      & saxtonB,              & !< coefficient in moisture-tension relationship
-      & saxtonC                 !< exponent of moisture-conductivity relationship
-    ! quincy_jsbach<<<
+      & wtr_soil_pot_scool_sl   !< Potentially supercooled water in soil layer                              [m]
 
     ! Additional variables for PFT lct_type
 
     ! Parameters
-    TYPE(t_jsb_var_real3d) :: &
-      & root_depth_sl           !< Rooted depth per soil layer (until rooting depth) [m]
-    TYPE(t_jsb_var_real2d) :: &
-      & root_depth,           & !< Rooting depth [m]
-      & fract_snow_can,       & !< Snow fraction on canopy                                                  []
-      & weq_snow_can,         & !< Snow amount on canopy                                                    [m water equivalent]
-      & water_stress,         & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
-      & canopy_cond_unlimited,& !< Canopy conductance without water limit  [m/s] (mean value)
-      & canopy_cond_limited,  & !< Canopy conductance with water limit [m/s] (mean value)
-      & transpiration           !< Transpiration
-
-    ! quincy_jsbach: will be removed and re-implemented>>>
-    ! quincy - Soil Water addons for QUINCY in HYDRO
-    TYPE(t_jsb_var_real2d) :: &
-      & wtr_rootzone_fc,      & !< Water content at field capacity in root zone of the soil                 [m]
-      & wtr_rootzone_pwp,     & !< Water content at permanent wilting point in root zone of the soil        [m]
-      & wtr_rootzone_theta,   & !< root zone integrated plant available water, fraction of maximum 
-      & rootzone_wpot           !< soil water potential [MPa]
-    ! quincy_jsbach<<<
+    TYPE(t_jsb_var_real3d) ::   &
+      & root_depth_sl             !< Rooted depth per soil layer (until rooting depth) [m]
+    TYPE(t_jsb_var_real2d) ::   &
+      & root_depth,             & !< Rooting depth [m]
+      & fract_snow_can,         & !< Snow fraction on canopy                                                  []
+      & weq_snow_can,           & !< Snow amount on canopy                                                    [m water equivalent]
+      & ice_rootzone,           & !< Frozen water content of the root zone                                    [m water equivalent]
+      & wtr_rootzone_scool_pot, & !< Potential amount of suppercooled water in the root zone                  [m]
+      & wtr_rootzone_scool_act, & !< Suppercooled water content in root zone                                  [m]
+      & wtr_rootzone_avail,     & !< Plant available water content in root zone                               [m]
+      & wtr_rootzone_avail_max, & !< Maximum plant available water content in the root zone                   [m]
+      & water_stress,           & !< Water stress factor of canopy                        (1: no water stress, 0: infinite stress)
+      & canopy_cond_unlimited,  & !< Canopy conductance without water limit  [m/s] (mean value)
+      & canopy_cond_limited,    & !< Canopy conductance with water limit [m/s] (mean value)
+      & transpiration             !< Transpiration
 
     ! Additional variables for GLACIER lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -183,7 +172,7 @@ MODULE mo_hydro_memory_class
       wtr_rootzone_rel_gmean, & !< Global mean relative rootzone moisture   [1]
       fract_snow_gsum,        & !< Global snow area on non-glacier land     [Mio m2]
       weq_snow_gsum,          & !< Global snow amount on non-glacier land   [Gt]
-      weq_balance_err_gsum      !< Global land water balance error          [m3]
+      weq_balance_err_gsum      !< Global water balance error sum           [m3/timestep]
 
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
@@ -219,10 +208,6 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_w  ! Vertical grids
 
-    ! quincy_jsbach: will be removed and re-implemented>>>
-    TYPE(t_jsb_vgrid), POINTER :: vgrid_soil_sb    ! Vertical grid
-    ! quincy_jsbach<<<
-
     INTEGER :: table
     TYPE(t_grib2) :: grib2_desc
 
@@ -237,10 +222,6 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     soil_w       => Get_vgrid('soil_depth_water')
-
-    ! quincy_jsbach: will be removed and re-implemented>>>
-    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
-    ! quincy_jsbach<<<
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -336,13 +317,13 @@ CONTAINS
       & loutput=.TRUE., output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'ws_negative', mem%ws_negative,                        &
-      & hgrid, surface,                                                      &
-      & t_cf('ws_negative', 'kg m-2', 'negative soil water'),                &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & loutput=.TRUE., output_level=BASIC,                                  &
+    CALL mem%Add_var( 'ws_negative', mem%ws_negative,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('ws_negative', 'kg m-2', 'negative soil water'),                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & loutput=.TRUE., output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
@@ -393,12 +374,12 @@ CONTAINS
       & initval_r=0.0_wp )
 
     IF (jsbach_runs_standalone()) THEN
-      CALL mem%Add_var( 'elevation', mem%elevation,                                    &
-        & hgrid, surface,                                                              &
-        & t_cf('elevation', 'm', 'Mean orography'),                                    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE.,                                                            &
+      CALL mem%Add_var( 'elevation', mem%elevation,                                  &
+        & hgrid, surface,                                                            &
+        & t_cf('elevation', 'm', 'Mean orography'),                                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & lrestart=.FALSE.,                                                          &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
     END IF
 
@@ -504,7 +485,7 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
           & prefix, suffix,                                                          &
           & lrestart=.TRUE.,                                                         &
-          & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+          & initval_r=0.0_wp )
       END IF
 
       CALL mem%Add_var( 'weq_rootzone_max', mem%weq_rootzone_max,                    &
@@ -581,7 +562,7 @@ CONTAINS
 
       CALL mem%Add_var( 'bclapp', mem%bclapp,                                  &
         & hgrid, surface,                                                      &
-        & t_cf('bclapp_sl', '', 'Clapp and Hornberger (1978) exponent b'),     &
+        & t_cf('bclapp', '', 'Clapp and Hornberger (1978) exponent b'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -593,7 +574,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'matrix_pot', mem%matrix_pot,                          &
         & hgrid, surface,                                                      &
@@ -625,7 +606,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                         &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        & initval_r=0.0_wp )
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,211, grib_bits)
@@ -705,12 +686,22 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
+
       CALL mem%Add_var( 'wtr_rootzone', mem%wtr_rootzone,                      &
         & hgrid, surface,                                                      &
         & t_cf('wtr_rootzone', 'm', 'Liquid water content of the root zone'),  &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'ice_rootzone', mem%ice_rootzone,                                &
+        & hgrid, surface,                                                                &
+        & t_cf('ice_rootzone', 'm water equivalent', 'Ice content in the root zone'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
+        & lrestart=.FALSE.,                                                              &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_soil_sl', mem%wtr_soil_sl,                        &
@@ -770,57 +761,20 @@ CONTAINS
         & loutput=.TRUE.,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'wtr_soil_pot_scool_sl', mem%wtr_soil_pot_scool_sl,                   &
+        & hgrid, soil_w,                                                                      &
+        & t_cf('wtr_soil_pot_scool_sl', 'm', 'Potentially supercooled water on soil layers'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
+        & prefix, suffix,                                                                     &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
         & hgrid, surface,                                                                &
         & t_cf('wtr_rootzone_rel', '-', 'Relative root zone moisture'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
         & initval_r=0.0_wp )
-
-      ! quincy_jsbach: will be removed and re-implemented>>>
-      CALL mem%Add_var('soil_wpot_sl', mem%soil_wpot_sl,                                 &
-        & hgrid, vgrid_soil_sb,                                                          &
-        & t_cf('soil_wpot_sl', 'MPa', 'soil water potential per layer'),                 &
-        & t_grib1(table, 255, grib_bits),                                                &
-        & t_grib2(255, 255, 255, grib_bits),                                             &
-        & prefix, suffix,                                                                &
-        & loutput = .TRUE.,                                                              &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('saxtonA', mem%saxtonA,                                           &
-        & hgrid, vgrid_soil_sb,                                                          &
-        & t_cf('saxtonA', '', 'coefficient in moisture-tension relationship'),           &
-        & t_grib1(table, 255, grib_bits),                                                &
-        & t_grib2(255, 255, 255, grib_bits),                                             &
-        & prefix, suffix,                                                                &
-        & loutput = .TRUE.,                                                              &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('saxtonB', mem%saxtonB,                                           &
-        & hgrid, vgrid_soil_sb,                                                          &
-        & t_cf('saxtonB', '', 'coefficient in moisture-tension relationship'),           &
-        & t_grib1(table, 255, grib_bits),                                                &
-        & t_grib2(255, 255, 255, grib_bits),                                             &
-        & prefix, suffix,                                                                &
-        & loutput = .TRUE.,                                                              &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('saxtonC', mem%saxtonC,                                           &
-        & hgrid, vgrid_soil_sb,                                                          &
-        & t_cf('saxtonC', '', 'exponent of moisture-conductivity relationship'),         &
-        & t_grib1(table, 255, grib_bits),                                                &
-        & t_grib2(255, 255, 255, grib_bits),                                             &
-        & prefix, suffix,                                                                &
-        & loutput = .TRUE.,                                                              &
-        & initval_r = 0.0_wp)
-
-!vg       CALL mem%Add_var('weq_soil_rel', mem%weq_soil_rel,                            &
-!vg         &  hgrid, surface,                                                          &
-!vg         &  t_cf('water_soil_relative', '', ''),                                     &
-!vg         &  t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),       &
-!vg         & prefix, suffix,                                                           &
-!vg         & initval_r=0.0_wp )
-      ! quincy_jsbach<<<
 
     END IF
 
@@ -861,24 +815,39 @@ CONTAINS
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      ! quincy_jsbach: will be removed and re-implemented>>>
-      CALL mem%Add_var( 'wtr_rootzone_fc', mem%wtr_rootzone_fc,                          &
-        & hgrid, surface,                                                                &
-        & t_cf('wtr_rootzone_fc', 'm', 'Root zone water content at field capacity'),     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-        & prefix, suffix,                                                                &
-        & lrestart=.FALSE.,                                                              &
-        & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      CALL mem%Add_var( 'wtr_rootzone_scool_pot', mem%wtr_rootzone_scool_pot,                        &
+        & hgrid, surface,                                                                            &
+        & t_cf('wtr_rootzone_scool_pot', 'm', 'Potentially supercooled water content in root zone'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
+        & prefix, suffix,                                                                            &
+        & lrestart=.FALSE.,                                                                          &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'wtr_rootzone_pwp', mem%wtr_rootzone_pwp,                        &
+      CALL mem%Add_var( 'wtr_rootzone_scool_act', mem%wtr_rootzone_scool_act,            &
         & hgrid, surface,                                                                &
-        & t_cf('wtr_rootzone_pwp', 'm',                                                  &
-        &      'Root zone water content at permanent wilting point'),                    &
+        & t_cf('wtr_rootzone_scool_act', 'm', 'Supercooled water content in root zone'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & lrestart=.FALSE.,                                                              &
-        & loutput=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-      ! quincy_jsbach<<<
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_rootzone_avail', mem%wtr_rootzone_avail,                    &
+        & hgrid, surface,                                                                &
+        & t_cf('wtr_rootzone_avail', 'm', 'Plant available water content in root zone'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
+        & prefix, suffix,                                                                &
+        & output_level=BASIC,                                                            &
+        & lrestart=.FALSE.,                                                              &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'wtr_rootzone_avail_max', mem%wtr_rootzone_avail_max,                        &
+        & hgrid, surface,                                                                            &
+        & t_cf('wtr_rootzone_avail_max', 'm', 'Maximum plant available water content in root zone'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                         &
+        & prefix, suffix,                                                                            &
+        & output_level=BASIC,                                                                        &
+        & lrestart=.FALSE.,                                                                          &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'water_stress', mem%water_stress,                                &
         & hgrid, surface,                                                                &
@@ -887,7 +856,7 @@ CONTAINS
         & prefix, suffix,                                                                &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp )
 
-     IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
+      IF (.NOT. dsl4jsb_Config(ASSIMI_)%active) THEN
         CALL mem%Add_var( 'canopy_cond_unlimited', mem%canopy_cond_unlimited,            &
           & hgrid, surface,                                                              &
           & t_cf('canopy_cond_unlimited', 'm/s',                                         &
@@ -914,30 +883,6 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    ! quincy_jsbach: will be removed and re-implemented>>>
-    !vg: same as wtr_rootzone_rel???
-      CALL mem%Add_var('wtr_rootzone_theta', mem%wtr_rootzone_theta, &
-        & hgrid, surface, &
-        & t_cf('wtr_rootzone_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      !vg: Same as matrix_potential???
-      CALL mem%Add_var('rootzone_wpot', mem%rootzone_wpot, &
-        & hgrid, surface, &
-        & t_cf('rootzone_wpot', 'MPa', 'soil water potential'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-    ! quincy_jsbach<<<
- 
     END IF
 
     ! Additional variables for GLACIER lct
@@ -947,7 +892,7 @@ CONTAINS
 
       CALL mem%Add_var( 'fract_snow_glac', mem%fract_snow_glac,                          &
         & hgrid, surface,                                                                &
-        & t_cf('fract_snow_glac', '-', 'Snow frction on glacier'),                       &
+        & t_cf('fract_snow_glac', '-', 'Snow fraction on glacier'),                      &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &

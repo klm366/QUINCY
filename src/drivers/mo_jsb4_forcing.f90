@@ -113,7 +113,6 @@ MODULE mo_jsb4_forcing
   REAL(wp), PARAMETER :: ckap = 0.4_wp
 
   CHARACTER(len=*), PARAMETER :: name_of_unit_attribute = 'units'
-!<<<<<<<
 
   ! expected varnames in forcing files
   CHARACTER(len=*), PARAMETER :: max_temp_varname = 'tmax'

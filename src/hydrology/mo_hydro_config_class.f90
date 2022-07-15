@@ -43,7 +43,8 @@ MODULE mo_hydro_config_class
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
-      & l_soil_texture,      & !< deduce soil hydrological parameters from soil texture
+      & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
+      & l_soil_texture,      & !< Deduce soil hydrological parameters from soil texture
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero        !< Allow infiltration at soil temperatures below 0°C
   CONTAINS
@@ -69,7 +70,7 @@ CONTAINS
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
-    LOGICAL                     :: l_organic, l_soil_texture, l_glac_in_soil
+    LOGICAL                     :: l_organic, l_socmap, l_soil_texture, l_glac_in_soil
     LOGICAL                     :: l_infil_subzero
 
     NAMELIST /jsb_hydro_nml/        &
@@ -84,6 +85,7 @@ CONTAINS
       & snow_depth_max,             &
       & scheme_stom_cond,           &
       & l_organic,                  &
+      & l_socmap,                   &
       & l_soil_texture,             &
       & l_glac_in_soil,             &
       & l_infil_subzero
@@ -111,7 +113,8 @@ CONTAINS
     w_soil_wilt_fract = 0.35_wp
     snow_depth_max    = -1.0_wp             ! -1: no limitation
     scheme_stom_cond  = 'echam5'
-    l_organic         = .FALSE.
+    l_organic         = .TRUE.
+    l_socmap          = .TRUE.
     l_soil_texture    = .FALSE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
@@ -148,11 +151,16 @@ CONTAINS
     config%l_organic           = l_organic
     IF (l_organic) CALL message(TRIM(routine), 'Using organic component in soil hydrology')
 
+    config%l_socmap = l_socmap
+    IF (l_socmap .AND. l_organic) &
+      & CALL message(TRIM(routine), 'Replacing organic carbon fractions with map from bc file: ' //TRIM(logical2string(l_socmap)))
+
     config%l_soil_texture      = l_soil_texture
     IF (l_soil_texture) CALL message(TRIM(routine), 'Using soil texture in soil hydrology')
 
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
+    IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
     CALL close_nml(nml_handler)
 

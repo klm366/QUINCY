@@ -154,6 +154,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_freeze_sl
     dsl4jsb_Real3D_onChunk :: ice_melt_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
@@ -251,6 +252,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)      ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_freeze_sl)    ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_melt_sl)      ! out
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
 
@@ -487,7 +489,8 @@ CONTAINS
         & ice_soil_sl                         (:,:), &
         ! optional, out
         & wtr_freeze_sl                       (:,:), &
-        & ice_melt_sl                         (:,:)  &
+        & ice_melt_sl                         (:,:), &
+        & wtr_soil_pot_scool_sl               (:,:)  &
         & )
       !$claw acc exit data delete(ws_max_sl)
       DEALLOCATE(ws_max_sl)
@@ -555,11 +558,12 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(SSE_,   t_snow_bcoef,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(SSE_,   t_snow,           weighted_by_fract)
     END IF
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_freeze_sl,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_freeze_sl,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,             weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -568,7 +572,11 @@ CONTAINS
   SUBROUTINE update_soil_and_snow_properties(tile, options)
 
     USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min ! , cs
-    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, hcond_ice, hcond_snow, hcond_snow_min !, vol_hcap_snow_min
+
+    USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, vol_hcap_org_top, vol_hcap_org_below, &
+                                       & hcond_ice, hcond_snow, hcond_snow_min, &
+                                       & hcond_org_top, hcond_dry_org_top, hcond_org_below, hcond_dry_org_below !, vol_hcap_snow_min
+    USE mo_hydro_constants,        ONLY: vol_porosity_org_top, vol_porosity_org_below
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -607,9 +615,13 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: & 
-      & vol_heat_cap_tmp,                    & 
+      & vol_heat_cap_tmp,                    &
+      & vol_heat_cap_org_tmp,                & 
       & soil_e_dz_tmp,                       &
-      & heat_cond_tmp
+      & vol_porosity_org_tmp,                & 
+      & heat_cond_tmp,                       & 
+      & hcond_org_tmp,                       & 
+      & hcond_dry_org_tmp
 
     INTEGER  :: iblk, ics, ice, nc, i, j
     INTEGER  :: nsoil
@@ -703,28 +715,35 @@ CONTAINS
       END DO
       !$claw acc end data
 
-      ALLOCATE(vol_heat_cap_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
-      !$claw acc enter data pcreate(vol_heat_cap_tmp,soil_e_dz_tmp)
+      ALLOCATE(vol_heat_cap_tmp(nc,nsoil), vol_heat_cap_org_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
+      !$claw acc enter data pcreate(vol_heat_cap_tmp,vol_heat_cap_org_tmp,soil_e_dz_tmp)
       !$claw acc update host(vol_heat_cap(:))
       vol_heat_cap_tmp(:,:) = SPREAD( vol_heat_cap(:), DIM=2, ncopies=nsoil)
+
+      vol_heat_cap_org_tmp(:,1) = vol_hcap_org_top
+      DO j = 2, nsoil
+        vol_heat_cap_org_tmp(:,j) = vol_hcap_org_below
+      END DO
+      
       soil_e_dz_tmp(:,:) = SPREAD( soil_e%dz(:), DIM=1, ncopies=nc)
-      !$claw acc update device(vol_heat_cap_tmp,soil_e_dz_tmp)
+      !$claw acc update device(vol_heat_cap_tmp,vol_heat_cap_org_tmp,soil_e_dz_tmp)
  
       !$claw expand parallel update savepoint=ser_jsb_sse_calc_vol_heat_capacity_1 tile_name=tile%name
       vol_heat_cap_sl (:,:) = calc_vol_heat_capacity( &
-        !&                        SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil)             , &
-        &                                vol_heat_cap_tmp(:,:)                                              , &
-        &                                vol_porosity_sl(:,:)                                               , &
-        &                                fract_org_sl(:,:)                                                  , &
-        &                                fract_water(:,:), &
-        &                                fract_ice  (:,:), &
-        &                                soil_depth_sl(:,:)                                                 , &
-        !&                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
-        &                                soil_e_dz_tmp(:,:)                                                   &
+        !&                        SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil) , &
+        &                                vol_heat_cap_tmp(:,:)     , &
+        &                                vol_heat_cap_org_tmp(:,:) , &
+        &                                vol_porosity_sl(:,:)      , &
+        &                                fract_org_sl(:,:)         , &
+        &                                fract_water(:,:)          , &
+        &                                fract_ice  (:,:)          , &
+        &                                soil_depth_sl(:,:)        , &
+        !&                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc) &
+        &                                soil_e_dz_tmp(:,:)          &
         & )
       
-      !$claw acc exit data delete(fract_water,fract_ice,vol_heat_cap_tmp,soil_e_dz_tmp)
-      DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, soil_e_dz_tmp)
+      !$claw acc exit data delete(fract_water,fract_ice,vol_heat_cap_tmp, vol_heat_cap_org_tmp,soil_e_dz_tmp)
+      DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, vol_heat_cap_org_tmp, soil_e_dz_tmp)
     ELSE
       !$claw acc data present(vol_heat_cap_sl,vol_heat_cap)
       !$claw acc parallel loop gang vector collapse(2)
@@ -738,12 +757,23 @@ CONTAINS
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
       
-      ALLOCATE(heat_cond_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
-      !$claw acc enter data pcreate(heat_cond_tmp,soil_e_dz_tmp)
+      ALLOCATE(heat_cond_tmp(nc,nsoil), vol_porosity_org_tmp(nc,nsoil), &
+             & hcond_org_tmp(nc,nsoil), hcond_dry_org_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
+      !$claw acc enter data pcreate(heat_cond_tmp,vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp,soil_e_dz_tmp)
       !$claw acc update host(heat_cond(:))
       heat_cond_tmp(:,:) = SPREAD( heat_cond(:), DIM=2, ncopies=nsoil)
+
+      vol_porosity_org_tmp(:,1)   = vol_porosity_org_top
+      hcond_org_tmp(:,1)          = hcond_org_top
+      hcond_dry_org_tmp(:,1)      = hcond_dry_org_top
+      DO j = 2, nsoil
+        vol_porosity_org_tmp(:,j) = vol_porosity_org_below
+        hcond_org_tmp(:,j)        = hcond_org_below
+        hcond_dry_org_tmp(:,j)    = hcond_dry_org_below
+      END DO
+
       soil_e_dz_tmp(:,:) = SPREAD( soil_e%dz(:), DIM=1, ncopies=nc)
-      !$claw acc update device(heat_cond_tmp, soil_e_dz_tmp)
+      !$claw acc update device(heat_cond_tmp,vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp,soil_e_dz_tmp)
 
       !$claw expand parallel update savepoint=ser_jsb_sse_calc_thermal_conductivity_1 tile_name=tile%name
       heat_cond_sl (:,:) = calc_thermal_conductivity( &
@@ -754,13 +784,16 @@ CONTAINS
         &                                vol_porosity_sl(:,:)                                               , &
         &                                vol_field_cap_sl(:,:)                                              , &
         &                                fract_org_sl(:,:)                                                  , &
+        &                                vol_porosity_org_tmp(:,:)                                          , &
+        &                                hcond_org_tmp(:,:)                                                 , &
+        &                                hcond_dry_org_tmp(:,:)                                             , &
         &                                soil_depth_sl(:,:)                                                 , &
         &                                soil_e_dz_tmp(:,:)                                                   &
         !&                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
         & )
 
-      !$claw acc exit data delete(heat_cond_tmp,soil_e_dz_tmp)
-      DEALLOCATE(heat_cond_tmp, soil_e_dz_tmp)
+      !$claw acc exit data delete(heat_cond_tmp,vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp,soil_e_dz_tmp)
+      DEALLOCATE(heat_cond_tmp, vol_porosity_org_tmp,hcond_org_tmp, hcond_dry_org_tmp, soil_e_dz_tmp)
     ELSE
       !$claw acc data present(heat_cond_sl,heat_cond)
       !$claw acc parallel loop gang vector collapse(2)
