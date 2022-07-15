@@ -44,7 +44,7 @@ case `hostname` in
     ;;
 esac
 
-debug=false             # true/false
+debug=false   # true/false
 debug_remap_scheme=nn
 
 pool_prepare=/pool/data/JSBACH/prepare/                   # pool directory with data needed for initial file generation
@@ -95,7 +95,7 @@ varlist="glac lake init_moist snow roughness_length albedo elevation
 fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max 
 albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
 soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity 
-moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
+moisture_pot hyd_cond_sat wilting_point bclapp fract_org_sl root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
 
@@ -114,6 +114,14 @@ set +u
 . ${MODULESHOME}/init/bash
 module unload cdo nco netcdf nag
 case `hostname` in
+  levante*)
+    module unload netcdf-c
+    module load cdo/2.0.5-gcc-11.2.0
+    module load nco/5.0.6-gcc-11.2.0
+    module load netcdf-c/4.8.1-gcc-11.2.0
+    module load nag/7.1-gcc-11.2.0
+    module list
+    ;;
   mlogin*|mistralpp*)
     module load cdo/1.9.6-magicsxx-gcc64
     module load nco/4.6.7-gcc48
@@ -194,6 +202,12 @@ function generate_gauss_data {
   ./jsbach_init_file.ksh #vg >& /dev/null
   mv jsbach_*.nc ../
 
+  # Add fields from different source
+  if [[ $varlist == *"fract_org_sl"* ]]; then
+    ${cdo} remapycon,${source_res}grid ${pool_prepare}05/wise_som-fract_05deg_jsbsoillayers.nc \
+        ../gauss_${source_res}_fract_org_sl.nc
+  fi
+
 }
 
 function generate_land_sea_mask {
@@ -257,7 +271,7 @@ function extrapolate_var {
       ;;
     lai_clim | veg_fract | veg_ratio_max | roughness_length_oro | \
     soil_depth | bclapp | soil_field_cap | heat_capacity | heat_conductivity | hyd_cond_sat | \
-    moisture_pot | pore_size_index | soil_porosity | wilting_point )
+    moisture_pot | pore_size_index | soil_porosity | wilting_point | fract_org_sl )
       echo "Extrapolating $var ..."
       ${cdo} setvar,${var} -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc \
              gauss_${source_res}_${var}.nc gauss_${source_res}_${var}_ext.nc
@@ -422,9 +436,11 @@ function remap_var {
   #     ${cdo} gec,0.5 ${grid_name}_glac_remap.nc ${temp}
   #     mv ${temp} ${grid_name}_glac_remap.nc
   # fi
-  # Copy attributes
-  [[ -f gauss_${source_res}_${var}.nc ]] && \
+  # Copy attributes but delete CDI_grid_type otherwise it messes up icon grid files (only necessary with new nco version on levante)
+  if [ -f gauss_${source_res}_${var}.nc ]; then
       ncks -A -C -H -v ${var} gauss_${source_res}_${var}.nc ${grid_name}_${var}_remap.nc >& /dev/null
+      ncatted -O -a CDI_grid_type,,d,, ${grid_name}_${var}_remap.nc >& /dev/null
+  fi
   [[ -f ${grid_name}_${var}_remap.nc ]] && debug_file ${grid_name}_${var}_remap.nc
   return 0
 }
@@ -433,10 +449,10 @@ function pseudo_remap_var {
 
   local var=$1     # Variable name
 
-  [[ ! -f ${grid_name}_notsea.nc ]] && cdo setvar,notsea gauss_${grid_name}_slm.nc ${grid_name}_notsea.nc
+  [[ ! -f ${grid_name}_notsea.nc ]] && ${cdo} setvar,notsea gauss_${grid_name}_slm.nc ${grid_name}_notsea.nc
   if [[ ${var} == oro* ]]; then
   	VAR=$(echo ${var} | tr -s 'a-z' 'A-Z')
-	  cdo -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
+	  ${cdo} -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
   else 
 	  ln -s gauss_${grid_name}_${var}.nc ${grid_name}_${var}_remap.nc
   fi
@@ -470,6 +486,7 @@ function generate_fractions {
   ${cdo} setvar,land -mul ${grid_name}_notsea.nc ${grid_name}_fract_land.nc ${grid_name}_land.nc
   ncatted -a long_name,land,m,c,'Fraction of land' ${grid_name}_land.nc
   debug_file ${grid_name}_land.nc
+
   # Generate PFT fractions
   local i=1
   for npfts in $npfts_list
@@ -503,7 +520,6 @@ function generate_fractions {
       done        
     fi
   done
-
 }
 
 function crosscheck_vars {
@@ -603,6 +619,7 @@ function generate_output_files {
   ${cdo} merge \
       ${grid_name}_soil_depth_remap.nc \
       ${grid_name}_root_depth_remap.nc \
+      ${grid_name}_fract_org_sl_remap.nc \
       ${grid_name}_bclapp_remap.nc \
       ${grid_name}_soil_field_cap_remap.nc \
       ${grid_name}_heat_capacity_remap.nc \
@@ -613,7 +630,6 @@ function generate_output_files {
       ${grid_name}_soil_porosity_remap.nc \
       ${grid_name}_wilting_point_remap.nc \
       ${grid_name}_fao_remap.nc \
-      ${grid_name}_maxmoist_remap.nc \
       ${outfile}
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
@@ -690,8 +706,8 @@ function generate_frac_output_files {
           ${grid_name}_glac.nc \
           ${outfile}
     fi
-    cdo showattribute,comment ${input_file} | tail -n +2 > comment.txt
-    cdo setattribute,FILE=comment.txt ${outfile} ${temp} && mv ${temp} ${outfile}
+    comment=$(cdo -s showattribute,comment ${input_file} | sed -e 's/\\n//g' -e 's/\"//g' | tr '\n' '; ' | tr -s " " | cut -d "=" -f2)
+    ${cdo} setattribute,comment="${comment}" ${outfile} ${temp} && mv ${temp} ${outfile}
     rm comment.txt
 
     #ncrename -d cell,ncells ${outfile} >& /dev/null
@@ -705,6 +721,8 @@ function modify_soil_and_root_depth {
 
   local soil_depth=${grid_name}_soil_depth_remap.nc
   local root_depth=${grid_name}_root_depth_remap.nc
+  local maxmoist=${grid_name}_maxmoist_remap.nc
+  local soil_field_cap=${grid_name}_soil_field_cap_remap.nc
 
   local temp=temp_$$
 
@@ -722,12 +740,8 @@ function modify_soil_and_root_depth {
   ${cdo} add ${temp}_soil_depth_EQ.nc ${temp}_soil_depth_NH.nc ${temp}_soil_depth_EQ_NH.nc
   ${cdo} add ${temp}_soil_depth_EQ_NH.nc ${temp}_soil_depth_SH.nc ${temp}_soil_depth_all.nc
 
-  # root depth
-  ${cdo} mulc,0.7 -mul ${root_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_root_depth_EQ.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_root_depth_NH.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_root_depth_SH.nc
-  ${cdo} add ${temp}_root_depth_EQ.nc ${temp}_root_depth_NH.nc ${temp}_root_depth_EQ_NH.nc
-  ${cdo} add ${temp}_root_depth_EQ_NH.nc ${temp}_root_depth_SH.nc ${temp}_root_depth_all.nc
+  # compute root depth based on maximum root zone moisture and field capacity
+  ${cdo} -setname,root_depth -div ${maxmoist} ${soil_field_cap} ${temp}_root_depth_all.nc
 
   # keep minimum values (0.3m for root depth and 0.5m for soil depth)
   ${cdo} gtc,0.5 ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc
@@ -868,7 +882,7 @@ do
   cd mpiesm-landveg
   git config core.sparseCheckout true
   echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
-  git checkout 83462fbc
+  git checkout 5fd38a895
   mv contrib/initial_tarfiles/ ..
   cd ../initial_tarfiles
   rm -rf ../mpiesm-landveg

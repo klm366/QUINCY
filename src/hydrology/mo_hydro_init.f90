@@ -740,20 +740,15 @@ CONTAINS
         & fill_array=hydro_init_vars%vol_p_wilt)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-      CALL input_file%Close()
-
-    END IF
-
-    IF (tile%contains_vegetation) THEN
-
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
-
-      ptr_2D => input_file%Read_2d(   &
-        & variable_name='root_depth', &
-        & fill_array = hydro_init_vars%root_depth)
-!vg: Wollen wir das??
-      hydro_init_vars%root_depth = MAX(0.1_wp, MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp))           ! min root_depth is 0.1 m, consistent with soil_depth
-      hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)  ! Temporary fix (root depth sometimes larger then soil depth)
+      ! Read soil organic carbon fractions for each soil layer
+      IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+        DO isoil=1,nsoil
+          ptr_3D => input_file%Read_2d_extdim( &
+            & variable_name='fract_org_sl',     &
+            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
+          hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+        END DO
+      END IF
 
       CALL input_file%Close()
 
@@ -841,11 +836,6 @@ CONTAINS
       dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl) = soil_depth_to_layers_2d( &
         & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth),                          & ! Total soil depth until bedrock (from textures)
         & soil_w%dz(:))                                                          ! Soil layer thicknesses
-
-      ! Maximum root zone soil moisture
-      !    weq_rootzone_max is zero over glaciers ... but since we do this only for tiles with soil, we
-      !    set weq_rootzone_max to 0.2 over glaciers
-      dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = hydro_init_vars%weq_rootzone_max
 
       ! Volumetric soil porosity
       dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity

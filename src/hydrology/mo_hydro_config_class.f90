@@ -223,6 +223,10 @@ CONTAINS
     config%l_soil_texture      = l_soil_texture
     IF (l_soil_texture) CALL message(TRIM(routine), 'Using soil texture in soil hydrology')
 
+    config%l_socmap = l_socmap
+    IF (l_socmap .AND. l_organic) &
+      & CALL message(TRIM(routine), 'Replacing organic carbon fractions with map from bc file: ' //TRIM(logical2string(l_socmap)))
+
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
