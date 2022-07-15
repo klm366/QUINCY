@@ -158,8 +158,8 @@ CONTAINS
     l_heat_cond_dyn  = .TRUE.
     l_heat_cap_map   = .FALSE.
     l_heat_cond_map  = .FALSE.
-    l_freeze         = .FALSE.
-    l_supercool      = .FALSE.
+    l_freeze         = .TRUE.
+    l_supercool      = .TRUE.
     w_soil_critical  = 5.85036E-3_wp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
