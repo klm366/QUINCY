@@ -2805,4 +2805,3 @@ CONTAINS
     day_in_year = INT(get_year_day(date))
 
   END FUNCTION day_in_year
-
