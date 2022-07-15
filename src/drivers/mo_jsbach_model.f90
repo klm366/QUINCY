@@ -714,6 +714,7 @@ CONTAINS
     USE mo_echam_rad_config,          ONLY: echam_rad_config
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
+    USE mo_jsb_subset,                ONLY: ON_CHUNK
 
     dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
@@ -936,6 +937,8 @@ CONTAINS
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
+      CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+      CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Run tasks in queue
       CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
