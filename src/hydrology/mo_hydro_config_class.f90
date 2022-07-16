@@ -149,7 +149,12 @@ CONTAINS
     config%scheme_stom_cond    = scheme_stom_cond
 
     config%l_organic           = l_organic
-    IF (l_organic) CALL message(TRIM(routine), 'Using organic component in soil hydrology')
+    IF (l_organic) THEN
+      CALL message(TRIM(routine), 'Using organic component in soil hydrology')
+    ELSE
+      IF (l_socmap) CALL message(TRIM(routine), 'Setting l_socmap=false since l_organic=false in soil hydrology')
+      l_socmap = .FALSE.
+    END IF
 
     config%l_socmap = l_socmap
     IF (l_socmap .AND. l_organic) &
