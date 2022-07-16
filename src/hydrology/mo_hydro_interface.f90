@@ -1032,8 +1032,9 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
 
+    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)   ! in
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
       !$claw acc enter data create(fract_org_sl)
