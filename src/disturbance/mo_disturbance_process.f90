@@ -110,9 +110,10 @@ CONTAINS
 
   FUNCTION get_relative_humidity_air(nc, air_moisture, air_temperature, air_press) RESULT(relative_humidity_air)
 
-    USE mo_physical_constants_iface, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
-    USE mo_physical_constants_iface, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
-    !USE mo_jsb4_forcing,             ONLY: sat_specific_humidity ! Function
+    USE mo_phy_schemes,            ONLY: sat_specific_humidity
+    USE mo_jsb_physical_constants, ONLY: &
+      & rd, &  !< gas constant for dry air [J/(K*kg)]
+      & rv     !< gas constant for water vapor [J/(K*kg)]
 
     INTEGER, INTENT(in)  :: nc
     REAL(wp), INTENT(in) :: &
@@ -125,67 +126,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air'
 
-    CALL sat_specific_humidity( &
-      & nc,                     & ! in
-      & air_temperature,        & ! in
-      & air_press,              & ! in
-      & air_qsat                & ! out
-      & )
-
-        IF (ANY( air_qsat(:) > 0.99_wp*HUGE(1._wp) )) THEN
-           CALL finish(TRIM(routine), 'lookup table overflow.')
-        END IF
+    air_qsat(:) = sat_specific_humidity(air_temperature(:), air_press(:))
 
     relative_humidity_air(:) = 100._wp * air_moisture(:)                                       &
                                * ( (1._wp - rd / rv)  * air_qsat(:)  + (rd / rv) )             &
                                / ( ((1._wp - rd / rv) * air_moisture(:) + (rd / rv)) * air_qsat(:) )
 
   END FUNCTION get_relative_humidity_air
-
-  ! R: TBD: I copied this subroutine from MO_JSB4_FORCING, because
-  !    this mo is not compiled with icon/echam.
-  !    Reiner has to decide if we change config or the place of this procedure.
-  !    I made some changes because the dimensions (vector lenghts) were unnecessary
-  !    cryptic. We could even skip "nc" if we would change the DO loop below...
-  SUBROUTINE sat_specific_humidity(nc, temp, pressure, qsat)
-    ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
-    ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
-    ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-    USE mo_exception,                ONLY: message_text
-    USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
-    USE mo_jsb_physical_constants,   ONLY: rvd1
-
-    INTEGER,  INTENT(IN) :: nc
-    REAL(wp), INTENT(IN) :: temp(nc)      ! Air temperature at level [K]
-    REAL(wp), INTENT(IN) :: pressure(nc)  ! Pressure at level [Pa]
-    REAL(wp), INTENT(OUT):: qsat(nc)
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
-
-    INTEGER  :: i
-    INTEGER  :: it(nc)
-    REAL(wp) :: tluc(nc)
-
-    !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
-    DO i = 1,nc
-      IF ((temp(i) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)) .OR. (temp(i) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp))) THEN
-        WRITE (message_text,*)                                                                                      &
-          & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-          & '- temperature was: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
-        CALL finish(TRIM(routine), TRIM(message_text))
-      ENDIF
-    ENDDO
-
-    it = NINT(temp*1000._wp)
-    tluc = tlucua(it)
-
-    WHERE (it >= jptlucu1 .AND. it <= jptlucu2)
-      qsat = tluc / (pressure - rvd1*tluc)
-    ELSEWHERE
-      qsat = HUGE(1._wp)
-    END WHERE
-
-  END SUBROUTINE sat_specific_humidity
 
 #endif
 END MODULE mo_disturb_process

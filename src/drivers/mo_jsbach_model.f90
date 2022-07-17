@@ -135,7 +135,6 @@ CONTAINS
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
     USE mo_dynamics_config,         ONLY: iequations
-    USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
 
@@ -347,8 +346,6 @@ CONTAINS
     CALL allocate_vct_atmo(p_patch(1)%nlevp1)
 
     IF (timers_level > 4) CALL timer_stop(timer_compute_coeffs)
-
-    CALL init_convect_tables ! necessary for FUNCTION qsat
 
     CALL jsbach_setup_grid( 1, p_patch(1), type='icon') !< in
     CALL jsbach_setup_tiles(1)

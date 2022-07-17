@@ -16,48 +16,17 @@ MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
+  USE mo_jsb_thermo_iface, ONLY: sat_specific_humidity, sat_pres_water
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, &
+  PUBLIC :: sat_specific_humidity, sat_pres_water, q_effective, surface_dry_static_energy, heat_transfer_coef, &
     thermal_radiation, lwnet_from_lwdown
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes'
 
 CONTAINS
-
-  !>
-  ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
-  ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
-  ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-  !
-  REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
-
-    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
-      &                                    jptlucu1, jptlucu2
-    USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
-
-    REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
-    REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
-
-    INTEGER :: it
-    REAL(wp) :: tluc
-
-    !$claw sca routine
-
-    it = NINT(temperature*1000._wp)
-!!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
-    tluc = tlucua(it) !<- TODO catch seg fault for unplausible temperatures? (e.g. see mo_jsb4_forcing)
-
-    IF (it >= jptlucu1 .AND. it <= jptlucu2) THEN
-      qsat = tluc / (pressure - rvd1*tluc)
-    ELSE
-      qsat = HUGE(1._wp)
-    END IF
-
-  END FUNCTION qsat
-
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION q_effective

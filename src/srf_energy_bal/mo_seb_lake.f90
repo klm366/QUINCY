@@ -43,7 +43,7 @@ CONTAINS
 
   SUBROUTINE update_surface_energy_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: qsat, surface_dry_static_energy
+    USE mo_phy_schemes,            ONLY: sat_specific_humidity, surface_dry_static_energy
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -288,13 +288,13 @@ CONTAINS
     END IF
 
     !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_4
-    qsat_lwtr(:)  = qsat(t_lwtr(:), press_srf(:))
+    qsat_lwtr(:)  = sat_specific_humidity(t_lwtr(:), press_srf(:))
     s_lwtr(:)     = surface_dry_static_energy(t_lwtr(:), qsat_lwtr(:))
     !$claw end expand
 
     IF (config_l_ice_on_lakes) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_5
-      qsat_lice(:) = qsat(t_lice(:), press_srf(:))
+      qsat_lice(:) = sat_specific_humidity(t_lice(:), press_srf(:))
       s_lice(:)    = surface_dry_static_energy(t_lice(:), qsat_lice(:))
       t(:) = (1._wp - fract_lice(:)) * t_lwtr   (:) + fract_lice(:) * t_lice   (:)
       heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)

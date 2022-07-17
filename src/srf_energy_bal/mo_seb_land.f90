@@ -54,7 +54,7 @@ CONTAINS
 
     !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
     USE mo_sse_process,            ONLY: Get_liquid_max
-    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: sat_specific_humidity, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
@@ -306,7 +306,7 @@ CONTAINS
     ! t_unfilt_old(:) = MAX(MIN(t_unfilt(:), 380._wp), 100._wp)
     ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
-    qsat_srf_old(:) = qsat(t_old(:), press_srf(:))
+    qsat_srf_old(:) = sat_specific_humidity(t_old(:), press_srf(:))
 
     ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
     heat_cap(:) = hcap_grnd(:)
@@ -319,7 +319,7 @@ CONTAINS
     !
     ! 1. Compute sensitivity of surface saturation specific humidity to temperature
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2 tile_name=tile%name
-    dQdT(:) = ( qsat(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
+    dQdT(:) = ( sat_specific_humidity(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
 
     ! 2. Old dry static energy
     s_old(:) = surface_dry_static_energy( &
@@ -581,7 +581,7 @@ CONTAINS
   SUBROUTINE update_surface_fluxes_land(tile, options)
 
     USE mo_phy_schemes,            ONLY: heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: alv, als
+    USE mo_jsb_physical_constants, ONLY: alv, als, cvv, cvd
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -594,6 +594,7 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: s_star
+    dsl4jsb_Real2D_onChunk :: t_old
     dsl4jsb_Real2D_onChunk :: t_acoef
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: drag_srf
@@ -644,7 +645,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)            ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)              ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)  ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_old)               ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
 
@@ -668,6 +670,7 @@ CONTAINS
     ! Compute sensible heat flux
     !
     sensible_hflx(:) = heat_tcoef(:) * (s_air(:) - s_star(:))
+    ! sensible_hflx(:) = heat_tcoef(:) * (s_air(:) - s_star(:)) - (cvv - cvd) * t_old(:) * evapotrans(:)
 
     ! Compute latent heat flux
     !
