@@ -401,7 +401,6 @@ CONTAINS
   ! @param [in]      nlat                (Effective) number of latitudes
   ! @param [in]      dtime               Time step [s]
   ! @param [in]      l_infil_subzero     Allow infiltration of supercolled water
-  ! @param [in]      hydrotiles_type    Property defining whether the actual tile is source or sink for lateral flow
   ! @param [in]      soil_depth_sl       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_sl       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      fract_org_sl        Fractions per soil layer of organic comonent []
@@ -431,20 +430,19 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                    &
-    & l_infil_subzero, hydrotiles_type,                                                  &
+    & l_infil_subzero,                                                                   &
     & soil_depth_sl, root_depth_sl, fract_org_sl,                                        &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,    &
-    & water_to_soil_tile, evapotrans_soil, transpiration,                                     &
+    & water_to_soil, evapotrans_soil, transpiration,                                     &
     ! inout
-    & wtr_soil_sl, ice_soil_sl, tpe_overflow, w_pond,                                    &
+    & wtr_soil_sl, ice_soil_sl, tpe_overflow,                                            &
     ! out
     & wsat_sl, field_cap_sl, p_wilt_sl, runoff, drainage                                 &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
-    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max, &
-      & UPLAND_, LOWLAND_
+    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: &
@@ -454,15 +452,14 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero
-    INTEGER, INTENT(in) :: hydrotiles_type
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl, root_depth_sl, fract_org_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & oro_stddev, t_soil_sl1, water_to_soil_tile, &
+      & oro_stddev, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, w_pond
+      & tpe_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -481,8 +478,7 @@ CONTAINS
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
       & transpiration_in_m(nc),       & !< transpiration within time step [m]
       & ws_rel(nc),                   & !< relative soil moisture (0: wilting point, 1: field capacity)
-      & infilt(nc),                   & !< infiltration [m]
-      & water_to_soil(nc)               !< water available at soil surface [m]
+      & infilt(nc)                      !< infiltration [m]
 
     REAL(wp) ::              &
       & ws_max(nc),          & ! water holding capacity of the soil [m]
@@ -565,14 +561,6 @@ CONTAINS
       zbm    = 1._wp/zb1
       zconw1 = ws_max(i)*zb1
 
-      ! Add lateral flow from upland tiles
-      IF (hydrotiles_type == LOWLAND_) THEN
-          water_to_soil(i) = water_to_soil_tile(i) + 0.9_wp * w_pond(i)
-          w_pond(i) = 0.1_wp * w_pond(i)
-      ELSE
-          water_to_soil(i) = water_to_soil_tile(i)
-      END IF
-
       !>  1.1 Surface runoff and infiltration
       !   -----------------------------------
       ! @todo: The amount of runoff and infiltration is calculated regarding the complete root zone,
@@ -612,13 +600,6 @@ CONTAINS
           END IF
         END IF
       END IF
-
-      ! Use 50% of surface runoff as lateral flow towards lowland tiles
-      IF (hydrotiles_type == UPLAND_) THEN
-          w_pond(i) = w_pond(i) + 0.5_wp * runoff(i)
-          runoff(i) = 0.5_wp * runoff(i) 
-      END IF
-
     END DO
 
     !

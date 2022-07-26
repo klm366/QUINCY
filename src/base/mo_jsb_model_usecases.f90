@@ -30,7 +30,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE, & !, BARE_TYPE   ! define the type of the tile
+    &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE, & !, BARE_TYPE ! define the type of the tile
     &                               UPLAND_TYPE, LOWLAND_TYPE
 !  USE mo_test_pools,          ONLY: test_pools                                                  ! to debug and test pools implementation
 

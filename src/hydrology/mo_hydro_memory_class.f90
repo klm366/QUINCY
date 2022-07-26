@@ -104,9 +104,7 @@ MODULE mo_hydro_memory_class
       & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
       & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
       & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
-      & wtr_rootzone_rel,     & !< Water content of the rootzone relative to the maximum possible amout     [1]
-      & w_pond,               & !< Water ponding on the soil surface                                        [m water equivalent]
-      & w_latflow               !< Lateral water transport between tiles                                    [kg m-2 s-1]
+      & wtr_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
 
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
@@ -764,24 +762,6 @@ CONTAINS
         & prefix, suffix,                                                                &
         & output_level=BASIC,                                                            &
         & initval_r=0.0_wp )
-
-      CALL mem%Add_var('w_pond', mem%w_pond,                                        &
-        & hgrid, surface,                                                           &
-        & t_cf('water ponding on the soil surface', 'm water equivalent', ''),      &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & lrestart=.TRUE., lrestart_cont=.TRUE.,                                    &
-        & loutput=.TRUE., output_level=BASIC,                                       &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var('w_latflow', mem%w_latflow,                                  &
-        & hgrid, surface,                                                           &
-        & t_cf('lateral water transport between tiles', 'kg m-2 s-1', ''),          &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & lrestart=.FALSE.,                                                         &
-        & loutput=.TRUE., output_level=BASIC,                                       &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
 
