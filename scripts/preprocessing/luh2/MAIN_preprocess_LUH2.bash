@@ -6,11 +6,11 @@
 # SF 15.06.22 (stefanie.falk@lmu.de)
 #--------------------------------------------------------------------
 ### Batch Queuing System is SLURM
-#SBATCH --output=T63_preprocess_LUH2_extensions_dynveg.o%j
-#SBATCH --error=T63_preprocess_LUH2_extensions_dynveg.o%j
+#SBATCH --output=T63_preprocess_LUH2.o%j
+#SBATCH --error=T63_preprocess_LUH2.o%j
 #SBATCH --mail-type=FAIL
-#SBATCH --mail-user=yourname@mpimet.mpg.de
-#SBATCH --account=bm1241
+#SBATCH --mail-user=yourname@YOUR-INSTITUTE-DOMAIN
+#SBATCH --account=YOUR_PROJECT_ACCOUNT
 #SBATCH --partition=interactive
 #SBATCH --mem-per-cpu=3000
 #SBATCH --exclusive    #-- exclusive required when aggregate_LUH2_transitions.bash or aggregate_LUH2_harvest.bash work on a large transitions_selectedYears.nc file
