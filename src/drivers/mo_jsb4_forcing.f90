@@ -121,7 +121,6 @@ MODULE mo_jsb4_forcing
   REAL(wp), PARAMETER :: cc = 5._wp
 
   CHARACTER(len=*), PARAMETER :: name_of_unit_attribute = 'units'
-!<<<<<<<
 
   ! expected varnames in forcing files
   CHARACTER(len=*), PARAMETER :: max_temp_varname = 'tmax'
@@ -1370,10 +1369,8 @@ CONTAINS
         zg(1:ic) = forcing_options%heightWind * grav
         zgh(1:ic) = forcing_options%heightHumidity * grav ! jsb3 "HeightHumidity and HeightTemperature have to be equal"
       ELSE
-        ! TODO Once forcing from model data is implemented this has to be activated again!
-        ! zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
-        ! zgh(1:ic) = zg(1:ic)
-        CALL finish(routine, 'forcing_height_wind or forcing_height_humidity not set')
+        zg(1:ic) = ztvir(1:ic) * rd * LOG(1._wp / zsigma)
+        zgh(1:ic) = zg(1:ic)
       ENDIF
 
       ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
