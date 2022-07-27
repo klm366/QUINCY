@@ -143,6 +143,8 @@ CONTAINS
         return_pointer => input_file%Read_2d(         &
           & variable_name='NSPLIT',                   &
           & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
+      ELSE
+        dsl4jsb_var_ptr(HD_,nsplit)(:,:) = 1._wp
       END IF
 
       nproma = grid%nproma
