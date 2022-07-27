@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
+import argparse
+import collections
 import re
 
 from pathlib import Path
-
-from numpy import short
 
 memory_class_files = {
     '_tile_' : Path('src/base/mo_jsb_tile.f90'),
@@ -33,10 +33,21 @@ tiles = [ 'box', 'land', 'lake', 'glac', 'veg', 'pft01', 'pft02', 'pft03', 'pft0
 jsbach_discipline = 2 # land-surface products
 jsbach_category_start = 198
 
-force = False
-write_files = False
-write_shortnames = True
-show_mapping = False
+parser = argparse.ArgumentParser(description='GRIB code generation and analysis tool.')
+parser._get_formatter = lambda: parser.formatter_class(prog=parser.prog, max_help_position=26)
+parser.add_argument('-f', '--force', action='store_true', help='Reassign codes for variables with already valid GRIB codes.')
+parser.add_argument('-s', '--show', action='store_true', help='Print a table of code mappings.')
+parser.add_argument('-W', '--write-files', action='store_true', help='Write generated codes to the memory files.')
+parser.add_argument('-S', '--write-shortnames', action='store_true', help='Write shortName.def')
+parser.add_argument('-D', '--dry-run', action='store_true', help='Do not actually write files (for debugging).')
+
+args = parser.parse_args()
+
+force = args.force
+write_files = args.write_files
+write_shortnames = args.write_shortnames
+show_mapping = args.show
+dry_run = args.dry_run
 
 basedir = Path('..')
 
@@ -56,7 +67,21 @@ grib2_pattern = re.compile(r'''(?ix)
         [^)]+
     \)
     ''')
+cf_pattern = re.compile(r'''(?ix)
+    t_cf\(
+        \s*
+        '(?P<standard_name>[^']*)'
+        \s*,\s*
+        '(?P<units>[^']*)'
+        \s*,\s*
+        '(?P<long_name>[^']*)'
+        [^)]*
+    \)
+    ''')
 jsb_add_var_pattern = re.compile(r"(?i)jsb_add_var\s*\(\s*[^,]+,\s*'(?P<var>[^']+)'")
+
+VariableInfo = collections.namedtuple('VariableInfo', [
+    'start', 'endline', 'grib_location', 'grib_triple', 'template_triple', 'cf_info', 'vgrid'])
 
 process_vars = {}
 for process, memfile in memory_class_files.items():
@@ -72,6 +97,7 @@ for process, memfile in memory_class_files.items():
 
                 var = match.group('var')
 
+                # Grab the full add_var call.
                 add_var_call = []
                 j = i
                 while whitespace_pattern.sub('', contents[j]).endswith('&'):
@@ -81,22 +107,33 @@ for process, memfile in memory_class_files.items():
 
                 add_var_call_str = ' '.join(whitespace_pattern.sub('', s).strip('&') for s in add_var_call)
 
+                vgrid = add_var_call_str.split(',')[4 if process == '_tile_' else 3].strip()
+
                 # This assumes that lrestart is TRUE by default.
                 is_restart = process == '_tile_' or restart_pattern.search(add_var_call_str) is None
 
                 if not is_restart:
                     continue
 
+                cf_info = None
+                cf_match = cf_pattern.search(add_var_call_str)
+                if cf_match is not None:
+                    cf_info = cf_match.groupdict()
+
+                # Find the GRIB2 metadata inside the add_var call, remembering its line offset in `k`.
                 for k, avline in enumerate(add_var_call):
                     grib2 = grib2_pattern.search(avline)
                     if grib2 is not None:
                         break
 
+                k += i
+
                 grib2_templ = None
 
-                k += i
+                # The GRIB2 metadata might have been defined a few lines before the call, usually in an IF construct.
+                # Look at up to 10 lines before the call but make sure that we don't accidentally grab the previous
+                # variable's metadata. Also match `owner_tile_pattern` to try and find a non-dummy GRIB triple.
                 if process != '_tile_' and grib2 is None:
-                    k = max(i-10, last_var_end+1)
                     for k in range(max(i-10, last_var_end+1), i):
                         if owner_tile_pattern.search(contents[k]) is not None:
                             grib2_templ = grib2_pattern.search(contents[k+1])
@@ -121,12 +158,8 @@ for process, memfile in memory_class_files.items():
                         print(f'Warning: {var}: Found template triple but one of the entries is 255.')
 
                 grib2_triple = tuple(map(int, grib2.groups()))
-                vi = [(i, match.start()), j, (k, grib2.start(), grib2.end()), grib2_triple, tpl_triple]
+                vi = VariableInfo((i, match.start()), j, (k, grib2.start(), grib2.end()), grib2_triple, tpl_triple, cf_info, vgrid)
                 vars.setdefault(var, []).append(vi)
-
-                #if process == '_tile_':
-                #    print(f'{var}: add_var @ {vi[0]} to line {vi[1]}. GRIB2 info @ {vi[2]}\n    GRIB2 info: {vi[3]}\n    Template: {vi[4]}')
-                #    print(contents[vi[2][0]][vi[2][1]:vi[2][2]])
 
                 last_var_end = j
     process_vars[process] = vars
@@ -144,81 +177,97 @@ jsbach_category = jsbach_category_start
 jsbach_parameter = 0
 for process, vars in process_vars.items():
     for varname, vis in vars.items():
+
+        # Check if variable already has a non-dummy GRIB triple.
         vi = vis[0]
-        if not force and not any(255 == t for t in vi[3]):
-            if vi[3] in grib_map:
-                print('Warning: {}/{}: Code triple {!s} already taken by {}! Codes will not be unique.'.format(process, varname, vi[3], '/'.join(grib_map[vi[3]])))
+        if not force and not any(255 == t for t in vi.grib_triple):
+            if vi.grib_triple in grib_map:
+                print('Warning: {}/{}: Code triple {!s} already taken by {}! Codes will not be unique.'.format(
+                    process, varname, vi.grib_triple, '/'.join(grib_map[vi.grib_triple])))
             else:
-                grib_map[vi[3]] = (process, varname)
+                grib_map[vi.grib_triple] = (process, varname)
             continue
 
-        if any(vi[4] is not None for vi in vis):
+        if any(vi.template_triple is not None for vi in vis):
             for vi in vis:
-                if vi[4] is not None:
+                if vi.template_triple is not None:
                     break
 
-            vis[0][3] = vi[4]
+            vis[0].grib_triple = vi.template_triple
         else:
-            vis[0][3] = (jsbach_discipline, jsbach_category, jsbach_parameter)
+            vis[0].grib_triple = (jsbach_discipline, jsbach_category, jsbach_parameter)
             jsbach_parameter += 1
             if jsbach_parameter == 255:
                 jsbach_parameter = 0
                 jsbach_category += 1
 
-        if vis[0][3] in grib_map:
+        if vis[0].grib_triple in grib_map:
             print('Warning: {}/{}: Code triple {!s} already taken by {}! Codes will not be unique.'.format(process, varname, vis[0][3], '/'.join(grib_map[vis[0][3]])))
         else:
-            grib_map[vis[0][3]] = (process, varname)
+            grib_map[vis[0].grib_triple] = (process, varname)
 
 if show_mapping:
-    for trip, pv in grib_map.items():
-        print('{!s}: {}'.format(trip, '/'.join(pv)))
+    print()
+    print('|   GRIB    |  proc   |             short              | CF standard | CF long | vgrid |')
+    print('|-----------|---------|--------------------------------|-------------|---------|-------|')
+    for trip, (process, varname) in grib_map.items():
+        vi = process_vars[process][varname][0]
+        print('| {:<9s} | {:7s} | {:30s} | {} | {} | {} |'.format(
+            '{:1d}.{:3d}.{:3d}'.format(*trip),
+            process,
+            varname,
+            vi.cf_info['standard_name'] if vi.cf_info['standard_name'].casefold() != varname.casefold() else '<-',
+            vi.cf_info['long_name'],
+            vi.vgrid))
 
-for process, memfile in memory_class_files.items():
-    if not process_vars[process]:
-        continue
+if write_files:
+    for process, memfile in memory_class_files.items():
+        if not process_vars[process]:
+            continue
 
-    with open(basedir / memfile) as f:
-        contents = list(iter(f))
+        with open(basedir / memfile) as f:
+            contents = list(iter(f))
 
-    for vis in process_vars[process].values():
-        dis, cat, par = vis[0][3]
+        for vis in process_vars[process].values():
+            dis, cat, par = vis[0].grib_triple
 
-        for vi in vis:
-            k, start, stop = vi[2]
+            for vi in vis:
+                k, start, stop = vi.grib_location
 
-            line = contents[k]
-            line = ''.join((line[:start], f't_grib2({dis:3d}, {cat:3d}, {par:3d}, grib_bits)', line[stop:]))
-            contents[k] = line
+                line = contents[k]
+                line = ''.join((line[:start], f't_grib2({dis:3d}, {cat:3d}, {par:3d}, grib_bits)', line[stop:]))
+                contents[k] = line
 
-    if write_files:
-        print(f'Patching {memfile}...')
-        with open(basedir / memfile, 'w') as f:
-            f.writelines(contents)
+        print(f'Patching {memfile}...' + (' (DRY RUN)' if dry_run else ''))
+        if not dry_run:
+            with open(basedir / memfile, 'w') as f:
+                f.writelines(contents)
 
-shortnamedef = ['# auto-generated by JSBACHs gribify.py']
-
-for trip, (process, varname) in grib_map.items():
-    for ti, tile in enumerate(tiles):
-        sd = [
-            "",
-            f"'{process}_{varname}_{tile}' = {{" if process != '_tile_' else f"'{varname}_{tile}' = {{",
-            f"    discipline = {trip[0]} ;",
-            f"    parameterCategory = {trip[1]} ;",
-            f"    parameterNumber = {trip[2]} ;",
-        ]
-
-        # box tile is special
-        if ti != 0:
-            sd += [
-                f"    tileAttribute = 0 ;",
-                f"    tileIndex = {ti} ;"
-            ]
-        sd.append(f"}}")
-
-        shortnamedef += sd
 
 if write_shortnames:
-    print('Writing shortName.def')
-    with open('shortName.def', 'w') as f:
-        f.write('\n'.join(shortnamedef))
+    shortnamedef = ['# auto-generated by JSBACHs gribify.py']
+
+    for trip, (process, varname) in grib_map.items():
+        for ti, tile in enumerate(tiles):
+            sd = [
+                "",
+                f"'{process}_{varname}_{tile}' = {{" if process != '_tile_' else f"'{varname}_{tile}' = {{",
+                f"    discipline = {trip[0]} ;",
+                f"    parameterCategory = {trip[1]} ;",
+                f"    parameterNumber = {trip[2]} ;",
+            ]
+
+            # box tile is special
+            if ti != 0:
+                sd += [
+                    f"    tileAttribute = 0 ;",
+                    f"    tileIndex = {ti} ;"
+                ]
+            sd.append(f"}}")
+
+            shortnamedef += sd
+
+    print('Writing shortName.def...' + (' (DRY RUN)' if dry_run else ''))
+    if not dry_run:
+        with open('shortName.def', 'w') as f:
+            f.write('\n'.join(shortnamedef))
