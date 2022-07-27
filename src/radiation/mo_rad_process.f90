@@ -364,17 +364,10 @@ CONTAINS
         B4 =   (1._wp - Q0 - Q1) * fract_par_direct &
           &  + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
 
-      END IF ! cos_zenith_angle
+        IF (B4_layer_above < 7777776._wp) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
+          B4 = B4_layer_above                  !    with the second level use level above...
+        ENDIF
 
-        ! IF (icanopy < ncanopy) THEN
-           !------------------------------------------------------------
-           ! Only Layers-1, i.e. except the lower boundary calculation
-           !------------------------------------------------------------
-      IF (B4_layer_above < 7777776._wp) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
-        B4 = B4_layer_above                  !    with the second level use level above...
-      ENDIF
-
-      IF (cos_zenith_angle .GE. ZenithMinPar) THEN  ! do not calculate PAR for zenith angles below ZenithMinPar
         IF (icanopy < ncanopy) THEN
            !----------------------------------------------------------------------------
            ! p2=1/p1
@@ -430,15 +423,12 @@ CONTAINS
            faPAR_cl = B4_layer_above - X0
            !B4_layer_above = X0
         ENDIF ! icanopy
+        !------------------------------------------------------------
+        ! Multiplication of faPAR_cl with fc because D-D(iGP-1)
+        ! division is made outside FfaPAR_clL and is still the old l ???
+        !------------------------------------------------------------
+        faPAR_cl = faPAR_cl * FSHD
      ENDIF  ! cos_zenith_angle
-
-     !------------------------------------------------------------
-     ! Multiplication of faPAR_cl with fc because D-D(iGP-1)
-     ! division is made outside FfaPAR_clL and is still the old l ???
-     !------------------------------------------------------------
-     IF (cos_zenith_angle .GE. ZenithMinPar) THEN
-       faPAR_cl = faPAR_cl * FSHD
-     END IF
 
     ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
     ! par and fraction of absorbed PAR
