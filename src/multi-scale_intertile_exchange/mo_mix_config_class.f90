@@ -1,5 +1,5 @@
 !>
-!! @brief Contains structures and methods for the lateral transport config
+!! @brief Contains structures and methods for the multi-scale intertile exchange config
 !!
 !! @author
 !! Tobias Stacke, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lattrans_config_class
+MODULE mo_mix_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
@@ -26,62 +26,62 @@ MODULE mo_lattrans_config_class
   ! Module variables 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_lattrans_config
+  PUBLIC :: t_mix_config
 
-  TYPE, EXTENDS(t_jsb_config) :: t_lattrans_config
+  TYPE, EXTENDS(t_jsb_config) :: t_mix_config
      LOGICAL                  :: &
-       & l_lattrans                !< enable lateral transport of water between grid cell tiles
+       & l_hydro_mix               !< enable lateral transport of water between grid tiles
 
    CONTAINS
-     PROCEDURE :: Init => Init_lattrans_config
-  END type t_lattrans_config
+     PROCEDURE :: Init => Init_mix_config
+  END type t_mix_config
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_lattrans_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_config_class'
 
 CONTAINS
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize lattrans process
+  !> Initialize multi-scale intertile exchange process
   !!  
-  SUBROUTINE Init_lattrans_config(config)
+  SUBROUTINE Init_mix_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
-    CLASS(t_lattrans_config), INTENT(inout) :: config
+    CLASS(t_mix_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    LOGICAL                     :: l_lattrans
+    LOGICAL                     :: l_hydro_mix
 
-    NAMELIST /jsb_lattrans_nml/       &
-         active,                      &
-         l_lattrans
+    NAMELIST /jsb_mix_nml/       &
+         active,                 &
+         l_hydro_mix
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_lattrans_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_mix_config'
 
-    CALL message(TRIM(routine), 'Starting lateral transport configuration')
+    CALL message(TRIM(routine), 'Starting multi-scale intertile exchange configuration')
 
     ! Set defaults
     active              = .TRUE.
-    l_lattrans          = .FALSE.
+    l_hydro_mix         = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
-    nml_unit = position_nml('jsb_lattrans_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_lattrans_nml)
+    nml_unit = position_nml('jsb_mix_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_mix_nml)
 
     CALL close_nml(nml_handler)
 
     config%active              = active
-    config%l_lattrans          = l_lattrans
-    IF (l_lattrans) THEN 
+    config%l_hydro_mix         = l_hydro_mix
+    IF (l_hydro_mix) THEN 
       CALL message(TRIM(routine), 'Lateral water flow between tiles is enabled')
     ELSE
       CALL message(TRIM(routine), 'Lateral water flow between tiles is disabled')
     END IF
     
-  END SUBROUTINE Init_lattrans_config
+  END SUBROUTINE Init_mix_config
 
 #endif
-END MODULE mo_lattrans_config_class
+END MODULE mo_mix_config_class

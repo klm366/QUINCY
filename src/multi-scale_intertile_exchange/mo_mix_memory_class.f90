@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the memory class for the lateral transport process.
+!! @brief Contains the memory class for the multi-scale intertile exchange process.
 !!
 !! @author
 !! Tobias Stacke, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lattrans_memory_class
+MODULE mo_mix_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -29,12 +29,12 @@ MODULE mo_lattrans_memory_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_lattrans_memory, max_no_of_vars
+  PUBLIC :: t_mix_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 10
 
   !> Type definition for memory
-  TYPE, EXTENDS(t_jsb_memory) :: t_lattrans_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_mix_memory
     
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -42,20 +42,20 @@ MODULE mo_lattrans_memory_class
       & wtr_transstor           !< Lateral transport water storage [m]
 
   CONTAINS
-    PROCEDURE :: Init => Init_lattrans_memory
-  END TYPE t_lattrans_memory
+    PROCEDURE :: Init => Init_mix_memory
+  END TYPE t_mix_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_lattrans_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_memory_class'
 
 CONTAINS
 
-  SUBROUTINE Init_lattrans_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_mix_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_lattrans_memory), INTENT(inout), TARGET :: mem
+    CLASS(t_mix_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
@@ -68,7 +68,7 @@ CONTAINS
     INTEGER :: table
     TYPE(t_grib2) :: grib2_desc
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_lattrans_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_mix_memory'
 
     model => Get_model(model_id)
 
@@ -100,7 +100,7 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )
 
-  END SUBROUTINE Init_lattrans_memory
+  END SUBROUTINE Init_mix_memory
 
 #endif
-END MODULE mo_lattrans_memory_class
+END MODULE mo_mix_memory_class

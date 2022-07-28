@@ -26,7 +26,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               FUEL_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_, LATTRANS_
+    &                               FUEL_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_, MIX_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -433,7 +433,7 @@ CONTAINS
         END IF
 
         topo_tile => t_jsb_tile('upland', 'Upland tile', &
-          & processes = (/LATTRANS_/), &
+          & processes = (/MIX_/), &
           & process_actions = (/ON_TILE_/), &
           & lct=t_jsb_lct(UPLAND_TYPE), parent=land_tile)
 
@@ -479,7 +479,7 @@ CONTAINS
             END DO
 
         topo_tile => t_jsb_tile('lowland', 'Lowland tile', &
-          & processes = (/LATTRANS_/), &
+          & processes = (/MIX_/), &
           & process_actions = (/ON_TILE_/), &
           & lct=t_jsb_lct(LOWLAND_TYPE), parent=land_tile)
 

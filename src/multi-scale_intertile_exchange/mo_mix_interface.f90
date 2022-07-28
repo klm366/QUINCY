@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interfaces to the lateral transport process
+!! @brief Contains the interfaces to the multi-scale intertile exchange process
 !!
 !! @author
 !! Tobias Stacke, MPI-M Hamburg
@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_lattrans_interface
+MODULE mo_mix_interface
 #ifndef __NO_JSBACH__
 
   ! -------------------------------------------------------------------------------------------------------
@@ -31,34 +31,34 @@ MODULE mo_lattrans_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes LATTRANS_
+  dsl4jsb_Use_processes MIX_
 
   ! Use of process configurations
-  dsl4jsb_Use_config(LATTRANS_)
+  dsl4jsb_Use_config(MIX_)
 
   ! Use of process memories
-  dsl4jsb_Use_memory(LATTRANS_)
+  dsl4jsb_Use_memory(MIX_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables 
   
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_lattrans_tasks
+  PUBLIC :: Register_mix_tasks
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_lattrans_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_interface'
   
-  !> Type definition for collect_water task
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_collect_water
+  !> Type definition for hydro_mix task
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_hydro_mix
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_collect_water     !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_collect_water  !< Aggregates computed task variables
-  END TYPE tsk_collect_water
+    PROCEDURE, NOPASS :: Integrate => update_hydro_mix     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_hydro_mix  !< Aggregates computed task variables
+  END TYPE tsk_hydro_mix
   
-  !> Constructor interface for collect_water task
-  INTERFACE tsk_collect_water
-    PROCEDURE Create_task_collect_water                        !< Constructor function for task
-  END INTERFACE tsk_collect_water
+  !> Constructor interface for hydro_mix task
+  INTERFACE tsk_hydro_mix
+    PROCEDURE Create_task_hydro_mix                        !< Constructor function for task
+  END INTERFACE tsk_hydro_mix
 
 CONTAINS
 
@@ -66,35 +66,35 @@ CONTAINS
   !! Constructors for tasks
   
   ! -------------------------------------------------------------------------------------------------------
-  !> Constructor for collect_water task
+  !> Constructor for hydro_mix task
   !!
-  FUNCTION Create_task_collect_water(model_id) RESULT(return_ptr)
+  FUNCTION Create_task_hydro_mix(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-    ALLOCATE(tsk_collect_water::return_ptr)
-    CALL return_ptr%Construct(name='collect_water', process_id=LATTRANS_, owner_model_id=model_id)
+    ALLOCATE(tsk_hydro_mix::return_ptr)
+    CALL return_ptr%Construct(name='hydro_mix', process_id=MIX_, owner_model_id=model_id)
 
-  END FUNCTION Create_task_collect_water
+  END FUNCTION Create_task_hydro_mix
   
   ! -------------------------------------------------------------------------------------------------------
-  !> Register tasks for lateral transport process
+  !> Register tasks for multi-scale intertile exchange process
   !!
-  SUBROUTINE Register_lattrans_tasks(process, model_id)
+  SUBROUTINE Register_mix_tasks(process, model_id)
 
     CLASS(t_jsb_process),  INTENT(inout) :: process
     INTEGER,               INTENT(in)    :: model_id
 
-    CALL process%Register_task(tsk_collect_water(model_id))
+    CALL process%Register_task(tsk_hydro_mix(model_id))
     
-  END SUBROUTINE Register_lattrans_tasks
+  END SUBROUTINE Register_mix_tasks
 
   ! ================================================================================================================================
   !>
-  !! @brief Implementation of "update" for task "collect_water"
+  !! @brief Implementation of "update" for task "hydro_mix"
   !!
-  SUBROUTINE update_collect_water(tile, options)
+  SUBROUTINE update_hydro_mix(tile, options)
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -105,11 +105,11 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_collect_water'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_hydro_mix'
 
     ! Declare process memories
-    dsl4jsb_Def_config(LATTRANS_)
-    dsl4jsb_Def_memory(LATTRANS_)
+    dsl4jsb_Def_config(MIX_)
+    dsl4jsb_Def_memory(MIX_)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: wtr_transport
@@ -122,23 +122,23 @@ CONTAINS
     nc      = options%nc
     
     ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_calculated(LATTRANS_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(MIX_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
     
-    dsl4jsb_Get_config(LATTRANS_)
+    dsl4jsb_Get_config(MIX_)
 
     ! Get process memories
-    dsl4jsb_Get_memory(LATTRANS_)
+    dsl4jsb_Get_memory(MIX_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(LATTRANS_, wtr_transstor)     ! inout
-    dsl4jsb_Get_var2D_onChunk(LATTRANS_, wtr_transport)     ! out
+    dsl4jsb_Get_var2D_onChunk(MIX_, wtr_transstor)     ! inout
+    dsl4jsb_Get_var2D_onChunk(MIX_, wtr_transport)     ! out
 
     ! Just some dummy stuff to see that the general process implementation is working
-    IF (dsl4jsb_Config(LATTRANS_)%l_lattrans) THEN
+    IF (dsl4jsb_Config(MIX_)%l_hydro_mix) THEN
       wtr_transport(:) = 2.0_wp
       wtr_transstor(:) = 2.0_wp
     ELSE
@@ -148,25 +148,25 @@ CONTAINS
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
-  END SUBROUTINE update_collect_water
+  END SUBROUTINE update_hydro_mix
   
   ! -------------------------------------------------------------------------------------------------------
   !>
-  !! Implementation of "aggregate" for task "collect_water"
+  !! Implementation of "aggregate" for task "hydro_mix"
   !!
-  SUBROUTINE aggregate_collect_water(tile, options)
+  SUBROUTINE aggregate_hydro_mix(tile, options)
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
-    dsl4jsb_Def_memory(LATTRANS_)
+    dsl4jsb_Def_memory(MIX_)
 
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_collect_water'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_hydro_mix'
     
     ! Get local variables from options argument
     iblk = options%iblk
@@ -176,16 +176,16 @@ CONTAINS
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    dsl4jsb_Get_memory(LATTRANS_)
+    dsl4jsb_Get_memory(MIX_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(LATTRANS_, wtr_transport, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LATTRANS_, wtr_transstor, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_, wtr_transport, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_, wtr_transstor, weighted_by_fract)
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_collect_water
+  END SUBROUTINE aggregate_hydro_mix
   
 #endif
-END MODULE mo_lattrans_interface
+END MODULE mo_mix_interface
