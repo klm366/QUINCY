@@ -365,7 +365,7 @@ CONTAINS
         fract_new = 0.0_wp
       ELSE
         ! Pond surface area
-        fract_new = MIN(1.0_wp, MAX(0.0005_wp, (v / (v_max / (1._wp+2._wp/shape_par))) ** ( 2._wp / (2._wp+2._wp/shape_par) )))
+        fract_new = MIN(1.0_wp, MAX(0.0_wp, (v / (v_max / (1._wp+2._wp/shape_par))) ** ( 2._wp / (2._wp+shape_par) )))
       END IF
     ELSE 
       fract_new = 0._wp
@@ -764,6 +764,13 @@ CONTAINS
 
       global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:)+runoff_lake(:,:))*in_domain(:,:))
 
+      WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
+        ! lake water drained into internal lake
+        discharge_lake(:,:) = outflow_rivers(:,:)
+        outflow_rivers(:,:) = 0._wp
+      END WHERE
+
+
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
       DO blk = blks, blke
@@ -813,15 +820,12 @@ CONTAINS
         discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
         ! lake water drained into internal lake
-        overlflow_lake(:,:) = outflow_runoff(:,:)
-        baseflow_lake(:,:) = outflow_drainage(:,:)
-        riverflow_lake(:,:) = discharge(:,:)
+        discharge(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
-        discharge(:,:) = 0._wp
       END WHERE
       ! inflow at lake sink points
-      discharge_lake(:,:) = overlflow_lake(:,:) + baseflow_lake(:,:) + riverflow_lake(:,:) + runoff_lake(:,:)
+      discharge_lake(:,:) =  discharge_lake(:,:) + runoff_lake(:,:)
       ! lake water storage [m3]
       volume_lake(:,:) = volume_lake(:,:) + discharge_lake(:,:) * steplen
 
@@ -1119,11 +1123,10 @@ CONTAINS
                 CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
                 u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
                 k_lake           = neigh_dist/u_lake
-  !              ncount = COUNT(height_dyn(jc,blk)          == PACK(height_dyn(:,:)  ,nneigh_mask(:,:)))
-                ncount = COUNT(height_dyn(jc,blk)           == PACK(height_dyn(:,:)  ,nneigh_mask(:,:)) .AND. &
-                               outflow_mins(njc(n),nblk(n)) >= PACK(outflow_mins(:,:),nneigh_mask(:,:)))
+                ncount = COUNT(height_dyn(jc,blk)   == PACK(height_dyn(:,:)  ,nneigh_mask(:,:)) .AND. &
+                               outflow_mins(jc,blk) >= PACK(outflow_mins(:,:),nneigh_mask(:,:)))
                 lake_inflow(jc,blk) = lake_inflow(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, &
-                                                                 volume_lake(njc(n),nblk(n))/steplen ) / ncount
+                                                                 volume_lake(njc(n),nblk(n))/steplen) / ncount
               END IF
                 
               ! outflow
@@ -1135,13 +1138,10 @@ CONTAINS
                 CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
                 u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
                 k_lake           = neigh_dist/u_lake
-                ! make sure neighbor cells have different dynamic height
-                ! (water outflow only into one neighboring grid cells allowed)
-  !              ncount = COUNT(height_dyn(njc(n),nblk(n)) == PACK(height_dyn(:,:)  ,neigh_mask(:,:)))
-                ncount = COUNT(height_dyn(njc(n),nblk(n)) == PACK(height_dyn(:,:)  ,neigh_mask(:,:)) .AND. &
-                               outflow_mins(jc,blk)       >= PACK(outflow_mins(:,:),neigh_mask(:,:)))
-                lake_outflow(jc,blk) = lake_outflow(jc,blk) - MIN( volume_lake(jc,blk)/k_lake, &
-                                                                   volume_lake(jc,blk)/steplen ) / ncount
+                ncount = COUNT(height_dyn(njc(n),nblk(n))   == PACK(height_dyn(:,:)  ,neigh_mask(:,:)) .AND. &
+                               outflow_mins(njc(n),nblk(n)) >= PACK(outflow_mins(:,:),neigh_mask(:,:)))
+                lake_outflow(jc,blk) = lake_outflow(jc,blk) - MIN(volume_lake(jc,blk)/k_lake, &
+                                                                  volume_lake(jc,blk)/steplen) / ncount
               END IF
 
             END IF
