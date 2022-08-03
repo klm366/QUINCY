@@ -83,6 +83,11 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_glacier = .FALSE.      !< whether any lct of tile is GLACIER_TYPE
     LOGICAL                                :: contains_lake = .FALSE.         !< whether any lct of tile is LAKE_TYPE
     LOGICAL                                :: contains_soil = .FALSE.         !< whether any lct of tile is one that has soil
+    LOGICAL                                :: belongs_to_vegetation = .FALSE. !< whether actual tile or any parent of this tile is VEG_TYPE
+    LOGICAL                                :: belongs_to_bare = .FALSE.       !< whether actual tile or any parent of this tile is BARE_TYPE
+    LOGICAL                                :: belongs_to_land = .FALSE.       !< whether actual tile or any parent of this tile is LAND_TYPE
+    LOGICAL                                :: belongs_to_glacier = .FALSE.    !< whether actual tile or any parent of this tile is GLACIER_TYPE
+    LOGICAL                                :: belongs_to_lake = .FALSE.       !< whether actual tile or any parent of this tile is LAKE_TYPE
     INTEGER,                ALLOCATABLE    :: process_action(:)
     ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
     REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
@@ -376,6 +381,15 @@ CONTAINS
     END SELECT
 
     this%contains_soil       = this%contains_vegetation .OR. this%contains_bare .OR. this%contains_land
+
+    ! the "belongs_to" properties reveal all lcts occurring in any of the ancestors of a given tile
+    IF (ASSOCIATED(this%parent)) THEN    ! Root tile has no parent and has no LCT anyway
+      this%belongs_to_land = this%is_land .OR. this%parent_tile%belongs_to_land
+      this%belongs_to_glacier = this%is_glacier .OR. this%parent_tile%belongs_to_glacier
+      this%belongs_to_lake = this%is_lake .OR. this%parent_tile%belongs_to_lake
+      this%belongs_to_vegetation = this%is_vegetation .OR. this%parent_tile%belongs_to_vegetation
+      this%belongs_to_bare = this%is_bare .OR. this%parent_tile%belongs_to_bare
+    END IF
 
   END SUBROUTINE Add_lct
 
