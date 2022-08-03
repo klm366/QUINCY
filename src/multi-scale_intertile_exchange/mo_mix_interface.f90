@@ -112,8 +112,7 @@ CONTAINS
     dsl4jsb_Def_memory(MIX_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: wtr_transport
-    dsl4jsb_Real2D_onChunk :: wtr_transstor
+    dsl4jsb_Real2D_onChunk :: wtr_storage
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -134,16 +133,11 @@ CONTAINS
     dsl4jsb_Get_memory(MIX_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(MIX_, wtr_transstor)     ! inout
-    dsl4jsb_Get_var2D_onChunk(MIX_, wtr_transport)     ! out
+    dsl4jsb_Get_var2D_onChunk(MIX_, wtr_storage)     ! inout
 
     ! Just some dummy stuff to see that the general process implementation is working
     IF (dsl4jsb_Config(MIX_)%l_hydro_mix) THEN
-      wtr_transport(:) = 2.0_wp
-      wtr_transstor(:) = 2.0_wp
-    ELSE
-      wtr_transport(:) = 1.0_wp
-      wtr_transstor(:) = 1.0_wp
+      CALL message(TRIM(routine), 'Transport magic will happen here')
     END IF
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -180,8 +174,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(MIX_, wtr_transport, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(MIX_, wtr_transstor, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_, wtr_storage,  weighted_by_fract)
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

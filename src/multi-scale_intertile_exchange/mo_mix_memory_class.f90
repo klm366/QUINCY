@@ -38,8 +38,7 @@ MODULE mo_mix_memory_class
     
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & wtr_transport,        & !< Lateral water transport flux    [kg m-2 s-1]
-      & wtr_transstor           !< Lateral transport water storage [m]
+      & wtr_storage             !< Intermediate storage for lateral water flow    [m]
 
   CONTAINS
     PROCEDURE :: Init => Init_mix_memory
@@ -86,16 +85,9 @@ CONTAINS
 
     ! Common variables
 
-    CALL mem%Add_var('wtr_transport', mem%wtr_transport,                             &
+    CALL mem%Add_var('wtr_storage', mem%wtr_storage,                                 &
       & hgrid, surface,                                                              &
-      & t_cf('wtr_transport', 'kg m-2 s-1', 'water flow between tiles'),             &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var('wtr_transstor', mem%wtr_transstor,                             &
-      & hgrid, surface,                                                              &
-      & t_cf('wtr_transstor', 'm (water equivalent)', 'intermediate lateral flow storage'), &
+      & t_cf('wtr_storage', 'm (water equivalent)', 'Intermediate water storage for lateral flow'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp )

@@ -316,7 +316,6 @@ CONTAINS
         ! --- before it was between humidity_scaling and foliage_projected_cover
         ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
       CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
-      CALL model%Queue_task(MIX_,    "hydro_mix")
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
@@ -330,6 +329,7 @@ CONTAINS
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
       CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
       CALL model%Queue_task(HYDRO_,  "soil_hydrology")
+      CALL model%Queue_task(MIX_,    "hydro_mix")
 #ifndef __NO_JSBACH_HD__
       CALL model%Queue_task(HD_,     "hd_local_outflow")
 #endif

@@ -24,7 +24,8 @@ MODULE mo_jsb_tile_class
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+    &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE, &
+    &                               UPLAND_TYPE, LOWLAND_TYPE
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
 
@@ -77,17 +78,23 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: is_land = .FALSE.               !< whether primary lct is LAND_TYPE
     LOGICAL                                :: is_glacier = .FALSE.            !< whether primary lct is GLACIER_TYPE
     LOGICAL                                :: is_lake = .FALSE.               !< whether primary lct is LAKE_TYPE
+    LOGICAL                                :: is_upland = .FALSE.             !< whether primary lct is UPLAND_TYPE
+    LOGICAL                                :: is_lowland = .FALSE.            !< whether primary lct is LOWLAND_TYPE
     LOGICAL                                :: contains_vegetation = .FALSE.   !< whether any lct of tile is VEG_TYPE
     LOGICAL                                :: contains_bare = .FALSE.         !< whether any lct of tile is BARE_TYPE
     LOGICAL                                :: contains_land = .FALSE.         !< whether any lct of tile is LAND_TYPE
     LOGICAL                                :: contains_glacier = .FALSE.      !< whether any lct of tile is GLACIER_TYPE
     LOGICAL                                :: contains_lake = .FALSE.         !< whether any lct of tile is LAKE_TYPE
+    LOGICAL                                :: contains_upland = .FALSE.       !< whether any lct of tile is UPLAND_TYPE
+    LOGICAL                                :: contains_lowland = .FALSE.      !< whether any lct of tile is LOWLAND_TYPE
     LOGICAL                                :: contains_soil = .FALSE.         !< whether any lct of tile is one that has soil
     LOGICAL                                :: belongs_to_vegetation = .FALSE. !< whether actual tile or any parent of this tile is VEG_TYPE
     LOGICAL                                :: belongs_to_bare = .FALSE.       !< whether actual tile or any parent of this tile is BARE_TYPE
     LOGICAL                                :: belongs_to_land = .FALSE.       !< whether actual tile or any parent of this tile is LAND_TYPE
     LOGICAL                                :: belongs_to_glacier = .FALSE.    !< whether actual tile or any parent of this tile is GLACIER_TYPE
     LOGICAL                                :: belongs_to_lake = .FALSE.       !< whether actual tile or any parent of this tile is LAKE_TYPE
+    LOGICAL                                :: belongs_to_upland = .FALSE.     !< whether actual tile or any parent of this tile is UPLAND_TYPE
+    LOGICAL                                :: belongs_to_lowland = .FALSE.    !< whether actual tile or any parent of this tile is LOWLAND_TYPE
     INTEGER,                ALLOCATABLE    :: process_action(:)
     ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
     REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
@@ -349,6 +356,10 @@ CONTAINS
           this%is_glacier = .TRUE.
         CASE (LAKE_TYPE)
           this%is_lake = .TRUE.
+        CASE (UPLAND_TYPE)
+          this%is_upland = .TRUE.
+        CASE (LOWLAND_TYPE)
+          this%is_lowland = .TRUE.
         END SELECT
       END IF
 
@@ -378,6 +389,10 @@ CONTAINS
       this%contains_glacier = .TRUE.
     CASE (LAKE_TYPE)
       this%contains_lake = .TRUE.
+    CASE (UPLAND_TYPE)
+      this%contains_upland = .TRUE.
+    CASE (LOWLAND_TYPE)
+      this%contains_lowland = .TRUE.
     END SELECT
 
     this%contains_soil       = this%contains_vegetation .OR. this%contains_bare .OR. this%contains_land
@@ -389,6 +404,8 @@ CONTAINS
       this%belongs_to_lake = this%is_lake .OR. this%parent_tile%belongs_to_lake
       this%belongs_to_vegetation = this%is_vegetation .OR. this%parent_tile%belongs_to_vegetation
       this%belongs_to_bare = this%is_bare .OR. this%parent_tile%belongs_to_bare
+      this%belongs_to_upland = this%is_upland .OR. this%parent_tile%belongs_to_upland
+      this%belongs_to_lowland = this%is_lowland .OR. this%parent_tile%belongs_to_lowland
     END IF
 
   END SUBROUTINE Add_lct

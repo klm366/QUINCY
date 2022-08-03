@@ -60,6 +60,8 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & runoff,               & !< surface runoff
       & drainage,             & !< drainage
+      & wtr_inflow,           & !< lateral water flow from uphill tile
+      & wtr_outflow,          & !< lateral water flow to downhill tile
       & discharge,            & !< discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
       & internal_drain          !< internal drain
@@ -309,6 +311,24 @@ CONTAINS
     CALL mem%Add_var( 'drainage', mem%drainage,                                      &
       & hgrid, surface,                                                              &
       & t_cf('drainage', 'kg m-2 s-1', 'Drainage'),                                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'wtr_inflow', mem%wtr_inflow,                                  &
+      & hgrid, surface,                                                              &
+      & t_cf('wtr_inflow', 'kg m-2 s-1', 'Lateral water flow from uphill tile'),     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'wtr_outflow', mem%wtr_outflow,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('wtr_outflow', 'kg m-2 s-1', 'Lateral water flow to downhill tile'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &

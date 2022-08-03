@@ -33,11 +33,12 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_, MIX_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
+  dsl4jsb_Use_config(MIX_)
   dsl4jsb_Use_config(HYDRO_)
 
   ! Use of process memories
@@ -958,6 +959,7 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
+    USE mo_hydro_constants,        ONLY: NOFLOW_, UPLAND_, LOWLAND_
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -966,6 +968,7 @@ CONTAINS
     ! Local variables
     !
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(MIX_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
 
@@ -974,14 +977,14 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
-    ! @todo check if this declaration is even necessary
-    dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl
-    dsl4jsb_Real3D_onChunk :: root_depth_sl
-    dsl4jsb_Real2D_onChunk :: tpe_overflow
+    ! ! @todo check if this declaration is even necessary
+    ! dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    ! dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    ! dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
+    ! dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
+    ! dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl
+    ! dsl4jsb_Real3D_onChunk :: root_depth_sl
+    ! dsl4jsb_Real2D_onChunk :: tpe_overflow
 
 
     ! Locally allocated vectors
@@ -996,6 +999,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
     INTEGER  :: nsoil
+    INTEGER  :: hydrotype
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1023,6 +1027,7 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(MIX_)
 
     ltpe_open = .FALSE.
     ltpe_closed = .FALSE.
@@ -1042,6 +1047,15 @@ CONTAINS
       fract_org_sl(:,:) = 0._wp
     END IF
 
+    hydrotype = NOFLOW_
+    IF (dsl4jsb_Config(MIX_)%l_hydro_mix) THEN
+      IF (tile%belongs_to_upland) THEN
+        hydrotype = UPLAND_
+      ELSE IF (tile%belongs_to_lowland) THEN
+        hydrotype = LOWLAND_
+      END IF
+    END IF
+
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
@@ -1051,6 +1065,7 @@ CONTAINS
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
+      & hydrotype,                                              &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       &                                fract_org_sl  (:,:),     &
@@ -1071,6 +1086,8 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_inflow        ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_outflow       ),     &
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
@@ -1124,6 +1141,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_fc_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_inflow,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_outflow,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 
