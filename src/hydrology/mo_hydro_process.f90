@@ -556,7 +556,6 @@ CONTAINS
     ! Add intertile water flow to water_to_soil flux
     IF (hydrotype == LOWLAND_) THEN
       water_to_soil(:) = water_to_soil_local(:) + wtr_inflow(:) * dtime / rhoh2o
-      wtr_inflow(:)    = 0._wp
     ELSE
       water_to_soil(:) = water_to_soil_local(:)
     END IF
@@ -613,7 +612,7 @@ CONTAINS
       END IF
     END DO
 
-    ! Add intertile water flow to water_to_soil flux
+    ! Put intertile water flow into water_to_soil flux
     IF (hydrotype == UPLAND_) THEN
       wtr_outflow(:) = runoff(:) * rhoh2o / dtime
       runoff(:)      = 0._wp
