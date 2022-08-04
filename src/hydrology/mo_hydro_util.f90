@@ -99,21 +99,26 @@ CONTAINS
 
     !$claw acc data present(ws, dz, dz_root, ws_root) create(bottom, bottom_m1, root_depth)
     !$claw acc parallel default(none)
-    !$claw acc loop gang vector
+    !$claw acc loop gang(static:1) vector
     DO j = 1, SIZE(ws, 1)
-      bottom (j)    = SUM(dz (j,:))
-      root_depth(j) = SUM(dz_root(j,:))
-      IF (root_depth(j) > bottom(j) + EPSILON(1._wp)) THEN
-        !$claw remove
-        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-        !$claw end remove
-      ELSE
+      root_depth(j) = 0._wp
         bottom(j)    = 0._wp
         bottom_m1(j) = 0._wp
         ws_root  (j) = 0._wp
+    END DO
 
         !$claw acc loop seq
         DO i=1,n
+      !$claw acc loop gang(static:1) vector
+      DO j = 1, SIZE(ws, 1)
+        root_depth(j) = root_depth(j) + dz_root(j,i)
+      END DO
+    END DO
+
+    !$claw acc loop seq
+    DO i=1,n
+      !$claw acc loop gang(static:1) vector
+      DO j = 1, SIZE(ws, 1)
           bottom(j)    = bottom(j) + dz(j,i)
           IF (root_depth(j) >= bottom(j)) THEN                ! Root zone extends to below current layer
             ws_root(j) = ws_root(j) + ws(j,i)
@@ -122,8 +127,16 @@ CONTAINS
           END IF
           bottom_m1(j) = bottom_m1(j) + dz(j,i)
         END DO
+    END DO
+
+    !$claw remove
+    DO j = 1, SIZE(ws, 1)
+      IF (root_depth(j) > bottom(j) + EPSILON(1._wp)) THEN
+        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
       END IF
     END DO
+    !$claw end remove
+
     !$claw acc end parallel
     !$claw acc end data
 

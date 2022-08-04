@@ -37,6 +37,10 @@ MODULE mo_jsb_control
   PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
   PUBLIC :: max_no_of_models
 
+  ! Needed for inlining timer_on and debug_on on NEC.
+  PUBLIC :: debug_level, timer_level
+  PROTECTED :: debug_level, timer_level
+
   LOGICAL,           SAVE :: is_standalone
   LOGICAL,           SAVE :: restart_jsbach
   CHARACTER(len=99), SAVE :: model_base_dir
