@@ -107,8 +107,8 @@ CONTAINS
         ws_root  (j) = 0._wp
     END DO
 
-        !$claw acc loop seq
-        DO i=1,n
+    !$claw acc loop seq
+    DO i=1,n
       !$claw acc loop gang(static:1) vector
       DO j = 1, SIZE(ws, 1)
         root_depth(j) = root_depth(j) + dz_root(j,i)
