@@ -52,9 +52,9 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
-      local_budget    , &  !< discharge from upstream cells
-      local_fluxes    , &  !< discharge from upstream cells
-      local_wbal_error, &  !< discharge from upstream cells
+      local_budget    , &  !< total HD reservoir content
+      local_fluxes    , &  !< grid cell in- and outflow
+      local_wbal_error, &  !< grid cell water balance error
       water_budget    , &  !< HD water budget
       water_budget_change, & !< water budget change within the time step
       outflow_resid   , &  !< residual outflow that's not routed to discharge - only used for debugging (see mo_hd_interface.f90)
