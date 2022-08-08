@@ -1171,6 +1171,9 @@ CONTAINS
       END DO
     END IF
 
+    !$claw acc end parallel
+    !$claw acc end data
+
 #ifndef _OPENACC
       !----------------------------------------------------------------------------------------------
       ! debugging output for grid cell jllog
