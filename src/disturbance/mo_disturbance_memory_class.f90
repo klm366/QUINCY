@@ -18,7 +18,7 @@ MODULE mo_disturb_memory_class
   USE mo_kind, ONLY: wp
 
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d    ! <Rackhun Son>
 
   IMPLICIT NONE
   PRIVATE
@@ -40,7 +40,29 @@ MODULE mo_disturb_memory_class
                                 ! This is only needed for cbalone forcing!
     prev_day_max_wind_10m,    & ! for windbreak
     max_wind_10m,             & ! for windbreak
-    max_wind_10m_act            ! for windbreak
+    max_wind_10m_act,         & ! for windbreak
+
+    t_air_ave,                & ! for Fire <Rackhun Son>
+    q_ave,                    & ! for Fire <Rackhun Son>
+    q_rel_ave,                & ! for Fire <Rackhun Son>
+    swl1_ave,                 & ! for Fire <Rackhun Son>
+    swl2_ave,                 & ! for Fire <Rackhun Son>
+    swl3_ave,                 & ! for Fire <Rackhun Son>
+    swl4_ave,                 & ! for Fire <Rackhun Son>
+    lai_ave                     ! for Fire <Rackhun Son>
+
+  TYPE(t_jsb_var_real3d) ::   &
+    t_air_clim,               & ! for Fire <Rackhun Son>
+    q_clim,                   & ! for Fire <Rackhun Son>
+    q_rel_clim,               & ! for Fire <Rackhun Son>
+    swl1_clim,                & ! for Fire <Rackhun Son>
+    swl2_clim,                & ! for Fire <Rackhun Son>
+    swl3_clim,                & ! for Fire <Rackhun Son>
+    swl4_clim,                & ! for Fire <Rackhun Son>
+    lai_clim                    ! for Fire <Rackhun Son>
+
+  REAL(wp), POINTER :: lightning_climatology(:,:,:) => NULL()   ! lightning climatology (nproma,nblks,366) <Rackhun Son>
+  REAL(wp), POINTER :: population_density(:,:,:)    => NULL()   ! population density    (nproma,nblks,366) <Rackhun Son>
 
   CONTAINS
     PROCEDURE :: Init => Init_disturb_memory
@@ -66,6 +88,7 @@ CONTAINS
 
     TYPE(t_jsb_grid),  POINTER :: hgrid           ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface         ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: daily           ! daily time grids <Rackhun Son>
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_memory'
@@ -77,6 +100,10 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
+    daily   => Get_vgrid('daily')      ! 366 days <Rackhun Son>
+
+    ALLOCATE(mem%lightning_climatology(hgrid%nproma, hgrid%nblks, 1:366))   ! lightning climatology <Rackhun Son>
+    ALLOCATE(mem%population_density   (hgrid%nproma, hgrid%nblks, 1:366))   ! population density    <Rackhun Son>
 
     CALL mem%Add_var( 'burned_fract', mem%burned_fract,                                 &
       & hgrid, surface,                                                                 &
@@ -146,6 +173,135 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+
+    ! additional variable for fire <Rackhun Son>
+    CALL mem%Add_var('t_air_ave', mem%t_air_ave,                            &
+      & hgrid, surface,                                                     &
+      & t_cf('t_air_ave', 'K',                                              &
+      &  'temperature daily average'),                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('q_ave', mem%q_ave,                                    &
+      & hgrid, surface,                                                     &
+      & t_cf('q_ave', 'g/g',                                                &
+      &  'specific humidity daily average'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('q_rel_ave', mem%q_rel_ave,                            &
+      & hgrid, surface,                                                     &
+      & t_cf('q_rel_ave', '%',                                              &
+      &  'relative humidity daily average'),                                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('swl1_ave', mem%swl1_ave,                              &
+      & hgrid, surface,                                                     &
+      & t_cf('swl1_ave', 'm3/m3',                                           &
+      &  'daily average of volumetric soil water content in the 1st layer'),&
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp) 
+
+    CALL mem%Add_var('swl2_ave', mem%swl2_ave,                              &
+      & hgrid, surface,                                                     &
+      & t_cf('swl2_ave', 'm3/m3',                                           &
+      &  'daily average of volumetric soil water content in the 2nd layer'),&
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp) 
+
+    CALL mem%Add_var('swl3_ave', mem%swl3_ave,                              &
+      & hgrid, surface,                                                     &
+      & t_cf('swl3_ave', 'm3/m3',                                           &
+      &  'daily average of volumetric soil water content in the 3rd layer'),&
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp) 
+
+    CALL mem%Add_var('swl4_ave', mem%swl4_ave,                              &
+      & hgrid, surface,                                                     &
+      & t_cf('swl4_ave', 'm3/m3',                                           &
+      &  'daily average of volumetric soil water content in the 4th layer'),&
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('lai_ave', mem%lai_ave,                                &
+      & hgrid, surface,                                                     &
+      & t_cf('lai_ave', '-',                                                &
+      &  'LAI daily average'),                                              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp) 
+
+    CALL mem%Add_var('t_air_clim', mem%t_air_clim,                          &
+      & hgrid, daily,                                                       &
+      & t_cf('t_air_clim', 'K',                                             &
+      &  'temperature daily climatology'),                                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('q_clim', mem%q_clim,                                  &
+      & hgrid, daily,                                                       &
+      & t_cf('q_clim', 'g/g',                                               &
+      &  'specific humidity daily climatology'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('q_rel_clim', mem%q_rel_clim,                          &
+      & hgrid, daily,                                                       &
+      & t_cf('q_rel_clim', '%',                                             &
+      &  'relative humidity daily climatology'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('swl1_clim', mem%swl1_clim,                            &
+      & hgrid, daily,                                                       &
+      & t_cf('swl1_clim', 'm3/m3',                                          &
+      &  'daily climatology of soil water content in the 1st layer'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('swl2_clim', mem%swl2_clim,                            &
+      & hgrid, daily,                                                       &
+      & t_cf('swl2_clim', 'm3/m3',                                          &
+      &  'daily climatology of soil water content in the 2nd layer'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('swl3_clim', mem%swl3_clim,                            &
+      & hgrid, daily,                                                       &
+      & t_cf('swl3_clim', 'm3/m3',                                          &
+      &  'daily climatology of soil water content in the 3rd layer'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('swl4_clim', mem%swl4_clim,                            &
+      & hgrid, daily,                                                       &
+      & t_cf('swl4_clim', 'm3/m3',                                          &
+      &  'daily climatology of soil water content in the 4th layer'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('lai_clim', mem%lai_clim,                              &
+      & hgrid, daily,                                                       &
+      & t_cf('lai_clim', '-',                                               &
+      &  'LAI daily climatology'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
 
   END SUBROUTINE Init_disturb_memory
 

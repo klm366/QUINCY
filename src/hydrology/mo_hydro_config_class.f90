@@ -59,10 +59,12 @@ CONTAINS
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
-    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
+    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
 
     CLASS(t_hydro_config), INTENT(inout) :: config
+
+    TYPE(t_jsb_vgrid), POINTER  :: pft_layer   ! <Rackhun Son>
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
@@ -92,6 +94,7 @@ CONTAINS
     REAL(wp), POINTER :: ptr_1D(:)
     REAL(wp), ALLOCATABLE :: depths(:), mids(:)
     INTEGER :: nsoil
+    INTEGER :: npft, i  ! <Rackhun Son>
 
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
@@ -196,6 +199,12 @@ CONTAINS
     WRITE(message_text, *) 'Soil level depths in hydrology   [m]: ', soil_w%dz
     CALL message(TRIM(routine), message_text)
     DEALLOCATE(depths, mids)
+
+    ! to use fraction of pfts in disturbance <Rackhun Son>
+    npft=11
+    pft_layer => new_vgrid('pft_layer', ZAXIS_GENERIC, npft, &
+      & levels=(/ (REAL(i,kind=wp),i=1,npft) /), units='')
+    CALL register_vgrid(pft_layer)  
 
   END SUBROUTINE Init_hydro_config
 

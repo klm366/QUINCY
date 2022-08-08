@@ -45,6 +45,10 @@ MODULE mo_disturb_config_class
                          fire_tau_woody,         & ! return period of fire for woody PFT [year] at 0% relative humidity
                          fire_tau_grass            ! return period of fire for grass PFT [year] at 0% relative humidity
 
+
+  CHARACTER(len=filename_max) :: bc_lightning_filename    ! lightning frequency (daily) for fire <Rackhun Son>
+  CHARACTER(len=filename_max) :: bc_population_filename   ! population density (daily) for fire  <Rackhun Son>
+
    CONTAINS
      PROCEDURE :: Init => Init_disturb_config
   END type t_disturb_config
@@ -60,11 +64,16 @@ CONTAINS
   SUBROUTINE Init_disturb_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid   ! <Rackhun Son>
+    USE mo_jsb_grid,           ONLY: Register_vgrid           ! <Rackhun Son>
+    USE mo_jsb_io,             ONLY: ZAXIS_GENERIC            ! <Rackhun Son>
 
     CLASS(t_disturb_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    CHARACTER(len=filename_max) :: bc_lightning_filename    ! lightning frequency (daily) for fire <Rackhun Son>
+    CHARACTER(len=filename_max) :: bc_population_filename   ! population density (daily) for fire  <Rackhun Son>
 
     INTEGER                     :: fire_algorithm
     INTEGER                     :: windbreak_algorithm
@@ -100,15 +109,18 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat
 
+    TYPE(t_jsb_vgrid), POINTER :: daily        ! New axis for the day of year <Rackhun Son>
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_config'
 
     CALL message(TRIM(routine), 'Starting disturb configuration')
 
     ! Set defaults
-    active                 = .FALSE.
+    active                 = .TRUE.                    ! activate fire model <Rackhun Son>
     bc_filename            = 'bc_land_disturb.nc'
     ic_filename            = 'ic_land_disturb.nc'
-    fire_algorithm         =  1
+    bc_lightning_filename  = 'bc_land_lightning.nc'    ! lightning frequency (daily) for fire <Rackhun Son>
+    bc_population_filename = 'bc_land_population.nc'   ! population density (daily) for fire  <Rackhun Son>
     windbreak_algorithm    =  1
     lburn_pasture          = .FALSE.
     !
@@ -139,6 +151,8 @@ CONTAINS
     config%active                 = active
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
+    config%bc_lightning_filename  = bc_lightning_filename   ! lightning frequency (daily) for fire <Rackhun Son>
+    config%bc_population_filename = bc_population_filename  ! population density (daily) for fire  <Rackhun Son>
     config%fire_algorithm         = fire_algorithm
     config%windbreak_algorithm    = windbreak_algorithm
     config%lburn_pasture          = lburn_pasture
@@ -150,6 +164,10 @@ CONTAINS
     config%fire_tau_grass         = fire_tau_grass
     config%wnd_threshold          = wnd_threshold
     config%wnd_damage_scale       = wnd_damage_scale
+
+    ! New axis for the day of year <Rackhun Son>
+    daily => new_vgrid('daily', ZAXIS_GENERIC, 366, units='day')
+    CALL Register_vgrid(daily)
 
   END SUBROUTINE Init_disturb_config
 

@@ -8,6 +8,7 @@
 !> First version and many ongoing changes               by Reiner Schnur (2013-04-04 - present)
 !> Some adaptations for JSBACH4 standalone with ECHAM   by Julia Nabel   (2016-04-15)
 !> Task order changes required for forest management    by Julia Nabel   (2018-07-05)
+!> Add disturbance initialization                       by Rackhun Son   (2022-08-03)          
 !>
 !>#### License
 !>
@@ -193,6 +194,7 @@ CONTAINS
     USE mo_sb_init,             ONLY: sb_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_tcq_init,            ONLY: tcq_init
+    USE mo_disturb_init,        ONLY: disturb_init    ! <Rackhun Son>
 
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
@@ -258,6 +260,9 @@ CONTAINS
       ! - also fuel and area damaged by natural disturbances in this timestep are calculated before any lcc takes place
       IF (model%processes(FUEL_)%p%config%active) THEN
         CALL model%Queue_task(FUEL_, "fuel")
+      END IF
+      IF (model%processes(HYDRO_)%p%config%active) THEN   ! <Rackhun Son>
+        CALL model%Queue_task(HYDRO_, "pfts_fraction")
       END IF
       IF (model%processes(DISTURB_)%p%config%active) THEN
         CALL model%Queue_task(DISTURB_, "damaged_area")
@@ -586,6 +591,14 @@ CONTAINS
       CASE (MODEL_QUINCY)
         IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
           CALL veg_init(tile)
+        END IF
+      END SELECT
+
+      ! Initialize DISTURB_   <Rackhun Son> 
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        IF (one_of(tile%process_action(DISTURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+          CALL disturb_init(tile)
         END IF
       END SELECT
 

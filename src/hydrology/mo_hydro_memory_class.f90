@@ -172,6 +172,10 @@ MODULE mo_hydro_memory_class
       weq_snow_gsum,          & !< Global snow amount on non-glacier land   [Gt]
       weq_balance_err_gsum      !< Global water balance error sum           [m3/timestep]
 
+    ! Additional variables for Fire disturbance <Rackhun Son>
+    TYPE(t_jsb_var_real3d) :: &
+      & pfts_fract              !< fraction of pfts
+
   CONTAINS
     PROCEDURE :: Init => Init_hydro_memory
   END TYPE t_hydro_memory
@@ -205,6 +209,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid            ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface, soil_w  ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: pft_layer        ! Number of PFTs <Rackhun Son>
 
     INTEGER :: table
     TYPE(t_grib2) :: grib2_desc
@@ -220,6 +225,7 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     soil_w       => Get_vgrid('soil_depth_water')
+    pft_layer    => Get_vgrid('pft_layer')
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -942,6 +948,22 @@ CONTAINS
       END IF
 
     END IF
+
+    ! Additional variables for Fire disturbance   <Rackhun Son>  
+    IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
+      &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
+      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
+      &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
+      &  ) ) THEN
+
+      CALL mem%Add_var('pfts_fract', mem%pfts_fract,                          &
+        & hgrid, pft_layer,                                                     &
+        & t_cf('pfts_fract', 'PFT cover fractions', 'pfts fract'),            &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
+        & prefix, suffix,                                                       &
+        & output_level=BASIC,                                                   &
+        & initval_r=0.0_wp )
+    ENDIF
 
 #ifdef __ICON__
     ! Diagnostic 1d global land variables for experiment monitoring

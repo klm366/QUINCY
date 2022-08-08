@@ -38,6 +38,7 @@ MODULE mo_disturb_interface
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
   dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_
+  dsl4jsb_Use_processes PHENO_, HYDRO_    ! <Rackhun Son>
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
@@ -52,6 +53,8 @@ MODULE mo_disturb_interface
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(PHENO_)    ! <Rackhun Son>
+  dsl4jsb_Use_memory(HYDRO_)    ! <Rackhun Son>
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -142,9 +145,13 @@ CONTAINS
   !
   SUBROUTINE update_damaged_area(tile, options)
     USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
+    USE mo_disturb_process,       ONLY: burned_fract_dl ! <Rackhun Son>  
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, timesteps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
+
+    USE mo_jsb_time_iface,        ONLY: get_year_day    ! <Rackhun Son>
+    USE mo_time_config,           ONLY: time_config     ! <Rackhun Son>
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -152,6 +159,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
     INTEGER :: iblk, nc, ics, ice
+    INTEGER :: iyr, day_of_year                         ! <Rackhun Son>
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_damaged_area'
 
@@ -162,6 +170,8 @@ CONTAINS
     dsl4jsb_Def_memory(FUEL_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(CARBON_)
+    dsl4jsb_Def_memory(PHENO_)                       ! <Rackhun Son>
+    dsl4jsb_Def_memory(HYDRO_)                       ! <Rackhun Son>
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(CARBON_)
 
@@ -176,6 +186,35 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf_yDay
 
+    ! axuxiliary input variables for fire
+    dsl4jsb_Real2D_onChunk :: t_air                  ! temperature [K]   <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: rain                   ! precipitation <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: lai                    ! LAI <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max          ! Maximum fraction of tile that can be covered by leave <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: pfts_fract             ! fraction of PFTs <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: fract_snow_soil        ! snow fraction on soil <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: elevation              ! elevation <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl            ! water content in soil layers [m] <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl          ! soil depth within each soil layer [m] <Rackhun Son>
+
+    dsl4jsb_Real2D_onChunk :: t_air_ave              ! daily average of temperature <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: q_ave                  ! daily average of specific humidity <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: q_rel_ave              ! daily average of relative humidity <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: swl1_ave               ! daily average of volumetric soil water content in the 1st layer <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: swl2_ave               ! daily average of volumetric soil water content in the 2nd layer <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: swl3_ave               ! daily average of volumetric soil water content in the 3rd layer <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: swl4_ave               ! daily average of volumetric soil water content in the 4th layer <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: lai_ave                ! daily average of LAI <Rackhun Son>
+
+    dsl4jsb_Real3D_onChunk :: t_air_clim             ! daily climatology of temperature <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: q_clim                 ! daily climatology of specific humidity <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: q_rel_clim             ! daily climatology of relative humidity <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: swl1_clim              ! daily climatology of volumetric soil water content in the 1st layer <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: swl2_clim              ! daily climatology of volumetric soil water content in the 2nd layer <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: swl3_clim              ! daily climatology of volumetric soil water content in the 3rd layer <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: swl4_clim              ! daily climatology of volumetric soil water content in the 4th layer <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: lai_clim               ! daily climatology of LAI <Rackhun Son>
+
     dsl4jsb_Real2D_onChunk :: burned_fract
     dsl4jsb_Real2D_onChunk :: damaged_fract
 
@@ -188,7 +227,18 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
-      & q_rel_air
+      & q_rel_air,                     &   
+      & swl1,                          &   ! volumetric soil water content in the 1st layer <Rackhun Son>
+      & swl2,                          &   ! volumetric soil water content in the 2nd layer <Rackhun Son>
+      & swl3,                          &   ! volumetric soil water content in the 3rd layer <Rackhun Son>
+      & swl4                               ! volumetric soil water content in the 4th layer <Rackhun Son>
+
+    REAL(wp), DIMENSION(options%nc, 9) :: &
+      & modified_pfts_fract                ! modified pft fractions for Fire <Rackhun Son>
+
+    ! Declare pointers to variables in memory <Rackhun Son>
+    REAL(wp), POINTER      :: lightning_climatology(:)
+    REAL(wp), POINTER      :: population_density(:)
 
     !LOGICAL  :: pft_mask ! True for pfts to which the disturbance should be applied.
     REAL(wp) :: persist ! Factor (as fraction) determining the persistance of q_rel_air_climbuf
@@ -201,6 +251,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    iyr     = options%current_datetime%date%year    ! <Rackhun Son> 
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
@@ -220,6 +271,8 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(PHENO_)    ! <Rackhun Son>
+    dsl4jsb_Get_memory(HYDRO_)    ! <Rackhun Son>
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! in
@@ -233,6 +286,34 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_rel_air_climbuf)        ! inout
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_rel_air_climbuf_yDay)   ! out
 
+    dsl4jsb_Get_var2D_onChunk(A2L_,       t_air)                    ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(A2L_,       rain)                     ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(PHENO_,     lai)                      ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(PHENO_,     fract_fpc_max)            ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,     pfts_fract)               ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,     fract_snow_soil)          ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,     elevation)                ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,     wtr_soil_sl)              ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,     soil_depth_sl)            ! in <Rackhun Son>
+    
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   t_air_ave)                ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_ave)                    ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_rel_ave)                ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl1_ave)                 ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl2_ave)                 ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl3_ave)                 ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl4_ave)                 ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   lai_ave)                  ! in <Rackhun Son>
+
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   t_air_clim)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   q_clim)                   ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   q_rel_clim)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl1_clim)                ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl2_clim)                ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl3_clim)                ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl4_clim)                ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   lai_clim)                 ! in <Rackhun Son>
+    
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
 
@@ -240,7 +321,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_green_2_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_woods_2_soil)  ! out
 
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)         ! in
+    dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)          ! in
     ! -------------------------------------------------------------------------------------------------- !
 
     q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
@@ -263,7 +344,99 @@ CONTAINS
       q_rel_air_climbuf_yDay(:) = q_rel_air_climbuf(:)
     END IF
 
+    ! calculate volumetric soil water content <Rackhun Son>
+    swl1(:) = wtr_soil_sl(:,1) / (soil_depth_sl(:,1)+1e-10_wp)
+    swl2(:) = wtr_soil_sl(:,2) / (soil_depth_sl(:,2)+1e-10_wp)
+    swl3(:) = wtr_soil_sl(:,3) / (soil_depth_sl(:,3)+1e-10_wp)
+    swl4(:) = wtr_soil_sl(:,4) / (soil_depth_sl(:,4)+1e-10_wp)
+
+    ! calculate daily statistics <Rackhun Son>
+    ! get day of year for cliamtology calculation
+    day_of_year = INT(get_year_day(options%current_datetime))
+
+    ! skip 2/29 (2/29 is 60th at proleptic gregorian)
+    IF (mod(iyr,4) /= 0) THEN
+      IF (day_of_year >= 60) day_of_year = day_of_year+1
+    ENDIF
+
+    t_air_ave(:) = t_air_ave(:) + t_air(:)    *(options%dtime/60._wp/60._wp/24._wp)
+    q_ave(:)     = q_ave(:)     + q_air(:)    *(options%dtime/60._wp/60._wp/24._wp)
+    q_rel_ave(:) = q_rel_ave(:) + q_rel_air(:)*(options%dtime/60._wp/60._wp/24._wp)
+    swl1_ave(:)  = swl1_ave(:)  + swl1(:)     *(options%dtime/60._wp/60._wp/24._wp)
+    swl2_ave(:)  = swl2_ave(:)  + swl2(:)     *(options%dtime/60._wp/60._wp/24._wp)
+    swl3_ave(:)  = swl3_ave(:)  + swl3(:)     *(options%dtime/60._wp/60._wp/24._wp)
+    swl4_ave(:)  = swl4_ave(:)  + swl4(:)     *(options%dtime/60._wp/60._wp/24._wp)
+    lai_ave(:)   = lai_ave(:)   + lai(:)      *(options%dtime/60._wp/60._wp/24._wp)
+
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
+
+      ! calculate auxiliary variables for DL fire model   <Rackhun Son>
+      IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
+        ! approximate daily climatology with 30-year window
+        IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
+          t_air_clim(:,day_of_year) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
+          q_clim(:,day_of_year)     = q_ave(:)     /(options%dtime/60._wp/60._wp/24._wp)
+          q_rel_clim(:,day_of_year) = q_rel_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
+          swl1_clim(:,day_of_year)  = swl1_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl2_clim(:,day_of_year)  = swl2_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl3_clim(:,day_of_year)  = swl3_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl4_clim(:,day_of_year)  = swl4_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          lai_clim(:,day_of_year)   = lai_ave(:)   /(options%dtime/60._wp/60._wp/24._wp)
+        ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
+          t_air_clim(:,day_of_year) = t_air_ave(:)
+          q_clim(:,day_of_year)     = q_ave(:)
+          q_rel_clim(:,day_of_year) = q_rel_ave(:)
+          swl1_clim(:,day_of_year)  = swl1_ave(:)
+          swl2_clim(:,day_of_year)  = swl2_ave(:)
+          swl3_clim(:,day_of_year)  = swl3_ave(:)
+          swl4_clim(:,day_of_year)  = swl4_ave(:)
+          lai_clim(:,day_of_year)   = lai_ave(:)
+        ELSEIF (day_of_year == 60) Then                                ! 2/29 <= 2/28
+          t_air_clim(:,day_of_year) = t_air_clim(:,59)
+          q_clim(:,day_of_year)     = q_clim(:,59)
+          q_rel_clim(:,day_of_year) = q_rel_clim(:,59)
+          swl1_clim(:,day_of_year)  = swl1_clim(:,59)
+          swl2_clim(:,day_of_year)  = swl2_clim(:,59)
+          swl3_clim(:,day_of_year)  = swl3_clim(:,59)
+          swl4_clim(:,day_of_year)  = swl4_clim(:,59)
+          lai_clim(:,day_of_year)   = lai_clim(:,59)
+        ELSE
+          t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*0.967_wp + t_air_ave(:)*0.033_wp
+          q_clim(:,day_of_year)     = q_clim(:,day_of_year)*0.967_wp     + q_ave(:)*0.033_wp
+          q_rel_clim(:,day_of_year) = q_rel_clim(:,day_of_year)*0.967_wp + q_rel_ave(:)*0.033_wp
+          swl1_clim(:,day_of_year)  = swl1_clim(:,day_of_year)*0.967_wp  + swl1_ave(:)*0.033_wp
+          swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)*0.967_wp  + swl2_ave(:)*0.033_wp
+          swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)*0.967_wp  + swl3_ave(:)*0.033_wp
+          swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)*0.967_wp  + swl4_ave(:)*0.033_wp
+          lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)*0.967_wp   + lai_ave(:)*0.033_wp
+        ENDIF
+
+        ! modify pft fractions for Fire
+        modified_pfts_fract(:,1) = fract_snow_soil(:)
+        !modified_pfts_fract(:,1) = MAX(0._wp, 1._wp-SUM(pfts_fract(:,:8),DIM=2))*fract_fpc_max
+        modified_pfts_fract(:,2) = pfts_fract(:,1)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf evergreen
+        modified_pfts_fract(:,3) = pfts_fract(:,2)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf deciduous
+        modified_pfts_fract(:,4) = pfts_fract(:,3)*(1-fract_snow_soil(:))*fract_fpc_max     ! Extra-tropical broadleaf evergreen
+        modified_pfts_fract(:,5) = pfts_fract(:,4)*(1-fract_snow_soil(:))*fract_fpc_max     ! Extra_tropical broadleaf deciduous
+        modified_pfts_fract(:,6) = pfts_fract(:,5)*(1-fract_snow_soil(:))*fract_fpc_max     ! Raingreen Shrubs
+        modified_pfts_fract(:,7) = pfts_fract(:,6)*(1-fract_snow_soil(:))*fract_fpc_max     ! Deciduous Shrubs
+        modified_pfts_fract(:,8) = SUM(pfts_fract(:,7:8),DIM=2)*(1-fract_snow_soil(:))*fract_fpc_max   ! Grass
+        modified_pfts_fract(:,9) = (1-fract_snow_soil(:))*(1-fract_fpc_max)  ! Others
+
+        !IF (tile%is_vegetation) print*, SUM(SUM(pfts_fract, DIM=2)*fract_fpc_max)
+        !IF (tile%is_glacier) print*, SUM(modified_pfts_fract), SUM(fract_snow_soil)
+        !IF (SUM(fract_snow_soil)>0 .AND. SUM(modified_pfts_fract)>32) print*, SUM(modified_pfts_fract), SUM(fract_snow_soil)
+        !print*, SUM(modified_pfts_fract, DIM=2)
+
+        !rain(:) = rain(:)*86400   ! [kg/m2/s] => [mm/day]   currently precipitation forcing is set to GSWP3
+        !IF (iyr == 2008) print*, minval(t_air_clim), maxval(t_air_clim)
+        !print*, minval(rain*86400), maxval(rain*86400)
+        !print*, minval(wtr_soil_sl(:,4)/(soil_depth_sl(:,4)+1e-10_wp)), maxval(wtr_soil_sl(:,4)/(soil_depth_sl(:,4)+1e-10_wp))
+
+        lightning_climatology => dsl4jsb_memory(DISTURB_)%lightning_climatology(ics:ice, iblk, day_of_year)    ! <Rackhun Son>
+        population_density    => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk, day_of_year)       ! <Rackhun Son>
+      ENDIF
+
       burned_fract(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) &
           .OR. (dsl4jsb_Config(DISTURB_)%lburn_pasture .AND. dsl4jsb_Lctlib_param(pasture_PFT)) &
@@ -272,6 +445,7 @@ CONTAINS
         SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
           CASE (0) !! No fire algorithm
           CASE (1) !! jsbach algorithm
+            !IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
 
             ! Calculate burned area. Woody and grass types call the subroutine with different parameters
             IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN  ! Woody Type
@@ -296,6 +470,30 @@ CONTAINS
           CASE (3)
             CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
           CASE (4) !! Read burned_fract
+          CASE (5) !! DL based new fire algoritm   <Rackhun Son>
+
+            CALL burned_fract_dl(                                      &
+              & t_air(:),      t_air_clim(:,day_of_year),              &  
+              & q_rel_air(:),  q_rel_clim(:,day_of_year),              &
+              & q_air(:),      q_clim(:,day_of_year),                  &
+              & wind_10m(:),                                           &
+              & rain(:),                                               &
+              & swl1(:),       swl1_clim(:,day_of_year),               &
+              & swl2(:),       swl2_clim(:,day_of_year),               &
+              & swl3(:),       swl3_clim(:,day_of_year),               &
+              & swl4(:),       swl4_clim(:,day_of_year),               &
+              & lai(:),        lai_clim(:,day_of_year),                &
+              & modified_pfts_fract(:,:),                              &
+              & fuel(:),                                               &
+              & population_density(:),                                 &
+              & lightning_climatology(:),                              &
+              & elevation(:),                                          &
+
+              & nc,                                                    &
+              
+              & burned_fract(:)                                        & ! inout
+              & )
+
           CASE DEFAULT
             CALL finish('disturbed_fract','Unknown fire algorithm')
         END SELECT
@@ -325,6 +523,16 @@ CONTAINS
         cflux_dist_green_2_soil(:) = 0._wp
         cflux_dist_woods_2_soil(:) = 0._wp
       ENDIF
+
+    ! reset daily statistics
+    t_air_ave(:) = 0._wp
+    q_ave(:) = 0._wp
+    q_rel_ave(:) = 0._wp
+    swl1_ave(:) = 0._wp
+    swl2_ave(:) = 0._wp
+    swl3_ave(:) = 0._wp
+    swl4_ave(:) = 0._wp
+    lai_ave(:) = 0._wp
 
     ENDIF ! is_newday
 
@@ -645,6 +853,64 @@ CONTAINS
             CASE (3)
               CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
             CASE (4) !! Read burned_fract
+            CASE (5) !! jsbach algorithm
+
+              !Calculate current sum before operation for c conservation test
+              CALL recalc_carbon_per_tile_vars(tile, options)
+              CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
+
+              CALL relocate_carbon_fire(                    &
+                & burned_fract(:),                          & ! in, only for windbreak
+                & dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos , & ! in
+                & dsl4jsb_Lctlib_param(LeafLit_coef(1:5)),  & ! in
+                & dsl4jsb_Lctlib_param(WoodLit_coef(1:5)),  & ! in
+                & c_green(:),                               & ! inout
+                & c_woods(:),                               & ! inout
+                & c_reserve(:),                             & ! inout
+                & cflux_dist_green_2_soil(:),               & ! inout
+                & cflux_dist_woods_2_soil(:),               & ! inout
+                & c_acid_ag1(:),                            & ! inout
+                & c_water_ag1(:),                           & ! inout
+                & c_ethanol_ag1(:),                         & ! inout
+                & c_nonsoluble_ag1(:),                      & ! inout
+                & c_acid_ag2(:),                            & ! inout
+                & c_water_ag2(:),                           & ! inout
+                & c_ethanol_ag2(:),                         & ! inout
+                & c_nonsoluble_ag2(:),                      & ! inout
+                & c_acid_bg1(:),                            & ! inout
+                & c_water_bg1(:),                           & ! inout
+                & c_ethanol_bg1(:),                         & ! inout
+                & c_nonsoluble_bg1(:),                      & ! inout
+                & c_acid_bg2(:),                            & ! inout
+                & c_water_bg2(:),                           & ! inout
+                & c_ethanol_bg2(:),                         & ! inout
+                & c_nonsoluble_bg2(:),                      & ! inout
+                & c_humus_1(:),                             & ! inout
+                & c_humus_2(:),                             & ! inout
+                & co2flux_fire_all_2_atm                    & ! out
+                & )
+
+              CALL calculate_current_c_ag_1_and_bg_sums(tile, options)
+              CALL recalc_per_tile_vars(tile, options,                                      &
+                & c_green= c_green(:), c_woods = c_woods(:), c_reserve = c_reserve(:),      &
+                & c_acid_ag1 = c_acid_ag1(:), c_water_ag1 = c_water_ag1(:),                 &
+                & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+                & c_acid_ag2 = c_acid_ag2(:), c_water_ag2 = c_water_ag2(:),                 &
+                & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:), &
+                & c_acid_bg1 = c_acid_bg1(:), c_water_bg1 = c_water_bg1(:),                 &
+                & c_ethanol_bg1 = c_ethanol_bg1(:), c_nonsoluble_bg1 = c_nonsoluble_bg1(:), &
+                & c_acid_bg2 = c_acid_bg2(:), c_water_bg2 = c_water_bg2(:),                 &
+                & c_ethanol_bg2 = c_ethanol_bg2(:), c_nonsoluble_bg2 = c_nonsoluble_bg2(:), &
+                & c_humus_1 = c_humus_1(:), c_humus_2 = c_humus_2(:),                       &
+                & cflux_dist_green_2_soil = cflux_dist_green_2_soil(:),                     &
+                & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:),                     &
+                & co2flux_fire_all_2_atm = co2flux_fire_all_2_atm(:))
+
+              ! For conservation test: negate currently positve co2flux_fire_all_2_atm_ta (flux away from land!)
+              ! and convert from CO2 flux to carbon change per day
+
+              CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
+                & -co2flux_fire_all_2_atm_ta(:) * sec_per_day / molarMassCO2_kg, cconservation_fire(:))
             CASE DEFAULT
               CALL finish('disturbed_fract','Unknown fire algorithm')
           END SELECT

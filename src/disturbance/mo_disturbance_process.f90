@@ -22,6 +22,7 @@ MODULE mo_disturb_process
   PRIVATE
 
   PUBLIC :: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
+  PUBLIC :: burned_fract_dl    ! <Rackhun Son>
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_disturb_process'
 
@@ -71,6 +72,61 @@ CONTAINS
     END IF
 
   END SUBROUTINE burned_fract_jsbach
+
+  !!! DL based Fire model  <Rackhun Son>
+  SUBROUTINE burned_fract_dl( &
+    & t_air,       t_clim,                        & ! in
+    & q_rel_air,   rh_clim,                       & ! in
+    & q_air,       q_clim,                        & ! in
+    & wind_10m,                                   & ! in
+    & rain,                                       & ! in
+    & swl1,        swl1_clim,                     & ! in
+    & swl2,        swl2_clim,                     & ! in
+    & swl3,        swl3_clim,                     & ! in
+    & swl4,        swl4_clim,                     & ! in
+    & lai,         lai_clim,                      & ! in
+    & modified_pfts_fract,                        & ! in
+    & fuel,                                       & ! in
+    & population_density,                         & ! in
+    & lightning_climatology,                      & ! in
+    & elevation,                                  & ! in
+
+    & nc,                                         & ! in
+
+    & burned_fract                                & ! inout
+    & )
+
+    ! Input Arguments
+    REAL(wp), INTENT(in) ::             &
+      & t_air(:),       t_clim(:),      &
+      & q_rel_air(:),   rh_clim(:),     &
+      & q_air(:),       q_clim(:),      &
+      & wind_10m(:),                    &
+      & rain(:),                        &
+      & swl1(:),        swl1_clim(:),   &
+      & swl2(:),        swl2_clim(:),   &
+      & swl3(:),        swl3_clim(:),   &
+      & swl4(:),        swl4_clim(:),   &
+      & lai(:),         lai_clim(:),    &
+      & modified_pfts_fract(:,:),       &
+      & fuel(:),                        &
+      & population_density(:),          &
+      & lightning_climatology(:),       &
+      & elevation(:)                    
+
+    INTEGER, INTENT(in) ::                          &
+      & nc                                            ! in                                  
+
+    ! Output Arguments
+    REAL(wp), INTENT(inout) ::                      &
+      & burned_fract(:)                               ! inout
+
+    ! output
+    burned_fract(:) = 0.  
+
+    IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
+
+  END SUBROUTINE burned_fract_dl
 
   ! Calculate windbreak for woody types
   PURE ELEMENTAL SUBROUTINE broken_woody_fract_jsbach( &

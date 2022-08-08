@@ -178,6 +178,18 @@ MODULE mo_hydro_interface
     PROCEDURE Create_task_water_balance
   END INTERFACE tsk_water_balance
 
+  !> Type definition for pfts_fraction task   <Rackhun Son>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_pfts_fraction
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_pfts_fraction    
+    PROCEDURE, NOPASS :: Aggregate => aggregate_pfts_fraction 
+  END TYPE tsk_pfts_fraction
+
+  !> Constructor interface for snow_and_skin_fraction task
+  INTERFACE tsk_pfts_fraction
+    PROCEDURE Create_task_pfts_fraction                       
+  END INTERFACE tsk_pfts_fraction
+
 CONTAINS
 
   ! ================================================================================================================================
@@ -344,6 +356,22 @@ CONTAINS
   END FUNCTION Create_task_water_balance
 
   ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for pfts_fraction task   <Rackhun Son>
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "tsk_pfts_fraction"
+  !!
+  FUNCTION Create_task_pfts_fraction(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_pfts_fraction::return_ptr)
+    CALL return_ptr%Construct(name='pfts_fraction', process_id=HYDRO_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_pfts_fraction
+
+  ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for hydrology process
   !!
   !! @param[in]     model_id  Model id
@@ -364,6 +392,7 @@ CONTAINS
     !CALL process%Register_task( tsk_snow_and_ice_hydrology (model_id))
     CALL process%Register_task( tsk_snow_and_skin_fraction (model_id))
     CALL process%Register_task( tsk_water_balance          (model_id))
+    CALL process%Register_task( tsk_pfts_fraction          (model_id))     ! <Rackhun Son>
 
   END SUBROUTINE Register_hydro_tasks
   !
@@ -2220,6 +2249,120 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_water_balance
+
+  ! ================================================================================================================================
+  !
+  !! @brief Implementation of "update" for task "pfts_fraction"
+  !! Task "update_pfts_fraction" calculates all pfts fractions
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_pfts_fraction(tile, options)
+
+    ! Use declarations
+    USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
+
+    ! Arguments
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    !----------------------------
+    ! Local variables
+    TYPE(t_jsb_model), POINTER :: model
+    CLASS(t_jsb_tile_abstract),  POINTER  ::  ptr_tile
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_pfts_fraction'
+
+    INTEGER  :: iblk, ics, ice, no_children, itile
+    REAL(wp) :: dtime, steplen, config_w_skin_max
+    REAL(wp), DIMENSION(options%nc) :: pft_fract, veg_fract, bare_fract
+    !$claw verbatim INTEGER, SAVE :: task_counter = 1
+
+    ! Declare pointers for process configuration and memory
+    dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(PHENO_)
+
+    ! Declare pointers for variables in memory
+    dsl4jsb_Real2D_onChunk :: fract_fpc_max
+    dsl4jsb_Real3D_onChunk :: pfts_fract
+
+    ! ---------------------------
+    ! Go
+
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+
+    IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    ! Set pointers to process configs and memory
+    dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(PHENO_)
+
+    dsl4jsb_Get_var2D_onChunk(PHENO_,  fract_fpc_max)  ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,     pfts_fract)  ! out
+
+    ! Get 11 pft fractions
+    IF (tile%is_vegetation) THEN
+      no_children = tile%Get_no_of_children()
+      DO itile = 1,no_children
+        IF (itile == 1) THEN
+          ptr_tile => tile%Get_first_child_tile()
+        ELSE
+          ptr_tile => ptr_tile%Get_next_sibling_tile()
+        END IF
+        ! get cover fractions
+        CALL ptr_tile%Get_fraction(ics, ice, iblk, fract=pfts_fract(:,itile))
+      END DO ! itile
+    END IF
+
+  END SUBROUTINE update_pfts_fraction
+
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "pfts_fraction"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_pfts_fraction(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    TYPE(t_jsb_model), POINTER :: model
+    INTEGER  :: iblk , ics, ice
+
+    dsl4jsb_Def_memory(HYDRO_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_pfts_fraction'
+    
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    dsl4jsb_Get_memory(HYDRO_)
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pfts_fract, weighted_by_fract)
+
+    ! Don't aggregate, but explicitely compute water balance on each tile
+    !CALL update_pfts_fraction(tile, options)
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_pfts_fraction
 
   !-----------------------------------------------------------------------------------------------------
   !> Global land mean hydrology output
