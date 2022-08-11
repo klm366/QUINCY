@@ -51,16 +51,15 @@ transitionsTag='_flipped'
 #############################################################################
 # For standard LUH2 data processing
 if [ $user_defined_states_trans = false ]; then
-  statesFile="states$.nc"
+  statesFile="states.nc"
   transitionFile="transitions.nc"
-  echo $statesFile $transitionFile
-  exit
+  echo "Looking for files:" $statesFile $transitionFile in ${pathToOrgData}
 fi
 
 # prepare paths
 scaledAndMappedStatesPath="${mainWorkingPath}/updated_states_out"
 mappedHarvestPath="${mainWorkingPath}/lu_out_harvest"
-forMappingTransPath="${mainWorkingPath}/lu_out"
+forMappingTransPath="${mainWorkingPath}/lu_out"$
 
 if [ ${orgDataHasAlreadyBeenAggregated} = true ] && [ ${resolutionHasAlreadyBeenUsedForMapping} = false ]; then
   aggregatedStatesPath="${mainWorkingPathForAggregatedData}/updated_states_out"
@@ -115,9 +114,9 @@ if [ ! ${resolutionHasAlreadyBeenUsedForMapping} = true ]; then
   #############################################################################
   #-- extract the required years from the original data
     if [ ! ${orgDataHasAlreadyBeenAggregated} = true ]; then
-        cdo -s -selyear,${selStartYear}/${selEndYearStates} ${pathToOrgData}/${statesFile} ${mainWorkingPath}/${selStates}
+        cdo -s -setmissval,1.e+20 -selyear,${selStartYear}/${selEndYearStates} ${pathToOrgData}/${statesFile} ${mainWorkingPath}/${selStates}
         # the transitions file is also required if [ ! ${processTransitions} = true ] because of the data on harvest
-        cdo -s -selyear,${selStartYear}/${selEndYearTransitions} ${pathToOrgData}/${transitionFile} ${mainWorkingPath}/${selTrans}
+        cdo -s -setmissval,1.e+20 -selyear,${selStartYear}/${selEndYearTransitions} ${pathToOrgData}/${transitionFile} ${mainWorkingPath}/${selTrans}
     fi
 
   #############################################################################
