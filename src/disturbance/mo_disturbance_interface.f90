@@ -152,6 +152,9 @@ CONTAINS
 
     USE mo_jsb_time_iface,        ONLY: get_year_day    ! <Rackhun Son>
     USE mo_time_config,           ONLY: time_config     ! <Rackhun Son>
+    !!!! These will be removed after the FUEL issue
+    USE mo_fuel_process,          ONLY: calc_fuel_jsbach
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -186,6 +189,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf_yDay
 
+    !!!! These will be removed after the FUEL issue
+    dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
+    dsl4jsb_Real2D_onChunk :: c_water_ag1_ta
+    dsl4jsb_Real2D_onChunk :: c_ethanol_ag1_ta
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag1_ta
+    dsl4jsb_Real2D_onChunk :: c_acid_ag2_ta
+    dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
+    dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
+    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     ! axuxiliary input variables for fire
     dsl4jsb_Real2D_onChunk :: t_air                  ! temperature [K]   <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: rain                   ! precipitation <Rackhun Son>
@@ -214,6 +228,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: swl3_clim              ! daily climatology of volumetric soil water content in the 3rd layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: swl4_clim              ! daily climatology of volumetric soil water content in the 4th layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: lai_clim               ! daily climatology of LAI <Rackhun Son>
+
+    dsl4jsb_Real3D_onChunk :: climate_lstm_hidden    ! LSTM hidden/cell <Rackhun>
+    dsl4jsb_Real3D_onChunk :: climate_lstm_cell      ! LSTM hidden/cell <Rackhun>
+    dsl4jsb_Real3D_onChunk :: vegetation_lstm_hidden ! LSTM hidden/cell <Rackhun>
+    dsl4jsb_Real3D_onChunk :: vegetation_lstm_cell   ! LSTM hidden/cell <Rackhun>
 
     dsl4jsb_Real2D_onChunk :: burned_fract
     dsl4jsb_Real2D_onChunk :: damaged_fract
@@ -313,6 +332,11 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl3_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl4_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   lai_clim)                 ! in <Rackhun Son>
+
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   climate_lstm_hidden)      ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   climate_lstm_cell)        ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   vegetation_lstm_hidden)   ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   vegetation_lstm_cell)     ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
@@ -320,6 +344,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm)   ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_green_2_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_woods_2_soil)  ! out
+    
+    !!!! These will be removed after the FUEL issue 
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1_ta)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1_ta)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1_ta)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2_ta)            ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2_ta)           ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2_ta)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2_ta)      ! in
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)          ! in
     ! -------------------------------------------------------------------------------------------------- !
@@ -413,7 +448,6 @@ CONTAINS
 
         ! modify pft fractions for Fire
         modified_pfts_fract(:,1) = fract_snow_soil(:)
-        !modified_pfts_fract(:,1) = MAX(0._wp, 1._wp-SUM(pfts_fract(:,:8),DIM=2))*fract_fpc_max
         modified_pfts_fract(:,2) = pfts_fract(:,1)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf evergreen
         modified_pfts_fract(:,3) = pfts_fract(:,2)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf deciduous
         modified_pfts_fract(:,4) = pfts_fract(:,3)*(1-fract_snow_soil(:))*fract_fpc_max     ! Extra-tropical broadleaf evergreen
@@ -421,21 +455,30 @@ CONTAINS
         modified_pfts_fract(:,6) = pfts_fract(:,5)*(1-fract_snow_soil(:))*fract_fpc_max     ! Raingreen Shrubs
         modified_pfts_fract(:,7) = pfts_fract(:,6)*(1-fract_snow_soil(:))*fract_fpc_max     ! Deciduous Shrubs
         modified_pfts_fract(:,8) = SUM(pfts_fract(:,7:8),DIM=2)*(1-fract_snow_soil(:))*fract_fpc_max   ! Grass
-        modified_pfts_fract(:,9) = (1-fract_snow_soil(:))*(1-fract_fpc_max)  ! Others
+        modified_pfts_fract(:,9) = (1-fract_snow_soil(:))*(1-fract_fpc_max)                 ! Others
 
-        !IF (tile%is_vegetation) print*, SUM(SUM(pfts_fract, DIM=2)*fract_fpc_max)
-        !IF (tile%is_glacier) print*, SUM(modified_pfts_fract), SUM(fract_snow_soil)
-        !IF (SUM(fract_snow_soil)>0 .AND. SUM(modified_pfts_fract)>32) print*, SUM(modified_pfts_fract), SUM(fract_snow_soil)
-        !print*, SUM(modified_pfts_fract, DIM=2)
-
+        !Fix rain
         !rain(:) = rain(:)*86400   ! [kg/m2/s] => [mm/day]   currently precipitation forcing is set to GSWP3
         !IF (iyr == 2008) print*, minval(t_air_clim), maxval(t_air_clim)
-        !print*, minval(rain*86400), maxval(rain*86400)
-        !print*, minval(wtr_soil_sl(:,4)/(soil_depth_sl(:,4)+1e-10_wp)), maxval(wtr_soil_sl(:,4)/(soil_depth_sl(:,4)+1e-10_wp))
 
         lightning_climatology => dsl4jsb_memory(DISTURB_)%lightning_climatology(ics:ice, iblk, day_of_year)    ! <Rackhun Son>
         population_density    => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk, day_of_year)       ! <Rackhun Son>
       ENDIF
+
+      !!!! These will be removed after the FUEL issue 
+      CALL calc_fuel_jsbach(       &
+        & c_acid_ag1_ta(:),        & ! in
+        & c_water_ag1_ta(:),       & ! in
+        & c_ethanol_ag1_ta(:),     & ! in
+        & c_nonsoluble_ag1_ta(:),  & ! in
+        & c_acid_ag2_ta(:),        & ! in
+        & c_water_ag2_ta(:),       & ! in
+        & c_ethanol_ag2_ta(:),     & ! in
+        & c_nonsoluble_ag2_ta(:),  & ! in
+        & fract_fpc_max(:),        & ! in
+        & fuel(:)                  & ! out
+        & )
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
       burned_fract(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) &
@@ -445,7 +488,6 @@ CONTAINS
         SELECT CASE (dsl4jsb_Config(DISTURB_)%fire_algorithm)
           CASE (0) !! No fire algorithm
           CASE (1) !! jsbach algorithm
-            !IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
 
             ! Calculate burned area. Woody and grass types call the subroutine with different parameters
             IF (dsl4jsb_Lctlib_param(woody_PFT)) THEN  ! Woody Type
@@ -471,6 +513,10 @@ CONTAINS
             CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
           CASE (4) !! Read burned_fract
           CASE (5) !! DL based new fire algoritm   <Rackhun Son>
+            !IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
+            !if (SUM(c_acid_ag1_ta)>0) then
+            !  print*, SUM(c_acid_ag1_ta)
+            !endif
 
             CALL burned_fract_dl(                                      &
               & t_air(:),      t_air_clim(:,day_of_year),              &  
@@ -490,7 +536,116 @@ CONTAINS
               & elevation(:),                                          &
 
               & nc,                                                    &
+              & tile%name,                                             &
+
+              & dsl4jsb_Config(DISTURB_)%d_climate_input,              &
+              & dsl4jsb_Config(DISTURB_)%d_climate_hidden,             &
+              & dsl4jsb_Config(DISTURB_)%d_vegetation_input,           &
+              & dsl4jsb_Config(DISTURB_)%d_vegetation_hidden,          &
+              & dsl4jsb_Config(DISTURB_)%d_static_input,               &
+              & dsl4jsb_Config(DISTURB_)%d_static_hidden,              &
+              & dsl4jsb_Config(DISTURB_)%d_output,                     &
+              & dsl4jsb_Config(DISTURB_)%d_emb_input,                  &
+              & dsl4jsb_Config(DISTURB_)%d_emb_hidden,                 &
+              & dsl4jsb_Config(DISTURB_)%d_emb_output,                 &
+
+              & dsl4jsb_Config(DISTURB_)%climate_i2i_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_i2i_bias,             &
+              & dsl4jsb_Config(DISTURB_)%climate_h2i_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_h2i_bias,             &
+              & dsl4jsb_Config(DISTURB_)%climate_i2f_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_i2f_bias,             &
+              & dsl4jsb_Config(DISTURB_)%climate_h2f_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_h2f_bias,             &
+              & dsl4jsb_Config(DISTURB_)%climate_i2g_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_i2g_bias,             &
+              & dsl4jsb_Config(DISTURB_)%climate_h2g_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_h2g_bias,             &
+              & dsl4jsb_Config(DISTURB_)%climate_i2o_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_i2o_bias,             &
+              & dsl4jsb_Config(DISTURB_)%climate_h2o_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_h2o_bias,             &
+              & dsl4jsb_Config(DISTURB_)%climate_out_weight,           &
+              & dsl4jsb_Config(DISTURB_)%climate_out_bias,             &
+
+              & dsl4jsb_Config(DISTURB_)%vegetation_i2i_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_i2i_bias,          &
+              & dsl4jsb_Config(DISTURB_)%vegetation_h2i_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_h2i_bias,          &
+              & dsl4jsb_Config(DISTURB_)%vegetation_i2f_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_i2f_bias,          &
+              & dsl4jsb_Config(DISTURB_)%vegetation_h2f_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_h2f_bias,          &
+              & dsl4jsb_Config(DISTURB_)%vegetation_i2g_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_i2g_bias,          &
+              & dsl4jsb_Config(DISTURB_)%vegetation_h2g_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_h2g_bias,          &
+              & dsl4jsb_Config(DISTURB_)%vegetation_i2o_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_i2o_bias,          &
+              & dsl4jsb_Config(DISTURB_)%vegetation_h2o_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_h2o_bias,          &
+              & dsl4jsb_Config(DISTURB_)%vegetation_out_weight,        &
+              & dsl4jsb_Config(DISTURB_)%vegetation_out_bias,          &
+
+              & dsl4jsb_Config(DISTURB_)%static_layer1_weight,         &
+              & dsl4jsb_Config(DISTURB_)%static_layer1_bias,           &
+              & dsl4jsb_Config(DISTURB_)%static_layer2_weight,         &
+              & dsl4jsb_Config(DISTURB_)%static_layer2_bias,           &
+
+              & dsl4jsb_Config(DISTURB_)%climate_emb_layer1_weight,    &
+              & dsl4jsb_Config(DISTURB_)%climate_emb_layer1_bias,      &
+              & dsl4jsb_Config(DISTURB_)%climate_emb_layer2_weight,    &
+              & dsl4jsb_Config(DISTURB_)%climate_emb_layer2_bias,      &
+
+              & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer1_weight, &
+              & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer1_bias,   &
+              & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_weight, &
+              & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_bias,   &
+
+              & dsl4jsb_Config(DISTURB_)%t_air_minmax,                 &
+              & dsl4jsb_Config(DISTURB_)%t_air_ano_minmax,             &
+              & dsl4jsb_Config(DISTURB_)%t_air_clim_minmax,            &
+              & dsl4jsb_Config(DISTURB_)%q_rel_minmax,                 &
+              & dsl4jsb_Config(DISTURB_)%q_rel_ano_minmax,             &
+              & dsl4jsb_Config(DISTURB_)%q_rel_clim_minmax,            &
+              & dsl4jsb_Config(DISTURB_)%q_minmax,                     &
+              & dsl4jsb_Config(DISTURB_)%q_ano_minmax,                 &
+              & dsl4jsb_Config(DISTURB_)%q_clim_minmax,                &
+              & dsl4jsb_Config(DISTURB_)%wind_10m_minmax,              &
+              & dsl4jsb_Config(DISTURB_)%rain_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%swl1_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%swl1_ano_minmax,              &
+              & dsl4jsb_Config(DISTURB_)%swl1_clim_minmax,             &
+              & dsl4jsb_Config(DISTURB_)%swl2_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%swl2_ano_minmax,              &
+              & dsl4jsb_Config(DISTURB_)%swl2_clim_minmax,             &
+              & dsl4jsb_Config(DISTURB_)%swl3_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%swl3_ano_minmax,              &
+              & dsl4jsb_Config(DISTURB_)%swl3_clim_minmax,             &
+              & dsl4jsb_Config(DISTURB_)%swl4_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%swl4_ano_minmax,              &
+              & dsl4jsb_Config(DISTURB_)%swl4_clim_minmax,             &
+              & dsl4jsb_Config(DISTURB_)%lai_minmax,                   &
+              & dsl4jsb_Config(DISTURB_)%lai_ano_minmax,               &
+              & dsl4jsb_Config(DISTURB_)%lai_clim_minmax,              &
+              & dsl4jsb_Config(DISTURB_)%population_density_minmax,    &
+              & dsl4jsb_Config(DISTURB_)%lightning_climatology_minmax, &
+              & dsl4jsb_Config(DISTURB_)%elevation_minmax,             &
+              & dsl4jsb_Config(DISTURB_)%agb_minmax,                   &
+              & dsl4jsb_Config(DISTURB_)%pft1_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%pft2_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%pft3_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%pft4_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%pft5_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%pft6_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%pft7_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%pft8_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%pft9_minmax,                  &
               
+              & climate_lstm_hidden(:,:),                              & ! inout
+              & climate_lstm_cell(:,:),                                & ! inout
+              & vegetation_lstm_hidden(:,:),                           & ! inout
+              & vegetation_lstm_cell(:,:),                             & ! inout
               & burned_fract(:)                                        & ! inout
               & )
 

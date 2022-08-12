@@ -59,7 +59,11 @@ MODULE mo_disturb_memory_class
     swl2_clim,                & ! for Fire <Rackhun Son>
     swl3_clim,                & ! for Fire <Rackhun Son>
     swl4_clim,                & ! for Fire <Rackhun Son>
-    lai_clim                    ! for Fire <Rackhun Son>
+    lai_clim,                 & ! for Fire <Rackhun Son>
+    climate_lstm_hidden,      & ! for Fire <Rackhun Son>
+    climate_lstm_cell,        & ! for Fire <Rackhun Son>
+    vegetation_lstm_hidden,   & ! for Fire <Rackhun Son>
+    vegetation_lstm_cell        ! for Fire <Rackhun Son>
 
   REAL(wp), POINTER :: lightning_climatology(:,:,:) => NULL()   ! lightning climatology (nproma,nblks,366) <Rackhun Son>
   REAL(wp), POINTER :: population_density(:,:,:)    => NULL()   ! population density    (nproma,nblks,366) <Rackhun Son>
@@ -86,9 +90,11 @@ CONTAINS
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
 
-    TYPE(t_jsb_grid),  POINTER :: hgrid           ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface         ! Vertical grids
-    TYPE(t_jsb_vgrid), POINTER :: daily           ! daily time grids <Rackhun Son>
+    TYPE(t_jsb_grid),  POINTER :: hgrid             ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface           ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: daily             ! daily time grids <Rackhun Son>
+    TYPE(t_jsb_vgrid), POINTER :: d_climate_lstm    ! LSTM (climate) hidden grids <Rackhun Son>
+    TYPE(t_jsb_vgrid), POINTER :: d_vegetation_lstm ! LSTM (vegetation) hidden grids <Rackhun Son>
     INTEGER :: table
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_memory'
@@ -101,6 +107,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
     daily   => Get_vgrid('daily')      ! 366 days <Rackhun Son>
+    d_climate_lstm    => Get_vgrid('d_climate_lstm')    ! LSTM (climate) hidden dimension <Rackhun Son>
+    d_vegetation_lstm => Get_vgrid('d_vegetation_lstm') ! LSTM (vegetation) hidden grids <Rackhun Son>
 
     ALLOCATE(mem%lightning_climatology(hgrid%nproma, hgrid%nblks, 1:366))   ! lightning climatology <Rackhun Son>
     ALLOCATE(mem%population_density   (hgrid%nproma, hgrid%nblks, 1:366))   ! population density    <Rackhun Son>
@@ -298,7 +306,39 @@ CONTAINS
     CALL mem%Add_var('lai_clim', mem%lai_clim,                              &
       & hgrid, daily,                                                       &
       & t_cf('lai_clim', '-',                                               &
-      &  'LAI daily climatology'),       &
+      &  'LAI daily climatology'),                                          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('climate_lstm_hidden', mem%climate_lstm_hidden,        &
+      & hgrid, d_climate_lstm,                                              &
+      & t_cf('climate_lstm_hidden', '-',                                    &
+      &  'climate lstm hidden'),                                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('climate_lstm_cell', mem%climate_lstm_cell,            &
+      & hgrid, d_climate_lstm,                                              &
+      & t_cf('climate_lstm_cell', '-',                                      &
+      &  'climate lstm cell'),                                              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('vegetation_lstm_hidden', mem%vegetation_lstm_hidden,  &
+      & hgrid, d_vegetation_lstm,                                           &
+      & t_cf('vegetation_lstm_hidden', '-',                                 &
+      &  'vegetation lstm hidden'),                                         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('vegetation_lstm_cell', mem%vegetation_lstm_cell,      &
+      & hgrid, d_vegetation_lstm,                                           &
+      & t_cf('vegetation_lstm_cell', '-',                                   &
+      &  'vegetation lstm cell'),                                           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
