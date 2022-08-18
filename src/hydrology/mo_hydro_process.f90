@@ -1,5 +1,5 @@
 !>
-!t! @brief Contains the routines for the hydro processes
+!! @brief Contains the routines for the hydro processes
 !!
 !! @author
 !!  Rainer Schneck, MPI-M Hamburg
@@ -413,7 +413,7 @@ CONTAINS
   ! @param [in]      vol_p_wilt_sl       Volumetric permanent wilting point - ice not considered [m/m]
   ! @param [in]      oro_stddev          Sub-grid standard deviation of orography [m]
   ! @param [in]      t_soil_sl1          Temperature of the upper soil layer [K]
-  ! @param [in]      water_to_soil_local Amount of water going into the soil from vertical water balance [m]
+  ! @param [in]      water_to_soil       Amount of water going into the soil [m]
   ! @param [in]      evapotrans_soil     Evapotranspiration from the soil (w/o snow or canopy) [kg m-2 s-1]
   ! @param [in]      transpiration       Evapotranspiration [kg m-2 s-1]
   ! @param [in]      wtr_soil_pot_scool_sl Amount of potentially supercooled water [m]
@@ -430,20 +430,19 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                    &
-    & l_infil_subzero, hydrotype,                                                        &
+    & l_infil_subzero,                                                                   &
     & soil_depth_sl, root_depth_sl, fract_org_sl,                                        &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,    &
-    & water_to_soil_local, evapotrans_soil, transpiration,                               &
+    & water_to_soil, evapotrans_soil, transpiration,                                     &
     ! inout
-    & wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_inflow, wtr_outflow,                   &
+    & wtr_soil_sl, ice_soil_sl, tpe_overflow,                                            &
     ! out
     & wsat_sl, field_cap_sl, p_wilt_sl, runoff, drainage                                 &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
-    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max, &
-        & UPLAND_, LOWLAND_
+    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: &
@@ -453,15 +452,14 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero
-    INTEGER, INTENT(in) :: hydrotype
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl, root_depth_sl, fract_org_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & oro_stddev, t_soil_sl1, water_to_soil_local, &
+      & oro_stddev, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, wtr_inflow, wtr_outflow
+      & tpe_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -479,7 +477,6 @@ CONTAINS
       ! Other variables
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
       & transpiration_in_m(nc),       & !< transpiration within time step [m]
-      & water_to_soil(nc),            & !< water added to the soil within time step [m]
       & ws_rel(nc),                   & !< relative soil moisture (0: wilting point, 1: field capacity)
       & infilt(nc)                      !< infiltration [m]
 
@@ -553,13 +550,6 @@ CONTAINS
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
-    ! Add intertile water flow to water_to_soil flux
-    IF (hydrotype == LOWLAND_) THEN
-      water_to_soil(:) = water_to_soil_local(:) + wtr_inflow(:) * dtime / rhoh2o
-    ELSE
-      water_to_soil(:) = water_to_soil_local(:)
-    END IF
-
     !$claw acc parallel
     !$claw acc loop gang vector
     DO i=1,nc
@@ -611,14 +601,6 @@ CONTAINS
         END IF
       END IF
     END DO
-
-    ! Put intertile water flow into water_to_soil flux
-    IF (hydrotype == UPLAND_) THEN
-      wtr_outflow(:) = runoff(:) * rhoh2o / dtime
-      runoff(:)      = 0._wp
-    ELSE
-      wtr_outflow(:) = 0._wp
-    END IF
 
     !
     !> 1.2 Update soil water with respect to evapotransration fluxes

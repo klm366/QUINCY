@@ -49,6 +49,7 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
+  dsl4jsb_Use_memory(MIX_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -959,7 +960,6 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
-    USE mo_hydro_constants,        ONLY: NOFLOW_, UPLAND_, LOWLAND_
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -971,6 +971,7 @@ CONTAINS
     dsl4jsb_Def_config(MIX_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(MIX_)
 
     ! Pointers to variables in memory
 
@@ -999,7 +1000,6 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
     INTEGER  :: nsoil
-    INTEGER  :: hydrotype
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1036,6 +1036,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
+    dsl4jsb_Get_memory(MIX_)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
@@ -1047,13 +1048,13 @@ CONTAINS
       fract_org_sl(:,:) = 0._wp
     END IF
 
-    hydrotype = NOFLOW_
-    IF (dsl4jsb_Config(MIX_)%l_hydro_mix) THEN
-      IF (tile%belongs_to_upland) THEN
-        hydrotype = UPLAND_
-      ELSE IF (tile%belongs_to_lowland) THEN
-        hydrotype = LOWLAND_
-      END IF
+    IF (dsl4jsb_Config(MIX_)%l_hydro_mix .AND. tile%contains_lowland) THEN
+      ! @todo as soon as a ponding water storage exists in HYDRO_, the water can be added
+      !       directly to this storage in the mix_interface. Until then, it
+      !       is added in the hydro_interface as temporary solution
+      dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) = dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) &
+        & + dsl4jsb_var2D_onChunk (MIX_, wtr_storage)
+      dsl4jsb_var2D_onChunk (MIX_, wtr_storage) = 0._wp
     END IF
 
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
@@ -1065,7 +1066,6 @@ CONTAINS
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
-      & hydrotype,                                              &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       &                                fract_org_sl  (:,:),     &
@@ -1086,8 +1086,6 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_inflow        ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_outflow       ),     &
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
@@ -1141,8 +1139,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_fc_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_inflow,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_outflow,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 

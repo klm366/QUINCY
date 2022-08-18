@@ -71,12 +71,6 @@ MODULE mo_hydro_constants
 
     & beta_perc           = 0.139_wp             !< Parameter from percolation theory
 
-  INTEGER, PARAMETER ::                    &
-    ! Configuration states, used to define HydroTile states
-    & NOFLOW_ = 0,                         & !< ignores lateral transport
-    & UPLAND_ = 1,                         & !< source tiles of lateral water flow
-    & LOWLAND_ = 2                           !< sink tiles of lateral water flow
-
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
 
 #endif
