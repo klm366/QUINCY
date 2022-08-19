@@ -1048,14 +1048,12 @@ CONTAINS
       fract_org_sl(:,:) = 0._wp
     END IF
 
-    IF (dsl4jsb_Config(MIX_)%l_hydro_mix .AND. tile%contains_lowland) THEN
-      ! @todo as soon as a ponding water storage exists in HYDRO_, the water can be added
-      !       directly to this storage in the mix_interface. Until then, it
-      !       is added in the hydro_interface as temporary solution
-      dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) = dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) &
-        & + dsl4jsb_var2D_onChunk (MIX_, wtr_storage)
-      dsl4jsb_var2D_onChunk (MIX_, wtr_storage) = 0._wp
-    END IF
+    ! @todo Temporary implementation of a surface pond reservoir to be used as target
+    !   for lateral flows from upland areas. Needs to be revised as soon as real ponding
+    !   is implemented in the model
+    dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) = dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) &
+      & + dsl4jsb_var2D_onChunk (HYDRO_, weq_pond)
+    dsl4jsb_var2D_onChunk (HYDRO_, weq_pond) = 0._wp
 
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
@@ -1141,6 +1139,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2102,6 +2101,7 @@ CONTAINS
 
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(MIX_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -2110,8 +2110,10 @@ CONTAINS
       & runoff, &
       & drainage, &
       & evapotrans, &
+      & wtr_latflow, &
       & wtr_skin, &
       & weq_snow, &
+      & weq_pond, &
       & weq_fluxes, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
       & weq_balance_err  ! [m3/(time step)]
@@ -2151,17 +2153,20 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(MIX_)
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      rain)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      snow)                ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    drainage)            ! in
+    dsl4jsb_Get_var2D_onChunk(MIX_,      wtr_latflow)         ! in
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)            ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow)            ! in
     END IF
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
@@ -2175,13 +2180,13 @@ CONTAINS
     END DO
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
-    weq_fluxes(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
+    weq_fluxes(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:) + wtr_latflow(:)
     weq_fluxes(:) = weq_fluxes(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
     !$claw end expand
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_1 tile_name=tile%name
-      weq_land_new(:) = (  wtr_skin(:) + weq_snow(:)                                       &
+      weq_land_new(:) = (  wtr_skin(:) + weq_snow(:) + weq_pond(:)                      &
         &                + SUM(wtr_soil_sl(:,:), DIM=2) + SUM(ice_soil_sl(:,:), DIM=2)  &
         &               ) * tile_fract(:) * area(:)  ! m -> m^3
     ELSE

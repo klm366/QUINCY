@@ -619,7 +619,8 @@ CONTAINS
 
       IF (model%config%use_lakes) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
-          & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+          & processes       = (/SEB_,     HYDRO_,   MIX_/), &
+          & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
@@ -633,8 +634,8 @@ CONTAINS
 
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
-            & processes = (/HYDRO_, SSE_/), &
-            & process_actions = (/ON_TILE_, ON_TILE_/), &
+            & processes       = (/HYDRO_,   MIX_,     SSE_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
         END IF
 

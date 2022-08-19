@@ -53,6 +53,7 @@ MODULE mo_hydro_memory_class
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
+      & weq_pond,             & !< Water content of pond reservoir                                      [m water equivalent]
       & weq_fluxes,           & !< All land water fluxes; needed for water budget check                 [m3/s]
       & weq_land,             & !< Total amount of land water and ice                                   [m3]
       & weq_balance_err         !< Land water balance error within a time step                          [m3/(time step)]
@@ -260,6 +261,13 @@ CONTAINS
       & t_cf('weq_snow', 'm (water equivalent)', 'Snow amount'),               &
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix,                                                        &
+      & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
+      & hgrid, surface,                                                              &
+      & t_cf('weq_pond', 'm (water equivalent)', 'Surface pond reservoir'),          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
       & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Total evapotranspiration, including sublimation
