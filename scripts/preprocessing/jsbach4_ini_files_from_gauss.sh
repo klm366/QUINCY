@@ -10,24 +10,32 @@
 # 
 # Based on scripts from Veronika Gayler, Thomas Raddatz and Marco Giorgetta
 #
+# The script generates cover fractions relative to the parent tile of the
+# respective tiles. This is what ICON-Land generally expects, unless namelist
+# parameter 'relative_fractions_in_file = .false.' (jsb_model_nml).
+#
+# Note: It might be useful to check the jsbach4_ini_files_from_gauss.sh version
+#       stored with the intitial files of the previous revision to compare
+#       parameter settings.
+#
 set -eu
 #_____________________________________________________________________________
 
 # Settings
 
-coupled=false      # land sea mask for coupled experiment?
+coupled=false                # land sea mask for coupled experiment?
 
-refinement=R02B04
-bisections=4
+refinement=R02B04            # ICON-Land grid resolution
+bisections=4                 # Determines Gaussian source grid resolution (see below)
 atmGridID=0043
-oceGridID=0036    # required for coupled configurations
-revision=r00xx
-revision_ext=r0001
+oceGridID=0036               # Required for coupled configurations
+revision=r00xx               # Revision directory that will be generated
+revision_ext=r0001           # Extpar revision used
 start_year=1850
 end_year=1850
 
-#ggrids="T63"                   # additional gaussian grids for jsbach4 (to run with echam6)
-ggrids=""                       # disable gaussian grids
+#ggrids="T63"                # additional Gaussian grids for jsbach4 (to run with echam6)
+ggrids=""                    # disable Gaussian grids
 
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
@@ -806,7 +814,7 @@ do
   if [[ ${jsb4icon} == true ]]; then
     if [[ $bisection -ge 8  ]]
     then
-      cdo="${cdo} -f nc4 -P 8"
+      ## cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
       ulimit -s unlimited
       ulimit -v unlimited
       ulimit -m unlimited
