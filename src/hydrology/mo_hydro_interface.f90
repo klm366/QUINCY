@@ -38,7 +38,6 @@ MODULE mo_hydro_interface
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
-  dsl4jsb_Use_config(MIX_)
   dsl4jsb_Use_config(HYDRO_)
 
   ! Use of process memories
@@ -968,25 +967,13 @@ CONTAINS
     ! Local variables
     !
     dsl4jsb_Def_config(HYDRO_)
-    dsl4jsb_Def_config(MIX_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(MIX_)
 
     ! Pointers to variables in memory
 
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
-
-    ! ! @todo check if this declaration is even necessary
-    ! dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    ! dsl4jsb_Real3D_onChunk :: wtr_soil_sl
-    ! dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
-    ! dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
-    ! dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl
-    ! dsl4jsb_Real3D_onChunk :: root_depth_sl
-    ! dsl4jsb_Real2D_onChunk :: tpe_overflow
-
 
     ! Locally allocated vectors
 
@@ -1027,7 +1014,6 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
-    dsl4jsb_Get_config(MIX_)
 
     ltpe_open = .FALSE.
     ltpe_closed = .FALSE.
@@ -1036,7 +1022,6 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SSE_)
-    dsl4jsb_Get_memory(MIX_)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
