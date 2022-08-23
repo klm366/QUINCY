@@ -31,7 +31,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE, & !, BARE_TYPE ! define the type of the tile
-    &                               UPLAND_TYPE, LOWLAND_TYPE
+    &                               UPLAND_TYPE, LOWLAND_TYPE, RIDGE_TYPE, DEPRES_TYPE
 !  USE mo_test_pools,          ONLY: test_pools                                                  ! to debug and test pools implementation
 
   IMPLICIT NONE
@@ -353,17 +353,22 @@ CONTAINS
 
     INTEGER :: i,t
 
-    INTEGER, PARAMETER :: ntopo = 2
+    INTEGER, PARAMETER :: ntopo = 4
 
-    CHARACTER(len=5), PARAMETER :: topo_shortnames(ntopo) = [character(len=3) ::  &
-      & 'up', 'low' ]
+    CHARACTER(len=6), PARAMETER :: topo_shortnames(ntopo) = [character(len=6) ::  &
+      & 'upup', 'uplow', 'lowup', 'lowlow' ]
 
-    CHARACTER(len=30), PARAMETER :: topo_longnames(ntopo) = [character(len=30) :: &
-      & 'upland fraction', &
-      & 'lowland fraction' ]
+    CHARACTER(len=50), PARAMETER :: topo_longnames(ntopo) = [character(len=50) :: &
+      & 'micro-ridges within upland fraction',      &
+      & 'micro-depressions within upland fraction', &
+      & 'micro-ridges within lowland fraction',     &
+      & 'micro-depressions within lowland fraction' ]
 
-    INTEGER, PARAMETER :: topo_types(ntopo) = [ &
-      & UPLAND_TYPE, LOWLAND_TYPE ]
+    INTEGER, PARAMETER :: macrotopo_types(ntopo) = [ &
+      & UPLAND_TYPE, UPLAND_TYPE, LOWLAND_TYPE, LOWLAND_TYPE ]
+
+    INTEGER, PARAMETER :: microtopo_types(ntopo) = [ &
+      & RIDGE_TYPE, DEPRES_TYPE, RIDGE_TYPE, DEPRES_TYPE ]
 
     INTEGER, PARAMETER :: npft = 11
 
@@ -398,13 +403,13 @@ CONTAINS
     !   |      |
     !  land  lakes
     !   |
-    !   |---------------------------------
-    !   |                   |            |
-    !  veg_up              veg_low      glacier
-    !   |                   |
-    !   |----------         |-----------
-    !   |         |         |          |
-    !  pft01_up  pftXX_up  pft01_low  pftXX_low 
+    !   |---------------------------------------------------------------------------------------------
+    !   |                       |                         |                         |                |
+    !  veg_upup                veg_uplow                 veg_lowup                 veg_lowlow       glacier
+    !   |                       |                         |                         |
+    !   |------------           |-------------            |-------------            |--------------
+    !   |           |           |            |            |            |            |             |
+    !  pft01_upup  pftXX_upup  pft01_uplow  pftXX_uplow  pft01_lowup  pftXX_lowup  pft01_lowlow  pftXX_lowlow 
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -455,7 +460,8 @@ CONTAINS
             & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg_'//TRIM(topo_shortnames(t)))
-          CALL veg_tile%Add_lct(t_jsb_lct(topo_types(t)))
+          CALL veg_tile%Add_lct(t_jsb_lct(macrotopo_types(t)))
+          CALL veg_tile%Add_lct(t_jsb_lct(microtopo_types(t)))
 
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
