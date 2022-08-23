@@ -35,3 +35,6 @@ luhRelease='LUH2 v2.1f LAMACLIMA (2022-05-17) - [http://luh.umd.edu/data.shtml]'
 user_defined_states_trans=true
 statesFile="states_shifted.nc"
 transitionFile="transitions_shifted.nc"
+
+# Define missing value to be set instead of nan
+missval=1.e+20
