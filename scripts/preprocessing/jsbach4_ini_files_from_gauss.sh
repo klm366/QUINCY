@@ -10,24 +10,32 @@
 # 
 # Based on scripts from Veronika Gayler, Thomas Raddatz and Marco Giorgetta
 #
+# The script generates cover fractions relative to the parent tile of the
+# respective tiles. This is what ICON-Land generally expects, unless namelist
+# parameter 'relative_fractions_in_file = .false.' (jsb_model_nml).
+#
+# Note: It might be useful to check the jsbach4_ini_files_from_gauss.sh version
+#       stored with the intitial files of the previous revision to compare
+#       parameter settings.
+#
 set -eu
 #_____________________________________________________________________________
 
 # Settings
 
-coupled=false      # land sea mask for coupled experiment?
+coupled=false                # land sea mask for coupled experiment?
 
-refinement=R02B04
-bisections=4
+refinement=R02B04            # ICON-Land grid resolution
+bisections=4                 # Determines Gaussian source grid resolution (see below)
 atmGridID=0043
-oceGridID=0036    # required for coupled configurations
-revision=r00xx
-revision_ext=r0001
+oceGridID=0036               # Required for coupled configurations
+revision=r00xx               # Revision directory that will be generated
+revision_ext=r0001           # Extpar revision used
 start_year=1850
 end_year=1850
 
-#ggrids="T63"                   # additional gaussian grids for jsbach4 (to run with echam6)
-ggrids=""                       # disable gaussian grids
+#ggrids="T63"                # additional Gaussian grids for jsbach4 (to run with echam6)
+ggrids=""                    # disable Gaussian grids
 
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
@@ -210,6 +218,15 @@ function generate_land_sea_mask {
   echo "Generating land sea mask and lake/glacier fractions ..."
 
   temp=$(mktemp -u --tmpdir=.)
+
+  # Make sure, the icon grid file includes a valid land sea mask
+  if [[ $(cdo -s output -fldsum -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} | tr -d ' ') == 0 ]]
+  then
+    echo "Invalid land sea mask in icon_grid_file ${icon_grid_file}:"
+    echo "Variable cell_sea_land_mask does not have any land grid cells."
+    echo "Check if there is another grid file, e.g. with suffix _Glsm.nc."
+    exit 1
+  fi
 
   ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
   ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
@@ -763,7 +780,7 @@ do
   if [[ ${jsb4icon} == true ]]; then
     if [[ $bisection -ge 8  ]]
     then
-      cdo="${cdo} -f nc4 -P 8"
+      ## cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
       ulimit -s unlimited
       ulimit -v unlimited
       ulimit -m unlimited
