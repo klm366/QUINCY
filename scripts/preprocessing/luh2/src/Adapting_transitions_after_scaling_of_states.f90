@@ -712,12 +712,12 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     end do
 
     ! put data
-    ALLOCATE(writeData(dimLength(1),dimLength(2),1))
+    ALLOCATE(writeData(dimLength(2),dimLength(3),1))
 
     DO i = 1,NTRANS
       writeData(:,:,1) = scaledTrans(:,:,i)
       CALL check_err(nf_put_vara_double(ncFileID,writeVarIDs(i+NDIMSOFVARS),&
-          & (/1,1,1/),writeVarIDs,writeData(:,:,1)))
+          & (/1,1,1/),(/dimLength(2),dimLength(3),1/),writeData(:,:,1)))
     END DO
 
     ! close the output-file
