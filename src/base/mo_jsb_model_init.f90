@@ -324,6 +324,7 @@ CONTAINS
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         CALL model%Queue_task(RAD_,    "radiation_par")
       END IF
+      CALL model%Queue_task(MIX_,    "reset_mix")
       CALL model%Queue_task(HYDRO_,  "surface_hydrology") 
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
