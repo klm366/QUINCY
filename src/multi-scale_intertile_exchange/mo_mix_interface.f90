@@ -17,14 +17,14 @@ MODULE mo_mix_interface
 
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
-  
+
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: finish, message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: ON_TILE_
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
@@ -43,20 +43,20 @@ MODULE mo_mix_interface
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables 
-  
+
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_mix_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_interface'
-  
+
   !> Type definition for reset_mix task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_mix
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_reset_mix     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_reset_mix  !< Aggregates computed task variables
   END TYPE tsk_reset_mix
-  
+
   !> Constructor interface for reset_mix task
   INTERFACE tsk_reset_mix
     PROCEDURE Create_task_reset_mix                        !< Constructor function for task
@@ -68,7 +68,7 @@ MODULE mo_mix_interface
     PROCEDURE, NOPASS :: Integrate => update_hydro_mix     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_hydro_mix  !< Aggregates computed task variables
   END TYPE tsk_hydro_mix
-  
+
   !> Constructor interface for hydro_mix task
   INTERFACE tsk_hydro_mix
     PROCEDURE Create_task_hydro_mix                        !< Constructor function for task
@@ -78,7 +78,7 @@ CONTAINS
 
   ! ================================================================================================================================
   !! Constructors for tasks
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !!
   !> Constructor for reset_mix task
@@ -91,7 +91,7 @@ CONTAINS
     CALL return_ptr%Construct(name='reset_mix', process_id=MIX_, owner_model_id=model_id)
 
   END FUNCTION Create_task_reset_mix
-  
+
   !> Constructor for hydro_mix task
   FUNCTION Create_task_hydro_mix(model_id) RESULT(return_ptr)
 
@@ -102,7 +102,7 @@ CONTAINS
     CALL return_ptr%Construct(name='hydro_mix', process_id=MIX_, owner_model_id=model_id)
 
   END FUNCTION Create_task_hydro_mix
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for multi-scale intertile exchange process
   !!
@@ -113,7 +113,7 @@ CONTAINS
 
     CALL process%Register_task(tsk_reset_mix(model_id))
     CALL process%Register_task(tsk_hydro_mix(model_id))
-    
+
   END SUBROUTINE Register_mix_tasks
 
   ! ================================================================================================================================
@@ -136,7 +136,7 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: wtr_latflow
-   
+
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -156,11 +156,11 @@ CONTAINS
 
     ! Reset lateral intertile fluxes prior to update_*_mix
     wtr_latflow(:) = 0._wp
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_reset_mix
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "reset_mix"
@@ -179,13 +179,13 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_reset_mix'
-    
+
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_memory(MIX_)
@@ -193,7 +193,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(MIX_,   wtr_latflow,  weighted_by_fract)
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_reset_mix
@@ -244,14 +244,14 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-   
+
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(MIX_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    
+
     dsl4jsb_Get_config(MIX_)
 
     ! Get process memories
@@ -293,7 +293,7 @@ CONTAINS
             &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. &
             &  (tile%contains_lowland .AND. tile%contains_ridge .AND.                &
             &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) ) THEN
-            
+
             CALL sibl_tile%Get_fraction(ics, ice, iblk, fract=target_fract(:))
             ! Get memory for water storage at MIX_ target tile
             dsl4jsb_Get_memory_tile(MIX_,   sibl_tile)
@@ -304,7 +304,7 @@ CONTAINS
             ! @todo this would be the place to add a lag factor later. Then also
             !       the lateral flow needs to be updated as difference between new and old storage
             WHERE(target_fract(:) > 1.0e-10_wp)
-              weq_pond_sibl_tile(:)    = weq_pond_sibl_tile(:) + & 
+              weq_pond_sibl_tile(:)    = weq_pond_sibl_tile(:) + &
                 & runoff(:) * dtime / rhoh2o * (source_fract(:) / target_fract(:))
               wtr_latflow_sibl_tile(:) = wtr_latflow_sibl_tile(:) + runoff(:) * (source_fract(:) / target_fract(:))
               wtr_latflow(:)           = wtr_latflow(:) - runoff(:)
@@ -315,11 +315,11 @@ CONTAINS
       END IF
 
     END IF
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_hydro_mix
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "hydro_mix"
@@ -338,13 +338,13 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_hydro_mix'
-    
+
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     dsl4jsb_Get_memory(MIX_)
@@ -355,10 +355,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(MIX_,   wtr_latflow,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,     weighted_by_fract)
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_hydro_mix
-  
+
 #endif
 END MODULE mo_mix_interface

@@ -35,7 +35,7 @@ MODULE mo_mix_memory_class
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_mix_memory
-    
+
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
       & wtr_latflow             !< Lateral water flow between tiles               [kg m-2 s-1]

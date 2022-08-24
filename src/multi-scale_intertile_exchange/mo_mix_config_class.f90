@@ -16,7 +16,7 @@ MODULE mo_mix_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
-  
+
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
@@ -75,12 +75,12 @@ CONTAINS
 
     config%active              = active
     config%l_hydro_mix         = l_hydro_mix
-    IF (l_hydro_mix) THEN 
+    IF (l_hydro_mix) THEN
       CALL message(TRIM(routine), 'Lateral water flow between tiles is enabled')
     ELSE
       CALL message(TRIM(routine), 'Lateral water flow between tiles is disabled')
     END IF
-    
+
   END SUBROUTINE Init_mix_config
 
 #endif
