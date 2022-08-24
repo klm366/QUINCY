@@ -204,7 +204,7 @@ CONTAINS
   !!
   SUBROUTINE update_hydro_mix(tile, options)
 
-    USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_mix_process,            ONLY: calc_runoff_transport
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -280,7 +280,7 @@ CONTAINS
         ! Move runoff into water storage of the target tile
         nsibl = tile%parent_tile%Get_no_of_children()
         DO ic = 1, nsibl
-          ! Loop over all tiles in this hierarchy level
+          ! Loop over all sibling tiles
           IF (ic == 1) THEN
             sibl_tile => tile%parent_tile%Get_first_child_tile()
           ELSE
@@ -293,23 +293,23 @@ CONTAINS
             &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. &
             &  (tile%contains_lowland .AND. tile%contains_ridge .AND.                &
             &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) ) THEN
-
+            ! Get target file area fraction
             CALL sibl_tile%Get_fraction(ics, ice, iblk, fract=target_fract(:))
-            ! Get memory for water storage at MIX_ target tile
+            ! Get memory MIX_ and HYDRO_ memory for target tile
             dsl4jsb_Get_memory_tile(MIX_,   sibl_tile)
             dsl4jsb_Get_memory_tile(HYDRO_, sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow, sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, weq_pond,    sibl_tile)
             ! Move surface runoff from source to target tile
-            ! @todo this would be the place to add a lag factor later. Then also
-            !       the lateral flow needs to be updated as difference between new and old storage
-            WHERE(target_fract(:) > 1.0e-10_wp)
-              weq_pond_sibl_tile(:)    = weq_pond_sibl_tile(:) + &
-                & runoff(:) * dtime / rhoh2o * (source_fract(:) / target_fract(:))
-              wtr_latflow_sibl_tile(:) = wtr_latflow_sibl_tile(:) + runoff(:) * (source_fract(:) / target_fract(:))
-              wtr_latflow(:)           = wtr_latflow(:) - runoff(:)
-              runoff(:)                = 0._wp
-            ENDWHERE
+            CALL calc_runoff_transport(   &
+              & dtime,                    & !< in
+              & source_fract(:),          & !< in
+              & target_fract(:),          & !< in
+              & runoff(:),                & !< inout
+              & wtr_latflow(:),           & !< inout
+              & wtr_latflow_sibl_tile(:), & !< inout
+              & weq_pond_sibl_tile(:)     & !< inout
+              & )
           END IF
         END DO
       END IF
