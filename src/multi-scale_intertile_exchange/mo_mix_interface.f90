@@ -339,6 +339,10 @@ CONTAINS
             ENDDO
           END IF
         END DO
+      ELSE
+        ! This tile acts only as target tile and lateral drainage cannot be transported any further.
+        !   Thus, the lateral drainage is simply added to the bottom drainage
+        drainage(:) = drainage(:) + SUM(latdrain_sl(:,:), DIM=2)
       END IF
 
     END IF
