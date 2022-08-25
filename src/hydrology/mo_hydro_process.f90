@@ -438,7 +438,7 @@ CONTAINS
     ! inout
     & wtr_soil_sl, ice_soil_sl, tpe_overflow,                                            &
     ! out
-    & wsat_sl, field_cap_sl, p_wilt_sl, runoff, drainage                                 &
+    & wsat_sl, field_cap_sl, p_wilt_sl, runoff, latdrain_sl, drainage                    &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -465,7 +465,7 @@ CONTAINS
     REAL(wp), INTENT(out), DIMENSION(:) :: &
       & runoff, drainage
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
-      & wsat_sl, field_cap_sl, p_wilt_sl
+      & latdrain_sl, wsat_sl, field_cap_sl, p_wilt_sl
 
     ! Local variables
     REAL(wp) ::                       &
@@ -631,6 +631,7 @@ CONTAINS
     DO i=1,nc
       ! initilalization of drainage
       drainage(i) = 0._wp
+      latdrain_sl(i,:) = 0._wp
     END DO
     !$claw acc end parallel
 
@@ -653,10 +654,10 @@ CONTAINS
       &     wtr_soil_sl, drainage, tpe_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
-    CALL soilhyd(nc, nsoil, dtime, ilog, jllog, soil_depth_sl, wtr_soil_sl,                &
-      &     ice_soil_sl, wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl,          &
-      &     bclapp_sl, matrix_pot_sl, wtr_soil_pot_scool_sl, drainage, pore_size_index_sl, &
-      &     p_wilt_sl, tpe_overflow, ltpe_closed, ltpe_open)
+    CALL soilhyd(nc, nsoil, dtime, ilog, jllog, soil_depth_sl, wtr_soil_sl,         &
+      &     ice_soil_sl, wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl,   &
+      &     bclapp_sl, matrix_pot_sl, wtr_soil_pot_scool_sl, latdrain_sl, drainage, &
+      &     pore_size_index_sl, p_wilt_sl, tpe_overflow, ltpe_closed, ltpe_open)
 
     ! update soil moisture according to infiltration
     !    - second half of the water
@@ -670,17 +671,18 @@ CONTAINS
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector
     DO i = 1, nc
-      runoff(i)   = runoff  (i) * rhoh2o / dtime
-      drainage(i) = drainage(i) * rhoh2o / dtime
+      runoff(i)        = runoff  (i) * rhoh2o / dtime
+      latdrain_sl(i,:) = latdrain_sl(i,:) * rhoh2o / dtime
+      drainage(i)      = drainage(i) * rhoh2o / dtime
     END DO
     !$claw acc end data
     !$claw acc end data
   END SUBROUTINE calc_soil_hydrology
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE soilhyd(nc, nsoil, dtime, ilog, jllog, dsoil, wtr_soil_sl, ice_soil_sl,      &
-    & wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl,  &
-    & wtr_soil_pot_scool_sl, drainage, pore_size_index_sl, p_wilt_sl, tpe_overflow, &
+  SUBROUTINE soilhyd(nc, nsoil, dtime, ilog, jllog, dsoil, wtr_soil_sl, ice_soil_sl,             &
+    & wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl,         &
+    & wtr_soil_pot_scool_sl, latdrain_sl, drainage, pore_size_index_sl, p_wilt_sl, tpe_overflow, &
     & ltpe_closed, ltpe_open)
 
     !----------------------------------------------------------------------------------------------
@@ -711,7 +713,8 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: ice_soil_sl(:,:)           ! amount of ice in the soil [m]
     REAL(wp), INTENT(IN)            :: wtr_soil_pot_scool_sl(:,:) ! potentially supercooled water [m]
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of drainage within timestep [m]
+    REAL(wp), INTENT(INOUT)         :: latdrain_sl(:,:)           ! amount of lateral drainage within timestep [m]
+    REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of bottom drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -742,10 +745,10 @@ CONTAINS
     REAL(wp) :: ws_immo_sl(nc,nsoil)        ! liquid water that can not move through the soil (supercooled or < pwilt_sl)
 
     !$claw acc data &
-    !$claw acc present(dsoil, wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl, &
-    !$claw acc         pore_size_index_sl, p_wilt_sl, wtr_soil_sl, drainage, tpe_overflow, ice_soil_sl)          &
-    !$claw acc pcreate(diffus_sl, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_sl, soil_above,       &
-    !$claw acc         soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_sl,          &
+    !$claw acc present(dsoil, wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl,     &
+    !$claw acc         pore_size_index_sl, p_wilt_sl, wtr_soil_sl, latdrain_sl, drainage, tpe_overflow, ice_soil_sl) &
+    !$claw acc pcreate(diffus_sl, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_sl, soil_above,           &
+    !$claw acc         soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_sl,              &
     !$claw acc         percolation, wslog)
 
     !$claw acc parallel loop gang vector collapse(2)
@@ -917,7 +920,7 @@ CONTAINS
         IF (.NOT. ltpe_closed) THEN
           IF (dsoil(j,i) > 0._wp .AND. soil_below(j) .AND. ws_tmp(j) > ws_immo_sl(j,i)) THEN
             wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
-            drainage(j) = drainage(j) + drain_sl(j)           ! and add it to the total drainage
+            latdrain_sl(j,i) = latdrain_sl(j,i) + drain_sl(j) ! and add it to the total drainage
           END IF
         END IF                                       ! no drainage for TPE closed case
 
@@ -1050,7 +1053,7 @@ CONTAINS
         !$claw acc loop seq
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp .AND. wtr_soil_sl(j,i) > field_cap_sl(j,i)) THEN
-            drainage(j) = drainage(j) + wtr_soil_sl(j,i)-field_cap_sl(j,i)
+            latdrain_sl(j,i) = latdrain_sl(j,i) + wtr_soil_sl(j,i)-field_cap_sl(j,i)
             wtr_soil_sl(j,i) = field_cap_sl(j,i)
           END IF
         END DO
@@ -1179,7 +1182,7 @@ CONTAINS
       ! This should not happen, this is just for security.
       IF (.NOT. ltpe_closed) THEN
         IF (wtr_soil_sl(j,1) > field_cap_sl(j,1)) THEN
-          drainage(j) = drainage(j) + wtr_soil_sl(j,1) - field_cap_sl(j,1)
+          latdrain_sl(j,1) = latdrain_sl(j,1) + wtr_soil_sl(j,1) - field_cap_sl(j,1)
           wtr_soil_sl(j,1) = field_cap_sl(j,1)
         END IF
       ELSE      ! TPE closed case

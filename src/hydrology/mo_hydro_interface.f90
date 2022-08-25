@@ -1074,6 +1074,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          )      &
       & )
 
