@@ -37,15 +37,27 @@ MODULE mo_hydro_config_class
                              !  i.e. at which water stress starts to be above zero
       & w_soil_wilt_fract, & !< Fraction of field capacity at which soil is at wilting point,
                              !  i.e. when no transpiration occurs anymore
-      & snow_depth_max       !< Limit for snow depth [m water equivalent] to avoid grid cells with
+      & snow_depth_max,    & !< Limit for snow depth [m water equivalent] to avoid grid cells with
                              !  infinitely growing snow depth; -1. for no limitation
+      & manning_n            ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture, 
+                             ! 0.05 -> floodplains - light brush, 0.075 -> floodplains - heavy brush, 0.15 -> floodplains - trees
     CHARACTER(len=10)     :: &
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
       & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero        !< Allow infiltration at soil temperatures below 0°C
+      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
+      & l_soilhydnew,        &
+      & l_infiltnew,         &
+      & l_hydro_q
+    INTEGER               :: &
+      & i_shm,               & !< Choice of soil hydrological model: Brooks & Corey, 2 = Clapp & Horberger (Campbell), 3 = Van Genuchten
+      & i_interpol,          & !< Interpolation scheme, to optain K & D at layer interface: 1 = upstream mean, 2 = arithmetic mean 
+      & i_infil,          & !< Switch (1) that may come in handy during testing
+      & i_testing1,          & !< Switch (2) that may come in handy during testing
+      & i_testing2             !< Switch (3) that may come in handy during testing                       
+
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
   END type t_hydro_config
@@ -67,9 +79,12 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
+    REAL(wp)                    :: manning_n
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
-    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
+    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
+                                 & l_soilhydnew, l_infiltnew, l_hydro_q
+    INTEGER                     :: i_shm, i_interpol, i_infil, i_testing1, i_testing2
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -81,11 +96,20 @@ CONTAINS
       & w_soil_crit_fract,          &
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
+      & manning_n,                  &
       & scheme_stom_cond,           &
       & l_organic,                  &
       & l_socmap,                   &
       & l_glac_in_soil,             &
-      & l_infil_subzero
+      & l_infil_subzero,            &
+      & l_soilhydnew,               & 
+      & l_infiltnew,                &
+      & l_hydro_q,                  &
+      & i_shm,                      &
+      & i_interpol,                 &
+      & i_infil,                 &
+      & i_testing1,                 &
+      & i_testing2
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -109,11 +133,20 @@ CONTAINS
     w_soil_crit_fract = 0.75_wp
     w_soil_wilt_fract = 0.35_wp
     snow_depth_max    = -1.0_wp             ! -1: no limitation
+    manning_n         = 0.075_wp
     scheme_stom_cond  = 'echam5'
     l_organic         = .TRUE.
     l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
+    l_soilhydnew      = .FALSE.
+    l_infiltnew       = .FALSE.
+    l_hydro_q         = .FALSE.
+    i_shm             = 1
+    i_interpol        = 1
+    i_infil           = 1
+    i_testing1        = 1
+    i_testing2        = 1
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -142,6 +175,8 @@ CONTAINS
       CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
     END IF
 
+    config%manning_n      = manning_n
+
     config%scheme_stom_cond    = scheme_stom_cond
 
     config%l_organic           = l_organic
@@ -159,6 +194,22 @@ CONTAINS
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
+
+    config%l_soilhydnew        = l_soilhydnew 
+    IF (l_soilhydnew ) CALL message(TRIM(routine), 'Running new soil hydrology ...')
+    config%l_infiltnew         = l_infiltnew 
+    IF (l_infiltnew ) CALL message(TRIM(routine), 'Running new infiltration scheme ...')
+    config%l_hydro_q           = l_hydro_q 
+    IF (l_hydro_q) CALL message(TRIM(routine), 'Running with Q-Arctic add ons ...')
+
+    config%i_shm      = i_shm
+    config%i_interpol = i_interpol
+    config%i_infil    = i_infil
+
+
+    config%i_testing1 = i_testing1
+    config%i_testing2 = i_testing2
+
 
     CALL close_nml(nml_handler)
 

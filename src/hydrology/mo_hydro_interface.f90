@@ -418,6 +418,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapo_snow
     dsl4jsb_Real2D_onChunk :: snowmelt
+    dsl4jsb_Real2D_onChunk :: infilt
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: runoff_glac
@@ -469,6 +470,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   snow)               ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)           ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, infilt)             ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)             ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)           ! out
@@ -476,6 +478,7 @@ CONTAINS
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_0 tile_name=tile%name
       runoff  (:) = rain(:) + snow(:) + evapotrans(:)
+      infilt(:)   = 0._wp
       drainage(:) = 0._wp
       weq_snow(:) = 0._wp
       evapo_snow(:) = evapopot(:)
@@ -507,6 +510,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)    ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, infilt)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
 
@@ -576,6 +580,7 @@ CONTAINS
         & pme_glacier = runoff(:)          & !< out, P-E ... used as runoff for HD model
         & )
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_5 tile_name=tile%name
+      infilt(:)   = 0._wp
       drainage(:) = 0._wp
       weq_snow_soil(:) = 0._wp
       evapo_snow(:) = evapopot(:)
@@ -695,6 +700,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 
@@ -716,6 +722,8 @@ CONTAINS
       & hyd_cond_sat_org_below, bclapp_org_below, matrix_pot_org_below, pore_size_index_org_below, &
       & vol_field_cap_org_below, vol_p_wilt_org_below, thresh_org, beta_perc
 
+    USE mo_hydro_util,         ONLY: get_amount_in_rootzone
+
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -733,8 +741,15 @@ CONTAINS
       & matrix_pot,           &
       & pore_size_index,      &
       & vol_field_cap,        &
-      & vol_p_wilt
+      & vol_p_wilt,           &
+      & weq_rootzone_max
+
+
     dsl4jsb_Real3D_onChunk :: &
+!pdv >
+      & soil_depth_sl,        &
+      & root_depth_sl,        &
+!pdv <
       & fract_org_sl,         &
       & hyd_cond_sat_sl,      &
       & vol_porosity_sl,      &
@@ -756,7 +771,6 @@ CONTAINS
     REAL(wp), ALLOCATABLE ::  fract_perc(:,:)          ! fraction of the soil with connected organic pathways
     REAL(wp), ALLOCATABLE ::  fract_uncon(:,:)         ! fraction of the soil with unconnected organic matter
     REAL(wp), ALLOCATABLE ::  hyd_cond_sat_uncon(:,:)  ! saturated hydraulic conductivity of 'unconnected' fraction
-
     REAL(wp), ALLOCATABLE ::  hyd_cond_sat_org(:,:)
     REAL(wp), ALLOCATABLE ::  vol_porosity_org(:,:)
     REAL(wp), ALLOCATABLE ::  bclapp_org(:,:)
@@ -788,6 +802,13 @@ CONTAINS
     !
     dsl4jsb_Get_memory(HYDRO_)
 
+!pdv >
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)          ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_,    root_depth_sl)          ! in
+!pdv <
+
+
+
     dsl4jsb_Get_var2D_onChunk(HYDRO_, hyd_cond_sat)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_porosity)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, bclapp)             ! in
@@ -795,6 +816,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, pore_size_index)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_field_cap)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, vol_p_wilt)         ! in
+
     IF (dsl4jsb_Config(HYDRO_)%l_organic)   &
       &  dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)    ! out
@@ -804,6 +826,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl) ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)   ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)      ! out
+
+!pdv >
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_rootzone_max)   ! out
+!pdv <
 
     DO i=1,nsoil
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_0 tile_name=tile%name soil=i
@@ -898,6 +924,11 @@ CONTAINS
       DEALLOCATE(pore_size_index_org)
       DEALLOCATE(vol_field_cap_org)
       DEALLOCATE(vol_p_wilt_org)
+
+!pdv > 
+    CALL get_amount_in_rootzone(vol_field_cap_sl(:,:)*soil_depth_sl(:,:),  &
+                             &  soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
+!pdv <
 
       !$claw end expand
     END IF
@@ -1051,6 +1082,15 @@ CONTAINS
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
+      & dsl4jsb_Config(HYDRO_)%l_soilhydnew,                    &
+      & dsl4jsb_Config(HYDRO_)%l_infiltnew,                     &
+      & dsl4jsb_Config(HYDRO_)%l_hydro_q,                       &
+      & dsl4jsb_Config(HYDRO_)%manning_n,                       &
+      & dsl4jsb_Config(HYDRO_)%i_shm,                           &
+      & dsl4jsb_Config(HYDRO_)%i_interpol,                      &
+      & dsl4jsb_Config(HYDRO_)%i_infil,                         &
+      & dsl4jsb_Config(HYDRO_)%i_testing1,                      &
+      & dsl4jsb_Config(HYDRO_)%i_testing2,                      &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       &                                fract_org_sl  (:,:),     &
@@ -1071,12 +1111,22 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
+!pdv >
+      & dsl4jsb_var3D_onChunk (HYDRO_, weq_soilhyd_err   ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, pdv_1d_out        ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, pdv_2d_out        ),     &
+!pdv <
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          )      &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_over       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_perm        )      &
       & )
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
@@ -1124,8 +1174,16 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_fc_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_over,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_perm,      weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_1d_out, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_2d_out, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
