@@ -383,7 +383,7 @@ CONTAINS
             IF (jc_us > 0 .and. blk_us > 0) THEN
             ! Workaround for NVIDIA compiler 21.3 internal compiler error
             ! Note that nsplit is set to 1._wp for use_bifurcated_rivers=false
-#if defined(__NVCOMPILER) && (__NVCOMPILER_MAJOR__ == 21 && __NVCOMPILER_MINOR__ == 3)
+#if defined(__NVCOMPILER)
               discharge(jc,blk) =  discharge(jc,blk)                      &
                                  + ( ( outflow_runoff(jc_us,blk_us)       &
                                      + outflow_drainage(jc_us,blk_us)     &
