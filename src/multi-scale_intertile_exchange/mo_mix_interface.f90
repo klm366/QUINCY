@@ -129,7 +129,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_reset_mix'
 
@@ -143,7 +143,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(MIX_)) RETURN
@@ -178,7 +177,7 @@ CONTAINS
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_reset_mix'
 
@@ -186,7 +185,6 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    nc      = options%nc
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -206,8 +204,9 @@ CONTAINS
   !!
   SUBROUTINE update_hydro_mix(tile, options)
 
-    USE mo_mix_process,            ONLY: calc_runoff_transport,  &
-      &                                  calc_drainage_transport
+    USE mo_mix_process,            ONLY: calc_runoff_transport,   &
+      &                                  calc_drainage_transport, &
+      &                                  calc_intertile_diffusion
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -238,8 +237,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real3D_onChunk :: latdrain_sl
-    dsl4jsb_Real2D_onChunk :: weq_pond_sibl_tile
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
     dsl4jsb_Real2D_onChunk :: wtr_latflow_sibl_tile
+    dsl4jsb_Real2D_onChunk :: weq_pond_sibl_tile
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl_sibl_tile
 
@@ -269,13 +270,18 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(MIX_,   wtr_latflow)   ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)        ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)      ! inout
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, latdrain_sl)   ! inout
+    dsl4jsb_Get_var2D_onChunk(MIX_,   wtr_latflow)      ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)           ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)         ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, latdrain_sl)      ! inout
+    IF (tile%contains_soil) THEN
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl) ! inout
+    END IF
 
     ! Transport water from between tiles
-    IF (dsl4jsb_Config(MIX_)%l_hydro_mix) THEN
+    ! @todo currently, lateral transport is only considered on tiles that contain soil
+    IF (dsl4jsb_Config(MIX_)%l_hydro_mix .AND. tile%contains_soil) THEN
       ! This check should be moved to init routine as soon as enough stuff is there to justify one
       IF (tile%process_action(HYDRO_) /= ON_TILE_) THEN
         CALL finish(routine, 'MIX_ processes must be activate on the same tiles as HYDRO_')
@@ -288,23 +294,22 @@ CONTAINS
         ! Get area fraction of upland tile
         CALL tile%Get_fraction(ics, ice, iblk, fract=source_fract(:))
 
-        ! Move runoff into water storage of the target tile
+        ! Get number of tiles in this hierarchy level and loop over then
         nsibl = tile%parent_tile%Get_no_of_children()
         DO ic = 1, nsibl
-          ! Loop over all sibling tiles
           IF (ic == 1) THEN
             sibl_tile => tile%parent_tile%Get_first_child_tile()
           ELSE
             sibl_tile => sibl_tile%Get_next_sibling_tile()
           END IF
-          ! Identify correct target sibling
+          ! Identify correct downhill target sibling
           IF ( (tile%contains_upland .AND. tile%contains_ridge .AND.                 &
             &   sibl_tile%contains_upland .AND. sibl_tile%contains_depression) .OR.  &
             &  (tile%contains_upland .AND. tile%contains_depression .AND.            &
             &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. &
             &  (tile%contains_lowland .AND. tile%contains_ridge .AND.                &
             &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) ) THEN
-            ! Get target file area fraction
+            ! Get target tile area fraction
             CALL sibl_tile%Get_fraction(ics, ice, iblk, fract=target_fract(:))
             ! Get memory MIX_ and HYDRO_ memory for target tile
             dsl4jsb_Get_memory_tile(MIX_,   sibl_tile)
@@ -343,6 +348,49 @@ CONTAINS
         ! This tile acts only as target tile and lateral drainage cannot be transported any further.
         !   Thus, the lateral drainage is simply added to the bottom drainage
         drainage(:) = drainage(:) + SUM(latdrain_sl(:,:), DIM=2)
+      END IF
+
+      ! Lateral soil water diffusion between ridge and depression tiles of the same macrotopography
+      IF (tile%contains_ridge) THEN
+
+        ! Get area fraction of ridge tile
+        CALL tile%Get_fraction(ics, ice, iblk, fract=source_fract(:))
+
+        ! Get number of tiles in this hierarchy level and loop over then
+        nsibl = tile%parent_tile%Get_no_of_children()
+        DO ic = 1, nsibl
+          IF (ic == 1) THEN
+            sibl_tile => tile%parent_tile%Get_first_child_tile()
+          ELSE
+            sibl_tile => sibl_tile%Get_next_sibling_tile()
+          END IF
+          ! Identify depression on the same macrotopography tile
+          IF ( (tile%contains_upland  .AND. sibl_tile%contains_upland  .AND. sibl_tile%contains_depression) .OR.  &
+            &  (tile%contains_lowland .AND. sibl_tile%contains_lowland .AND. sibl_tile%contains_depression)) THEN
+            ! Get depression tile area fraction
+            CALL sibl_tile%Get_fraction(ics, ice, iblk, fract=target_fract(:))
+            ! Get memory MIX_ and HYDRO_ memory for target tile
+            dsl4jsb_Get_memory_tile(MIX_,   sibl_tile)
+            dsl4jsb_Get_memory_tile(HYDRO_, sibl_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,    sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,    sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl, sibl_tile)
+            ! Move soil water between tiles
+            DO i = 1, nsoil
+              CALL calc_intertile_diffusion(     &
+                & dtime,                         & !< in
+                & source_fract(:),               & !< in
+                & target_fract(:),               & !< in
+                & wtr_soil_fc_sl(:,i),           & !< in
+                & wtr_soil_fc_sl_sibl_tile(:,i), & !< in
+                & wtr_latflow(:),                & !< inout
+                & wtr_latflow_sibl_tile(:),      & !< inout
+                & wtr_soil_sl(:,i),              & !< inout
+                & wtr_soil_sl_sibl_tile(:,i)     & !< inout
+                & )
+            ENDDO
+          END IF
+        END DO
       END IF
 
     END IF
