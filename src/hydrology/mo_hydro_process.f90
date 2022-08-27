@@ -429,7 +429,7 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                    &
-    & l_infil_subzero, l_soilhydnew, l_infiltnew, l_hydro_q, manning_n,                  &
+    & l_infil_subzero, l_soilhydnew, l_infiltnew, l_hydro_q, manning_n,  dt_sat,         &
     & i_shm, i_interpol, i_infil, i_testing1, i_testing2,                                &
     & soil_depth_sl, root_depth_sl, fract_org_sl,                                        &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
@@ -461,7 +461,7 @@ CONTAINS
     LOGICAL, INTENT(in) :: l_hydro_q
 
     REAL(wp), INTENT(in) :: &
-      & manning_n
+      & manning_n, dt_sat
 
     INTEGER, INTENT(in) :: &
       & i_shm, i_interpol, i_infil, i_testing1, i_testing2 
@@ -580,7 +580,7 @@ CONTAINS
       infilt(:) = water_to_soil(:)
     ELSE
       IF (l_infiltnew) THEN
-        CALL infiltration_new(nc,nlat, dtime, i_infil, i_shm,                          &
+        CALL infiltration_new(nc,nlat, dt_sat, dtime, i_infil, i_shm,                  &
                             & oro_stddev(:), manning(:),                               & 
                             & pore_size_index_sl(:,1), bclapp_sl(:,1), wsat_sl(:,1),   &
                             & field_cap_sl(:,1), p_wilt_sl(:,1), hyd_cond_sat_sl(:,1), &
@@ -800,7 +800,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------------------
 
-  SUBROUTINE infiltration_new(nc,nlat, dtime, i_infil, i_shm, &
+  SUBROUTINE infiltration_new(nc,nlat, dt_sat, dtime, i_infil, i_shm, &
                             & oro_stddev, manning,                                    & 
                             & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat, &
                             & ws_incl_ice, ice_soil, water_to_soil,                   &
@@ -811,7 +811,8 @@ CONTAINS
     INTEGER,  INTENT(in) :: &
       & nc, nlat
 
-    REAL(wp), INTENT(in) :: dtime
+    REAL(wp), INTENT(in) :: dtime, &
+      & dt_sat !< Time it takes hydraulic conductivity to reach max [sec]
 
     INTEGER,  INTENT(in) :: &
       & i_infil, i_shm
@@ -854,6 +855,7 @@ CONTAINS
       & k_end(nc),           &   ! ... and the end of the timestep (assuming all water to infiltrate)
       & delta_k(nc),         &   ! ... additional infiltration capacity 
       & water_excess(nc),    &   ! Water that doesn infiltrte immediatly but ponds
+      & pond_pot(nc),        &   ! Ponding depth reached during saturation time
       & slope(nc),           &   ! Slope of the contributing areas ... for now use b
       & v_max(nc),           &   ! Avg. velocity of water; vertical crossection 
       & sro_max(nc),         &   ! velocity relative to m2 gridcell area
@@ -952,9 +954,15 @@ CONTAINS
         END IF
       END IF
 
-
-      infilt(i) = MIN(water_to_soil(i), k_start(i)* dtime)
+      delta_k(i) = k_end(i) - k_start(i)
+      infilt(i)  = MIN(water_to_soil(i), k_start(i)* dtime)
       water_excess(i) = water_to_soil(i) - infilt(i)
+      pond_pot(i) = water_excess(i) * dt_sat / dtime
+
+
+      IF (dtime < dt_sat .AND. (i_infil == 1 .OR. i_infil == 2)) THEN
+        k_end(i) = k_start(i) +  delta_k(i) * dtime / dt_sat
+      END IF
 
       slope(i) = MIN(ABS(zbws), 0.45_wp)
       !IF (hydrotype == LOWLAND_) slope(i) = 0.01_wp
@@ -963,13 +971,9 @@ CONTAINS
           
       IF (water_excess(i) > 0._wp) THEN
       !!v_ini          = RH**(2/3)*slope**(1/2)*1./manning_n ! RH roughly equal to ponding depth
-        v_max(i)       = water_excess(i)**(2._wp/3._wp)*slope(i)**(1._wp/2._wp)*1._wp / manning(i)
-        sro_max(i)     = water_excess(i) * v_max(i)  ! get from outflux through crossection (side) to flux per grid-box area
-        !v_max(i)       = water_to_soil(i)**(2._wp/3._wp)*slope(i)**(1._wp/2._wp)*1._wp / manning(i)
-        !sro_max(i)     = water_to_soil(i) * v_max(i)  ! get from outflux through crossection (side) to flux per grid-box area
-        !sro_max(i)     = MIN(sro_max(i), water_to_soil(i)/dtime)
+        v_max(i)       = pond_pot(i)**(2._wp/3._wp)*slope(i)**(1._wp/2._wp)*1._wp / manning(i)
+        sro_max(i)     = pond_pot(i) * v_max(i)  ! get from outflux through crossection (side) to flux per grid-box area
 
-        delta_k(i)      = k_end(i) - k_start(i)
         fract_infilt(i) = MAX(0._wp, MIN(1._wp, delta_k(i) / (delta_k(i) + sro_max(i))))
         infilt_pot(i)   = water_excess(i) * fract_infilt(i)
             

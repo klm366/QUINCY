@@ -39,8 +39,10 @@ MODULE mo_hydro_config_class
                              !  i.e. when no transpiration occurs anymore
       & snow_depth_max,    & !< Limit for snow depth [m water equivalent] to avoid grid cells with
                              !  infinitely growing snow depth; -1. for no limitation
-      & manning_n            ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture, 
+      & manning_n,         & ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture,
                              ! 0.05 -> floodplains - light brush, 0.075 -> floodplains - heavy brush, 0.15 -> floodplains - trees
+      & dt_sat               !< Time it takes hydraulic conductivity to reach max [sec]
+
     CHARACTER(len=10)     :: &
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
@@ -79,7 +81,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
-    REAL(wp)                    :: manning_n
+    REAL(wp)                    :: manning_n, dt_sat
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
@@ -97,6 +99,7 @@ CONTAINS
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
       & manning_n,                  &
+      & dt_sat,                     &
       & scheme_stom_cond,           &
       & l_organic,                  &
       & l_socmap,                   &
@@ -134,6 +137,7 @@ CONTAINS
     w_soil_wilt_fract = 0.35_wp
     snow_depth_max    = -1.0_wp             ! -1: no limitation
     manning_n         = 0.075_wp
+    dt_sat            = 600._wp
     scheme_stom_cond  = 'echam5'
     l_organic         = .TRUE.
     l_socmap          = .TRUE.
@@ -176,6 +180,7 @@ CONTAINS
     END IF
 
     config%manning_n      = manning_n
+    config%dt_sat         = dt_sat
 
     config%scheme_stom_cond    = scheme_stom_cond
 
