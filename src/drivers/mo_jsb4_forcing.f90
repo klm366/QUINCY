@@ -46,15 +46,7 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_physical_constants, ONLY: cvdifts, grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
     & tmelt, rd, amco2, amd, cpd, vtmpc1, cpvd1, ckap, zkappa
   USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
-#ifdef __ICON__
-#ifdef __NO_RTE_RRTMGP__
-    USE mo_psrad_orbit,       ONLY: inquire_declination
-#else
-    USE mo_radiation_orbit,   ONLY: inquire_declination
-#endif
-#else
-  USE mo_orbit,                ONLY: inquire_declination
-#endif
+  USE mo_orbit_solar,            ONLY: inquire_declination
 
   ! jsb4
   USE mo_jsb_class,              ONLY: jsbach
