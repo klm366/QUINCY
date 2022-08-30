@@ -1087,6 +1087,7 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%l_hydro_q,                       &
       & dsl4jsb_Config(HYDRO_)%manning_n,                       &
       & dsl4jsb_Config(HYDRO_)%dt_sat,                          &
+      & dsl4jsb_Config(HYDRO_)%max_slope,                       &
       & dsl4jsb_Config(HYDRO_)%i_shm,                           &
       & dsl4jsb_Config(HYDRO_)%i_interpol,                      &
       & dsl4jsb_Config(HYDRO_)%i_infil,                         &

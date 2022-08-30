@@ -426,23 +426,23 @@ CONTAINS
   ! @param [out]     runoff              Runoff
   ! @param [out]     drainage            Drainage
   !
-  SUBROUTINE calc_soil_hydrology(                                                        &
+  SUBROUTINE calc_soil_hydrology(                                                           &
     ! in
-    & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                    &
-    & l_infil_subzero, l_soilhydnew, l_infiltnew, l_hydro_q, manning_n,  dt_sat,         &
-    & i_shm, i_interpol, i_infil, i_testing1, i_testing2,                                &
-    & soil_depth_sl, root_depth_sl, fract_org_sl,                                        &
-    & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,    &
-    & water_to_soil, evapotrans_soil, transpiration,                                     &
+    & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                       &
+    & l_infil_subzero, l_soilhydnew, l_infiltnew, l_hydro_q, manning_n, dt_sat, max_slope,  &
+    & i_shm, i_interpol, i_infil, i_testing1, i_testing2,                                   &
+    & soil_depth_sl, root_depth_sl, fract_org_sl,                                           &
+    & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,       &
+    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,       &
+    & water_to_soil, evapotrans_soil, transpiration,                                        &
     ! inout
-    & wtr_soil_sl, ice_soil_sl, tpe_overflow,                                            &
+    & wtr_soil_sl, ice_soil_sl, tpe_overflow,                                               &
     !pdv >
     & weq_soilhyd_err, pdv_1d_out, pdv_2d_out, &
     !pdv <
     ! out
     & wsat_sl, field_cap_sl, p_wilt_sl, &
-    & infilt, runoff, runoff_over, drainage, drain_rock, drain_lat, drain_perm           &
+    & infilt, runoff, runoff_over, drainage, drain_rock, drain_lat, drain_perm              &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -461,7 +461,7 @@ CONTAINS
     LOGICAL, INTENT(in) :: l_hydro_q
 
     REAL(wp), INTENT(in) :: &
-      & manning_n, dt_sat
+      & manning_n, dt_sat, max_slope
 
     INTEGER, INTENT(in) :: &
       & i_shm, i_interpol, i_infil, i_testing1, i_testing2 
@@ -580,7 +580,7 @@ CONTAINS
       infilt(:) = water_to_soil(:)
     ELSE
       IF (l_infiltnew) THEN
-        CALL infiltration_new(nc,nlat, dt_sat, dtime, i_infil, i_shm,                  &
+        CALL infiltration_new(nc,nlat, dt_sat, dtime, max_slope, i_infil, i_shm,       &
                             & oro_stddev(:), manning(:),                               & 
                             & pore_size_index_sl(:,1), bclapp_sl(:,1), wsat_sl(:,1),   &
                             & field_cap_sl(:,1), p_wilt_sl(:,1), hyd_cond_sat_sl(:,1), &
@@ -800,7 +800,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------------------
 
-  SUBROUTINE infiltration_new(nc,nlat, dt_sat, dtime, i_infil, i_shm, &
+  SUBROUTINE infiltration_new(nc,nlat, dt_sat, dtime, max_slope , i_infil, i_shm,     &
                             & oro_stddev, manning,                                    & 
                             & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat, &
                             & ws_incl_ice, ice_soil, water_to_soil,                   &
@@ -812,7 +812,8 @@ CONTAINS
       & nc, nlat
 
     REAL(wp), INTENT(in) :: dtime, &
-      & dt_sat !< Time it takes hydraulic conductivity to reach max [sec]
+      & dt_sat,          &         !< Time it takes hydraulic conductivity to reach max [sec]
+      & max_slope
 
     INTEGER,  INTENT(in) :: &
       & i_infil, i_shm
@@ -951,6 +952,12 @@ CONTAINS
             k_end(i) =  ice_impede(i) * hyd_cond_sat(i) * ws_rel_end(i)**(0.5_wp) &
                    & *(1._wp-(1._wp-ws_rel_end(i)**(1._wp/zmvg(i)))**zmvg(i))**2._wp
           END IF
+        ELSE IF (i_infil == 4) THEN
+          !!---Assuming the wetting front moves with the speed of ksat
+          !!---and in frozen soils water can enter until pore space of top layer is saturated
+          k_end(i)        = MIN(hyd_cond_sat(i),                                  &
+                                MAX(ice_impede(i) * hyd_cond_sat(i),              &
+                                   (ws_max(i) - ws_incl_ice(i))/dtime))
         END IF
       END IF
 
@@ -964,7 +971,7 @@ CONTAINS
         k_end(i) = k_start(i) +  delta_k(i) * dtime / dt_sat
       END IF
 
-      slope(i) = MIN(ABS(zbws), 0.45_wp)
+      slope(i) = MIN(ABS(zbws), max_slope)
       !IF (hydrotype == LOWLAND_) slope(i) = 0.01_wp
 
       pdv_1d_out(i) = 1.0_wp
