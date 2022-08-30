@@ -23,7 +23,7 @@ MODULE mo_hd_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_grid_class,      ONLY: t_jsb_grid, get_blk_start, get_blk_end, get_col_start, get_col_end
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_decomposition_tools, ONLY: get_local_index
   USE mo_impl_constants,      ONLY: SEA_BOUNDARY
@@ -73,7 +73,7 @@ CONTAINS
     ! Get hd config
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+    IF (.NOT. model%Is_process_active(HD_)) RETURN
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
@@ -156,11 +156,11 @@ CONTAINS
       dsl4jsb_var_ptr(HD_,nidx_upstream) = -1
       dsl4jsb_var_ptr(HD_,bidx_upstream) = -1
 
-      blks = get_blk_start(grid)
-      blke = get_blk_end(grid)
+      blks = grid%get_blk_start()
+      blke = grid%get_blk_end()
       DO blk = blks, blke
-        jcs = get_col_start(blk, grid)
-        jce = get_col_end  (blk, grid)
+        jcs = grid%get_col_start(blk)
+        jce = grid%get_col_end  (blk)
         DO n = 1, hd__mem%nneigh
           DO jc = jcs, jce
             IF (cells_up(jc,blk,n) > 0) THEN
@@ -235,7 +235,7 @@ CONTAINS
     ! Get hd config
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+    IF (.NOT. model%Is_process_active(HD_)) RETURN
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
@@ -254,8 +254,8 @@ CONTAINS
 
       nproma = grid%nproma
       nblks  = grid%nblks
-      blks = get_blk_start(grid)
-      blke = get_blk_end(grid)
+      blks = grid%get_blk_start()
+      blke = grid%get_blk_end()
       
       ! Overlandflow reservoir
       ptr => input_file%Read_2d_extdim(  &
@@ -266,8 +266,8 @@ CONTAINS
       
       
       DO blk = blks, blke
-         jcs = get_col_start(blk, grid)
-         jce = get_col_end  (blk, grid)
+         jcs = grid%get_col_start(blk)
+         jce = grid%get_col_end  (blk)
          DO n = 1, hd__mem%nres_o_max
            DO jc = jcs, jce
              dsl4jsb_var_ptr(HD_,overlflow_res)(jc,n,blk) = ptr(jc,blk,n)
@@ -283,8 +283,8 @@ CONTAINS
         & extdim_name='bresnum')
       
       DO blk = blks, blke
-         jcs = get_col_start(blk, grid)
-         jce = get_col_end  (blk, grid)
+         jcs = grid%get_col_start(blk)
+         jce = grid%get_col_end  (blk)
          DO n = 1, hd__mem%nres_b_max
            DO jc = jcs, jce
               dsl4jsb_var_ptr(HD_,baseflow_res)(jc,n,blk) = ptr(jc,blk,n)
@@ -300,8 +300,8 @@ CONTAINS
         & extdim_name='rresnum')
       
       DO blk = blks, blke
-         jcs = get_col_start(blk, grid)
-         jce = get_col_end  (blk, grid)
+         jcs = grid%get_col_start(blk)
+         jce = grid%get_col_end  (blk)
          DO n = 1, hd__mem%nres_r_max
            DO jc = jcs, jce
              dsl4jsb_var_ptr(HD_,riverflow_res)(jc,n,blk) = ptr(jc,blk,n)

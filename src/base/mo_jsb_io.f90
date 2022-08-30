@@ -8,8 +8,8 @@ MODULE mo_jsb_io
     ZAXIS_SURFACE, ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC,              &
     FILETYPE_NC2, FILETYPE_NC4, FILETYPE_GRB, FILETYPE_GRB2,           &
     GRID_CELL, GRID_UNSTRUCTURED, GRID_UNSTRUCTURED_CELL,              &
-    TSTEP_CONSTANT, TSTEP_INSTANT,                                     &
-    cdiDefMissval, read_io_namelist
+    GRID_LONLAT, TSTEP_CONSTANT, TSTEP_INSTANT,                        &
+    cdiDefMissval, read_jsb_io_namelist
 
   USE mo_exception, ONLY: finish
 
@@ -92,13 +92,14 @@ CONTAINS
   !>
   !! @brief Initialize io control for JSBACH
   !!
-  SUBROUTINE init_io(namelist_filename)
+  SUBROUTINE init_jsb_io(namelist_filename)
 
     CHARACTER(len=*), INTENT(in) :: namelist_filename
 
-    CALL read_io_namelist(TRIM(namelist_filename))
+    CALL read_jsb_io_namelist(TRIM(namelist_filename))
 
-  END SUBROUTINE init_io
+  END SUBROUTINE init_jsb_io
+
 
 #endif
 END MODULE mo_jsb_io

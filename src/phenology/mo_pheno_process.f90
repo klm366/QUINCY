@@ -104,26 +104,23 @@ MODULE mo_pheno_process
 
      !-----------------------------------------------------------------------
      !  ARGUMENTS
-     INTEGER,  intent(in)    ::                     &
-                                day_of_year
+     INTEGER,  intent(in)    :: day_of_year
 
      LOGICAL,  intent(in)    :: is_newday
 
      REAL(wp), intent(in)    :: timeStep_in_days
 
      !$claw model-data
-     REAL(wp), intent(in)    ::                     &
-                                lat,                &
-                                previous_day_temp_mean, &
-                                LaiMax_corrected,   &
-                                pseudo_soil_temp
+     REAL(wp), intent(in)    :: lat,                &
+       &                        previous_day_temp_mean, &
+       &                        LaiMax_corrected,   &
+       &                        pseudo_soil_temp
 
-     REAL(wp), intent(inout) ::                     &
-                                days_since_growth_begin_SG, &
-                                chill_days_SG,      &
-                                heat_sum_SG,        &
-                                growth_phase_SG,    &
-                                lai                   ! Total LAI.
+     REAL(wp), intent(inout) :: days_since_growth_begin_SG, &
+       &                        chill_days_SG,      &
+       &                        heat_sum_SG,        &
+       &                        growth_phase_SG,    &
+       &                        lai                   ! Total LAI.
      !$claw end model-data                                
 
 
@@ -131,7 +128,7 @@ MODULE mo_pheno_process
      !  LOCAL VARIABLES
      REAL(wp)          :: xtmp,   &  ! argument to calls of get_letItDie
                                      ! (necessary to allow for inlining of these functions)
-                          grRate     ! argument to calls of get_letItGrow
+       &                  grRate     ! argument to calls of get_letItGrow
 
      !-----------------------------------------------------------------------
      ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
@@ -998,7 +995,8 @@ MODULE mo_pheno_process
     !$claw sca routine
 
     slope           = PhenoParam%RG%growthRate / (PhenoParam%RG%bucketFill_critical - PhenoParam%all%wilt_point)
-    shedRate        = PhenoParam%RG%growthRate + PhenoParam%RG%shedRate_aging - slope * (bucket_filling - PhenoParam%all%wilt_point)
+    shedRate        = PhenoParam%RG%growthRate + PhenoParam%RG%shedRate_aging &
+      &               - slope * (bucket_filling - PhenoParam%all%wilt_point)
     get_shedRate_RG = MIN(MAX(PhenoParam%RG%shedRate_aging,shedRate),PhenoParam%RG%growthRate+PhenoParam%RG%shedRate_aging)
 
   END FUNCTION get_shedRate_RG

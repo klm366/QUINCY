@@ -27,12 +27,14 @@ MODULE mo_jsb_model_class
   USE mo_jsb_task_class,    ONLY: t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
   USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
+  USE mo_jsb_impl_constants,ONLY: SHORT_NAME_LEN
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_jsb_model_m, t_jsb_model
   PUBLIC :: new_model, print_model, delete_model
+  PUBLIC :: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
 
   !>
   !! Type for model structure
@@ -49,7 +51,7 @@ MODULE mo_jsb_model_class
     ! TYPE(t_Action)              :: actions(MAX_ACTIONS) !< List of possible actions (events)
     ! Extensions:
     INTEGER                            :: id                !< Model id
-    CHARACTER(len=10)                  :: shortname         !< Model short name
+    CHARACTER(len=SHORT_NAME_LEN)      :: shortname         !< Model short name
     CHARACTER(len=132)                 :: description       !< Model description
     CHARACTER(len=filename_max)        :: namelist_filename !< Model namelist file
     TYPE(t_jsb_model_config),  POINTER :: config            !< Configuration
@@ -71,6 +73,7 @@ MODULE mo_jsb_model_class
     ! PROCEDURE :: Process_message
     ! Extensions:
     PROCEDURE :: Configure_processes => Configure_model_processes
+    PROCEDURE :: Do_fractions_change => Any_process_changes_fractions
     PROCEDURE :: Get_shortname       => Get_model_shortname
     PROCEDURE :: Get_top_tile
     PROCEDURE :: Goto_next_tile
@@ -79,11 +82,14 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Reset_tiles
     PROCEDURE :: Get_tile
     PROCEDURE :: Get_process
+    PROCEDURE :: Is_process_active
     PROCEDURE :: Queue_task
 !!$    PROCEDURE :: Get_process_configs
 !!$    PROCEDURE :: Process_task
     PROCEDURE :: Run_tasks
     PROCEDURE :: Set_options
+    PROCEDURE :: Set_subset
+    PROCEDURE :: Associate_var_pointers
 #ifdef _OPENACC
     PROCEDURE :: gpu_to_cpu => Sync_vars_from_gpu_to_cpu
     PROCEDURE :: cpu_to_gpu => Sync_vars_from_cpu_to_gpu
@@ -99,6 +105,15 @@ MODULE mo_jsb_model_class
   TYPE t_jsb_model_m
     TYPE(t_jsb_model), POINTER :: m
   END TYPE t_jsb_model_m
+
+
+  !>model schemes
+  !!  model_scheme namlist option in mo_jsb_config_class:t_jsb_model_config
+  !!  NOTE in mo_jsb_config_class:new_model_config this ENUM is not used, but replaced by INTEGER, to avoid a dependency cycle
+  ENUM, BIND(C)
+    ENUMERATOR :: MODEL_JSBACH=1, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  END ENUM
+
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_class'
 
@@ -166,6 +181,24 @@ CONTAINS
 
   END FUNCTION Get_process
 
+  LOGICAL FUNCTION Is_process_active(this, iproc)
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+    INTEGER, INTENT(in) :: iproc
+
+    Is_process_active = .FALSE.
+    IF (ASSOCIATED(this%processes(iproc)%p)) THEN
+      IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+        Is_process_active = this%processes(iproc)%p%config%active
+      ELSE 
+        ! If the process is associated but the configuration is not associated 
+        ! we assume here that the process is active on the model -- currently this is the case for l2a and a2l
+        Is_process_active = .TRUE.
+      ENDIF
+    ENDIF
+
+  END FUNCTION Is_process_active
+
   SUBROUTINE Queue_task(this, iproc, name)
 
     CLASS(t_jsb_model),        INTENT(inout) :: this
@@ -188,6 +221,27 @@ CONTAINS
     END DO
 
   END SUBROUTINE Configure_model_processes
+
+  FUNCTION Any_process_changes_fractions(this) RESULT(l_fractions_change)
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+    LOGICAL                           :: l_fractions_change
+
+    INTEGER :: iproc
+
+    l_fractions_change = .FALSE.
+    DO iproc=1,SIZE(this%processes)
+      IF (ASSOCIATED(this%processes(iproc)%p)) THEN
+        IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+          IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
+            l_fractions_change = .TRUE.
+            EXIT
+          ENDIF
+        END IF
+      END IF
+    END DO
+
+  END FUNCTION Any_process_changes_fractions
 
 !!$  FUNCTION Get_process_configs(this) RESULT(return_ptr)
 !!$
@@ -433,7 +487,111 @@ CONTAINS
 
   END SUBROUTINE Set_options
 
-  !>
+  SUBROUTINE Set_subset(this, type, iblk, ics, ice)
+
+    USE mo_jsb_subset,     ONLY: jsbach_subsets, ON_DOMAIN, ON_CHUNK
+    USE mo_jsb_grid_class, ONLY: t_jsb_grid
+    USE mo_jsb_grid,       ONLY: Get_grid
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+    INTEGER,            INTENT(in)    :: type
+    INTEGER, OPTIONAL,  INTENT(in)    :: iblk
+    INTEGER, OPTIONAL,  INTENT(in)    :: ics
+    INTEGER, OPTIONAL,  INTENT(in)    :: ice
+
+    TYPE(t_jsb_grid), POINTER :: grid
+
+    INTEGER :: no_omp_thread
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Set_subset'
+
+    no_omp_thread = Get_omp_thread()
+
+    SELECT CASE (type)
+    CASE (ON_CHUNK)
+      IF (.NOT. (PRESENT(iblk) .AND. PRESENT(ics) .AND. PRESENT(ice))) &
+        & CALL finish(routine, 'Parameters missing for subset type ON_CHUNK')
+      jsbach_subsets(this%id)%sub(no_omp_thread)%iblk =  iblk
+      jsbach_subsets(this%id)%sub(no_omp_thread)%ics  =  ics
+      jsbach_subsets(this%id)%sub(no_omp_thread)%ice  =  ice
+      jsbach_subsets(this%id)%sub(no_omp_thread)%nb   =  1
+      jsbach_subsets(this%id)%sub(no_omp_thread)%nc   =  ice - ics + 1
+    CASE (ON_DOMAIN)
+      grid => Get_grid(this%grid_id)
+      jsbach_subsets(this%id)%sub(no_omp_thread)%iblk =  0
+      jsbach_subsets(this%id)%sub(no_omp_thread)%ics  =  0
+      jsbach_subsets(this%id)%sub(no_omp_thread)%ice  =  0
+      jsbach_subsets(this%id)%sub(no_omp_thread)%nb   =  grid%nblks
+      jsbach_subsets(this%id)%sub(no_omp_thread)%nc   =  grid%nproma
+    END SELECT 
+    jsbach_subsets(this%id)%sub(no_omp_thread)%type = type   
+
+  END SUBROUTINE Set_subset
+
+  SUBROUTINE Associate_var_pointers(this, ic_start, ic_end, iblk_start, iblk_end)
+
+    USE mo_jsb_var_class,     ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+    USE mo_jsb_subset,        ONLY: ON_DOMAIN, ON_CHUNK
+    USE mo_jsb_process_class, ONLY: INHERIT_
+
+    CLASS(t_jsb_model), INTENT(inout) :: this
+    INTEGER, OPTIONAL,  INTENT(in)    :: ic_start
+    INTEGER, OPTIONAL,  INTENT(in)    :: ic_end
+    INTEGER, OPTIONAL,  INTENT(in)    :: iblk_start
+    INTEGER, OPTIONAL,  INTENT(in)    :: iblk_end
+
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
+
+    INTEGER :: iproc, ivar, itype, no_omp_thread
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Associate_var_pointers'
+
+    no_omp_thread = Get_omp_thread()
+
+    IF (iblk_start == iblk_end) THEN
+      itype = ON_CHUNK
+    ELSE
+      itype = ON_DOMAIN
+    END IF
+
+    CALL this%Reset()
+    CALL this%Get_top_tile(tile)
+    IF (.NOT. ASSOCIATED(tile)) &
+      & CALL finish(TRIM(routine), 'Top tile not set')
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        CALL this%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
+      DO iproc=1,SIZE(tile%mem)
+        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
+        IF (tile%process_action(iproc) == INHERIT_) CYCLE
+        DO ivar=1,tile%mem(iproc)%p%no_of_vars
+          SELECT TYPE (var => tile%mem(iproc)%p%vars(ivar)%p)
+          CLASS IS (t_jsb_var_real2d)
+            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
+            var%subset_type = itype
+          CLASS IS (t_jsb_var_real3d)
+            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
+            var%subset_type = itype
+          END SELECT
+        END DO
+
+        IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
+          & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
+
+      END DO
+
+      CALL this%Goto_next_tile(tile)
+
+    END DO
+
+  END SUBROUTINE Associate_var_pointers
+
+    !>
   !! Destructor method for model instance.
   !!
   !! Subroutine to delete model instance from memory.
@@ -523,6 +681,8 @@ CONTAINS
           CYCLE
         END SELECT
 
+        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
+
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
@@ -583,6 +743,8 @@ CONTAINS
         CASE (SKIP_, INHERIT_)
           CYCLE
         END SELECT
+
+        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
 
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars

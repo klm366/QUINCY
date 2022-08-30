@@ -30,6 +30,7 @@ MODULE mo_assimi_config_class
   PUBLIC :: t_assimi_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
+     LOGICAL               :: init_running_means ! initialize npp buffer for NLCC process
      INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
                                                ! R: could be different for other processes e.g. for radiation
      REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
@@ -38,6 +39,7 @@ MODULE mo_assimi_config_class
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
+    CHARACTER(15)           :: canopy_conductance_scheme  !< select scheme to calculate canopy conductance [medlyn|ballberry]
    CONTAINS
      PROCEDURE :: Init => Init_assimi_config
   END type t_assimi_config
@@ -62,16 +64,18 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    LOGICAL                     :: init_running_means
     INTEGER                     :: ncanopy, i
     TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
     !! quincy
     REAL(wp), ALLOCATABLE       :: canopy_layer_thickness_profile(:)  !< use LAI per layer [m2 m-2], indirectly defining the thickness (i.e., vertical height) of each single canopy layer 
-    LOGICAL                     :: flag_optimal_Nfraction     , &
-                                   flag_t_resp_acclimation    , &
-                                   flag_t_jmax_acclimation
+    LOGICAL                     :: flag_optimal_Nfraction
+    LOGICAL                     :: flag_t_resp_acclimation
+    LOGICAL                     :: flag_t_jmax_acclimation
     CHARACTER(15)               :: canopy_layer_scheme
-    INTEGER                     :: ncanopy_q_    , &
-                                   icanopy
+    CHARACTER(15)               :: canopy_conductance_scheme
+    INTEGER                     :: ncanopy_q_
+    INTEGER                     :: icanopy
     REAL(wp)                    :: dAPAR
     REAL(wp)                    :: k_canopy_layer                !< extinction coefficient to calculate canopy layer depth
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_canopy
@@ -80,12 +84,14 @@ CONTAINS
      & active,                 &
      & ic_filename,            &
      & bc_filename,            &
+     & init_running_means,     &
      !! quincy
        flag_optimal_Nfraction,    &
        flag_t_resp_acclimation,   &
        flag_t_jmax_acclimation,   &
        ncanopy_q_,                &  ! renamed: ncanopy -> ncanopy_q_ avoiding conflicts with jsb4; there is no ncanopy_q_ parameter in the namelist !
-       canopy_layer_scheme
+       canopy_layer_scheme,       &
+       canopy_conductance_scheme
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -101,6 +107,7 @@ CONTAINS
     active              = .TRUE.
     bc_filename         = 'bc_land_assimi.nc'
     ic_filename         = 'ic_land_assimi.nc'
+    init_running_means  = .FALSE.
     ncanopy             = 3
     !X e.g: use_alb_veg_simple        = .FALSE.
     !! quincy
@@ -109,6 +116,7 @@ CONTAINS
     flag_t_jmax_acclimation        = .FALSE.      ! .TRUE. .FALSE.
     ncanopy_q_                     = 10           ! (default for FAPAR based canopy layers would be 10)
     canopy_layer_scheme            = "fapar"      ! 
+    canopy_conductance_scheme      = "medlyn"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -120,12 +128,14 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
+    config%init_running_means  = init_running_means
     config%ncanopy             = ncanopy
     !! quincy
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction
     config%flag_t_resp_acclimation       = flag_t_resp_acclimation
     config%flag_t_jmax_acclimation       = flag_t_jmax_acclimation
     config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)
+    config%canopy_conductance_scheme     = TRIM(canopy_conductance_scheme)
 
     ! Create vertical axis
     canopy_layer  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
@@ -164,6 +174,20 @@ CONTAINS
 
       CASE DEFAULT
         WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme',canopy_layer_scheme
+        CALL finish(routine, message_text) 
+    END SELECT
+
+    !< check canopy-conductance scheme
+    !! 
+    SELECT CASE(TRIM(config%canopy_conductance_scheme))
+      CASE ("medlyn")
+        CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
+          &                         ' the local lctlib_g1 variable is set to lctlib%g1_medlyn')
+      CASE ("ballberry")
+        CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
+          &                         ' the local lctlib_g1 variable is set to lctlib%g1_bberry')
+      CASE DEFAULT
+        WRITE(message_text,'(2a)') 'invalid canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme)
         CALL finish(routine, message_text) 
     END SELECT
 

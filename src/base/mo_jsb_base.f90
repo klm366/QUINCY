@@ -17,7 +17,7 @@ MODULE mo_jsb_base
 
   USE mo_jsb_class,   ONLY: jsbach
   USE mo_jsb_control, ONLY: debug_on
-  USE mo_exception,   ONLY: message
+  USE mo_exception,   ONLY: message, finish
   USE mo_util,        ONLY: int2string
 
   IMPLICIT NONE
@@ -32,8 +32,9 @@ CONTAINS
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
-    USE mo_jsb_parallel,        ONLY: init_parallel_iface
-    USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model
+    USE mo_jsb_parallel,        ONLY: init_parallel_iface, Get_omp_no_of_threads
+    USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model, MODEL_JSBACH, MODEL_QUINCY
+    USE mo_jsb_subset,          ONLY: jsbach_subsets
     USE mo_jsb_config_class,    ONLY: new_model_config
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_time,            ONLY: init_time
@@ -44,17 +45,21 @@ CONTAINS
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_assimi_constants,    ONLY: init_assimi_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
-    ! USE mo_sse_constants,       ONLY: init_sse_constants
-    ! USE mo_sb_constants,        ONLY: init_sb_constants
+    USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
+    USE mo_spq_constants,       ONLY: init_spq_constants
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_
+
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
+    dsl4jsb_Use_config(FLCC_)
+    dsl4jsb_Use_config(WLCC_)
+    dsl4jsb_Use_config(PPLCC_)
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
@@ -64,12 +69,16 @@ CONTAINS
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(FLCC_)
+    dsl4jsb_Def_config(WLCC_)
+    dsl4jsb_Def_config(PPLCC_)
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
 
     INTEGER :: no_of_models, model_idx, iproc
+    INTEGER :: model_scheme
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models'
 
@@ -85,6 +94,8 @@ CONTAINS
     ALLOCATE(jsbach%models(no_of_models))
     jsbach%no_of_models = no_of_models
 
+    ALLOCATE(jsbach_subsets(no_of_models))
+  
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(model)
@@ -94,6 +105,7 @@ CONTAINS
         &                  jsb_models_nml(model_idx)%model_description,       &
         &                  jsb_models_nml(model_idx)%model_namelist_filename)
       jsbach%models(jsb_models_nml(model_idx)%model_id)%m => model
+      ALLOCATE(jsbach_subsets(model_idx)%sub(Get_omp_no_of_threads()))
     END DO
 
     ! Configure models according to model namelist(s)
@@ -101,6 +113,13 @@ CONTAINS
        NULLIFY(model)
        model => jsbach%models(model_idx)%m
        model%config => new_model_config(model%namelist_filename)
+
+       ! Require that only one model_scheme is used!
+       IF (model_idx == 1) THEN
+         model_scheme = model%config%model_scheme
+       ELSE IF (model%config%model_scheme /= model_scheme) THEN
+          CALL finish(routine, 'Only one model_scheme allowed!')
+       END IF
 
        CALL message(TRIM(routine), 'New jsbach model: '//TRIM(model%shortname))
        CALL message('     ', '... ID: '//TRIM(int2string(model%id)))
@@ -126,12 +145,18 @@ CONTAINS
 
       CALL model%Configure_processes()
 
-      dsl4jsb_Get_config(SSE_)
-      dsl4jsb_Get_config(HYDRO_)
       dsl4jsb_Get_config(RAD_)
-      dsl4jsb_Get_config(CARBON_)
-      dsl4jsb_Get_config(FUEL_)
-      dsl4jsb_Get_config(DISTURB_)
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        dsl4jsb_Get_config(SSE_)
+        dsl4jsb_Get_config(HYDRO_)
+        dsl4jsb_Get_config(CARBON_)
+        dsl4jsb_Get_config(FUEL_)
+        dsl4jsb_Get_config(DISTURB_)
+        dsl4jsb_Get_config(WLCC_)
+        dsl4jsb_Get_config(FLCC_)
+        dsl4jsb_Get_config(PPLCC_)
+      END SELECT
 
       ! Crosscheck process configs
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
@@ -148,60 +173,93 @@ CONTAINS
         END IF
       END IF
 
-      IF (model%config%l_compat401) THEN
-        CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
-        CALL message('    ', '... using soil heat capacity from mineral soil map')
-        CALL message('    ', '... using soil heat conductivity from mineral soil map')
-        CALL message('    ', '... using fixed snow heat capacity and snow heat conductivity')
-        CALL message('    ', '... not using multi-layer snow model')
-        CALL message('    ', '... not using dynamical snow density and thickness')
-        CALL message('    ', '... not using frozen ground')
-        CALL message('    ', '... not using organic soil fractions')
-        CALL message('    ', '... using canopy albedo from ini file')
-        dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
-        dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
-        dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
-        dsl4jsb_Config(SSE_)%l_heat_cond_map = .FALSE.
-        dsl4jsb_Config(SSE_)%l_snow = .FALSE.
-        dsl4jsb_Config(SSE_)%l_dynsnow = .FALSE.
-        dsl4jsb_Config(SSE_)%l_freeze = .FALSE.
-        dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
-        dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
-      END IF
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
 
-      IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
-        CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
-          &                         ' ... therefore no influence of vegetation on albedo')
-      ELSE
-        CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
-      END IF
+        IF (model%config%l_compat401) THEN
+          CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
+          CALL message('    ', '... using soil heat capacity from mineral soil map')
+          CALL message('    ', '... using soil heat conductivity from mineral soil map')
+          CALL message('    ', '... using fixed snow heat capacity and snow heat conductivity')
+          CALL message('    ', '... not using multi-layer snow model')
+          CALL message('    ', '... not using dynamical snow density and thickness')
+          CALL message('    ', '... not using frozen ground')
+          CALL message('    ', '... not using organic soil fractions')
+          CALL message('    ', '... using canopy albedo from ini file')
+          dsl4jsb_Config(SSE_)%l_heat_cap_dyn = .FALSE.
+          dsl4jsb_Config(SSE_)%l_heat_cond_dyn = .FALSE.
+          dsl4jsb_Config(SSE_)%l_heat_cap_map = .FALSE.
+          dsl4jsb_Config(SSE_)%l_heat_cond_map = .FALSE.
+          dsl4jsb_Config(SSE_)%l_snow = .FALSE.
+          dsl4jsb_Config(SSE_)%l_dynsnow = .FALSE.
+          dsl4jsb_Config(SSE_)%l_freeze = .FALSE.
+          dsl4jsb_Config(HYDRO_)%l_organic = .FALSE.
+          dsl4jsb_Config(RAD_)%use_alb_canopy = .TRUE.
+        END IF
 
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(FUEL_)%active) THEN
-        dsl4jsb_Config(FUEL_)%active = .TRUE.
-        CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
-      END IF
-      IF (dsl4jsb_Config(DISTURB_)%active .AND. .NOT. dsl4jsb_Config(CARBON_)%active) THEN
-        dsl4jsb_Config(CARBON_)%active = .TRUE.
-        CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
-      END IF
+        IF (model%Do_fractions_change()) THEN
+          IF (.NOT. dsl4jsb_Config(PPLCC_)%active) THEN
+            CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
+          END IF
+          dsl4jsb_Config(PPLCC_)%active = .TRUE.
+        END IF
+
+        IF (model%config%init_from_ifs) THEN
+          CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
+        END IF
+
+        IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
+          ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
+          dsl4jsb_Config(HYDRO_)%l_infil_subzero = .FALSE.
+          CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature (l_snow=false)')
+        ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
+          ! Print message if infiltration at sub-zero temperature is switched off in namelist
+          CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature')
+        END IF
+
+        IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN
+          CALL message(TRIM(routine), 'Using canopy albedo from ini file '//TRIM(dsl4jsb_Config(RAD_)%bc_filename)//&
+            &                         ' ... therefore no influence of vegetation on albedo')
+        ELSE
+          CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
+        END IF
+
+        IF (model%Is_process_active(FLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+          dsl4jsb_Config(DISTURB_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
+        END IF
+        IF (model%Is_process_active(WLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+          dsl4jsb_Config(DISTURB_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on disturbance process since wind lcc process is active')
+        END IF
+        IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(FUEL_)) THEN
+          dsl4jsb_Config(FUEL_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
+        END IF
+        IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(CARBON_)) THEN
+          dsl4jsb_Config(CARBON_)%active = .TRUE.
+          CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
+        END IF
+      END SELECT
 
     END DO
 
-    !> quincy constants init
-    !! assuming the shared/constants/ modules are available here already (impl, math, physical)
-    IF (model%config%use_quincy) THEN
-      CALL message(TRIM(routine), 'Starting init of QUINCY process constants')
+    !>quincy constants init
+    !>
+    ! assuming the shared/constants/ modules are available here already (impl, math, physical)
+    SELECT CASE (model_scheme)
+    CASE (MODEL_QUINCY)
+      CALL message(TRIM(routine), 'starting init of QUINCY process constants')
       CALL init_rad_constants      
-      CALL init_atmland_constants  
       CALL init_assimi_constants   
-      CALL init_veg_constants      
-      ! CALL init_sse_constants
-      ! CALL init_sb_constants
+      CALL init_veg_constants    
+      CALL init_spq_constants
+      CALL init_sb_constants
       CALL init_pheno_constants    
-      IF (debug_on()) CALL message(TRIM(routine), 'initialized quincy constants)')
-    ENDIF
+      CALL init_atmland_constants  
+    END SELECT
 
-    IF (debug_on()) CALL message(TRIM(routine), 'done basic setup (models, process configs)')
+    CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')
 
   END SUBROUTINE jsbach_setup_models
 
@@ -214,21 +272,39 @@ CONTAINS
 
     INTEGER, INTENT(in) :: model_id
 
-    TYPE(t_jsb_model), POINTER :: model
-
+    TYPE(t_jsb_model), POINTER  :: model
+    CHARACTER(LEN=30)           :: lctlib_filename
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_tiles'
 
     model => Get_model(model_id)
 
-    model%lctlib => Read_lctlib('lctlib_nlct21.def', model%config%use_quincy)
-    CALL message(TRIM(routine), 'Imported lctlib from '//'lctlib_nlct21.def')
+    ! select lctlib file depending on the usecase
+    ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
+    SELECT CASE (TRIM(model%config%usecase))
+    ! quincy model (8 PFT tiles)
+    CASE ('quincy_eight_pfts')
+      lctlib_filename = 'lctlib_quincy_nlct8.def'
+    ! jsbach_lite & jsbach_pfts
+    CASE DEFAULT
+      lctlib_filename = 'lctlib_nlct21.def'
+    END SELECT
+    
+    ! import lctlib
+    ! use model_scheme_char, instead of the ENUM model_scheme, to differentiate between model schemes
+    !  because mo_jsb_model_class is not used in this function 
+    model%lctlib => Read_lctlib(TRIM(lctlib_filename), &
+      &                         TRIM(model%config%model_scheme_char), &
+      &                         TRIM(model%config%usecase))
+    CALL message(TRIM(routine), 'Imported lctlib from '//TRIM(lctlib_filename)// &
+      &                         ' using the model scheme '//model%config%model_scheme_char)
 
+    ! initialize usecase if defined via namelist
     IF (model%config%usecase /= '') THEN
       ! Shortcut model configuration through usecase
       CALL init_usecase(model)
     ELSE
       ! Explicit model configuration through namelist
-      ! TBD
+      ! TODO
     END IF
 
   END SUBROUTINE jsbach_setup_tiles

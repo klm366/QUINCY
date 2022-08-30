@@ -30,8 +30,13 @@ MODULE mo_jsb_process_factory
   USE mo_carbon_memory_class,  ONLY: t_carbon_memory
   USE mo_disturb_memory_class, ONLY: t_disturb_memory
   USE mo_fuel_memory_class,    ONLY: t_fuel_memory
-  USE mo_veg_memory_class,     ONLY: t_veg_memory
+  USE mo_pplcc_memory_class,   ONLY: t_pplcc_memory
+  USE mo_tcq_memory_class,     ONLY: t_tcq_memory
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
+  USE mo_nlcc_memory_class,    ONLY: t_nlcc_memory
+  USE mo_veg_memory_class,     ONLY: t_veg_memory
+  USE mo_sb_memory_class,      ONLY: t_sb_memory
+  USE mo_spq_memory_class,     ONLY: t_spq_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -59,13 +64,30 @@ MODULE mo_jsb_process_factory
   USE mo_disturb_config_class,  ONLY: t_disturb_config
   USE mo_fuel_interface,        ONLY: Register_fuel_tasks
   USE mo_fuel_config_class,     ONLY: t_fuel_config
-  USE mo_veg_interface,         ONLY: Register_veg_tasks
-  USE mo_veg_config_class,      ONLY: t_veg_config
+  USE mo_pplcc_interface,       ONLY: Register_pplcc_tasks
+  USE mo_pplcc_config_class,    ONLY: t_pplcc_config
+  USE mo_tlcc_interface,        ONLY: Register_tlcc_tasks
+  USE mo_tlcc_config_class,     ONLY: t_tlcc_config
+  USE mo_tcq_interface,         ONLY: Register_tcq_tasks
+  USE mo_tcq_config_class,      ONLY: t_tcq_config
   USE mo_alcc_interface,        ONLY: Register_alcc_tasks
   USE mo_alcc_config_class,     ONLY: t_alcc_config
+  USE mo_flcc_interface,        ONLY: Register_flcc_tasks
+  USE mo_flcc_config_class,     ONLY: t_flcc_config
+  USE mo_wlcc_interface,        ONLY: Register_wlcc_tasks
+  USE mo_wlcc_config_class,     ONLY: t_wlcc_config
+  USE mo_nlcc_interface,        ONLY: Register_nlcc_tasks
+  USE mo_nlcc_config_class,     ONLY: t_nlcc_config
+  USE mo_veg_interface,         ONLY: Register_veg_tasks
+  USE mo_veg_config_class,      ONLY: t_veg_config
+  USE mo_sb_interface,          ONLY: Register_sb_tasks
+  USE mo_sb_config_class,       ONLY: t_sb_config
+  USE mo_spq_interface,         ONLY: Register_spq_tasks
+  USE mo_spq_config_class,      ONLY: t_spq_config
 
   USE mo_jsb_process_class, ONLY: &
-    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, ALCC_, VEG_
+    & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
+    & PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
 
   IMPLICIT NONE
   PRIVATE
@@ -73,7 +95,7 @@ MODULE mo_jsb_process_factory
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 20
+  INTEGER, PARAMETER :: max_no_of_processes = 23
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory'
 
@@ -93,6 +115,8 @@ CONTAINS
     return_ptr%owner_model_id = model_id
 
     SELECT CASE (iproc)
+    CASE (A2L_, L2A_)
+      ! Do nothing for A2L and L2A: these processes currently have no tasks and no config
     CASE (RAD_)
       CALL Register_rad_tasks(return_ptr, model_id)
       ALLOCATE(t_rad_config::return_ptr%config)
@@ -128,18 +152,52 @@ CONTAINS
     CASE (FUEL_)
       CALL Register_fuel_tasks(return_ptr, model_id)
       ALLOCATE(t_fuel_config::return_ptr%config)
+    CASE (PPLCC_)
+      CALL Register_pplcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_pplcc_config::return_ptr%config)
+    CASE (TLCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      return_ptr%has_memory = .FALSE.
+      CALL Register_tlcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_tlcc_config::return_ptr%config)
+    CASE (TCQ_)
+      CALL Register_tcq_tasks(return_ptr, model_id)
+      ALLOCATE(t_tcq_config::return_ptr%config)
+    CASE (ALCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_alcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_alcc_config::return_ptr%config)
+    CASE (FLCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      return_ptr%has_memory = .FALSE.
+      CALL Register_flcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_flcc_config::return_ptr%config)
+    CASE (WLCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      return_ptr%has_memory = .FALSE.
+      CALL Register_wlcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_wlcc_config::return_ptr%config)
+    CASE (NLCC_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_nlcc_tasks(return_ptr, model_id)
+      ALLOCATE(t_nlcc_config::return_ptr%config)
     CASE (VEG_)
       CALL Register_veg_tasks(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
-    CASE (ALCC_)
-      CALL Register_alcc_tasks(return_ptr, model_id)
-      ALLOCATE(t_alcc_config::return_ptr%config)
+    CASE (SB_)
+      CALL Register_sb_tasks(return_ptr, model_id)
+      ALLOCATE(t_sb_config::return_ptr%config)
+    CASE (SPQ_)
+      CALL Register_spq_tasks(return_ptr, model_id)
+      ALLOCATE(t_spq_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
 
     IF (ASSOCIATED(return_ptr)) THEN
-      return_ptr%config%namelist_filename = TRIM(namelist_filename)
+      IF (ASSOCIATED(return_ptr%config)) THEN
+        return_ptr%config%namelist_filename = TRIM(namelist_filename)
+      END IF
     END IF
 
   END FUNCTION Create_process
@@ -158,8 +216,13 @@ CONTAINS
     USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
     USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
     USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
-    USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
+    USE mo_pplcc_memory_class,   ONLY: max_no_of_pplcc_vars => max_no_of_vars
+    USE mo_tcq_memory_class,     ONLY: max_no_of_tcq_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
+    USE mo_nlcc_memory_class,    ONLY: max_no_of_nlcc_vars => max_no_of_vars
+    USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
+    USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
+    USE mo_spq_memory_class,     ONLY: max_no_of_spq_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
@@ -209,12 +272,27 @@ CONTAINS
     CASE (FUEL_)
       ALLOCATE(t_fuel_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_fuel_vars
-    CASE (VEG_)
-      ALLOCATE(t_veg_memory::return_ptr)
-      return_ptr%max_no_of_vars = max_no_of_veg_vars
+    CASE (PPLCC_)
+      ALLOCATE(t_pplcc_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_pplcc_vars
+    CASE (TCQ_)
+      ALLOCATE(t_tcq_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_tcq_vars
     CASE (ALCC_)
       ALLOCATE(t_alcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_alcc_vars
+    CASE (NLCC_)
+      ALLOCATE(t_nlcc_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_nlcc_vars
+    CASE (VEG_)
+      ALLOCATE(t_veg_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_veg_vars
+    CASE (SB_)
+      ALLOCATE(t_sb_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_sb_vars
+    CASE (SPQ_)
+      ALLOCATE(t_spq_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_spq_vars
     END SELECT
 
     !$acc enter data create(return_ptr)

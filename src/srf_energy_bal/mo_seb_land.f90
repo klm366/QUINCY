@@ -112,12 +112,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
-    dsl4jsb_Real2D_onChunk :: w_snow
+    dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_ice_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
@@ -148,6 +148,7 @@ CONTAINS
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
+     & tile_fract_zero,               &
      & has_snow_layer
 
     REAL(wp) ::    & ! Avoid compute in param
@@ -232,24 +233,24 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)     ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)  ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   rad_srf_net)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)      ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)      ! in
 
-    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil)      ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_,   t_soil)         ! in
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
-    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,has_snow_layer,  &
-    !$claw acc soil_depth_sl_vol_porosity_sl_tmp)
+    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,tile_fract_zero, 
+    !$claw acc has_snow_layer,soil_depth_sl_vol_porosity_sl_tmp)
 
 
     l_is_clas = dsl4jsb_Config(SEB_)%l_scheme_canopy_clas
@@ -269,6 +270,14 @@ CONTAINS
       is_glacier(:) = .FALSE.
     END IF
     !$claw acc update device(is_glacier) !
+    !$claw acc end data
+
+    ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
+    ! calculated globally, this occurs e.g. on complete ocean or complete lake grid cells.
+    !$claw acc data present(tile_fract_zero)
+    CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
+    tile_fract_zero(:) = fract(:) <= 0._wp .OR. tile%fract(ics:ice,iblk) <= 0._wp
+    !$claw acc update device(tile_fract_zero)
     !$claw acc end data
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
@@ -312,7 +321,17 @@ CONTAINS
     t_old   (:) = t(:)
     !$claw end expand
 
-    ! Temporary fix for temperatures over ocean getting too warm or too cold, leading to crash in convect_tables
+    ! Fix needed for numerical reasons on grid cells without real land fraction
+    !$claw acc data present(tile_fract_zero,t_unfilt_old,t_old)
+    !$claw acc parallel loop gang vector
+    DO i=1, size(s_star,dim=1)
+      IF (tile_fract_zero(i)) THEN
+        t_unfilt_old(i) = 280._wp
+        t_old(i)        = 280._wp
+      END IF
+    END DO
+    !$claw acc end data
+
     ! t_unfilt_old(:) = MAX(MIN(t_unfilt(:), 380._wp), 100._wp)
     ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
@@ -393,14 +412,14 @@ CONTAINS
 
       IF (l_is_clas) THEN
         !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
-        CALL surface_temp_implicit( nc, steplen, &
-          t2s_conv(:), &
-          t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &
-          s_old(:), qsat_srf_old(:), dQdT(:), &
-          rad_srf_net(:), forc_hflx(:), heat_tcoef(:), &
-          fact_q_air(:), fact_qsat_srf(:), &
-          fract_snow(:), heat_cap(:), &
-          & s_star(:))
+        CALL surface_temp_implicit( nc, steplen, & ! in
+          t2s_conv(:),                           & ! in
+          t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &  ! in
+          s_old(:), qsat_srf_old(:), dQdT(:),    & ! in
+          rad_srf_net(:), forc_hflx(:), heat_tcoef(:),    &  ! in
+          fact_q_air(:), fact_qsat_srf(:),       & ! in
+          fract_snow(:), heat_cap(:),            & ! in
+          & s_star(:))                             ! out
       END IF
 
       IF (l_is_skin) THEN
@@ -472,24 +491,16 @@ CONTAINS
 
     END IF
 
-    ! @todo - hack for oceans boxes (land tile is direct child of root tile)
-    !$claw acc data present(fract)
-    CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
-    !$claw acc update device(fract)
-    !$claw acc end data
-
-    !$claw acc data present(fract,s_star,t2s_conv)
+    ! Fix needed for numerical reasons on grid cells without real land fraction
+    !$claw acc data present(tile_fract_zero,s_star,t2s_conv)
     !$claw acc parallel loop gang vector
     DO i=1, size(s_star,dim=1)
-      IF (fract(i) < EPSILON(1._wp)) THEN
+      IF (tile_fract_zero(i)) THEN
         ! s_star(:) = s_old(:)
         s_star(i) = 280._wp * t2s_conv(i)
       END IF
     END DO
     !$claw acc end data
-
-
-
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
@@ -504,10 +515,10 @@ CONTAINS
     w_soil_critical_tmp = dsl4jsb_Config(SSE_)%w_soil_critical
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_5 tile_name=tile%name
-      has_snow_layer(:) = w_snow(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min
+      has_snow_layer(:) = weq_snow(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6 tile_name=tile%name
-      has_snow_layer(:) = w_snow(:) > w_soil_critical_tmp
+      has_snow_layer(:) = weq_snow(:) > w_soil_critical_tmp
     END IF
 
     ! Actual snowmelt will be computed later in the hydrology process (update_surface_hydrology)
@@ -536,15 +547,15 @@ CONTAINS
         liquid_max(:) = 0._wp
       END IF
 
-      !$claw acc data present(has_snow_layer,is_glacier,w_soil_sl,liquid_max,t_star,w_ice_sl)
+      !$claw acc data present(has_snow_layer,is_glacier,wtr_soil_sl,liquid_max,t_star,ice_soil_sl)
       !$claw acc parallel loop gang vector
       DO i=1,size(t_star, dim=1)
         IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
-          IF (w_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
+          IF (wtr_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
             ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
             t_star(i) = MAX(t_star(i), tmelt)
           END IF
-          IF (w_ice_sl(i,1) > w_soil_critical_tmp ) THEN
+          IF (ice_soil_sl(i,1) > w_soil_critical_tmp ) THEN
             ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
             t_star(i) = MIN(t_star(i), tmelt)
           END IF
@@ -1340,7 +1351,7 @@ CONTAINS
     nc      = options%nc
     steplen = options%steplen
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1415,6 +1426,7 @@ CONTAINS
 
     !$cla$w acc end data
     !$claw acc exit data delete(s_air, heat_tcoef)
+    DEALLOCATE(s_air, heat_tcoef)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 

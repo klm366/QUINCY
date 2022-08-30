@@ -26,10 +26,11 @@ MODULE mo_jsb_interface
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
 !  USE mo_jsb_controller,      ONLY: Run_process_task
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
+  USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear
 
-  dsl4jsb_Use_processes CARBON_
+  dsl4jsb_Use_processes CARBON_, ALCC_
 
   IMPLICIT NONE
   PRIVATE
@@ -90,11 +91,12 @@ CONTAINS
     & alb_vis_dif,      &
     & alb_nir_dif,      &
     & CO2_flux,         &
+    & DEBUG_VAR,        &
     ! For lakes (optional):
     & drag_wtr, drag_ice,                                               & !< in
     & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,               & !< in
     & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,               & !< in
-    & t_lwtr, qsat_lwtr, s_lwtr,                                        &
+    & t_lwtr, qsat_lwtr, s_lwtr,                                        & !< out
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                    & !< out
     & albedo_lwtr,                                                      & !< out
     & t_lice, qsat_lice, s_lice,                                        &
@@ -147,6 +149,7 @@ CONTAINS
       & CO2_air           (:)
     ! For lakes:
     REAL(wp), INTENT(in), OPTIONAL ::    &
+      & DEBUG_VAR         (:), &
       & drag_wtr          (:), &
       & drag_ice          (:), &
       & t_acoef_wtr       (:), &
@@ -236,6 +239,9 @@ CONTAINS
 
     ! Update options
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
+    CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+
+    CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Put atmospheric forcing into the a2l memory.
 
@@ -254,7 +260,7 @@ CONTAINS
       & swvis_srf_down     = swvis_srf_down(:),     &
       & swnir_srf_down     = swnir_srf_down(:),     &
       & swpar_srf_down     = swpar_srf_down(:),     &
-      & fract_par_diffuse   = fract_par_diffuse(:),   &
+      & fract_par_diffuse   = fract_par_diffuse(:), &
       & press_srf          = press_srf(:),          &
       & drag_srf           = drag_srf(:),           &
       & t_acoef            = t_acoef(:),            &
@@ -264,6 +270,7 @@ CONTAINS
       & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:),            &
+      & DEBUG_VAR          = DEBUG_VAR,             &
       ! For lakes:
       & drag_wtr           = drag_wtr,              &
       & drag_ice           = drag_ice,              &
@@ -281,11 +288,10 @@ CONTAINS
     ! Run tasks in queue
     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
-    ! Finally, give the required variables back to the atmosphere
-    ! Note: evapopot is an optional parameter, so it has to be passed without the colon!
 
+    ! give the required variables back to the atmosphere
+    !   Note: evapopot is an optional parameter, so it has to be passed without the colon!
     CALL model%Get_top_tile(tile)
-
     CALL update_land2atm(                        &
       & tile,                                    &
       & model%options(no_omp_thread),            &
@@ -364,15 +370,13 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
-    USE mo_jsb_time,          ONLY: is_newday, is_time_experiment_start
-    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
+    USE mo_alcc_init,           ONLY : read_land_use_data
 
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: dtime
 
     TYPE(t_jsb_model),           POINTER :: model
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile
 
     INTEGER :: no_omp_thread
 
@@ -394,16 +398,11 @@ CONTAINS
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
-    ! Carbon conservation test
+    !> For the ALCC process land use data has to be read once a year
+    IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
+      CALL read_land_use_data(model_id, current_datetime)
+    ENDIF
 
-    CALL model%Get_top_tile(tile)
-
-    IF (model%processes(CARBON_)%p%config%active) THEN
-      IF (is_newday(current_datetime, dtime) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
-        CALL yday_carbon_conservation_test(tile)
-      END IF
-    END IF
-    
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE jsbach_start_timestep
@@ -412,12 +411,23 @@ CONTAINS
 
     USE mo_util,        ONLY: report_memory_usage
     USE mo_jsb_control, ONLY: get_debug_memory_level
-    USE mo_jsb_time,    ONLY: is_newday, is_newmonth
+    USE mo_jsb_time,    ONLY: is_newday, is_newmonth, is_time_experiment_start
+    USE mo_carbon_interface,  ONLY: yday_carbon_conservation_test
 
+    USE mo_seb_interface,      ONLY: global_seb_diagnostics
+    USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
+    USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
+    USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
+    USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
 #endif
+
+    dsl4jsb_Use_processes SEB_
+    dsl4jsb_Use_processes HYDRO_
+    dsl4jsb_Use_processes PHENO_
+    dsl4jsb_Use_processes PPLCC_
 
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -428,6 +438,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_finish_timestep'
 
+    REAL(wp) :: dtime
     LOGICAL :: l_trace_memory
     INTEGER :: no_omp_thread
 
@@ -441,12 +452,21 @@ CONTAINS
 
     model => Get_model(model_id)
 
-    CALL model%Get_top_tile(tile)
-
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
 
+    dtime = model%options(no_omp_thread)%dtime
+
+    ! Carbon conservation test
+    CALL model%Get_top_tile(tile)
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      IF (is_newday(current_datetime, dtime) .AND. .NOT. is_time_experiment_start(current_datetime)) THEN
+        CALL yday_carbon_conservation_test(tile)
+      END IF
+    END IF
+
 #ifndef __NO_JSBACH_HD__
+    CALL model%Get_top_tile(tile)
     CALL hd_lateral_flow(tile, model%options(no_omp_thread))
     CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
@@ -456,6 +476,24 @@ CONTAINS
 ! #ifdef _OPENACC
 !    CALL model%gpu_to_cpu()
 ! #endif
+
+    ! Global diagnostics
+    !TODO: go through all processes.
+    IF (model%processes(SEB_)%p%config%active) THEN
+      CALL global_seb_diagnostics(tile)
+    END IF
+    IF (model%processes(HYDRO_)%p%config%active) THEN
+      CALL global_hydrology_diagnostics(tile)
+    END IF
+    IF (model%processes(PHENO_)%p%config%active) THEN
+      CALL global_phenology_diagnostics(tile)
+    END IF
+    IF (model%processes(CARBON_)%p%config%active) THEN
+      CALL global_carbon_diagnostics(tile)
+    END IF
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL global_pplcc_diagnostics(tile)
+    END IF
 
     l_trace_memory = .FALSE.
     SELECT CASE (get_debug_memory_level())
