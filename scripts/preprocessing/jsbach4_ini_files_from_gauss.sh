@@ -26,7 +26,7 @@ set -eu
 coupled=false                # land sea mask for coupled experiment?
 
 refinement=R02B04            # ICON-Land grid resolution
-bisections=4                 # Determines Gaussian source grid resolution (see below)
+bisections=${refinement#*B}  # Determines Gaussian source grid resolution (see below)
 atmGridID=0043
 oceGridID=0036               # Required for coupled configurations
 revision=r00xx               # Revision directory that will be generated
@@ -219,24 +219,28 @@ function generate_land_sea_mask {
 
   temp=$(mktemp -u --tmpdir=.)
 
-  # Make sure, the icon grid file includes a valid land sea mask
-  if [[ $(cdo -s output -fldsum -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} | tr -d ' ') == 0 ]]
-  then
-    echo "Invalid land sea mask in icon_grid_file ${icon_grid_file}:"
-    echo "Variable cell_sea_land_mask does not have any land grid cells."
-    echo "Check if there is another grid file, e.g. with suffix _Glsm.nc."
-    exit 1
-  fi
-
-  ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
-  ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
-    -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
-
   if [[ ${coupled} == "true" ]]
   then
+    ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
+      -mul -gtc,0 -selvar,cell_sea_land_mask ${coupled_lsf_file} ${temp} ${grid_name}_glac_remap.nc
+
     ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${icon_grid_file} \
       -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
   else
+    # Make sure, the icon grid file includes a valid land sea mask
+    if [[ $(cdo -s output -fldsum -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} | tr -d ' ') == 0 ]]
+    then
+      echo "Invalid land sea mask in icon_grid_file ${icon_grid_file}:"
+      echo "Variable cell_sea_land_mask does not have any land grid cells."
+      echo "Check if there is another grid file, e.g. with suffix _Glsm.nc."
+      exit 1
+    fi
+
+    ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
+      -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
+
     ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
       -ifthenelse -setmisstoc,0 -masklonlatbox,0.,360.,-60.,90. -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} \
       -max ${grid_name}_glac_remap.nc -setgrid,${icon_grid_file} -selvar,FR_LAND_TOPO ${extpar_file} \
@@ -794,7 +798,8 @@ do
     fi
 
     grid_name=${refinement}
-    source_res=${source_res_dict[${bisection}]}
+    bisect=$(echo ${bisection} | tr -d ^0)
+    source_res=${source_res_dict[${bisect}]}
   else         # jsbach4 on gaussian grid
     grid_name=${bisection}
     remap_scheme=ycon
