@@ -26,7 +26,7 @@ set -eu
 coupled=false                # land sea mask for coupled experiment?
 
 refinement=R02B04            # ICON-Land grid resolution
-bisections=4                 # Determines Gaussian source grid resolution (see below)
+bisections=${refinement#*B}  # Determines Gaussian source grid resolution (see below)
 atmGridID=0043
 oceGridID=0036               # Required for coupled configurations
 revision=r00xx               # Revision directory that will be generated
@@ -223,6 +223,10 @@ function generate_land_sea_mask {
   echo "Generating land sea mask ..."
   if [[ ${coupled} == "true" ]]
   then
+    ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
+      -mul -gtc,0 -selvar,cell_sea_land_mask ${coupled_lsf_file} ${temp} ${grid_name}_glac_remap.nc
+
     ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${icon_grid_file} \
       -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
   else
