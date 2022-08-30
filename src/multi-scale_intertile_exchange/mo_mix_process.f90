@@ -92,12 +92,14 @@ CONTAINS
     !!   *** DUMMY implementation which later on will be replaced with a physics based process ***
     !!   Lateral drainage is scaled with the tile fractions and moved into the target tile's
     !!   soil storage. It flows into the same layer as it originates from on the source tile.
-    !!   Excess drainage is added to the bottom drainage of the source tile.
+    !!   Excess drainage is added to the total drainage of the source tile.
     !! @todo If a flow lag is required it needs to be implemented here, probably with an
     !!   temporary storage on the source tile, which then also needs to be part of the global
     !!   water balance
 
     IF (target_fract > 1.0e-10_wp) THEN
+      ! Substract diagnosed lateral drainage from total drainage
+      drainage_source    = drainage_source - latdrain_source
       ! Scale and add all lateral drainage to target tile soil layer
       latflow_act        = latdrain_source * (source_fract / target_fract)
       wtr_soil_target    = wtr_soil_target + latflow_act * dtime / rhoh2o
@@ -108,7 +110,7 @@ CONTAINS
       ! Rescale the actually transported water back to the source tile
       latflow_act        = latflow_act * (target_fract / source_fract)
       wtr_latflow_source = wtr_latflow_source - latflow_act
-      ! Add any residual lateral flow to the bottom drainage of the source tile
+      ! Add any residual lateral flow to the total drainage of the source tile
       drainage_source    = drainage_source + MAX(latdrain_source - latflow_act, 0._wp)
       latdrain_source    = 0._wp
     END IF

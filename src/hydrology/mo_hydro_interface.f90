@@ -2198,7 +2198,7 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
     weq_land(:) = weq_land_new(:)
 
-    IF (.NOT. TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+    IF (TRIM(model%config%usecase) /= 'jsbach_qarctic') THEN
       !$claw acc exit data delete(wtr_latflow)
       DEALLOCATE(wtr_latflow)
     END IF

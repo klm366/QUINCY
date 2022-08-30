@@ -714,7 +714,7 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: wtr_soil_pot_scool_sl(:,:) ! potentially supercooled water [m]
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
     REAL(wp), INTENT(INOUT)         :: latdrain_sl(:,:)           ! amount of lateral drainage within timestep [m]
-    REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of bottom drainage within timestep [m]
+    REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of total drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -919,8 +919,9 @@ CONTAINS
 
         IF (.NOT. ltpe_closed) THEN
           IF (dsoil(j,i) > 0._wp .AND. soil_below(j) .AND. ws_tmp(j) > ws_immo_sl(j,i)) THEN
-            wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
-            latdrain_sl(j,i) = latdrain_sl(j,i) + drain_sl(j) ! and add it to the total drainage
+            wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture,
+            drainage(j)      = drainage(j)      + drain_sl(j) ! add it to the total drainage
+            latdrain_sl(j,i) = latdrain_sl(j,i) + drain_sl(j) ! and store it additional in lateral drainage for diagnostics
           END IF
         END IF                                       ! no drainage for TPE closed case
 
@@ -1053,7 +1054,8 @@ CONTAINS
         !$claw acc loop seq
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp .AND. wtr_soil_sl(j,i) > field_cap_sl(j,i)) THEN
-            latdrain_sl(j,i) = latdrain_sl(j,i) + wtr_soil_sl(j,i)-field_cap_sl(j,i)
+            latdrain_sl(j,i) = latdrain_sl(j,i) + wtr_soil_sl(j,i) - field_cap_sl(j,i)
+            drainage(j)      = drainage(j)      + wtr_soil_sl(j,i) - field_cap_sl(j,i)
             wtr_soil_sl(j,i) = field_cap_sl(j,i)
           END IF
         END DO
@@ -1183,6 +1185,7 @@ CONTAINS
       IF (.NOT. ltpe_closed) THEN
         IF (wtr_soil_sl(j,1) > field_cap_sl(j,1)) THEN
           latdrain_sl(j,1) = latdrain_sl(j,1) + wtr_soil_sl(j,1) - field_cap_sl(j,1)
+          drainage(j)      = drainage(j)      + wtr_soil_sl(j,1) - field_cap_sl(j,1)
           wtr_soil_sl(j,1) = field_cap_sl(j,1)
         END IF
       ELSE      ! TPE closed case
