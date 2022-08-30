@@ -2139,13 +2139,23 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
-    dsl4jsb_Get_memory(MIX_)
+    IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+      ! MIX_ Process currently only exists for qarctic usecase
+      dsl4jsb_Get_memory(MIX_)
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(A2L_,      rain)                ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,      snow)                ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    drainage)            ! in
-    dsl4jsb_Get_var2D_onChunk(MIX_,      wtr_latflow)         ! in
+    IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+      dsl4jsb_Get_var2D_onChunk(MIX_,      wtr_latflow)       ! in
+    ELSE
+      !$claw acc enter data create(wtr_latflow)
+      !$claw expand parallel update
+      ALLOCATE(wtr_latflow(nc))
+      wtr_latflow(:) = 0._wp
+    END IF
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)         ! in
@@ -2187,6 +2197,11 @@ CONTAINS
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
     weq_land(:) = weq_land_new(:)
+
+    IF (.NOT. TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+      !$claw acc exit data delete(wtr_latflow)
+      DEALLOCATE(wtr_latflow)
+    END IF
 
     !$claw acc end data
 
