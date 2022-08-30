@@ -400,7 +400,7 @@ CONTAINS
   ! @param [in]      nsoil               Number of soil layers
   ! @param [in]      nlat                (Effective) number of latitudes
   ! @param [in]      dtime               Time step [s]
-  ! @param [in]      l_infil_subzero     Allow infiltration of supercolled water
+  ! @param [in]      l_infil_subzero     Allow infiltration at soil temperatures below 0°C
   ! @param [in]      soil_depth_sl       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_sl       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      fract_org_sl        Fractions per soil layer of organic comonent []
@@ -577,9 +577,9 @@ CONTAINS
         runoff(i) = 0._wp
         infilt(i) = water_to_soil(i)
       ELSE
+        ! Temperature dependence of infiltration should not be included when using the 5-layer snow scheme because:
+        !     when tsurf == 0.C and T_soil < 0.C --> all snow melt is going to surface runoff
         IF (.NOT. l_infil_subzero .AND. (t_soil_sl1(i) < tmelt)) THEN
-          !pdv: Temperature dependence should not be included when using the 5-layer snow scheme because:
-          !     when tsurf == 0.C and T_soil < 0.C --> all snow melt is going to surface runoff
           runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
           infilt(i) = 0._wp
         ELSE
