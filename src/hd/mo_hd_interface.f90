@@ -290,9 +290,11 @@ CONTAINS
       & outflow_drainage,      &
       & outflow_rivers,        &
       & outflow_resid,         &
+      & outflow_count,         &
       & discharge,             &
       & discharge_ocean,       &
-      & internal_drain
+      & internal_drain,        &
+      & nsplit
 
     dsl4jsb_Real3D_onDomain :: &
       & nidx_upstream,         &
@@ -323,7 +325,7 @@ CONTAINS
 
     REAL(wp) :: global_resid
 
-    LOGICAL  :: debug_hd
+    LOGICAL  :: debug_hd, use_bifurcated_rivers
 
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
@@ -355,9 +357,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, bidx_upstream)    ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, nsplit)           ! IN
+
 
     dsl4jsb_Get_var2D_onDomain(HD_, coast_ocean)      ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
+    ! dsl4jsb_Get_var2D_onDomain(HD_, outflow_count)    ! OUT
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! OUT
@@ -366,8 +371,9 @@ CONTAINS
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 
     ! Configuration parameters from the namelist
-    routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
-    debug_hd       = dsl4jsb_Config(HD_)%debug_hd
+    routing_scheme        = dsl4jsb_Config(HD_)%routing_scheme
+    debug_hd              = dsl4jsb_Config(HD_)%debug_hd
+    use_bifurcated_rivers = dsl4jsb_Config(HD_)%use_bifurcated_rivers
 
 
     ! Domain Mask - to mask all halo cells for global sums (otherwise these cells are counted twice)
@@ -389,6 +395,8 @@ CONTAINS
       discharge(:,:) = 0._wp
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
+      ! Enable the next line for debugging ... but this only works on one (!) processor, i.e. no halos
+      ! outflow_count(:,:) = nsplit(:,:)
 
       global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:))*in_domain(:,:))
 
@@ -416,18 +424,35 @@ CONTAINS
             jc_us  =  nidx_upstream(jc,n,blk)
             blk_us =  bidx_upstream(jc,n,blk)
             IF (jc_us > 0 .and. blk_us > 0) THEN
-              discharge(jc,blk) =  discharge(jc,blk)               &
-                                 + outflow_runoff(jc_us,blk_us)    &
-                                 + outflow_drainage(jc_us,blk_us)  &
-                                 + outflow_rivers(jc_us,blk_us)
-              ! Enable the next three lines for debugging ... but this only works on one (!) processor, i.e. no halos
-              ! We set outflow of the up-stream cells to zero after it was added to the current cell. This enables us
-              ! to detect grid cells without outflow below.
-              !dbg>>
-              ! outflow_runoff  (jc_us,blk_us) = 0._wp
-              ! outflow_drainage(jc_us,blk_us) = 0._wp
-              ! outflow_rivers  (jc_us,blk_us) = 0._wp
-              !dbg<<
+            ! Workaround for NVIDIA compiler 21.3 internal compiler error
+            ! Note that nsplit is set to 1._wp for use_bifurcated_rivers=false
+#if defined(__NVCOMPILER)
+              discharge(jc,blk) =  discharge(jc,blk)                      &
+                                 + ( ( outflow_runoff(jc_us,blk_us)       &
+                                     + outflow_drainage(jc_us,blk_us)     &
+                                     + outflow_rivers(jc_us,blk_us)   )   &
+                                   / nsplit(jc_us,blk_us)               )
+#else
+              IF (use_bifurcated_rivers) THEN
+                discharge(jc,blk) =  discharge(jc,blk)                      &
+                                   + ( ( outflow_runoff(jc_us,blk_us)       &
+                                       + outflow_drainage(jc_us,blk_us)     &
+                                       + outflow_rivers(jc_us,blk_us)   )   &
+                                     / nsplit(jc_us,blk_us)               )
+              ELSE
+                discharge(jc,blk) =  discharge(jc,blk)               &
+                                   + outflow_runoff(jc_us,blk_us)    &
+                                   + outflow_drainage(jc_us,blk_us)  &
+                                   + outflow_rivers(jc_us,blk_us)
+              END IF
+#endif
+              ! Enable the next six lines for debugging ... but this only works on one (!) processor, i.e. no halos
+              !outflow_count(jc_us,blk_us) = outflow_count(jc_us,blk_us) - 1._wp
+              !IF (outflow_count(jc_us,blk_us) == 0) THEN
+              !  outflow_runoff  (jc_us,blk_us) = 0._wp
+              !  outflow_drainage(jc_us,blk_us) = 0._wp
+              !  outflow_rivers  (jc_us,blk_us) = 0._wp
+              !END IF
             END IF
           END DO
         END DO
