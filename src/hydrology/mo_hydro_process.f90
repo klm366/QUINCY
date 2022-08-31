@@ -482,10 +482,10 @@ CONTAINS
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wsat_sl, field_cap_sl, p_wilt_sl
 
-    REAL(wp), INTENT(out), DIMENSION(:) :: &
+    REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & pdv_1d_out
 
-    REAL(wp), INTENT(out), DIMENSION(:,:) :: &
+    REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & pdv_2d_out
 
     ! Local variables
@@ -906,7 +906,7 @@ CONTAINS
       END IF
 
       !IF (l_ice_impedance_perc) THEN
-      IF (ws_max(i) > 0._wp .AND. ice_soil(i) > 0._wp) THEN 
+      IF (ws_max(i) > 0._wp .AND. ice_soil(i) > 0._wp) THEN
         ice_impede(i) = 10._wp**(-6._wp * ice_soil(i) / ws_max(i))
       ELSE
         ice_impede(i) = 1._wp
@@ -2667,7 +2667,7 @@ CONTAINS
     END IF
     WHERE (ws_range_vol(:,:) > 0._wp)
       ws_rel_vol(:,:)  = ws_free_vol(:,:) / ws_range_vol(:,:)
-    END WHERE 
+    END WHERE
 
     ! Making sure ws_rel is in the pyhsical range
     ! This is especially important when infiltration is added to the first layer
@@ -2702,8 +2702,12 @@ CONTAINS
     ! But what about diffucivity .... ice seems to attract water ?
     DO j = 1, nc
       DO i = 1, nsoil_act(j)
-        ice_impede(j,i)  = 10._wp**(-6._wp * (ice_vol(j,i) + scool_vol(j,i) ) &
-                       & / (fc_vol(j,i) + ice_vol(j,i)))
+        IF (fc_vol(j,i) + ice_vol(j,i) > 1.0e-10_wp) THEN
+          ice_impede(j,i)  = 10._wp**(-6._wp * (ice_vol(j,i) + scool_vol(j,i) ) &
+                         & / (fc_vol(j,i) + ice_vol(j,i)))
+        ELSE
+          ice_impede(j,i) = 1._wp
+        END IF
         K(j,i) = K(j,i) * ice_impede(j,i)
         D(j,i) = D(j,i) * ice_impede(j,i)
       END DO

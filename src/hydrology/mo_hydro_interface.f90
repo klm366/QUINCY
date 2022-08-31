@@ -1073,6 +1073,9 @@ CONTAINS
       fract_org_sl(:,:) = 0._wp
     END IF
 
+    dsl4jsb_var2D_onChunk (HYDRO_, pdv_1d_out) = 0._wp
+    dsl4jsb_var3D_onChunk (HYDRO_, pdv_2d_out) = 0._wp
+
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
