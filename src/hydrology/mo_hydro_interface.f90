@@ -1085,7 +1085,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, weq_soilhyd_err   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soilhyd_err   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, pdv_1d_out        ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, pdv_2d_out        ),     &
       ! out

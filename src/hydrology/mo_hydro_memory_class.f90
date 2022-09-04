@@ -128,7 +128,7 @@ MODULE mo_hydro_memory_class
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice  [m]
       & wtr_soil_pot_scool_sl,& !< Potentially supercooled water in soil layer                              [m]
-      & weq_soilhyd_err,      & !< Error (accumulated) due to new soilhydrology                             [m]
+      & wtr_soilhyd_err,      & !< Error (accumulated) due to new soilhydrology                             [m]
       & pdv_2d_out
 
     ! Additional variables for PFT lct_type
@@ -785,9 +785,9 @@ CONTAINS
         & loutput=.TRUE.,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'weq_soilhyd_err', mem%weq_soilhyd_err,                        &
+      CALL mem%Add_var( 'wtr_soilhyd_err', mem%wtr_soilhyd_err,                        &
         & hgrid, soil_w,                                                               &
-        & t_cf('weq_soilhyd_err', 'm', 'Soilhyd water balance error'),                 &
+        & t_cf('wtr_soilhyd_err', 'm', 'Soilhyd water balance error'),                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE., output_level=BASIC,                                        &

@@ -436,7 +436,7 @@ CONTAINS
     & water_to_soil, evapotrans_soil, transpiration,                                     &
     ! inout
     & wtr_soil_sl, ice_soil_sl, tpe_overflow,                                            &
-    & weq_soilhyd_err, pdv_1d_out, pdv_2d_out,                                           &
+    & wtr_soilhyd_err, pdv_1d_out, pdv_2d_out,                                           &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl,                                      &
     & infilt, runoff, runoff_over, drainage, drain_rock, drain_lat, drain_perm           &
@@ -465,7 +465,7 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & tpe_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
-      & wtr_soil_sl, ice_soil_sl, weq_soilhyd_err
+      & wtr_soil_sl, ice_soil_sl, wtr_soilhyd_err
     REAL(wp), INTENT(out), DIMENSION(:) :: &
       & infilt, runoff, runoff_over, drainage, &
       & drain_rock, drain_lat, drain_perm
@@ -666,7 +666,7 @@ CONTAINS
         &     bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl,             &
         &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
         &     infilt, runoff_over, drainage, drain_rock, drain_lat_sl, drain_perm_sl,  &
-        &     tpe_overflow, weq_soilhyd_err, pdv_2d_out,                               &
+        &     tpe_overflow, wtr_soilhyd_err, pdv_2d_out,                               &
         &     ltpe_closed, ltpe_open)
 
     ELSE
@@ -683,7 +683,7 @@ CONTAINS
       !    - first half of the water
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_0
       CALL digest_infilt(nc, nsoil, ltpe_closed, wtr_field_cap_sl, infilt_hlp, &
-        &     wtr_soil_sl, drainage, tpe_overflow)
+        &     wtr_soil_sl, runoff_over, drainage, tpe_overflow)
 
       ! Drainage calculation with multi-layer soil scheme
       CALL soilhyd(nc, nsoil, dtime, ilog, jllog, soil_depth_sl, wtr_soil_sl,                &
@@ -697,7 +697,7 @@ CONTAINS
       !    - second half of the water
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_1
       CALL digest_infilt(nc, nsoil, ltpe_closed, wtr_field_cap_sl, infilt_hlp, &
-        &     wtr_soil_sl, drainage, tpe_overflow)
+        &     wtr_soil_sl, runoff_over, drainage, tpe_overflow)
 
     END IF
 
@@ -1099,7 +1099,7 @@ CONTAINS
         !$claw acc loop seq
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp .AND. wtr_soil_sl(j,i) > wtr_field_cap_sl(j,i)) THEN
-            IF (i == 1) runoff_over(j) = runoff_over(j) +  wtr_soil_sl(j,i)-wtr_field_cap_sl(j,i)
+            runoff_over(j) = runoff_over(j) +  wtr_soil_sl(j,i)-wtr_field_cap_sl(j,i)
             drainage(j) = drainage(j) + wtr_soil_sl(j,i)-wtr_field_cap_sl(j,i)
             wtr_soil_sl(j,i) = wtr_field_cap_sl(j,i)
           END IF
@@ -1278,7 +1278,7 @@ CONTAINS
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl, &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
     & infilt, runoff_over, drainage, drain_rock, drain_lat,        &
-    & drain_frozen, tpe_overflow, weq_soilhyd_err, pdv_2d_out,     &
+    & drain_frozen, tpe_overflow, wtr_soilhyd_err, pdv_2d_out,     &
     & ltpe_closed, ltpe_open)
 
     !----------------------------------------------------------------------------------------------
@@ -1293,8 +1293,8 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
-    INTEGER,  INTENT(in)            :: i_shm
-    INTEGER,  INTENT(in)            :: i_interpol
+    INTEGER,  INTENT(in)            :: i_shm                      ! hydrology model scheme
+    INTEGER,  INTENT(in)            :: i_interpol                 ! lateral interpolation scheme
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           ! Maximum storage in each soil layer (porosity, reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      ! field capacity of the soil layer (reduced by ice) [m]
@@ -1316,7 +1316,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! Needed later for hydrotiles
     REAL(wp), INTENT(INOUT)         :: drain_frozen(:,:)          ! Needed later for hydrotiles
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
-    REAL(wp), INTENT(INOUT)         :: weq_soilhyd_err(:,:)
+    REAL(wp), INTENT(INOUT)         :: wtr_soilhyd_err(:,:)
     REAL(wp), INTENT(OUT)           :: pdv_2d_out(:,:)
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -1484,12 +1484,12 @@ CONTAINS
         !!!! Testing if waterbalance is ruined.
         DO i = 1, nsoil_act(j)
           IF (wtr_soil_sl(j,i) < 0._wp) THEN
-            weq_soilhyd_err(j,i) = weq_soilhyd_err(j,i)+wtr_soil_sl(j,i)
+            wtr_soilhyd_err(j,i) = wtr_soilhyd_err(j,i)+wtr_soil_sl(j,i)
             wtr_soil_sl(j,i) = 0._wp
           END IF
         END DO
       ELSE
-        weq_soilhyd_err(j,:) = weq_soilhyd_err(j,:)
+        wtr_soilhyd_err(j,:) = wtr_soilhyd_err(j,:)
       END IF
     END DO
 !pdv < 
@@ -1826,6 +1826,7 @@ CONTAINS
     & wtr_field_cap_sl,      &
     & infilt,                &
     & wtr_soil_sl,           &
+    & runoff_over,           &
     & drainage,              &
     & tpe_overflow           &
     & )
@@ -1844,6 +1845,7 @@ CONTAINS
     REAL(wp), INTENT(in)     :: infilt(:)               ! infiltration in [m/s]
 
     REAL(wp), INTENT(inout)  :: wtr_soil_sl(:,:)        ! water content of the soil layer [m]
+    REAL(wp), INTENT(inout)  :: runoff_over(:)          ! excess infiltration into the soil [m]
     REAL(wp), INTENT(inout)  :: drainage(:)             ! drainage [m]
     REAL(wp), INTENT(inout)  :: tpe_overflow(:)         ! For TPE
 
@@ -1884,8 +1886,10 @@ CONTAINS
       END DO
 
       ! if all soil layers are at field capacity and there is still excess water, it is added to drainage
+      ! and diagnosed as excess infiltration
       IF (excess(i) > 0._wp) THEN
         drainage(i) = drainage(i) + excess(i)
+        runoff_over(i) = runoff_over(i) + excess(i)
       END IF
     END DO
     !$claw acc end parallel
