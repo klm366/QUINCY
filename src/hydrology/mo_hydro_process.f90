@@ -483,10 +483,10 @@ CONTAINS
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wsat_sl, field_cap_sl, p_wilt_sl
 
-    REAL(wp), INTENT(out), DIMENSION(:) :: &
+    REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & pdv_1d_out
 
-    REAL(wp), INTENT(out), DIMENSION(:,:) :: &
+    REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & pdv_2d_out
 
     ! Local variables
