@@ -23,7 +23,8 @@ MODULE mo_hydro_process
 
   PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_soil_hydrology, &
     & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare,         &
-    & get_canopy_conductance, get_water_stress_factor,  vert_transport, get_conductivies_diffusivities
+    & get_canopy_conductance, get_water_stress_factor,                                        &
+    & vert_transport, get_conductivies_diffusivities_column, get_conductivies_diffusivities
 
   INTERFACE get_canopy_conductance
     MODULE PROCEDURE get_canopy_cond_unstressed_simple
@@ -498,8 +499,8 @@ CONTAINS
       & ws_max(nc),          & ! water holding capacity of the soil [m]
       & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
       & ice_rootzone(nc),    & ! amount of ice in the rootzone [m]
-      & manning(nc),         & ! Manning roughness coefficient (0.15 for flowplain with trees) 
-      & ws_incl_ice_sl1(nc)    ! soil moisture including ice [m]
+      & manning(nc)            ! Manning roughness coefficient (0.15 for flowplain with trees) 
+
     REAL(wp) ::                 &
       & wsat_sl_ni(nc,nsoil),      &
       & field_cap_sl_ni(nc,nsoil), &
@@ -547,10 +548,6 @@ CONTAINS
 
     manning(:) = manning_n
 
-
-    ! using top layer as reference for infiltration
-    ws_incl_ice_sl1(:) = wtr_soil_sl(:,1) + ice_soil_sl(:,1)
-
     CALL get_amount_in_rootzone(wsat_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ws_max(:))
     CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
@@ -580,11 +577,12 @@ CONTAINS
       infilt(:) = water_to_soil(:)
     ELSE
       IF (l_infiltnew) THEN
-        CALL infiltration_new(nc,nlat, dt_sat, dtime, max_slope, i_infil, i_shm,       &
-                            & oro_stddev(:), manning(:),                               & 
-                            & pore_size_index_sl(:,1), bclapp_sl(:,1), wsat_sl(:,1),   &
-                            & field_cap_sl(:,1), p_wilt_sl(:,1), hyd_cond_sat_sl(:,1), &
-                            & ws_incl_ice_sl1(:), ice_soil_sl(:,1), water_to_soil(:),  &
+        CALL infiltration_new(nc,nlat, dt_sat, dtime, max_slope, i_infil, i_shm,               &
+                            & oro_stddev(:), manning(:), soil_depth_sl(:,1),                   &
+                            & pore_size_index_sl(:,1), bclapp_sl(:,1), wsat_sl(:,1),           &
+                            & field_cap_sl(:,1), p_wilt_sl(:,1), hyd_cond_sat_sl(:,1),         &
+                            & wtr_soil_sl(:,1), ice_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1),  &
+                            & water_to_soil(:),                                                &
                             & runoff(:),infilt(:),pdv_1d_out(:))
 
 
@@ -801,10 +799,11 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
   SUBROUTINE infiltration_new(nc,nlat, dt_sat, dtime, max_slope , i_infil, i_shm,     &
-                            & oro_stddev, manning,                                    & 
+                            & oro_stddev, manning, dsoil,                             &
                             & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat, &
-                            & ws_incl_ice, ice_soil, water_to_soil,                   &
+                            & ws_soil, ice_soil, wtr_pot_scool, water_to_soil,        &
                             & runoff, infilt, pdv_1d_out)
+
 
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
 
@@ -826,8 +825,10 @@ CONTAINS
       & fc(:),                   &
       & pwp(:),                  &
       & hyd_cond_sat(:),         &
+      & dsoil(:),                &
       & manning(:),              & 
-      & ws_incl_ice(:),          &
+      & ws_soil(:),              &
+      & wtr_pot_scool(:),        &
       & ice_soil(:),             &
       & water_to_soil(:)
             
@@ -835,7 +836,7 @@ CONTAINS
       & runoff(:), infilt(:),    &
       pdv_1d_out(:)
     ! Local variables
-    INTEGER :: jl, i
+    INTEGER :: jl, i, varindex
 
     REAL(wp) ::                       &
       ! variables for infiltration calculation
@@ -844,14 +845,11 @@ CONTAINS
       & steepness,                    & !< sub-grid scale steepness of the orography
       & zbws
 
-
     REAL(wp) ::              &
-      & zmvg(nc),            &   ! Van Genuchten parameter for top layer
-      & ws_free(nc),         &
-      & ws_range(nc),        &
+      & zeros(nc),       &
+      & wtr_scool(nc),       &
+      & ws_incl_ice(nc),     &
       & ice_impede(nc),      &   ! Inhibition of infiltration due to teh presence of ice
-      & ws_rel_start(nc),    &   ! Saturation of top layer at the beginning ...
-      & ws_rel_end(nc),      &   ! ... and the end of the timestep (assuming all water to infiltrate)
       & k_start(nc),         &   ! hydrualic conductivity at the beginning ...
       & k_end(nc),           &   ! ... and the end of the timestep (assuming all water to infiltrate)
       & delta_k(nc),         &   ! ... additional infiltration capacity 
@@ -865,6 +863,9 @@ CONTAINS
 
     !--------------------------------------------------------------------------------------------------------------------------------------
 
+    zeros(:) = 0._wp
+    wtr_scool(:) = MIN(wtr_pot_scool(:), ws_soil(:))
+    ws_incl_ice(:) = ws_soil(:) + ice_soil(:)
     !>
     !> 1. Infiltration
     !>
@@ -891,39 +892,24 @@ CONTAINS
       zbws   = MAX(MIN(steepness,0.5_wp), 0.01_wp)
       !>  1.1 Surface runoff and infiltration
       !   -----------------------------------
-      zmvg(i) = pore_size_index(i) / (pore_size_index(i)+1._wp)
 
-      IF (i_shm==2) THEN ! Clapp & Horberger (Campbell)
-        ws_free(i)   = ws_incl_ice(i)
-        ws_range(i)  = ws_max(i)
-      ELSE  ! Brooks & Coorey; Van Genuchten
-        ws_free(i)   = MAX(0._wp,ws_incl_ice(i)-pwp(i))
-        ws_range(i)  = fc(i) - pwp(i)
-      END IF
-      IF (ws_range(i) > 0._wp) THEN
-        ws_rel_start(i) = MIN(1._wp,ws_free(i) / ws_range(i))
-      ELSE
-        ws_rel_start(i) = 0._wp
-      END IF
+      varindex      = 1
+      call get_conductivies_diffusivities(i_shm,varindex,            &
+                    & dsoil(i), ws_soil(i), ice_soil(i), wtr_scool(i),   &
+                    & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
+                    & zeros(i), bclapp(i), pore_size_index(i),       &
+                    & ice_impede(i))
 
-      !IF (l_ice_impedance_perc) THEN
-      IF (ws_max(i) > 0._wp .AND. ice_soil(i) > 0._wp) THEN 
-        ice_impede(i) = 10._wp**(-6._wp * ice_soil(i) / ws_max(i))
-      ELSE
-        ice_impede(i) = 1._wp
-      END IF
 
-      IF (i_shm==1 .OR. i_shm==2) THEN  !1=Brooks & Correy or 2 = Clapp & Horberger (Campbell)
-        k_start(i) =  ice_impede(i) * hyd_cond_sat(i) * ws_rel_start(i)**(2._wp * bclapp(i) + 3._wp)
+      varindex      = 2
+      call get_conductivies_diffusivities(i_shm,varindex,            &
+                    & dsoil(i), ws_soil(i), ice_soil(i), wtr_scool(i),   &
+                    & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
+                    & zeros(i), bclapp(i), pore_size_index(i),       &
+                    & k_start(i))
 
-      ELSE IF (i_shm==3) THEN ! Van Genuchten
-
-        k_start(i) =  ice_impede(i) * hyd_cond_sat(i) * ws_rel_start(i)**(0.5_wp) &
-               & *(1._wp-(1._wp-ws_rel_start(i)**(1._wp/zmvg(i)))**zmvg(i))**2._wp
-      END IF
 
       IF (water_to_soil(i) <= 0._wp) THEN
-        ws_rel_end(i) = ws_rel_start(i)
         k_end(i)      = k_start(i)
       ELSE
         IF (i_infil == 1) THEN
@@ -934,24 +920,12 @@ CONTAINS
           k_end(i)        = MIN(ice_impede(i) * hyd_cond_sat(i), water_to_soil(i)/dtime)
         ELSE IF (i_infil == 3) THEN
           !Assuming that pondig water is euqally distributed throughout the soil layer 
-          IF (i_shm==2) THEN ! Clapp & Horberger (Campbell)
-            ws_free(i)=ws_incl_ice(i) + water_to_soil(i) 
-          ELSE  ! Brooks & Coorey; Van Genuchten
-            ws_free(i)=MAX(0._wp,ws_incl_ice(i)-pwp(i) + water_to_soil(i))
-          END IF
-          IF (ws_range(i) > 0._wp) THEN
-            ws_rel_end(i)  = MIN(1._wp,ws_free(i) / ws_range(i))
-          ELSE
-            ws_rel_end(i) = 0._wp
-          END IF
-          IF (i_shm==1 .OR. i_shm==2) THEN  !1=Brooks & Correy or 2 = Clapp & Horberger (Campbell)
-            k_end(i) =  ice_impede(i) * hyd_cond_sat(i) * ws_rel_end(i)**(2._wp * bclapp(i) + 3._wp)
- 
-          ELSE IF (i_shm==3) THEN ! Van Genuchten
-
-            k_end(i) =  ice_impede(i) * hyd_cond_sat(i) * ws_rel_end(i)**(0.5_wp) &
-                   & *(1._wp-(1._wp-ws_rel_end(i)**(1._wp/zmvg(i)))**zmvg(i))**2._wp
-          END IF
+          varindex      = 2
+          call get_conductivies_diffusivities(i_shm,varindex,            &
+                    & dsoil(i), (ws_soil(i)+ water_to_soil(i)), ice_soil(i), wtr_scool(i),   &
+                    & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
+                    & zeros(i), bclapp(i), pore_size_index(i),       &
+                    & k_end(i))
         ELSE IF (i_infil == 4) THEN
           !!---Assuming the wetting front moves with the speed of ksat
           !!---and in frozen soils water can enter until pore space of top layer is saturated
@@ -1605,8 +1579,8 @@ CONTAINS
     INTEGER  :: i, j                        ! looping index
     INTEGER  :: nsoil_act(nc)               ! number of soil layers above the bedrock boundary
 
-    REAL(wp)  :: dttest = 120._wp
-
+    REAL(wp) :: dttest = 120._wp
+    REAL(wp) :: wtr_soil_scool_sl(nc,nsoil) ! supercooled water [m]
     REAL(wp) :: ws_inter_sl(nc,nsoil)       ! soil moisture with infiltration added to first layer
     REAL(wp) :: ws_vol_sl(nc,nsoil)         ! volumetric soil mositure
     REAL(wp) :: ws_rel_sl(nc,nsoil)         ! normalized (~relative) soil mositure
@@ -1622,8 +1596,6 @@ CONTAINS
     REAL(wp) :: drain_crit(nc)              ! drainage above a soil moisture of ws_crit [m/s]
     REAL(wp) :: drain_sl(nc)                ! drainage from the current layer
     REAL(wp) :: remoist(nc)                 ! for TPE
-    REAL(wp) :: zmvg_sl(nc,nsoil)           ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
-    REAL(wP) :: matrix_pot_correct(nc,nsoil)! Sign conversion (matric potential should be negative)
     REAL(wp) :: ice_impede(nc)              ! factor to reduce ksat in the presence of ice (taken from CLM4.5)
     REAL(wp) :: ws_rsdl_sl(nc,nsoil)        ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
     REAL(wp) :: wsat_sl_ni(nc,nsoil)                ! Maximum storage in each soil layer (porosity) (reduced by ice) [m]
@@ -1667,19 +1639,13 @@ CONTAINS
       nsoil_act(j) = 0
       DO i=1,nsoil
         IF (dsoil(j,i) > 0._wp) nsoil_act(j) = nsoil_act(j) + 1
-        !!!! Extremly careful when implementing new equations:
-        !!!! mpot in the inifile is positive while in all formulas it should be negative !!!!
-        IF (matrix_pot_sl(j,i) > 0._wp) THEN
-          matrix_pot_correct(j,i) = -matrix_pot_sl(j,i)
-        ELSE
-          matrix_pot_correct(j,i) = matrix_pot_sl(j,i)
-        END IF
-        zmvg_sl(j,i) = pore_size_index_sl(j,i) / (pore_size_index_sl(j,i)+1._wp)
         ! pdv: supercooled water in the soil should not be able to move vertically
         ws_rsdl_sl(j,i) = MAX(wtr_soil_pot_scool_sl(j,i), p_wilt_sl(j,i))
-        ws_rel(j,i)           = 0._wp
+        ws_rel(j,i)     = 0._wp
       END DO
     END DO
+
+    wtr_soil_scool_sl(:,:) = MIN(wtr_soil_pot_scool_sl(:,:), wtr_soil_sl(:,:))
 
     ws_inter_sl(:,:) = wtr_soil_sl(:,:)
     ws_inter_sl(:,1) = wtr_soil_sl(:,1) + infilt(:)
@@ -1687,18 +1653,18 @@ CONTAINS
     ! Determining hydraulic condiuctivity and diffuisivity on layers and at layer interfaces
     ! Note that the indexing uses the upper interface -> interface Ii = I(i,i-1)
     ! passing nsoil and nsoil_act for looping only over the layers above bedrock ... because why do more ?
-    CALL get_conductivies_diffusivities(                        &
-          & i_shm, i_interpol,                              &
-          & dtime,                                              &
-          & nc,nsoil,                                           &
-          & nsoil_act(:), dsoil(:,:),                           &
-          & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),           &
-          & wsat_sl(:,:), field_cap_sl(:,:), p_wilt_sl(:,:),                          &
-          & hyd_cond_sat_sl(:,:), matrix_pot_correct(:,:),                            &
-          & bclapp_sl(:,:), zmvg_sl(:,:),                                             &
-          & ice_impede_sl(:,:),                                                       &
-          & hyd_cond_sl(:,:), diffus_sl(:,:),                                         &
-          & hyd_cond_li(:,:), diffus_li(:,:)                                          &
+    CALL get_conductivies_diffusivities_column(                            &
+          & i_shm, i_interpol,                                             &
+          & dtime,                                                         &
+          & nc,nsoil,                                                      &
+          & nsoil_act(:), dsoil(:,:),                                      &
+          & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_scool_sl(:,:),    &
+          & wsat_sl(:,:), field_cap_sl(:,:), p_wilt_sl(:,:),               &
+          & hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),                      &
+          & bclapp_sl(:,:), pore_size_index_sl(:,:),                       &
+          & ice_impede_sl(:,:),                                            &
+          & hyd_cond_sl(:,:), diffus_sl(:,:),                              &
+          & hyd_cond_li(:,:), diffus_li(:,:)                               &
           )
 
     !
@@ -1748,7 +1714,7 @@ CONTAINS
 
 
     DO j=1,nc
-      IF (zmvg_sl(j,1) > 0._wp) THEN !!! Need to figure out if this is necessary, but not sure that all variables exist everywhere !!!
+      IF (wsat_sl(j,1) > 0._wp) THEN !!! Need to figure out if this is necessary, but not sure that all variables exist everywhere !!!
         ! Determination of Vertical movement of water through the soil
         ! Note that concentrations (volumetric soil moisture) are needed for transport
         ws_vol_sl(j,1:nsoil_act(j)) = wtr_soil_sl(j,1:nsoil_act(j)) / dsoil(j,1:nsoil_act(j))    ! Or should this be relative to wsat / fc
@@ -2594,13 +2560,13 @@ CONTAINS
 
   END FUNCTION vert_transport
 
-  SUBROUTINE get_conductivies_diffusivities(     &
+  SUBROUTINE get_conductivies_diffusivities_column(     &
             & i_shm, i_interpol,                 &
             & dt,                                &
             & nc,nsoil,nsoil_act,dsoil,          &
             & ws, is, wscools,                   &
             & wsat, fc, pwp,                     &
-            & k_sat, mpot_sat, bclapp, mvgn,     &
+            & k_sat, mpot_sat, bclapp, pore_size_index,     &
             & ice_impede, K, D, K_inter, D_inter &
             )
 
@@ -2621,8 +2587,9 @@ CONTAINS
     REAL(wp), INTENT(in)     :: k_sat(:,:)              ! hydraaulic conductivity
     REAL(wp), INTENT(in)     :: mpot_sat(:,:)           ! matric potential
     REAL(wp), INTENT(in)     :: bclapp(:,:)             ! clapp & Hornberger exponent
-    REAL(wp), INTENT(in)     :: mvgn(:,:)               ! Van Genuchten m
-    REAL(wp), INTENT(out)    :: ice_impede(:,:)         ! Impedence factor to account for ice blocking flowpaths
+    REAL(wp), INTENT(in)     :: pore_size_index(:,:)    ! Pore size distribution index
+
+    REAL(wp), INTENT(out)    :: ice_impede(nc,nsoil)    ! Impedence factor to account for ice blocking flowpaths
     REAL(wp), INTENT(out)    :: K(nc,nsoil)             ! hydrualic condctivity of the soil layer [m]
     REAL(wp), INTENT(out)    :: D(nc,nsoil)             ! diffusivity of the soil layer [m]
     REAL(wp), INTENT(out)    :: K_inter(nc,nsoil)       ! hydrualic condctivity at (upper) layer interface [m]
@@ -2630,95 +2597,35 @@ CONTAINS
 
     ! local variables
 
-    INTEGER  :: i,j
-    REAL(wp) ::  ws_vol(nc,nsoil), ice_vol(nc,nsoil), scool_vol(nc,nsoil), &
-             &   ws_rel_vol(nc,nsoil),  ws_range_vol(nc,nsoil),  &
-             &   wsat_vol(nc,nsoil), fc_vol(nc,nsoil), pwp_vol(nc,nsoil), &
-             &   wscool_vol(nc,nsoil), ws_free_vol(nc,nsoil)
+    INTEGER  :: i,j, varindex
 
+    REAL(wp) :: outvar(nc,nsoil)    ! Impedence factor to account for ice blocking flowpaths
 
-    !i_shm  1 = Brooks & Corey, 2 = Clapp & Horberger (Campbell), 3 = Van Genuchten
-    !i_interpol 1 = upstream, 2 = Arithmetic mean
+    varindex       = 1
+    call get_conductivies_diffusivities(i_shm,varindex,                      &
+                    & dsoil(:,:), ws(:,:), is(:,:), wscools(:,:),       &
+                    & wsat(:,:), fc(:,:), pwp(:,:), k_sat(:,:),         &
+                    & mpot_sat(:,:), bclapp(:,:), pore_size_index(:,:), &
+                    & ice_impede(:,:))
 
-    ws_rel_vol(:,:) = 0._wp
-    ice_impede(:,:) = 1._wp
-    K(:,:)          = 0._wp
-    D(:,:)          = 0._wp
+    varindex       = 2
+    call get_conductivies_diffusivities(i_shm,varindex,    &
+                    & dsoil(:,:), ws(:,:), is(:,:), wscools(:,:),       &
+                    & wsat(:,:), fc(:,:), pwp(:,:), k_sat(:,:),         &
+                    & mpot_sat(:,:), bclapp(:,:), pore_size_index(:,:), &
+                    & K(:,:))
+
+    varindex       = 3
+    call get_conductivies_diffusivities(i_shm,varindex,    &
+                    & dsoil(:,:), ws(:,:), is(:,:), wscools(:,:),       &
+                    & wsat(:,:), fc(:,:), pwp(:,:), k_sat(:,:),         &
+                    & mpot_sat(:,:), bclapp(:,:), pore_size_index(:,:), &
+                    &  D(:,:))
+
     K_inter(:,:)    = 0._wp
     D_inter(:,:)    = 0._wp
 
-    ! switching to volumetric quantities
-    WHERE(dsoil(:,:)> 0._wp)
-      ws_vol(:,:)   =  ws(:,:)      / dsoil(:,:)
-      ice_vol(:,:)  =  is(:,:)      / dsoil(:,:)
-      scool_vol     =  wscools(:,:) / dsoil(:,:)
-      wsat_vol(:,:) =  wsat(:,:)    / dsoil(:,:)
-      fc_vol(:,:)   =  fc(:,:)      / dsoil(:,:)
-      pwp_vol(:,:)  =  pwp(:,:)     / dsoil(:,:)
-    ELSEWHERE
-      ws_vol(:,:)   =  0._wp
-      ice_vol(:,:)  =  0._wp
-      scool_vol     =  0._wp
-      wsat_vol(:,:) =  0._wp
-      fc_vol(:,:)   =  0._wp
-      pwp_vol(:,:)  =  0._wp
-    END WHERE
-
-
-    IF (i_shm==2) THEN ! Clapp & Horberger (Campbell)
-      ws_free_vol(:,:)=MAX(0._wp,ws_vol(:,:)-scool_vol(:,:))
-      ws_range_vol(:,:)  = wsat_vol(:,:)
-    ELSE  ! Brooks & Coorey; Van Genuchten
-      ws_free_vol(:,:)=MAX(0._wp,ws_vol(:,:)-MAX(scool_vol(:,:),pwp_vol(:,:)))
-      ws_range_vol(:,:)  = fc_vol(:,:) - pwp_vol(:,:)
-    END IF
-    WHERE (ws_range_vol(:,:) > 0._wp)
-      ws_rel_vol(:,:)  = ws_free_vol(:,:) / ws_range_vol(:,:)
-    END WHERE 
-
-    ! Making sure ws_rel is in the pyhsical range
-    ! This is especially important when infiltration is added to the first layer
-    ws_rel_vol(:,:) = MIN(1._wp, MAX(0._wp, ws_rel_vol(:,:)))
-
-    ! Determining K and D on layer
-    IF (i_shm==1 .OR. i_shm==2) THEN  !1=Brooks & Correy or 2 = Clapp & Horberger (Campbell)
-      K(:,:) =  k_sat(:,:)                                                   &
-             & * ws_rel_vol(:,:)**(2._wp * bclapp(:,:) + 3._wp)
-      WHERE(ws_range_vol(:,:) > 0._wp)
-        D(:,:) = -k_sat(:,:) * mpot_sat(:,:) * bclapp(:,:) / ws_range_vol(:,:) &
-               & * ws_rel_vol(:,:)**(1._wp * bclapp(:,:) + 2._wp)
-      ELSEWHERE
-        D(:,:) = 0._wp
-      END WHERE
-
-    ELSE IF (i_shm==3) THEN ! Van Genuchten
-      ws_rel_vol(:,:) = MIN(0.9999_wp, ws_rel_vol(:,:)) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
-
-      K(:,:) = k_sat(:,:) * ws_rel_vol(:,:)**(0.5_wp) &
-             & *(1._wp-(1._wp-ws_rel_vol(:,:)**(1._wp/mvgn(:,:)))**mvgn(:,:))**2._wp
-
-      WHERE(ws_range_vol(:,:) > 0._wp)
-        D(:,:) = -K(:,:)* mpot_sat(:,:) * bclapp(:,:) / ws_range_vol(:,:) &
-               & * ws_rel_vol(:,:)**(1._wp/mvgn(:,:)) * (1._wp-ws_rel_vol(:,:)**(1._wp/mvgn(:,:)))**(-mvgn(:,:))
-      ELSEWHERE
-        D(:,:) = 0._wp
-      END WHERE
-    END IF
-
-    ! Reduce percolation velocity in presence of ice
-    ! But what about diffucivity .... ice seems to attract water ?
-    DO j = 1, nc
-      DO i = 1, nsoil_act(j)
-        ice_impede(j,i)  = 10._wp**(-6._wp * (ice_vol(j,i) + scool_vol(j,i) ) &
-                       & / (fc_vol(j,i) + ice_vol(j,i)))
-        K(j,i) = K(j,i) * ice_impede(j,i)
-        D(j,i) = D(j,i) * ice_impede(j,i)
-      END DO
-    END DO
-
-
     !!! making sure percolation from top layer is limited to water content !!!
-
     K(:,1) = MIN(K(:,1), MAX(0._wp,(ws(:,1)-pwp(:,1)) / dt))
 
     ! Determining K & D on layer interface
@@ -2744,6 +2651,172 @@ CONTAINS
       END DO
     END DO
 
+  END SUBROUTINE get_conductivies_diffusivities_column
+
+  ! ===============================================================================================================================
+  PURE ELEMENTAL SUBROUTINE get_conductivies_diffusivities(            &
+            & i_shm, i_delieveroo,               &
+            & dsoil,                             &
+            & ws, is, wscools,                   &
+            & wsat, fc, pwp,                     &
+            & k_sat, mpot_sat, bclapp, pore_size_index,     &
+            & outvar                             &
+            )
+
+    ! arguments
+
+    INTEGER,  INTENT(in)     :: i_shm, i_delieveroo! soil-hydrology model used, variable requested
+    REAL(wp), INTENT(in)     :: dsoil              ! soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in)     :: ws                 ! water content
+    REAL(wp), INTENT(in)     :: is                 ! ice content
+    REAL(wp), INTENT(in)     :: wscools            ! supercooled water
+    REAL(wp), INTENT(in)     :: wsat               ! soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in)     :: fc                 ! field capacity [m]
+    REAL(wp), INTENT(in)     :: pwp                ! residual water (until bedrock) per layer
+    REAL(wp), INTENT(in)     :: k_sat              ! hydraaulic conductivity
+    REAL(wp), INTENT(in)     :: mpot_sat           ! matric potential
+    REAL(wp), INTENT(in)     :: bclapp             ! clapp & Hornberger exponent
+    REAL(wp), INTENT(in)     :: pore_size_index    ! Pore size distribution index
+
+
+    REAL(wp), INTENT(out)    :: outvar             ! Impedence factor to account for ice blocking flowpaths
+
+    REAL(wp) ::  ws_vol, ice_vol, scool_vol, &
+             &   ws_rel_vol,  ws_range_vol,  &
+             &   wsat_vol, fc_vol, pwp_vol,  &
+             &   wscool_vol, ws_free_vol, ice_impede
+
+    REAL(wp) ::  ck                 ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+
+
+    REAL(wp) ::  nvgn, mvgn,       &
+             &   mpot_sat_correct, &
+             &   K, D, mpot
+
+
+    ck           = 8.0_wp           ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+
+    ! switching to volumetric quantities
+    IF(dsoil> 0._wp) THEN
+      ws_vol    =  ws      / dsoil
+      ice_vol   =  is      / dsoil
+      scool_vol =  wscools / dsoil
+      wsat_vol  =  wsat    / dsoil
+      fc_vol    =  fc      / dsoil
+      pwp_vol   =  pwp     / dsoil
+    ELSE
+      ws_vol    =  0._wp
+      ice_vol   =  0._wp
+      scool_vol =  0._wp
+      wsat_vol  =  0._wp
+      fc_vol    =  0._wp
+      pwp_vol   =  0._wp
+    END IF
+
+
+    IF (i_delieveroo == 3 .OR. i_delieveroo == 4) THEN
+      IF (mpot_sat > 0._wp) THEN
+          mpot_sat_correct = -mpot_sat
+      ELSE
+          mpot_sat_correct = mpot_sat
+      END IF
+    END IF
+
+    IF (i_shm == 3) THEN
+      nvgn = pore_size_index + 1._wp
+      mvgn = pore_size_index / nvgn
+    END IF
+
+    IF (i_shm==2) THEN ! Clapp & Horberger (Campbell)
+      ws_free_vol   = MAX(0._wp,ws_vol-scool_vol)
+      ws_range_vol  = wsat_vol
+    ELSE  ! Brooks & Coorey; Van Genuchten
+      ws_free_vol   = MAX(0._wp,ws_vol-MAX(scool_vol,pwp_vol))
+      ws_range_vol  = fc_vol - pwp_vol
+    END IF
+    IF (ws_range_vol > 0._wp) THEN
+      ws_rel_vol  = ws_free_vol / ws_range_vol
+    ELSE
+      ws_rel_vol  = 0._wp
+    END IF
+
+    ! Making sure ws_rel is in the pyhsical range
+    ! This is especially important when infiltration is added to the first layer
+    ws_rel_vol = MIN(1._wp, MAX(0._wp, ws_rel_vol))
+
+    ! Reduce percolation velocity in presence of ice
+    ! But what about diffucivity .... ice seems to attract water ?
+    IF (wsat_vol > 0._wp) THEN
+        ice_impede  = 10._wp**(-6._wp * (ice_vol + scool_vol) / wsat_vol)
+    ELSE
+       ice_impede  = 1._wp
+    END IF
+
+    IF (i_delieveroo == 1) THEN
+      outvar = ice_impede
+    END IF
+
+    IF (i_delieveroo == 2) THEN
+      ! Determining conductivit K
+      IF (i_shm==1 .OR. i_shm==2) THEN  !1=Brooks & Correy or 2 = Clapp & Horberger (Campbell)
+        K =  k_sat * ws_rel_vol**(2._wp * bclapp + 3._wp)
+
+      ELSE IF (i_shm==3) THEN ! Van Genuchten
+        ws_rel_vol = MIN(0.9999_wp, ws_rel_vol) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
+
+        K = k_sat * ws_rel_vol**(0.5_wp) &
+        & *(1._wp-(1._wp-ws_rel_vol**(1._wp/mvgn))**mvgn)**2._wp
+      END IF
+      K = K * ice_impede
+      outvar = K
+    END IF
+
+    IF (i_delieveroo == 3) THEN
+      ! Determining diffusivity D
+      IF (i_shm==1 .OR. i_shm==2) THEN  !1=Brooks & Correy or 2 = Clapp & Horberger (Campbell)
+        IF(ws_range_vol > 0._wp) THEN
+          D = -k_sat * mpot_sat_correct * bclapp / ws_range_vol &
+            & * ws_rel_vol**(1._wp * bclapp + 2._wp)
+        ELSE
+          D = 0._wp
+        END IF
+
+      ELSE IF (i_shm==3) THEN ! Van Genuchten
+        IF(ws_range_vol > 0._wp) THEN
+          ws_rel_vol = MIN(0.9999_wp, ws_rel_vol) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
+
+          K = k_sat * ws_rel_vol**(0.5_wp) &
+            & *(1._wp-(1._wp-ws_rel_vol**(1._wp/mvgn))**mvgn)**2._wp
+
+          D = -K * mpot_sat_correct * bclapp / ws_range_vol &
+            & * ws_rel_vol**(1._wp/mvgn) * (1._wp-ws_rel_vol**(1._wp/mvgn))**(-mvgn)
+        ELSE
+          D = 0._wp
+        END IF
+      END IF
+      D = D * ice_impede
+      outvar = D
+    END IF
+
+    IF (i_delieveroo == 4) THEN
+      ! Determin matric potential
+      !!! Formula from Stuurop 2021 (https://doi.org/10.1016/j.coldregions.2021.103456) adjusted from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+      IF (ws_rel_vol > 0._wp) THEN
+        IF (i_shm == 1 .OR. i_shm==2) THEN
+          mpot = mpot_sat_correct * (ws_rel_vol**(-bclapp))
+        ELSE
+          mpot = mpot_sat_correct * (ws_rel_vol**(-1._wp/mvgn) - 1._wp)**(1._wp/nvgn)
+        END IF
+        mpot = mpot * ((1._wp + ck * ice_vol)**2._wp)
+        mpot = MIN(100._wp,  mpot)
+      ELSE
+        mpot = 100._wp
+      END IF
+      outvar = mpot
+    END IF
+
+
   END SUBROUTINE get_conductivies_diffusivities
+
 #endif
 END MODULE mo_hydro_process
