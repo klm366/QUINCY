@@ -223,12 +223,21 @@ function generate_land_sea_mask {
   echo "Generating land sea mask ..."
   if [[ ${coupled} == "true" ]]
   then
-    ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
-    ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
-      -mul -gtc,0 -selvar,cell_sea_land_mask ${coupled_lsf_file} ${temp} ${grid_name}_glac_remap.nc
 
     ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${icon_grid_file} \
       -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
+
+    # Glacier mask
+    ${cdo} remapycon,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} -gtc,0.5   ${temp} ${grid_name}_glac-05_remap.nc
+    ${cdo} -gtc,0.001 ${temp} ${grid_name}_glac-0001_remap.nc
+    # The glacier mask corresponds to the 0.5 mask within the continents and to the 0.001 mask
+    # at the costs to avoid non-glacier land cells North of Greenland or at the Antarctic coast.
+    ${cdo} ifthenelse -gtc,0.7 ${coupled_lsf_file}   \
+          ${grid_name}_glac-05_remap.nc ${grid_name}_glac-0001_remap.nc \
+          ${grid_name}_glac_remap.tmp.nc
+    ${cdo} setvar,glac -mul -gtc,0 ${grid_name}_notsea.nc ${grid_name}_glac_remap.tmp.nc ${grid_name}_glac_remap.nc
+
   else
     if [[ "${old_r2b4_amip}" != "true" ]]; then
       # Note: blend out some grid boxes which are land in FR_LAND_TOPO
@@ -536,6 +545,7 @@ function generate_fractions {
 
 function crosscheck_vars {
 
+  # Set minimum soil depth of non-glacier grid cells to 0.01
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
   mv ${temp} ${grid_name}_soil_depth_remap.nc
@@ -546,6 +556,8 @@ function crosscheck_vars {
   mv ${temp} ${grid_name}_maxmoist_remap.nc
   debug_file ${grid_name}_maxmoist_remap.nc
   rm max_soilwater.nc
+
+  # Set missing value of surface temperature to 280K
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} setmisstoc,280 ${grid_name}_surf_temp_remap.nc ${temp}
   mv ${temp} ${grid_name}_surf_temp_remap.nc
@@ -1035,4 +1047,3 @@ if [[ ${clean} == "true" ]]
 then
   echo "Cleaning up ..."
   cd ${cwddir}
-  rm -rf ${workdir}
