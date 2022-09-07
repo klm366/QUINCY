@@ -296,6 +296,18 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
     dsl4jsb_Real3D_onChunk :: soil_litter_carbon_sl
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c     
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_n     
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_p     
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c13   
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c14   
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_n15   
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c  
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_n  
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_p  
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c13
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c14
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_n15
     !------------------------------------------------------------------------------------------------------ !
     iblk      = options%iblk
     ics       = options%ics
@@ -542,6 +554,18 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       soil_litter_carbon_sl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_n)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_p)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c13)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c14)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_n15)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_n)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_p)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c13)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c14)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_n15)    ! out
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -1046,6 +1070,46 @@ CONTAINS
        SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                + &
        SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp  
 
+    !>13.0 sb_pool diagnostics: sum C/N/P each across components pools into 3D variable
+    !>  differ between litter and SOM (soil organic matter) components
+    ! litter
+    sb_pool_total_litter_c(:,:) = &
+      & sb_pool%soluable_litter%carbon(:,:)     + sb_pool%polymeric_litter%carbon(:,:)     + sb_pool%woody_litter%carbon(:,:)
+    sb_pool_total_litter_n(:,:) = &
+      & sb_pool%soluable_litter%nitrogen(:,:)   + sb_pool%polymeric_litter%nitrogen(:,:)   + sb_pool%woody_litter%nitrogen(:,:)
+    sb_pool_total_litter_p(:,:) = &
+      & sb_pool%soluable_litter%phosphorus(:,:) + sb_pool%polymeric_litter%phosphorus(:,:) + sb_pool%woody_litter%phosphorus(:,:)
+    sb_pool_total_litter_c13(:,:) = &
+      & sb_pool%soluable_litter%carbon13(:,:)   + sb_pool%polymeric_litter%carbon13(:,:)   + sb_pool%woody_litter%carbon13(:,:)
+    sb_pool_total_litter_c14(:,:) = &
+      & sb_pool%soluable_litter%carbon14(:,:)   + sb_pool%polymeric_litter%carbon14(:,:)   + sb_pool%woody_litter%carbon14(:,:)
+    sb_pool_total_litter_n15(:,:) = &
+      & sb_pool%soluable_litter%nitrogen15(:,:) + sb_pool%polymeric_litter%nitrogen15(:,:) + sb_pool%woody_litter%nitrogen15(:,:)
+    ! SOM
+    sb_pool_total_som_c(:,:) = &
+      & sb_pool%dom%carbon(:,:)            + sb_pool%dom_assoc%carbon(:,:)      + sb_pool%fungi%carbon(:,:) + &
+      & sb_pool%mycorrhiza%carbon(:,:)     + sb_pool%microbial%carbon(:,:)      + &
+      & sb_pool%residue%carbon(:,:)        + sb_pool%residue_assoc%carbon(:,:)
+    sb_pool_total_som_c(:,:) = &
+      & sb_pool%dom%nitrogen(:,:)          + sb_pool%dom_assoc%nitrogen(:,:)    + sb_pool%fungi%nitrogen(:,:) + &
+      & sb_pool%mycorrhiza%nitrogen(:,:)   + sb_pool%microbial%nitrogen(:,:)    + &
+      & sb_pool%residue%nitrogen(:,:)      + sb_pool%residue_assoc%nitrogen(:,:)
+    sb_pool_total_som_p(:,:) = &
+      & sb_pool%dom%phosphorus(:,:)        + sb_pool%dom_assoc%phosphorus(:,:)  + sb_pool%fungi%phosphorus(:,:) + &
+      & sb_pool%mycorrhiza%phosphorus(:,:) + sb_pool%microbial%phosphorus(:,:)  + &
+      & sb_pool%residue%phosphorus(:,:)    + sb_pool%residue_assoc%phosphorus(:,:)
+    sb_pool_total_som_c13(:,:) = &
+      & sb_pool%dom%carbon13(:,:)          + sb_pool%dom_assoc%carbon13(:,:)    + sb_pool%fungi%carbon13(:,:) + &
+      & sb_pool%mycorrhiza%carbon13(:,:)   + sb_pool%microbial%carbon13(:,:)    + &
+      & sb_pool%residue%carbon13(:,:)      + sb_pool%residue_assoc%carbon13(:,:)
+    sb_pool_total_som_c14(:,:) = &
+      & sb_pool%dom%carbon14(:,:)          + sb_pool%dom_assoc%carbon14(:,:)    + sb_pool%fungi%carbon14(:,:) + &
+      & sb_pool%mycorrhiza%carbon14(:,:)   + sb_pool%microbial%carbon14(:,:)    + &
+      & sb_pool%residue%carbon14(:,:)      + sb_pool%residue_assoc%carbon14(:,:)
+    sb_pool_total_som_n15(:,:) = &
+      & sb_pool%dom%nitrogen15(:,:)        + sb_pool%dom_assoc%nitrogen15(:,:)  + sb_pool%fungi%nitrogen15(:,:) + &
+      & sb_pool%mycorrhiza%nitrogen15(:,:) + sb_pool%microbial%nitrogen15(:,:)  + &
+      & sb_pool%residue%nitrogen15(:,:)    + sb_pool%residue_assoc%nitrogen15(:,:)
 
   ! Deallocate local allocatable variables
   DEALLOCATE(p_deposition_sl)
