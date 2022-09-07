@@ -216,9 +216,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_mavg
-    dsl4jsb_Real2D_onChunk      :: total_veg_pool_c
-    dsl4jsb_Real2D_onChunk      :: total_veg_pool_n
-    dsl4jsb_Real2D_onChunk      :: total_veg_pool_p
+    dsl4jsb_Real2D_onChunk      :: veg_pool_total_c
+    dsl4jsb_Real2D_onChunk      :: veg_pool_total_n
+    dsl4jsb_Real2D_onChunk      :: veg_pool_total_p
+    dsl4jsb_Real2D_onChunk      :: veg_pool_total_c13
+    dsl4jsb_Real2D_onChunk      :: veg_pool_total_c14
+    dsl4jsb_Real2D_onChunk      :: veg_pool_total_n15
     ! VEG_ 3D
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_tfrac_mavg_cl
     dsl4jsb_Real3D_onChunk      :: leaf_nitrogen_cl
@@ -354,9 +357,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_tfrac_mavg)                  ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, beta_sinklim_ps_tfrac_mavg)     ! in
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_mavg)                ! in
-    dsl4jsb_Get_var2D_onChunk(VEG_, total_veg_pool_c)               ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, total_veg_pool_n)               ! out
-    dsl4jsb_Get_var2D_onChunk(VEG_, total_veg_pool_p)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_p)               ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c13)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_c14)             ! out
+    dsl4jsb_Get_var2D_onChunk(VEG_, veg_pool_total_n15)             ! out
     ! VEG_ 3D
     dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_tfrac_mavg_cl)     ! inout
     dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)               ! out
@@ -671,20 +677,32 @@ CONTAINS
                           veg_pool%fruit       + &     !< elements of fruit
                           veg_pool%seed_bed            !< elements of seed_bed
 
-    !>  5.1 vge_pool diagnostics: sum C/N/P each across tissue pools into 2D variable
+    !>  5.1 veg_pool diagnostics: sum C/N/P each across tissue pools into 2D variable
     !>
-    total_veg_pool_c(:) = &
+    veg_pool_total_c(:) = &
       & veg_pool%leaf%carbon(:) + veg_pool%fine_root%carbon(:) + veg_pool%coarse_root%carbon(:) + &
       & veg_pool%sap_wood%carbon(:) + veg_pool%heart_wood%carbon(:) + veg_pool%labile%carbon(:) + & 
       & veg_pool%reserve%carbon(:) + veg_pool%fruit%carbon(:) + veg_pool%seed_bed%carbon(:)
-    total_veg_pool_n(:) = &
+    veg_pool_total_n(:) = &
       & veg_pool%leaf%nitrogen(:) + veg_pool%fine_root%nitrogen(:) + veg_pool%coarse_root%nitrogen(:) + &
       & veg_pool%sap_wood%nitrogen(:) + veg_pool%heart_wood%nitrogen(:) + veg_pool%labile%nitrogen(:) + & 
       & veg_pool%reserve%nitrogen(:) + veg_pool%fruit%nitrogen(:) + veg_pool%seed_bed%nitrogen(:)
-    total_veg_pool_p(:) = &
+    veg_pool_total_p(:) = &
       & veg_pool%leaf%phosphorus(:) + veg_pool%fine_root%phosphorus(:) + veg_pool%coarse_root%phosphorus(:) + &
       & veg_pool%sap_wood%phosphorus(:) + veg_pool%heart_wood%phosphorus(:) + veg_pool%labile%phosphorus(:) + & 
       & veg_pool%reserve%phosphorus(:) + veg_pool%fruit%phosphorus(:) + veg_pool%seed_bed%phosphorus(:)
+    veg_pool_total_c13(:) = &
+      & veg_pool%leaf%carbon13(:) + veg_pool%fine_root%carbon13(:) + veg_pool%coarse_root%carbon13(:) + &
+      & veg_pool%sap_wood%carbon13(:) + veg_pool%heart_wood%carbon13(:) + veg_pool%labile%carbon13(:) + & 
+      & veg_pool%reserve%carbon13(:) + veg_pool%fruit%carbon13(:) + veg_pool%seed_bed%carbon13(:)
+    veg_pool_total_c14(:) = &
+      & veg_pool%leaf%carbon14(:) + veg_pool%fine_root%carbon14(:) + veg_pool%coarse_root%carbon14(:) + &
+      & veg_pool%sap_wood%carbon14(:) + veg_pool%heart_wood%carbon14(:) + veg_pool%labile%carbon14(:) + & 
+      & veg_pool%reserve%carbon14(:) + veg_pool%fruit%carbon14(:) + veg_pool%seed_bed%carbon14(:)
+    veg_pool_total_n15(:) = &
+      & veg_pool%leaf%nitrogen15(:) + veg_pool%fine_root%nitrogen15(:) + veg_pool%coarse_root%nitrogen15(:) + &
+      & veg_pool%sap_wood%nitrogen15(:) + veg_pool%heart_wood%nitrogen15(:) + veg_pool%labile%nitrogen15(:) + & 
+      & veg_pool%reserve%nitrogen15(:) + veg_pool%fruit%nitrogen15(:) + veg_pool%seed_bed%nitrogen15(:)
 
 #ifdef __QUINCY_STANDALONE__
 ! Pass back values to process memory
