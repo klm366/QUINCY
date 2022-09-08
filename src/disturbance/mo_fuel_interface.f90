@@ -209,11 +209,11 @@ CONTAINS
 
           ! _ta variables are not in restart and, since fuel process is called before
           ! carbon process, we have to recalculate them
-          CALL recalc_per_tile_vars(tile, options,                                      &
-            & c_acid_ag1 = c_acid_ag1(:),       c_water_ag1 = c_water_ag1(:),           &
-            & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
-            & c_acid_ag2 = c_acid_ag2(:),       c_water_ag2 = c_water_ag2(:),           &
-            & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:))
+!          CALL recalc_per_tile_vars(tile, options,                                      &
+!            & c_acid_ag1 = c_acid_ag1(:),       c_water_ag1 = c_water_ag1(:),           &
+!            & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
+!            & c_acid_ag2 = c_acid_ag2(:),       c_water_ag2 = c_water_ag2(:),           &
+!            & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:))
   
           CALL calc_fuel_jsbach(       &
             & c_acid_ag1_ta(:),        & ! in

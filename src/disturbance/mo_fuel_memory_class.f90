@@ -75,7 +75,7 @@ CONTAINS
       & t_cf('fuel', 'mol(C)/m^2 (potential vegetation)', 'Amount of carbon fuel for burned area calculations.'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
-      & output_level=BASIC,                                                                                       &
+      & loutput=.TRUE., output_level=BASIC,                                                                                       &
       & lrestart=.FALSE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
   END SUBROUTINE Init_fuel_memory
