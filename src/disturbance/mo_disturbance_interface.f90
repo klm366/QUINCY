@@ -162,7 +162,8 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
     INTEGER :: iblk, nc, ics, ice
-    INTEGER :: iyr, day_of_year                         ! <Rackhun Son>
+    INTEGER :: iyr, imo, idy, day_of_year, diff_year, i          ! <Rackhun Son>
+    REAL(wp) :: clim_ratio, yearly_ratio                         ! average ratio for climatology <Rackhun Son>
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_damaged_area'
 
@@ -206,7 +207,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: lai                    ! LAI <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: fract_fpc_max          ! Maximum fraction of tile that can be covered by leave <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: pfts_fract             ! fraction of PFTs <Rackhun Son>
-    dsl4jsb_Real2D_onChunk :: fract_snow_soil        ! snow fraction on soil <Rackhun Son>
+    !dsl4jsb_Real2D_onChunk :: fract_snow_soil        ! snow fraction on soil <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: fract_snow             ! Snow fraction of tile <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: elevation              ! elevation <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl            ! water content in soil layers [m] <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: soil_depth_sl          ! soil depth within each soil layer [m] <Rackhun Son>
@@ -228,6 +230,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: swl3_clim              ! daily climatology of volumetric soil water content in the 3rd layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: swl4_clim              ! daily climatology of volumetric soil water content in the 4th layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: lai_clim               ! daily climatology of LAI <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: fuel_yearly            ! yearly mean of Fuel <Rackhun Son>
 
     dsl4jsb_Real3D_onChunk :: climate_lstm_hidden    ! LSTM hidden/cell <Rackhun>
     dsl4jsb_Real3D_onChunk :: climate_lstm_cell      ! LSTM hidden/cell <Rackhun>
@@ -270,7 +273,9 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    iyr     = options%current_datetime%date%year    ! <Rackhun Son> 
+    iyr     = options%current_datetime%date%year   ! <Rackhun Son> 
+    imo     = INT(options%current_datetime%date%month)   ! <Rackhun Son> 
+    idy     = options%current_datetime%date%day     ! <Rackhun Son> 
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
@@ -310,7 +315,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,     lai)                      ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(PHENO_,     fract_fpc_max)            ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(HYDRO_,     pfts_fract)               ! in <Rackhun Son>
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,     fract_snow_soil)          ! in <Rackhun Son>
+    !dsl4jsb_Get_var2D_onChunk(HYDRO_,     fract_snow_soil)         ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,     fract_snow)               ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(HYDRO_,     elevation)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(HYDRO_,     wtr_soil_sl)              ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(HYDRO_,     soil_depth_sl)            ! in <Rackhun Son>
@@ -332,6 +338,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl3_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl4_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   lai_clim)                 ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   fuel_yearly)              ! in <Rackhun Son>
 
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   climate_lstm_hidden)      ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   climate_lstm_cell)        ! in <Rackhun Son>
@@ -380,10 +387,41 @@ CONTAINS
     END IF
 
     ! calculate volumetric soil water content <Rackhun Son>
-    swl1(:) = wtr_soil_sl(:,1) / (soil_depth_sl(:,1)+1e-10_wp)
-    swl2(:) = wtr_soil_sl(:,2) / (soil_depth_sl(:,2)+1e-10_wp)
-    swl3(:) = wtr_soil_sl(:,3) / (soil_depth_sl(:,3)+1e-10_wp)
-    swl4(:) = wtr_soil_sl(:,4) / (soil_depth_sl(:,4)+1e-10_wp)
+    !swl1(:) = wtr_soil_sl(:,1) / (soil_depth_sl(:,1)+1e-8_wp)
+    !swl2(:) = wtr_soil_sl(:,2) / (soil_depth_sl(:,2)-soil_depth_sl(:,1)+1e-8_wp)
+    !swl3(:) = wtr_soil_sl(:,3) / (soil_depth_sl(:,3)-soil_depth_sl(:,2)+1e-8_wp)
+    !swl4(:) = wtr_soil_sl(:,4) / (soil_depth_sl(:,4)-soil_depth_sl(:,3)+1e-8_wp)
+    
+    !swl1(:) = wtr_soil_sl(:,1) / (soil_depth_sl(:,1)+1e-8_wp)
+    !swl2(:) = wtr_soil_sl(:,2) / (soil_depth_sl(:,2)+1e-8_wp)
+    !swl3(:) = wtr_soil_sl(:,3) / (soil_depth_sl(:,3)+1e-8_wp)
+    !swl4(:) = wtr_soil_sl(:,4) / (soil_depth_sl(:,4)+1e-8_wp)
+
+    DO i = 1, size(soil_depth_sl, dim=1)
+      IF (soil_depth_sl(i,1) > 0._wp) THEN
+        swl1(i) = wtr_soil_sl(i,1) / soil_depth_sl(i,1)
+      ELSE
+        swl1(i) = 0._wp
+      ENDIF
+
+      IF (soil_depth_sl(i,2) > 0._wp) THEN
+        swl2(i) = wtr_soil_sl(i,2) / soil_depth_sl(i,2)
+      ELSE
+        swl2(i) = 0._wp
+      ENDIF
+
+      IF (soil_depth_sl(i,3) > 0._wp) THEN
+        swl3(i) = wtr_soil_sl(i,3) / soil_depth_sl(i,3)
+      ELSE
+        swl3(i) = 0._wp
+      ENDIF
+
+      IF (soil_depth_sl(i,4) > 0._wp) THEN
+        swl4(i) = wtr_soil_sl(i,4) / soil_depth_sl(i,4)
+      ELSE
+        swl4(i) = 0._wp
+      ENDIF
+    END DO
 
     ! calculate daily statistics <Rackhun Son>
     ! get day of year for cliamtology calculation
@@ -405,66 +443,6 @@ CONTAINS
 
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
 
-      ! calculate auxiliary variables for DL fire model   <Rackhun Son>
-      IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
-        ! approximate daily climatology with 30-year window
-        IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
-          t_air_clim(:,day_of_year) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
-          q_clim(:,day_of_year)     = q_ave(:)     /(options%dtime/60._wp/60._wp/24._wp)
-          q_rel_clim(:,day_of_year) = q_rel_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
-          swl1_clim(:,day_of_year)  = swl1_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          swl2_clim(:,day_of_year)  = swl2_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          swl3_clim(:,day_of_year)  = swl3_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          swl4_clim(:,day_of_year)  = swl4_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          lai_clim(:,day_of_year)   = lai_ave(:)   /(options%dtime/60._wp/60._wp/24._wp)
-        ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
-          t_air_clim(:,day_of_year) = t_air_ave(:)
-          q_clim(:,day_of_year)     = q_ave(:)
-          q_rel_clim(:,day_of_year) = q_rel_ave(:)
-          swl1_clim(:,day_of_year)  = swl1_ave(:)
-          swl2_clim(:,day_of_year)  = swl2_ave(:)
-          swl3_clim(:,day_of_year)  = swl3_ave(:)
-          swl4_clim(:,day_of_year)  = swl4_ave(:)
-          lai_clim(:,day_of_year)   = lai_ave(:)
-        ELSEIF (day_of_year == 60) Then                                ! 2/29 <= 2/28
-          t_air_clim(:,day_of_year) = t_air_clim(:,59)
-          q_clim(:,day_of_year)     = q_clim(:,59)
-          q_rel_clim(:,day_of_year) = q_rel_clim(:,59)
-          swl1_clim(:,day_of_year)  = swl1_clim(:,59)
-          swl2_clim(:,day_of_year)  = swl2_clim(:,59)
-          swl3_clim(:,day_of_year)  = swl3_clim(:,59)
-          swl4_clim(:,day_of_year)  = swl4_clim(:,59)
-          lai_clim(:,day_of_year)   = lai_clim(:,59)
-        ELSE
-          t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*0.967_wp + t_air_ave(:)*0.033_wp
-          q_clim(:,day_of_year)     = q_clim(:,day_of_year)*0.967_wp     + q_ave(:)*0.033_wp
-          q_rel_clim(:,day_of_year) = q_rel_clim(:,day_of_year)*0.967_wp + q_rel_ave(:)*0.033_wp
-          swl1_clim(:,day_of_year)  = swl1_clim(:,day_of_year)*0.967_wp  + swl1_ave(:)*0.033_wp
-          swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)*0.967_wp  + swl2_ave(:)*0.033_wp
-          swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)*0.967_wp  + swl3_ave(:)*0.033_wp
-          swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)*0.967_wp  + swl4_ave(:)*0.033_wp
-          lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)*0.967_wp   + lai_ave(:)*0.033_wp
-        ENDIF
-
-        ! modify pft fractions for Fire
-        modified_pfts_fract(:,1) = fract_snow_soil(:)
-        modified_pfts_fract(:,2) = pfts_fract(:,1)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf evergreen
-        modified_pfts_fract(:,3) = pfts_fract(:,2)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf deciduous
-        modified_pfts_fract(:,4) = pfts_fract(:,3)*(1-fract_snow_soil(:))*fract_fpc_max     ! Extra-tropical broadleaf evergreen
-        modified_pfts_fract(:,5) = pfts_fract(:,4)*(1-fract_snow_soil(:))*fract_fpc_max     ! Extra_tropical broadleaf deciduous
-        modified_pfts_fract(:,6) = pfts_fract(:,5)*(1-fract_snow_soil(:))*fract_fpc_max     ! Raingreen Shrubs
-        modified_pfts_fract(:,7) = pfts_fract(:,6)*(1-fract_snow_soil(:))*fract_fpc_max     ! Deciduous Shrubs
-        modified_pfts_fract(:,8) = SUM(pfts_fract(:,7:8),DIM=2)*(1-fract_snow_soil(:))*fract_fpc_max   ! Grass
-        modified_pfts_fract(:,9) = (1-fract_snow_soil(:))*(1-fract_fpc_max)                 ! Others
-
-        !Fix rain
-        !rain(:) = rain(:)*86400   ! [kg/m2/s] => [mm/day]   currently precipitation forcing is set to GSWP3
-        !IF (iyr == 2008) print*, minval(t_air_clim), maxval(t_air_clim)
-
-        lightning_climatology => dsl4jsb_memory(DISTURB_)%lightning_climatology(ics:ice, iblk, day_of_year)    ! <Rackhun Son>
-        population_density    => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk, day_of_year)       ! <Rackhun Son>
-      ENDIF
-
       !!!! These will be removed after the FUEL issue 
       CALL calc_fuel_jsbach(       &
         & c_acid_ag1_ta(:),        & ! in
@@ -479,6 +457,137 @@ CONTAINS
         & fuel(:)                  & ! out
         & )
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      ! calculate auxiliary variables for DL fire model   <Rackhun Son>
+      IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
+        ! approximate daily climatology with 30-year window
+        diff_year = iyr-time_config%tc_exp_startdate%date%year
+
+        IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
+          t_air_clim(:,imo) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
+          q_clim(:,imo)     = q_ave(:)     /(options%dtime/60._wp/60._wp/24._wp)
+          q_rel_clim(:,imo) = q_rel_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
+          swl1_clim(:,imo)  = swl1_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl2_clim(:,imo)  = swl2_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl3_clim(:,imo)  = swl3_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl4_clim(:,imo)  = swl4_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          lai_clim(:,imo)   = lai_ave(:)   /(options%dtime/60._wp/60._wp/24._wp)
+          fuel_yearly(:)    = fuel(:)
+
+        !ELSEIF (iyr == time_config%tc_exp_startdate%date%year .AND. idy == 1) THEN   ! 1st day of month
+        !ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
+        ELSE
+          IF (iyr == time_config%tc_exp_startdate%date%year .AND. idy == 1) THEN   ! 1st day of month
+            t_air_clim(:,imo) = t_air_ave(:)
+            q_clim(:,imo)     = q_ave(:)
+            q_rel_clim(:,imo) = q_rel_ave(:)
+            swl1_clim(:,imo)  = swl1_ave(:)
+            swl2_clim(:,imo)  = swl2_ave(:)
+            swl3_clim(:,imo)  = swl3_ave(:)
+            swl4_clim(:,imo)  = swl4_ave(:)
+            lai_clim(:,imo)   = lai_ave(:)
+          ELSE
+            IF (diff_year < 1) Then
+              !clim_ratio = 10/(diff_year+1)
+              clim_ratio = MAX(30._wp/idy, 1._wp)
+            ELSE
+              clim_ratio = 1._wp
+            ENDIF
+            t_air_clim(:,imo) = t_air_clim(:,imo)*(30._wp-clim_ratio)/30._wp + t_air_ave(:)*clim_ratio/30._wp
+            q_clim(:,imo)     = q_clim(:,imo)*(30._wp-clim_ratio)/30._wp     + q_ave(:)*clim_ratio/30._wp
+            q_rel_clim(:,imo) = q_rel_clim(:,imo)*(30._wp-clim_ratio)/30._wp + q_rel_ave(:)*clim_ratio/30._wp
+            swl1_clim(:,imo)  = swl1_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl1_ave(:)*clim_ratio/30._wp
+            swl2_clim(:,imo)  = swl2_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl2_ave(:)*clim_ratio/30._wp
+            swl3_clim(:,imo)  = swl3_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl3_ave(:)*clim_ratio/30._wp
+            swl4_clim(:,imo)  = swl4_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl4_ave(:)*clim_ratio/30._wp
+            lai_clim(:,imo)   = lai_clim(:,imo)*(30._wp-clim_ratio)/30._wp   + lai_ave(:)*clim_ratio/30._wp
+          ENDIF
+
+          IF (iyr == time_config%tc_exp_startdate%date%year) THEN   ! 1st year
+            yearly_ratio = MAX(365._wp/get_year_day(options%current_datetime), 1._wp)
+          ELSE
+            yearly_ratio = 1._wp
+          ENDIF
+          fuel_yearly(:)= fuel_yearly(:)*(365._wp-yearly_ratio)/365._wp  + fuel(:)*yearly_ratio/365._wp
+
+          !fuel_clim(:,imo)  = fuel(:)
+          !t_air_clim(:,day_of_year) = t_air_ave(:)
+          !q_clim(:,day_of_year)     = q_ave(:)
+          !q_rel_clim(:,day_of_year) = q_rel_ave(:)
+          !swl1_clim(:,day_of_year)  = swl1_ave(:)
+          !swl2_clim(:,day_of_year)  = swl2_ave(:)
+          !swl3_clim(:,day_of_year)  = swl3_ave(:)
+          !swl4_clim(:,day_of_year)  = swl4_ave(:)
+          !lai_clim(:,day_of_year)   = lai_ave(:)
+        !ELSEIF (day_of_year == 60) Then                                ! 2/29 <= 2/28
+          !t_air_clim(:,day_of_year) = t_air_clim(:,59)
+          !q_clim(:,day_of_year)     = q_clim(:,59)
+          !q_rel_clim(:,day_of_year) = q_rel_clim(:,59)
+          !swl1_clim(:,day_of_year)  = swl1_clim(:,59)
+          !swl2_clim(:,day_of_year)  = swl2_clim(:,59)
+          !swl3_clim(:,day_of_year)  = swl3_clim(:,59)
+          !swl4_clim(:,day_of_year)  = swl4_clim(:,59)
+          !lai_clim(:,day_of_year)   = lai_clim(:,59)
+        !ELSE
+          !t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*0.967_wp + t_air_ave(:)*0.033_wp
+          !q_clim(:,day_of_year)     = q_clim(:,day_of_year)*0.967_wp     + q_ave(:)*0.033_wp
+          !q_rel_clim(:,day_of_year) = q_rel_clim(:,day_of_year)*0.967_wp + q_rel_ave(:)*0.033_wp
+          !swl1_clim(:,day_of_year)  = swl1_clim(:,day_of_year)*0.967_wp  + swl1_ave(:)*0.033_wp
+          !swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)*0.967_wp  + swl2_ave(:)*0.033_wp
+          !swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)*0.967_wp  + swl3_ave(:)*0.033_wp
+          !swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)*0.967_wp  + swl4_ave(:)*0.033_wp
+          !lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)*0.967_wp   + lai_ave(:)*0.033_wp
+          !IF (diff_year < 1) Then
+            !clim_ratio = 10/(diff_year+1)
+          !  clim_ratio = MAX(30._wp/idy, 1._wp)
+          !ELSE
+          !  clim_ratio = 1._wp
+          !ENDIF
+          !t_air_clim(:,imo) = t_air_clim(:,imo)*(30._wp-clim_ratio)/30._wp + t_air_ave(:)*clim_ratio/30._wp
+          !q_clim(:,imo)     = q_clim(:,imo)*(30._wp-clim_ratio)/30._wp     + q_ave(:)*clim_ratio/30._wp
+          !q_rel_clim(:,imo) = q_rel_clim(:,imo)*(30._wp-clim_ratio)/30._wp + q_rel_ave(:)*clim_ratio/30._wp
+          !swl1_clim(:,imo)  = swl1_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl1_ave(:)*clim_ratio/30._wp
+          !swl2_clim(:,imo)  = swl2_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl2_ave(:)*clim_ratio/30._wp
+          !swl3_clim(:,imo)  = swl3_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl3_ave(:)*clim_ratio/30._wp
+          !swl4_clim(:,imo)  = swl4_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl4_ave(:)*clim_ratio/30._wp
+          !lai_clim(:,imo)   = lai_clim(:,imo)*(30._wp-clim_ratio)/30._wp   + lai_ave(:)*clim_ratio/30._wp
+          !fuel_yearly(:,imo)= fuel_clim(:,imo)*(365._wp-yearly_ratio)/365._wp  + fuel(:)*yearly_ratio/365._wp
+        ENDIF
+
+        ! modify pft fractions for Fire
+        !modified_pfts_fract(:,1) = fract_snow_soil(:)
+        !modified_pfts_fract(:,2) = pfts_fract(:,1)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf evergreen
+        !modified_pfts_fract(:,3) = pfts_fract(:,2)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf deciduous
+        !modified_pfts_fract(:,4) = pfts_fract(:,3)*(1-fract_snow_soil(:))*fract_fpc_max     ! Extra-tropical broadleaf evergreen
+        !modified_pfts_fract(:,5) = pfts_fract(:,4)*(1-fract_snow_soil(:))*fract_fpc_max     ! Extra_tropical broadleaf deciduous
+        !modified_pfts_fract(:,6) = pfts_fract(:,5)*(1-fract_snow_soil(:))*fract_fpc_max     ! Raingreen Shrubs
+        !modified_pfts_fract(:,7) = pfts_fract(:,6)*(1-fract_snow_soil(:))*fract_fpc_max     ! Deciduous Shrubs
+        !modified_pfts_fract(:,8) = SUM(pfts_fract(:,7:8),DIM=2)*(1-fract_snow_soil(:))*fract_fpc_max   ! Grass
+        !modified_pfts_fract(:,9) = (1-fract_snow_soil(:))*(1-fract_fpc_max)                 ! Others
+
+        modified_pfts_fract(:,1) = fract_snow(:)
+        modified_pfts_fract(:,2) = pfts_fract(:,1)*(1-fract_snow(:))*fract_fpc_max     ! Tropical broadleaf evergreen
+        modified_pfts_fract(:,3) = pfts_fract(:,2)*(1-fract_snow(:))*fract_fpc_max     ! Tropical broadleaf deciduous
+        modified_pfts_fract(:,4) = pfts_fract(:,3)*(1-fract_snow(:))*fract_fpc_max     ! Extra-tropical broadleaf evergreen
+        modified_pfts_fract(:,5) = pfts_fract(:,4)*(1-fract_snow(:))*fract_fpc_max     ! Extra_tropical broadleaf deciduous
+        modified_pfts_fract(:,6) = pfts_fract(:,5)*(1-fract_snow(:))*fract_fpc_max     ! Raingreen Shrubs
+        modified_pfts_fract(:,7) = pfts_fract(:,6)*(1-fract_snow(:))*fract_fpc_max     ! Deciduous Shrubs
+        modified_pfts_fract(:,8) = SUM(pfts_fract(:,7:8),DIM=2)*(1-fract_snow(:))*fract_fpc_max   ! Grass
+        modified_pfts_fract(:,9) = (1-fract_snow(:))*(1-fract_fpc_max)                 ! Others
+
+        lightning_climatology => dsl4jsb_memory(DISTURB_)%lightning_climatology(ics:ice, iblk, day_of_year)    ! <Rackhun Son>
+        population_density    => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk, day_of_year)       ! <Rackhun Son>
+      ENDIF
+
+      ! reset daily statistics
+      t_air_ave(:) = 0._wp
+      q_ave(:) = 0._wp
+      q_rel_ave(:) = 0._wp
+      swl1_ave(:) = 0._wp
+      swl2_ave(:) = 0._wp
+      swl3_ave(:) = 0._wp
+      swl4_ave(:) = 0._wp
+      lai_ave(:) = 0._wp
 
       burned_fract(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) &
@@ -519,18 +628,19 @@ CONTAINS
             !endif
 
             CALL burned_fract_dl(                                      &
-              & t_air(:),      t_air_clim(:,day_of_year),              &  
-              & q_rel_air(:),  q_rel_clim(:,day_of_year),              &
-              & q_air(:),      q_clim(:,day_of_year),                  &
+              & t_air(:),      t_air_clim(:,imo),                      &  
+              & q_rel_air(:),  q_rel_clim(:,imo),                      &
+              & q_air(:),      q_clim(:,imo),                          &
               & wind_10m(:),                                           &
               & rain(:),                                               &
-              & swl1(:),       swl1_clim(:,day_of_year),               &
-              & swl2(:),       swl2_clim(:,day_of_year),               &
-              & swl3(:),       swl3_clim(:,day_of_year),               &
-              & swl4(:),       swl4_clim(:,day_of_year),               &
-              & lai(:),        lai_clim(:,day_of_year),                &
+              & swl1(:),       swl1_clim(:,imo),                       &
+              & swl2(:),       swl2_clim(:,imo),                       &
+              & swl3(:),       swl3_clim(:,imo),                       &
+              & swl4(:),       swl4_clim(:,imo),                       &
+              & lai(:),        lai_clim(:,imo),                        &
               & modified_pfts_fract(:,:),                              &
-              & fuel(:),                                               &
+              & fuel(:),       fuel_yearly(:),                         &
+              !& fuel(:),                                               &
               & population_density(:),                                 &
               & lightning_climatology(:),                              &
               & elevation(:),                                          &
@@ -678,16 +788,6 @@ CONTAINS
         cflux_dist_green_2_soil(:) = 0._wp
         cflux_dist_woods_2_soil(:) = 0._wp
       ENDIF
-
-    ! reset daily statistics
-    t_air_ave(:) = 0._wp
-    q_ave(:) = 0._wp
-    q_rel_ave(:) = 0._wp
-    swl1_ave(:) = 0._wp
-    swl2_ave(:) = 0._wp
-    swl3_ave(:) = 0._wp
-    swl4_ave(:) = 0._wp
-    lai_ave(:) = 0._wp
 
     ENDIF ! is_newday
 

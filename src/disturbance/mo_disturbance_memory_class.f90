@@ -49,7 +49,8 @@ MODULE mo_disturb_memory_class
     swl2_ave,                 & ! for Fire <Rackhun Son>
     swl3_ave,                 & ! for Fire <Rackhun Son>
     swl4_ave,                 & ! for Fire <Rackhun Son>
-    lai_ave                     ! for Fire <Rackhun Son>
+    lai_ave,                  & ! for Fire <Rackhun Son>
+    fuel_yearly                 ! for Fire <Rackhun Son>
 
   TYPE(t_jsb_var_real3d) ::   &
     t_air_clim,               & ! for Fire <Rackhun Son>
@@ -307,6 +308,14 @@ CONTAINS
       & hgrid, daily,                                                       &
       & t_cf('lai_clim', '-',                                               &
       &  'LAI daily climatology'),                                          &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('fuel_yearly', mem%fuel_yearly,                        &
+      & hgrid, surface,                                                     &
+      & t_cf('fuel_yearly', '-',                                            &
+      &  'Fuel yearly mean'),                                               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)

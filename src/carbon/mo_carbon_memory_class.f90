@@ -699,7 +699,7 @@ CONTAINS
       & t_cf('co2flux_fire_all_2_atm', 'kg(CO2) m-2(canopy) s-1', 'CO2 flux into atmosphere due to fire.'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                        &
       & prefix, suffix,                                                                                           &
-      & output_level=MEDIUM, l_conserve_quan=.TRUE., cons_quan_type_id = FLUX_C_CQ_TYPE,                          &
+      & output_level=BASIC, l_conserve_quan=.TRUE., cons_quan_type_id = FLUX_C_CQ_TYPE,                          &
       & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) ! initval taken from JSBACH3
 
     ! Carbon variables on tile area

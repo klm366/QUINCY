@@ -730,7 +730,8 @@ CONTAINS
     config%pft9_minmax                  = pft9_minmax
 
     ! New axis for the day of year <Rackhun Son>
-    daily => new_vgrid('daily', ZAXIS_GENERIC, 366, units='day')
+    !daily => new_vgrid('daily', ZAXIS_GENERIC, 366, units='day')
+    daily => new_vgrid('daily', ZAXIS_GENERIC, 12, units='day')
     CALL Register_vgrid(daily)
 
     ! New axis for climate LSTM <Rackhun Son>

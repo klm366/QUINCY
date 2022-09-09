@@ -467,7 +467,7 @@ CONTAINS
         & t_cf('soil_depth_sl', 'm', 'Soil depth within each soil layer'),     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & loutput=.TRUE.,                                                      &
+        & loutput=.TRUE.,   output_level=BASIC,                                &
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 

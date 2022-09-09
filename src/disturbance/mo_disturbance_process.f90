@@ -86,7 +86,8 @@ CONTAINS
     & swl4,        swl4_clim,                     & ! in
     & lai,         lai_clim,                      & ! in
     & modified_pfts_fract,                        & ! in
-    & fuel,                                       & ! in
+    & fuel,        fuel_yearly,                   & ! in
+    !& fuel,                                       & ! in
     & population_density,                         & ! in
     & lightning_climatology,                      & ! in
     & elevation,                                  & ! in
@@ -172,7 +173,8 @@ CONTAINS
       & swl4(:),        swl4_clim(:),   &
       & lai(:),         lai_clim(:),    &
       & modified_pfts_fract(:,:),       &
-      & fuel(:),                        &
+      & fuel(:),        fuel_yearly(:), &
+      !& fuel(:),                        &
       & population_density(:),          &
       & lightning_climatology(:),       &
       & elevation(:),                   &
@@ -277,7 +279,10 @@ CONTAINS
       emb_network(nc, d_emb_hidden),                &
       emb_network_act(nc, d_emb_hidden),            &
       climate_emb_output(nc, d_emb_output),         &
-      vegetation_emb_output(nc, d_emb_output)
+      vegetation_emb_output(nc, d_emb_output),      &
+
+      !fuel_(nc),                                    &
+      q_rel_air_(nc)
 
     REAL(wp) ::  scale
     INTEGER  ::  pft_idx
@@ -344,7 +349,9 @@ CONTAINS
                        / (swl4_clim_minmax(2)  - swl4_clim_minmax(1))
     emb_variables(:,8) = (lai_clim             - lai_clim_minmax(1))   &
                        / (lai_clim_minmax(2)   - lai_clim_minmax(1)) 
-    emb_variables(:,9) = (fuel                 - agb_minmax(1))        &
+    !emb_variables(:,9) = (fuel                 - agb_minmax(1))        &
+    !                   / (agb_minmax(2)        - agb_minmax(1)) 
+    emb_variables(:,9) = (fuel_yearly          - agb_minmax(1))        &
                        / (agb_minmax(2)        - agb_minmax(1)) 
     emb_variables(:,10)= (modified_pfts_fract(:,1) - pft1_minmax(1))   &
                        / (pft1_minmax(2)           - pft1_minmax(1))
@@ -364,6 +371,7 @@ CONTAINS
                        / (pft8_minmax(2)           - pft8_minmax(1))
     emb_variables(:,18)= (modified_pfts_fract(:,9) - pft9_minmax(1))   &
                        / (pft9_minmax(2)           - pft9_minmax(1))
+
 
     ! rel ano max 5
     ! swl2 ano no err
@@ -504,10 +512,25 @@ CONTAINS
     !                 * modified_pfts_fract(:,:8)  &
     !                 , dim=2)*1e-2/8
 
-    burned_fract = burned_fract*(1-modified_pfts_fract(:,9))
     where (burned_fract < 0) burned_fract = 0.
-    !burned_fract = 0.
+    where (burned_fract > 1) burned_fract = 1. 
 
+    where (emb_variables(:,9) < 0) emb_variables(:,9) = 0.
+    !where (climate_variables(:,3) > 1) climate_variables(:,3) = 1.
+
+    q_rel_air_(:) = q_rel_air(:)
+    where (q_rel_air_ < 0) q_rel_air_ = 0.
+    where (q_rel_air_ > 100) q_rel_air_ = 100.
+    
+    !fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
+    !where (fuel_ < 0) fuel_ = 0.
+
+    !burned_fract = burned_fract*(1-modified_pfts_fract(:,9))*(fuel_**0.25)
+    burned_fract = burned_fract*(1-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
+    burned_fract = burned_fract*(emb_variables(:,9)**0.25)*((1-q_rel_air_/100)**0.25)
+    !burned_fract = burned_fract*(fuel_(:)**0.25)*((1-q_rel_air_/100)**0.25)
+    
+    
   END SUBROUTINE burned_fract_dl
 
   ! Calculate windbreak for woody types
