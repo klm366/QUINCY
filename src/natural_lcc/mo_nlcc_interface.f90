@@ -132,6 +132,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, no_children
     INTEGER  :: i, itile
     REAL(wp) :: dtime
+    REAL(wp) :: accelerate_nlcc
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
     REAL(wp), POINTER  ::  var_collect(:,:)
@@ -153,7 +154,6 @@ CONTAINS
     REAL(wp), POINTER  ::  sla(:,:)
     REAL(wp), POINTER  ::  cover_fract_pot_previous_year(:,:)
     REAL(wp), POINTER  ::  cover_fract_sum(:)
-    REAL(wp), PARAMETER  ::  accelerate_nlcc = 1._wp
     REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
 
     ! Declare process memories
@@ -325,6 +325,7 @@ CONTAINS
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
 
+    accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
     init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
     init_mmtemp20 = .TRUE.
     IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.
