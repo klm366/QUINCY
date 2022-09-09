@@ -2808,9 +2808,9 @@ CONTAINS
           mpot = mpot_sat_correct * (ws_rel_vol**(-1._wp/mvgn) - 1._wp)**(1._wp/nvgn)
         END IF
         mpot = mpot * ((1._wp + ck * ice_vol)**2._wp)
-        mpot = MIN(100._wp,  mpot)
+        mpot = MAX(-100._wp,  mpot)
       ELSE
-        mpot = 100._wp
+        mpot = -100._wp
       END IF
       outvar = mpot
     END IF
