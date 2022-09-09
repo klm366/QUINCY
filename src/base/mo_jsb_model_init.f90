@@ -255,10 +255,7 @@ CONTAINS
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
       END IF
 
-      ! - also fuel and area damaged by natural disturbances in this timestep are calculated before any lcc takes place
-      IF (model%processes(FUEL_)%p%config%active) THEN
-        CALL model%Queue_task(FUEL_, "fuel")
-      END IF
+      ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
       IF (model%processes(DISTURB_)%p%config%active) THEN
         CALL model%Queue_task(DISTURB_, "damaged_area")
       END IF
@@ -365,6 +362,11 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     
+      ! Fuel is calculated last in a timestep to be right available in the next timestep
+      IF (model%processes(FUEL_)%p%config%active) THEN
+        CALL model%Queue_task(FUEL_, "fuel")
+      END IF
+
     ! ----------------------------------------------------------------------------------------------------- !
     !
     ! jsbach4 & quincy - using a mix of JSBACH4 and QUINCY soil physics processes and routines
