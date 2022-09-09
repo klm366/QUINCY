@@ -788,8 +788,9 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(PHENO_, lai,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
       IF (is_newyear(options%current_datetime, options%dtime)) THEN

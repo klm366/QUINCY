@@ -434,7 +434,8 @@ CONTAINS
 
     t_air_ave(:) = t_air_ave(:) + t_air(:)    *(options%dtime/60._wp/60._wp/24._wp)
     q_ave(:)     = q_ave(:)     + q_air(:)    *(options%dtime/60._wp/60._wp/24._wp)
-    q_rel_ave(:) = q_rel_ave(:) + q_rel_air(:)*(options%dtime/60._wp/60._wp/24._wp)
+    !q_rel_ave(:) = q_rel_ave(:) + q_rel_air(:)*(options%dtime/60._wp/60._wp/24._wp)
+    q_rel_ave(:) = q_rel_ave(:) + q_rel_air_climbuf(:)*(options%dtime/60._wp/60._wp/24._wp)
     swl1_ave(:)  = swl1_ave(:)  + swl1(:)     *(options%dtime/60._wp/60._wp/24._wp)
     swl2_ave(:)  = swl2_ave(:)  + swl2(:)     *(options%dtime/60._wp/60._wp/24._wp)
     swl3_ave(:)  = swl3_ave(:)  + swl3(:)     *(options%dtime/60._wp/60._wp/24._wp)
@@ -629,7 +630,8 @@ CONTAINS
 
             CALL burned_fract_dl(                                      &
               & t_air(:),      t_air_clim(:,imo),                      &  
-              & q_rel_air(:),  q_rel_clim(:,imo),                      &
+              !& q_rel_air(:),  q_rel_clim(:,imo),                      &
+              & q_rel_air_climbuf(:),  q_rel_clim(:,imo),              &
               & q_air(:),      q_clim(:,imo),                          &
               & wind_10m(:),                                           &
               & rain(:),                                               &

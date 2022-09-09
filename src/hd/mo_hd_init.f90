@@ -138,6 +138,15 @@ CONTAINS
         & start_extdim=1, end_extdim=nneigh_max,    &
         & extdim_name='nneigh')
 
+      IF (dsl4jsb_config(HD_)%use_bifurcated_rivers) THEN
+        ! Number of channel river splits into 
+        return_pointer => input_file%Read_2d(         &
+          & variable_name='NSPLIT',                   &
+          & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
+      ELSE
+        dsl4jsb_var_ptr(HD_,nsplit)(:,:) = 1._wp
+      END IF
+
       nproma = grid%nproma
       nblks  = grid%nblks
 
