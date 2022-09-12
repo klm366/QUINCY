@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! Rackhun Son (2022-08-03): ligtnining climatology & population density for fire
+!! Rackhun Son (2022-09-11): local mean (climatology) variables for fire
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
@@ -39,7 +40,17 @@ MODULE mo_disturb_init
   TYPE t_disturb_init_vars
     REAL(wp), POINTER ::  &
       & lightning_climatology(:,:,:), &
-      & population_density(:,:,:)
+      & population_density(:,:,:), &
+
+      & t_air_local_clim(:,:,:), &
+      & q_rel_local_clim(:,:,:), &
+      & q_local_clim(:,:,:), &
+      & ws10_local_clim(:,:,:), &
+      & swvl1_local_clim(:,:,:), &
+      & swvl2_local_clim(:,:,:), &
+      & swvl3_local_clim(:,:,:), &
+      & swvl4_local_clim(:,:,:), &
+      & lai_local_clim(:,:,:)
 
   END TYPE t_disturb_init_vars
 
@@ -82,7 +93,18 @@ CONTAINS
 
     DEALLOCATE( &
       & disturb_init_vars%lightning_climatology,       &
-      & disturb_init_vars%population_density           &
+      & disturb_init_vars%population_density,          &
+
+      & disturb_init_vars%t_air_local_clim,             &
+      & disturb_init_vars%q_rel_local_clim,             &
+      & disturb_init_vars%q_local_clim,                 &
+      & disturb_init_vars%ws10_local_clim,              &
+      & disturb_init_vars%swvl1_local_clim,             &
+      & disturb_init_vars%swvl2_local_clim,             &
+      & disturb_init_vars%swvl3_local_clim,             &
+      & disturb_init_vars%swvl4_local_clim,             &
+      & disturb_init_vars%lai_local_clim                &
+
       & )
 
   END SUBROUTINE disturb_finalize_init_vars
@@ -97,7 +119,8 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
 
     REAL(wp), POINTER ::  &
-      & ptr_3D(:,:,:)
+      & ptr_3D(:,:,:)     
+      !& ptr_2D(:,:)
     TYPE(t_input_file) :: input_file
 
     INTEGER :: nproma, nblks
@@ -111,20 +134,49 @@ CONTAINS
 
     ALLOCATE( &
       & disturb_init_vars%lightning_climatology(nproma, nblks, 1:366),              &
-      & disturb_init_vars%population_density   (nproma, nblks, 1:366)               &
+      & disturb_init_vars%population_density   (nproma, nblks, 1:366),              &
+
+      & disturb_init_vars%t_air_local_clim (nproma, nblks, 1:366),                   &
+      & disturb_init_vars%q_rel_local_clim (nproma, nblks, 1:366),                   &
+      & disturb_init_vars%q_local_clim     (nproma, nblks, 1:366),                   &
+      & disturb_init_vars%ws10_local_clim  (nproma, nblks, 1:366),                   &
+      & disturb_init_vars%swvl1_local_clim (nproma, nblks, 1:366),                   &
+      & disturb_init_vars%swvl2_local_clim (nproma, nblks, 1:366),                   &
+      & disturb_init_vars%swvl3_local_clim (nproma, nblks, 1:366),                   &
+      & disturb_init_vars%swvl4_local_clim (nproma, nblks, 1:366),                   &
+      & disturb_init_vars%lai_local_clim   (nproma, nblks, 1:366)                    &
+      !& disturb_init_vars%t_air_local_clim (nproma, nblks, 1:12),                   &
+      !& disturb_init_vars%q_rel_local_clim (nproma, nblks, 1:12),                   &
+      !& disturb_init_vars%q_local_clim     (nproma, nblks, 1:12),                   &
+      !& disturb_init_vars%ws10_local_clim  (nproma, nblks, 1:12),                   &
+      !& disturb_init_vars%swvl1_local_clim (nproma, nblks, 1:12),                   &
+      !& disturb_init_vars%swvl2_local_clim (nproma, nblks, 1:12),                   &
+      !& disturb_init_vars%swvl3_local_clim (nproma, nblks, 1:12),                   &
+      !& disturb_init_vars%swvl4_local_clim (nproma, nblks, 1:12),                   &
+      !& disturb_init_vars%lai_local_clim   (nproma, nblks, 1:12)                    &
       & )
 
     disturb_init_vars%lightning_climatology(:,:,:) = missval
     disturb_init_vars%population_density   (:,:,:) = missval
 
+    disturb_init_vars%t_air_local_clim (:,:,:) = missval
+    disturb_init_vars%q_rel_local_clim (:,:,:) = missval
+    disturb_init_vars%q_local_clim     (:,:,:) = missval
+    disturb_init_vars%ws10_local_clim  (:,:,:) = missval
+    disturb_init_vars%swvl1_local_clim (:,:,:) = missval
+    disturb_init_vars%swvl2_local_clim (:,:,:) = missval
+    disturb_init_vars%swvl3_local_clim (:,:,:) = missval
+    disturb_init_vars%swvl4_local_clim (:,:,:) = missval
+    disturb_init_vars%lai_local_clim   (:,:,:) = missval
+
     dsl4jsb_Get_config(DISTURB_)
 
+    !  lightning climatology
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (lightning climatology) init from ' &
       &                          //TRIM(dsl4jsb_Config(DISTURB_)%bc_lightning_filename))
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%bc_lightning_filename), model%grid_id)
 
-    !  lightning climatology
     IF (debug_on()) CALL message(TRIM(routine), 'reading lightning_climatology ...')
     ptr_3D => input_file%Read_2d_time(    &
       & variable_name='lightning_climatology')
@@ -133,16 +185,147 @@ CONTAINS
 
     CALL input_file%Close()
 
+    ! population density
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (population density) init from ' &
       &                          //TRIM(dsl4jsb_Config(DISTURB_)%bc_population_filename))
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%bc_population_filename), model%grid_id)
 
-    ! population density
     IF (debug_on()) CALL message(TRIM(routine), 'reading population density ...')
     ptr_3D => input_file%Read_2d_time(    &
       & variable_name='population_density')
     disturb_init_vars%population_density(:,:,1:366) = ptr_3D(:,:,1:366)
+    DEALLOCATE(ptr_3D)
+
+    ! temperature (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (temperature local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_t_air_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_t_air_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean of temperature ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='t2m')
+    disturb_init_vars%t_air_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%t_air_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
+    DEALLOCATE(ptr_3D)
+
+    CALL input_file%Close()
+
+    ! relative humidity (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (relative humidity local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_rH_cf_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_rH_cf_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean relative humidity ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='rH_cf')
+    disturb_init_vars%q_rel_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%q_rel_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
+    DEALLOCATE(ptr_3D)
+
+    CALL input_file%Close()
+
+    ! specific humidity (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (specific humidity local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_q_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_q_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean specific humidity ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='q')
+    disturb_init_vars%q_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%q_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
+    DEALLOCATE(ptr_3D)
+
+    CALL input_file%Close()
+
+    ! wind speed (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (wind speed local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_ws10_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_ws10_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean wind speed ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='ws10')
+    disturb_init_vars%ws10_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%ws10_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
+    DEALLOCATE(ptr_3D)
+
+    CALL input_file%Close()
+
+    ! soil water content level1 (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (soil water level1 local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl1_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl1_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean soil water content level1 ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='swvl1')
+    disturb_init_vars%swvl1_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%swvl1_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
+    DEALLOCATE(ptr_3D)
+
+    CALL input_file%Close()
+
+    ! soil water content level2 (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (soil water level2 local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl2_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl2_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean soil water content level2 ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='swvl2')
+    disturb_init_vars%swvl2_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%swvl2_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
+    DEALLOCATE(ptr_3D)
+
+    ! soil water content level3 (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (soil water level3 local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl3_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl3_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean soil water content level3 ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='swvl3')
+    disturb_init_vars%swvl3_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%swvl3_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
+    DEALLOCATE(ptr_3D)
+
+    CALL input_file%Close()
+
+    ! soil water content level4 (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (soil water level4 local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl4_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl4_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean soil water content level4 ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='swvl4')
+    disturb_init_vars%swvl4_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%swvl4_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
+    DEALLOCATE(ptr_3D)
+
+    CALL input_file%Close()
+
+    ! LAI (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (lai local mean) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_lai_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_lai_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading local mean lai ...')
+    ptr_3D => input_file%Read_2d_time(    &
+      & variable_name='Lai')
+    disturb_init_vars%lai_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
+    !disturb_init_vars%lai_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
     DEALLOCATE(ptr_3D)
 
     CALL input_file%Close()
@@ -179,6 +362,52 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'setting population density ...')
     dsl4jsb_memory(DISTURB_)%population_density(:,:,:) = disturb_init_vars%population_density(:,:,:)
     !$acc update device(dsl4jsb_memory(DISTURB_)%population_density)
+
+    ! temperature (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting temperature local mean ...')
+    dsl4jsb_memory(DISTURB_)%t_air_local_clim(:,:,:) = disturb_init_vars%t_air_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%t_air_local_clim)
+
+    ! relative humidity (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting relative humidity local mean ...')
+    dsl4jsb_memory(DISTURB_)%q_rel_local_clim(:,:,:) = disturb_init_vars%q_rel_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%q_rel_local_clim)
+
+    ! speficif humidity (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting specific humidity local mean ...')
+    dsl4jsb_memory(DISTURB_)%q_local_clim(:,:,:) = disturb_init_vars%q_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%q_local_clim)
+
+    ! wind speed (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting wind speed local mean ...')
+    dsl4jsb_memory(DISTURB_)%ws10_local_clim(:,:,:) = disturb_init_vars%ws10_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%ws10_local_clim)
+
+    ! soil water content level1 (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting soil water content level1 local mean ...')
+    dsl4jsb_memory(DISTURB_)%swvl1_local_clim(:,:,:) = disturb_init_vars%swvl1_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%swvl1_local_clim)
+
+    ! soil water content level2 (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting soil water content level2 local mean ...')
+    dsl4jsb_memory(DISTURB_)%swvl2_local_clim(:,:,:) = disturb_init_vars%swvl2_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%swvl2_local_clim)
+
+    ! soil water content level3 (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting soil water content level3 local mean ...')
+    dsl4jsb_memory(DISTURB_)%swvl3_local_clim(:,:,:) = disturb_init_vars%swvl3_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%swvl3_local_clim)
+
+    ! soil water content level4 (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting soil water content level4 local mean ...')
+    dsl4jsb_memory(DISTURB_)%swvl4_local_clim(:,:,:) = disturb_init_vars%swvl4_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%swvl4_local_clim)
+
+    ! lai (local mean)
+    IF (debug_on()) CALL message(TRIM(routine), 'setting lai local mean ...')
+    dsl4jsb_memory(DISTURB_)%lai_local_clim(:,:,:) = disturb_init_vars%lai_local_clim(:,:,:)
+    !$acc update device(dsl4jsb_memory(DISTURB_)%lai_local_clim)
+
 
   END SUBROUTINE disturb_init_bc
 

@@ -75,19 +75,19 @@ CONTAINS
 
   !!! DL based Fire model  <Rackhun Son>
   SUBROUTINE burned_fract_dl( &
-    & t_air,       t_clim,                        & ! in
-    & q_rel_air,   q_rel_clim,                    & ! in
-    & q_air,       q_clim,                        & ! in
+    & t_air,       t_clim_o,      t_clim_m,       & ! in
+    & q_rel_air,   q_rel_clim_o,  q_rel_clim_m,   & ! in
+    & q_air,       q_clim_o,      q_clim_m,       & ! in
     & wind_10m,                                   & ! in
     & rain,                                       & ! in
-    & swl1,        swl1_clim,                     & ! in
-    & swl2,        swl2_clim,                     & ! in
-    & swl3,        swl3_clim,                     & ! in
-    & swl4,        swl4_clim,                     & ! in
-    & lai,         lai_clim,                      & ! in
+    & swl1,        swl1_clim_o,   swl1_clim_m,    & ! in
+    & swl2,        swl2_clim_o,   swl2_clim_m,    & ! in
+    & swl3,        swl3_clim_o,   swl3_clim_m,    & ! in
+    & swl4,        swl4_clim_o,   swl4_clim_m,    & ! in
+    & lai,         lai_clim_o,    lai_clim_m,     & ! in
     & modified_pfts_fract,                        & ! in
     & fuel,        fuel_yearly,                   & ! in
-    !& fuel,                                       & ! in
+    !& fuel,                                      & ! in
     & population_density,                         & ! in
     & lightning_climatology,                      & ! in
     & elevation,                                  & ! in
@@ -161,23 +161,23 @@ CONTAINS
     & )
 
     ! Input Arguments
-    REAL(wp), INTENT(in) ::             &
-      & t_air(:),       t_clim(:),      &
-      & q_rel_air(:),   q_rel_clim(:),  &
-      & q_air(:),       q_clim(:),      &
-      & wind_10m(:),                    &
-      & rain(:),                        &
-      & swl1(:),        swl1_clim(:),   &
-      & swl2(:),        swl2_clim(:),   &
-      & swl3(:),        swl3_clim(:),   &
-      & swl4(:),        swl4_clim(:),   &
-      & lai(:),         lai_clim(:),    &
-      & modified_pfts_fract(:,:),       &
-      & fuel(:),        fuel_yearly(:), &
-      !& fuel(:),                        &
-      & population_density(:),          &
-      & lightning_climatology(:),       &
-      & elevation(:),                   &
+    REAL(wp), INTENT(in) ::                             &
+      & t_air(:),     t_clim_o(:),     t_clim_m(:),     &
+      & q_rel_air(:), q_rel_clim_o(:), q_rel_clim_m(:), &
+      & q_air(:),     q_clim_o(:),     q_clim_m(:),     &
+      & wind_10m(:),                                    &
+      & rain(:),                                        &
+      & swl1(:),      swl1_clim_o(:),  swl1_clim_m(:),  &
+      & swl2(:),      swl2_clim_o(:),  swl2_clim_m(:),  &
+      & swl3(:),      swl3_clim_o(:),  swl3_clim_m(:),  &
+      & swl4(:),      swl4_clim_o(:),  swl4_clim_m(:),  &
+      & lai(:),       lai_clim_o(:),   lai_clim_m(:),   &
+      & modified_pfts_fract(:,:),                       &
+      & fuel(:),       fuel_yearly(:),                  &
+      !& fuel(:),                                       &
+      & population_density(:),                          &
+      & lightning_climatology(:),                       &
+      & elevation(:),                                   &
 
       & climate_i2i_weight(:,:),    climate_i2i_bias(:),      &
       & climate_h2i_weight(:,:),    climate_h2i_bias(:),      &
@@ -281,49 +281,55 @@ CONTAINS
       climate_emb_output(nc, d_emb_output),         &
       vegetation_emb_output(nc, d_emb_output),      &
 
-      !fuel_(nc),                                    &
+      fuel_(nc),                                    &
       q_rel_air_(nc)
 
     REAL(wp) ::  scale
     INTEGER  ::  pft_idx
 
-
-    climate_variables(:,1) = (t_air               - t_air_minmax(1))     &
-                           / (t_air_minmax(2)     - t_air_minmax(1))
-    climate_variables(:,2) = (t_air-t_clim        - t_air_ano_minmax(1)) &
-                           / (t_air_ano_minmax(2) - t_air_ano_minmax(1)) 
-    climate_variables(:,3) = (q_rel_air           - q_rel_minmax(1))     &
-                           / (q_rel_minmax(2)     - q_rel_minmax(1)) 
-    climate_variables(:,4) = (q_rel_air-q_rel_clim- q_rel_ano_minmax(1)) &
-                           / (q_rel_ano_minmax(2) - q_rel_ano_minmax(1)) 
-    climate_variables(:,5) = (q_air               - q_minmax(1))         &
-                           / (q_minmax(2)         - q_minmax(1)) 
-    climate_variables(:,6) = (q_air-q_clim        - q_ano_minmax(1))     &
-                           / (q_ano_minmax(2)     - q_ano_minmax(1)) 
-    climate_variables(:,7) = (wind_10m            - wind_10m_minmax(1))  &
-                           / (wind_10m_minmax(2)  - wind_10m_minmax(1)) 
-    climate_variables(:,8) = (rain*86400          - rain_minmax(1))      &
-                           / (rain_minmax(2)      - rain_minmax(1)) 
-    climate_variables(:,9) = (swl1                - swl1_minmax(1))      &
-                           / (swl1_minmax(2)      - swl1_minmax(1)) 
-    climate_variables(:,10)= (swl1-swl1_clim      - swl1_ano_minmax(1))  &
-                           / (swl1_ano_minmax(2)  - swl1_ano_minmax(1)) 
-    climate_variables(:,11)= (swl2                - swl2_minmax(1))      &
-                           / (swl2_minmax(2)      - swl2_minmax(1))
-    climate_variables(:,12)= (swl2-swl2_clim      - swl2_ano_minmax(1))  &
-                           / (swl2_ano_minmax(2)  - swl2_ano_minmax(1))  
-    climate_variables(:,13)= (swl3                - swl3_minmax(1))      &
-                           / (swl3_minmax(2)      - swl3_minmax(1))
-    climate_variables(:,14)= (swl3-swl3_clim      - swl3_ano_minmax(1))  &
-                           / (swl3_ano_minmax(2)  - swl3_ano_minmax(1))  
-    climate_variables(:,15)= (swl4                - swl4_minmax(1))      &
-                           / (swl4_minmax(2)      - swl4_minmax(1))
-    climate_variables(:,16)= (swl4-swl4_clim      - swl4_ano_minmax(1))  &
-                           / (swl4_ano_minmax(2)  - swl4_ano_minmax(1)) 
+    !climate_variables(:,1) = (t_air                 - t_air_minmax(1))                     &
+    climate_variables(:,1) = (t_air-t_clim_m+t_clim_o - t_air_minmax(1))                  &
+                           / (t_air_minmax(2)       - t_air_minmax(1))
+    climate_variables(:,2) = (t_air-t_clim_m        - t_air_ano_minmax(1))                 &
+                           / (t_air_ano_minmax(2)   - t_air_ano_minmax(1)) 
+    !climate_variables(:,3) = (q_rel_air             - q_rel_minmax(1))                     &
+    climate_variables(:,3) = (q_rel_air-q_rel_clim_m+q_rel_clim_o - q_rel_minmax(1))       &
+                           / (q_rel_minmax(2)       - q_rel_minmax(1)) 
+    climate_variables(:,4) = (q_rel_air-q_rel_clim_m- q_rel_ano_minmax(1))                 &
+                           / (q_rel_ano_minmax(2)   - q_rel_ano_minmax(1)) 
+    !climate_variables(:,5) = (q_air                 - q_minmax(1))                         &
+    climate_variables(:,5) = (q_air-q_clim_m+q_clim_o - q_minmax(1))                         &
+                           / (q_minmax(2)           - q_minmax(1)) 
+    climate_variables(:,6) = (q_air-q_clim_m        - q_ano_minmax(1))                     &
+                           / (q_ano_minmax(2)       - q_ano_minmax(1)) 
+    climate_variables(:,7) = (wind_10m              - wind_10m_minmax(1))                  &
+                           / (wind_10m_minmax(2)    - wind_10m_minmax(1)) 
+    climate_variables(:,8) = (rain*86400            - rain_minmax(1))                      &
+                           / (rain_minmax(2)        - rain_minmax(1)) 
+    !climate_variables(:,9) = (swl1                  - swl1_minmax(1))                      &
+    climate_variables(:,9) = (swl1-swl1_clim_m+swl1_clim_o - swl1_minmax(1))               &
+                           / (swl1_minmax(2)        - swl1_minmax(1)) 
+    climate_variables(:,10)= (swl1-swl1_clim_m      - swl1_ano_minmax(1))                  &
+                           / (swl1_ano_minmax(2)    - swl1_ano_minmax(1)) 
+    !climate_variables(:,11)= (swl2                  - swl2_minmax(1))                      &
+    climate_variables(:,11)= (swl2-swl2_clim_m+swl2_clim_o - swl2_minmax(1))               &
+                           / (swl2_minmax(2)        - swl2_minmax(1))
+    climate_variables(:,12)= (swl2-swl2_clim_m      - swl2_ano_minmax(1))                  &
+                           / (swl2_ano_minmax(2)    - swl2_ano_minmax(1))  
+    !climate_variables(:,13)= (swl3                  - swl3_minmax(1))                      &
+    climate_variables(:,13)= (swl3-swl3_clim_m+swl3_clim_o - swl3_minmax(1))               &
+                           / (swl3_minmax(2)        - swl3_minmax(1))
+    climate_variables(:,14)= (swl3-swl3_clim_m      - swl3_ano_minmax(1))                  &
+                           / (swl3_ano_minmax(2)    - swl3_ano_minmax(1))  
+    !climate_variables(:,15)= (swl4                  - swl4_minmax(1))                      &
+    climate_variables(:,15)= (swl4-swl4_clim_m+swl4_clim_o - swl4_minmax(1))               &
+                           / (swl4_minmax(2)        - swl4_minmax(1))
+    climate_variables(:,16)= (swl4-swl4_clim_m      - swl4_ano_minmax(1))                  &
+                           / (swl4_ano_minmax(2)    - swl4_ano_minmax(1)) 
     
-    vegetation_variables(:,1) = (lai              - lai_minmax(1))       &
+    vegetation_variables(:,1) = (lai              - lai_minmax(1))                         &
                               / (lai_minmax(2)    - lai_minmax(1))
-    vegetation_variables(:,2) = (lai-lai_clim     - lai_ano_minmax(1))   &
+    vegetation_variables(:,2) = (lai-lai_clim_m   - lai_ano_minmax(1))                     &
                               / (lai_ano_minmax(2)- lai_ano_minmax(1))
 
     static_variables(:,1) = (population_density             - population_density_minmax(1))    &
@@ -333,21 +339,21 @@ CONTAINS
     static_variables(:,3) = (elevation                      - elevation_minmax(1))             &
                           / (elevation_minmax(2)            - elevation_minmax(1))  
 
-    emb_variables(:,1) = (t_clim               - t_air_clim_minmax(1)) &
+    emb_variables(:,1) = (t_clim_o             - t_air_clim_minmax(1))     &
                        / (t_air_clim_minmax(2) - t_air_clim_minmax(1)) 
-    emb_variables(:,2) = (q_rel_clim           - q_rel_clim_minmax(1)) &
+    emb_variables(:,2) = (q_rel_clim_o         - q_rel_clim_minmax(1)) &
                        / (q_rel_clim_minmax(2) - q_rel_clim_minmax(1))
-    emb_variables(:,3) = (q_clim               - q_clim_minmax(1))     &
+    emb_variables(:,3) = (q_clim_o             - q_clim_minmax(1)) &
                        / (q_clim_minmax(2)     - q_clim_minmax(1))
-    emb_variables(:,4) = (swl1_clim            - swl1_clim_minmax(1))  &
+    emb_variables(:,4) = (swl1_clim_o          - swl1_clim_minmax(1))  &
                        / (swl1_clim_minmax(2)  - swl1_clim_minmax(1)) 
-    emb_variables(:,5) = (swl2_clim            - swl2_clim_minmax(1))  &
+    emb_variables(:,5) = (swl2_clim_o          - swl2_clim_minmax(1))  &
                        / (swl2_clim_minmax(2)  - swl2_clim_minmax(1)) 
-    emb_variables(:,6) = (swl3_clim            - swl3_clim_minmax(1))  &
+    emb_variables(:,6) = (swl3_clim_o          - swl3_clim_minmax(1))  &
                        / (swl3_clim_minmax(2)  - swl3_clim_minmax(1)) 
-    emb_variables(:,7) = (swl4_clim            - swl4_clim_minmax(1))  &
+    emb_variables(:,7) = (swl4_clim_o          - swl4_clim_minmax(1))  &
                        / (swl4_clim_minmax(2)  - swl4_clim_minmax(1))
-    emb_variables(:,8) = (lai_clim             - lai_clim_minmax(1))   &
+    emb_variables(:,8) = (lai_clim_o           - lai_clim_minmax(1))   &
                        / (lai_clim_minmax(2)   - lai_clim_minmax(1)) 
     !emb_variables(:,9) = (fuel                 - agb_minmax(1))        &
     !                   / (agb_minmax(2)        - agb_minmax(1)) 
@@ -506,30 +512,31 @@ CONTAINS
                  * modified_pfts_fract(:,1)            &
                  * 1e-2 / 8
 
-    !burned_fract = sum(climate_lstm_output_       &
-    !                 * vegetation_lstm_output_    &
-    !                 * static_network_output      &
-    !                 * modified_pfts_fract(:,:8)  &
-    !                 , dim=2)*1e-2/8
-
     where (burned_fract < 0) burned_fract = 0.
     where (burned_fract > 1) burned_fract = 1. 
 
-    where (emb_variables(:,9) < 0) emb_variables(:,9) = 0.
-    !where (climate_variables(:,3) > 1) climate_variables(:,3) = 1.
+    ! ratio for bared & snow area
+    burned_fract = burned_fract*(1-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
 
+    ! ratio for dry (fuel)
     q_rel_air_(:) = q_rel_air(:)
     where (q_rel_air_ < 0) q_rel_air_ = 0.
     where (q_rel_air_ > 100) q_rel_air_ = 100.
-    
-    !fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
-    !where (fuel_ < 0) fuel_ = 0.
+    burned_fract = burned_fract*((1-q_rel_air_/100)**0.25)
 
-    !burned_fract = burned_fract*(1-modified_pfts_fract(:,9))*(fuel_**0.25)
-    burned_fract = burned_fract*(1-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
-    burned_fract = burned_fract*(emb_variables(:,9)**0.25)*((1-q_rel_air_/100)**0.25)
-    !burned_fract = burned_fract*(fuel_(:)**0.25)*((1-q_rel_air_/100)**0.25)
+    ! ratio for (dry) fuel
+    !where (emb_variables(:,9) < 0) emb_variables(:,9) = 0.
+    fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
+    where (fuel_ < 0) fuel_ = 0.
+    burned_fract = burned_fract*(emb_variables(:,9)**0.25)
+
+    !if (isnan(fuel_yearly(1))) then
+    !  print*, 'fuel_yearly'
+    !endif
     
+    
+    !burned_fract = burned_fract*(1-modified_pfts_fract(:,9))*(fuel_**0.25)
+    !burned_fract = burned_fract*(fuel_(:)**0.25)*((1-q_rel_air_/100)**0.25)
     
   END SUBROUTINE burned_fract_dl
 
