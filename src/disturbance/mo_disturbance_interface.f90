@@ -455,18 +455,18 @@ CONTAINS
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
 
       !!!! These will be removed after the FUEL issue 
-      CALL calc_fuel_jsbach(       &
-        & c_acid_ag1_ta(:),        & ! in
-        & c_water_ag1_ta(:),       & ! in
-        & c_ethanol_ag1_ta(:),     & ! in
-        & c_nonsoluble_ag1_ta(:),  & ! in
-        & c_acid_ag2_ta(:),        & ! in
-        & c_water_ag2_ta(:),       & ! in
-        & c_ethanol_ag2_ta(:),     & ! in
-        & c_nonsoluble_ag2_ta(:),  & ! in
-        & fract_fpc_max(:),        & ! in
-        & fuel(:)                  & ! out
-        & )
+      !CALL calc_fuel_jsbach(       &
+      !  & c_acid_ag1_ta(:),        & ! in
+      !  & c_water_ag1_ta(:),       & ! in
+      !  & c_ethanol_ag1_ta(:),     & ! in
+      !  & c_nonsoluble_ag1_ta(:),  & ! in
+      !  & c_acid_ag2_ta(:),        & ! in
+      !  & c_water_ag2_ta(:),       & ! in
+      !  & c_ethanol_ag2_ta(:),     & ! in
+      !  & c_nonsoluble_ag2_ta(:),  & ! in
+      !  & fract_fpc_max(:),        & ! in
+      !  & fuel(:)                  & ! out
+      !  & )
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !if (SUM(fuel) > 0) then
       !  print*, SUM(fuel)
@@ -664,7 +664,7 @@ CONTAINS
             CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
           CASE (4) !! Read burned_fract
           CASE (5) !! DL based new fire algoritm   <Rackhun Son>
-            !IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
+            IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
             !if (SUM(c_acid_ag1_ta)>0) then
             !  print*, SUM(c_acid_ag1_ta)
             !endif
