@@ -255,16 +255,7 @@ CONTAINS
       & swl1,                          &   ! volumetric soil water content in the 1st layer <Rackhun Son>
       & swl2,                          &   ! volumetric soil water content in the 2nd layer <Rackhun Son>
       & swl3,                          &   ! volumetric soil water content in the 3rd layer <Rackhun Son>
-      & swl4                               ! volumetric soil water content in the 4th layer <Rackhun Son>
-      !& t_air_bias,                    & 
-      !& q_air_bias,                    & 
-      !& q_rel_bias,                    & 
-      !& ws10_bias,                     & 
-      !& swl1_bias,                     & 
-      !& swl2_bias,                     & 
-      !& swl3_bias,                     & 
-      !& swl4_bias,                     & 
-      !& lai_bias                   
+      & swl4                               ! volumetric soil water content in the 4th layer <Rackhun Son>                
 
     REAL(wp), DIMENSION(options%nc, 9) :: &
       & modified_pfts_fract                ! modified pft fractions for Fire <Rackhun Son>
@@ -477,6 +468,9 @@ CONTAINS
         & fuel(:)                  & ! out
         & )
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !if (SUM(fuel) > 0) then
+      !  print*, SUM(fuel)
+      !endif
 
       ! calculate auxiliary variables for DL fire model   <Rackhun Son>
       IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
@@ -541,9 +535,9 @@ CONTAINS
 
           ELSE
             !IF (diff_year < 1) Then
-            IF (diff_year < 20) Then
+            IF (diff_year < 10) Then
               !clim_ratio = MAX(30._wp/idy, 1._wp)
-              clim_ratio = MAX(20._wp/(diff_year+1), 1._wp)
+              clim_ratio = MAX(10._wp/(diff_year+1), 1._wp)
             ELSE
               clim_ratio = 1._wp
             ENDIF
@@ -557,22 +551,22 @@ CONTAINS
             !swl4_clim(:,imo)  = swl4_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl4_ave(:)*clim_ratio/30._wp
             !lai_clim(:,imo)   = lai_clim(:,imo)*(30._wp-clim_ratio)/30._wp   + lai_ave(:)*clim_ratio/30._wp
 
-            t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*(20._wp-clim_ratio)/20._wp + t_air_ave(:)*clim_ratio/20._wp
-            q_clim(:,day_of_year)     = q_clim(:,day_of_year)*(20._wp-clim_ratio)/20._wp     + q_ave(:)*clim_ratio/20._wp
-            q_rel_clim(:,day_of_year) = q_rel_clim(:,day_of_year)*(20._wp-clim_ratio)/20._wp + q_rel_ave(:)*clim_ratio/20._wp
-            swl1_clim(:,day_of_year)  = swl1_clim(:,day_of_year)*(20._wp-clim_ratio)/20._wp  + swl1_ave(:)*clim_ratio/20._wp
-            swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)*(20._wp-clim_ratio)/20._wp  + swl2_ave(:)*clim_ratio/20._wp
-            swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)*(20._wp-clim_ratio)/20._wp  + swl3_ave(:)*clim_ratio/20._wp
-            swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)*(20._wp-clim_ratio)/20._wp  + swl4_ave(:)*clim_ratio/20._wp
-            lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)*(20._wp-clim_ratio)/20._wp   + lai_ave(:)*clim_ratio/20._wp
+            t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp + t_air_ave(:)*clim_ratio/10._wp
+            q_clim(:,day_of_year)     = q_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp     + q_ave(:)*clim_ratio/10._wp
+            q_rel_clim(:,day_of_year) = q_rel_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp + q_rel_ave(:)*clim_ratio/10._wp
+            swl1_clim(:,day_of_year)  = swl1_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl1_ave(:)*clim_ratio/10._wp
+            swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl2_ave(:)*clim_ratio/10._wp
+            swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl3_ave(:)*clim_ratio/10._wp
+            swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl4_ave(:)*clim_ratio/10._wp
+            lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp   + lai_ave(:)*clim_ratio/10._wp
           ENDIF
 
-          !IF (iyr == time_config%tc_exp_startdate%date%year) THEN   ! 1st year
-          !  yearly_ratio = MAX(365._wp/get_year_day(options%current_datetime), 1._wp)
-          !ELSE
-          !  yearly_ratio = 1._wp
-          !ENDIF
-          !fuel_yearly(:)= fuel_yearly(:)*(365._wp-yearly_ratio)/365._wp  + fuel(:)*yearly_ratio/365._wp
+          IF (iyr == time_config%tc_exp_startdate%date%year) THEN   ! 1st year
+            yearly_ratio = MAX(365._wp/get_year_day(options%current_datetime), 1._wp)
+          ELSE
+            yearly_ratio = 1._wp
+          ENDIF
+          fuel_yearly(:)= fuel_yearly(:)*(365._wp-yearly_ratio)/365._wp  + fuel(:)*yearly_ratio/365._wp
 
         ENDIF
 
@@ -616,23 +610,13 @@ CONTAINS
         !t_air_local_clim      => dsl4jsb_memory(DISTURB_)%t_air_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
         !q_rel_local_clim      => dsl4jsb_memory(DISTURB_)%q_rel_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
         !q_local_clim          => dsl4jsb_memory(DISTURB_)%q_local_clim(ics:ice, iblk, imo)             ! <Rackhun Son>
-        !ws10_local_clim       => dsl4jsb_memory(DISTURB_)%ws10_local_clim(ics:ice, iblk, imo)          ! <Rackhun Son>
+        !!ws10_local_clim       => dsl4jsb_memory(DISTURB_)%ws10_local_clim(ics:ice, iblk, imo)          ! <Rackhun Son>
         !swvl1_local_clim      => dsl4jsb_memory(DISTURB_)%swvl1_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
         !swvl2_local_clim      => dsl4jsb_memory(DISTURB_)%swvl2_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
         !swvl3_local_clim      => dsl4jsb_memory(DISTURB_)%swvl3_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
         !swvl4_local_clim      => dsl4jsb_memory(DISTURB_)%swvl4_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
         !lai_local_clim        => dsl4jsb_memory(DISTURB_)%lai_local_clim(ics:ice, iblk, imo)           ! <Rackhun Son>
-
-
-        !t_air_bias(:) = t_air_clim(:,imo) - t_air_local_clim(:)
-        !q_air_bias(:) = q_clim(:,imo)     - q_local_clim(:)
-        !q_rel_bias(:) = q_rel_clim(:,imo) - q_rel_local_clim(:)
-        !ws10_bias(:)  = ws10_clim(:,imo)  / ws10_local_clim(:)
-        !swl1_bias(:)  = swl1_clim(:,imo)  - swvl1_local_clim(:)
-        !swl2_bias(:)  = swl2_clim(:,imo)  - swvl2_local_clim(:)
-        !swl3_bias(:)  = swl3_clim(:,imo)  - swvl3_local_clim(:)
-        !swl4_bias(:)  = swl4_clim(:,imo)  - swvl4_local_clim(:)
-        !lai_bias(:)   = lai_clim(:,imo)   - lai_local_clim(:)
+        
       ENDIF
 
       !print*, t_air_min_bias(1)
@@ -686,18 +670,26 @@ CONTAINS
             !endif
 
             CALL burned_fract_dl(                                      &
-              & t_air(:),      t_air_local_clim(:), t_air_clim(:,imo), &  
-              & q_rel_air(:),  q_rel_local_clim(:), q_rel_clim(:,imo), &
-              & q_air(:),      q_local_clim(:),     q_clim(:,imo),     &
+              & t_air(:),                                              &
+              & t_air_local_clim(:), t_air_clim(:,day_of_year),        &  
+              & q_rel_air(:),                                          &
+              & q_rel_local_clim(:), q_rel_clim(:,day_of_year),        &
+              & q_air(:),                                              &
+              & q_local_clim(:),     q_clim(:,day_of_year),            &
               & wind_10m(:),                                           &
               & rain(:),                                               &
-              & swl1(:),       swvl1_local_clim(:), swl1_clim(:,imo),  &
-              & swl2(:),       swvl2_local_clim(:), swl2_clim(:,imo),  &
-              & swl3(:),       swvl3_local_clim(:), swl3_clim(:,imo),  &
-              & swl4(:),       swvl4_local_clim(:), swl4_clim(:,imo),  &
-              & lai(:),        lai_local_clim(:),   lai_clim(:,imo),   &
+              & swl1(:),                                               &
+              & swvl1_local_clim(:), swl1_clim(:,day_of_year),         &
+              & swl2(:),                                               &
+              & swvl2_local_clim(:), swl2_clim(:,day_of_year),         &
+              & swl3(:),                                               &
+              & swvl3_local_clim(:), swl3_clim(:,day_of_year),         &
+              & swl4(:),                                               &
+              & swvl4_local_clim(:), swl4_clim(:,day_of_year),         &
+              & lai(:),                                                &
+              & lai_local_clim(:),   lai_clim(:,day_of_year),          &
               & modified_pfts_fract(:,:),                              &
-              & fuel(:),       fuel_yearly(:),                         &
+              & fuel(:),             fuel_yearly(:),                   &
              !& fuel(:),                                               &
               & population_density(:),                                 &
               & lightning_climatology(:),                              &
