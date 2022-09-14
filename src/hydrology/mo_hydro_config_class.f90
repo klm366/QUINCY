@@ -46,6 +46,11 @@ MODULE mo_hydro_config_class
       & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero        !< Allow infiltration at soil temperatures below 0°C
+
+INTEGER               :: &
+      & i_shm                  !< Choice of soil hydrological model: Brooks & Corey, 2 = Clapp & Horberger (Campbell), 3 = Van Genuchten
+      
+
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
   END type t_hydro_config
@@ -70,6 +75,7 @@ CONTAINS
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
+    INTEGER                     :: i_shm
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -85,7 +91,8 @@ CONTAINS
       & l_organic,                  &
       & l_socmap,                   &
       & l_glac_in_soil,             &
-      & l_infil_subzero
+      & l_infil_subzero,            &
+      & i_shm
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -114,6 +121,7 @@ CONTAINS
     l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
+    i_shm             = 1
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -159,6 +167,8 @@ CONTAINS
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
+
+    config%i_shm      = i_shm
 
     CALL close_nml(nml_handler)
 

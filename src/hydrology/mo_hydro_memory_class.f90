@@ -325,7 +325,7 @@ CONTAINS
 
     CALL mem%Add_var( 'drainage', mem%drainage,                                      &
       & hgrid, surface,                                                              &
-      & t_cf('drainage', 'kg m-2 s-1', 'Bottom drainage'),                           &
+      & t_cf('drainage', 'kg m-2 s-1', 'Total drainage'),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &

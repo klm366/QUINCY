@@ -23,7 +23,7 @@ MODULE mo_hydro_process
 
   PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_soil_hydrology, &
     & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare,         &
-    & get_canopy_conductance, get_water_stress_factor
+    & get_canopy_conductance, get_water_stress_factor, get_conductivies_diffusivities
 
   INTERFACE get_canopy_conductance
     MODULE PROCEDURE get_canopy_cond_unstressed_simple
@@ -400,7 +400,7 @@ CONTAINS
   ! @param [in]      nsoil               Number of soil layers
   ! @param [in]      nlat                (Effective) number of latitudes
   ! @param [in]      dtime               Time step [s]
-  ! @param [in]      l_infil_subzero     Allow infiltration of supercolled water
+  ! @param [in]      l_infil_subzero     Allow infiltration at soil temperatures below 0°C
   ! @param [in]      soil_depth_sl       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_sl       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      fract_org_sl        Fractions per soil layer of organic comonent []
@@ -577,9 +577,9 @@ CONTAINS
         runoff(i) = 0._wp
         infilt(i) = water_to_soil(i)
       ELSE
+        ! Temperature dependence of infiltration should not be included when using the 5-layer snow scheme because:
+        !     when tsurf == 0.C and T_soil < 0.C --> all snow melt is going to surface runoff
         IF (.NOT. l_infil_subzero .AND. (t_soil_sl1(i) < tmelt)) THEN
-          !pdv: Temperature dependence should not be included when using the 5-layer snow scheme because:
-          !     when tsurf == 0.C and T_soil < 0.C --> all snow melt is going to surface runoff
           runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
           infilt(i) = 0._wp
         ELSE
@@ -714,7 +714,7 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: wtr_soil_pot_scool_sl(:,:) ! potentially supercooled water [m]
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
     REAL(wp), INTENT(INOUT)         :: latdrain_sl(:,:)           ! amount of lateral drainage within timestep [m]
-    REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of bottom drainage within timestep [m]
+    REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of total drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -919,8 +919,9 @@ CONTAINS
 
         IF (.NOT. ltpe_closed) THEN
           IF (dsoil(j,i) > 0._wp .AND. soil_below(j) .AND. ws_tmp(j) > ws_immo_sl(j,i)) THEN
-            wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
-            latdrain_sl(j,i) = latdrain_sl(j,i) + drain_sl(j) ! and add it to the total drainage
+            wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture,
+            drainage(j)      = drainage(j)      + drain_sl(j) ! add it to the total drainage
+            latdrain_sl(j,i) = latdrain_sl(j,i) + drain_sl(j) ! and store it additional in lateral drainage for diagnostics
           END IF
         END IF                                       ! no drainage for TPE closed case
 
@@ -1053,7 +1054,8 @@ CONTAINS
         !$claw acc loop seq
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp .AND. wtr_soil_sl(j,i) > field_cap_sl(j,i)) THEN
-            latdrain_sl(j,i) = latdrain_sl(j,i) + wtr_soil_sl(j,i)-field_cap_sl(j,i)
+            latdrain_sl(j,i) = latdrain_sl(j,i) + wtr_soil_sl(j,i) - field_cap_sl(j,i)
+            drainage(j)      = drainage(j)      + wtr_soil_sl(j,i) - field_cap_sl(j,i)
             wtr_soil_sl(j,i) = field_cap_sl(j,i)
           END IF
         END DO
@@ -1183,6 +1185,7 @@ CONTAINS
       IF (.NOT. ltpe_closed) THEN
         IF (wtr_soil_sl(j,1) > field_cap_sl(j,1)) THEN
           latdrain_sl(j,1) = latdrain_sl(j,1) + wtr_soil_sl(j,1) - field_cap_sl(j,1)
+          drainage(j)      = drainage(j)      + wtr_soil_sl(j,1) - field_cap_sl(j,1)
           wtr_soil_sl(j,1) = field_cap_sl(j,1)
         END IF
       ELSE      ! TPE closed case
@@ -1789,6 +1792,172 @@ CONTAINS
     END IF
 
   END FUNCTION get_water_stress_factor
+
+  ! ===============================================================================================================================
+  PURE ELEMENTAL SUBROUTINE get_conductivies_diffusivities(            &
+            & i_shm, i_delieveroo,               &
+            & dsoil,                             &
+            & ws, is, wscools,                   &
+            & wsat, fc, pwp,                     &
+            & k_sat, mpot_sat, bclapp, pore_size_index,     &
+            & outvar                             &
+            )
+
+    ! arguments
+
+    INTEGER,  INTENT(in)     :: i_shm, i_delieveroo! soil-hydrology model used, variable requested
+    REAL(wp), INTENT(in)     :: dsoil              ! soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in)     :: ws                 ! water content
+    REAL(wp), INTENT(in)     :: is                 ! ice content
+    REAL(wp), INTENT(in)     :: wscools            ! supercooled water
+    REAL(wp), INTENT(in)     :: wsat               ! soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in)     :: fc                 ! field capacity [m]
+    REAL(wp), INTENT(in)     :: pwp                ! residual water (until bedrock) per layer
+    REAL(wp), INTENT(in)     :: k_sat              ! hydraaulic conductivity
+    REAL(wp), INTENT(in)     :: mpot_sat           ! matric potential
+    REAL(wp), INTENT(in)     :: bclapp             ! clapp & Hornberger exponent
+    REAL(wp), INTENT(in)     :: pore_size_index    ! Pore size distribution index
+
+
+    REAL(wp), INTENT(out)    :: outvar             ! Impedence factor to account for ice blocking flowpaths
+
+    REAL(wp) ::  ws_vol, ice_vol, scool_vol, &
+             &   ws_rel_vol,  ws_range_vol,  &
+             &   wsat_vol, fc_vol, pwp_vol,  &
+             &   ws_free_vol, ice_impede
+
+    REAL(wp) ::  ck                 ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+
+
+    REAL(wp) ::  nvgn, mvgn,       &
+             &   mpot_sat_correct, &
+             &   K, D, mpot
+
+
+    ck           = 8.0_wp           ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+
+    ! switching to volumetric quantities
+    IF(dsoil> 0._wp) THEN
+      ws_vol    =  ws      / dsoil
+      ice_vol   =  is      / dsoil
+      scool_vol =  wscools / dsoil
+      wsat_vol  =  wsat    / dsoil
+      fc_vol    =  fc      / dsoil
+      pwp_vol   =  pwp     / dsoil
+    ELSE
+      ws_vol    =  0._wp
+      ice_vol   =  0._wp
+      scool_vol =  0._wp
+      wsat_vol  =  0._wp
+      fc_vol    =  0._wp
+      pwp_vol   =  0._wp
+    END IF
+
+
+    IF (i_delieveroo == 3 .OR. i_delieveroo == 4) THEN
+      IF (mpot_sat > 0._wp) THEN
+          mpot_sat_correct = -mpot_sat
+      ELSE
+          mpot_sat_correct = mpot_sat
+      END IF
+    END IF
+
+    IF (i_shm == 3) THEN
+      nvgn = pore_size_index + 1._wp
+      mvgn = pore_size_index / nvgn
+    END IF
+
+    IF (i_shm==2) THEN ! Clapp & Horberger (Campbell)
+      ws_free_vol   = MAX(0._wp,ws_vol-scool_vol)
+      ws_range_vol  = wsat_vol
+    ELSE  ! Brooks & Coorey; Van Genuchten
+      ws_free_vol   = MAX(0._wp,ws_vol-MAX(scool_vol,pwp_vol))
+      ws_range_vol  = fc_vol - pwp_vol
+    END IF
+    IF (ws_range_vol > 0._wp) THEN
+      ws_rel_vol  = ws_free_vol / ws_range_vol
+    ELSE
+      ws_rel_vol  = 0._wp
+    END IF
+
+    ! Making sure ws_rel is in the pyhsical range
+    ! This is especially important when infiltration is added to the first layer
+    ws_rel_vol = MIN(1._wp, MAX(0._wp, ws_rel_vol))
+
+    ! Reduce percolation velocity in presence of ice
+    ! But what about diffucivity .... ice seems to attract water ?
+    IF (wsat_vol > 0._wp) THEN
+        ice_impede  = 10._wp**(-6._wp * (ice_vol + scool_vol) / wsat_vol)
+    ELSE
+       ice_impede  = 1._wp
+    END IF
+
+    IF (i_delieveroo == 1) THEN
+      outvar = ice_impede
+    END IF
+
+    IF (i_delieveroo == 2) THEN
+      ! Determining conductivit K
+      IF (i_shm==1 .OR. i_shm==2) THEN  !1=Brooks & Correy or 2 = Clapp & Horberger (Campbell)
+        K =  k_sat * ws_rel_vol**(2._wp * bclapp + 3._wp)
+
+      ELSE IF (i_shm==3) THEN ! Van Genuchten
+        ws_rel_vol = MIN(0.9999_wp, ws_rel_vol) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
+
+        K = k_sat * ws_rel_vol**(0.5_wp) &
+        & *(1._wp-(1._wp-ws_rel_vol**(1._wp/mvgn))**mvgn)**2._wp
+      END IF
+      K = K * ice_impede
+      outvar = K
+    END IF
+
+    IF (i_delieveroo == 3) THEN
+      ! Determining diffusivity D
+      IF (i_shm==1 .OR. i_shm==2) THEN  !1=Brooks & Correy or 2 = Clapp & Horberger (Campbell)
+        IF(ws_range_vol > 0._wp) THEN
+          D = -k_sat * mpot_sat_correct * bclapp / ws_range_vol &
+            & * ws_rel_vol**(1._wp * bclapp + 2._wp)
+        ELSE
+          D = 0._wp
+        END IF
+
+      ELSE IF (i_shm==3) THEN ! Van Genuchten
+        IF(ws_range_vol > 0._wp) THEN
+          ws_rel_vol = MIN(0.9999_wp, ws_rel_vol) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
+
+          K = k_sat * ws_rel_vol**(0.5_wp) &
+            & *(1._wp-(1._wp-ws_rel_vol**(1._wp/mvgn))**mvgn)**2._wp
+
+          D = -K * mpot_sat_correct * bclapp / ws_range_vol &
+            & * ws_rel_vol**(1._wp/mvgn) * (1._wp-ws_rel_vol**(1._wp/mvgn))**(-mvgn)
+        ELSE
+          D = 0._wp
+        END IF
+      END IF
+      D = D * ice_impede
+      outvar = D
+    END IF
+
+    IF (i_delieveroo == 4) THEN
+      ! Determin matric potential
+      !!! Formula from Stuurop 2021 (https://doi.org/10.1016/j.coldregions.2021.103456) adjusted from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+      IF (ws_rel_vol > 0._wp) THEN
+        IF (i_shm == 1 .OR. i_shm==2) THEN
+          mpot = mpot_sat_correct * (ws_rel_vol**(-bclapp))
+        ELSE
+          mpot = mpot_sat_correct * (ws_rel_vol**(-1._wp/mvgn) - 1._wp)**(1._wp/nvgn)
+        END IF
+        mpot = mpot * ((1._wp + ck * ice_vol)**2._wp)
+        mpot = MAX(-100._wp,  mpot)
+      ELSE
+        mpot = -100._wp
+      END IF
+      outvar = mpot
+    END IF
+
+
+  END SUBROUTINE get_conductivies_diffusivities
+
 
 #endif
 END MODULE mo_hydro_process
