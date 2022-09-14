@@ -38,6 +38,7 @@ MODULE mo_mix_interface
 
   ! Use of process configurations
   dsl4jsb_Use_config(MIX_)
+  dsl4jsb_Use_config(HYDRO_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(MIX_)
@@ -206,7 +207,8 @@ CONTAINS
 
     USE mo_mix_process,            ONLY: calc_runoff_transport,   &
       &                                  calc_drainage_transport, &
-      &                                  calc_intertile_diffusion
+      &                                  calc_intertile_diffusion,&
+      &                                  calc_intertile_diffusion_new
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -227,22 +229,48 @@ CONTAINS
     ! Declare process memories
     dsl4jsb_Def_config(MIX_)
     dsl4jsb_Def_memory(MIX_)
+
+    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
 
     dsl4jsb_Def_memory_tile(MIX_,   sibl_tile)
     dsl4jsb_Def_memory_tile(HYDRO_, sibl_tile)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: wtr_latflow
+
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real3D_onChunk :: latdrain_sl
+
+    dsl4jsb_Real2D_onChunk :: wtr_latflow
+    dsl4jsb_Real2D_onChunk :: weq_pond
+
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
+    dsl4jsb_Real3D_onChunk :: hyd_cond_sat_sl
+    dsl4jsb_Real3D_onChunk :: matrix_pot_sl
+    dsl4jsb_Real3D_onChunk :: bclapp_sl
+    dsl4jsb_Real3D_onChunk :: pore_size_index_sl
+
     dsl4jsb_Real2D_onChunk :: wtr_latflow_sibl_tile
     dsl4jsb_Real2D_onChunk :: weq_pond_sibl_tile
+
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sat_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: hyd_cond_sat_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: matrix_pot_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: bclapp_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: pore_size_index_sl_sibl_tile
 
     REAL(wp), DIMENSION(options%nc) :: source_fract    !< Fractions of water source tile
     REAL(wp), DIMENSION(options%nc) :: target_fract    !< Fractions of water target tile
@@ -264,6 +292,7 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(MIX_)
+    dsl4jsb_Get_config(HYDRO_)
 
     ! Get process memories
     dsl4jsb_Get_memory(MIX_)
@@ -275,8 +304,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)         ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, latdrain_sl)      ! inout
     IF (tile%contains_soil) THEN
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl) ! inout
+!pdv >
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, hyd_cond_sat_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl)
+
+!pdv <
     END IF
 
     ! Transport water from between tiles
@@ -369,22 +411,48 @@ CONTAINS
             dsl4jsb_Get_memory_tile(MIX_,   sibl_tile)
             dsl4jsb_Get_memory_tile(HYDRO_, sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,    sibl_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, weq_pond,       sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,    sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl, sibl_tile)
+!pdv >
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, soil_depth_sl,  sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sat_sl,sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_pwp_sl,sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, ice_soil_sl,    sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_pot_scool_sl,    sibl_tile) 
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, hyd_cond_sat_sl,sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, matrix_pot_sl,  sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, bclapp_sl,      sibl_tile)
+            dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, pore_size_index_sl,sibl_tile)
+
             ! Move soil water between tiles
-            DO i = 1, nsoil
-              CALL calc_intertile_diffusion(     &
-                & dtime,                         & !< in
-                & source_fract(:),               & !< in
-                & target_fract(:),               & !< in
-                & wtr_soil_fc_sl(:,i),           & !< in
-                & wtr_soil_fc_sl_sibl_tile(:,i), & !< in
-                & wtr_latflow(:),                & !< inout
-                & wtr_latflow_sibl_tile(:),      & !< inout
-                & wtr_soil_sl(:,i),              & !< inout
-                & wtr_soil_sl_sibl_tile(:,i)     & !< inout
-                & )
+            DO i = 1, nc
+              IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp .AND. &
+                  wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
+
+              CALL calc_intertile_diffusion_new(nsoil,                   &
+                 & dsl4jsb_Config(HYDRO_)%i_shm, dtime,                  &
+                 & source_fract(i),      target_fract(i),                &
+                 & soil_depth_sl(i,:),   soil_depth_sl_sibl_tile(i,:),   &
+                 & wtr_soil_fc_sl(i,:),  wtr_soil_fc_sl_sibl_tile(i,:),  &
+                 & wtr_soil_sat_sl(i,:), wtr_soil_sat_sl_sibl_tile(i,:), &
+                 & wtr_soil_pwp_sl(i,:), wtr_soil_pwp_sl_sibl_tile(i,:), &
+                 & matrix_pot_sl(i,:),   matrix_pot_sl_sibl_tile(i,:),   &
+                 & hyd_cond_sat_sl(i,:), hyd_cond_sat_sl_sibl_tile(i,:), &
+                 & bclapp_sl(i,:),       bclapp_sl_sibl_tile(i,:),       &
+                 & pore_size_index_sl(i,:), pore_size_index_sl_sibl_tile(i,:), &
+                 & ice_soil_sl(i,:),     ice_soil_sl_sibl_tile(i,:),     &
+                 & MIN(wtr_soil_pot_scool_sl(i,:), wtr_soil_sl(i,:)),    &
+                 & MIN(wtr_soil_pot_scool_sl_sibl_tile(i,:), wtr_soil_sl_sibl_tile(i,:)),  &
+                 & weq_pond(i),          weq_pond_sibl_tile(i),          &
+                 & wtr_latflow(i),       wtr_latflow_sibl_tile(i),       &
+                 & wtr_soil_sl(i,:),     wtr_soil_sl_sibl_tile(i,:)      &
+                 & )
+
+
+              END IF
             ENDDO
+!pdv <
           END IF
         END DO
       END IF
