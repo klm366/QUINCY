@@ -2140,7 +2140,8 @@ CONTAINS
       & weq_snow, &
       & weq_fluxes, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
-      & weq_balance_err  ! [m3/(time step)]
+      & weq_balance_err, &  ! [m3/(time step)]
+      & weq_balance_err_rel ! [/]
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &
       & ice_soil_sl
@@ -2192,6 +2193,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err_rel) ! out
 
     !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
 
@@ -2218,6 +2220,11 @@ CONTAINS
     IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       weq_balance_err(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
+      WHERE(weq_land(:) + weq_fluxes(:) > 0._wp)
+        weq_balance_err_rel(:) = weq_balance_err(:) / (weq_land(:) + weq_fluxes(:) * dtime)
+      ELSEWHERE
+        weq_balance_err_rel(:) = 0._wp
+      ENDWHERE
     END IF
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
