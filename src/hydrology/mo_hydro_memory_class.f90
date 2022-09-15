@@ -108,6 +108,7 @@ MODULE mo_hydro_memory_class
       & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
+      & wtr_soilhyd_err,      & !< Error (accumulated) due to new soilhydrology                             [m]
       & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
       & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
       & wtr_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
@@ -128,7 +129,6 @@ MODULE mo_hydro_memory_class
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice  [m]
       & wtr_soil_pot_scool_sl,& !< Potentially supercooled water in soil layer                              [m]
-      & wtr_soilhyd_err,      & !< Error (accumulated) due to new soilhydrology                             [m]
       & pdv_2d_out
 
     ! Additional variables for PFT lct_type
@@ -722,6 +722,14 @@ CONTAINS
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'wtr_soilhyd_err', mem%wtr_soilhyd_err,                        &
+        & hgrid, surface,                                                              &
+        & t_cf('wtr_soilhyd_err', 'm3/(time step)', 'Soilhyd water balance error'),    &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & lrestart=.FALSE., output_level=BASIC,                                        &
+        & initval_r=0.0_wp )
+
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,213, grib_bits)
       ELSE
@@ -784,14 +792,6 @@ CONTAINS
         & prefix, suffix,                                                                &
         & loutput=.TRUE.,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var( 'wtr_soilhyd_err', mem%wtr_soilhyd_err,                        &
-        & hgrid, soil_w,                                                               &
-        & t_cf('wtr_soilhyd_err', 'm', 'Soilhyd water balance error'),                 &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & lrestart=.FALSE., output_level=BASIC,                                        &
-        & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'pdv_2d_out', mem%pdv_2d_out,                          &
         & hgrid, soil_w,                                                                 &

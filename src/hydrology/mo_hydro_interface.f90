@@ -1003,6 +1003,9 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
+    REAL(wp), POINTER :: area(:)
+    REAL(wp) :: tile_fract(options%nc)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
     iblk  = options%iblk
@@ -1027,6 +1030,7 @@ CONTAINS
 
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+    area => grid%area(ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -1085,7 +1089,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soilhyd_err   ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_err   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, pdv_1d_out        ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, pdv_2d_out        ),     &
       ! out
@@ -1105,6 +1109,13 @@ CONTAINS
       !$claw acc exit data delete(fract_org_sl)
       DEALLOCATE(fract_org_sl)
     END IF
+
+    ! Convert soil hydrology balance error to volume
+    !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
+    !$claw acc parallel loop gang vector
+    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
+    dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_err) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_err) &
+      & * tile_fract(:) * area(:)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1155,6 +1166,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_perm,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_1d_out,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_2d_out,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_err, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

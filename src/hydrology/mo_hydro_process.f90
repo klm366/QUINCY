@@ -465,10 +465,11 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & tpe_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
-      & wtr_soil_sl, ice_soil_sl, wtr_soilhyd_err
+      & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
       & infilt, runoff, runoff_over, drainage, &
-      & drain_rock, drain_lat, drain_perm
+      & drain_rock, drain_lat, drain_perm, &
+      & wtr_soilhyd_err
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
 
@@ -650,13 +651,16 @@ CONTAINS
     !> 2. Vertical water transport within the soil column
     !---------------------
 
-   !$claw acc parallel
-   !$claw acc loop gang
-   DO i = 1, nc
-     drainage(i) = 0._wp
-   END DO
-   !$claw acc end parallel
-   !$claw acc end data
+    !$claw acc parallel
+    !$claw acc loop gang
+    DO i = 1, nc
+      drainage(i) = 0._wp
+    END DO
+    !$claw acc end parallel
+    !$claw acc end data
+
+    !< store actual soil water state and infiltration in water balance
+    wtr_soilhyd_err(:) = SUM(wtr_soil_sl(:,:), DIM=2) + infilt(:)
 
     IF (l_soilhydnew) THEN
 
@@ -666,7 +670,7 @@ CONTAINS
         &     bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl,             &
         &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
         &     infilt, runoff_over, drainage, drain_rock, drain_lat_sl, drain_perm_sl,  &
-        &     tpe_overflow, wtr_soilhyd_err, pdv_2d_out,                               &
+        &     tpe_overflow, pdv_2d_out,                                                &
         &     ltpe_closed, ltpe_open)
 
     ELSE
@@ -700,6 +704,9 @@ CONTAINS
         &     wtr_soil_sl, runoff_over, drainage, tpe_overflow)
 
     END IF
+
+    !< substract new soil state and drainage from water balance
+    wtr_soilhyd_err(:) = wtr_soilhyd_err(:) - (SUM(wtr_soil_sl(:,:), DIM=2) + drainage(:))
 
     drain_lat(:)  = SUM(drain_lat_sl(:,:),  DIM=2)
     drain_perm(:) = SUM(drain_perm_sl(:,:), DIM=2)
@@ -1278,7 +1285,7 @@ CONTAINS
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl, &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
     & infilt, runoff_over, drainage, drain_rock, drain_lat,        &
-    & drain_frozen, tpe_overflow, wtr_soilhyd_err, pdv_2d_out,     &
+    & drain_frozen, tpe_overflow, pdv_2d_out,                      &
     & ltpe_closed, ltpe_open)
 
     !----------------------------------------------------------------------------------------------
@@ -1316,7 +1323,6 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! Needed later for hydrotiles
     REAL(wp), INTENT(INOUT)         :: drain_frozen(:,:)          ! Needed later for hydrotiles
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
-    REAL(wp), INTENT(INOUT)         :: wtr_soilhyd_err(:,:)
     REAL(wp), INTENT(OUT)           :: pdv_2d_out(:,:)
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -1367,7 +1373,7 @@ CONTAINS
       CALL finish ('soilhyd', message_text)
     END IF
 
-    pdv_2d_out(:,:) = 1.0
+    pdv_2d_out(:,:) = 1._wp
 
     !> Calculation of soil saturation, field capacity and wilting point taking into account soil ice
     !
@@ -1460,39 +1466,38 @@ CONTAINS
 
 
     DO j=1,nc
-      IF (zmvg_sl(j,1) > 0._wp) THEN !!! Need to figure out if this is necessary, but not sure that all variables exist everywhere !!!
-        ! Determination of Vertical movement of water through the soil
-        ! Note that concentrations (volumetric soil moisture) are needed for transport
-        ws_vol_sl(j,1:nsoil_act(j)) = wtr_soil_sl(j,1:nsoil_act(j)) / dsoil(j,1:nsoil_act(j))    ! Or should this be relative to wsat / fc
+      ! Determination of Vertical movement of water through the soil
+      ! Note that concentrations (volumetric soil moisture) are needed for transport
+      DO i = 1, nsoil
+        IF (dsoil(j,i) > 0._wp) THEN
+          ws_vol_sl(j,i) = wtr_soil_sl(j,i) / dsoil(j,i)    ! Or should this be relative to wsat / fc
+        ELSE
+          ws_vol_sl(j,i) = wtr_soil_sl(j,i)
+        END IF
+      END DO
 
-        !CALL vert_transport(nc,n,d,alpha,dzf,top_bound, bot_bound, S,C,P,Q, X_old)
-        ! *-bound, S are fluxes i.e. x/sec
-        ws_vol_sl(j:j,1:nsoil_act(j))  =                              &
-        &      vert_transport( 1,nsoil_act(j),dtime,1._wp,            &
-                           & dsoil(j:j,1:nsoil_act(j)),               &  ! Or should this be relative to wsat / fc
-                           & infilt(j:j)/dtime,                       &
-                           & drain_rock(j:j)/dtime,                   &
-                           & SPREAD(SPREAD(0._wp, DIM=1, ncopies=1), DIM=2,ncopies=nsoil_act(j)), & ! Ideally one could use evapotranspiration here and get rid of digest evapotr...
-                           & SPREAD(SPREAD(1._wp, DIM=1, ncopies=1), DIM=2,ncopies=nsoil_act(j)), &
-                           & diffus_li(j:j,1:nsoil_act(j)),           &
-                           & hyd_cond_li(j:j,1:nsoil_act(j)),         &
-                           & ws_vol_sl(j:j,1:nsoil_act(j))            &
-                           & )
-        !Comming back to absolute water content
-        wtr_soil_sl(j,1:nsoil_act(j)) = ws_vol_sl(j,1:nsoil_act(j)) * dsoil(j,1:nsoil_act(j))
-  !pdv > 
-        !!!! Testing if waterbalance is ruined.
-        DO i = 1, nsoil_act(j)
-          IF (wtr_soil_sl(j,i) < 0._wp) THEN
-            wtr_soilhyd_err(j,i) = wtr_soilhyd_err(j,i)+wtr_soil_sl(j,i)
-            wtr_soil_sl(j,i) = 0._wp
-          END IF
-        END DO
-      ELSE
-        wtr_soilhyd_err(j,:) = wtr_soilhyd_err(j,:)
-      END IF
+      !CALL vert_transport(nc,n,d,alpha,dzf,top_bound, bot_bound, S,C,P,Q, X_old)
+      ! *-bound, S are fluxes i.e. x/sec
+      ws_vol_sl(j:j,1:nsoil_act(j))  =                              &
+      &      vert_transport( 1,nsoil_act(j),dtime,1._wp,            &
+                         & dsoil(j:j,1:nsoil_act(j)),               &  ! Or should this be relative to wsat / fc
+                         & infilt(j:j)/dtime,                       &
+                         & drain_rock(j:j)/dtime,                   &
+                         & SPREAD(SPREAD(0._wp, DIM=1, ncopies=1), DIM=2,ncopies=nsoil_act(j)), & ! Ideally one could use evapotranspiration here and get rid of digest evapotr...
+                         & SPREAD(SPREAD(1._wp, DIM=1, ncopies=1), DIM=2,ncopies=nsoil_act(j)), &
+                         & diffus_li(j:j,1:nsoil_act(j)),           &
+                         & hyd_cond_li(j:j,1:nsoil_act(j)),         &
+                         & ws_vol_sl(j:j,1:nsoil_act(j))            &
+                         & )
+      ! Converting back to absolute water content
+      DO i = 1, nsoil
+        IF (dsoil(j,i) > 0._wp) THEN
+          wtr_soil_sl(j,i) = ws_vol_sl(j,i) * dsoil(j,i)
+        ELSE
+          wtr_soil_sl(j,i) = ws_vol_sl(j,i)
+        END IF
+      END DO
     END DO
-!pdv < 
 
     DO j=1,nc
       !
@@ -1520,7 +1525,7 @@ CONTAINS
             drain_sl(j) = 0._wp
           END IF
           ! Fast drainage
-          IF (wtr_soil_sl(j,i) > ws_crit(j)) THEN
+          IF (wtr_soil_sl(j,i) > ws_crit(j) .AND. weq_wsat_sl(j,i) > 0._wp) THEN
             drain_crit(j) = (zdrmax-zdrmin) * ((wtr_soil_sl(j,i) - ws_crit(j)) / (weq_wsat_sl(j,i) - ws_crit(j)))**zdrexp
             drain_sl(j) = drain_sl(j) + MIN(drain_crit(j), (wtr_soil_sl(j,i) - ws_crit(j))/dtime)
           END IF
