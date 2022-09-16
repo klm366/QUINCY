@@ -1329,7 +1329,7 @@ CONTAINS
     LOGICAL, INTENT(IN) :: ltpe_open
 
     INTEGER  :: i, j                        ! looping index
-    INTEGER  :: nsoil_act(nc)               ! number of soil layers above the bedrock boundary
+    INTEGER  :: nsoil_act(nc)               ! deepest soil layer index (above the bedrock boundary)
 
     REAL(wp)  :: dttest = 120._wp
 
@@ -1404,7 +1404,7 @@ CONTAINS
 
     ! Determining hydraulic condiuctivity and diffuisivity on layers and at layer interfaces
     ! Note that the indexing uses the upper interface -> interface Ii = I(i,i-1)
-    ! passing nsoil and nsoil_act for looping only over the layers above bedrock ... because why do more ?
+    ! For numerical reasons, soil loops always cover all soil layers, even if they are not active (bedrock)
     CALL get_conductivies_diffusivities(                        &
           & i_shm, i_interpol,                              &
           & dtime,                                              &
@@ -1478,16 +1478,16 @@ CONTAINS
 
       !CALL vert_transport(nc,n,d,alpha,dzf,top_bound, bot_bound, S,C,P,Q, X_old)
       ! *-bound, S are fluxes i.e. x/sec
-      ws_vol_sl(j:j,1:nsoil_act(j))  =                              &
-      &      vert_transport( 1,nsoil_act(j),dtime,1._wp,            &
-                         & dsoil(j:j,1:nsoil_act(j)),               &  ! Or should this be relative to wsat / fc
-                         & infilt(j:j)/dtime,                       &
-                         & drain_rock(j:j)/dtime,                   &
-                         & SPREAD(SPREAD(0._wp, DIM=1, ncopies=1), DIM=2,ncopies=nsoil_act(j)), & ! Ideally one could use evapotranspiration here and get rid of digest evapotr...
-                         & SPREAD(SPREAD(1._wp, DIM=1, ncopies=1), DIM=2,ncopies=nsoil_act(j)), &
-                         & diffus_li(j:j,1:nsoil_act(j)),           &
-                         & hyd_cond_li(j:j,1:nsoil_act(j)),         &
-                         & ws_vol_sl(j:j,1:nsoil_act(j))            &
+      ws_vol_sl(j,1:nsoil_act(j))  = vert_transport(                   &
+                         & nsoil_act(j), dtime, 1._wp,                 &
+                         & dsoil(j,1:nsoil_act(j)),                    &  ! Or should this be relative to wsat / fc
+                         & infilt(j)/dtime,                            &
+                         & drain_rock(j)/dtime,                        &
+                         & SPREAD(0._wp, DIM=1, ncopies=nsoil_act(j)), & ! Ideally one could use evapotranspiration here and get rid of digest evapotr...
+                         & SPREAD(1._wp, DIM=1, ncopies=nsoil_act(j)), &
+                         & diffus_li(j,1:nsoil_act(j)),                &
+                         & hyd_cond_li(j,1:nsoil_act(j)),              &
+                         & ws_vol_sl(j,1:nsoil_act(j))                 &
                          & )
       ! Converting back to absolute water content
       DO i = 1, nsoil
@@ -1511,37 +1511,39 @@ CONTAINS
       ! @todo: This concept needs to be discussed. Should lateral drainage occur at all?
       !
       !$claw acc loop seq
-      DO i = 1, nsoil_act(j) - 1
-        ice_impede(j)=MINVAL(ice_impede_sl(j,i:nsoil))
-      !> Calculating lateral drainage from all but the lowest layer above bedrock
-        !
-        !> Drainage pt.2a --- from all soils (impeded in the presence of ice)
+      DO i = 1, nsoil
+        IF (i < nsoil_act(j)) THEN
+          ice_impede(j)=MINVAL(ice_impede_sl(j,i:nsoil))
+          !> Calculating lateral drainage from all but the lowest layer above bedrock
+          !
+          !> Drainage pt.2a --- from all soils (impeded in the presence of ice)
 
-        IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN          ! drainage occurs only with mobile water
-          ! Slow drainage
-          IF (weq_field_cap_sl(j,i) > ws_rsdl_sl(j,i)) THEN
-            drain_sl(j) = zdrmin * (wtr_soil_sl(j,i) - ws_rsdl_sl(j,i)) / (weq_field_cap_sl(j,i)-ws_rsdl_sl(j,i))
+          IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN          ! drainage occurs only with mobile water
+            ! Slow drainage
+            IF (weq_field_cap_sl(j,i) > ws_rsdl_sl(j,i)) THEN
+              drain_sl(j) = zdrmin * (wtr_soil_sl(j,i) - ws_rsdl_sl(j,i)) / (weq_field_cap_sl(j,i)-ws_rsdl_sl(j,i))
+            ELSE
+              drain_sl(j) = 0._wp
+            END IF
+            ! Fast drainage
+            IF (wtr_soil_sl(j,i) > ws_crit(j) .AND. weq_wsat_sl(j,i) > 0._wp) THEN
+              drain_crit(j) = (zdrmax-zdrmin) * ((wtr_soil_sl(j,i) - ws_crit(j)) / (weq_wsat_sl(j,i) - ws_crit(j)))**zdrexp
+              drain_sl(j) = drain_sl(j) + MIN(drain_crit(j), (wtr_soil_sl(j,i) - ws_crit(j))/dtime)
+            END IF
+            ! drainage is limited by the soil moisture within the layer and ice impedence
+            drain_sl(j) = ice_impede(j) * MIN(drain_sl(j) * dtime, (wtr_soil_sl(j,i) - ws_rsdl_sl(j,i)))
           ELSE
             drain_sl(j) = 0._wp
           END IF
-          ! Fast drainage
-          IF (wtr_soil_sl(j,i) > ws_crit(j) .AND. weq_wsat_sl(j,i) > 0._wp) THEN
-            drain_crit(j) = (zdrmax-zdrmin) * ((wtr_soil_sl(j,i) - ws_crit(j)) / (weq_wsat_sl(j,i) - ws_crit(j)))**zdrexp
-            drain_sl(j) = drain_sl(j) + MIN(drain_crit(j), (wtr_soil_sl(j,i) - ws_crit(j))/dtime)
-          END IF
-          ! drainage is limited by the soil moisture within the layer and ice impedence
-          drain_sl(j) = ice_impede(j) * MIN(drain_sl(j) * dtime, (wtr_soil_sl(j,i) - ws_rsdl_sl(j,i)))
-        ELSE
-          drain_sl(j) = 0._wp
-        END IF
 
-        IF (.NOT. ltpe_closed) THEN
-          IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN
-            wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
-            drain_lat(j,i)   = drain_lat(j,i)  + drain_sl(j)  ! When taking this for hydrotiles make sure its no longer added to drainage !
-            drainage(j)      = drainage(j) + drain_sl(j)      ! and add it to the total drainage
-          END IF
-        END IF                                       ! no drainage for TPE closed case
+          IF (.NOT. ltpe_closed) THEN
+            IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN
+              wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
+              drain_lat(j,i)   = drain_lat(j,i)  + drain_sl(j)  ! When taking this for hydrotiles make sure its no longer added to drainage !
+              drainage(j)      = drainage(j) + drain_sl(j)      ! and add it to the total drainage
+            END IF
+          END IF                                       ! no drainage for TPE closed case
+        END IF
       END DO
 
       ! 3. Correct percolation if maximum moisture is exceeded, and correct soil moisture of the
@@ -1550,23 +1552,25 @@ CONTAINS
       ! Overflow is not allowed from layers below the surface layer.
       ! Instead it is assumed that water piles upwards from saturated layers.
       !$claw acc loop seq
-      DO i = nsoil_act(j), 2, -1
-        IF (.NOT. ltpe_closed) THEN
-          IF (wtr_soil_sl(j,i) > wtr_field_cap_sl(j,i)) THEN
-            ! soil moisture above field capacity:
-            wtr_soil_sl(j,i-1) = wtr_soil_sl(j,i-1) + wtr_soil_sl(j,i) - wtr_field_cap_sl(j,i)
-            wtr_soil_sl(j,i)   = wtr_field_cap_sl(j,i)
-          END IF
-        ELSE
-          IF (wtr_soil_sl(j,i) > wtr_field_cap_sl(j,i)) THEN
-            ! redirect overflow from drainage to overflow pool
-            tpe_overflow(j) = tpe_overflow(j) + wtr_soil_sl(j,i) - wtr_field_cap_sl(j,i)
-            wtr_soil_sl(j,i) = wtr_field_cap_sl(j,i)
-          ELSE ! wtr_soil_sl <= wtr_field_cap_sl
-            ! refill soil moisture from overflow pool
-            remoist(j) = MIN(tpe_overflow(j), wtr_field_cap_sl(j,i) - wtr_soil_sl(j,i))
-            wtr_soil_sl(j,i) = wtr_soil_sl(j,i) + remoist(j)
-            tpe_overflow(j) = tpe_overflow(j) - remoist(j)
+      DO i = nsoil, 2, -1
+        IF (i <= nsoil_act(j)) THEN
+          IF (.NOT. ltpe_closed) THEN
+            IF (wtr_soil_sl(j,i) > wtr_field_cap_sl(j,i)) THEN
+              ! soil moisture above field capacity:
+              wtr_soil_sl(j,i-1) = wtr_soil_sl(j,i-1) + wtr_soil_sl(j,i) - wtr_field_cap_sl(j,i)
+              wtr_soil_sl(j,i)   = wtr_field_cap_sl(j,i)
+            END IF
+          ELSE
+            IF (wtr_soil_sl(j,i) > wtr_field_cap_sl(j,i)) THEN
+              ! redirect overflow from drainage to overflow pool
+              tpe_overflow(j) = tpe_overflow(j) + wtr_soil_sl(j,i) - wtr_field_cap_sl(j,i)
+              wtr_soil_sl(j,i) = wtr_field_cap_sl(j,i)
+            ELSE ! wtr_soil_sl <= wtr_field_cap_sl
+              ! refill soil moisture from overflow pool
+              remoist(j) = MIN(tpe_overflow(j), wtr_field_cap_sl(j,i) - wtr_soil_sl(j,i))
+              wtr_soil_sl(j,i) = wtr_soil_sl(j,i) + remoist(j)
+              tpe_overflow(j) = tpe_overflow(j) - remoist(j)
+            END IF
           END IF
         END IF
       END DO
@@ -2210,26 +2214,27 @@ CONTAINS
 
   END FUNCTION get_water_stress_factor
 
-  FUNCTION vert_transport(nc,n,dt,alpha,dzf,top_bound, bot_bound, S,C,P,Q, X_old) RESULT(X_new)
+  FUNCTION vert_transport(n, dt, alpha, dzf, top_bound, bot_bound, S, C, P, Q, X_old) &
+    &      RESULT(X_new)
 
   ! INPUT
-  INTEGER, INTENT(in) :: nc,n                       ! vector length, number of levels
-  REAL(wp), Intent(in):: dt, alpha,  &              ! time step
-                       & top_bound(nc), bot_bound(nc), &    ! boundary conditions
-                       & dzf(nc,n), C(nc,n), S(nc,n), Q(nc,n), P(nc,n), X_old(nc,n)
+  INTEGER, INTENT(in) :: n                          ! number of active soil levels
+  REAL(wp), Intent(in):: dt, alpha,            &    ! time step
+                       & top_bound, bot_bound, &    ! boundary conditions
+                       & dzf(n), C(n), S(n), Q(n), P(n), X_old(n)
 
   ! OUTPUT
-  REAL(wp)           :: X_new(nc,n)
+  REAL(wp)           :: X_new(n)
 
   ! LOCAL
   INTEGER, PARAMETER :: NMAX=500
   INTEGER            :: i,j
-  REAL(wp)           :: dzh(nc,n), matrix(nc,n,4), &
-                      & bet(nc), gam(nc,NMAX)
+  REAL(wp)           :: dzh(n), matrix(n,4), &
+                      & bet, gam(NMAX)
 
-  dzh(:,:) = 0.0                             ! thickness of half levels
+  dzh(:) = 0.0                             ! thickness of half levels
   DO j=2,n
-    dzh(:,j) = (dzf(:,j-1) + dzf(:,j)) / 2._wp
+    dzh(j) = (dzf(j-1) + dzf(j)) / 2._wp
   END DO
 
   ! Note that P & Q refer to the inter face above a given lvl not below.
@@ -2238,40 +2243,40 @@ CONTAINS
 
   DO j=1,n
     IF(j .eq. 1) THEN
-      matrix(:,j,1) =  0.0_wp
-      matrix(:,j,2) =                   P(:,j+1) / dzh(:,j+1) + dzf(:,j) * C(:,j) / (alpha * dt)
-      matrix(:,j,3) = -P(:,j+1) / dzh(:,j+1)
-      matrix(:,j,4) =       - Q(:,j+1) + dzf(:,j) * S(:,j) + dzf(:,j) * C(:,j) * X_old(:,j) / (alpha * dt) + top_bound(:)
+      matrix(j,1) =  0.0_wp
+      matrix(j,2) =  P(j+1) / dzh(j+1) + dzf(j) * C(j) / (alpha * dt)
+      matrix(j,3) = -P(j+1) / dzh(j+1)
+      matrix(j,4) = -Q(j+1) + dzf(j) * S(j) + dzf(j) * C(j) * X_old(j) / (alpha * dt) + top_bound
     ELSE IF((j .NE. 1) .AND. (j .NE. n)) THEN
-      matrix(:,j,1) = -P(:,j) / dzh(:,j)
-      matrix(:,j,2) =  P(:,j) / dzh(:,j) +  P(:,j+1) / dzh(:,j+1) + dzf(:,j) * C(:,j) / (alpha * dt)
-      matrix(:,j,3) = -P(:,j+1) / dzh(:,j+1)
-      matrix(:,j,4) =  Q(:,j) - Q(:,j+1) + dzf(:,j) * S(:,j) + dzf(:,j) * C(:,j) * X_old(:,j) / (alpha * dt)
+      matrix(j,1) = -P(j) / dzh(j)
+      matrix(j,2) =  P(j) / dzh(j) +  P(j+1) / dzh(j+1) + dzf(j) * C(j) / (alpha * dt)
+      matrix(j,3) = -P(j+1) / dzh(j+1)
+      matrix(j,4) =  Q(j) - Q(j+1) + dzf(j) * S(j) + dzf(j) * C(j) * X_old(j) / (alpha * dt)
     ELSE
-      matrix(:,j,1) = -P(:,j) / dzh(:,j)
-      matrix(:,j,2) =  P(:,j) / dzh(:,j)                      + dzf(:,j) * C(:,j) / (alpha * dt)
-      matrix(:,j,3) =  0.0_wp
-      matrix(:,j,4) =  Q(:,j)          + dzf(:,j) * S(:,j) + dzf(:,j) * C(:,j) * X_old(:,j) / (alpha * dt) - bot_bound(:)
+      matrix(j,1) = -P(j) / dzh(j)
+      matrix(j,2) =  P(j) / dzh(j) + dzf(j) * C(j) / (alpha * dt)
+      matrix(j,3) =  0.0_wp
+      matrix(j,4) =  Q(j)          + dzf(j) * S(j) + dzf(j) * C(j) * X_old(j) / (alpha * dt) - bot_bound
     END IF
   END DO
 
-  IF( ANY(matrix(:,1,2) .EQ. 0.0)) THEN
-    WRITE (message_text,*) 'tridiag: something went terribly wrong ... rewrite equations!', MINVAL(C(:,1)), MINVAL(dzf(:,1))
+  IF( matrix(1,2) .EQ. 0.0) THEN
+    WRITE (message_text,*) 'tridiag: something went terribly wrong ... rewrite equations!', C(1), dzf(1)
     CALL finish('vert_transport', message_text)
   END IF
-  bet(:)  = matrix(:,1,2)
-  X_new(:,1) = matrix(:,1,4)/bet(:)
+  bet  = matrix(1,2)
+  X_new(1) = matrix(1,4)/bet
   DO j = 2, n
-    gam(:,j) = matrix(:,j-1,3) /bet(:)
-    bet(:)    = matrix(:,j,2) - matrix(:,j,1) * gam(:,j)
-    IF( ANY(bet(:) .EQ. 0.0)) THEN
+    gam(j) = matrix(j-1,3) /bet
+    bet    = matrix(j,2) - matrix(j,1) * gam(j)
+    IF( bet .EQ. 0.0) THEN
       WRITE (message_text,*) 'tridiag: matrix couldn t be solved !'
       CALL finish('vert_transport', message_text)
     END IF
-    X_new(:,j)   = (matrix(:,j,4) - matrix(:,j,1) * X_new(:,j-1)) / bet(:)
+    X_new(j)   = (matrix(j,4) - matrix(j,1) * X_new(j-1)) / bet
   END DO
   DO j  = n-1, 1, -1
-    X_new(:,j)= X_new(:,j) - gam(:,j+1) * X_new(:,j+1)
+    X_new(j)= X_new(j) - gam(j+1) * X_new(j+1)
   END DO
 
   END FUNCTION vert_transport
@@ -2279,7 +2284,7 @@ CONTAINS
   SUBROUTINE get_conductivies_diffusivities(     &
             & i_shm, i_interpol,                 &
             & dt,                                &
-            & nc,nsoil,nsoil_act,dsoil,          &
+            & nc, nsoil, nsoil_act, dsoil,       &
             & ws, is, wscools,                   &
             & wsat, fc, pwp,                     &
             & k_sat, mpot_sat, bclapp, mvgn,     &
@@ -2293,7 +2298,7 @@ CONTAINS
     REAL(wp), INTENT(in)     :: dt                      !> time step length
     INTEGER,  INTENT(in)     :: nc                      !> vector length
     INTEGER,  INTENT(in)     :: nsoil                   !> number of below ground layers
-    INTEGER,  INTENT(in)     :: nsoil_act(:)            !> number of soil layers (above bedrock)
+    INTEGER,  INTENT(in)     :: nsoil_act(:)            !> index of deepest soil layers (above bedrock)
     REAL(wp), INTENT(in)     :: dsoil(:,:)              !> soil depth (until bedrock) per layer
     REAL(wp), INTENT(in)     :: ws(:,:)                 !> water content
     REAL(wp), INTENT(in)     :: is(:,:)                 !> ice content
@@ -2391,15 +2396,17 @@ CONTAINS
     ! Reduce percolation velocity in presence of ice
     ! But what about diffucivity .... ice seems to attract water ?
     DO j = 1, nc
-      DO i = 1, nsoil_act(j)
-        IF (fc_vol(j,i) + ice_vol(j,i) > 1.0e-10_wp) THEN
-          ice_impede(j,i)  = 10._wp**(-6._wp * (ice_vol(j,i) + scool_vol(j,i) ) &
-                         & / (fc_vol(j,i) + ice_vol(j,i)))
-        ELSE
-          ice_impede(j,i) = 1._wp
+      DO i = 1, nsoil
+        IF (i <= nsoil_act(j)) THEN
+          IF (fc_vol(j,i) + ice_vol(j,i) > 1.0e-10_wp) THEN
+            ice_impede(j,i)  = 10._wp**(-6._wp * (ice_vol(j,i) + scool_vol(j,i) ) &
+                           & / (fc_vol(j,i) + ice_vol(j,i)))
+          ELSE
+            ice_impede(j,i) = 1._wp
+          END IF
+          K(j,i) = K(j,i) * ice_impede(j,i)
+          D(j,i) = D(j,i) * ice_impede(j,i)
         END IF
-        K(j,i) = K(j,i) * ice_impede(j,i)
-        D(j,i) = D(j,i) * ice_impede(j,i)
       END DO
     END DO
 
@@ -2415,18 +2422,20 @@ CONTAINS
     ! Note that in the vertical transport scheme the notation refers to the upper interface of a level.
     ! Hence the loop goes from nsoil_act to 2
     DO j = 1, nc
-      DO i = nsoil_act(j), 2, -1
-        IF (i_interpol == 1) THEN ! upstream
-          K_inter(j,i)  =   K(j,i-1)
-          D_inter(j,i)  =   MAX(D(j,i),D(j,i-1))
-!          D_inter(j,i)  =   MIN(D(j,i),D(j,i-1))
-        ELSE IF (i_interpol == 2) THEN !  Adapted arithmetic mean
-          IF (K(j,i-1) > K(j,i)) THEN ! MOVEMENT OF WETTING FRONTS LIMITED BY SATURATION OF SUBJACENT LAYER. ELSE ... 
-            K_inter(j,i)  =   (K(j,i)*dsoil(j,i)+K(j,i-1)*dsoil(j,i-1))/(dsoil(j,i)+dsoil(j,i-1))
-          ELSE ! ... PREVENT FLUX FROM COMPLETLY DRYING OUT UPPER LAYER
-            K_inter(j,i)  = K(j,i-1)
+      DO i = nsoil, 2, -1
+        IF (i <= nsoil_act(j)) THEN
+          IF (i_interpol == 1) THEN ! upstream
+            K_inter(j,i)  =   K(j,i-1)
+            D_inter(j,i)  =   MAX(D(j,i),D(j,i-1))
+!            D_inter(j,i)  =   MIN(D(j,i),D(j,i-1))
+          ELSE IF (i_interpol == 2) THEN !  Adapted arithmetic mean
+            IF (K(j,i-1) > K(j,i)) THEN ! MOVEMENT OF WETTING FRONTS LIMITED BY SATURATION OF SUBJACENT LAYER. ELSE ... 
+              K_inter(j,i)  =   (K(j,i)*dsoil(j,i)+K(j,i-1)*dsoil(j,i-1))/(dsoil(j,i)+dsoil(j,i-1))
+            ELSE ! ... PREVENT FLUX FROM COMPLETLY DRYING OUT UPPER LAYER
+              K_inter(j,i)  = K(j,i-1)
+            END IF
+            D_inter(j,i)  =   (D(j,i)*dsoil(j,i)+D(j,i-1)*dsoil(j,i-1))/(dsoil(j,i)+dsoil(j,i-1))
           END IF
-          D_inter(j,i)  =   (D(j,i)*dsoil(j,i)+D(j,i-1)*dsoil(j,i-1))/(dsoil(j,i)+dsoil(j,i-1))
         END IF
       END DO
     END DO
