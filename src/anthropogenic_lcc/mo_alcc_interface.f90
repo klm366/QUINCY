@@ -140,7 +140,7 @@ CONTAINS
     !>
     !> Assert that PPLCC process is active
     !>
-    IF (.NOT. model%Is_process_active(PPLCC_)) THEN
+    IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
       CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
     ENDIF
 

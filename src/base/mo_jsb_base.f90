@@ -224,19 +224,19 @@ CONTAINS
           CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
         END IF
 
-        IF (model%Is_process_active(FLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+        IF (model%Is_process_enabled(FLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
           dsl4jsb_Config(DISTURB_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
         END IF
-        IF (model%Is_process_active(WLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+        IF (model%Is_process_enabled(WLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
           dsl4jsb_Config(DISTURB_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on disturbance process since wind lcc process is active')
         END IF
-        IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(FUEL_)) THEN
+        IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(FUEL_)) THEN
           dsl4jsb_Config(FUEL_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
         END IF
-        IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(CARBON_)) THEN
+        IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
           dsl4jsb_Config(CARBON_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF

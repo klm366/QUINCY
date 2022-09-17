@@ -141,7 +141,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(TLCC_)) RETURN
 
     ! Assert, that PPLCC is active
-    IF (.NOT. model%Is_process_active(PPLCC_)) THEN
+    IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
       CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
     ENDIF
 

@@ -148,7 +148,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. model%Is_process_active(HD_)) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
@@ -335,7 +335,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. model%Is_process_active(HD_)) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
@@ -646,7 +646,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. model%Is_process_active(HD_)) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
 
