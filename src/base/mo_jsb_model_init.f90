@@ -644,7 +644,7 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(TCQ_)) THEN
           CALL tcq_init(tile)
         END IF
 #ifndef __NO_JSBACH_HD__
@@ -848,15 +848,15 @@ CONTAINS
         END IF
       END SELECT
 
-        IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(ALCC_)) THEN
           CALL alcc_init_lcc(tile)
         END IF
 
-        IF (one_of(tile%process_action(FLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(FLCC_)) THEN
           CALL flcc_init_lcc(tile)
         END IF
 
-        IF (one_of(tile%process_action(WLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(WLCC_)) THEN
           CALL wlcc_init_lcc(tile)
         END IF
       END SELECT

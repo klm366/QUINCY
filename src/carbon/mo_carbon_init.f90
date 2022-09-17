@@ -113,7 +113,7 @@ CONTAINS
     ! Get carbon memory of the tile
     !dsl4jsb_Get_memory(CARBON_)
 
-    IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
+    IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting  carbon boundary conditions for tile '//TRIM(tile%name))
 
@@ -140,7 +140,7 @@ CONTAINS
    !-----------------------------------------------------------------------
    ! CONTENT
 
-   IF (.NOT. tile%Is_process_calculated(CARBON_)) RETURN
+   IF (.NOT. tile%Is_process_active(CARBON_)) RETURN
 
    IF (debug_on()) CALL message(TRIM(routine), 'Initializing carbon memory for tile '//TRIM(tile%name))
 
