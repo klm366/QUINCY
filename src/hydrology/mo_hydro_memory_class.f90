@@ -849,7 +849,7 @@ CONTAINS
         & prefix, suffix,                                                                &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp )
 
-      IF (.NOT. model%Is_process_active(ASSIMI_)) THEN
+      IF (.NOT. model%Is_process_enabled(ASSIMI_)) THEN
         CALL mem%Add_var( 'canopy_cond_unlimited', mem%canopy_cond_unlimited,            &
           & hgrid, surface,                                                              &
           & t_cf('canopy_cond_unlimited', 'm/s',                                         &

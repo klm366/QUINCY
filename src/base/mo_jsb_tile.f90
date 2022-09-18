@@ -49,6 +49,7 @@ MODULE mo_jsb_tile
     PROCEDURE :: Init_fractions => Init_fractions_on_tile
     PROCEDURE :: Init_vars      => Init_vars_on_tile
     PROCEDURE :: Is_process_calculated       => Is_process_calculated_on_tile
+    PROCEDURE :: Is_process_active           => Is_process_active_on_tile
     PROCEDURE :: Has_process_memory          => Has_process_memory_on_tile
     PROCEDURE :: Count_conserved_quantities  => Count_conserved_quantities_on_tile
     PROCEDURE :: Collect_conserved_variables => Collect_conserved_variables_on_tile
@@ -634,22 +635,41 @@ CONTAINS
   END SUBROUTINE Init_vars_on_tile
 
   ! ====================================================================================================== !
-  !
-  !> Check if a given process is to be calculated (Integrated or aggregated) on the tile: 
-  !>  i.e. if the process action on this tile is not SKIP_ or INHERIT_
+  !> Check if a given process is to be integrated on the tile: 
+  !>  i.e. if the process action on this tile is one of ON_TILE_ or ON_SUBTREE_
   !
   LOGICAL FUNCTION Is_process_calculated_on_tile(this, iproc)
 
     USE mo_util,                ONLY: one_of
 
-    CLASS(t_jsb_tile), INTENT(in) :: this !< tile on which the process activity is to be checked
+    CLASS(t_jsb_tile), INTENT(in) :: this  !< tile on which the process activity is to be checked
     INTEGER,           INTENT(in) :: iproc !< process for which the activity is to be checked
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_calculated_on_tile'
 
-    Is_process_calculated_on_tile = (one_of(this%process_action(iproc), (/SKIP_, INHERIT_/)) < 0)
+    ! Note: It's not necessary to test for ON_LEAFS_ because, after the tile tree has been completely
+    !       set up, ON_LEAFS_ on a tile has been replaced by AGGREGATE_ and ON_TILE_ on the sub-tree.
+    Is_process_calculated_on_tile = (one_of(this%process_action(iproc), (/ON_TILE_, ON_SUBTREE_/)) > 0)
     
   END FUNCTION Is_process_calculated_on_tile
+
+  ! ====================================================================================================== !
+  !
+  !> Check if a given process is to be active (integrated or aggregated) on the tile: 
+  !>  i.e. if the process action on this tile is not SKIP_ or INHERIT_
+  !
+  LOGICAL FUNCTION Is_process_active_on_tile(this, iproc)
+
+    USE mo_util,                ONLY: one_of
+
+    CLASS(t_jsb_tile), INTENT(in) :: this  !< tile on which the process activity is to be checked
+    INTEGER,           INTENT(in) :: iproc !< process for which the activity is to be checked
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active_on_tile'
+
+    Is_process_active_on_tile = (one_of(this%process_action(iproc), (/SKIP_, INHERIT_/)) < 0)
+    
+  END FUNCTION Is_process_active_on_tile
 
   ! ====================================================================================================== !
   !
