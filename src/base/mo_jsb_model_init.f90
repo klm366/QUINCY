@@ -258,9 +258,9 @@ CONTAINS
       END IF
 
       ! - also fuel and area damaged by natural disturbances in this timestep are calculated before any lcc takes place
-      IF (model%processes(FUEL_)%p%config%active) THEN
-        CALL model%Queue_task(FUEL_, "fuel")
-      END IF
+      !IF (model%processes(FUEL_)%p%config%active) THEN
+      !  CALL model%Queue_task(FUEL_, "fuel")
+      !END IF
       IF (model%processes(HYDRO_)%p%config%active) THEN   ! <Rackhun Son>
         CALL model%Queue_task(HYDRO_, "pfts_fraction")
       END IF

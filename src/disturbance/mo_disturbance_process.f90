@@ -22,7 +22,7 @@ MODULE mo_disturb_process
   PRIVATE
 
   PUBLIC :: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
-  PUBLIC :: burned_fract_dl    ! <Rackhun Son>
+  PUBLIC :: burned_fract_dl, get_relative_humidity_air_v2    ! <Rackhun Son>
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_disturb_process'
 
@@ -86,8 +86,8 @@ CONTAINS
     & swl4,        swl4_clim_o,   swl4_clim_m,    & ! in
     & lai,         lai_clim_o,    lai_clim_m,     & ! in
     & modified_pfts_fract,                        & ! in
-    & fuel,        fuel_yearly,                   & ! in
-    !& fuel,                                      & ! in
+  !& fuel,        fuel_yearly,                   & ! in
+    & fuel,                                      & ! in
     & population_density,                         & ! in
     & lightning_climatology,                      & ! in
     & elevation,                                  & ! in
@@ -173,8 +173,8 @@ CONTAINS
       & swl4(:),      swl4_clim_o(:),  swl4_clim_m(:),  &
       & lai(:),       lai_clim_o(:),   lai_clim_m(:),   &
       & modified_pfts_fract(:,:),                       &
-      & fuel(:),       fuel_yearly(:),                  &
-      !& fuel(:),                                       &
+      !& fuel(:),       fuel_yearly(:),                  &
+      & fuel(:),                                       &
       & population_density(:),                          &
       & lightning_climatology(:),                       &
       & elevation(:),                                   &
@@ -339,26 +339,26 @@ CONTAINS
     static_variables(:,3) = (elevation                      - elevation_minmax(1))             &
                           / (elevation_minmax(2)            - elevation_minmax(1))  
 
-    emb_variables(:,1) = (t_clim_o             - t_air_clim_minmax(1)) &
+    emb_variables(:,1) = (t_clim_m             - t_air_clim_minmax(1)) &
                        / (t_air_clim_minmax(2) - t_air_clim_minmax(1)) 
-    emb_variables(:,2) = (q_rel_clim_o         - q_rel_clim_minmax(1)) &
+    emb_variables(:,2) = (q_rel_clim_m         - q_rel_clim_minmax(1)) &
                        / (q_rel_clim_minmax(2) - q_rel_clim_minmax(1))
-    emb_variables(:,3) = (q_clim_o             - q_clim_minmax(1))     &
+    emb_variables(:,3) = (q_clim_m             - q_clim_minmax(1))     &
                        / (q_clim_minmax(2)     - q_clim_minmax(1))
-    emb_variables(:,4) = (swl1_clim_o          - swl1_clim_minmax(1))  &
+    emb_variables(:,4) = (swl1_clim_m          - swl1_clim_minmax(1))  &
                        / (swl1_clim_minmax(2)  - swl1_clim_minmax(1)) 
-    emb_variables(:,5) = (swl2_clim_o          - swl2_clim_minmax(1))  &
+    emb_variables(:,5) = (swl2_clim_m          - swl2_clim_minmax(1))  &
                        / (swl2_clim_minmax(2)  - swl2_clim_minmax(1)) 
-    emb_variables(:,6) = (swl3_clim_o          - swl3_clim_minmax(1))  &
+    emb_variables(:,6) = (swl3_clim_m          - swl3_clim_minmax(1))  &
                        / (swl3_clim_minmax(2)  - swl3_clim_minmax(1)) 
-    emb_variables(:,7) = (swl4_clim_o          - swl4_clim_minmax(1))  &
+    emb_variables(:,7) = (swl4_clim_m          - swl4_clim_minmax(1))  &
                        / (swl4_clim_minmax(2)  - swl4_clim_minmax(1))
-    emb_variables(:,8) = (lai_clim_o           - lai_clim_minmax(1))   &
+    emb_variables(:,8) = (lai_clim_m           - lai_clim_minmax(1))   &
                        / (lai_clim_minmax(2)   - lai_clim_minmax(1)) 
-    !emb_variables(:,9) = (fuel                 - agb_minmax(1))        &
-    !                   / (agb_minmax(2)        - agb_minmax(1)) 
-    emb_variables(:,9) = (fuel_yearly          - agb_minmax(1))        &
+    emb_variables(:,9) = (fuel                 - agb_minmax(1))        &
                        / (agb_minmax(2)        - agb_minmax(1)) 
+    !emb_variables(:,9) = (fuel_yearly          - agb_minmax(1))        &
+    !                   / (agb_minmax(2)        - agb_minmax(1)) 
     emb_variables(:,10)= (modified_pfts_fract(:,1) - pft1_minmax(1))   &
                        / (pft1_minmax(2)           - pft1_minmax(1))
     emb_variables(:,11)= (modified_pfts_fract(:,2) - pft2_minmax(1))   &
@@ -523,14 +523,14 @@ CONTAINS
     q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
     where (q_rel_air_ < 0) q_rel_air_ = 0.
     where (q_rel_air_ > 100) q_rel_air_ = 100.
-    burned_fract = burned_fract*((1-q_rel_air_/100)**0.25)
+    burned_fract = burned_fract*((1-q_rel_air_/100)**1)
 
     ! ratio for (dry) fuel
-    !where (emb_variables(:,9) < 0) emb_variables(:,9) = 0.
-    !burned_fract = burned_fract*(emb_variables(:,9)**0.25)
-    fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
-    where (fuel_ < 0) fuel_ = 0.
-    burned_fract = burned_fract*(fuel_(:)**0.25)
+    where (emb_variables(:,9) < 0) emb_variables(:,9) = 0.
+    burned_fract = burned_fract*(emb_variables(:,9)**1)
+    !fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
+    !where (fuel_ < 0) fuel_ = 0.
+    !burned_fract = burned_fract*(fuel_(:)**1)
 
     if (isnan(burned_fract(1))) then
       print*, 'burned_fract'
@@ -611,6 +611,23 @@ CONTAINS
                                / ( ((1._wp - rd / rv) * air_moisture(:) + (rd / rv)) * air_qsat(:) )
 
   END FUNCTION get_relative_humidity_air
+
+  FUNCTION get_relative_humidity_air_v2(nc, air_moisture, air_temperature, air_press) RESULT(relative_humidity_air)
+
+    INTEGER, INTENT(in)  :: nc
+    REAL(wp), INTENT(in) :: &
+      air_moisture(:),      & ! Specific humidity of air [kg kg-1]
+      air_temperature(:),   & ! Temperature of air [K]
+      air_press(:)            ! Pressure of air [Pa]
+
+    REAL(wp) :: relative_humidity_air(SIZE(air_moisture))
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_relative_humidity_air_v2'
+
+    relative_humidity_air(:) = 0.263 * air_press(:) * air_moisture(:)                          &
+                             / ( EXP((17.67*(air_temperature(:)-273.16))/(air_temperature(:)-29.65)) ) 
+
+  END FUNCTION get_relative_humidity_air_v2
 
   ! R: TBD: I copied this subroutine from MO_JSB4_FORCING, because
   !    this mo is not compiled with icon/echam.

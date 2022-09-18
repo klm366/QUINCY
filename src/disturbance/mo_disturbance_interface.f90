@@ -145,7 +145,7 @@ CONTAINS
   !
   SUBROUTINE update_damaged_area(tile, options)
     USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
-    USE mo_disturb_process,       ONLY: burned_fract_dl ! <Rackhun Son>  
+    USE mo_disturb_process,       ONLY: burned_fract_dl, get_relative_humidity_air_v2 ! <Rackhun Son>  
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, timesteps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
@@ -153,7 +153,7 @@ CONTAINS
     USE mo_jsb_time_iface,        ONLY: get_year_day    ! <Rackhun Son>
     USE mo_time_config,           ONLY: time_config     ! <Rackhun Son>
     !!!! These will be removed after the FUEL issue
-    USE mo_fuel_process,          ONLY: calc_fuel_jsbach
+    !USE mo_fuel_process,          ONLY: calc_fuel_jsbach
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -162,8 +162,8 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
     INTEGER :: iblk, nc, ics, ice
-    INTEGER :: iyr, imo, idy, day_of_year, diff_year, i          ! <Rackhun Son>
-    REAL(wp) :: clim_ratio, yearly_ratio                         ! average ratio for climatology <Rackhun Son>
+    INTEGER :: iyr, imo, idy, day_of_year, i          ! <Rackhun Son>
+    REAL(wp) :: clim_ratio, yearly_ratio, diff_year   ! average ratio for climatology <Rackhun Son>
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_damaged_area'
 
@@ -191,14 +191,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf_yDay
 
     !!!! These will be removed after the FUEL issue
-    dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
-    dsl4jsb_Real2D_onChunk :: c_water_ag1_ta
-    dsl4jsb_Real2D_onChunk :: c_ethanol_ag1_ta
-    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag1_ta
-    dsl4jsb_Real2D_onChunk :: c_acid_ag2_ta
-    dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
-    dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
-    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
+    !dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
+    !dsl4jsb_Real2D_onChunk :: c_water_ag1_ta
+    !dsl4jsb_Real2D_onChunk :: c_ethanol_ag1_ta
+    !dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag1_ta
+    !dsl4jsb_Real2D_onChunk :: c_acid_ag2_ta
+    !dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
+    !dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
+    !dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! axuxiliary input variables for fire
@@ -366,20 +366,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_woods_2_soil)  ! out
     
     !!!! These will be removed after the FUEL issue 
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1_ta)            ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1_ta)           ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1_ta)         ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1_ta)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2_ta)            ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2_ta)           ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2_ta)         ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2_ta)      ! in
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1_ta)            ! in
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1_ta)           ! in
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1_ta)         ! in
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1_ta)      ! in
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2_ta)            ! in
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2_ta)           ! in
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2_ta)         ! in
+    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2_ta)      ! in
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)          ! in
     ! -------------------------------------------------------------------------------------------------- !
 
     q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
+    !q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
 
     ! For each time step update the climate buffer
 
@@ -474,21 +475,9 @@ CONTAINS
 
       ! calculate auxiliary variables for DL fire model   <Rackhun Son>
       IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
-        ! approximate daily climatology with 20-year window
-        diff_year = iyr-time_config%tc_exp_startdate%date%year
+        diff_year = FLOAT(iyr-time_config%tc_exp_startdate%date%year) +1._wp
 
         IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
-          !t_air_clim(:,imo) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
-          !q_clim(:,imo)     = q_ave(:)     /(options%dtime/60._wp/60._wp/24._wp)
-          !q_rel_clim(:,imo) = q_rel_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
-          !!ws10_clim(:,imo)  = ws10_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          !swl1_clim(:,imo)  = swl1_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          !swl2_clim(:,imo)  = swl2_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          !swl3_clim(:,imo)  = swl3_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          !swl4_clim(:,imo)  = swl4_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          !lai_clim(:,imo)   = lai_ave(:)   /(options%dtime/60._wp/60._wp/24._wp)
-          !fuel_yearly(:)    = fuel(:)
-
           t_air_clim(:,day_of_year) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
           q_clim(:,day_of_year)     = q_ave(:)     /(options%dtime/60._wp/60._wp/24._wp)
           q_rel_clim(:,day_of_year) = q_rel_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
@@ -497,22 +486,11 @@ CONTAINS
           swl3_clim(:,day_of_year)  = swl3_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
           swl4_clim(:,day_of_year)  = swl4_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
           lai_clim(:,day_of_year)   = lai_ave(:)   /(options%dtime/60._wp/60._wp/24._wp)
-          fuel_yearly(:)            = fuel(:)
 
         !ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
         ELSE
 
-          !IF (iyr == time_config%tc_exp_startdate%date%year .AND. idy == 1) THEN   ! 1st day of month
           IF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
-            !t_air_clim(:,imo) = t_air_ave(:)
-            !q_clim(:,imo)     = q_ave(:)
-            !q_rel_clim(:,imo) = q_rel_ave(:)
-            !!ws10_clim(:,imo)  = ws10_ave(:)
-            !swl1_clim(:,imo)  = swl1_ave(:)
-            !swl2_clim(:,imo)  = swl2_ave(:)
-            !swl3_clim(:,imo)  = swl3_ave(:)
-            !swl4_clim(:,imo)  = swl4_ave(:)
-            !lai_clim(:,imo)   = lai_ave(:)
 
             t_air_clim(:,day_of_year) = t_air_ave(:)
             q_clim(:,day_of_year)     = q_ave(:)
@@ -535,21 +513,12 @@ CONTAINS
 
           ELSE
             !IF (diff_year < 1) Then
-            IF (diff_year < 10) Then
+            !IF (diff_year < 10) Then
               !clim_ratio = MAX(30._wp/idy, 1._wp)
-              clim_ratio = MAX(10._wp/(diff_year+1), 1._wp)
-            ELSE
-              clim_ratio = 1._wp
-            ENDIF
-            !t_air_clim(:,imo) = t_air_clim(:,imo)*(30._wp-clim_ratio)/30._wp + t_air_ave(:)*clim_ratio/30._wp
-            !q_clim(:,imo)     = q_clim(:,imo)*(30._wp-clim_ratio)/30._wp     + q_ave(:)*clim_ratio/30._wp
-            !q_rel_clim(:,imo) = q_rel_clim(:,imo)*(30._wp-clim_ratio)/30._wp + q_rel_ave(:)*clim_ratio/30._wp
-            !!ws10_clim(:,imo)  = ws10_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + ws10_ave(:)*clim_ratio/30._wp
-            !swl1_clim(:,imo)  = swl1_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl1_ave(:)*clim_ratio/30._wp
-            !swl2_clim(:,imo)  = swl2_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl2_ave(:)*clim_ratio/30._wp
-            !swl3_clim(:,imo)  = swl3_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl3_ave(:)*clim_ratio/30._wp
-            !swl4_clim(:,imo)  = swl4_clim(:,imo)*(30._wp-clim_ratio)/30._wp  + swl4_ave(:)*clim_ratio/30._wp
-            !lai_clim(:,imo)   = lai_clim(:,imo)*(30._wp-clim_ratio)/30._wp   + lai_ave(:)*clim_ratio/30._wp
+              !clim_ratio = MAX(10._wp/(diff_year+1), 1._wp)
+            !ELSE
+              !clim_ratio = 1._wp
+            !ENDIF
 
             t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp + t_air_ave(:)*clim_ratio/10._wp
             q_clim(:,day_of_year)     = q_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp     + q_ave(:)*clim_ratio/10._wp
@@ -559,14 +528,23 @@ CONTAINS
             swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl3_ave(:)*clim_ratio/10._wp
             swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl4_ave(:)*clim_ratio/10._wp
             lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp   + lai_ave(:)*clim_ratio/10._wp
+
+            !t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year) + t_air_ave(:)
+            !q_clim(:,day_of_year)     = q_clim(:,day_of_year)     + q_ave(:)
+            !q_rel_clim(:,day_of_year) = q_rel_clim(:,day_of_year) + q_rel_ave(:)
+            !swl1_clim(:,day_of_year)  = swl1_clim(:,day_of_year)  + swl1_ave(:)
+            !swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)  + swl2_ave(:)
+            !swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)  + swl3_ave(:)
+            !swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)  + swl4_ave(:)
+            !lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)   + lai_ave(:)
           ENDIF
 
-          IF (iyr == time_config%tc_exp_startdate%date%year) THEN   ! 1st year
-            yearly_ratio = MAX(365._wp/get_year_day(options%current_datetime), 1._wp)
-          ELSE
-            yearly_ratio = 1._wp
-          ENDIF
-          fuel_yearly(:)= fuel_yearly(:)*(365._wp-yearly_ratio)/365._wp  + fuel(:)*yearly_ratio/365._wp
+          !IF (iyr == time_config%tc_exp_startdate%date%year) THEN   ! 1st year
+          !  yearly_ratio = MAX(365._wp/get_year_day(options%current_datetime), 1._wp)
+          !ELSE
+          !  yearly_ratio = 1._wp
+          !ENDIF
+          !fuel_yearly(:)= fuel_yearly(:)*(365._wp-yearly_ratio)/365._wp  + fuel(:)*yearly_ratio/365._wp
 
         ENDIF
 
@@ -664,33 +642,33 @@ CONTAINS
             CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
           CASE (4) !! Read burned_fract
           CASE (5) !! DL based new fire algoritm   <Rackhun Son>
-            IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
+            !IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
             !if (SUM(c_acid_ag1_ta)>0) then
             !  print*, SUM(c_acid_ag1_ta)
             !endif
 
             CALL burned_fract_dl(                                      &
               & t_air(:),                                              &
-              & t_air_local_clim(:), t_air_clim(:,day_of_year),        &  
+              & t_air_local_clim(:), t_air_clim(:,day_of_year), &!/diff_year, &  
               & q_rel_air(:),                                          &
-              & q_rel_local_clim(:), q_rel_clim(:,day_of_year),        &
+              & q_rel_local_clim(:), q_rel_clim(:,day_of_year), &!/diff_year, &
               & q_air(:),                                              &
-              & q_local_clim(:),     q_clim(:,day_of_year),            &
+              & q_local_clim(:),     q_clim(:,day_of_year), &!/diff_year,     &
               & wind_10m(:),                                           &
               & rain(:),                                               &
               & swl1(:),                                               &
-              & swvl1_local_clim(:), swl1_clim(:,day_of_year),         &
+              & swvl1_local_clim(:), swl1_clim(:,day_of_year), &!/diff_year,  &
               & swl2(:),                                               &
-              & swvl2_local_clim(:), swl2_clim(:,day_of_year),         &
+              & swvl2_local_clim(:), swl2_clim(:,day_of_year), &!/diff_year,  &
               & swl3(:),                                               &
-              & swvl3_local_clim(:), swl3_clim(:,day_of_year),         &
+              & swvl3_local_clim(:), swl3_clim(:,day_of_year), &!/diff_year,  &
               & swl4(:),                                               &
-              & swvl4_local_clim(:), swl4_clim(:,day_of_year),         &
+              & swvl4_local_clim(:), swl4_clim(:,day_of_year), &!/diff_year,  &
               & lai(:),                                                &
-              & lai_local_clim(:),   lai_clim(:,day_of_year),          &
+              & lai_local_clim(:),   lai_clim(:,day_of_year), &!/diff_year,   &
               & modified_pfts_fract(:,:),                              &
-              & fuel(:),             fuel_yearly(:),                   &
-             !& fuel(:),                                               &
+             !& fuel(:),             fuel_yearly(:),                   &
+              & fuel(:),                                               &
               & population_density(:),                                 &
               & lightning_climatology(:),                              &
               & elevation(:),                                          &
