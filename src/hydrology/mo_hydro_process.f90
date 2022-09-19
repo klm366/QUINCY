@@ -25,6 +25,8 @@ MODULE mo_hydro_process
     & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare,         &
     & get_canopy_conductance, get_water_stress_factor
 
+  PUBLIC :: zfcmin
+
   INTERFACE get_canopy_conductance
     MODULE PROCEDURE get_canopy_cond_unstressed_simple
     MODULE PROCEDURE get_canopy_cond_stressed_simple
