@@ -436,7 +436,7 @@ CONTAINS
     & water_to_soil, evapotrans_soil, transpiration,                                     &
     ! inout
     & wtr_soil_sl, ice_soil_sl, tpe_overflow,                                            &
-    & wtr_soilhyd_err, pdv_1d_out, pdv_2d_out,                                           &
+    & wtr_soilhyd_res, pdv_1d_out, pdv_2d_out,                                           &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl,                                      &
     & infilt, runoff, runoff_over, drainage, drain_rock, drain_lat, drain_perm           &
@@ -469,7 +469,7 @@ CONTAINS
     REAL(wp), INTENT(out), DIMENSION(:) :: &
       & infilt, runoff, runoff_over, drainage, &
       & drain_rock, drain_lat, drain_perm, &
-      & wtr_soilhyd_err
+      & wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
 
@@ -659,8 +659,7 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
-    !< store actual soil water state and infiltration in water balance
-    wtr_soilhyd_err(:) = SUM(wtr_soil_sl(:,:), DIM=2) + infilt(:)
+    wtr_soilhyd_res(:) = 0._wp
 
     IF (l_soilhydnew) THEN
 
@@ -670,7 +669,7 @@ CONTAINS
         &     bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl,             &
         &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
         &     infilt, runoff_over, drainage, drain_rock, drain_lat_sl, drain_perm_sl,  &
-        &     tpe_overflow, pdv_2d_out,                                                &
+        &     tpe_overflow, wtr_soilhyd_res, pdv_2d_out,                               &
         &     ltpe_closed, ltpe_open)
 
     ELSE
@@ -704,9 +703,6 @@ CONTAINS
         &     wtr_soil_sl, runoff_over, drainage, tpe_overflow)
 
     END IF
-
-    !< substract new soil state and drainage from water balance
-    wtr_soilhyd_err(:) = wtr_soilhyd_err(:) - (SUM(wtr_soil_sl(:,:), DIM=2) + drainage(:))
 
     drain_lat(:)  = SUM(drain_lat_sl(:,:),  DIM=2)
     drain_perm(:) = SUM(drain_perm_sl(:,:), DIM=2)
@@ -1285,7 +1281,7 @@ CONTAINS
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl, &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
     & infilt, runoff_over, drainage, drain_rock, drain_lat,        &
-    & drain_frozen, tpe_overflow, pdv_2d_out,                      &
+    & drain_frozen, tpe_overflow, wtr_soilhyd_res, pdv_2d_out,     &
     & ltpe_closed, ltpe_open)
 
     !----------------------------------------------------------------------------------------------
@@ -1323,6 +1319,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! Needed later for hydrotiles
     REAL(wp), INTENT(INOUT)         :: drain_frozen(:,:)          ! Needed later for hydrotiles
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
+    REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
     REAL(wp), INTENT(OUT)           :: pdv_2d_out(:,:)
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -1355,6 +1352,8 @@ CONTAINS
     REAL(wp) :: weq_wsat_sl(nc,nsoil)       ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
     REAL(wp) :: weq_field_cap_sl(nc,nsoil)  ! field capacity of the soil layer (not reduced by ice) [m]
     REAL(wp) :: weq_p_wilt_sl(nc,nsoil)     ! wilting point - not reduced relative to soil ice fraction [m]
+    REAL(wp) :: wtr_transp_residual(nc)     ! numerical error caused by the vertical transport scheme [m]
+    REAL(wp) :: wtr_transp_corr(nc)         ! uncorrected part of the transport residual [m]
 
 
     !$claw acc data &
@@ -1464,6 +1463,8 @@ CONTAINS
 
     END DO
 
+    !< store actual soil water state and infiltration (upper boundary condition) to compute the residual transport error
+    wtr_transp_residual(:) = SUM(wtr_soil_sl(:,:), DIM=2) + infilt(:)
 
     DO j=1,nc
       ! Determination of Vertical movement of water through the soil
@@ -1497,6 +1498,35 @@ CONTAINS
           wtr_soil_sl(j,i) = ws_vol_sl(j,i)
         END IF
       END DO
+    END DO
+
+    !< substract new soil state and bottom drainage (lower boundary condition) from water balance
+    wtr_transp_residual(:) = wtr_transp_residual(:) - (SUM(wtr_soil_sl(:,:), DIM=2) + drain_rock(:))
+    wtr_soilhyd_res(:) = wtr_transp_residual(:)
+
+    !< Correct for the vertical transport error. This is necessary because the transport scheme
+    !  (being implicit) cannot fully conserve water.
+    DO j = 1, nc
+      IF (ABS(wtr_transp_residual(j)) > 0._wp) THEN
+        ! 1. Modify lower boundary condition (drainage) as much as possible
+        wtr_transp_corr(j)     = MIN(wtr_transp_residual(j) + drain_rock(j), 0._wp)
+        drain_rock(j)          = MAX(drain_rock(j) + wtr_transp_residual(j), 0._wp)
+        drainage(j)            = MAX(drainage(j) + wtr_transp_residual(j), 0._wp)
+        wtr_transp_residual(j) = wtr_transp_corr(j)
+      END IF
+      ! Modify soil layers if necessary
+      DO i = nsoil, 1, -1
+        IF (ABS(wtr_transp_residual(j)) > 0._wp) THEN
+          wtr_transp_corr(j)     = MIN(wtr_transp_residual(j) + wtr_soil_sl(j,i), 0._wp)
+          wtr_soil_sl(j,i)       = MAX(wtr_soil_sl(j,i) + wtr_transp_residual(j), 0._wp)
+          wtr_transp_residual(j) = wtr_transp_corr(j)
+        END IF
+      END DO
+      ! Complain if correction is not sufficient
+      IF (ABS(wtr_transp_residual(j)) > 1.0e-20_wp) THEN
+        WRITE (message_text,*) 'Remaining soil water transport residual: ', wtr_transp_residual(j), ' at ', j
+        CALL finish ('soilhyd_new', message_text)
+      END IF
     END DO
 
     DO j=1,nc

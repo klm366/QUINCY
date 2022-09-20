@@ -109,7 +109,7 @@ MODULE mo_hydro_memory_class
       & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
-      & wtr_soilhyd_err,      & !< Error (accumulated) due to new soilhydrology                             [m]
+      & wtr_soilhyd_res,      & !< Residual of vertical soil water transport scheme                         [m]
       & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
       & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
       & wtr_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
@@ -732,9 +732,9 @@ CONTAINS
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'wtr_soilhyd_err', mem%wtr_soilhyd_err,                        &
+      CALL mem%Add_var( 'wtr_soilhyd_res', mem%wtr_soilhyd_res,                        &
         & hgrid, surface,                                                              &
-        & t_cf('wtr_soilhyd_err', 'm3/(time step)', 'Soilhyd water balance error'),    &
+        & t_cf('wtr_soilhyd_res', 'm3/(time step)', 'Vertical transport residual'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & lrestart=.FALSE., output_level=BASIC,                                        &
