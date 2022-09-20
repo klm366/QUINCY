@@ -570,14 +570,10 @@ CONTAINS
         IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
         IF (tile%process_action(iproc) == INHERIT_) CYCLE
         DO ivar=1,tile%mem(iproc)%p%no_of_vars
-          SELECT TYPE (var => tile%mem(iproc)%p%vars(ivar)%p)
-          CLASS IS (t_jsb_var_real2d)
+          ASSOCIATE (var => tile%mem(iproc)%p%vars(ivar)%p)
             CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
             var%subset_type = itype
-          CLASS IS (t_jsb_var_real3d)
-            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-            var%subset_type = itype
-          END SELECT
+          END ASSOCIATE
         END DO
 
         IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
