@@ -42,7 +42,8 @@ MODULE mo_hydro_config_class
       & manning_n,         & ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture,
                              ! 0.05 -> floodplains - light brush, 0.075 -> floodplains - heavy brush, 0.15 -> floodplains - trees
       & dt_sat,            & !< Time it takes hydraulic conductivity to reach max [sec]
-      & max_slope            !< maximum slope considdered for infiltration/runoff estimation
+      & max_slope,         & !< maximum slope considdered for infiltration/runoff estimation
+      & max_pond_depth
 
     CHARACTER(len=10)     :: &
       & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
@@ -82,7 +83,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
-    REAL(wp)                    :: manning_n, dt_sat, max_slope
+    REAL(wp)                    :: manning_n, dt_sat, max_slope, max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
@@ -102,6 +103,7 @@ CONTAINS
       & manning_n,                  &
       & dt_sat,                     &
       & max_slope,                  &
+      & max_pond_depth,             &
       & scheme_stom_cond,           &
       & l_organic,                  &
       & l_socmap,                   &
@@ -141,6 +143,7 @@ CONTAINS
     manning_n         = 0.075_wp
     dt_sat            = 600._wp
     max_slope         = 0.45_wp
+    max_pond_depth    = 0.1_wp
     scheme_stom_cond  = 'echam5'
     l_organic         = .TRUE.
     l_socmap          = .TRUE.
@@ -185,6 +188,7 @@ CONTAINS
     config%manning_n      = manning_n
     config%dt_sat         = dt_sat
     config%max_slope      = max_slope
+    config%max_pond_depth = max_pond_depth
 
     config%scheme_stom_cond    = scheme_stom_cond
 

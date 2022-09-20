@@ -32,20 +32,23 @@ CONTAINS
   !! @brief   Compute intertile exchange of surface runoff
   !!
   PURE ELEMENTAL SUBROUTINE calc_runoff_transport(            &
-    & dtime, source_fract, target_fract, runoff_source,       &
-    & wtr_latflow_source, wtr_latflow_target, weq_pond_target &
+    & dtime, source_pond_max, source_fract, target_fract, runoff_source,       &
+    & wtr_latflow_source, wtr_latflow_target, weq_pond_source, weq_pond_target &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in)    :: dtime,              & !< timestep length
+      &                        source_pond_max,    & !< maximum surface water storage on source tile
       &                        source_fract,       & !< area fraction of water source tile
       &                        target_fract          !< area fraction of water target tile
     REAL(wp), INTENT(inout) :: runoff_source,      & !< surface runoff on source tile
       &                        wtr_latflow_source, & !< lateral water flow from source tile
       &                        wtr_latflow_target, & !< lateral water flow towards target tile
+      &                        weq_pond_source,    & !< surface water storage on source tile
       &                        weq_pond_target       !< surface water storage on target tile
 
+    REAL(wp)                :: overland_flx
     !> Update target ponds with surface runoff from source tile
     !!   *** DUMMY implementation which later on will be replaced with a physics based process ***
     !!   Surface runoff is scaled with the tile fractions and moved into the target tile's
@@ -54,10 +57,13 @@ CONTAINS
     !!   temporary storage on the source tile, which then also needs to be part of the global
     !!   water balance
 
+    overland_flx    = MAX(0._wp, weq_pond_source + runoff_source * dtime / rhoh2o - source_pond_max)
+    weq_pond_source = MIN(source_pond_max, weq_pond_source + runoff_source * dtime / rhoh2o)
+
     IF (target_fract > 1.0e-10_wp) THEN
-      weq_pond_target    = weq_pond_target + runoff_source * dtime / rhoh2o * (source_fract / target_fract)
-      wtr_latflow_target = wtr_latflow_target + runoff_source * (source_fract / target_fract)
-      wtr_latflow_source = wtr_latflow_source - runoff_source
+      weq_pond_target    = weq_pond_target    + overland_flx * (source_fract / target_fract)
+      wtr_latflow_target = wtr_latflow_target + overland_flx * rhoh2o / dtime * (source_fract / target_fract)
+      wtr_latflow_source = wtr_latflow_source - overland_flx * rhoh2o / dtime
       runoff_source      = 0._wp
     END IF
 
@@ -105,14 +111,18 @@ CONTAINS
       latflow_act        = latdrain_source * (source_fract / target_fract)
       wtr_soil_target    = wtr_soil_target + latflow_act * dtime / rhoh2o
       ! Reduce lateral flow by upper soil water limit and correct for any excess soil moisture
-      latflow_act        = latflow_act - MAX(wtr_soil_target - field_cap_target, 0._wp) * rhoh2o / dtime
-      wtr_soil_target    = MIN(wtr_soil_target, field_cap_target)
+      !pdv >
+      !latflow_act        = latflow_act - MAX(wtr_soil_target - field_cap_target, 0._wp) * rhoh2o / dtime
+      !wtr_soil_target    = MIN(wtr_soil_target, field_cap_target)
+      !pdv <
       wtr_latflow_target = wtr_latflow_target + latflow_act
       ! Rescale the actually transported water back to the source tile
       latflow_act        = latflow_act * (target_fract / source_fract)
       wtr_latflow_source = wtr_latflow_source - latflow_act
       ! Add any residual lateral flow to the total drainage of the source tile
-      drainage_source    = drainage_source + MAX(latdrain_source - latflow_act, 0._wp)
+      !pdv >
+      !drainage_source    = drainage_source + MAX(latdrain_source - latflow_act, 0._wp)
+      !pdv <
       latdrain_source    = 0._wp
     END IF
 
@@ -182,7 +192,7 @@ CONTAINS
   !! @brief   Compute intertile lateral diffusion between tiles with different surface elevation (elevation/depression)
   !!
   SUBROUTINE calc_intertile_diffusion_new(nsoil, i_shm, dtime,   &
-      &      lvt_fract, dpr_fract, dsoil_lvt,dsoil_dpr,          &
+      &      h_offset, lvt_fract, dpr_fract, dsoil_lvt,dsoil_dpr,          &
       &      field_cap_lvt, field_cap_dpr, wsat_lvt, wsat_dpr,   &
       &      pwp_lvt, pwp_dpr, mpot_sat_lvt, mpot_sat_dpr,       &
       &      k_sat_lvt, k_sat_dpr, bclapp_lvt, bclapp_dpr, ps_index_lvt, ps_index_dpr,             &
@@ -197,6 +207,7 @@ CONTAINS
                                i_shm                  !< Choice of soil hydrological model
 
     REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
+      &                        h_offset,            &
       &                        lvt_fract,           & !< area fraction of water elevation tile
       &                        dpr_fract              !< area fraction of water depression tile
 
@@ -299,12 +310,12 @@ CONTAINS
 
     REAL(wp) ::     Pi,              &
       &             length_scale,    & ! assumed diameter of depressions (could be input field / namelist para)
-      &             h_offset,        & ! hight difference between ridge and depression (should later be input field)
+!      &             h_offset,        & ! hight difference between ridge and depression (should later be input field)
       &             ck                 ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
 
 
     Pi           = 3.1415927_wp  
-    h_offset     = 0.1_wp           ! hight difference between ridge and depression (should later be input field)
+    !h_offset     = 0.1_wp           ! hight difference between ridge and depression (should later be input field)
 
     nrgrd         = nsoil * 2 + 3
 
@@ -482,9 +493,9 @@ CONTAINS
           d_mpot            = mpot_dpr_rgrd - mpot_lvt_rgrd
           wtr_flx_lat       = - k_inter  * d_mpot / length_scale *  a_inter
 
-          wtr_rel_qlbrm     = ((wtr_soil_lvt_rgrd+ice_soil_lvt_rgrd) * fr_lvt_rel       &
+          wtr_rel_qlbrm     = MIN(1._wp, ((wtr_soil_lvt_rgrd+ice_soil_lvt_rgrd) * fr_lvt_rel       &
                           & +  (wtr_soil_dpr_rgrd+ice_soil_dpr_rgrd) * fr_dpr_rel)      &
-                          & / (wsat_lvt_rgrd * fr_lvt_rel +wsat_dpr_rgrd * fr_dpr_rel )
+                          & / (wsat_lvt_rgrd * fr_lvt_rel +wsat_dpr_rgrd * fr_dpr_rel ))
 
           IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from elevation to depression 
 

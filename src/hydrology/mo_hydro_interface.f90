@@ -1025,10 +1025,16 @@ CONTAINS
 
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
+! pdv >
+    LOGICAL  :: l_latdrain
+    LOGICAL  :: l_frzdrain
+! pdv <
 
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
     INTEGER  :: nsoil
+
+    REAL(wp) :: max_pond_depth
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1085,6 +1091,25 @@ CONTAINS
       & + dsl4jsb_var2D_onChunk (HYDRO_, weq_pond)
     dsl4jsb_var2D_onChunk (HYDRO_, weq_pond) = 0._wp
 
+    !pdv >
+    ! For testing only
+    ! 1.) Pond depth
+    IF (tile%contains_depression) THEN
+      max_pond_depth = dsl4jsb_Config(HYDRO_)%max_pond_depth
+    ELSE
+      max_pond_depth = 0.0_wp
+    END IF
+    ! Latdrain flag (no latdrain from depression)
+    IF (tile%contains_lowland .AND. tile%contains_depression) THEN
+      l_latdrain = .FALSE.
+      l_frzdrain = .FALSE.
+    ELSE
+      l_latdrain = .TRUE.
+      l_frzdrain = .TRUE.
+    END IF
+    !
+    !pdv <
+
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
@@ -1097,9 +1122,12 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%l_soilhydnew,                    &
       & dsl4jsb_Config(HYDRO_)%l_infiltnew,                     &
       & dsl4jsb_Config(HYDRO_)%l_hydro_q,                       &
+      & l_latdrain,                                             &
+      & l_frzdrain,                                          &
       & dsl4jsb_Config(HYDRO_)%manning_n,                       &
       & dsl4jsb_Config(HYDRO_)%dt_sat,                          &
       & dsl4jsb_Config(HYDRO_)%max_slope,                       &
+      & max_pond_depth,                                         &
       & dsl4jsb_Config(HYDRO_)%i_shm,                           &
       & dsl4jsb_Config(HYDRO_)%i_interpol,                      &
       & dsl4jsb_Config(HYDRO_)%i_infil,                         &
@@ -1124,6 +1152,7 @@ CONTAINS
       ! inout
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, weq_pond),               &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
 !pdv >
       & dsl4jsb_var3D_onChunk (HYDRO_, weq_soilhyd_err   ),     &
@@ -1143,9 +1172,23 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, drain_perm_sl     )      &
       & )
 
-    dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl           ) = &
-    &  dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl       ) + &
-    &  dsl4jsb_var3D_onChunk (HYDRO_, drain_perm_sl      )
+    !pdv >
+    ! For testing only
+    ! on macroscale, lateral drainage in unfrozen soils is assumed to 
+    ! reach bedrock boundary before reaching the lower tile.
+    ! In frozen soils lateral drainage can not reach bedrock boundary and 
+    ! flows to lower (macroscale) tile
+    IF (tile%contains_upland .AND. tile%contains_depression) THEN
+      dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl           ) = &
+      &  dsl4jsb_var3D_onChunk (HYDRO_, drain_perm_sl      )
+    ELSE
+      dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl           ) = &
+      &  dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl       ) + &
+      &  dsl4jsb_var3D_onChunk (HYDRO_, drain_perm_sl      )
+    END IF
+    !pdv <
+
+
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
       !$claw acc exit data delete(fract_org_sl)
