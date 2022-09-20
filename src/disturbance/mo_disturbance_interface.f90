@@ -513,12 +513,12 @@ CONTAINS
 
           ELSE
             !IF (diff_year < 1) Then
-            !IF (diff_year < 10) Then
+            IF (diff_year < 10) Then
               !clim_ratio = MAX(30._wp/idy, 1._wp)
-              !clim_ratio = MAX(10._wp/(diff_year+1), 1._wp)
-            !ELSE
-              !clim_ratio = 1._wp
-            !ENDIF
+              clim_ratio = MAX(10._wp/(diff_year+1), 1._wp)
+            ELSE
+              clim_ratio = 1._wp
+            ENDIF
 
             t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp + t_air_ave(:)*clim_ratio/10._wp
             q_clim(:,day_of_year)     = q_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp     + q_ave(:)*clim_ratio/10._wp
@@ -646,6 +646,7 @@ CONTAINS
             !if (SUM(c_acid_ag1_ta)>0) then
             !  print*, SUM(c_acid_ag1_ta)
             !endif
+            print*, minval(modified_pfts_fract(:,2))
 
             CALL burned_fract_dl(                                      &
               & t_air(:),                                              &

@@ -339,21 +339,21 @@ CONTAINS
     static_variables(:,3) = (elevation                      - elevation_minmax(1))             &
                           / (elevation_minmax(2)            - elevation_minmax(1))  
 
-    emb_variables(:,1) = (t_clim_m             - t_air_clim_minmax(1)) &
+    emb_variables(:,1) = (t_clim_o             - t_air_clim_minmax(1)) &
                        / (t_air_clim_minmax(2) - t_air_clim_minmax(1)) 
-    emb_variables(:,2) = (q_rel_clim_m         - q_rel_clim_minmax(1)) &
+    emb_variables(:,2) = (q_rel_clim_o         - q_rel_clim_minmax(1)) &
                        / (q_rel_clim_minmax(2) - q_rel_clim_minmax(1))
-    emb_variables(:,3) = (q_clim_m             - q_clim_minmax(1))     &
+    emb_variables(:,3) = (q_clim_o             - q_clim_minmax(1))     &
                        / (q_clim_minmax(2)     - q_clim_minmax(1))
-    emb_variables(:,4) = (swl1_clim_m          - swl1_clim_minmax(1))  &
+    emb_variables(:,4) = (swl1_clim_o          - swl1_clim_minmax(1))  &
                        / (swl1_clim_minmax(2)  - swl1_clim_minmax(1)) 
-    emb_variables(:,5) = (swl2_clim_m          - swl2_clim_minmax(1))  &
+    emb_variables(:,5) = (swl2_clim_o          - swl2_clim_minmax(1))  &
                        / (swl2_clim_minmax(2)  - swl2_clim_minmax(1)) 
-    emb_variables(:,6) = (swl3_clim_m          - swl3_clim_minmax(1))  &
+    emb_variables(:,6) = (swl3_clim_o          - swl3_clim_minmax(1))  &
                        / (swl3_clim_minmax(2)  - swl3_clim_minmax(1)) 
-    emb_variables(:,7) = (swl4_clim_m          - swl4_clim_minmax(1))  &
+    emb_variables(:,7) = (swl4_clim_o          - swl4_clim_minmax(1))  &
                        / (swl4_clim_minmax(2)  - swl4_clim_minmax(1))
-    emb_variables(:,8) = (lai_clim_m           - lai_clim_minmax(1))   &
+    emb_variables(:,8) = (lai_clim_o           - lai_clim_minmax(1))   &
                        / (lai_clim_minmax(2)   - lai_clim_minmax(1)) 
     emb_variables(:,9) = (fuel                 - agb_minmax(1))        &
                        / (agb_minmax(2)        - agb_minmax(1)) 
