@@ -359,24 +359,33 @@ CONTAINS
                        / (agb_minmax(2)        - agb_minmax(1)) 
     !emb_variables(:,9) = (fuel_yearly          - agb_minmax(1))        &
     !                   / (agb_minmax(2)        - agb_minmax(1)) 
-    emb_variables(:,10)= (modified_pfts_fract(:,1) - pft1_minmax(1))   &
-                       / (pft1_minmax(2)           - pft1_minmax(1))
-    emb_variables(:,11)= (modified_pfts_fract(:,2) - pft2_minmax(1))   &
-                       / (pft2_minmax(2)           - pft2_minmax(1))
-    emb_variables(:,12)= (modified_pfts_fract(:,3) - pft3_minmax(1))   &
-                       / (pft3_minmax(2)           - pft3_minmax(1))
-    emb_variables(:,13)= (modified_pfts_fract(:,4) - pft4_minmax(1))   &
-                       / (pft4_minmax(2)           - pft4_minmax(1))
-    emb_variables(:,14)= (modified_pfts_fract(:,5) - pft5_minmax(1))   &
-                       / (pft5_minmax(2)           - pft5_minmax(1))
-    emb_variables(:,15)= (modified_pfts_fract(:,6) - pft6_minmax(1))   &
-                       / (pft6_minmax(2)           - pft6_minmax(1))
-    emb_variables(:,16)= (modified_pfts_fract(:,7) - pft7_minmax(1))   &
-                       / (pft7_minmax(2)           - pft7_minmax(1))
-    emb_variables(:,17)= (modified_pfts_fract(:,8) - pft8_minmax(1))   &
-                       / (pft8_minmax(2)           - pft8_minmax(1))
-    emb_variables(:,18)= (modified_pfts_fract(:,9) - pft9_minmax(1))   &
-                       / (pft9_minmax(2)           - pft9_minmax(1))
+    emb_variables(:,10)= modified_pfts_fract(:,1)
+    !emb_variables(:,10)= (modified_pfts_fract(:,1) - pft1_minmax(1))   &
+    !                   / (pft1_minmax(2)           - pft1_minmax(1))
+    emb_variables(:,11)= modified_pfts_fract(:,2)
+    !emb_variables(:,11)= (modified_pfts_fract(:,2) - pft2_minmax(1))   &
+    !                   / (pft2_minmax(2)           - pft2_minmax(1))
+    emb_variables(:,12)= modified_pfts_fract(:,3)
+    !emb_variables(:,12)= (modified_pfts_fract(:,3) - pft3_minmax(1))   &
+    !                   / (pft3_minmax(2)           - pft3_minmax(1))
+    emb_variables(:,13)= modified_pfts_fract(:,4)
+    !emb_variables(:,13)= (modified_pfts_fract(:,4) - pft4_minmax(1))   &
+    !                   / (pft4_minmax(2)           - pft4_minmax(1))
+    emb_variables(:,14)= modified_pfts_fract(:,5)
+    !emb_variables(:,14)= (modified_pfts_fract(:,5) - pft5_minmax(1))   &
+    !                   / (pft5_minmax(2)           - pft5_minmax(1))
+    emb_variables(:,15)= modified_pfts_fract(:,6)
+    !emb_variables(:,15)= (modified_pfts_fract(:,6) - pft6_minmax(1))   &
+    !                   / (pft6_minmax(2)           - pft6_minmax(1))
+    emb_variables(:,16)= modified_pfts_fract(:,7)
+    !emb_variables(:,16)= (modified_pfts_fract(:,7) - pft7_minmax(1))   &
+    !                   / (pft7_minmax(2)           - pft7_minmax(1))
+    emb_variables(:,17)= modified_pfts_fract(:,8)
+    !emb_variables(:,17)= (modified_pfts_fract(:,8) - pft8_minmax(1))   &
+    !                   / (pft8_minmax(2)           - pft8_minmax(1))
+    emb_variables(:,18)= modified_pfts_fract(:,9)
+    !emb_variables(:,18)= (modified_pfts_fract(:,9) - pft9_minmax(1))   &
+    !                   / (pft9_minmax(2)           - pft9_minmax(1))
 
 
     ! rel ano max 5
@@ -417,7 +426,7 @@ CONTAINS
     emb_network_act = log(1+exp(emb_network))
     where (emb_network > 20) emb_network_act = emb_network
     climate_emb_output = matmul(emb_network_act, climate_emb_layer2_weight) + spread(climate_emb_layer2_bias, 1, nc)
-    where (climate_emb_output > 700) climate_emb_output = 700
+    where (climate_emb_output > 700._wp) climate_emb_output = 700._wp
 
     climate_score = exp(climate_emb_output)
     climate_score = climate_score / spread(sum(climate_score,dim=2), 2, d_emb_output)
@@ -453,7 +462,7 @@ CONTAINS
     emb_network_act = log(1+exp(emb_network))
     where (emb_network > 20) emb_network_act = emb_network
     vegetation_emb_output = matmul(emb_network_act, vegetation_emb_layer2_weight) + spread(vegetation_emb_layer2_bias, 1, nc)
-    where (vegetation_emb_output > 700) vegetation_emb_output = 700
+    where (vegetation_emb_output > 700._wp) vegetation_emb_output = 700._wp
 
     vegetation_score = exp(vegetation_emb_output)
     vegetation_score = vegetation_score / spread(sum(vegetation_score,dim=2), 2, d_emb_output)
@@ -473,28 +482,28 @@ CONTAINS
     ! output
     IF (tilename == 'pft01') THEN 
       pft_idx = 2
-      scale = 1
+      scale = 1._wp
     ELSE IF (tilename == 'pft02') THEN
       pft_idx = 3
-      scale = 1
+      scale = 1._wp
     ELSE IF (tilename == 'pft03') THEN
       pft_idx = 4
-      scale = 1
+      scale = 1._wp
     ELSE IF (tilename == 'pft04') THEN
       pft_idx = 5
-      scale = 1
+      scale = 1._wp
     ELSE IF (tilename == 'pft05') THEN
       pft_idx = 6
-      scale = 1
+      scale = 1._wp
     ELSE IF (tilename == 'pft06') THEN
       pft_idx = 7
-      scale = 1
+      scale = 1._wp
     ELSE IF (tilename == 'pft07') THEN
       pft_idx = 8
-      scale = 1/2
+      scale = 1._wp/2._wp
     ELSE IF (tilename == 'pft08') THEN
       pft_idx = 8
-      scale = 1/2
+      scale = 1._wp/2._wp
     ELSE
       print*, 'new land cover type'
     endif
@@ -503,34 +512,38 @@ CONTAINS
                  * vegetation_lstm_output_(:,pft_idx)  &
                  * static_network_output(:,pft_idx)    &
                  * modified_pfts_fract(:,pft_idx)      &
-                 * 1e-2*scale
+                 * scale/100._wp
 
     burned_fract = burned_fract                        &
                  + climate_lstm_output_(:,1)           &
                  * vegetation_lstm_output_(:,1)        &
                  * static_network_output(:,1)          &
                  * modified_pfts_fract(:,1)            &
-                 * 1e-2 / 8
+                 * 8._wp/100._wp 
 
-    where (burned_fract < 0) burned_fract = 0.
-    where (burned_fract > 1) burned_fract = 1. 
+    where (burned_fract < 0._wp) burned_fract = 0._wp
+    where (burned_fract > 1._wp) burned_fract = 1._wp 
 
     ! ratio for bared & snow area
     burned_fract = burned_fract*(1-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
 
     ! ratio for dry (fuel)
-    !q_rel_air_(:) = q_rel_air(:)
+    !q_rel_air_(:) = q_rel_air(:)/100._wp
     q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
-    where (q_rel_air_ < 0) q_rel_air_ = 0.
-    where (q_rel_air_ > 100) q_rel_air_ = 100.
-    burned_fract = burned_fract*((1-q_rel_air_/100)**1)
+    q_rel_air_(:) = q_rel_air_(:)/100._wp
+    where (q_rel_air_ < 0._wp) q_rel_air_ = 0._wp
+    where (q_rel_air_ > 1._wp) q_rel_air_ = 1._wp
+    q_rel_air_(:) = 1._wp / (1._wp + exp(-20._wp*(q_rel_air_(:)-0.5)))
+    !where (q_rel_air_ > 70._wp) q_rel_air_ = 100._wp
+    burned_fract = burned_fract*((1._wp-q_rel_air_)**1)
 
     ! ratio for (dry) fuel
-    where (emb_variables(:,9) < 0) emb_variables(:,9) = 0.
-    burned_fract = burned_fract*(emb_variables(:,9)**1)
+    !where (emb_variables(:,9) < 0._wp) emb_variables(:,9) = 0._wp
+    !burned_fract = burned_fract*(emb_variables(:,9)**1)
     !fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
-    !where (fuel_ < 0) fuel_ = 0.
-    !burned_fract = burned_fract*(fuel_(:)**1)
+    fuel_(:) = emb_variables(:,9)
+    where (fuel_ < 0) fuel_ = 0.
+    burned_fract = burned_fract*(fuel_(:)**0.25)
 
     if (isnan(burned_fract(1))) then
       print*, 'burned_fract'
