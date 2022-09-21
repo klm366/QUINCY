@@ -542,7 +542,7 @@ CONTAINS
     !burned_fract = burned_fract*(emb_variables(:,9)**1)
     !fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
     fuel_(:) = emb_variables(:,9)
-    where (fuel_ < 0) fuel_ = 0.
+    where (fuel_ < 0._wp) fuel_ = 0._wp
     burned_fract = burned_fract*(fuel_(:)**0.25)
 
     if (isnan(burned_fract(1))) then
