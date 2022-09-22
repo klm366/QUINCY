@@ -111,7 +111,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_config'
     
-    NAMELIST /spq_ctl/       & 
+    NAMELIST /jsb_spq_nml/       & 
                           active                  , &
                           ic_filename             , &
                           bc_filename             , &
@@ -164,8 +164,8 @@ CONTAINS
     ! &SPQ_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
-    nml_unit = position_nml('SPQ_CTL', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, spq_ctl)
+    nml_unit = position_nml('jsb_spq_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_spq_nml)
 
     CALL close_nml(nml_handler)
 
