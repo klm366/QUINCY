@@ -89,7 +89,8 @@ CONTAINS
     & skinres_canopy_max, skinres_max, fract_snow, fract_wet,       &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
-    & q_snocpymlt, snow_accum, snowmelt_soil,                       &
+    & wtr_pond, ice_pond,                                           &
+    & q_snocpymlt, snow_accum, snowmelt_soil, pond_freeze, pond_melt, &
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
@@ -103,9 +104,9 @@ CONTAINS
       & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,                 &
       & fract_snow, fract_wet, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
     REAL(wp), INTENT(inout) :: &
-      & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens
+      & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens, wtr_pond, ice_pond
     REAL(wp), INTENT(out)   ::                   &
-      & q_snocpymlt, snow_accum, snowmelt_soil,  &
+      & q_snocpymlt, snow_accum, snowmelt_soil, pond_freeze, pond_melt, &
       & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
     !$claw end model-data
     !
@@ -134,6 +135,11 @@ CONTAINS
       & rain_to_skinres,      & !< amount of rain going into the skin reservoir
       & wtr_skin_pre_rain       !< amount of water in the skin reservoir prior to the update [m]
 
+! pdv >
+    REAL(wp) ::               &
+      & t_pond,               &
+      & pond_change_pot
+!pdv
 
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
@@ -152,6 +158,9 @@ CONTAINS
     evapo_snow = 0._wp
     water_to_soil = 0._wp
     evapo_deficit = 0._wp
+
+    pond_freeze = 0._wp
+    pond_melt   = 0._wp
 
     !-----------------------------------------------------------------
     ! Convert water fluxes to m water equivalent within the time step
@@ -235,6 +244,23 @@ CONTAINS
       weq_snow_soil = MIN(snow_depth_max, weq_snow_soil)
     END IF
 
+    !pdv >
+    ! Freezing and melting of pond reservoir
+    ! 1.) Potential melting:
+    t_pond = t_unfilt - snowmelt_soil / hcap_grnd * (alf*rhoh2o)
+    IF (t_pond > tmelt .AND. ice_pond > 0._wp) THEN
+      pond_change_pot = hcap_grnd * (t_pond-tmelt)/(alf*rhoh2o)
+      pond_melt       = MAX(MIN(pond_change_pot, ice_pond), 0._wp)
+      ice_pond        = ice_pond - pond_melt
+      wtr_pond        = wtr_pond + pond_melt
+    ELSE IF (t_pond < tmelt .AND. wtr_pond > 0._wp) THEN
+      pond_change_pot = hcap_grnd * (tmelt-t_pond)/(alf*rhoh2o)
+      pond_freeze     = MAX(MIN(pond_change_pot, wtr_pond), 0._wp)
+      wtr_pond        = wtr_pond - pond_freeze
+      ice_pond        = ice_pond + pond_freeze
+    END IF
+    !pdv <
+
     !-----------------------------------------------------------
     !  Budget of water in skin reservoir (canopy and ground)
     !-----------------------------------------------------------
@@ -279,6 +305,8 @@ CONTAINS
 
     ! Transform fluxes in output from [m] to [kg m-2 s-1]
     snowmelt_soil = snowmelt_soil * rhoh2o / dtime
+    pond_freeze   = pond_freeze   * rhoh2o / dtime
+    pond_melt     = pond_melt     * rhoh2o / dtime
 
     evapotrans_soil = evapotrans_soil_in_m * rhoh2o / dtime
     evapo_skin = evapo_skin_in_m  * rhoh2o / dtime
@@ -433,20 +461,21 @@ CONTAINS
     ! in
     & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                       &
     & l_infil_subzero, l_soilhydnew, l_infiltnew, l_hydro_q, l_latdrain, l_frzdrain,        &
-    & manning_n, dt_sat, max_slope, max_pond_depth,                                         &
+    & manning_n, dt_sat, max_slope,                                         &
     & i_shm, i_interpol, i_infil, i_testing1, i_testing2,                                   &
     & soil_depth_sl, root_depth_sl, fract_org_sl,                                           &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,       &
-    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,       &
+    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                               &
+    & oro_stddev, t_soil_sl1, wtr_pond_max,                                               &
     & water_to_soil, evapotrans_soil, transpiration,                                        &
     ! inout
-    & wtr_soil_sl, ice_soil_sl, weq_pond, tpe_overflow,                                     &
+    & wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow,                                     &
     !pdv >
     & weq_soilhyd_err, pdv_1d_out, pdv_2d_out, &
     !pdv <
     ! out
     & wsat_sl, field_cap_sl, p_wilt_sl, &
-    & infilt, runoff, runoff_over, drainage, drain_rock, drain_lat_sl, drain_perm_sl        &
+    & infilt, runoff, runoff_horton, runoff_dunne, drainage, drain_rock, drain_lat_sl, drain_perm_sl        &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -467,7 +496,7 @@ CONTAINS
     LOGICAL, INTENT(in) :: l_frzdrain
 
     REAL(wp), INTENT(in) :: &
-      & manning_n, dt_sat, max_slope, max_pond_depth
+      & manning_n, dt_sat, max_slope
 
     INTEGER, INTENT(in) :: &
       & i_shm, i_interpol, i_infil, i_testing1, i_testing2 
@@ -476,15 +505,15 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, fract_org_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & oro_stddev, t_soil_sl1, water_to_soil, &
+      & oro_stddev, t_soil_sl1, wtr_pond_max, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & weq_pond, tpe_overflow
+      & wtr_pond, tpe_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl, weq_soilhyd_err
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & infilt, runoff, runoff_over, drainage, &
-      & drain_rock
+      & infilt, runoff, runoff_horton,     &
+      & runoff_dunne, drainage, drain_rock
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & drain_lat_sl, drain_perm_sl
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
@@ -576,26 +605,30 @@ CONTAINS
     !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
     !$claw acc end parallel
 
+    runoff_dunne(:)     = 0._wp
+    runoff_horton(:)    = 0._wp
+    runoff(:)           = 0._wp
+
     IF (ltpe_closed) THEN
       ! Terra planet setup without runoff
       runoff(:) = 0._wp
       infilt(:) = water_to_soil(:)
     ELSE
       IF (l_infiltnew) THEN
-        CALL infiltration_new(nc,nlat, dt_sat, dtime, max_slope, max_pond_depth, i_infil, i_shm,  &
+        CALL infiltration_new(nc,nlat, dt_sat, dtime, max_slope, wtr_pond_max(:), i_infil, i_shm,  &
                             & oro_stddev(:), manning(:), soil_depth_sl(:,1),                      &
                             & pore_size_index_sl(:,1), bclapp_sl(:,1), wsat_sl_wi(:,1),           &
                             & field_cap_sl_wi(:,1), p_wilt_sl_wi(:,1), hyd_cond_sat_sl(:,1),      &
                             & wtr_soil_sl(:,1), ice_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1),     &
-                            & water_to_soil(:), weq_pond(:),                                      &
-                            & runoff(:),infilt(:),pdv_1d_out(:))
+                            & water_to_soil(:), wtr_pond(:),                                      &
+                            & runoff_horton(:),infilt(:),pdv_1d_out(:))
 
 
       ELSE
      
         CALL infiltration(nc,nlat,l_infil_subzero, oro_stddev(:), &
                       & ws_max(:), t_soil_sl1(:), wtr_rootzone(:), ice_rootzone(:), water_to_soil(:), &
-                      & runoff(:), infilt(:))
+                      & runoff_dunne(:), infilt(:))
       END IF
     END IF  
 
@@ -623,19 +656,18 @@ CONTAINS
     !$claw acc parallel loop gang vector
 
 ! pdv >
-    runoff_over(:)      = 0._wp
     drain_rock(:)       = 0._wp
     drain_lat_sl(:,:)   = 0._wp
     drain_perm_sl(:,:)  = 0._wp
 
     IF (l_soilhydnew) THEN
 
-      CALL soilhyd_new(nc, nsoil, dtime, max_pond_depth, i_shm, i_interpol, &
-        &     l_hydro_q, l_latdrain, l_frzdrain,                            &
-        &     soil_depth_sl, wsat_sl_wi, field_cap_sl_wi, hyd_cond_sat_sl,                &
-        &     bclapp_sl, matrix_pot_sl, pore_size_index_sl, p_wilt_sl_wi,                 &
-        &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,  weq_pond,              &
-        &     infilt,runoff_over, drainage, drain_rock, drain_lat_sl, drain_perm_sl,   &
+      CALL soilhyd_new(nc, nsoil, dtime, i_shm, i_interpol,                                &
+        &     l_hydro_q, l_latdrain, l_frzdrain,                                           &
+        &     wtr_pond_max, soil_depth_sl, wsat_sl_wi, field_cap_sl_wi, hyd_cond_sat_sl, &
+        &     bclapp_sl, matrix_pot_sl, pore_size_index_sl, p_wilt_sl_wi,                  &
+        &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,  wtr_pond,                  &
+        &     infilt,runoff_dunne, drainage, drain_rock, drain_lat_sl, drain_perm_sl,       &
         &     tpe_overflow, &
         &     weq_soilhyd_err, pdv_2d_out,  &
         &     ltpe_closed, ltpe_open)
@@ -656,7 +688,7 @@ CONTAINS
       ! Drainage calculation with multi-layer soil scheme
       CALL soilhyd(nc, nsoil, dtime, ilog, jllog, soil_depth_sl, wtr_soil_sl,                &
         &     ice_soil_sl, wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl,          &
-        &     bclapp_sl, matrix_pot_sl, wtr_soil_pot_scool_sl, runoff_over, drainage, &
+        &     bclapp_sl, matrix_pot_sl, wtr_soil_pot_scool_sl, runoff_dunne, drainage, &
         &     drain_rock, drain_lat_sl, pore_size_index_sl, &
         &     p_wilt_sl, tpe_overflow, ltpe_closed, ltpe_open)
 
@@ -676,16 +708,15 @@ CONTAINS
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector
 !pdv > 
-    ! quick and dirty for bookkeeping ... in the end discuss with Tobias how we want to do this
-    runoff(:)   = runoff(:) + runoff_over(:)
-    drainage(:) = drainage  - runoff_over(:)
+    runoff(:)            = runoff_horton(:) + runoff_dunne(:)
 !pdv <
 
 
     DO i = 1, nc
       infilt(i)          = infilt     (i)     * rhoh2o / dtime
       runoff(i)          = runoff     (i)     * rhoh2o / dtime
-      runoff_over(i)     = runoff_over(i)     * rhoh2o / dtime
+      runoff_dunne(i)    = runoff_dunne(i)    * rhoh2o / dtime
+      runoff_horton(i)   = runoff_horton(i)   * rhoh2o / dtime
       drainage(i)        = drainage   (i)     * rhoh2o / dtime
       drain_rock(i)      = drain_rock (i)     * rhoh2o / dtime
       drain_lat_sl(i,:)  = drain_lat_sl(i,:)  * rhoh2o / dtime
@@ -808,10 +839,10 @@ CONTAINS
 
   !------------------------------------------------------------------------------------------------
 
-  SUBROUTINE infiltration_new(nc,nlat, dt_sat, dtime, max_slope, pond_max, i_infil, i_shm,     &
+  SUBROUTINE infiltration_new(nc,nlat, dt_sat, dtime, max_slope, wtr_pond_max, i_infil, i_shm,     &
                             & oro_stddev, manning, dsoil,                                &
                             & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat,    &
-                            & ws_soil, ice_soil, wtr_pot_scool, water_to_soil, weq_pond, &
+                            & ws_soil, ice_soil, wtr_pot_scool, water_to_soil, wtr_pond, &
                             & runoff, infilt, pdv_1d_out)
 
 
@@ -822,13 +853,13 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: dtime, &
       & dt_sat,          &         !< Time it takes hydraulic conductivity to reach max [sec]
-      & max_slope,       &
-      & pond_max
+      & max_slope
 
     INTEGER,  INTENT(in) :: &
       & i_infil, i_shm
 
     REAL(wp), INTENT(in) ::      &
+      & wtr_pond_max(:),             &
       & oro_stddev(:),           &
       & pore_size_index(:),      &
       & bclapp(:),               &
@@ -844,7 +875,7 @@ CONTAINS
       & water_to_soil(:)
 
     REAL(wp), INTENT(inout) ::      &
-      & weq_pond(:)
+      & wtr_pond(:)
 
     REAL(wp), INTENT(out) ::     &
       & runoff(:), infilt(:),    &
@@ -952,7 +983,7 @@ CONTAINS
 
       delta_k(i) = k_end(i) - k_start(i)
       infilt(i)  = MIN(water_to_soil(i), k_start(i)* dtime)
-      water_excess(i) = MAX(0._wp, water_to_soil(i) - infilt(i) - pond_max)
+      water_excess(i) = MAX(0._wp, water_to_soil(i) - infilt(i) - wtr_pond_max(i))
 !      water_excess(i) = water_to_soil(i) - infilt(i)
       pond_pot(i) = water_excess(i) * dt_sat / dtime
 
@@ -983,16 +1014,16 @@ CONTAINS
 
       END IF
 
-      pdv_1d_out(i) = pond_max
+      pdv_1d_out(i) = wtr_pond_max(i)
 
-      weq_pond(i) = MIN(pond_max, water_to_soil(i) - infilt(i))
-      runoff(i)   = MAX(0._wp,    water_to_soil(i) - infilt(i)  - weq_pond(i))
+      wtr_pond(i) = MIN(wtr_pond_max(i), water_to_soil(i) - infilt(i))
+      runoff(i)   = MAX(0._wp,    water_to_soil(i) - infilt(i)  - wtr_pond(i))
 
 
       !!! Unbedingt noch dahingehend korrigieren, das unter gepondeten Bereichen ziemlich sicher mit ksat infiltriert
-      IF (infilt(i) < ice_impede(i) * hyd_cond_sat(i) * dtime .AND. weq_pond(i) > 0._wp) THEN
-        infilt(i)   = MIN(ice_impede(i) * hyd_cond_sat(i) * dtime, infilt(i) + weq_pond(i))
-        weq_pond(i) = water_to_soil(i) - infilt(i) - runoff(i)
+      IF (infilt(i) < ice_impede(i) * hyd_cond_sat(i) * dtime .AND. wtr_pond(i) > 0._wp) THEN
+        infilt(i)   = MIN(ice_impede(i) * hyd_cond_sat(i) * dtime, infilt(i) + wtr_pond(i))
+        wtr_pond(i) = water_to_soil(i) - infilt(i) - runoff(i)
       END IF
 
     END DO
@@ -1003,7 +1034,7 @@ CONTAINS
 
   SUBROUTINE soilhyd(nc, nsoil, dtime, ilog, jllog, dsoil, wtr_soil_sl, ice_soil_sl,      &
     & wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl,  &
-    & wtr_soil_pot_scool_sl, runoff_over, drainage, drain_rock, drain_lat_sl,              &
+    & wtr_soil_pot_scool_sl, runoff_dunne, drainage, drain_rock, drain_lat_sl,              &
     & pore_size_index_sl, p_wilt_sl, tpe_overflow, ltpe_closed, ltpe_open)
 
     !----------------------------------------------------------------------------------------------
@@ -1034,7 +1065,7 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: ice_soil_sl(:,:)           ! amount of ice in the soil [m]
     REAL(wp), INTENT(IN)            :: wtr_soil_pot_scool_sl(:,:) ! potentially supercooled water [m]
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: runoff_over(:)             ! amount of overflow (only diagnostic) [m]
+    REAL(wp), INTENT(INOUT)         :: runoff_dunne(:)             ! amount of overflow (only diagnostic) [m]
     REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! amount of drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: drain_lat_sl(:,:)          ! amount of drainage within timestep [m]
@@ -1378,11 +1409,11 @@ CONTAINS
         DO i=1,nsoil
           IF (dsoil(j,i) > 0._wp .AND. wtr_soil_sl(j,i) > field_cap_sl(j,i)) THEN
             IF (i == 1) THEN
-              runoff_over(j) = runoff_over(j) +  wtr_soil_sl(j,i)-field_cap_sl(j,i)
+              runoff_dunne(j) = runoff_dunne(j) +  wtr_soil_sl(j,i)-field_cap_sl(j,i)
             ELSE
               drain_lat_sl(j,i)= drain_lat_sl(j,i)  +  wtr_soil_sl(j,i)-field_cap_sl(j,i)
+              drainage(j) = drainage(j) + wtr_soil_sl(j,i)-field_cap_sl(j,i)
             END IF
-            drainage(j) = drainage(j) + wtr_soil_sl(j,i)-field_cap_sl(j,i)
             wtr_soil_sl(j,i) = field_cap_sl(j,i)
           END IF
         END DO
@@ -1523,8 +1554,7 @@ CONTAINS
       ! This should not happen, this is just for security.
       IF (.NOT. ltpe_closed) THEN
         IF (wtr_soil_sl(j,1) > field_cap_sl(j,1)) THEN
-          runoff_over(j) = runoff_over(j) + wtr_soil_sl(j,1)-field_cap_sl(j,1)
-          drainage(j) = drainage(j) + wtr_soil_sl(j,1) - field_cap_sl(j,1)
+          runoff_dunne(j) = runoff_dunne(j) + wtr_soil_sl(j,1)-field_cap_sl(j,1)
           wtr_soil_sl(j,1) = field_cap_sl(j,1)
         END IF
       ELSE      ! TPE closed case
@@ -1555,13 +1585,13 @@ CONTAINS
 
 
   !------------------------------------------------------------------------------------------------
-  SUBROUTINE soilhyd_new(nc, nsoil, dtime, max_pond_depth,     &
+  SUBROUTINE soilhyd_new(nc, nsoil, dtime,     &
     & i_shm, i_interpol, l_hydro_q, l_latdrain, l_frzdrain,    &
-    & dsoil,                                                   &
+    & wtr_pond_max, dsoil,                                                   &
     & wsat_sl, field_cap_sl, hyd_cond_sat_sl,                  &
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl, p_wilt_sl, &
-    & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl, weq_pond, &
-    & infilt, runoff_over, drainage, drain_rock, drain_lat, drain_frozen,  &
+    & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl, wtr_pond, &
+    & infilt, runoff_dunne, drainage, drain_rock, drain_lat, drain_frozen,  &
     & tpe_overflow,             &
     !pdv >
     & weq_soilhyd_err, pdv_2d_out, &
@@ -1580,12 +1610,12 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
-    REAL(wp), INTENT(IN)            :: max_pond_depth
     INTEGER,  INTENT(in)            :: i_shm
     INTEGER,  INTENT(in)            :: i_interpol
     LOGICAL, INTENT(IN)             :: l_hydro_q
     LOGICAL, INTENT(IN)             :: l_latdrain
     LOGICAL, INTENT(IN)             :: l_frzdrain
+    REAL(wp), INTENT(IN)            :: wtr_pond_max(:)
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wsat_sl(:,:)               ! Maximum storage in each soil layer (porosity) [m]
     REAL(wp), INTENT(IN)            :: field_cap_sl(:,:)          ! field capacity of the soil layer [m]
@@ -1597,9 +1627,9 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: wtr_soil_pot_scool_sl(:,:) ! potentially supercooled water [m]
     REAL(wp), INTENT(IN)            :: ice_soil_sl(:,:)           ! amount of ice in the soil [m]
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: weq_pond(:)
+    REAL(wp), INTENT(INOUT)         :: wtr_pond(:)
     REAL(wp), INTENT(INOUT)         :: infilt(:)                  ! amount of infiltratioj within timestep [m]
-    REAL(wp), INTENT(INOUT)         :: runoff_over(:)             ! amount of overflow (only diagnostic) [m]
+    REAL(wp), INTENT(INOUT)         :: runoff_dunne(:)             ! amount of overflow (only diagnostic) [m]
     REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of drainage within timestep [m]
     REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! Needed later for hydrotiles
     REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! Needed later for hydrotiles
@@ -1887,23 +1917,23 @@ CONTAINS
       IF (.NOT. ltpe_closed) THEN
         IF (l_hydro_q) THEN
           IF (wtr_soil_sl(j,1) > wsat_sl_ni(j,1)) THEN
-            weq_pond(j)    = weq_pond(j) + wtr_soil_sl(j,1)-wsat_sl_ni(j,1)
+            wtr_pond(j)    = wtr_pond(j) + wtr_soil_sl(j,1)-wsat_sl_ni(j,1)
             infilt(j)      = infilt(j) - wtr_soil_sl(j,1) + wsat_sl_ni(j,1)
-            IF (weq_pond(j) > max_pond_depth) THEN
-              runoff_over(j) = runoff_over(j) + weq_pond(j) - max_pond_depth
-              drainage(j)    = drainage(j)    + weq_pond(j) - max_pond_depth
-              weq_pond(j)    = max_pond_depth
+            IF (wtr_pond(j) > wtr_pond_max(j)) THEN
+              runoff_dunne(j) = runoff_dunne(j) + wtr_pond(j) - wtr_pond_max(j)
+              !drainage(j)    = drainage(j)    + wtr_pond(j) - wtr_pond_max(j)
+              wtr_pond(j)    = wtr_pond_max(j)
             END IF
             wtr_soil_sl(j,1) = wsat_sl_ni(j,1)
           END IF
         ELSE
           IF (wtr_soil_sl(j,1) > field_cap_sl_ni(j,1)) THEN
-            weq_pond(j)    = weq_pond(j) + wtr_soil_sl(j,1)-field_cap_sl_ni(j,1)
+            wtr_pond(j)    = wtr_pond(j) + wtr_soil_sl(j,1)-field_cap_sl_ni(j,1)
             infilt(j)      = infilt(j) - wtr_soil_sl(j,1) + field_cap_sl_ni(j,1)
-            IF (weq_pond(j) > max_pond_depth) THEN
-              runoff_over(j) = runoff_over(j) + weq_pond(j) - max_pond_depth
-              drainage(j)    = drainage(j)    + weq_pond(j) - max_pond_depth
-              weq_pond(j)    = max_pond_depth
+            IF (wtr_pond(j) > wtr_pond_max(j)) THEN
+              runoff_dunne(j) = runoff_dunne(j) + wtr_pond(j) - wtr_pond_max(j)
+              !drainage(j)    = drainage(j)    + wtr_pond(j) - wtr_pond_max(j)
+              wtr_pond(j)    = wtr_pond_max(j)
             END IF
             wtr_soil_sl(j,1) = field_cap_sl_ni(j,1)
           END IF

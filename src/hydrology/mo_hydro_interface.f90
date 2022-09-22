@@ -404,6 +404,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_wet
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
+    dsl4jsb_Real2D_onChunk :: wtr_pond
+    dsl4jsb_Real2D_onChunk :: ice_pond
+    dsl4jsb_Real2D_onChunk :: pond_freeze
+    dsl4jsb_Real2D_onChunk :: pond_melt
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
     dsl4jsb_Real2D_onChunk :: fract_snow
@@ -505,6 +509,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)       ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)       ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, pond_freeze)    ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, pond_melt)      ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)       ! in
@@ -624,9 +632,13 @@ CONTAINS
         & weq_snow_soil(:),               & !< inout
         & weq_snow_can(:),                & !< inout
         & snow_soil_dens(:),              & !< inout
+        & wtr_pond(:),                    & !< inout
+        & ice_pond(:),                    & !< inout
         & q_snocpymlt(:),                 & !< out
         & snow_accum(:),                  & !< out
         & snowmelt(:),                    & !< out
+        & pond_freeze(:),                 & !< out
+        & pond_melt(:),                   & !< out
         & evapotrans_soil(:),             & !< out
         & evapo_skin(:),                  & !< out
         & evapo_snow(:),                  & !< out
@@ -704,6 +716,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pond_freeze,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pond_melt,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1007,6 +1023,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
+    dsl4jsb_Real2D_onChunk :: wtr_pond_max
+
     ! @todo check if this declaration is even necessary
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
@@ -1031,10 +1049,8 @@ CONTAINS
 ! pdv <
 
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: dtime
+    REAL(wp) :: dtime, max_slope_tile
     INTEGER  :: nsoil
-
-    REAL(wp) :: max_pond_depth
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1088,16 +1104,25 @@ CONTAINS
     !   for lateral flows from upland areas. Needs to be revised as soon as real ponding
     !   is implemented in the model
     dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) = dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) &
-      & + dsl4jsb_var2D_onChunk (HYDRO_, weq_pond)
-    dsl4jsb_var2D_onChunk (HYDRO_, weq_pond) = 0._wp
+      & + dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond)
+    dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond) = 0._wp
 
     !pdv >
     ! For testing only
     ! 1.) Pond depth
-    IF (tile%contains_depression) THEN
-      max_pond_depth = dsl4jsb_Config(HYDRO_)%max_pond_depth
+    ALLOCATE(wtr_pond_max(nc))
+
+    IF (tile%contains_upland) THEN
+      max_slope_tile = dsl4jsb_Config(HYDRO_)%max_slope
     ELSE
-      max_pond_depth = 0.0_wp
+      max_slope_tile = 0.01_wp
+    END IF
+
+    IF (tile%contains_depression) THEN
+      wtr_pond_max(:) = MAX(0._wp,dsl4jsb_Config(HYDRO_)%max_pond_depth &
+                   &  - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
+    ELSE
+      wtr_pond_max(:) = 0.0_wp
     END IF
     ! Latdrain flag (no latdrain from depression)
     IF (tile%contains_lowland .AND. tile%contains_depression) THEN
@@ -1126,8 +1151,7 @@ CONTAINS
       & l_frzdrain,                                          &
       & dsl4jsb_Config(HYDRO_)%manning_n,                       &
       & dsl4jsb_Config(HYDRO_)%dt_sat,                          &
-      & dsl4jsb_Config(HYDRO_)%max_slope,                       &
-      & max_pond_depth,                                         &
+      & max_slope_tile,                                         &
       & dsl4jsb_Config(HYDRO_)%i_shm,                           &
       & dsl4jsb_Config(HYDRO_)%i_interpol,                      &
       & dsl4jsb_Config(HYDRO_)%i_infil,                         &
@@ -1146,13 +1170,14 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ),     &
       &                                t_soil_sl     (:,1),     &
+      & wtr_pond_max(:),                                        &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, weq_pond),               &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond),               &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
 !pdv >
       & dsl4jsb_var3D_onChunk (HYDRO_, weq_soilhyd_err   ),     &
@@ -1165,7 +1190,8 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_over       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_horton     ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl      ),     &
@@ -1237,11 +1263,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_over,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_horton,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_dunne,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_perm_sl,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_1d_out, weighted_by_fract)
@@ -2219,6 +2248,8 @@ CONTAINS
       & wtr_latflow, &
       & wtr_skin, &
       & weq_snow, &
+      & wtr_pond, &
+      & ice_pond, &
       & weq_pond, &
       & weq_fluxes, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
@@ -2282,8 +2313,10 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)            ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow)            ! in
     END IF
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_pond)            ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    ice_pond)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
@@ -2295,6 +2328,7 @@ CONTAINS
       tile_fract(i) = tile%fract(ics-1+i,iblk)
     END DO
 
+    weq_pond(:) = wtr_pond(:) + ice_pond(:)
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
     weq_fluxes(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:) + wtr_latflow(:)
     weq_fluxes(:) = weq_fluxes(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s

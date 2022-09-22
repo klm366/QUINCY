@@ -108,6 +108,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
+    dsl4jsb_Real2D_onChunk :: wtr_pond
+    dsl4jsb_Real2D_onChunk :: ice_pond
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: ice_soil_sl
@@ -213,6 +215,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)       ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)       ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)    ! in
@@ -407,12 +411,18 @@ CONTAINS
       !$claw acc parallel loop gang vector
       DO i=1,size(t_star, dim=1)  
         IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
-          IF (wtr_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
-            ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
+          ! Freezing of water in pond reservoir
+          IF (wtr_pond(i) > w_soil_critical_tmp) THEN
+            t_star(i) = MAX(t_star(i), tmelt)
+          ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
+          ELSE IF (wtr_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
             t_star(i) = MAX(t_star(i), tmelt)
           END IF
-          IF (ice_soil_sl(i,1) > w_soil_critical_tmp ) THEN
-            ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
+          ! Melting of ice in pond reservoir
+          IF (ice_pond(i) > w_soil_critical_tmp) THEN
+            t_star(i) = MIN(t_star(i), tmelt)
+          ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
+          ELSE IF (ice_soil_sl(i,1) > w_soil_critical_tmp ) THEN
             t_star(i) = MIN(t_star(i), tmelt)
           END IF
         END IF

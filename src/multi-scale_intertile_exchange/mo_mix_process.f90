@@ -32,21 +32,21 @@ CONTAINS
   !! @brief   Compute intertile exchange of surface runoff
   !!
   PURE ELEMENTAL SUBROUTINE calc_runoff_transport(            &
-    & dtime, source_pond_max, source_fract, target_fract, runoff_source,       &
-    & wtr_latflow_source, wtr_latflow_target, weq_pond_source, weq_pond_target &
+    & dtime, source_wtr_pond_max, source_fract, target_fract, runoff_source,       &
+    & wtr_latflow_source, wtr_latflow_target, wtr_pond_source, wtr_pond_target &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in)    :: dtime,              & !< timestep length
-      &                        source_pond_max,    & !< maximum surface water storage on source tile
+      &                        source_wtr_pond_max,    & !< maximum surface water storage on source tile
       &                        source_fract,       & !< area fraction of water source tile
       &                        target_fract          !< area fraction of water target tile
     REAL(wp), INTENT(inout) :: runoff_source,      & !< surface runoff on source tile
       &                        wtr_latflow_source, & !< lateral water flow from source tile
       &                        wtr_latflow_target, & !< lateral water flow towards target tile
-      &                        weq_pond_source,    & !< surface water storage on source tile
-      &                        weq_pond_target       !< surface water storage on target tile
+      &                        wtr_pond_source,    & !< surface water storage on source tile
+      &                        wtr_pond_target       !< surface water storage on target tile
 
     REAL(wp)                :: overland_flx
     !> Update target ponds with surface runoff from source tile
@@ -57,11 +57,11 @@ CONTAINS
     !!   temporary storage on the source tile, which then also needs to be part of the global
     !!   water balance
 
-    overland_flx    = MAX(0._wp, weq_pond_source + runoff_source * dtime / rhoh2o - source_pond_max)
-    weq_pond_source = MIN(source_pond_max, weq_pond_source + runoff_source * dtime / rhoh2o)
+    overland_flx    = MAX(0._wp, wtr_pond_source + runoff_source * dtime / rhoh2o - source_wtr_pond_max)
+    wtr_pond_source = MIN(source_wtr_pond_max, wtr_pond_source + runoff_source * dtime / rhoh2o)
 
     IF (target_fract > 1.0e-10_wp) THEN
-      weq_pond_target    = weq_pond_target    + overland_flx * (source_fract / target_fract)
+      wtr_pond_target    = wtr_pond_target    + overland_flx * (source_fract / target_fract)
       wtr_latflow_target = wtr_latflow_target + overland_flx * rhoh2o / dtime * (source_fract / target_fract)
       wtr_latflow_source = wtr_latflow_source - overland_flx * rhoh2o / dtime
       runoff_source      = 0._wp
@@ -196,8 +196,8 @@ CONTAINS
       &      field_cap_lvt, field_cap_dpr, wsat_lvt, wsat_dpr,   &
       &      pwp_lvt, pwp_dpr, mpot_sat_lvt, mpot_sat_dpr,       &
       &      k_sat_lvt, k_sat_dpr, bclapp_lvt, bclapp_dpr, ps_index_lvt, ps_index_dpr,             &
-      &      ice_soil_lvt, ice_soil_dpr, wtr_scool_lvt, wtr_scool_dpr, weq_pond_lvt, weq_pond_dpr, &
-      &      wtr_latflow_lvt, wtr_latflow_dpr, wtr_soil_lvt, wtr_soil_dpr         &
+      &      ice_soil_lvt, ice_soil_dpr, wtr_scool_lvt, wtr_scool_dpr, wtr_pond_lvt, wtr_pond_dpr, &
+      &      wtr_latflow_lvt, wtr_latflow_dpr, wtr_soil_lvt, wtr_soil_dpr, diffus_lvt, diffus_dpr  &
       &      )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -233,13 +233,16 @@ CONTAINS
       &                        wtr_scool_dpr(:)
 
 
-    REAL(wp), INTENT(inout) :: weq_pond_lvt,    & !< lateral water flow from elevation tile
-      &                        weq_pond_dpr,    & !< lateral water flow towards depression tile
+    REAL(wp), INTENT(inout) :: wtr_pond_lvt,    & !< lateral water flow from elevation tile
+      &                        wtr_pond_dpr,    & !< lateral water flow towards depression tile
       &                        wtr_latflow_lvt, & !< lateral water flow from elevation tile
       &                        wtr_latflow_dpr    !< lateral water flow towards depression tile
 
     REAL(wp), INTENT(inout) :: wtr_soil_lvt(:),     & !< soil water storage on elevation tile
       &                        wtr_soil_dpr(:)        !< soil water storage on depression tile
+
+    REAL(wp), INTENT(out)   :: diffus_lvt(:),       & !< Diffusion flux at elevation tile [kg m-2 s-1]
+      &                        diffus_dpr(:)          !< Diffusion flux at depression tile [kg m-2 s-1]
 
 
 
@@ -250,7 +253,7 @@ CONTAINS
       &                        fr_dpr_rel,       &
       &                        pond_flx_lvt,     &
       &                        pond_flx_dpr,     &
-      &                        weq_pond_total,   &
+      &                        wtr_pond_total,   &
       &                        z_lvt,            &
       &                        z_dpr,            &
       &                        len_inter,        &
@@ -263,8 +266,7 @@ CONTAINS
       &                        wtr_avail,        &
       &                        wtr_2_qlbrm
 
-    REAL(wp)                :: diffus_lvt(nsoil),        & !< Diffusion flux at elevation tile per time step
-      &                        diffus_dpr(nsoil),        & !< Diffusion flux at depression tile per time step
+    REAL(wp)                ::                           &
       &                        mpot_lvt(nsoil),          &
       &                        mpot_dpr(nsoil),          &
       &                        ice_impede_lvt(nsoil),    &
@@ -338,18 +340,18 @@ CONTAINS
     length_scale = ((1._wp/fr_dpr_rel)/Pi)**0.5_wp                      ! From center to outer rim  
 
     ! Fist calculate the standing water at the surface of both tiles ... with the assumption that runoff is instant
-    weq_pond_total = weq_pond_lvt * fr_lvt_rel + weq_pond_dpr * fr_dpr_rel
+    wtr_pond_total = wtr_pond_lvt * fr_lvt_rel + wtr_pond_dpr * fr_dpr_rel
 
-    IF (weq_pond_total / fr_dpr_rel <= h_offset ) THEN
-      pond_flx_dpr =   weq_pond_total / fr_dpr_rel - weq_pond_dpr
-      pond_flx_lvt = - weq_pond_lvt
-      weq_pond_dpr =   weq_pond_total / fr_dpr_rel
-      weq_pond_lvt =   0._wp
+    IF (wtr_pond_total / fr_dpr_rel <= h_offset ) THEN
+      pond_flx_dpr =   wtr_pond_total / fr_dpr_rel - wtr_pond_dpr
+      pond_flx_lvt = - wtr_pond_lvt
+      wtr_pond_dpr =   wtr_pond_total / fr_dpr_rel
+      wtr_pond_lvt =   0._wp
     ELSE
-      pond_flx_dpr =   h_offset  + (weq_pond_total - h_offset * fr_dpr_rel) - weq_pond_dpr
-      pond_flx_lvt =   weq_pond_total - h_offset * fr_dpr_rel - weq_pond_lvt
-      weq_pond_dpr =   h_offset  + (weq_pond_total - h_offset * fr_dpr_rel)
-      weq_pond_lvt =   weq_pond_total - h_offset * fr_dpr_rel
+      pond_flx_dpr =   h_offset  + (wtr_pond_total - h_offset * fr_dpr_rel) - wtr_pond_dpr
+      pond_flx_lvt =   wtr_pond_total - h_offset * fr_dpr_rel - wtr_pond_lvt
+      wtr_pond_dpr =   h_offset  + (wtr_pond_total - h_offset * fr_dpr_rel)
+      wtr_pond_lvt =   wtr_pond_total - h_offset * fr_dpr_rel
     END IF
 
     ! Determine soil parameters on the native grids
@@ -425,8 +427,8 @@ CONTAINS
     i_dpr = 1
     IF (h_offset > 0._wp) THEN
       i_dpr = 0
-      IF (h_offset > weq_pond_dpr) THEN
-        z_dpr = h_offset - weq_pond_dpr
+      IF (h_offset > wtr_pond_dpr) THEN
+        z_dpr = h_offset - wtr_pond_dpr
       ELSE
         z_dpr = h_offset
       END IF
@@ -453,13 +455,13 @@ CONTAINS
         k_sat_lvt_rgrd      = k_sat_lvt(i_lvt)
         k_lvt_rgrd          = k_lvt(i_lvt)
 
-        IF (z_rgrd_bot <= h_offset - weq_pond_dpr) THEN ! Still above water level in depression
+        IF (z_rgrd_bot <= h_offset - wtr_pond_dpr) THEN ! Still above water level in depression
           ! Water flows out of the soil in the elevation tile into the pond reservoir of the depression tile
           wtr_flx_lat       = k_lvt_rgrd * a_inter
           wtr_avail         = MAX(0._wp,(wtr_soil_lvt_rgrd - pwp_lvt_rgrd) * fr_lvt_rel)
           wtr_lat           = MIN(wtr_flx_lat * dtime, wtr_avail)
           wtr_flx_lat       = wtr_lat / dtime
-          weq_pond_dpr      = weq_pond_dpr + wtr_lat / fr_dpr_rel
+          wtr_pond_dpr      = wtr_pond_dpr + wtr_lat / fr_dpr_rel
           wtr_soil_lvt_rgrd = wtr_soil_lvt_rgrd - wtr_lat / fr_lvt_rel
           wtr_soil_dpr_rgrd = 0.0_wp
 
@@ -469,10 +471,10 @@ CONTAINS
           wtr_flx_lat       = ((k_lvt_rgrd * k_sat_lvt_rgrd)**0.5_wp)*a_inter
 !          free_space        = MAX(0._wp,(wsat_lvt_rgrd - wtr_soil_lvt_rgrd - ice_soil_lvt_rgrd) * fr_lvt_rel)
           free_space        = MAX(0._wp,(field_cap_lvt_rgrd - wtr_soil_lvt_rgrd - ice_soil_lvt_rgrd) * fr_lvt_rel)
-          wtr_avail         = MIN(h, weq_pond_dpr) * fr_dpr_rel
+          wtr_avail         = MIN(h, wtr_pond_dpr) * fr_dpr_rel
           wtr_lat           = MAX(-wtr_flx_lat * dtime, -free_space, -wtr_avail)
           wtr_flx_lat       = wtr_lat / dtime
-          weq_pond_dpr      = weq_pond_dpr + wtr_lat / fr_dpr_rel
+          wtr_pond_dpr      = wtr_pond_dpr + wtr_lat / fr_dpr_rel
           wtr_soil_lvt_rgrd = wtr_soil_lvt_rgrd - wtr_lat / fr_lvt_rel
           wtr_soil_dpr_rgrd = 0.0_wp
 
@@ -618,6 +620,8 @@ CONTAINS
     wtr_latflow_lvt = wtr_latflow_lvt + (SUM(diffus_lvt(:)) + pond_flx_lvt) * rhoh2o / dtime
     wtr_latflow_dpr = wtr_latflow_dpr + (SUM(diffus_dpr(:)) + pond_flx_dpr) * rhoh2o / dtime
 
+    diffus_lvt(:) = diffus_lvt(:) * rhoh2o / dtime
+    diffus_dpr(:) = diffus_dpr(:) * rhoh2o / dtime
 
   END SUBROUTINE calc_intertile_diffusion_new
 
