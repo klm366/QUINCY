@@ -1,18 +1,18 @@
 !>
-!! @brief Contains concrete tile class that contains the surface structure and memory state.
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! This had to be separated from mo_jsb_tile_class in order to avoid circular dependencies.
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> @brief Contains concrete tile class that contains the surface structure and memory state.
+!>
+!> @author
+!>  Reiner Schnur, MPI-M Hamburg
+!>
+!> @par Revision History
+!> First version by Reiner Schnur (2013-04-04)
+!>
+!> This had to be separated from mo_jsb_tile_class in order to avoid circular dependencies.
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_jsb_tile
 #ifndef __NO_JSBACH__
@@ -41,10 +41,11 @@ MODULE mo_jsb_tile
 
   PUBLIC :: t_jsb_tile, t_jsb_tile_p
 
-  TYPE, EXTENDS(t_jsb_tile_abstract) :: t_jsb_tile
-    TYPE(t_jsb_model),         POINTER :: model => NULL()
-    LOGICAL :: in_var_groups
+  TYPE, EXTENDS(t_jsb_tile_abstract) :: t_jsb_tile           !< provides the components defined in tile_class abstract object
+    TYPE(t_jsb_model),         POINTER :: model => NULL()    !< connects tile to the model object
+    LOGICAL :: in_var_groups                                 !< defines whether tile is part of a output group
   CONTAINS
+    !> These deferred routines must match the interfaces provided in jsb_tile_class
     PROCEDURE :: Init           => Init_tile
     PROCEDURE :: Init_fractions => Init_fractions_on_tile
     PROCEDURE :: Init_vars      => Init_vars_on_tile
@@ -57,11 +58,12 @@ MODULE mo_jsb_tile
     PROCEDURE :: Handler        => Process_task_on_tile
   END TYPE t_jsb_tile
 
+  !> Used to create a vector of tiles
   TYPE t_jsb_tile_p
     TYPE(t_jsb_tile), POINTER :: p
   END TYPE t_jsb_tile_p
 
-  ! Derived-type constructor
+  !> Derived-type constructor used to create the tile instance
   INTERFACE t_jsb_tile
     PROCEDURE Construct_tile
   END INTERFACE t_jsb_tile
@@ -70,6 +72,8 @@ MODULE mo_jsb_tile
 
 CONTAINS
 
+  !> Constructs the tile object and returns the pointer to the tile
+  !
   FUNCTION Construct_tile(name, description, processes, lct, &
     & process_actions, parent, model_id, fract_filename, fract_varname) RESULT(return_ptr)
 
@@ -92,7 +96,7 @@ CONTAINS
 
     TYPE(t_jsb_model),            POINTER :: model
     INTEGER                               :: i, j, iproc
-    CLASS(t_State),               POINTER :: parent_tmp
+    CLASS(t_State),               POINTER :: parent_tmp       !< Temporary pointer to the parent tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_tile'
 
@@ -100,6 +104,8 @@ CONTAINS
 
     ! Allocate and initialize base structure (=state) for tile
     ALLOCATE(t_jsb_tile::return_ptr)
+
+    ! Add the parent tile to the actual tile (for all but the box tile)
     IF (PRESENT(parent)) THEN
       parent_tmp => parent
       CALL return_ptr%Init_state(name, description, parent_tmp)
