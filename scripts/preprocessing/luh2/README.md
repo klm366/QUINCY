@@ -12,8 +12,8 @@
 
 - Downloaded LUH2 data from, e.g., [https://luh.umd.edu/] in a directory `orgdata` 
   > INFO: For downloading LUH2 data, you might adapt and use `get_raw_data_LUH2_scenarios.bash` in the `attic`.
-  > NOTE: in addition to the transitions and the states, also the staticData_quarterdeg.nc might be downloaded, in order to extract the fstnf value required to assign rangelands to pasture or to natural vegetation
-- Alternatively to downloading of the fstnf map, it is also possible to create an own fstnf map, e.g. in order to assign all rangelands to pasture (fstnf = 1) or all to natural vegetation (fstnf = 0), the latter is what has been done for CMIP6
+  > NOTE: in addition to the transitions and the states, also the `staticData_quarterdeg.nc` might be downloaded, in order to extract the `fstnf` value required to assign rangelands to pasture or to natural vegetation
+- Alternatively to downloading of the `fstnf` map, it is also possible to create an own `fstnf` map, e.g. in order to assign all rangelands to pasture (`fstnf = 1`) or all to natural vegetation (`fstnf = 0`), the latter is what has been done for CMIP6
 - Paths correctly set-in the `MAIN_preprocess_LUH2.bash`
 - Membership to project `mj0060` and/or access to a maximum vegetation fraction file, e.g., 
   >`vegRatioMaxFile="/pool/data/JSBACH/prepare/T${ires}/${vrmFileName}.nc"`
@@ -23,11 +23,18 @@
 
 1. Execute the compilation script from the `luh2_preprocessing` main directory
     
-    ``` bash
+    ```bash
     ./compile.sh
     ```
-
-    > INFO: In case you want to clean up the `bin` directory execute `./compile.sh clean`
+    or
+    ``` bash
+    ./compile.sh -e <YOUR-EMAIL-ADDRESS> -p <YOUR-PROJECT-NUMBER> -c <USER-CONFIG-FILE>
+    ```
+    > INFO: 
+    > - Upon the first call of `compile.sh` without options will copy the MAIN runscript `preprocess_LUH2.bash` and has to be edited (-> see 3.)
+    > - Calling `compile.sh` with the given options will insert email, project number and config file into the header of `preprocess_LUH2.bash (-> you can edit it afterwards -> see 3.).
+    > - `preprocess_LUH2.bash` will not be overwritten by consecutive calls of `compile.sh`
+    > - In case you want to clean up the `bin` directory execute `./compile.sh clean`
 
 2. Copy one of the example configurations (`examples`) and adapt to your needs
    
@@ -36,6 +43,8 @@
     ```
 
     Usually these need adapting:
+  - Your contact information
+    >`user_email`
   - Output directory (use absolute paths) 
     >`mainWorkingPath`
   - Years to process (note: at least two years are required, and transitions are usually only available for one year less than states are available)
@@ -50,24 +59,21 @@
     > `calledFrom="MAIN_preprocess_LUH2.bash [contact:] -- using ${vegRatioMaxFile}"`
 
 
-3. Open `MAIN_reprocess_LUH2.bash` in an editor of your choice and 
+3. Open `preprocess_LUH2.bash` in an editor of your choice and 
 
-- change account
-- link to your own `user_config`
-   
-    ```bash
-    ln -s examples/user_config_xxx_yyy user_config
-    ``` 
+- YOUR-PROJECT: accounting information
+- yourname@YOUR-INSTITUTE-DOMAIN: email address
+- YOUR-CONFIG-FILE: own `user_config`
 
 4. Execution
 
-- For **test** purposes (max. 2 years!) execute
+- For **test** purposes (max. 2 years!) you can run
 
     ```bash
-    nohup ./MAIN_preprocess_LUH2.bash 2>&1 > log &
+    nohup ./preprocess_LUH2.bash 2>&1 > log &
     ```
 
-  on the log-in node. This will put the process into the background and write all messages to a `log` file.
+  on the login node. This will put the process into the background and write all messages to a `log` file.
 
 - For **production** send it to the queueing system (**obs: right user- and project ID**)
 
