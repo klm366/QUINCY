@@ -2248,6 +2248,7 @@ CONTAINS
       & wtr_latflow, &
       & wtr_skin, &
       & weq_snow, &
+      & runoff_retention, &
       & wtr_pond, &
       & ice_pond, &
       & weq_pond, &
@@ -2256,7 +2257,8 @@ CONTAINS
       & weq_balance_err  ! [m3/(time step)]
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &
-      & ice_soil_sl
+      & ice_soil_sl, &
+      & latdrain_retention
 
     REAL(wp), POINTER :: &
       & area(:)
@@ -2307,6 +2309,8 @@ CONTAINS
       ALLOCATE(wtr_latflow(nc))
       wtr_latflow(:) = 0._wp
     END IF
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff_retention)       ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, latdrain_retention)     ! in
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)         ! in
@@ -2336,8 +2340,9 @@ CONTAINS
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_1 tile_name=tile%name
-      weq_land_new(:) = (  wtr_skin(:) + weq_snow(:) + weq_pond(:)                      &
+      weq_land_new(:) = (  wtr_skin(:) + weq_snow(:) + weq_pond(:) +  runoff_retention(:) &
         &                + SUM(wtr_soil_sl(:,:), DIM=2) + SUM(ice_soil_sl(:,:), DIM=2)  &
+        &                + SUM(latdrain_retention(:,:), DIM=2)                          &
         &               ) * tile_fract(:) * area(:)  ! m -> m^3
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_2 tile_name=tile%name

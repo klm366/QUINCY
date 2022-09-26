@@ -32,13 +32,17 @@ CONTAINS
   !! @brief   Compute intertile exchange of surface runoff
   !!
   PURE ELEMENTAL SUBROUTINE calc_runoff_transport(            &
-    & dtime, source_wtr_pond_max, source_fract, target_fract, runoff_source,       &
-    & wtr_latflow_source, wtr_latflow_target, wtr_pond_source, wtr_pond_target &
+    & dtime, fract_to_retention, retention_time,                 &
+    & source_wtr_pond_max, source_fract, target_fract, runoff_source,       &
+    & wtr_latflow_source, wtr_latflow_target, wtr_pond_source, &
+    & runoff_retention_target,  wtr_pond_target &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in)    :: dtime,              & !< timestep length
+      &                        fract_to_retention, &
+      &                        retention_time, &
       &                        source_wtr_pond_max,    & !< maximum surface water storage on source tile
       &                        source_fract,       & !< area fraction of water source tile
       &                        target_fract          !< area fraction of water target tile
@@ -46,9 +50,13 @@ CONTAINS
       &                        wtr_latflow_source, & !< lateral water flow from source tile
       &                        wtr_latflow_target, & !< lateral water flow towards target tile
       &                        wtr_pond_source,    & !< surface water storage on source tile
+      &                        runoff_retention_target, &
       &                        wtr_pond_target       !< surface water storage on target tile
 
-    REAL(wp)                :: overland_flx
+    REAL(wp)                :: overland_flx,       &
+      &                        wtr_to_retention,  &
+      &                        wtr_from_retention
+
     !> Update target ponds with surface runoff from source tile
     !!   *** DUMMY implementation which later on will be replaced with a physics based process ***
     !!   Surface runoff is scaled with the tile fractions and moved into the target tile's
@@ -61,10 +69,15 @@ CONTAINS
     wtr_pond_source = MIN(source_wtr_pond_max, wtr_pond_source + runoff_source * dtime / rhoh2o)
 
     IF (target_fract > 1.0e-10_wp) THEN
-      wtr_pond_target    = wtr_pond_target    + overland_flx * (source_fract / target_fract)
-      wtr_latflow_target = wtr_latflow_target + overland_flx * rhoh2o / dtime * (source_fract / target_fract)
       wtr_latflow_source = wtr_latflow_source - overland_flx * rhoh2o / dtime
       runoff_source      = 0._wp
+      wtr_latflow_target = wtr_latflow_target + overland_flx * (source_fract / target_fract) * rhoh2o / dtime
+      wtr_to_retention   = fract_to_retention * overland_flx * (source_fract / target_fract)
+      wtr_pond_target    = wtr_pond_target    + overland_flx * (source_fract / target_fract) - wtr_to_retention
+      runoff_retention_target = runoff_retention_target + wtr_to_retention
+      wtr_from_retention = runoff_retention_target * dtime / retention_time
+      wtr_pond_target    = wtr_pond_target + wtr_from_retention
+      runoff_retention_target = runoff_retention_target - wtr_from_retention
     END IF
 
   END SUBROUTINE calc_runoff_transport
@@ -73,15 +86,18 @@ CONTAINS
   !>
   !! @brief   Compute intertile exchange of lateral drainage
   !!
-  PURE ELEMENTAL SUBROUTINE calc_drainage_transport(            &
-    & dtime, source_fract, target_fract, field_cap_target,      &
-    & latdrain_source, drainage_source, wtr_latflow_source,     &
-    & wtr_latflow_target, wtr_soil_target &
+  PURE ELEMENTAL SUBROUTINE calc_drainage_transport(        &
+    & dtime, fract_to_retention, retention_time,            &
+    & source_fract, target_fract, field_cap_target,         &
+    & latdrain_source, drainage_source, wtr_latflow_source, &
+    & wtr_latflow_target, latdrain_retention_target, wtr_soil_target &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in)    :: dtime,              & !< timestep length
+      &                        fract_to_retention, &
+      &                        retention_time,     &
       &                        source_fract,       & !< area fraction of water source tile
       &                        target_fract,       & !< area fraction of water target tile
       &                        field_cap_target      !< soil field capacity of target tile
@@ -89,11 +105,13 @@ CONTAINS
       &                        drainage_source,    & !< bottom drainage on source tile
       &                        wtr_latflow_source, & !< lateral water flow from source tile
       &                        wtr_latflow_target, & !< lateral water flow towards target tile
+      &                        latdrain_retention_target, &
       &                        wtr_soil_target       !< soil water storage on target tile
 
     ! Local variables
-    REAL(wp)                :: latflow_act           !< Actual lateral flow during time step
-                                                     !! considering the target storage limits
+    REAL(wp)                :: latflow_act,        &
+      &                        wtr_to_retention,   &
+      &                        wtr_from_retention
 
     !> Update target soil with lateral drainage from source tile
     !!   *** DUMMY implementation which later on will be replaced with a physics based process ***
@@ -106,24 +124,21 @@ CONTAINS
 
     IF (target_fract > 1.0e-10_wp) THEN
       ! Substract diagnosed lateral drainage from total drainage
-      drainage_source    = drainage_source - latdrain_source
+      ! and from latflow of srouce tile
+      drainage_source    = drainage_source    - latdrain_source
+      wtr_latflow_source = wtr_latflow_source - latdrain_source
       ! Scale and add all lateral drainage to target tile soil layer
       latflow_act        = latdrain_source * (source_fract / target_fract)
-      wtr_soil_target    = wtr_soil_target + latflow_act * dtime / rhoh2o
-      ! Reduce lateral flow by upper soil water limit and correct for any excess soil moisture
-      !pdv >
-      !latflow_act        = latflow_act - MAX(wtr_soil_target - field_cap_target, 0._wp) * rhoh2o / dtime
-      !wtr_soil_target    = MIN(wtr_soil_target, field_cap_target)
-      !pdv <
       wtr_latflow_target = wtr_latflow_target + latflow_act
-      ! Rescale the actually transported water back to the source tile
-      latflow_act        = latflow_act * (target_fract / source_fract)
-      wtr_latflow_source = wtr_latflow_source - latflow_act
-      ! Add any residual lateral flow to the total drainage of the source tile
-      !pdv >
-      !drainage_source    = drainage_source + MAX(latdrain_source - latflow_act, 0._wp)
-      !pdv <
       latdrain_source    = 0._wp
+
+      latflow_act        = latflow_act * dtime / rhoh2o
+      wtr_to_retention   = fract_to_retention * latflow_act
+      wtr_soil_target    = wtr_soil_target + latflow_act - wtr_to_retention
+      latdrain_retention_target = latdrain_retention_target + wtr_to_retention
+      wtr_from_retention = latdrain_retention_target * dtime / retention_time
+      latdrain_retention_target = latdrain_retention_target - wtr_from_retention
+      wtr_soil_target           = wtr_soil_target           + wtr_from_retention
     END IF
 
   END SUBROUTINE calc_drainage_transport

@@ -55,6 +55,7 @@ MODULE mo_hydro_memory_class
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
       & weq_pond,             & !< Water content of pond reservoir                                      [m water equivalent]
       & wtr_pond,             & !< Liquid water content of pond reservoir                               [m water equivalent]
+      & runoff_retention,     & !< Runoff retention reservoir                                           [m water equivalent]
       & pond_melt,            & !< Melting of ice in pond reservoir                                     [kg m-2 s-1]
       & pond_freeze,          & !< Freezing of liquid water in pond reservoir                           [kg m-2 s-1]
       & ice_pond,             & !< Frozen water content of pond reservoir                               [m water equivalent]
@@ -132,6 +133,7 @@ MODULE mo_hydro_memory_class
       & drain_lat_sl,         & !< drainage on soil level
       & drain_perm_sl,        & !< drainage on soil level in frozen soils
       & latdrain_sl,          & !< Lateral drainage flux                                                    [kg m-2 s-1]
+      & latdrain_retention,   & !< Drainage retention reservoir                                             [m water equivalent]
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity
                                 !! (derived from volumetric field capacity, reduced by ice)                 [m]
@@ -300,6 +302,13 @@ CONTAINS
       & prefix, suffix,                                                              &
       & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    CALL mem%Add_var( 'runoff_retention', mem%runoff_retention,                      &
+      & hgrid, surface,                                                              &
+      & t_cf('runoff_retention', 'm (water equivalent)', 'Runoff retention reservoir'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       ! Total evapotranspiration, including sublimation
     CALL mem%Add_var( 'evapotrans', mem%evapotrans,                                      &
       & hgrid, surface,                                                                  &
@@ -412,6 +421,15 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'latdrain_retention', mem%latdrain_retention,                  &
+      & hgrid, soil_w,                                                               &
+      & t_cf('latdrain_retention', 'kg m-2 s-1', 'Retention reservoir for lateral drainage'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & loutput=.TRUE., output_level=BASIC,                                  &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
 
     CALL mem%Add_var( 'drainage', mem%drainage,                                      &
       & hgrid, surface,                                                              &
@@ -811,10 +829,9 @@ CONTAINS
       CALL mem%Add_var( 'ice_rootzone', mem%ice_rootzone,                                &
         & hgrid, surface,                                                                &
         & t_cf('ice_rootzone', 'm water equivalent', 'Ice content in the root zone'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-        & prefix, suffix,                                                                &
-        & output_level=BASIC,                                                            &
-        & lrestart=.FALSE.,                                                              &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_soil_sl', mem%wtr_soil_sl,                        &
