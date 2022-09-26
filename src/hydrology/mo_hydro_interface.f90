@@ -22,7 +22,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message, finish
+  USE mo_exception,          ONLY: message, message_text, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -1756,11 +1756,12 @@ CONTAINS
     !----------------------------
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
     REAL(wp), DIMENSION(options%nc) :: w_skin_canopy_max, w_skin_max
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_skin_fraction'
 
-    INTEGER  :: iblk, ics, ice
+    INTEGER  :: iblk, ics, ice, i
     REAL(wp) :: dtime, steplen, config_w_skin_max
     !$claw verbatim INTEGER, SAVE :: task_counter = 1
 
@@ -1804,6 +1805,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
 
     ! Set pointers to process configs and memory
     dsl4jsb_Get_config(SEB_)
@@ -1863,6 +1865,18 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_soil)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
+
+#ifndef _OPENACC
+    IF (ANY(t(:) < 40._wp .OR. t(:) > 400._wp)) THEN
+      IF (ANY(t(:) < 40._wp)) THEN
+        i = MINLOC(t(:), DIM=1)
+      ELSE
+        i = MaxLOC(t(:), DIM=1)
+      END IF
+      WRITE (message_text,*) 'Temperature out of bounds at ', '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t: ', t(i)
+      CALL finish(TRIM(routine), message_text)
+    END IF
+#endif
 
     ! Maximum capacity of skin reservoir (soil + canopy)
     IF (tile%is_vegetation .OR. tile%is_land) THEN
