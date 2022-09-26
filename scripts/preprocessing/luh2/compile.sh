@@ -1,4 +1,23 @@
 #! /bin/bash
+main_name="preprocess_LUH2.bash"
+# Cleaning up
+case ${1} in
+
+    "clean")
+        echo -n "Removing binaries and machine config..."
+        rm -rf ${BIN_DIR}
+        rm config
+        rm -f user_config
+        rm -f *.o*
+        rm ${main_name}
+        echo " done"
+        exit
+        ;;
+    *)
+        echo "To clean executables call ./compile clean."
+        ;;
+
+esac
 
 # ICON-Land
 #

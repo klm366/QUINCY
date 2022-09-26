@@ -1,19 +1,7 @@
 #!/bin/bash
-
-# ICON-Land
 #
-# ---------------------------------------
-# Copyright (C) 2013-2024, MPI-M, MPI-BGC
-#
-# Contact: icon-model.org
-# Authors: AUTHORS.md
-# See LICENSES/ for license information
-# SPDX-License-Identifier: BSD-3-Clause
-# ---------------------------------------
-
-#----------------------------------------------------------------------
-# Script to preprocess LUH2 data for JSBACH CMIP6-like simulations
-# (updated according to methodology used for recent GCB simulations)
+# Script to preprocess LUH2 data for JSBACH CMIP6-like simulations 
+# (updated according to methodology used for recent GCB simulations) 
 #----------------------------------------------------------------------
 # JN 2019-2022 (julia.nabel@mpimet.mpg.de)
 # SF July-September 2022 (stefanie.falk@lmu.de)
