@@ -67,9 +67,9 @@ MODULE mo_hydro_constants
     & matrix_pot_org_below    = 1.0_wp,        & !< Matrix potential of organic part of soil layer [m]
                                                  ! (values (roughy) from Chadburn 2022)
     & pore_size_index_org_below = 0.7_wp,      & !< Pore size distribution index of organic part of soil layer []
-    & thresh_org          = 0.5_wp,            & !< Threshold of organic material above which connected flow pathways form
-
-    & beta_perc           = 0.139_wp             !< Parameter from percolation theory
+    & zwilt                   = 0.35_wp,       & !< Wilting point, below which plants are not allowed to transpire water [/] 
+    & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
+    & beta_perc               = 0.139_wp         !< Parameter from percolation theory
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
 
