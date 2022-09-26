@@ -1873,7 +1873,7 @@ CONTAINS
       ELSE
         i = MaxLOC(t(:), DIM=1)
       END IF
-      WRITE (message_text,*) 'Temperature out of bounds at ', '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t: ', t(i)
+      WRITE (message_text,*) 'Temperature out of bounds on tile ', tile%name, ' at ', '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t: ', t(i)
       CALL finish(TRIM(routine), message_text)
     END IF
 #endif
