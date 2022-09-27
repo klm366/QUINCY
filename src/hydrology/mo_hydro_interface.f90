@@ -1867,8 +1867,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
 
 #ifndef _OPENACC
-    IF (ANY(t(:) < 40._wp .OR. t(:) > 400._wp)) THEN
-      IF (ANY(t(:) < 40._wp)) THEN
+    IF (ANY(t(:) < 50._wp .OR. t(:) > 400._wp)) THEN
+      IF (ANY(t(:) < 50._wp)) THEN
         i = MINLOC(t(:), DIM=1)
       ELSE
         i = MaxLOC(t(:), DIM=1)
