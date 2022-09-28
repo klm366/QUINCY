@@ -211,6 +211,8 @@ CONTAINS
       &                                  calc_intertile_diffusion_new,&
       &                                  calc_intertile_diffusion_reduced
 
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
+
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -220,6 +222,11 @@ CONTAINS
     INTEGER  :: nsibl, ic              !< Counter variables for sibling tiles
     INTEGER  :: nsoil, i               !< Counter variables for soil layers
     REAL(wp) :: dtime
+
+    !pdv >
+    REAL(wp) :: max_pond_depth         ! < demporary solution
+    REAL(wp) :: weq_pond_new           ! < demporary solution
+    !pdv <
 
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_vgrid), POINTER          :: soil_w
@@ -330,6 +337,11 @@ CONTAINS
         CALL finish(routine, 'MIX_ processes must be activate on the same tiles as HYDRO_')
       END IF
 
+      IF (tile%contains_ridge) THEN
+        max_pond_depth = 0._wp
+      ELSE
+        max_pond_depth = 0.1_wp
+      END IF
       ! Downhill routing of surface runoff from ridges to depressions as well as from
       !   upland depressions to lowland depressions
       IF (tile%contains_upland .OR. tile%contains_ridge) THEN
@@ -345,7 +357,7 @@ CONTAINS
           ELSE
             sibl_tile => sibl_tile%Get_next_sibling_tile()
           END IF
-          ! Identify correct downhill target sibling
+          ! Identify correct downhill target sibling for runoff
           IF ( (tile%contains_upland .AND. tile%contains_ridge .AND.                 &
             &   sibl_tile%contains_upland .AND. sibl_tile%contains_depression) .OR.  &
             &  (tile%contains_upland .AND. tile%contains_depression .AND.            &
@@ -362,13 +374,28 @@ CONTAINS
             ! Move surface runoff from source to target tile
             CALL calc_runoff_transport(   &
               & dtime,                    & !< in
+              & max_pond_depth,           & !< in
               & source_fract(:),          & !< in
               & target_fract(:),          & !< in
               & runoff(:),                & !< inout
               & wtr_latflow(:),           & !< inout
               & wtr_latflow_sibl_tile(:), & !< inout
+              & weq_pond(:),              & !< inout
               & weq_pond_sibl_tile(:)     & !< inout
               & )
+          END IF
+          ! Identify correct downhill target sibling for drainage
+          IF ( (tile%contains_upland .AND. tile%contains_ridge .AND.                 &
+            &   sibl_tile%contains_upland .AND. sibl_tile%contains_depression) .OR.  &
+! pdv >
+! tricky ... should lateral drainage work over longer distances ?
+! In case of frozen ground this shoudl be the case, but for all other soils?
+            &  (tile%contains_upland .AND. tile%contains_depression .AND.            &
+            &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. &
+
+! pdv <
+            &  (tile%contains_lowland .AND. tile%contains_ridge .AND.                &
+            &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) ) THEN
             ! Move lateral drainage from source to target tile
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,    sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl, sibl_tile)
@@ -388,6 +415,20 @@ CONTAINS
           END IF
         END DO
       END IF
+
+      !pdv >
+      ! saving pond reservoir on lolo
+      IF (tile%contains_lowland .AND. tile%contains_depression) THEN
+        DO i = 1, nc
+          IF (weq_pond(i) < max_pond_depth) THEN
+            weq_pond_new = MIN(max_pond_depth, weq_pond(i) + runoff(i) * dtime / rhoh2o)
+            runoff(i)    = MAX(0._wp, runoff(i) * dtime / rhoh2o - max_pond_depth + weq_pond(i)) * rhoh2o / dtime
+            weq_pond(i)  = weq_pond_new
+          END IF
+        END DO
+      END IF
+      !pdv <
+
 
       ! Lateral soil water diffusion between ridge and depression tiles of the same macrotopography
       IF (tile%contains_ridge) THEN
@@ -458,6 +499,11 @@ CONTAINS
           END IF
         END DO
       END IF
+!pdv >
+
+
+!pdv
+
 
     END IF
 
