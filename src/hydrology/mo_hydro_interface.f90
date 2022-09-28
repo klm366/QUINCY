@@ -977,7 +977,6 @@ CONTAINS
 
     ! Pointers to variables in memory
 
-    dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     ! @todo check if this declaration is even necessary
@@ -1043,17 +1042,6 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
-    IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)   ! in
-    ELSE
-      ALLOCATE(fract_org_sl(nc, nsoil))
-      !$claw acc enter data create(fract_org_sl)
-      !$claw expand parallel update
-      fract_org_sl(:,:) = 0._wp
-    END IF
-
-    dsl4jsb_var2D_onChunk (HYDRO_, pdv_1d_out) = 0._wp
-    dsl4jsb_var3D_onChunk (HYDRO_, pdv_2d_out) = 0._wp
 
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
@@ -1067,11 +1055,8 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%l_soilhydnew,                    &
       & dsl4jsb_Config(HYDRO_)%i_shm,                           &
       & dsl4jsb_Config(HYDRO_)%i_interpol,                      &
-      & dsl4jsb_Config(HYDRO_)%i_testing1,                      &
-      & dsl4jsb_Config(HYDRO_)%i_testing2,                      &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
-      &                                fract_org_sl  (:,:),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, matrix_pot_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
@@ -1090,24 +1075,17 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, pdv_1d_out        ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, pdv_2d_out        ),     &
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_over       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         )      &
       & )
-
-    IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      !$claw acc exit data delete(fract_org_sl)
-      DEALLOCATE(fract_org_sl)
-    END IF
 
     ! Convert soil hydrology balance error to volume
     !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
@@ -1158,12 +1136,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_over,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt_over,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_1d_out,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_2d_out,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -2138,8 +2114,7 @@ CONTAINS
       & weq_snow, &
       & weq_fluxes, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
-      & weq_balance_err, &  ! [m3/(time step)]
-      & weq_balance_err_rel ! [/]
+      & weq_balance_err  ! [m3/(time step)]
     dsl4jsb_Real3D_onChunk :: &
       & wtr_soil_sl, &
       & ice_soil_sl
@@ -2191,7 +2166,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err_rel) ! out
 
     !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
 
@@ -2218,11 +2192,6 @@ CONTAINS
     IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       weq_balance_err(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
-      WHERE(weq_land(:) + weq_fluxes(:) > 0._wp)
-        weq_balance_err_rel(:) = weq_balance_err(:) / (weq_land(:) + weq_fluxes(:) * dtime)
-      ELSEWHERE
-        weq_balance_err_rel(:) = 0._wp
-      ENDWHERE
     END IF
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name

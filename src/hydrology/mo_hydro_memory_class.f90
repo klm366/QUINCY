@@ -55,21 +55,18 @@ MODULE mo_hydro_memory_class
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
       & weq_fluxes,           & !< All land water fluxes; needed for water budget check                 [m3/s]
       & weq_land,             & !< Total amount of land water and ice                                   [m3]
-      & weq_balance_err,      & !< Land water balance error within a time step                          [m3/(time step)]
-      & weq_balance_err_rel     !< Land water balance error within a time step relative to turnover     []
+      & weq_balance_err         !< Land water balance error within a time step                          [m3/(time step)]
 
     TYPE(t_jsb_var_real2d) :: &
       & infilt,               & !< infiltration
       & runoff,               & !< surface runoff
-      & runoff_over,          & !< overflow of top soil layer
-      & drainage,             & !< drainage
-      & drain_rock,           & !< drainage
-      & drain_lat,            & !< drainage
-      & drain_perm,           & !< drainage
+      & infilt_over,          & !< overflow of top soil layer
+      & drainage,             & !< total drainage
+      & drain_rock,           & !< bottom drainage
+      & drain_lat,            & !< subsurface lateral drainage
       & discharge,            & !< discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
-      & internal_drain,       & !< internal drain
-      & pdv_1d_out
+      & internal_drain          !< internal drain
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
@@ -129,8 +126,7 @@ MODULE mo_hydro_memory_class
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice  [m]
-      & wtr_soil_pot_scool_sl,& !< Potentially supercooled water in soil layer                              [m]
-      & pdv_2d_out
+      & wtr_soil_pot_scool_sl   !< Potentially supercooled water in soil layer                              [m]
 
     ! Additional variables for PFT lct_type
 
@@ -321,9 +317,9 @@ CONTAINS
       & loutput=.TRUE., output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'runoff_over', mem%runoff_over,                                &
+    CALL mem%Add_var( 'infilt_over', mem%infilt_over,                                &
       & hgrid, surface,                                                              &
-      & t_cf('runoff_over', 'kg m-2 s-1', 'Surface layer overflow'),                 &
+      & t_cf('infilt_over', 'kg m-2 s-1', 'Surface layer overflow'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE., output_level=BASIC,                                        &
@@ -348,7 +344,7 @@ CONTAINS
 
     CALL mem%Add_var( 'drain_lat', mem%drain_lat,                                    &
       & hgrid, surface,                                                              &
-      & t_cf('drain_lat', 'kg m-2 s-1', 'Lateral drainage'),                         &
+      & t_cf('drain_lat', 'kg m-2 s-1', 'Subsurface lateral drainage'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE., output_level=BASIC,                                        &
@@ -356,7 +352,7 @@ CONTAINS
 
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
       & hgrid, surface,                                                              &
-      & t_cf('discharge', 'kg m-2 s-1', 'Local discharge'),                          &
+      & t_cf('discharge', 'm3 s-1', 'Local discharge'),                             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -374,14 +370,6 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'pdv_1d_out', mem%pdv_1d_out,                                  &
-      & hgrid, surface,                                                              &
-      & t_cf('pdv_1d_out', '/', 'pdv_1d_out'),                                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE., output_level=BASIC,                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'weq_fluxes', mem%weq_fluxes,                                  &
@@ -403,15 +391,6 @@ CONTAINS
     CALL mem%Add_var( 'weq_balance_err', mem%weq_balance_err,                        &
       & hgrid, surface,                                                              &
       & t_cf('weq_balance_err', 'm3/(time step)', 'Land water balance error'),       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & loutput=.TRUE., output_level=BASIC,                                          &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp )
-
-    CALL mem%Add_var( 'weq_balance_err_rel', mem%weq_balance_err_rel,                &
-      & hgrid, surface,                                                              &
-      & t_cf('weq_balance_err_rel', '/', 'Land water balance error rel to turnover'),&
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & loutput=.TRUE., output_level=BASIC,                                          &
@@ -794,14 +773,6 @@ CONTAINS
         & prefix, suffix,                                                                &
         & loutput=.TRUE.,                                                                &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var( 'pdv_2d_out', mem%pdv_2d_out,                          &
-        & hgrid, soil_w,                                                                 &
-        & t_cf('pdv_2d_out', '/', 'pdv_2d_out'),                                         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
-        & prefix, suffix,                                                                &
-        & lrestart=.FALSE., output_level=BASIC,                                          &
-        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_soil_fc_sl', mem%wtr_soil_fc_sl,                            &
         & hgrid, soil_w,                                                                 &

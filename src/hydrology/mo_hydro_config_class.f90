@@ -49,9 +49,7 @@ MODULE mo_hydro_config_class
       & l_soilhydnew           !< Switch to new soil hydrology scheme
     INTEGER               :: &
       & i_shm,               & !< Choice of soil hydrological model: Brooks & Corey, 2 = Clapp & Horberger (Campbell), 3 = Van Genuchten
-      & i_interpol,          & !< Interpolation scheme, to optain K & D at layer interface: 1 = upstream mean, 2 = arithmetic mean 
-      & i_testing1,          & !< Switch (2) that may come in handy during testing
-      & i_testing2             !< Switch (3) that may come in handy during testing
+      & i_interpol             !< Interpolation scheme, to optain K & D at layer interface: 1 = upstream mean, 2 = arithmetic mean 
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -78,7 +76,7 @@ CONTAINS
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
                                  & l_soilhydnew
-    INTEGER                     :: i_shm, i_interpol, i_testing1, i_testing2
+    INTEGER                     :: i_shm, i_interpol
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -97,9 +95,7 @@ CONTAINS
       & l_infil_subzero,            &
       & l_soilhydnew,               &
       & i_shm,                      &
-      & i_interpol,                 &
-      & i_testing1,                 &
-      & i_testing2
+      & i_interpol
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -131,8 +127,6 @@ CONTAINS
     l_soilhydnew      = .FALSE.
     i_shm             = 1
     i_interpol        = 1
-    i_testing1        = 1
-    i_testing2        = 1
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -179,15 +173,13 @@ CONTAINS
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
-    config%l_soilhydnew        = l_soilhydnew 
-    IF (l_soilhydnew ) & 
+    config%l_soilhydnew        = l_soilhydnew
+    IF (l_soilhydnew ) &
       & CALL message(TRIM(routine), 'Running new soil hydrology ...')
 
     config%i_shm      = i_shm
     config%i_interpol = i_interpol
 
-    config%i_testing1 = i_testing1
-    config%i_testing2 = i_testing2
 
     CALL close_nml(nml_handler)
 
