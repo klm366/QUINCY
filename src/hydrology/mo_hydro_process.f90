@@ -439,7 +439,7 @@ CONTAINS
     & wtr_soilhyd_res, pdv_1d_out, pdv_2d_out,                                           &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl,                                      &
-    & infilt, runoff, runoff_over, drainage, drain_rock, drain_lat, drain_perm           &
+    & infilt, runoff, infilt_over, drainage, drain_rock, drain_lat                       &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -467,9 +467,8 @@ CONTAINS
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & infilt, runoff, runoff_over, drainage, &
-      & drain_rock, drain_lat, drain_perm, &
-      & wtr_soilhyd_res
+      & infilt, runoff, infilt_over, drainage, &
+      & drain_rock, drain_lat, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
 
@@ -548,10 +547,9 @@ CONTAINS
     !$claw acc end parallel
 
     ! Initialize diagnostic runoff and drainage variables
-    runoff_over(:)    = 0._wp
+    infilt_over(:)    = 0._wp
     drain_rock(:)     = 0._wp
     drain_lat_sl(:,:) = 0._wp
-    drain_perm(:)     = 0._wp
 
     !---------------------
     !> 1. Infiltration
@@ -657,10 +655,13 @@ CONTAINS
         &     bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl,             &
         &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
         &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
-        &     infilt, runoff_over, drainage, drain_rock, drain_lat_sl,                 &
+        &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
         &     tpe_overflow, wtr_soilhyd_res, pdv_2d_out,                               &
         &     ltpe_closed, ltpe_open)
 
+      ! Combine the different runoff flux components
+      drainage(:) = drainage(:) + drain_rock(:) + SUM(drain_lat_sl(:,:), DIM=2)
+      runoff(:)   = runoff(:) + infilt_over(:)
     ELSE
 
       !> Update soil water with respect to evapotransration fluxes
@@ -685,12 +686,12 @@ CONTAINS
       !    - first half of the water
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_0
       CALL digest_infilt(nc, nsoil, ltpe_closed, wtr_field_cap_sl, infilt_hlp, &
-        &     wtr_soil_sl, runoff_over, drainage, tpe_overflow)
+        &     wtr_soil_sl, infilt_over, drainage, tpe_overflow)
 
       ! Drainage calculation with multi-layer soil scheme
       CALL soilhyd(nc, nsoil, dtime, ilog, jllog, soil_depth_sl, wtr_soil_sl,                &
         &     ice_soil_sl, wtr_wsat_sl, wtr_field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl,  &
-        &     bclapp_sl, matrix_pot_sl, wtr_soil_pot_scool_sl, runoff_over, drainage,        &
+        &     bclapp_sl, matrix_pot_sl, wtr_soil_pot_scool_sl, infilt_over, drainage,        &
         &     drain_rock, drain_lat_sl, pore_size_index_sl, wtr_p_wilt_sl, tpe_overflow,     &
         &     ltpe_closed, ltpe_open)
 
@@ -699,7 +700,7 @@ CONTAINS
       !    - second half of the water
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_1
       CALL digest_infilt(nc, nsoil, ltpe_closed, wtr_field_cap_sl, infilt_hlp, &
-        &     wtr_soil_sl, runoff_over, drainage, tpe_overflow)
+        &     wtr_soil_sl, infilt_over, drainage, tpe_overflow)
 
     END IF
 
@@ -713,7 +714,7 @@ CONTAINS
     DO i = 1, nc
       infilt(i)      = infilt     (i) * rhoh2o / dtime
       runoff(i)      = runoff     (i) * rhoh2o / dtime
-      runoff_over(i) = runoff_over(i) * rhoh2o / dtime
+      infilt_over(i) = infilt_over(i) * rhoh2o / dtime
       drainage(i)    = drainage   (i) * rhoh2o / dtime
       drain_rock(i)  = drain_rock (i) * rhoh2o / dtime
       drain_lat(i)   = drain_lat  (i) * rhoh2o / dtime
@@ -1278,7 +1279,7 @@ CONTAINS
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl, &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,          &
-    & infilt, runoff_over, drainage, drain_rock, drain_lat,        &
+    & infilt, infilt_over, drain_rock, drain_lat,                  &
     & tpe_overflow, wtr_soilhyd_res,                               &
     & pdv_2d_out, ltpe_closed, ltpe_open)
 
@@ -1315,10 +1316,9 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: evapo_soil_in_m(:)         ! amount of soil evaporation within timestep [m]
     REAL(wp), INTENT(INOUT)         :: ice_soil_sl(:,:)           ! amount of ice in the soil [m]
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: runoff_over(:)             ! amount of overflow (only diagnostic) [m]
-    REAL(wp), INTENT(INOUT)         :: drainage(:)                ! amount of drainage within timestep [m]
-    REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! Needed later for hydrotiles
-    REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! Needed later for hydrotiles
+    REAL(wp), INTENT(INOUT)         :: infilt_over(:)             ! amount of infiltration overflow [m]
+    REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! drainage from lowest soil layer [m]
+    REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! overflow from subsurface soil layers [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
     REAL(wp), INTENT(OUT)           :: pdv_2d_out(:,:)
@@ -1359,7 +1359,7 @@ CONTAINS
 
     !$claw acc data &
     !$claw acc present(dsoil, wtr_wsat_sl, wtr_field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl, &
-    !$claw acc         pore_size_index_sl, wtr_p_wilt_sl, wtr_soil_sl, drainage, tpe_overflow, ice_soil_sl)          &
+    !$claw acc         pore_size_index_sl, wtr_p_wilt_sl, wtr_soil_sl, tpe_overflow, ice_soil_sl)          &
     !$claw acc pcreate(diffus_sl, ws_rel, ws_crit, drain_crit, ws_tmp, drain_sl, soil_above,       &
     !$claw acc         soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_sl,          &
     !$claw acc         percolation, wslog)
@@ -1427,7 +1427,6 @@ CONTAINS
     DO j = 1,nc
       ! Prescribe drainage from hydraulic conductivity
       drain_rock(j) = drain_rock(j) + hyd_cond_sl(j,nsoil_act(j)) * dtime  ! Set bottom drainage to hyd. cond. of lowest layer [m/s] -> [m]
-      drainage(j)   = drainage(j) + drain_rock(j)                          ! and add it to the total drainage
 
       !< store actual soil water state, infiltration (upper boundary condition) and evaporation 
       !  to compute the residual transport error
@@ -1495,7 +1494,6 @@ CONTAINS
       IF (ABS(wtr_transp_residual(j)) > 0._wp) THEN
         wtr_transp_corr(j)     = MIN(wtr_transp_residual(j) + drain_rock(j), 0._wp)
         drain_rock(j)          = MAX(drain_rock(j) + wtr_transp_residual(j), 0._wp)
-        drainage(j)            = MAX(drainage(j) + wtr_transp_residual(j), 0._wp)
         wtr_transp_residual(j) = wtr_transp_corr(j)
       END IF
 
@@ -1548,7 +1546,6 @@ CONTAINS
           IF (.NOT. ltpe_closed) THEN
             ! Add excess water to lateral drainage
             drain_lat(j,i)   = drain_lat(j,i)  + drain_sl(j)
-            drainage(j)      = drainage(j) + drain_sl(j)              ! and add it to the total drainage
           ELSE
             ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
             tpe_overflow(j) = tpe_overflow(j) + drain_sl(j)
@@ -1565,8 +1562,7 @@ CONTAINS
       IF (.NOT. ltpe_closed) THEN
         IF (wtr_soil_sl(j,1) > wtr_field_cap_sl(j,1)) THEN
           drain_sl(j)    = wtr_soil_sl(j,1) - wtr_field_cap_sl(j,1)
-          runoff_over(j) = runoff_over(j) + drain_sl(j)
-          drainage(j)    = drainage(j) + drain_sl(j)
+          infilt_over(j) = infilt_over(j) + drain_sl(j)
           wtr_soil_sl(j,1) = wtr_soil_sl(j,1) - drain_sl(j)
         END IF
       ELSE      ! TPE closed case

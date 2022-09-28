@@ -354,14 +354,6 @@ CONTAINS
       & lrestart=.FALSE., output_level=BASIC,                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-   CALL mem%Add_var( 'drain_perm', mem%drain_perm,                                   &
-      & hgrid, surface,                                                              &
-      & t_cf('drain_perm', 'kg m-2 s-1', 'Drainage frozen soils'),                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE., output_level=BASIC,                                        &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
       & hgrid, surface,                                                              &
       & t_cf('discharge', 'kg m-2 s-1', 'Local discharge'),                          &

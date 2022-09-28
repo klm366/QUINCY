@@ -1101,8 +1101,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff_over       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drain_perm        )      &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         )      &
       & )
 
     IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
@@ -1163,7 +1162,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_perm,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_1d_out,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, pdv_2d_out,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
