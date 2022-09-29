@@ -519,7 +519,8 @@ CONTAINS
                  * vegetation_lstm_output_(:,1)        &
                  * static_network_output(:,1)          &
                  * modified_pfts_fract(:,1)            &
-                 * 8._wp/100._wp 
+                 * 8._wp/100._wp
+                 !* scale/100._wp 
 
     where (burned_fract < 0._wp) burned_fract = 0._wp
     where (burned_fract > 1._wp) burned_fract = 1._wp 
@@ -533,8 +534,14 @@ CONTAINS
     q_rel_air_(:) = q_rel_air_(:)/100._wp
     where (q_rel_air_ < 0._wp) q_rel_air_ = 0._wp
     where (q_rel_air_ > 1._wp) q_rel_air_ = 1._wp
-    q_rel_air_(:) = 1._wp / (1._wp + exp(-20._wp*(q_rel_air_(:)-0.5)))
-    !where (q_rel_air_ > 70._wp) q_rel_air_ = 100._wp
+    !q_rel_air_(:) = 1._wp / (1._wp + exp(-20._wp*(q_rel_air_(:)-0.5)))
+    !q_rel_air_(:) = 1._wp / (1._wp + exp(-5._wp*(q_rel_air_(:)-0.5)))
+    !q_rel_air_(:) = 1._wp / (1._wp + exp(-10._wp*(q_rel_air_(:)-0.5)))
+    !q_rel_air_(:) = 1._wp / (1._wp + exp(-15._wp*(q_rel_air_(:)-0.5)))
+    q_rel_air_(:) = 1._wp / (1._wp + exp(-25._wp*(q_rel_air_(:)-0.5)))
+
+    !burned_fract = burned_fract*((1._wp-q_rel_air_)**0.25)
+    !burned_fract = burned_fract*((1._wp-q_rel_air_)**2)
     burned_fract = burned_fract*((1._wp-q_rel_air_)**1)
 
     ! ratio for (dry) fuel
@@ -543,7 +550,9 @@ CONTAINS
     !fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
     fuel_(:) = emb_variables(:,9)
     where (fuel_ < 0._wp) fuel_ = 0._wp
-    burned_fract = burned_fract*(fuel_(:)**0.25)
+    !burned_fract = burned_fract*(fuel_(:)**0.25)
+    !burned_fract = burned_fract*(fuel_(:)**2)
+    burned_fract = burned_fract*(fuel_(:)**1)
 
     if (isnan(burned_fract(1))) then
       print*, 'burned_fract'
