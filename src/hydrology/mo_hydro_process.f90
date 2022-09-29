@@ -1335,7 +1335,7 @@ CONTAINS
     REAL(wp) :: remoist(nc)                  ! for TPE
     REAL(wp) :: zmvg_sl(nc,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
     REAL(wP) :: matrix_pot_correct(nc,nsoil) ! Sign conversion (matric potential should be negative)
-    REAL(wp) :: ws_rsdl_sl(nc,nsoil)         ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
+    REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
     REAL(wp) :: weq_wsat_sl(nc,nsoil)        ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
     REAL(wp) :: weq_field_cap_sl(nc,nsoil)   ! field capacity of the soil layer (not reduced by ice) [m]
     REAL(wp) :: weq_p_wilt_sl(nc,nsoil)      ! wilting point - not reduced relative to soil ice fraction [m]
@@ -1345,7 +1345,7 @@ CONTAINS
     !$claw acc data &
     !$claw acc present(dsoil, wtr_wsat_sl, wtr_field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl, &
     !$claw acc         pore_size_index_sl, wtr_p_wilt_sl, wtr_soil_sl, tpe_overflow, ice_soil_sl)          &
-    !$claw acc pcreate(diffus_sl, ws_tmp, drain_sl, soil_above,       &
+    !$claw acc pcreate(diffus_sl, ws_tmp, drain_sl, soil_above, wtr_rsdl_sl,      &
     !$claw acc         soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, zdiflog, remoist, zmvg_sl,          &
     !$claw acc         percolation, wslog)
 
@@ -1377,7 +1377,10 @@ CONTAINS
         END IF
         zmvg_sl(i,j) = pore_size_index_sl(i,j) / (pore_size_index_sl(i,j)+1._wp)
         ! supercooled water in the soil should not be able to move vertically
-        ws_rsdl_sl(i,j) = MAX(wtr_soil_pot_scool_sl(i,j), weq_p_wilt_sl(i,j))
+        ! @todo at some point p_wilt has to be renamed to something more fitting, as it
+        !       basically describes immobile adhesion water which is not really the same
+        !       as the plant wilting point.
+        wtr_rsdl_sl(i,j) = MIN(MAX(wtr_soil_pot_scool_sl(i,j), weq_p_wilt_sl(i,j)), wtr_soil_sl(i,j))
       END DO
     END DO
 
@@ -1401,9 +1404,10 @@ CONTAINS
           & hyd_cond_li(:,:), diffus_li(:,:)                                          &
           )
 
-    !< Diagnose evapotranspiration fluxes from the different soil layer
+    !< Diagnose evapotranspiration fluxes from the different soil layer based on the available
+    !    mobile water
     CALL diagnose_evapotrans(nc, nsoil, root_depth_sl, dsoil, wtr_field_cap_sl, transpiration_in_m, &
-      &                      evapo_soil_in_m, wtr_soil_sl, evapo_soil_sl1, transpiration_sl, &
+      &                      evapo_soil_in_m, wtr_soil_sl - wtr_rsdl_sl, evapo_soil_sl1, transpiration_sl, &
       &                      deficit_evapotrans)
 
     DO i = 1, nc
@@ -1414,20 +1418,21 @@ CONTAINS
       !  to compute the residual transport error
       wtr_transp_residual(i) = SUM(wtr_soil_sl(i,:)) + infilt(i) + evapo_soil_sl1(i) + SUM(transpiration_sl(i,:))
 
-      ! Determination of Vertical movement of water through the soil
-      ! Note that normalized storage values (volumetric soil moisture and storage change) are needed for the transport
+      ! Determination of Vertical movement of mobile water through the soil.
+      !   Note that normalized storage values (volumetric soil moisture and storage change) are
+      !   needed for the transport and immobile water is temporarily removed from the soil.
       DO j = 1, nsoil
         IF (dsoil(i,j) > 0._wp) THEN
-          ws_vol_sl(i,j) = wtr_soil_sl(i,j) / dsoil(i,j)
+          ws_vol_sl(i,j) = (wtr_soil_sl(i,j) - wtr_rsdl_sl(i,j)) / dsoil(i,j)
           transpiration_sl(i,j) = transpiration_sl(i,j) / dsoil(i,j)
         ELSE
           ! without soil there is no change within the soil and the values do not matter
-          ws_vol_sl(i,j) = wtr_soil_sl(i,j)
+          ws_vol_sl(i,j) = wtr_soil_sl(i,j) - wtr_rsdl_sl(i,j)
         END IF
       END DO
 
       ! CALL vert_transport(nc, n, d, alpha, dzf, top_bound, bot_bound, S, C, P, Q, X_old)
-      ! *-bound, S are fluxes i.e. x/sec
+      !   *-bound, S are fluxes i.e. x/sec
       ws_vol_sl(i,1:nsoil_act(i))  = vert_transport(                    &
                          & nsoil_act(i), dtime, 1._wp,                  &
                          & dsoil(i,1:nsoil_act(i)),                     & ! Layer thickness
@@ -1443,9 +1448,9 @@ CONTAINS
       ! Converting back to absolute water content
       DO j = 1, nsoil
         IF (dsoil(i,j) > 0._wp) THEN
-          wtr_soil_sl(i,j) = ws_vol_sl(i,j) * dsoil(i,j)
+          wtr_soil_sl(i,j) = ws_vol_sl(i,j) * dsoil(i,j) + wtr_rsdl_sl(i,j)
         ELSE
-          wtr_soil_sl(i,j) = ws_vol_sl(i,j)
+          wtr_soil_sl(i,j) = ws_vol_sl(i,j) + wtr_rsdl_sl(i,j)
         END IF
       END DO
 
