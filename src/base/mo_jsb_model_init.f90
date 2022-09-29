@@ -255,10 +255,7 @@ CONTAINS
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
       END IF
 
-      ! - also fuel and area damaged by natural disturbances in this timestep are calculated before any lcc takes place
-      IF (model%processes(FUEL_)%p%config%active) THEN
-        CALL model%Queue_task(FUEL_, "fuel")
-      END IF
+      ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
       IF (model%processes(DISTURB_)%p%config%active) THEN
         CALL model%Queue_task(DISTURB_, "damaged_area")
       END IF
@@ -365,6 +362,11 @@ CONTAINS
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
     
+      ! Fuel is calculated last in a timestep to be right available in the next timestep
+      IF (model%processes(FUEL_)%p%config%active) THEN
+        CALL model%Queue_task(FUEL_, "fuel")
+      END IF
+
     ! ----------------------------------------------------------------------------------------------------- !
     !
     ! jsbach4 & quincy - using a mix of JSBACH4 and QUINCY soil physics processes and routines
@@ -520,22 +522,22 @@ CONTAINS
         & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
 
       ! TBD: Loop over processes instead of explicit
-      IF (one_of(tile%process_action(RAD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(RAD_)) THEN
         CALL rad_init(tile)
       END IF
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (one_of(tile%process_action(SEB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(SEB_)) THEN
           CALL seb_init(tile)
         END IF
-        IF (one_of(tile%process_action(TURB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(TURB_)) THEN
           CALL turb_init(tile)
         END IF
       END SELECT
 
       ! Initialize PHENO_ before HYDRO_ and VEG_
-      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(PHENO_)) THEN
         CALL pheno_init(tile)
       END IF
 
@@ -544,14 +546,14 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         ! HYDRO_ needs to be initialized prior to SSE_
-        IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(HYDRO_)) THEN
           CALL hydro_init(tile)
         END IF
-        IF (one_of(tile%process_action(SSE_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(SSE_)) THEN
           CALL sse_init(tile)
         END IF
       CASE (MODEL_QUINCY)
-        IF (one_of(tile%process_action(SPQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(SPQ_)) THEN
           CALL spq_init(tile)
         END IF        
       END SELECT
@@ -559,16 +561,16 @@ CONTAINS
       ! Initialize SSE_ & HYDRO_ before SB_
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        IF (one_of(tile%process_action(SB_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(SB_)) THEN
           CALL sb_init(tile)
         END IF
       END SELECT
 
-      IF (one_of(tile%process_action(A2L_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(A2L_)) THEN
         CALL atm2land_init(tile)
       END IF
       
-      IF (one_of(tile%process_action(ASSIMI_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (tile%Is_process_active(ASSIMI_)) THEN
         CALL assimi_init(tile)
         ! CALL assimi_init_bc(tile)
         ! CALL assimi_init_ic(tile)
@@ -576,7 +578,7 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(CARBON_)) THEN
           CALL carbon_init(tile)
         END IF
       END SELECT
@@ -584,18 +586,18 @@ CONTAINS
       ! VEG_ needs HYDRO_ to be initilized
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
-        IF (one_of(tile%process_action(VEG_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(VEG_)) THEN
           CALL veg_init(tile)
         END IF
       END SELECT
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (one_of(tile%process_action(TCQ_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(TCQ_)) THEN
           CALL tcq_init(tile)
         END IF
 #ifndef __NO_JSBACH_HD__
-        IF (one_of(tile%process_action(HD_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(HD_)) THEN
           CALL hd_init_bc(tile)
           CALL hd_init_ic(tile)
         END IF
@@ -719,7 +721,7 @@ CONTAINS
         CYCLE
       END IF
 
-      IF (one_of(tile%process_action(PHENO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_/)) > 0) THEN
+      IF (tile%Is_process_calculated(PHENO_)) THEN
         dsl4jsb_Get_config(PHENO_)
         IF (        tile%is_vegetation                                   &
             & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
@@ -750,19 +752,19 @@ CONTAINS
 
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (one_of(tile%process_action(TLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(TLCC_)) THEN
           CALL tlcc_init_lcc(tile)
         END IF
 
-        IF (one_of(tile%process_action(ALCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(ALCC_)) THEN
           CALL alcc_init_lcc(tile)
         END IF
 
-        IF (one_of(tile%process_action(FLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(FLCC_)) THEN
           CALL flcc_init_lcc(tile)
         END IF
 
-        IF (one_of(tile%process_action(WLCC_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(WLCC_)) THEN
           CALL wlcc_init_lcc(tile)
         END IF
       END SELECT
@@ -859,7 +861,7 @@ CONTAINS
       ! TBD: Loop over processes instead of explicit
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
-        IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        IF (tile%Is_process_active(CARBON_)) THEN
           IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
         END IF
       END SELECT

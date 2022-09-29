@@ -73,7 +73,7 @@ CONTAINS
     ! Get hd config
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. model%Is_process_active(HD_)) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
@@ -137,6 +137,15 @@ CONTAINS
         & variable_name='CELLS_UP',                   &
         & start_extdim=1, end_extdim=nneigh_max,    &
         & extdim_name='nneigh')
+
+      IF (dsl4jsb_config(HD_)%use_bifurcated_rivers) THEN
+        ! Number of channel river splits into 
+        return_pointer => input_file%Read_2d(         &
+          & variable_name='NSPLIT',                   &
+          & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
+      ELSE
+        dsl4jsb_var_ptr(HD_,nsplit)(:,:) = 1._wp
+      END IF
 
       nproma = grid%nproma
       nblks  = grid%nblks
@@ -235,7 +244,7 @@ CONTAINS
     ! Get hd config
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. model%Is_process_active(HD_)) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)

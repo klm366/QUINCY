@@ -93,6 +93,17 @@ MODULE mo_veg_memory_class
 #endif
 
     !------------------------------------------------------------------------------------------------------ !
+    !>veg_pool diagnostics - summary of C, N, P, C13, C14, N15 across the pool
+    !> 
+    TYPE(t_jsb_var_real2d)          :: &   
+                                    veg_pool_total_c      , &         !< sum of all veg_pool%*%carbon      [mol C / m2]
+                                    veg_pool_total_n      , &         !< sum of all veg_pool%*%nitrogen    [mol C / m2]
+                                    veg_pool_total_p      , &         !< sum of all veg_pool%*%phosphorus  [mol C / m2]
+                                    veg_pool_total_c13    , &         !< sum of all veg_pool%*%carbon13
+                                    veg_pool_total_c14    , &         !< sum of all veg_pool%*%carbon14
+                                    veg_pool_total_n15                !< sum of all veg_pool%*%nitrogen15
+
+    !------------------------------------------------------------------------------------------------------ !
     !>basic plant 2D
     !>
     TYPE(t_jsb_var_real2d)          :: &   
@@ -118,11 +129,6 @@ MODULE mo_veg_memory_class
     ! basic plant 3D 
     TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
                                     root_fraction_sl                 !< fractions of root per layer [unitless]
-    ! veg_pool diagnostics
-    TYPE(t_jsb_var_real2d)          :: &   
-                                    total_veg_pool_c  , &            !< sum of all veg_pool%*%carbon      [mol C / m2]
-                                    total_veg_pool_n  , &            !< sum of all veg_pool%*%nitrogen    [mol C / m2]
-                                    total_veg_pool_p                 !< sum of all veg_pool%*%phosphorus  [mol C / m2]
 
     !------------------------------------------------------------------------------------------------------ !
     !>target C:N and N:P ratios for various non-leaf tissues (mol/mol)
@@ -654,76 +660,76 @@ CONTAINS
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE.,                                                                             &
-        & output_level=BASIC,                                                                          &
-        & initval_r=0.0_wp )
+        & output_level = BASIC,                                                                        &
+        & loutput = .TRUE.,                                                                            &
+        & lrestart = .TRUE.,                                                                           &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_growth, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_litterfall, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_total_flux, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_falloc, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
 
       ! add all variables in the veg_elements_pool to the VEG_ memory
       CALL mem%Add_var(mem%veg_main_pool%veg_total_biomass, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.TRUE.,                                                                              &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_exudation, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_establishment, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_reserve_use, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
 
       ! output to logfile all pools & their variables at model-init 
       ! (maybe use for debugging; its quite a long list)
@@ -737,13 +743,82 @@ CONTAINS
       !>2.0 2D & 3D variables
       !> 
 
+      ! diagnostic variables specific to QUINCY pools in ICON-Land
+      CALL mem%Add_var('veg_pool_total_c', mem%veg_pool_total_c, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_c', '[mol C / m2]', 'total C, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_total_n', mem%veg_pool_total_n, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_n', '[mol C / m2]', 'total N, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_total_p', mem%veg_pool_total_p, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_p', '[mol C / m2]', 'total P, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+        
+      CALL mem%Add_var('veg_pool_total_c13', mem%veg_pool_total_c13, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_c13', '..', 'total C13, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_total_c14', mem%veg_pool_total_c14, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_c14', '..', 'total C14, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_total_n15', mem%veg_pool_total_n15, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_n15', '..', 'total N15, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      ! normal VEG_ variables (not specific to QUINCY pools in ICON-Land)
       CALL mem%Add_var('height', mem%height, &
         & hgrid, surface, &
         & t_cf('height', 'm', 'plant height'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -753,7 +828,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -763,7 +839,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -773,7 +850,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -783,7 +861,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -793,7 +872,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -803,7 +883,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -813,7 +894,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -823,7 +905,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -833,6 +916,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -843,7 +927,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -853,7 +938,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -863,7 +949,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -873,7 +960,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -883,6 +971,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -893,7 +982,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -903,7 +993,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -913,38 +1004,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('total_veg_pool_c', mem%total_veg_pool_c, &
-        & hgrid, surface, &
-        & t_cf('total_veg_pool_c', '[mol C / m2]', 'total C, sum of all veg_pool tissues'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('total_veg_pool_n', mem%total_veg_pool_n, &
-        & hgrid, surface, &
-        & t_cf('total_veg_pool_n', '[mol C / m2]', 'total N, sum of all veg_pool tissues'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('total_veg_pool_p', mem%total_veg_pool_p, &
-        & hgrid, surface, &
-        & t_cf('total_veg_pool_p', '[mol C / m2]', 'total P, sum of all veg_pool tissues'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_cn_fine_root', mem%target_cn_fine_root, &
@@ -953,7 +1015,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -963,7 +1026,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -973,7 +1037,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -983,7 +1048,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -993,7 +1059,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1003,7 +1070,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1013,7 +1081,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1023,7 +1092,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1033,6 +1103,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1043,6 +1114,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1053,6 +1125,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1063,6 +1136,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1073,6 +1147,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1083,6 +1158,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1093,6 +1169,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1103,6 +1180,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1113,7 +1191,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1123,7 +1202,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1133,6 +1213,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1143,7 +1224,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1153,7 +1235,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1163,6 +1246,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1173,7 +1257,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1183,7 +1268,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1193,7 +1279,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1203,7 +1290,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1213,6 +1301,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1223,7 +1312,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1233,7 +1323,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1243,6 +1334,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1253,7 +1345,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1263,6 +1356,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1273,7 +1367,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1283,6 +1378,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1293,7 +1389,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1303,7 +1400,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1313,6 +1411,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1323,6 +1422,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1333,6 +1433,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1343,6 +1444,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1353,6 +1455,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1363,6 +1466,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1373,6 +1477,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1383,6 +1488,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1393,6 +1499,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1403,6 +1510,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1413,6 +1521,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1423,6 +1532,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1433,6 +1543,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1443,6 +1554,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1453,6 +1565,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1463,6 +1576,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1473,6 +1587,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1483,6 +1598,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1493,6 +1609,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1503,6 +1620,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1513,6 +1631,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1523,7 +1642,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1533,6 +1653,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1543,6 +1664,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1553,6 +1675,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1563,6 +1686,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1573,6 +1697,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1583,6 +1708,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1593,6 +1719,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1603,6 +1730,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1613,6 +1741,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1623,6 +1752,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1633,6 +1763,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1643,6 +1774,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1653,6 +1785,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1663,6 +1796,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1673,6 +1807,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1683,6 +1818,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1693,6 +1829,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1703,6 +1840,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1713,6 +1851,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1723,6 +1862,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1733,6 +1873,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1743,6 +1884,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1753,6 +1895,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1763,6 +1906,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1773,6 +1917,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1783,6 +1928,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1793,6 +1939,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1803,6 +1950,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1813,6 +1961,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1823,6 +1972,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1833,6 +1983,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1843,6 +1994,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1853,6 +2005,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1863,6 +2016,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1873,6 +2027,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1883,6 +2038,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1893,6 +2049,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1903,6 +2060,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1913,6 +2071,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1923,6 +2082,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1933,6 +2093,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1943,6 +2104,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1953,6 +2115,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1963,6 +2126,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1973,6 +2137,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1983,6 +2148,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1993,6 +2159,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2003,6 +2170,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2013,6 +2181,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2023,6 +2192,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2033,6 +2203,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2044,6 +2215,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2054,6 +2226,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2064,6 +2237,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2074,6 +2248,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2084,6 +2259,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2094,6 +2270,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2104,6 +2281,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2114,6 +2292,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2124,6 +2303,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2134,6 +2314,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2144,6 +2325,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2154,6 +2336,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2164,6 +2347,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2174,6 +2358,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2184,6 +2369,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2194,6 +2380,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2204,6 +2391,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2214,6 +2402,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2224,6 +2413,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2234,6 +2424,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2244,6 +2435,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2254,6 +2446,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2264,6 +2457,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2274,6 +2468,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2284,6 +2479,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2294,6 +2490,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2304,6 +2501,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2314,6 +2512,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2324,6 +2523,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2334,6 +2534,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2344,6 +2545,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)

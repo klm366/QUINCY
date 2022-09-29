@@ -68,7 +68,7 @@ PROGRAM Adapting_transitions_after_scaling_of_states
   ! Thus, e.g.
   ! - changes in states do not equalise from one time step to another but differ of up to +-1.e-6
   ! - there are changes in the states in the magnitude of 1.e-6 although transitions are zero
-  REAL(dp), PARAMETER :: EXPECTED_ACCURACY = 1.e-6
+  REAL(dp), PARAMETER :: EXPECTED_ACCURACY = 1.e-6 ! Note: needed to be slightly increased for GCB2021 (3.e-5) 
   ! - NOTE: depending on the accepted error, imbalances between transitions and states might add up
   REAL(dp), PARAMETER :: RESULTING_ACCURACY_ERRORS = 3.e-5 !5.e-6
   REAL(dp), PARAMETER :: SMALL_RELATIVE_ERROR = 1.e-3
@@ -712,12 +712,12 @@ PROGRAM Adapting_transitions_after_scaling_of_states
     end do
 
     ! put data
-    ALLOCATE(writeData(dimLength(1),dimLength(2),1))
+    ALLOCATE(writeData(dimLength(2),dimLength(3),1))
 
     DO i = 1,NTRANS
       writeData(:,:,1) = scaledTrans(:,:,i)
       CALL check_err(nf_put_vara_double(ncFileID,writeVarIDs(i+NDIMSOFVARS),&
-          & (/1,1,1/),writeVarIDs,writeData(:,:,1)))
+          & (/1,1,1/),(/dimLength(2),dimLength(3),1/),writeData(:,:,1)))
     END DO
 
     ! close the output-file

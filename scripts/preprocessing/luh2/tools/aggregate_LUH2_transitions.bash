@@ -1,6 +1,10 @@
 #!/bin/bash
-# JN 06.12.16, script to aggregate LUH2 transitions to LUH1 states ("CMIP6 way")
+# JN 23.07.18, script to aggregate LUH2 type transitions to LUH1 type transitions - here with rangelands treated depending
+# on the fstnf value in the staticData_quarterdeg.nc (if 1, i.e. forests in LUH2, there is a conversion i.e. to pasture; if 0: no conversion, i.e. natural vegetation)
+#
+# called as ./aggregate_LUH2_transitions_treat_rangelands_depending_on_fstnf_value.bash transFileWithPath outfolder fstnfFile
 # (julia.nabel@mpimet.mpg.de)
+#
 # SF 18.05.22, add config file to load nco and cdo versions in MAIN
 # (stefanie.falk@lmu.de)
 
@@ -8,11 +12,13 @@ echo "--> aggregate_LUH2_transitions.bash"
 
 transFileWithPath=${1}
 outfolder=${2}
+fstnfFile=${3}
 
-org_states=( primf primn urban secdf secdn pastr range c3ann c3per c4ann c4per c3nfx )
-aggregated_states=( primary primary pasture secondary secondary pasture secondary crop crop crop crop crop )
+# NOTE: range is listed twice. Rangelands are aggregated to pasture or secondary vegetation depending on the fstnf value
+org_states=( primf primn urban secdf secdn pastr range range c3ann c3per c4ann c4per c3nfx )
+aggregated_states=( primary primary pasture secondary secondary pasture secondary pasture crop crop crop crop crop )
 
-nonExistingTransitions=( primf_to_secdf primn_to_secdn )
+nonExistingTransitions=( primf_to_secdf primn_to_secdn range_to_range )
 # and there are obviously no transitions to primf or primn
 
 if [ ! -d ${outfolder} ]; then
@@ -60,8 +66,25 @@ while [ ${state_from_index} -lt ${#org_states[@]} ]; do
       # get the data
       cdo -s -selvar,${thisVar} ${transFileWithPath} tmp.nc
 
-      # convert to double (currently they are float but the f90 mapping programm is only implemented for double)
+      # convert to double (currently they are float but the f90 mapping program is only implemented for double)
       ${ncap} -s "${thisVar}=double(${thisVar})" tmp.nc tmp1.nc
+
+      # treat rangelands
+      if [ ${state_from} = range ] && [ ${aggregated_state_from} = secondary ]; then
+          # only take those transitions where LUH2 does not assume forest (fstnf = 0); no land use change
+          cdo -s -mul tmp1.nc -mulc,-1 -subc,1 ${fstnfFile} tmp2.nc
+          mv tmp2.nc tmp1.nc
+      elif [ ${state_to} = range ] && [ ${aggregated_state_to} = secondary ]; then
+          cdo -s -mul tmp1.nc -mulc,-1 -subc,1 ${fstnfFile} tmp2.nc
+          mv tmp2.nc tmp1.nc
+      elif [ ${state_to} = range ] && [ ${aggregated_state_to} = pasture ]; then
+          # only take those transitions where LUH2 assumes forest (fstnf = 1); land use change
+          cdo -s -mul tmp1.nc ${fstnfFile} tmp2.nc
+          mv tmp2.nc tmp1.nc
+      elif [ ${state_from} = range ] && [ ${aggregated_state_from} = pasture ]; then
+          cdo -s -mul tmp1.nc ${fstnfFile} tmp2.nc
+          mv tmp2.nc tmp1.nc
+      fi
 
       thisAggregationFile=tmp_${thisTargetVar}.nc
       if [ -f ${thisAggregationFile} ]; then
