@@ -74,9 +74,11 @@ CONTAINS
 
     INTEGER :: nml_handler, nml_unit, istat, nlev, nedge
 
-    TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r, dl_l, dg_n  ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r, dl_l, dg_n, day_1y  ! Vertical grids
+    INTEGER                    :: i, ndays 
     TYPE(t_input_file)         :: input_file
     REAL(wp),          POINTER :: ptr_1D(:)
+    REAL(wp),      ALLOCATABLE :: days(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hd_config'
 
@@ -120,6 +122,10 @@ CONTAINS
 
     nedge = SIZE((/1._wp,2._wp,3._wp/))
 
+    ndays = 182 
+    ALLOCATE(days(ndays))
+    days(:)=(/(i, i=1,ndays)/)
+
     hd_o  => new_vgrid('hd_nres_overlflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
     CALL Register_vgrid(hd_o)
 
@@ -134,6 +140,10 @@ CONTAINS
 
     dg_n  => new_vgrid('edge_neighbors', ZAXIS_GENERIC, nedge, levels=(/1._wp,2._wp,3._wp/), units='')
     CALL Register_vgrid(dg_n)
+
+    day_1y  => new_vgrid('days_in_year', ZAXIS_GENERIC, ndays, levels=days(1:ndays), units='')
+    CALL Register_vgrid(day_1y)
+
 
   END SUBROUTINE Init_hd_config
 

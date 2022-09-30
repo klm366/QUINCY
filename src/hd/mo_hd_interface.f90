@@ -28,7 +28,7 @@ MODULE mo_hd_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
-  USE mo_jsb_time,           ONLY: is_time_experiment_start
+  USE mo_jsb_time,           ONLY: is_time_experiment_start, is_newday
   USE mo_jsb_math_constants, ONLY: deg2rad, pi
   USE mo_jsb_parallel,       ONLY: Get_omp_thread
 
@@ -120,6 +120,7 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_vgrid), POINTER :: day_1y
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
@@ -150,11 +151,17 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_lake
     dsl4jsb_Real2D_onChunk :: w_river_res
     dsl4jsb_Real2D_onChunk :: w_overl_res
+    dsl4jsb_Real2D_onChunk :: w_river_res_old
+    dsl4jsb_Real2D_onChunk :: w_overl_res_old
     dsl4jsb_Real2D_onChunk :: fract_river
     dsl4jsb_Real2D_onChunk :: fract_overl
+    dsl4jsb_Real2D_onChunk :: volume_river_seas_mean
+    dsl4jsb_Real2D_onChunk :: volume_overl_seas_mean
     dsl4jsb_Real3D_onChunk :: overlflow_res
     dsl4jsb_Real3D_onChunk :: baseflow_res
     dsl4jsb_Real3D_onChunk :: riverflow_res
+    dsl4jsb_Real3D_onChunk :: volume_river_seas
+    dsl4jsb_Real3D_onChunk :: volume_overl_seas
 
     REAL(wp), POINTER :: area(:)
     REAL(wp), POINTER :: lake_runoff(:)
@@ -166,8 +173,6 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: &
       & tile_fract, &
       & inflow
-!      & w_river_res_new, &
-!      & w_overl_res_new
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -175,8 +180,8 @@ CONTAINS
 
     CHARACTER(len=32) :: routing_scheme
 
-    INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: steplen, crit_stddev
+    INTEGER  :: iblk, ics, ice, nc, ndays, nsteps
+    REAL(wp) :: steplen
 
     iblk    = options%iblk
     ics     = options%ics
@@ -207,6 +212,8 @@ CONTAINS
     land_tile => lake_tile%next_sibling_tile
     veg_tile => land_tile%first_child_tile%next_sibling_tile
 
+    day_1y => Get_vgrid('days_in_year')
+    ndays = day_1y%n_levels    
 
     ! Get reference to variables in memory
     !
@@ -244,14 +251,20 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HD_, nres_riverflow)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! in
     dsl4jsb_Get_var2D_onChunk(HD_, runoff_lake)      ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, volume_river_seas_mean)! inout
+    dsl4jsb_Get_var2D_onChunk(HD_, volume_overl_seas_mean)! inout
     dsl4jsb_Get_var3D_onChunk(HD_, overlflow_res)    ! inout
     dsl4jsb_Get_var3D_onChunk(HD_, baseflow_res)     ! inout
     dsl4jsb_Get_var3D_onChunk(HD_, riverflow_res)    ! inout
+    dsl4jsb_Get_var3D_onChunk(HD_, volume_river_seas)! inout
+    dsl4jsb_Get_var3D_onChunk(HD_, volume_overl_seas)! inout
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_runoff)   ! out
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_drainage) ! out
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_rivers)   ! out
     dsl4jsb_Get_var2D_onChunk(HD_, w_river_res)      ! out
     dsl4jsb_Get_var2D_onChunk(HD_, w_overl_res)      ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, w_river_res_old)  ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, w_overl_res_old)  ! out
     dsl4jsb_Get_var2D_onChunk(HD_, fract_river)      ! out
     dsl4jsb_Get_var2D_onChunk(HD_, fract_overl)      ! out
 
@@ -291,11 +304,37 @@ CONTAINS
          w_overl_res(:) = 0._wp
       END WHERE
 
+      IF (is_newday(options%current_datetime, options%dtime)) THEN
+        volume_river_seas(:,1:ndays-1) = volume_river_seas(:,2:ndays)
+        volume_overl_seas(:,1:ndays-1) = volume_overl_seas(:,2:ndays)
+        volume_river_seas(:,ndays)     = 0._wp
+        volume_overl_seas(:,ndays)     = 0._wp
+      END IF
+
+      volume_river_seas(:,ndays) = volume_river_seas(:,ndays) + (w_river_res(:) - w_river_res_old(:)) 
+      volume_overl_seas(:,ndays) = volume_overl_seas(:,ndays) + (w_overl_res(:) - w_overl_res_old(:)) 
+
+
+      WHERE(w_river_res(:)>EPSILON(1._wp))
+        volume_river_seas_mean(:) = MAX(0._wp, SUM(volume_river_seas(:,:),DIM=2))
+      ELSE WHERE
+        volume_river_seas_mean(:) = 0._wp
+      END WHERE
+      WHERE(w_overl_res(:)>EPSILON(1._wp))
+        volume_overl_seas_mean(:) = MAX(0._wp, SUM(volume_overl_seas(:,:),DIM=2))
+      ELSE WHERE
+        volume_overl_seas_mean(:) = 0._wp
+      END WHERE
+
       IF (model%config%use_wetskins) THEN
         ! update reservoir wetskin fraction
-        fract_river(:) = update_wetskin (fract_river(:),w_river_res(:),oro_stddev(:),veg_fract(:),area)
-        fract_overl(:) = update_wetskin (fract_overl(:),w_overl_res(:),oro_stddev(:),veg_fract(:),area)
+        CALL update_wetskin (fract_river(:),volume_river_seas_mean(:),oro_stddev(:),veg_fract(:),area,nc)
+        CALL update_wetskin (fract_overl(:),volume_overl_seas_mean(:),oro_stddev(:),veg_fract(:),area,nc)
       ENDIF
+
+      w_river_res_old(:) = w_river_res(:)
+      w_overl_res_old(:) = w_overl_res(:)
+
 
     CASE ('weighted_to_coast')
       !
@@ -333,45 +372,47 @@ CONTAINS
   END SUBROUTINE aggregate_hd
 
 
-  ELEMENTAL FUNCTION update_wetskin(fract_old,reservoir,oro_stddev,fract_veg,area) &
-    RESULT (fract_new)
+  SUBROUTINE update_wetskin(fract,height,oro_stddev,fract_veg,cell_area,nc)
 
     ! Inputdata
-    REAL(wp), INTENT(in) :: fract_old                !< Old pond fraction        [/]
-    REAL(wp), INTENT(in) :: reservoir                !< Average flooding height  [m]
-    REAL(wp), INTENT(in) :: oro_stddev               !< Subgrid orographic standard deviation [m]
-    REAL(wp), INTENT(in) :: fract_veg                !< Vegetation tile fraction [/]
-    REAL(wp), INTENT(in) :: area                     !< Grid cell area           [m2]
+    REAL(wp), INTENT(in) :: height(:)               !< Average flooding volume        [m]
+    REAL(wp), INTENT(in) :: oro_stddev(:)           !< Orographic standard deviation  [m]
+    REAL(wp), INTENT(in) :: fract_veg(:)            !< Vegetation tile fraction       [/]
+    REAL(wp), INTENT(in) :: cell_area(:)            !< Grid cell area                 [m2]
+    INTEGER, Intent(in)  :: nc                      !< Number of grid cells           [/]
 
     ! Result
-    REAL(wp)             :: fract_new                !< New flooding fraction   [/]
-    REAL(wp)             :: h_max                    !< Maximum flooding height [m]
-    REAL(wp)             :: a_max                    !< Maximum flooding area   [m2]
-    REAL(wp)             :: v_max                    !< Maximum flooding volume [m3]
-    REAL(wp)             :: v                        !< Current flooding volume [m3]
+    REAL(wp), INTENT(inout) :: fract(:)             !< New flooding fraction          [/]
 
     ! Local variables
-    REAL(wp), PARAMETER  :: eps = EPSILON(1.0_wp)    !< Really small value
-    REAL(wp), PARAMETER  :: shape_par = 2._wp        !< General shape of all basins (cone: 1; parabolic: =< 2.0)
+    REAL(wp)             :: volume_max(nc)          !< Orographic scaling parameter   [m3]
+    REAL(wp)             :: volume(nc)              !< Orographic scaling parameter   [m3]
 
-    h_max = MAX(1.0_wp, 2._wp * oro_stddev)
-    a_max = area
-    v_max = h_max * a_max
-    v     = reservoir * area
+    ! Local parameters
+    REAL(wp), PARAMETER  :: eps = EPSILON(1.0_wp)   !< Really small value
+    REAL(wp), PARAMETER  :: shape_par = 2._wp       !< shape parameter (1: cone, 2: parabolic)
 
-    IF (fract_veg > 0._wp) THEN                      ! valid grid cell
-       ! 1. Pond dessicated
-      IF (reservoir < eps) THEN 
-        fract_new = 0.0_wp
-      ELSE
-        ! Pond surface area
-        fract_new = MIN(1.0_wp, MAX(0.0_wp, (v / (v_max / (1._wp+2._wp/shape_par))) ** ( 2._wp / (2._wp+shape_par) )))
-      END IF
-    ELSE 
-      fract_new = 0._wp
-    END IF
+    ! Orographic scaling parameter
+    volume_max  = MAX(1._wp, 2._wp * oro_stddev * cell_area) / (1._wp + 2._wp / shape_par)
+    volume      = height * cell_area
 
-  END FUNCTION update_wetskin
+    WHERE (fract_veg < 0._wp)                      ! valid grid cell
+      fract = 0._wp
+    ELSE WHERE
+
+      WHERE (volume < eps)  
+        ! 1. Wetland dessicated
+        fract = 0.0_wp
+
+      ELSE WHERE
+
+        fract = MIN(fract_veg, MAX(0.0_wp, (volume / volume_max) ** (2._wp / (2._wp + shape_par))))
+
+      END WHERE
+
+    END WHERE
+
+  END SUBROUTINE update_wetskin
 
 
   SUBROUTINE update_dynlake(tile, options)
@@ -396,6 +437,7 @@ CONTAINS
       & basin_mask,         & 
       & height_lake,        &
       & area_lake,          &
+      & fract_lake,          &
       & volume_lake,        &
       & height_dyn
 
@@ -404,8 +446,9 @@ CONTAINS
       & areas_lake,         &
       & volumes_lake
 
-    REAL(wp), POINTER :: lake_fract(:)
-    REAL(wp), POINTER :: land_fract(:)
+    REAL(wp), POINTER :: fract_lake_old(:)
+    REAL(wp), POINTER :: fract_land_old(:)
+    REAL(wp), POINTER :: area(:)
 
     LOGICAL, ALLOCATABLE  ::  &
       & volume_mask_low(:,:), &        !> dummy field 
@@ -453,6 +496,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
 
     grid => Get_grid(model%grid_id)
+    area => grid%area(ics:ice,iblk)
 
     dl_l => Get_vgrid('dynamic_lake_level')
     nlev    = dl_l%n_levels
@@ -471,6 +515,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onChunk(HD_, height_lake)      ! OUT
     dsl4jsb_Get_var2D_onChunk(HD_, area_lake)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HD_, fract_lake)        ! OUT
     dsl4jsb_Get_var2D_onChunk(HD_, volume_lake)      ! OUT
     dsl4jsb_Get_var2D_onChunk(HD_, height_dyn)       ! OUT
 
@@ -478,8 +523,8 @@ CONTAINS
     lake_tile => box_tile%first_child_tile
     land_tile => lake_tile%next_sibling_tile
 
-    lake_fract => lake_tile%fract(ics:ice,iblk)
-    land_fract => land_tile%fract(ics:ice,iblk)
+    fract_lake_old => lake_tile%fract(ics:ice,iblk)
+    fract_land_old => land_tile%fract(ics:ice,iblk)
 
     ! Configuration parameters from the namelist
     routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
@@ -504,7 +549,7 @@ CONTAINS
 
       WHERE      ( basin_mask(:) > 0._wp  .AND. volume_lake(:)<MINVAL(volumes_lake(:,:), DIM=2) .AND. volume_lake(:)>0._wp )
          height_lake(:)= volume_lake(:) * heights_lake(:,1) / volumes_lake(:,1)
-         area_lake  (:)= volume_lake(:) * areas_lake  (:,1) / volumes_lake(:,1)
+         fract_lake  (:)= volume_lake(:) * areas_lake  (:,1) / volumes_lake(:,1)
       ELSE  WHERE ( volume_mask(:)  .AND. volume_lake(:)<MAXVAL(volumes_lake(:,:), DIM=2) )
         height_low (:)=MAXVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_low (:,:))
         height_high(:)=MINVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
@@ -513,20 +558,21 @@ CONTAINS
         volume_low (:)=MAXVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_low (:,:))
         volume_high(:)=MINVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
         height_lake(:)= height_low(:) + (volume_lake(:)-volume_low(:)) * (height_high(:)-height_low(:)) / (volume_high(:)-volume_low(:)) 
-        area_lake  (:)= area_low  (:) + (volume_lake(:)-volume_low(:)) * (area_high  (:)-area_low  (:)) / (volume_high(:)-volume_low(:))
+        fract_lake  (:)= area_low  (:) + (volume_lake(:)-volume_low(:)) * (area_high  (:)-area_low  (:)) / (volume_high(:)-volume_low(:))
       ELSE WHERE ( volume_mask(:) .AND. volume_lake(:)>=MAXVAL(volumes_lake(:,:), DIM=2) )
         height_lake(:) = MAXVAL(heights_lake(:,:), DIM=2) + (volume_lake(:)-MAXVAL(volumes_lake(:,:), DIM=2)) / MAXVAL(areas_lake(:,:), DIM=2)
-        area_lake(:)   = MAXVAL(areas_lake(:,:), DIM=2)
+        fract_lake(:)   = MAXVAL(areas_lake(:,:), DIM=2)
       ELSE WHERE
         height_lake(:) = 0._wp
-        area_lake(:)   = 0._wp
+        fract_lake(:)   = 0._wp
       END WHERE
       height_dyn(:) = height_oro_min(:) + height_lake(:)
+      area_lake (:) = fract_lake(:) * area
 
       ! update lake fraction [%]
       WHERE (basin_mask(:) > 0._wp)
         ! lake and land fraction changes [%]
-        fract_lake_changes(:) = MIN( MAX(area_lake(:), 0._wp), 1._wp) - lake_fract(:)
+        fract_lake_changes(:) = MIN( MAX(fract_lake(:), 0._wp), 1._wp) - fract_lake_old(:)
       ELSE WHERE
         fract_lake_changes(:) = 0._wp
       END WHERE
@@ -535,7 +581,7 @@ CONTAINS
       CALL model%Get_top_tile(fract_tile)
       IF (ASSOCIATED(fract_tile%parent)) CALL finish(routine, 'Should only run on box tile!')
       IF (model%config%use_sizelakes) THEN
-      CALL do_stuff_on_tree(fract_tile, options, iblk, ics, ice, fract_lake_changes, land_fract(:))
+      CALL do_stuff_on_tree(fract_tile, options, iblk, ics, ice, fract_lake_changes, fract_land_old(:))
       END IF
 
     CASE ('weighted_to_coast')
@@ -647,8 +693,6 @@ CONTAINS
       & discharge_ocean,       &
       & internal_drain,        &
       & discharge_lake,           &
-      & overlflow_lake,           &
-      & baseflow_lake,         &
       & riverflow_lake,       &
       & runoff_lake,           &
       & volume_lake
@@ -715,8 +759,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, discharge_lake)   ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, overlflow_lake)      ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, baseflow_lake)    ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, riverflow_lake)  ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, runoff_lake)      ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
@@ -758,15 +800,13 @@ CONTAINS
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
       discharge_lake(:,:) = 0._wp
-      overlflow_lake(:,:) = 0._wp
-      baseflow_lake(:,:) = 0._wp
       riverflow_lake(:,:) = 0._wp
 
       global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:)+runoff_lake(:,:))*in_domain(:,:))
 
       WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
         ! lake water drained into internal lake
-        discharge_lake(:,:) = outflow_rivers(:,:)
+        riverflow_lake(:,:) = outflow_rivers(:,:)
         outflow_rivers(:,:) = 0._wp
       END WHERE
 
@@ -825,7 +865,7 @@ CONTAINS
         outflow_drainage(:,:) = 0._wp
       END WHERE
       ! inflow at lake sink points
-      discharge_lake(:,:) =  discharge_lake(:,:) + runoff_lake(:,:)
+      discharge_lake(:,:) =  riverflow_lake(:,:) + runoff_lake(:,:)
       ! lake water storage [m3]
       volume_lake(:,:) = volume_lake(:,:) + discharge_lake(:,:) * steplen
 
