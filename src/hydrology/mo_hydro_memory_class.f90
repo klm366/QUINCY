@@ -40,7 +40,7 @@ MODULE mo_hydro_memory_class
 
   PUBLIC :: t_hydro_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 100
+  INTEGER, PARAMETER :: max_no_of_vars = 111
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_hydro_memory
@@ -52,8 +52,10 @@ MODULE mo_hydro_memory_class
       & snowmelt,             & !< Snow melt                                                            [kg m-2 s-1]
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
-                                !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
+                                !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd
+      & fract_pond,           & !< Fraction of tile assumed inundated at given water level              [/]
       & weq_pond,             & !< Water content of pond reservoir                                      [m water equivalent]
+      & weq_pond_max,         & !< Maximum water content of pond reservoir                              [m water equivalent]
       & wtr_pond,             & !< Liquid water content of pond reservoir                               [m water equivalent]
       & runoff_retention,     & !< Runoff retention reservoir                                           [m water equivalent]
       & pond_melt,            & !< Melting of ice in pond reservoir                                     [kg m-2 s-1]
@@ -111,6 +113,7 @@ MODULE mo_hydro_memory_class
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
       !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
+      & evapo_pond,           & !< Evaporation from pond reservoir w/o snow and skin evaporation            [kg m-2 s-1]
       & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
       & evapo_deficit,        & !< Evaporation deficit flux due to inconsistent treatment of snow evap.     [m water equivalent]
       & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
@@ -279,6 +282,20 @@ CONTAINS
       & t_cf('weq_snow', 'm (water equivalent)', 'Snow amount'),               &
       & t_grib1(table, 255, grib_bits), grib2_desc,                            &
       & prefix, suffix,                                                        &
+      & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'fract_pond', mem%fract_pond,                                      &
+      & hgrid, surface,                                                              &
+      & t_cf('fract_pond', '/', 'Inindated surface fraction'),                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'weq_pond_max', mem%weq_pond_max,                                      &
+      & hgrid, surface,                                                              &
+      & t_cf('weq_pond_max', 'm (water equivalent)', 'Maximum surface pond reservoir'),      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
       & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
@@ -772,6 +789,16 @@ CONTAINS
         & hgrid, surface,                                                      &
         & t_cf('evapotrans_soil', 'kg m-2 s-1',                                &
         &      'Evapotranspiration from soil (w/o snow and skin res.'),        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE.,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'evapo_pond', mem%evapo_pond,                &
+        & hgrid, surface,                                                      &
+        & t_cf('evapo_pond', 'kg m-2 s-1',                                &
+        &      'Evaporation from ponds (w/o snow and skin res.'),        &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & loutput=.TRUE.,                                                      &

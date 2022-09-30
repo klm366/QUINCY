@@ -54,7 +54,9 @@ MODULE mo_hydro_config_class
       & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
       & l_soilhydnew,        &
       & l_infiltnew,         &
-      & l_hydro_q
+      & l_hydro_q,           &
+      & l_macrotrans_subsurf
+
     INTEGER               :: &
       & i_shm,               & !< Choice of soil hydrological model: Brooks & Corey, 2 = Clapp & Horberger (Campbell), 3 = Van Genuchten
       & i_interpol,          & !< Interpolation scheme, to optain K & D at layer interface: 1 = upstream mean, 2 = arithmetic mean 
@@ -87,7 +89,7 @@ CONTAINS
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
-                                 & l_soilhydnew, l_infiltnew, l_hydro_q
+                                 & l_soilhydnew, l_infiltnew, l_hydro_q, l_macrotrans_subsurf
     INTEGER                     :: i_shm, i_interpol, i_infil, i_testing1, i_testing2
 
     NAMELIST /jsb_hydro_nml/        &
@@ -112,6 +114,7 @@ CONTAINS
       & l_soilhydnew,               & 
       & l_infiltnew,                &
       & l_hydro_q,                  &
+      & l_macrotrans_subsurf,       &
       & i_shm,                      &
       & i_interpol,                 &
       & i_infil,                    &
@@ -152,6 +155,7 @@ CONTAINS
     l_soilhydnew      = .FALSE.
     l_infiltnew       = .FALSE.
     l_hydro_q         = .FALSE.
+    l_macrotrans_subsurf = .TRUE.
     i_shm             = 1
     i_interpol        = 1
     i_infil           = 1
@@ -215,6 +219,7 @@ CONTAINS
     config%l_hydro_q           = l_hydro_q 
     IF (l_hydro_q) CALL message(TRIM(routine), 'Running with Q-Arctic add ons ...')
 
+    config%l_macrotrans_subsurf = l_macrotrans_subsurf
     config%i_shm      = i_shm
     config%i_interpol = i_interpol
     config%i_infil    = i_infil

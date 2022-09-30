@@ -251,6 +251,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: latdrain_sl
 
     dsl4jsb_Real2D_onChunk :: wtr_latflow
+    dsl4jsb_Real2D_onChunk :: fract_pond
+    dsl4jsb_Real2D_onChunk :: weq_pond_max
+    dsl4jsb_Real2D_onChunk :: weq_pond
     dsl4jsb_Real2D_onChunk :: wtr_pond
 
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -322,6 +325,9 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl) ! inout
 !pdv >
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond_max)
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)
       dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sat_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pwp_sl)
@@ -344,9 +350,11 @@ CONTAINS
       END IF
 
       IF (tile%contains_ridge) THEN
+        weq_pond_max(:) = 0._wp
         wtr_pond_max(:) = 0._wp
       ELSE
-        wtr_pond_max(:) = MAX(0._wp,dsl4jsb_Config(HYDRO_)%max_pond_depth &
+        weq_pond_max(:) = dsl4jsb_Config(HYDRO_)%max_pond_depth
+        wtr_pond_max(:) = MAX(0._wp,weq_pond_max(:) &
                      &  - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
       END IF
 
@@ -535,6 +543,15 @@ CONTAINS
         END DO
       END IF
 
+      weq_pond(:) = dsl4jsb_var2D_onChunk (HYDRO_, ice_pond) + wtr_pond(:)
+
+      DO i = 1, nc
+        IF (weq_pond_max(i) > 1.E-20_wp .AND. weq_pond(i) > 1.E-20_wp) THEN
+          fract_pond(i) = MIN(1._wp, (weq_pond(i) / weq_pond_max(i))**0.5_wp)
+        ELSE
+          fract_pond(i) = 0._wp
+        END IF
+      END DO
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
