@@ -17,6 +17,7 @@ MODULE mo_hydro_config_class
 
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_util,              ONLY: real2string, logical2string
+  USE mo_util_string,       ONLY: tolower
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_control,       ONLY: debug_on
@@ -40,7 +41,7 @@ MODULE mo_hydro_config_class
       & snow_depth_max       !< Limit for snow depth [m water equivalent] to avoid grid cells with
                              !  infinitely growing snow depth; -1. for no limitation
     CHARACTER(len=10)     :: &
-      & scheme_stom_cond     !< Scheme to use for computation of stomatal conductance (echam5 only for now)
+      & scheme_stom_cond       !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
       & l_organic,           & !< Use organic component of soil layers
       & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
@@ -48,8 +49,8 @@ MODULE mo_hydro_config_class
       & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
       & l_soilhydnew           !< Switch to new soil hydrology scheme
     INTEGER               :: &
-      & i_shm,               & !< Choice of soil hydrological model: Brooks & Corey, 2 = Clapp & Horberger (Campbell), 3 = Van Genuchten
-      & i_interpol             !< Interpolation scheme, to optain K & D at layer interface: 1 = upstream mean, 2 = arithmetic mean 
+      & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
+      & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean 
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -66,6 +67,8 @@ CONTAINS
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
+    USE mo_hydro_constants,    ONLY: BooksCorey_, ClappHornberger_, VanGenuchten_, &
+      &                              Upstream_, Arithmetic_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -73,10 +76,9 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
-    CHARACTER(len=10)           :: scheme_stom_cond
+    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
                                  & l_soilhydnew
-    INTEGER                     :: i_shm, i_interpol
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -94,8 +96,8 @@ CONTAINS
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
       & l_soilhydnew,               &
-      & i_shm,                      &
-      & i_interpol
+      & soilhydmodel,               &
+      & interpol_mean
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -124,9 +126,9 @@ CONTAINS
     l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
-    l_soilhydnew      = .FALSE.
-    i_shm             = 1
-    i_interpol        = 1
+    l_soilhydnew      = .TRUE.
+    soilhydmodel      = "BrooksCorey"
+    interpol_mean     = "upstream"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -177,9 +179,30 @@ CONTAINS
     IF (l_soilhydnew ) &
       & CALL message(TRIM(routine), 'Running new soil hydrology ...')
 
-    config%i_shm      = i_shm
-    config%i_interpol = i_interpol
+    SELECT CASE(TRIM(tolower(soilhydmodel)))
+    CASE("brookscorey")
+      config%soilhydmodel = BooksCorey_
+      CALL message(TRIM(routine), 'Soil hydrology uses the Brooks & Corey model')
+    CASE("clapphornberger")
+      config%soilhydmodel = ClappHornberger_
+      CALL message(TRIM(routine), 'Soil hydrology uses the Clapp & Hornberger model')
+    CASE("vangenuchten")
+      config%soilhydmodel = VanGenuchten_
+      CALL message(TRIM(routine), 'Soil hydrology uses the Van Genuchten model')
+    CASE default
+      CALL finish(TRIM(routine), 'Soil hydrology model '//TRIM(soilhydmodel)//' not implemented')
+    END SELECT
 
+    SELECT CASE(TRIM(tolower(interpol_mean)))
+    CASE("upstream")
+      config%interpol_mean = Upstream_
+      CALL message(TRIM(routine), 'Soil diffusivity/conductivity interpolation uses upstream means')
+    CASE("arithmetic")
+      config%interpol_mean = Arithmetic_
+      CALL message(TRIM(routine), 'Soil diffusivity/conductivity interpolation uses arithmetic means')
+    CASE default
+      CALL finish(TRIM(routine), 'Soil diffusivity/conductivity interpolation method '//TRIM(interpol_mean)//' not implemented')
+    END SELECT
 
     CALL close_nml(nml_handler)
 

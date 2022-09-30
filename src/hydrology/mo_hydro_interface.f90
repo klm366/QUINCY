@@ -1053,8 +1053,8 @@ CONTAINS
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
       & dsl4jsb_Config(HYDRO_)%l_soilhydnew,                    &
-      & dsl4jsb_Config(HYDRO_)%i_shm,                           &
-      & dsl4jsb_Config(HYDRO_)%i_interpol,                      &
+      & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
+      & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &

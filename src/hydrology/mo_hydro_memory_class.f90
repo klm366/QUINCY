@@ -352,7 +352,7 @@ CONTAINS
 
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
       & hgrid, surface,                                                              &
-      & t_cf('discharge', 'm3 s-1', 'Local discharge'),                             &
+      & t_cf('discharge', 'm3 s-1', 'Local discharge'),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )

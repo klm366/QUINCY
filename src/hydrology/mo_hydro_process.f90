@@ -428,7 +428,7 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                    &
-    & l_infil_subzero, l_soilhydnew, i_shm, i_interpol,                                  &
+    & l_infil_subzero, l_soilhydnew, soilhydmodel, interpol_mean,                        &
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,    &
@@ -447,7 +447,7 @@ CONTAINS
     INTEGER,  INTENT(in) :: &
       & nc, nsoil, nlat
     INTEGER, INTENT(in) :: &
-      & i_shm, i_interpol
+      & soilhydmodel, interpol_mean
     REAL(wp), INTENT(in) :: &
       & dtime
     LOGICAL, INTENT(in) :: ltpe_closed
@@ -642,7 +642,7 @@ CONTAINS
 
     IF (l_soilhydnew) THEN
 
-      CALL soilhyd_new(nc, nsoil, dtime, i_shm, i_interpol, soil_depth_sl,             &
+      CALL soilhyd_new(nc, nsoil, dtime, soilhydmodel, interpol_mean, soil_depth_sl,   &
         &     wtr_wsat_sl, wtr_field_cap_sl, hyd_cond_sat_sl,                          &
         &     vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,                        &
         &     bclapp_sl, matrix_pot_sl, pore_size_index_sl, wtr_p_wilt_sl,             &
@@ -1264,7 +1264,7 @@ CONTAINS
 
   !------------------------------------------------------------------------------------------------
   SUBROUTINE soilhyd_new(nc, nsoil, dtime,                         &
-    & i_shm, i_interpol,                                           &
+    & soilhydmodel, interpol_mean,                                 &
     & dsoil,                                                       &
     & wtr_wsat_sl, wtr_field_cap_sl, hyd_cond_sat_sl,              &
     & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,            &
@@ -1287,8 +1287,8 @@ CONTAINS
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
-    INTEGER,  INTENT(in)            :: i_shm                      ! hydrology model scheme
-    INTEGER,  INTENT(in)            :: i_interpol                 ! lateral interpolation scheme
+    INTEGER,  INTENT(in)            :: soilhydmodel               ! hydrology model scheme
+    INTEGER,  INTENT(in)            :: interpol_mean              ! lateral interpolation scheme
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           ! Maximum storage in each soil layer (porosity, reduced by ice) [m]
@@ -1390,18 +1390,18 @@ CONTAINS
     ! Determining hydraulic conductivity and diffusivity on layers and at layer interfaces
     ! Note that the indexing uses the upper interface -> interface Ii = I(i,i-1)
     ! For numerical reasons, soil loops always cover all soil layers, even if they are not active (bedrock)
-    CALL get_conductivies_diffusivities(                        &
-          & i_shm, i_interpol,                              &
-          & dtime,                                              &
-          & nc,nsoil,                                           &
-          & nsoil_act(:), dsoil(:,:),                           &
-          & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:),           &
-          & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),              &
-          & hyd_cond_sat_sl(:,:), matrix_pot_correct(:,:),                            &
-          & bclapp_sl(:,:), zmvg_sl(:,:),                                             &
-          & ice_impede_sl(:,:),                                                       &
-          & hyd_cond_sl(:,:), diffus_sl(:,:),                                         &
-          & hyd_cond_li(:,:), diffus_li(:,:)                                          &
+    CALL get_conductivies_diffusivities(                                    &
+          & soilhydmodel, interpol_mean,                                    &
+          & dtime,                                                          &
+          & nc,nsoil,                                                       &
+          & nsoil_act(:), dsoil(:,:),                                       &
+          & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
+          & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &
+          & hyd_cond_sat_sl(:,:), matrix_pot_correct(:,:),                  &
+          & bclapp_sl(:,:), zmvg_sl(:,:),                                   &
+          & ice_impede_sl(:,:),                                             &
+          & hyd_cond_sl(:,:), diffus_sl(:,:),                               &
+          & hyd_cond_li(:,:), diffus_li(:,:)                                &
           )
 
     !< Diagnose evapotranspiration fluxes from the different soil layer based on the available
@@ -2452,7 +2452,7 @@ CONTAINS
   END FUNCTION vert_transport
 
   SUBROUTINE get_conductivies_diffusivities(     &
-            & i_shm, i_interpol,                 &
+            & soilhydmodel, interpol_mean,       &
             & dt,                                &
             & nc, nsoil, nsoil_act, dsoil,       &
             & ws, is, wscools,                   &
@@ -2461,10 +2461,13 @@ CONTAINS
             & ice_impede, K, D, K_inter, D_inter &
             )
 
+    USE mo_hydro_constants,    ONLY: BooksCorey_, ClappHornberger_, VanGenuchten_, &
+      &                              Upstream_, Arithmetic_
+
     ! arguments
 
-    INTEGER,  INTENT(in)     :: i_shm, i_interpol       !> Approaches to determine conductivites&difusivities (KD)
-                                                        !! and how to derive values at layer interface (AVG scheme)
+    INTEGER,  INTENT(in)     :: soilhydmodel, &         !> Approaches to determine conductivites & diffusivities (KD)
+      &                         interpol_mean           !! and how to derive values at layer interface (AVG scheme)
     REAL(wp), INTENT(in)     :: dt                      !> time step length
     INTEGER,  INTENT(in)     :: nc                      !> vector length
     INTEGER,  INTENT(in)     :: nsoil                   !> number of below ground layers
@@ -2523,10 +2526,10 @@ CONTAINS
     END WHERE
 
 
-    IF (i_shm==2) THEN ! Clapp & Horberger (Campbell)
+    IF (soilhydmodel == ClappHornberger_) THEN
       ws_free_vol(:,:)=MAX(0._wp,ws_vol(:,:)-scool_vol(:,:))
       ws_range_vol(:,:)  = wsat_vol(:,:)
-    ELSE  ! Brooks & Coorey; Van Genuchten
+    ELSE  ! Brooks & Corey; Van Genuchten
       ws_free_vol(:,:)=MAX(0._wp,ws_vol(:,:)-MAX(scool_vol(:,:),pwp_vol(:,:)))
       ws_range_vol(:,:)  = fc_vol(:,:) - pwp_vol(:,:)
     END IF
@@ -2539,7 +2542,7 @@ CONTAINS
     ws_rel_vol(:,:) = MIN(1._wp, MAX(0._wp, ws_rel_vol(:,:)))
 
     ! Determining K and D on layer
-    IF (i_shm==1 .OR. i_shm==2) THEN  !1=Brooks & Correy or 2 = Clapp & Horberger (Campbell)
+    IF (soilhydmodel == BooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
       K(:,:) =  k_sat(:,:)                                                   &
              & * ws_rel_vol(:,:)**(2._wp * bclapp(:,:) + 3._wp)
       WHERE(ws_range_vol(:,:) > 0._wp)
@@ -2549,11 +2552,15 @@ CONTAINS
         D(:,:) = 0._wp
       END WHERE
 
-    ELSE IF (i_shm==3) THEN ! Van Genuchten
+    ELSE IF (soilhydmodel == VanGenuchten_) THEN
       ws_rel_vol(:,:) = MIN(0.9999_wp, ws_rel_vol(:,:)) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
 
-      K(:,:) = k_sat(:,:) * ws_rel_vol(:,:)**(0.5_wp) &
-             & *(1._wp-(1._wp-ws_rel_vol(:,:)**(1._wp/mvgn(:,:)))**mvgn(:,:))**2._wp
+      WHERE(mvgn(:,:) > 0._wp)
+        K(:,:) = k_sat(:,:) * ws_rel_vol(:,:)**(0.5_wp) &
+               & *(1._wp-(1._wp-ws_rel_vol(:,:)**(1._wp/mvgn(:,:)))**mvgn(:,:))**2._wp
+      ELSEWHERE
+        K(:,:) = 0._wp
+      ENDWHERE
 
       WHERE(ws_range_vol(:,:) > 0._wp)
         D(:,:) = -K(:,:)* mpot_sat(:,:) * bclapp(:,:) / ws_range_vol(:,:) &
@@ -2594,11 +2601,11 @@ CONTAINS
     DO i = 1, nc
       DO j = nsoil, 2, -1
         IF (j <= nsoil_act(i)) THEN
-          IF (i_interpol == 1) THEN ! upstream
+          IF (interpol_mean == Upstream_) THEN
             K_inter(i,j)  =   K(i,j-1)
             D_inter(i,j)  =   MAX(D(i,j),D(i,j-1))
 !            D_inter(i,j)  =   MIN(D(i,j),D(i,j-1))
-          ELSE IF (i_interpol == 2) THEN !  Adapted arithmetic mean
+          ELSE IF (interpol_mean == Arithmetic_) THEN
             IF (K(i,j-1) > K(i,j)) THEN ! MOVEMENT OF WETTING FRONTS LIMITED BY SATURATION OF SUBJACENT LAYER. ELSE ... 
               K_inter(i,j)  =   (K(i,j)*dsoil(i,j)+K(i,j-1)*dsoil(i,j-1))/(dsoil(i,j)+dsoil(i,j-1))
             ELSE ! ... PREVENT FLUX FROM COMPLETLY DRYING OUT UPPER LAYER
