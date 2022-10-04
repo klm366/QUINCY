@@ -141,7 +141,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
-    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     !
     ! Locally allocated vectors
     !
@@ -178,7 +177,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2_ta)        ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2_ta)      ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2_ta)   ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)         ! in
     dsl4jsb_Get_var2D_onChunk(FUEL_,    fuel)                  ! out
 
 
@@ -200,7 +198,6 @@ CONTAINS
             & c_water_ag2_ta(:),       & ! in
             & c_ethanol_ag2_ta(:),     & ! in
             & c_nonsoluble_ag2_ta(:),  & ! in
-            & fract_fpc_max(:),        & ! in
             & fuel(:)                  & ! out
             & )
 
