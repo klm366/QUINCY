@@ -258,6 +258,7 @@ CONTAINS
       ! - area damaged by natural disturbances in this timestep are calculated before any lcc takes place
       IF (model%processes(DISTURB_)%p%config%active) THEN
         CALL model%Queue_task(DISTURB_, "damaged_area")
+        CALL model%Queue_task(DISTURB_, "natural_disturbances")
       END IF
 
       ! ------------------------ tasks that can change area
@@ -300,11 +301,6 @@ CONTAINS
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
 
-      ! Disturbances happen on a daily basis
-      IF (model%processes(DISTURB_)%p%config%active) THEN
-         CALL model%Queue_task(DISTURB_, "natural_disturbances")
-      END IF
-  
       ! ------------------------ tasks that do not change area
       !
       CALL model%Queue_task(TCQ_,    "tcq")
