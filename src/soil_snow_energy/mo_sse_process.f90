@@ -1275,9 +1275,9 @@ CONTAINS
 
     IF (temp < tmelt) THEN
       ! supercooled water equation (Niu&Yang,2006)
-      liquid_max =                                                              &
-        & w_max                                                                 & ! Maximum water storage
-        & * ( alf * (tmelt - temp) / MAX(1.e-10_wp, grav * temp * matrix_pot) ) &
+      liquid_max =                                                               &
+        & w_max                                                                  & ! Maximum water storage
+        & * ( alf * (tmelt - temp) / MAX(1.e-10_wp, grav * temp * -matrix_pot) ) &
         &   ** ( -1._wp / MAX(1._wp, bclapp))
     ELSE
       liquid_max = 0._wp

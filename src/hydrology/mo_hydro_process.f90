@@ -1332,7 +1332,6 @@ CONTAINS
     REAL(wp) :: deficit_evapotrans(nc)       ! water that could not be extracted from the soil [m]
     REAL(wp) :: remoist(nc)                  ! for TPE
     REAL(wp) :: zmvg_sl(nc,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
-    REAL(wP) :: matrix_pot_correct(nc,nsoil) ! Sign conversion (matric potential should be negative)
     REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
     REAL(wp) :: weq_wsat_sl(nc,nsoil)        ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
     REAL(wp) :: weq_field_cap_sl(nc,nsoil)   ! field capacity of the soil layer (not reduced by ice) [m]
@@ -1366,13 +1365,6 @@ CONTAINS
       nsoil_act(i) = 0
       DO j = 1, nsoil
         IF (dsoil(i,j) > 0._wp) nsoil_act(i) = nsoil_act(i) + 1
-        !!!! Extremly careful when implementing new equations:
-        !!!! mpot in the inifile is positive while in all formulas it should be negative !!!!
-        IF (matrix_pot_sl(i,j) > 0._wp) THEN
-          matrix_pot_correct(i,j) = -matrix_pot_sl(i,j)
-        ELSE
-          matrix_pot_correct(i,j) = matrix_pot_sl(i,j)
-        END IF
         zmvg_sl(i,j) = pore_size_index_sl(i,j) / (pore_size_index_sl(i,j)+1._wp)
         ! supercooled water in the soil should not be able to move vertically
         ! @todo at some point p_wilt has to be renamed to something more fitting, as it
@@ -1395,7 +1387,7 @@ CONTAINS
           & nsoil_act(:), dsoil(:,:),                                       &
           & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
           & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &
-          & hyd_cond_sat_sl(:,:), matrix_pot_correct(:,:),                  &
+          & hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),                       &
           & bclapp_sl(:,:), zmvg_sl(:,:),                                   &
           & ice_impede_sl(:,:),                                             &
           & hyd_cond_sl(:,:), diffus_sl(:,:),                               &
