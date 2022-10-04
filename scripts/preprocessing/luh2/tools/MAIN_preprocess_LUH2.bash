@@ -4,7 +4,7 @@
 # (updated according to methodology used for recent GCB simulations) 
 #----------------------------------------------------------------------
 # JN 2019-2022 (julia.nabel@mpimet.mpg.de)
-# SF 15.06.22 (stefanie.falk@lmu.de)
+# SF July-September 2022 (stefanie.falk@lmu.de)
 #--------------------------------------------------------------------
 ### Batch Queuing System is SLURM
 #SBATCH --output=YOUR-TAG_preprocess_LUH2_forcing.o%j
@@ -18,9 +18,9 @@
 #SBATCH --ntasks=1
 
 #############################################################################
-# settings to be adapted to user needs
+# settings in examples/user_config to be adapted to user needs
 
-ln -sf examples/user_config_test user_config
+ln -sf YOUR-CONFIG-FILE user_config
 source ./user_config
 
 #############################################################################

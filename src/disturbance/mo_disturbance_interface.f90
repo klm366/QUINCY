@@ -216,7 +216,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_air_ave              ! daily average of temperature <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: q_ave                  ! daily average of specific humidity <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: q_rel_ave              ! daily average of relative humidity <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: ws10_ave               ! daily average of wind speed <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: ws10_ave               ! daily average of wind speed <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: rain_ave               ! daily average of wind speed <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: swl1_ave               ! daily average of volumetric soil water content in the 1st layer <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: swl2_ave               ! daily average of volumetric soil water content in the 2nd layer <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: swl3_ave               ! daily average of volumetric soil water content in the 3rd layer <Rackhun Son>
@@ -262,7 +263,14 @@ CONTAINS
 
     ! Declare pointers to variables in memory <Rackhun Son>
     REAL(wp), POINTER      :: lightning_climatology(:)
-    REAL(wp), POINTER      :: population_density(:)
+    REAL(wp), POINTER      :: slope(:)
+    REAL(wp), POINTER      :: roughness(:)
+    REAL(wp), POINTER      :: topographic_position_idx(:)
+    REAL(wp), POINTER      :: terrain_ruggedness_idx(:)
+    REAL(wp), POINTER      :: vector_ruggedness_measure(:)
+    REAL(wp), POINTER      :: profile_curvature(:)
+    REAL(wp), POINTER      :: tangential_curvature(:)
+    !REAL(wp), POINTER      :: population_density(:)
     REAL(wp), POINTER      :: t_air_local_clim(:)
     REAL(wp), POINTER      :: q_rel_local_clim(:)
     REAL(wp), POINTER      :: q_local_clim(:)
@@ -335,7 +343,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   t_air_ave)                ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_ave)                    ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_rel_ave)                ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(DISTURB_,   ws10_ave)                 ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   ws10_ave)                 ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   rain_ave)                 ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl1_ave)                 ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl2_ave)                 ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl3_ave)                 ! in <Rackhun Son>
@@ -446,7 +455,9 @@ CONTAINS
     t_air_ave(:) = t_air_ave(:) + t_air(:)    *(options%dtime/60._wp/60._wp/24._wp)
     q_ave(:)     = q_ave(:)     + q_air(:)    *(options%dtime/60._wp/60._wp/24._wp)
     q_rel_ave(:) = q_rel_ave(:) + q_rel_air(:)*(options%dtime/60._wp/60._wp/24._wp)
-    !ws10_ave(:)  = ws10_ave(:)  + wind_10m(:) *(options%dtime/60._wp/60._wp/24._wp)
+    ws10_ave(:)  = ws10_ave(:)  + wind_10m(:) *(options%dtime/60._wp/60._wp/24._wp)
+    rain_ave(:)  = rain_ave(:)  + rain(:)     *(options%dtime/60._wp/60._wp/24._wp)
+    !rain_ave(:)  = rain_ave(:)  + rain(:)
     swl1_ave(:)  = swl1_ave(:)  + swl1(:)     *(options%dtime/60._wp/60._wp/24._wp)
     swl2_ave(:)  = swl2_ave(:)  + swl2(:)     *(options%dtime/60._wp/60._wp/24._wp)
     swl3_ave(:)  = swl3_ave(:)  + swl3(:)     *(options%dtime/60._wp/60._wp/24._wp)
@@ -478,14 +489,25 @@ CONTAINS
         diff_year = FLOAT(iyr-time_config%tc_exp_startdate%date%year) +1._wp
 
         IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
-          t_air_clim(:,day_of_year) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
-          q_clim(:,day_of_year)     = q_ave(:)     /(options%dtime/60._wp/60._wp/24._wp)
-          q_rel_clim(:,day_of_year) = q_rel_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
-          swl1_clim(:,day_of_year)  = swl1_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          swl2_clim(:,day_of_year)  = swl2_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          swl3_clim(:,day_of_year)  = swl3_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          swl4_clim(:,day_of_year)  = swl4_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
-          lai_clim(:,day_of_year)   = lai_ave(:)   /(options%dtime/60._wp/60._wp/24._wp)
+          t_air_ave(:) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
+          q_ave(:)     = q_ave(:)     /(options%dtime/60._wp/60._wp/24._wp)
+          q_rel_ave(:) = q_rel_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
+          ws10_ave(:)  = ws10_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          rain_ave(:)  = rain_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl1_ave(:)  = swl1_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl2_ave(:)  = swl2_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl3_ave(:)  = swl3_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl4_ave(:)  = swl4_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          lai_ave(:)   = lai_ave(:)   /(options%dtime/60._wp/60._wp/24._wp)
+
+          t_air_clim(:,day_of_year) = t_air_ave(:) !/(options%dtime/60._wp/60._wp/24._wp)
+          q_clim(:,day_of_year)     = q_ave(:)     !/(options%dtime/60._wp/60._wp/24._wp)
+          q_rel_clim(:,day_of_year) = q_rel_ave(:) !/(options%dtime/60._wp/60._wp/24._wp)
+          swl1_clim(:,day_of_year)  = swl1_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
+          swl2_clim(:,day_of_year)  = swl2_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
+          swl3_clim(:,day_of_year)  = swl3_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
+          swl4_clim(:,day_of_year)  = swl4_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
+          lai_clim(:,day_of_year)   = lai_ave(:)   !/(options%dtime/60._wp/60._wp/24._wp)
 
         !ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
         ELSE
@@ -574,7 +596,16 @@ CONTAINS
         modified_pfts_fract(:,9) = (1-fract_snow(:))*(1-fract_fpc_max)                 ! Others
 
         lightning_climatology => dsl4jsb_memory(DISTURB_)%lightning_climatology(ics:ice, iblk, day_of_year)    ! <Rackhun Son>
-        population_density    => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk, day_of_year)       ! <Rackhun Son>
+
+        slope                     => dsl4jsb_memory(DISTURB_)%slope(ics:ice, iblk)                     ! <Rackhun Son>
+        roughness                 => dsl4jsb_memory(DISTURB_)%roughness(ics:ice, iblk)                 ! <Rackhun Son>
+        topographic_position_idx  => dsl4jsb_memory(DISTURB_)%topographic_position_idx(ics:ice, iblk)  ! <Rackhun Son>
+        terrain_ruggedness_idx    => dsl4jsb_memory(DISTURB_)%terrain_ruggedness_idx(ics:ice, iblk)    ! <Rackhun Son>
+        vector_ruggedness_measure => dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(ics:ice, iblk) ! <Rackhun Son>
+        profile_curvature         => dsl4jsb_memory(DISTURB_)%profile_curvature(ics:ice, iblk)         ! <Rackhun Son>
+        tangential_curvature      => dsl4jsb_memory(DISTURB_)%tangential_curvature(ics:ice, iblk)      ! <Rackhun Son>
+
+        !population_density    => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk, day_of_year)       ! <Rackhun Son>
 
         t_air_local_clim      => dsl4jsb_memory(DISTURB_)%t_air_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
         q_rel_local_clim      => dsl4jsb_memory(DISTURB_)%q_rel_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
@@ -600,14 +631,15 @@ CONTAINS
       !print*, t_air_min_bias(1)
 
       ! reset daily statistics
-      t_air_ave(:) = 0._wp
-      q_ave(:) = 0._wp
-      q_rel_ave(:) = 0._wp
-      swl1_ave(:) = 0._wp
-      swl2_ave(:) = 0._wp
-      swl3_ave(:) = 0._wp
-      swl4_ave(:) = 0._wp
-      lai_ave(:) = 0._wp
+      !t_air_ave(:) = 0._wp
+      !q_ave(:) = 0._wp
+      !q_rel_ave(:) = 0._wp
+      !ws10_ave(:) = 0._wp
+      !swl1_ave(:) = 0._wp
+      !swl2_ave(:) = 0._wp
+      !swl3_ave(:) = 0._wp
+      !swl4_ave(:) = 0._wp
+      !lai_ave(:) = 0._wp
 
       burned_fract(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) &
@@ -648,30 +680,47 @@ CONTAINS
             !endif
 
             CALL burned_fract_dl(                                         &
-              & t_air(:),                                                 &
+              !& t_air(:),                                                 &
+              & t_air_ave(:),                                             &
               & t_air_local_clim(:), t_air_clim(:,day_of_year)/diff_year, &  
-              & q_rel_air(:),                                             &
+              !& q_rel_air(:),                                             &
+              & q_rel_ave(:),                                             &
               & q_rel_local_clim(:), q_rel_clim(:,day_of_year)/diff_year, &
-              & q_air(:),                                                 &
+              !& q_air(:),                                                 &
+              & q_ave(:),                                                 &
               & q_local_clim(:),     q_clim(:,day_of_year)/diff_year,     &
-              & wind_10m(:),                                              &
-              & rain(:),                                                  &
-              & swl1(:),                                                  &
+              & ws10_ave(:),                                              &
+              !& wind_10m(:),                                              &
+              & rain_ave(:),                                                  &
+              !& rain(:),                                                  &
+              !& swl1(:),                                                  &
+              & swl1_ave(:),                                              &
               & swvl1_local_clim(:), swl1_clim(:,day_of_year)/diff_year,  &
-              & swl2(:),                                                  &
+              !& swl2(:),                                                  &
+              & swl2_ave(:),                                              &
               & swvl2_local_clim(:), swl2_clim(:,day_of_year)/diff_year,  &
-              & swl3(:),                                                  &
+              !& swl3(:),                                                  &
+              & swl3_ave(:),                                              &
               & swvl3_local_clim(:), swl3_clim(:,day_of_year)/diff_year,  &
-              & swl4(:),                                                  &
+              !& swl4(:),                                                  &
+              & swl4_ave(:),                                              &
               & swvl4_local_clim(:), swl4_clim(:,day_of_year)/diff_year,  &
-              & lai(:),                                                   &
+              !& lai(:),                                                   &
+              & lai_ave(:),                                               &
               & lai_local_clim(:),   lai_clim(:,day_of_year)/diff_year,   &
               & modified_pfts_fract(:,:),                              &
              !& fuel(:),             fuel_yearly(:),                   &
               & fuel(:),                                               &
-              & population_density(:),                                 &
+              !& population_density(:),                                 &
               & lightning_climatology(:),                              &
               & elevation(:),                                          &
+              & slope(:),                                              &
+              & roughness(:),                                          &
+              & topographic_position_idx(:),                           &
+              & terrain_ruggedness_idx(:),                             &
+              & vector_ruggedness_measure(:),                          &
+              & profile_curvature(:),                                  &
+              & tangential_curvature(:),                               &
 
               & nc,                                                    &
               & tile%name,                                             &
@@ -680,8 +729,8 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%d_climate_hidden,             &
               & dsl4jsb_Config(DISTURB_)%d_vegetation_input,           &
               & dsl4jsb_Config(DISTURB_)%d_vegetation_hidden,          &
-              & dsl4jsb_Config(DISTURB_)%d_static_input,               &
-              & dsl4jsb_Config(DISTURB_)%d_static_hidden,              &
+              & dsl4jsb_Config(DISTURB_)%d_lnt_input,                  &
+              & dsl4jsb_Config(DISTURB_)%d_lnt_hidden,                 &
               & dsl4jsb_Config(DISTURB_)%d_output,                     &
               & dsl4jsb_Config(DISTURB_)%d_emb_input,                  &
               & dsl4jsb_Config(DISTURB_)%d_emb_hidden,                 &
@@ -725,10 +774,10 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%vegetation_out_weight,        &
               & dsl4jsb_Config(DISTURB_)%vegetation_out_bias,          &
 
-              & dsl4jsb_Config(DISTURB_)%static_layer1_weight,         &
-              & dsl4jsb_Config(DISTURB_)%static_layer1_bias,           &
-              & dsl4jsb_Config(DISTURB_)%static_layer2_weight,         &
-              & dsl4jsb_Config(DISTURB_)%static_layer2_bias,           &
+              & dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_weight, &
+              & dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_bias,   &
+              & dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_weight, &
+              & dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_bias,   &
 
               & dsl4jsb_Config(DISTURB_)%climate_emb_layer1_weight,    &
               & dsl4jsb_Config(DISTURB_)%climate_emb_layer1_bias,      &
@@ -740,45 +789,50 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_weight, &
               & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_bias,   &
 
-              & dsl4jsb_Config(DISTURB_)%t_air_minmax,                 &
-              & dsl4jsb_Config(DISTURB_)%t_air_ano_minmax,             &
-              & dsl4jsb_Config(DISTURB_)%t_air_clim_minmax,            &
-              & dsl4jsb_Config(DISTURB_)%q_rel_minmax,                 &
-              & dsl4jsb_Config(DISTURB_)%q_rel_ano_minmax,             &
-              & dsl4jsb_Config(DISTURB_)%q_rel_clim_minmax,            &
-              & dsl4jsb_Config(DISTURB_)%q_minmax,                     &
-              & dsl4jsb_Config(DISTURB_)%q_ano_minmax,                 &
-              & dsl4jsb_Config(DISTURB_)%q_clim_minmax,                &
-              & dsl4jsb_Config(DISTURB_)%wind_10m_minmax,              &
-              & dsl4jsb_Config(DISTURB_)%rain_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%swl1_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%swl1_ano_minmax,              &
-              & dsl4jsb_Config(DISTURB_)%swl1_clim_minmax,             &
-              & dsl4jsb_Config(DISTURB_)%swl2_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%swl2_ano_minmax,              &
-              & dsl4jsb_Config(DISTURB_)%swl2_clim_minmax,             &
-              & dsl4jsb_Config(DISTURB_)%swl3_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%swl3_ano_minmax,              &
-              & dsl4jsb_Config(DISTURB_)%swl3_clim_minmax,             &
-              & dsl4jsb_Config(DISTURB_)%swl4_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%swl4_ano_minmax,              &
-              & dsl4jsb_Config(DISTURB_)%swl4_clim_minmax,             &
-              & dsl4jsb_Config(DISTURB_)%lai_minmax,                   &
-              & dsl4jsb_Config(DISTURB_)%lai_ano_minmax,               &
-              & dsl4jsb_Config(DISTURB_)%lai_clim_minmax,              &
-              & dsl4jsb_Config(DISTURB_)%population_density_minmax,    &
-              & dsl4jsb_Config(DISTURB_)%lightning_climatology_minmax, &
-              & dsl4jsb_Config(DISTURB_)%elevation_minmax,             &
-              & dsl4jsb_Config(DISTURB_)%agb_minmax,                   &
-              & dsl4jsb_Config(DISTURB_)%pft1_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%pft2_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%pft3_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%pft4_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%pft5_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%pft6_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%pft7_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%pft8_minmax,                  &
-              & dsl4jsb_Config(DISTURB_)%pft9_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%climate_min_max,              &
+              & dsl4jsb_Config(DISTURB_)%vegetation_min_max,           &
+              & dsl4jsb_Config(DISTURB_)%embedding_min_max,            &
+              & dsl4jsb_Config(DISTURB_)%lightning_topography_min_max, &
+
+              !& dsl4jsb_Config(DISTURB_)%t_air_minmax,                 &
+              !& dsl4jsb_Config(DISTURB_)%t_air_ano_minmax,             &
+              !& dsl4jsb_Config(DISTURB_)%t_air_clim_minmax,            &
+              !& dsl4jsb_Config(DISTURB_)%q_rel_minmax,                 &
+              !& dsl4jsb_Config(DISTURB_)%q_rel_ano_minmax,             &
+              !& dsl4jsb_Config(DISTURB_)%q_rel_clim_minmax,            &
+              !& dsl4jsb_Config(DISTURB_)%q_minmax,                     &
+              !& dsl4jsb_Config(DISTURB_)%q_ano_minmax,                 &
+              !& dsl4jsb_Config(DISTURB_)%q_clim_minmax,                &
+              !& dsl4jsb_Config(DISTURB_)%wind_10m_minmax,              &
+              !& dsl4jsb_Config(DISTURB_)%rain_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%swl1_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%swl1_ano_minmax,              &
+              !& dsl4jsb_Config(DISTURB_)%swl1_clim_minmax,             &
+              !& dsl4jsb_Config(DISTURB_)%swl2_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%swl2_ano_minmax,              &
+              !& dsl4jsb_Config(DISTURB_)%swl2_clim_minmax,             &
+              !& dsl4jsb_Config(DISTURB_)%swl3_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%swl3_ano_minmax,              &
+              !& dsl4jsb_Config(DISTURB_)%swl3_clim_minmax,             &
+              !& dsl4jsb_Config(DISTURB_)%swl4_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%swl4_ano_minmax,              &
+              !& dsl4jsb_Config(DISTURB_)%swl4_clim_minmax,             &
+              !& dsl4jsb_Config(DISTURB_)%lai_minmax,                   &
+              !& dsl4jsb_Config(DISTURB_)%lai_ano_minmax,               &
+              !& dsl4jsb_Config(DISTURB_)%lai_clim_minmax,              &
+              !& dsl4jsb_Config(DISTURB_)%population_density_minmax,    &
+              !& dsl4jsb_Config(DISTURB_)%lightning_climatology_minmax, &
+              !& dsl4jsb_Config(DISTURB_)%elevation_minmax,             &
+              !& dsl4jsb_Config(DISTURB_)%agb_minmax,                   &
+              !& dsl4jsb_Config(DISTURB_)%pft1_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%pft2_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%pft3_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%pft4_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%pft5_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%pft6_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%pft7_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%pft8_minmax,                  &
+              !& dsl4jsb_Config(DISTURB_)%pft9_minmax,                  &
               
               & climate_lstm_hidden(:,:),                              & ! inout
               & climate_lstm_cell(:,:),                                & ! inout
@@ -791,6 +845,18 @@ CONTAINS
             CALL finish('disturbed_fract','Unknown fire algorithm')
         END SELECT
       END IF
+      ! reset daily statistics
+      t_air_ave(:) = 0.
+      q_ave(:) = 0.
+      q_rel_ave(:) = 0.
+      ws10_ave(:) = 0.
+      rain_ave(:) = 0.
+      swl1_ave(:) = 0.
+      swl2_ave(:) = 0.
+      swl3_ave(:) = 0.
+      swl4_ave(:) = 0.
+      lai_ave(:) = 0.
+
 
       damaged_fract(:) = 0._wp
       IF (dsl4jsb_Lctlib_param(woody_PFT) .AND. dsl4jsb_Lctlib_param(dynamic_PFT)) THEN

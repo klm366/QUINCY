@@ -46,6 +46,7 @@ MODULE mo_disturb_memory_class
     q_ave,                    & ! for Fire <Rackhun Son>
     q_rel_ave,                & ! for Fire <Rackhun Son>
     ws10_ave,                 & ! for Fire <Rackhun Son>
+    rain_ave,                 & ! for Fire <Rackhun Son>
     swl1_ave,                 & ! for Fire <Rackhun Son>
     swl2_ave,                 & ! for Fire <Rackhun Son>
     swl3_ave,                 & ! for Fire <Rackhun Son>
@@ -68,18 +69,26 @@ MODULE mo_disturb_memory_class
     vegetation_lstm_hidden,   & ! for Fire <Rackhun Son>
     vegetation_lstm_cell        ! for Fire <Rackhun Son>
 
-  REAL(wp), POINTER :: lightning_climatology(:,:,:) => NULL()   ! lightning climatology (nproma,nblks,366) <Rackhun Son>
-  REAL(wp), POINTER :: population_density(:,:,:)    => NULL()   ! population density    (nproma,nblks,366) <Rackhun Son>
+  REAL(wp), POINTER :: lightning_climatology(:,:,:)   => NULL()   ! lightning climatology (nproma,nblks,366) <Rackhun Son>
+  
+  REAL(wp), POINTER :: slope(:,:)                     => NULL()   ! slope                     (nproma,nblks) <Rackhun Son>
+  REAL(wp), POINTER :: roughness(:,:)                 => NULL()   ! roughness                 (nproma,nblks) <Rackhun Son>
+  REAL(wp), POINTER :: topographic_position_idx(:,:)  => NULL()   ! topographic_position_idx  (nproma,nblks) <Rackhun Son>
+  REAL(wp), POINTER :: terrain_ruggedness_idx(:,:)    => NULL()   ! terrain_ruggedness_idx    (nproma,nblks) <Rackhun Son>
+  REAL(wp), POINTER :: vector_ruggedness_measure(:,:) => NULL()   ! vector_ruggedness_measure (nproma,nblks) <Rackhun Son>
+  REAL(wp), POINTER :: profile_curvature(:,:)         => NULL()   ! profile_curvature         (nproma,nblks) <Rackhun Son>
+  REAL(wp), POINTER :: tangential_curvature(:,:)      => NULL()   ! tangential_curvature      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: population_density(:,:,:)    => NULL()   ! population density        (nproma,nblks,366) <Rackhun Son>
 
-  REAL(wp), POINTER :: t_air_local_clim(:,:,:)      => NULL()   ! temperature           (nproma,nblks)     <Rackhun Son>
-  REAL(wp), POINTER :: q_rel_local_clim(:,:,:)      => NULL()   ! relative humidity     (nproma,nblks)     <Rackhun Son>
-  REAL(wp), POINTER :: q_local_clim(:,:,:)          => NULL()   ! specific humidity     (nproma,nblks)     <Rackhun Son>
-  REAL(wp), POINTER :: ws10_local_clim(:,:,:)       => NULL()   ! wind speed            (nproma,nblks)     <Rackhun Son>
-  REAL(wp), POINTER :: swvl1_local_clim(:,:,:)      => NULL()   ! soil water content    (nproma,nblks)     <Rackhun Son>
-  REAL(wp), POINTER :: swvl2_local_clim(:,:,:)      => NULL()   ! soil water content    (nproma,nblks)     <Rackhun Son>
-  REAL(wp), POINTER :: swvl3_local_clim(:,:,:)      => NULL()   ! soil water content    (nproma,nblks)     <Rackhun Son>
-  REAL(wp), POINTER :: swvl4_local_clim(:,:,:)      => NULL()   ! soil water content    (nproma,nblks)     <Rackhun Son>
-  REAL(wp), POINTER :: lai_local_clim(:,:,:)        => NULL()   ! lai                   (nproma,nblks)     <Rackhun Son>
+  REAL(wp), POINTER :: t_air_local_clim(:,:,:)      => NULL()   ! temperature           (nproma,nblks,366)   <Rackhun Son>
+  REAL(wp), POINTER :: q_rel_local_clim(:,:,:)      => NULL()   ! relative humidity     (nproma,nblks,366)   <Rackhun Son>
+  REAL(wp), POINTER :: q_local_clim(:,:,:)          => NULL()   ! specific humidity     (nproma,nblks,366)   <Rackhun Son>
+  REAL(wp), POINTER :: ws10_local_clim(:,:,:)       => NULL()   ! wind speed            (nproma,nblks,366)   <Rackhun Son>
+  REAL(wp), POINTER :: swvl1_local_clim(:,:,:)      => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
+  REAL(wp), POINTER :: swvl2_local_clim(:,:,:)      => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
+  REAL(wp), POINTER :: swvl3_local_clim(:,:,:)      => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
+  REAL(wp), POINTER :: swvl4_local_clim(:,:,:)      => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
+  REAL(wp), POINTER :: lai_local_clim(:,:,:)        => NULL()   ! lai                   (nproma,nblks,366)   <Rackhun Son>
  
   CONTAINS
     PROCEDURE :: Init => Init_disturb_memory
@@ -126,7 +135,16 @@ CONTAINS
     d_vegetation_lstm => Get_vgrid('d_vegetation_lstm') ! LSTM (vegetation) hidden grids <Rackhun Son>
 
     ALLOCATE(mem%lightning_climatology(hgrid%nproma, hgrid%nblks, 1:366))   ! lightning climatology <Rackhun Son>
-    ALLOCATE(mem%population_density   (hgrid%nproma, hgrid%nblks, 1:366))   ! population density    <Rackhun Son>
+
+    ALLOCATE(mem%slope                     (hgrid%nproma, hgrid%nblks))   ! slope <Rackhun Son>
+    ALLOCATE(mem%roughness                 (hgrid%nproma, hgrid%nblks))   ! roughness <Rackhun Son>
+    ALLOCATE(mem%topographic_position_idx  (hgrid%nproma, hgrid%nblks))   ! topographic position idx <Rackhun Son>
+    ALLOCATE(mem%terrain_ruggedness_idx    (hgrid%nproma, hgrid%nblks))   ! terrain ruggedness idx <Rackhun Son>
+    ALLOCATE(mem%vector_ruggedness_measure (hgrid%nproma, hgrid%nblks))   ! vector ruggedness measure <Rackhun Son>
+    ALLOCATE(mem%profile_curvature         (hgrid%nproma, hgrid%nblks))   ! profile curvature <Rackhun Son>
+    ALLOCATE(mem%tangential_curvature      (hgrid%nproma, hgrid%nblks))   ! tangential curvature <Rackhun Son>
+
+    !ALLOCATE(mem%population_density   (hgrid%nproma, hgrid%nblks, 1:366))   ! population density    <Rackhun Son>
 
     ALLOCATE(mem%t_air_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! temperature           <Rackhun Son>
     ALLOCATE(mem%q_rel_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! relative humidity     <Rackhun Son>
@@ -249,6 +267,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
+    
+    CALL mem%Add_var('rain_ave', mem%rain_ave,                              &
+      & hgrid, surface,                                                     &
+      & t_cf('rain_ave', '',                                                &
+      &  'precipitation daily average'),                                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
 
     CALL mem%Add_var('swl1_ave', mem%swl1_ave,                              &
       & hgrid, surface,                                                     &
@@ -315,7 +341,7 @@ CONTAINS
       & lrestart = .TRUE., initval_r = 0.0_wp)
 
     CALL mem%Add_var('ws10_clim', mem%ws10_clim,                            &
-      & hgrid, daily,                                                     &
+      & hgrid, daily,                                                       &
       & t_cf('ws10_clim', 'm/s',                                            &
       &  'wind speed daily climatology'),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
@@ -323,7 +349,7 @@ CONTAINS
       & lrestart = .TRUE., initval_r = 0.0_wp)
 
     CALL mem%Add_var('swl1_clim', mem%swl1_clim,                            &
-      & hgrid, daily,                                                     &
+      & hgrid, daily,                                                       &
       & t_cf('swl1_clim', 'm3/m3',                                          &
       &  'daily climatology of soil water content in the 1st layer'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
@@ -331,7 +357,7 @@ CONTAINS
       & lrestart = .TRUE., initval_r = 0.0_wp)
 
     CALL mem%Add_var('swl2_clim', mem%swl2_clim,                            &
-      & hgrid, daily,                                                     &
+      & hgrid, daily,                                                       &
       & t_cf('swl2_clim', 'm3/m3',                                          &
       &  'daily climatology of soil water content in the 2nd layer'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
@@ -339,7 +365,7 @@ CONTAINS
       & lrestart = .TRUE., initval_r = 0.0_wp)
 
     CALL mem%Add_var('swl3_clim', mem%swl3_clim,                            &
-      & hgrid, daily,                                                     &
+      & hgrid, daily,                                                       &
       & t_cf('swl3_clim', 'm3/m3',                                          &
       &  'daily climatology of soil water content in the 3rd layer'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &

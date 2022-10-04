@@ -39,17 +39,26 @@ MODULE mo_disturb_init
 
   TYPE t_disturb_init_vars
     REAL(wp), POINTER ::  &
-      & lightning_climatology(:,:,:), &
-      & population_density(:,:,:), &
+      & lightning_climatology(:,:,:),   &
 
-      & t_air_local_clim(:,:,:), &
-      & q_rel_local_clim(:,:,:), &
-      & q_local_clim(:,:,:), &
-      & ws10_local_clim(:,:,:), &
-      & swvl1_local_clim(:,:,:), &
-      & swvl2_local_clim(:,:,:), &
-      & swvl3_local_clim(:,:,:), &
-      & swvl4_local_clim(:,:,:), &
+      & slope(:,:),                     &
+      & roughness(:,:),                 &
+      & topographic_position_idx(:,:),  &
+      & terrain_ruggedness_idx(:,:),    &
+      & vector_ruggedness_measure(:,:), &
+      & profile_curvature(:,:),         &
+      & tangential_curvature(:,:),      &
+
+      !& population_density(:,:,:), &
+
+      & t_air_local_clim(:,:,:),        &
+      & q_rel_local_clim(:,:,:),        &
+      & q_local_clim(:,:,:),            &
+      & ws10_local_clim(:,:,:),         &
+      & swvl1_local_clim(:,:,:),        &
+      & swvl2_local_clim(:,:,:),        &
+      & swvl3_local_clim(:,:,:),        &
+      & swvl4_local_clim(:,:,:),        &
       & lai_local_clim(:,:,:)
 
   END TYPE t_disturb_init_vars
@@ -93,17 +102,25 @@ CONTAINS
 
     DEALLOCATE( &
       & disturb_init_vars%lightning_climatology,       &
-      & disturb_init_vars%population_density,          &
+      !& disturb_init_vars%population_density,          &
 
-      & disturb_init_vars%t_air_local_clim,             &
-      & disturb_init_vars%q_rel_local_clim,             &
-      & disturb_init_vars%q_local_clim,                 &
-      & disturb_init_vars%ws10_local_clim,              &
-      & disturb_init_vars%swvl1_local_clim,             &
-      & disturb_init_vars%swvl2_local_clim,             &
-      & disturb_init_vars%swvl3_local_clim,             &
-      & disturb_init_vars%swvl4_local_clim,             &
-      & disturb_init_vars%lai_local_clim                &
+      & disturb_init_vars%slope,                       &
+      & disturb_init_vars%roughness,                   &
+      & disturb_init_vars%topographic_position_idx,    &
+      & disturb_init_vars%terrain_ruggedness_idx,      &
+      & disturb_init_vars%vector_ruggedness_measure,   &
+      & disturb_init_vars%profile_curvature,           &
+      & disturb_init_vars%tangential_curvature,        &
+
+      & disturb_init_vars%t_air_local_clim,            &
+      & disturb_init_vars%q_rel_local_clim,            &
+      & disturb_init_vars%q_local_clim,                &
+      & disturb_init_vars%ws10_local_clim,             &
+      & disturb_init_vars%swvl1_local_clim,            &
+      & disturb_init_vars%swvl2_local_clim,            &
+      & disturb_init_vars%swvl3_local_clim,            &
+      & disturb_init_vars%swvl4_local_clim,            &
+      & disturb_init_vars%lai_local_clim               &
 
       & )
 
@@ -119,8 +136,8 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
 
     REAL(wp), POINTER ::  &
-      & ptr_3D(:,:,:)     
-      !& ptr_2D(:,:)
+      & ptr_3D(:,:,:),    &     
+      & ptr_2D(:,:)
     TYPE(t_input_file) :: input_file
 
     INTEGER :: nproma, nblks
@@ -133,8 +150,16 @@ CONTAINS
     nblks  = grid%Get_nblks()
 
     ALLOCATE( &
-      & disturb_init_vars%lightning_climatology(nproma, nblks, 1:366),              &
-      & disturb_init_vars%population_density   (nproma, nblks, 1:366),              &
+      & disturb_init_vars%lightning_climatology(nproma, nblks, 1:366),               &
+      !& disturb_init_vars%population_density   (nproma, nblks, 1:366),               &
+
+      & disturb_init_vars%slope(nproma, nblks),                                      &
+      & disturb_init_vars%roughness(nproma, nblks),                                  &
+      & disturb_init_vars%topographic_position_idx(nproma, nblks),                   &
+      & disturb_init_vars%terrain_ruggedness_idx(nproma, nblks),                     &
+      & disturb_init_vars%vector_ruggedness_measure(nproma, nblks),                  &
+      & disturb_init_vars%profile_curvature(nproma, nblks),                          &
+      & disturb_init_vars%tangential_curvature(nproma, nblks),                       &
 
       & disturb_init_vars%t_air_local_clim (nproma, nblks, 1:366),                   &
       & disturb_init_vars%q_rel_local_clim (nproma, nblks, 1:366),                   &
@@ -157,7 +182,15 @@ CONTAINS
       & )
 
     disturb_init_vars%lightning_climatology(:,:,:) = missval
-    disturb_init_vars%population_density   (:,:,:) = missval
+    !disturb_init_vars%population_density   (:,:,:) = missval
+
+    disturb_init_vars%slope                    (:,:) = missval
+    disturb_init_vars%roughness                (:,:) = missval
+    disturb_init_vars%topographic_position_idx (:,:) = missval
+    disturb_init_vars%terrain_ruggedness_idx   (:,:) = missval
+    disturb_init_vars%vector_ruggedness_measure(:,:) = missval
+    disturb_init_vars%profile_curvature        (:,:) = missval
+    disturb_init_vars%tangential_curvature     (:,:) = missval
 
     disturb_init_vars%t_air_local_clim (:,:,:) = missval
     disturb_init_vars%q_rel_local_clim (:,:,:) = missval
@@ -185,17 +218,61 @@ CONTAINS
 
     CALL input_file%Close()
 
+    !  Topographical complexity
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (topographical complexity) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%bc_topography_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%bc_topography_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading topographical complexity variables ...')
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='slope')
+    disturb_init_vars%slope(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='roughness')
+    disturb_init_vars%roughness(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='tpi')
+    disturb_init_vars%topographic_position_idx(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='tri')
+    disturb_init_vars%terrain_ruggedness_idx(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='vrm')
+    disturb_init_vars%vector_ruggedness_measure(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='pcurv')
+    disturb_init_vars%profile_curvature(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='tcurv')
+    disturb_init_vars%tangential_curvature(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    CALL input_file%Close()
+
     ! population density
-    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (population density) init from ' &
-      &                          //TRIM(dsl4jsb_Config(DISTURB_)%bc_population_filename))
-
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%bc_population_filename), model%grid_id)
-
-    IF (debug_on()) CALL message(TRIM(routine), 'reading population density ...')
-    ptr_3D => input_file%Read_2d_time(    &
-      & variable_name='population_density')
-    disturb_init_vars%population_density(:,:,1:366) = ptr_3D(:,:,1:366)
-    DEALLOCATE(ptr_3D)
+    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (population density) init from ' &
+    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%bc_population_filename))
+    !
+    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%bc_population_filename), model%grid_id)
+    !
+    !IF (debug_on()) CALL message(TRIM(routine), 'reading population density ...')
+    !ptr_3D => input_file%Read_2d_time(    &
+    !  & variable_name='population_density')
+    !disturb_init_vars%population_density(:,:,1:366) = ptr_3D(:,:,1:366)
+    !DEALLOCATE(ptr_3D)
 
     ! temperature (local mean)
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (temperature local mean) init from ' &
@@ -353,14 +430,23 @@ CONTAINS
 
     ! Lightning climatology
     IF (debug_on()) CALL message(TRIM(routine), 'setting lightning climatology ...')
-
     dsl4jsb_memory(DISTURB_)%lightning_climatology(:,:,:) = disturb_init_vars%lightning_climatology(:,:,:)
-    !$acc enter data attach(dsl4jsb_memory(DISTURB_)%lightning_climatology)
     !$acc update device(dsl4jsb_memory(DISTURB_)%lightning_climatology)
 
+    ! Topographical complexity
+    IF (debug_on()) CALL message(TRIM(routine), 'setting topographical complexities ...')
+
+    dsl4jsb_memory(DISTURB_)%slope(:,:)                     = disturb_init_vars%slope(:,:)
+    dsl4jsb_memory(DISTURB_)%roughness(:,:)                 = disturb_init_vars%roughness(:,:)
+    dsl4jsb_memory(DISTURB_)%topographic_position_idx(:,:)  = disturb_init_vars%topographic_position_idx(:,:)
+    dsl4jsb_memory(DISTURB_)%terrain_ruggedness_idx(:,:)    = disturb_init_vars%terrain_ruggedness_idx(:,:)
+    dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(:,:) = disturb_init_vars%vector_ruggedness_measure(:,:)
+    dsl4jsb_memory(DISTURB_)%profile_curvature(:,:)         = disturb_init_vars%profile_curvature(:,:)
+    dsl4jsb_memory(DISTURB_)%tangential_curvature(:,:)      = disturb_init_vars%tangential_curvature(:,:)
+    
     ! population density
-    IF (debug_on()) CALL message(TRIM(routine), 'setting population density ...')
-    dsl4jsb_memory(DISTURB_)%population_density(:,:,:) = disturb_init_vars%population_density(:,:,:)
+    !IF (debug_on()) CALL message(TRIM(routine), 'setting population density ...')
+    !dsl4jsb_memory(DISTURB_)%population_density(:,:,:) = disturb_init_vars%population_density(:,:,:)
     !$acc update device(dsl4jsb_memory(DISTURB_)%population_density)
 
     ! temperature (local mean)
