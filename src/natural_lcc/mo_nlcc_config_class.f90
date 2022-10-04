@@ -30,10 +30,12 @@ MODULE mo_nlcc_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_nlcc_config
     LOGICAL             :: &
-      & init_running_means
-     !X e.g: LOGICAL                     :: use_alb_veg_simple
+      & init_running_means, &
+      & init_nlcc
     INTEGER            :: &
       & init_running_mean_years
+    REAL(wp)            :: &
+      & accelerate_nlcc
 
    CONTAINS
      PROCEDURE :: Init => Init_nlcc_config
@@ -61,16 +63,17 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
     INTEGER                     :: init_running_mean_years
-
-    !X e.g: LOGICAL                     :: use_alb_veg_simple
+    LOGICAL                     :: init_nlcc
+    REAL(wp)                    :: accelerate_nlcc
 
     NAMELIST /jsb_nlcc_nml/  &
       &  active,             &
       &  ic_filename,        &
       &  bc_filename,        &
       &  init_running_means, &
-      &  init_running_mean_years
-         !X e.g: use_<PROCESS_NAME_LOWER_CASE>_veg_simple
+      &  init_running_mean_years, &
+      &  init_nlcc,          &
+      &  accelerate_nlcc
 
     INTEGER :: nml_handler, nml_unit, istat, npft, i
 
@@ -83,7 +86,8 @@ CONTAINS
     bc_filename         = 'bc_land_nlcc.nc'
     ic_filename         = 'ic_land_nlcc.nc'
     init_running_means  = .FALSE.
-    !X e.g: use_alb_veg_simple        = .FALSE.
+    init_nlcc           = .FALSE.
+    accelerate_nlcc     = 1._wp
 
     init_running_mean_years = 2
 
@@ -99,7 +103,13 @@ CONTAINS
     config%bc_filename         = bc_filename
     config%init_running_means  = init_running_means
     IF (init_running_means) CALL message(TRIM(routine), 'Initializing climate buffer')
-    !X e.g: config%use_alb_veg_simple        = use_alb_veg_simple
+    config%init_nlcc         = init_nlcc
+    IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
+    config%accelerate_nlcc   = accelerate_nlcc
+    IF (accelerate_nlcc /= 1._wp) THEN
+      WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
+      CALL message(TRIM(routine), message_text)
+    END IF
 
     config%init_running_mean_years  = init_running_mean_years
 

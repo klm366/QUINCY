@@ -133,14 +133,6 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: fuel                   ! Amount of fuel on which fire is based
     !
-    dsl4jsb_Real2D_onChunk :: c_acid_ag1
-    dsl4jsb_Real2D_onChunk :: c_water_ag1
-    dsl4jsb_Real2D_onChunk :: c_ethanol_ag1
-    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag1
-    dsl4jsb_Real2D_onChunk :: c_acid_ag2
-    dsl4jsb_Real2D_onChunk :: c_water_ag2
-    dsl4jsb_Real2D_onChunk :: c_ethanol_ag2
-    dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2
     dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
     dsl4jsb_Real2D_onChunk :: c_water_ag1_ta
     dsl4jsb_Real2D_onChunk :: c_ethanol_ag1_ta
@@ -158,10 +150,10 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(FUEL_)) RETURN
 
-    IF (.NOT. tile%Is_process_active(CARBON_)) &
+    IF (.NOT. tile%Has_process_memory(CARBON_)) &
       & CALL finish(TRIM(routine), 'FUEL process depends on CARBON process')
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -178,22 +170,14 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1)            ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1)           ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1)         ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2)            ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2)           ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2)         ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2)      ! in
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1_ta)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1_ta)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1_ta)      ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1_ta)   ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2_ta)         ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2_ta)        ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2_ta)      ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2_ta)   ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag1_ta)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag1_ta)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag1_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag1_ta)   ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_acid_ag2_ta)         ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2_ta)        ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2_ta)      ! in
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2_ta)   ! in
     dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)         ! in
     dsl4jsb_Get_var2D_onChunk(FUEL_,    fuel)                  ! out
 
@@ -206,14 +190,6 @@ CONTAINS
 
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
         CASE (1) !! jsbach algorithm
-
-          ! _ta variables are not in restart and, since fuel process is called before
-          ! carbon process, we have to recalculate them
-          CALL recalc_per_tile_vars(tile, options,                                      &
-            & c_acid_ag1 = c_acid_ag1(:),       c_water_ag1 = c_water_ag1(:),           &
-            & c_ethanol_ag1 = c_ethanol_ag1(:), c_nonsoluble_ag1 = c_nonsoluble_ag1(:), &
-            & c_acid_ag2 = c_acid_ag2(:),       c_water_ag2 = c_water_ag2(:),           &
-            & c_ethanol_ag2 = c_ethanol_ag2(:), c_nonsoluble_ag2 = c_nonsoluble_ag2(:))
   
           CALL calc_fuel_jsbach(       &
             & c_acid_ag1_ta(:),        & ! in

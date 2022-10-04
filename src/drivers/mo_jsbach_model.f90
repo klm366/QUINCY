@@ -135,8 +135,7 @@ CONTAINS
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
     USE mo_dynamics_config,         ONLY: iequations
-    USE mo_echam_phy_config,        ONLY: eval_echam_phy_config, eval_echam_phy_tc, print_echam_phy_config
-    USE mo_echam_convect_tables,    ONLY: init_convect_tables
+    USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
 
@@ -351,16 +350,6 @@ CONTAINS
 
     CALL init_convect_tables ! necessary for FUNCTION qsat
 
-  ! ECHAM physics time control
-  ! --------------------------
-  ! Evaluate the ECHAM physics configuration variables echam_phy_config(:)
-  ! and the derived time control variables echam_phy_tc(:) on all grids
-  ! and for all controled processes.
-  !  
-    CALL eval_echam_phy_config
-    CALL eval_echam_phy_tc
-    CALL print_echam_phy_config
-  
     CALL jsbach_setup_grid( 1, p_patch(1), type='icon') !< in
     CALL jsbach_setup_tiles(1)
     CALL jsbach_init(1)
@@ -713,18 +702,17 @@ CONTAINS
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
     USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart
-    USE mo_jsb_model_class,           ONLY: t_jsb_model
+    USE mo_jsb_model_class,           ONLY: t_jsb_model, MODEL_QUINCY
     USE mo_jsb_class,                 ONLY: get_model
     USE mo_jsb_grid,                  ONLY: Get_grid
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
     USE mo_jsb_interface,             ONLY: jsbach_start_timestep, jsbach_finish_timestep
     USE mo_jsb4_forcing,              ONLY: forcing_options, get_interface_variables_from_external_forcing
-    USE mo_psrad_orbit,               ONLY: orbit_kepler, orbit_vsop87, get_orbit_times
-    USE mo_psrad_solar_parameters,    ONLY: solar_parameters
-    USE mo_echam_rad_config,          ONLY: echam_rad_config
+    USE mo_orbit_solar,               ONLY: compute_cos_zenith_angle
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
+    USE mo_jsb_subset,                ONLY: ON_CHUNK
 
     dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
@@ -756,15 +744,6 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
   
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-    LOGICAL               :: lyr_perp = .FALSE. ! This switch has no effect on the results but we need it as a dummmy.
-    INTEGER               :: yr_perp  = -99999  ! Year if (lyr_perp == .TRUE.). We need it as a dummy.
-    REAL(wp)              :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun
-    REAL(wp), ALLOCATABLE :: daylight_frc(:,:) ! daylight fraction (0 or 1) with diurnal cycle
-    REAL(wp), POINTER     :: cecc, cobld, clonp
-    INTEGER , POINTER     :: icosmu0
-    LOGICAL , POINTER     :: l_orbvsop87
-    REAL(wp)              :: dt_ext
-    LOGICAL, POINTER      :: ldiur, l_sph_symm_irr
   
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
 
@@ -831,45 +810,14 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_memory(HYDRO_)
 
-      l_orbvsop87   => echam_rad_config(1)% l_orbvsop87 ! Default: .TRUE.
-      cecc          => echam_rad_config(1)% cecc
-      cobld         => echam_rad_config(1)% cobld
-      clonp         => echam_rad_config(1)% clonp
-
-      CALL get_orbit_times(l_orbvsop87, datetime_old, lyr_perp, yr_perp, & ! in
-        &                  time_of_day, orbit_date)                        ! out.
-
-      IF (l_orbvsop87) THEN
-        CALL orbit_vsop87(orbit_date, rasc_sun, decl_sun, dist_sun) ! in, out, out, out
-      ELSE
-        CALL orbit_kepler(cecc, cobld, clonp, orbit_date, & ! in 
-          &               rasc_sun, decl_sun, dist_sun)     ! out
-      END IF
-
-      ! Get the solar zenith angle
       lon => grid%lon
       lat => grid%lat
       coslat => grid%coslat
       sinlat => grid%sinlat
 
-      icosmu0        => echam_rad_config(1)% icosmu0        ! defines if and how cosmu0 is defined for extended sunlit areas
-      ldiur          => echam_rad_config(1)% ldiur          ! .TRUE.
-      l_sph_symm_irr => echam_rad_config(1)% l_sph_symm_irr ! .FALSE.
-      dt_ext         =  0.0_wp                              ! time interval over which the insolated area is extended, for us =0
-
-      ALLOCATE(daylight_frc(nproma,nblks))
-
-      CALL solar_parameters(decl_sun,         time_of_day,     & ! in
-        &                   icosmu0,          dt_ext,          & ! in
-        &                   ldiur,            l_sph_symm_irr,  & ! in
-        &                   grid%patch,                        & ! in 
-        &                   dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle), & ! out
-        &                   daylight_frc)      ! out
-
-      dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle) = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle) * daylight_frc(:,:)
-
-      DEALLOCATE(daylight_frc)
-
+      CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
+      ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
+  
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
       ALLOCATE(evapo_act2pot(nproma, nblks))
       IF (is_time_experiment_start(datetime_old)) THEN
@@ -916,8 +864,10 @@ CONTAINS
 
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
       dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) = dsl4jsb_var2D_onDomain(A2L_, CO2_air) * molarMassDryAir / molarMassCO2
-      IF (model%config%use_quincy) &
-        & dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
+      END SELECT
 
       DEALLOCATE(evapo_act2pot)
 
@@ -945,6 +895,8 @@ CONTAINS
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
+      CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+      CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Run tasks in queue
       CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)

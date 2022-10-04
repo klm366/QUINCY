@@ -1,6 +1,6 @@
 before_script:
   #- pip install --no-cache-dir lxml
-  - pip install --no-cache-dir ford
+  #- pip install --no-cache-dir ford
   - apk add --update --no-cache graphviz ttf-freefont
 
 pages:
@@ -18,5 +18,5 @@ pages:
   artifacts:
     paths:
       - public
-    expire_in: 5min
+    expire_in: 10min
 

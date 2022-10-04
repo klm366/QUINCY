@@ -19,6 +19,7 @@ MODULE mo_jsb_tile_class
   USE mo_kind,                ONLY: wp, dp
   USE mo_exception,           ONLY: message, finish
   USE mo_io_units,            ONLY: filename_max
+  USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
 
   USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
   USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
@@ -71,17 +72,17 @@ MODULE mo_jsb_tile_class
     TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:)              !< List of land cover types for tile
                                                                    !! The first entry is always the primary LCT for this tile;
                                                                    !! the remaining lcts are those inherited for aggregation
-    LOGICAL                                :: is_vegetation = .FALSE.
-    LOGICAL                                :: is_bare = .FALSE.
-    LOGICAL                                :: is_land = .FALSE.
-    LOGICAL                                :: is_glacier = .FALSE.
-    LOGICAL                                :: is_lake = .FALSE.
-    LOGICAL                                :: contains_vegetation = .FALSE.
-    LOGICAL                                :: contains_bare = .FALSE.
-    LOGICAL                                :: contains_land = .FALSE.
-    LOGICAL                                :: contains_glacier = .FALSE.
-    LOGICAL                                :: contains_lake = .FALSE.
-    LOGICAL                                :: contains_soil = .FALSE.
+    LOGICAL                                :: is_vegetation = .FALSE.         !< whether primary lct is VEG_TYPE
+    LOGICAL                                :: is_bare = .FALSE.               !< whether primary lct is BARE_TYPE
+    LOGICAL                                :: is_land = .FALSE.               !< whether primary lct is LAND_TYPE
+    LOGICAL                                :: is_glacier = .FALSE.            !< whether primary lct is GLACIER_TYPE
+    LOGICAL                                :: is_lake = .FALSE.               !< whether primary lct is LAKE_TYPE
+    LOGICAL                                :: contains_vegetation = .FALSE.   !< whether any lct of tile is VEG_TYPE
+    LOGICAL                                :: contains_bare = .FALSE.         !< whether any lct of tile is BARE_TYPE
+    LOGICAL                                :: contains_land = .FALSE.         !< whether any lct of tile is LAND_TYPE
+    LOGICAL                                :: contains_glacier = .FALSE.      !< whether any lct of tile is GLACIER_TYPE
+    LOGICAL                                :: contains_lake = .FALSE.         !< whether any lct of tile is LAKE_TYPE
+    LOGICAL                                :: contains_soil = .FALSE.         !< whether any lct of tile is one that has soil
     INTEGER,                ALLOCATABLE    :: process_action(:)
     ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
     REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
@@ -113,7 +114,6 @@ MODULE mo_jsb_tile_class
     PROCEDURE                              :: Add_lct
     PROCEDURE                              :: Add_lct_to_parents
     PROCEDURE                              :: Get_parent_memory
-    PROCEDURE                              :: Is_process_active
     PROCEDURE                              :: Set_process_action => Set_process_action_tile
     PROCEDURE                              :: Set_process_action_parents
     PROCEDURE                              :: Register_aggregator
@@ -132,6 +132,7 @@ MODULE mo_jsb_tile_class
     !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    PROCEDURE                              :: Get_children_names
     PROCEDURE                              :: Has_conserved_quantities
     !
     PROCEDURE                              :: Cache_GPU_pointers
@@ -143,6 +144,9 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
     PROCEDURE(Print_interface),          DEFERRED :: Print
     PROCEDURE(Handler_interface),        DEFERRED :: Handler
+    PROCEDURE(Check_on_process),         DEFERRED :: Is_process_active
+    PROCEDURE(Check_on_process),         DEFERRED :: Is_process_calculated
+    PROCEDURE(Check_on_process),         DEFERRED :: Has_process_memory
     PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
 
@@ -175,6 +179,14 @@ MODULE mo_jsb_tile_class
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     END SUBROUTINE Init_vars_interface
+  END INTERFACE
+
+  ABSTRACT INTERFACE
+    LOGICAL FUNCTION Check_on_process(this, iproc)
+      IMPORT :: t_jsb_tile_abstract
+      CLASS(t_jsb_tile_abstract), INTENT(in) :: this
+      INTEGER, INTENT(in) :: iproc 
+    END FUNCTION Check_on_process
   END INTERFACE
 
   ABSTRACT INTERFACE
@@ -264,23 +276,6 @@ CONTAINS
 
   END FUNCTION Get_parent_memory
 
-  FUNCTION Is_process_active(this, iproc) RESULT(return_value)
-
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: this
-    INTEGER,                    INTENT(in) :: iproc
-    LOGICAL                                :: return_value
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active'
-
-    return_value = .FALSE.
-
-    SELECT TYPE (this)
-    CLASS IS (t_jsb_tile_abstract)
-      return_value = ASSOCIATED(this%mem(iproc)%p)
-    END SELECT
-
-  END FUNCTION Is_process_active
-
   SUBROUTINE Set_process_action_tile(this, iproc, action, action_to_parents)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
@@ -318,21 +313,26 @@ CONTAINS
 
   END SUBROUTINE Set_process_action_parents
 
+  ! ====================================================================================================== !
+  !
+  !> adds given lct to this tile and sets the "is" and/or "contains" properties on the tile accordingly
+  !
   SUBROUTINE Add_lct(this, lct)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    TYPE(t_jsb_lct),            INTENT(in)    :: lct
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this  !< this tile
+    TYPE(t_jsb_lct),            INTENT(in)    :: lct   !< the landcover type to add for this tile
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lct), ALLOCATABLE :: temp_lcts(:)
     INTEGER :: ilct, nlct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (.NOT. ALLOCATED(this%lcts)) THEN
 
       ALLOCATE(this%lcts(1))
       this%lcts(1) = lct
 
+      ! the "is" properties are only set for the primary lct
       IF (ASSOCIATED(this%parent)) THEN    ! Root tile has no primary LCT
         SELECT CASE (lct%id)
         CASE (VEG_TYPE)
@@ -360,8 +360,9 @@ CONTAINS
       temp_lcts(nlct+1) = lct
       CALL MOVE_ALLOC(temp_lcts, this%lcts)
 
-    END IF
+    END IF !(.NOT. ALLOCATED(this%lcts))
 
+    ! the "contains" properties are set according to all lcts of this tile
     SELECT CASE (lct%id)
     CASE (VEG_TYPE)
       this%contains_vegetation = .TRUE.
@@ -379,15 +380,19 @@ CONTAINS
 
   END SUBROUTINE Add_lct
 
+  ! ====================================================================================================== !
+  !
+  !> adds given lct to all parent tiles of this tile
+  !
   SUBROUTINE Add_lct_to_parents(this, lct)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    TYPE(t_jsb_lct),            INTENT(in)    :: lct
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this  !< tile whose parent is to be considered
+    TYPE(t_jsb_lct),            INTENT(in)    :: lct   !< the landcover type to add to the parent tiles
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_State), POINTER :: current
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_lct_to_parents'
-
+    ! -------------------------------------------------------------------------------------------------- !
     current => this%parent
 
     DO WHILE (ASSOCIATED(current))
@@ -1182,6 +1187,34 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Could not find next sibling tile')
 
   END FUNCTION Get_next_sibling_tile
+
+  ! ====================================================================================================== !
+  !
+  !> Collect the names of the children of this tile 
+  !
+  SUBROUTINE Get_children_names(this, children_names)
+    CLASS(t_jsb_tile_abstract), INTENT(inout)  :: this
+    CHARACTER(len=SHORT_NAME_LEN), INTENT(inout) :: children_names(:)
+
+    INTEGER :: i_tile, nr_of_children
+    CLASS(t_jsb_tile_abstract),  POINTER :: current_tile
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_children_names'
+
+    nr_of_children = this%Get_no_of_children()
+
+    IF (nr_of_children /= size(children_names)) &
+      & CALL finish(routine, 'Call with invalid array size (size does not equal nr of children).')
+
+    current_tile => this%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+      children_names(i_tile) = current_tile%name
+      current_tile => current_tile%Get_next_sibling_tile()
+    ENDDO
+
+  END SUBROUTINE Get_children_names  
+
 
   ! If conserved quantities were collected for this tile
   FUNCTION Has_conserved_quantities(this) RESULT(return_value)

@@ -19,7 +19,7 @@ MODULE mo_atmland_interface
   USE mo_kind,            ONLY: wp
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
-  USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
@@ -44,8 +44,13 @@ MODULE mo_atmland_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_interface'
 
+
 CONTAINS
 
+
+  ! ======================================================================================================= !
+  !> update atm2land
+  !>
   SUBROUTINE update_atm2land( &
     & tile, options,          &
     & t_air,                  &
@@ -99,7 +104,6 @@ CONTAINS
 
     INTEGER ::  iblk, ics, ice, nc, i
     TYPE(t_jsb_model), POINTER :: model
-    LOGICAL :: use_quincy
     LOGICAL :: tile_contains_lake
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_atm2land'
@@ -138,6 +142,10 @@ CONTAINS
       & t_bcoef_ice_ptr,       &
       & q_acoef_ice_ptr,       &
       & q_bcoef_ice_ptr
+    ! quincy
+    dsl4jsb_Real2D_onChunk :: prev_one_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk :: prev_two_cos_zenith_angle
+    
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -147,7 +155,6 @@ CONTAINS
     nc   = options%nc
 
     model => Get_model(tile%owner_model_id)
-    use_quincy = model%config%use_quincy
 
     ! make this logical accessible in the OpenACC code directly
     tile_contains_lake = tile%contains_lake
@@ -219,7 +226,9 @@ CONTAINS
     IF (PRESENT(CO2_air)) THEN
       CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
-      IF (use_quincy) CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
+        CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
+      END IF
     END IF
     IF (PRESENT(drag_wtr)) THEN
       drag_wtr_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_wtr)
@@ -250,6 +259,11 @@ CONTAINS
     END IF
     IF (PRESENT(q_bcoef_ice)) THEN
       q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
+    END IF
+
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      prev_one_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
+      prev_two_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
     END IF
 
     !$acc parallel default(present)
@@ -381,8 +395,10 @@ CONTAINS
         CO2_air_ptr(i) = CO2_air(i)
         ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
         CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
-        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv" (quincy | used in e.g. update_canopy_fluxes)
-        IF (use_quincy) CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
+        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
+        IF (model%config%model_scheme == MODEL_QUINCY) THEN
+          CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
+        END IF
       END DO
     END IF
 
@@ -452,8 +468,20 @@ CONTAINS
     END IF
     !$acc end parallel
 
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      IF (.NOT. PRESENT(cos_zenith_angle)) THEN
+        CALL finish(TRIM(routine), 'cos_zenith_angle not present but needed for QUINCY model')
+      END IF
+      prev_two_cos_zenith_angle(:) = prev_one_cos_zenith_angle(:)
+      prev_one_cos_zenith_angle(:) = cos_zenith_angle(:)      
+    END IF
+
   END SUBROUTINE update_atm2land
 
+
+  ! ======================================================================================================= !
+  !> update land2atm
+  !>
   SUBROUTINE update_land2atm(tile, options,                                          &
     & t_srf, t_eff_srf, qsat_srf, s_srf,                                             &
     & fact_q_air, fact_qsat_srf, evapopot,                                           &
@@ -559,7 +587,7 @@ CONTAINS
     dsl4jsb_Get_memory(TURB_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(RAD_)
-    IF (tile%Is_process_active(CARBON_)) THEN
+    IF (tile%Has_process_memory(CARBON_)) THEN
       dsl4jsb_Get_memory(CARBON_)
     END IF
 
@@ -793,7 +821,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(CO2_flux)) THEN
-      IF (tile%Is_process_active(CARBON_)) THEN
+      IF (tile%Has_process_memory(CARBON_)) THEN
         co2flux_npp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_npp_2_atm_ta)
         co2flux_soilresp_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_soilresp_2_atm_ta)
         co2flux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_herb_2_atm_ta)

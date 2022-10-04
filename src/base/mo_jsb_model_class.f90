@@ -34,6 +34,7 @@ MODULE mo_jsb_model_class
 
   PUBLIC :: t_jsb_model_m, t_jsb_model
   PUBLIC :: new_model, print_model, delete_model
+  PUBLIC :: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
 
   !>
   !! Type for model structure
@@ -81,6 +82,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Reset_tiles
     PROCEDURE :: Get_tile
     PROCEDURE :: Get_process
+    PROCEDURE :: Is_process_enabled
     PROCEDURE :: Queue_task
 !!$    PROCEDURE :: Get_process_configs
 !!$    PROCEDURE :: Process_task
@@ -103,6 +105,15 @@ MODULE mo_jsb_model_class
   TYPE t_jsb_model_m
     TYPE(t_jsb_model), POINTER :: m
   END TYPE t_jsb_model_m
+
+
+  !>model schemes
+  !!  model_scheme namlist option in mo_jsb_config_class:t_jsb_model_config
+  !!  NOTE in mo_jsb_config_class:new_model_config this ENUM is not used, but replaced by INTEGER, to avoid a dependency cycle
+  ENUM, BIND(C)
+    ENUMERATOR :: MODEL_JSBACH=1, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  END ENUM
+
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_model_class'
 
@@ -170,6 +181,24 @@ CONTAINS
 
   END FUNCTION Get_process
 
+  LOGICAL FUNCTION Is_process_enabled(this, iproc)
+
+    CLASS(t_jsb_model), INTENT(in) :: this
+    INTEGER, INTENT(in) :: iproc
+
+    Is_process_enabled = .FALSE.
+    IF (ASSOCIATED(this%processes(iproc)%p)) THEN
+      IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+        Is_process_enabled = this%processes(iproc)%p%config%active
+      ELSE 
+        ! If the process is associated but the configuration is not associated 
+        ! we assume here that the process is active on the model -- currently this is the case for l2a and a2l
+        Is_process_enabled = .TRUE.
+      ENDIF
+    ENDIF
+
+  END FUNCTION Is_process_enabled
+
   SUBROUTINE Queue_task(this, iproc, name)
 
     CLASS(t_jsb_model),        INTENT(inout) :: this
@@ -203,9 +232,11 @@ CONTAINS
     l_fractions_change = .FALSE.
     DO iproc=1,SIZE(this%processes)
       IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-        IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
-          l_fractions_change = .TRUE.
-          EXIT
+        IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
+          IF (this%processes(iproc)%p%config%active .AND. this%processes(iproc)%p%l_changes_fractions) THEN
+            l_fractions_change = .TRUE.
+            EXIT
+          ENDIF
         END IF
       END IF
     END DO
@@ -539,15 +570,14 @@ CONTAINS
         IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
         IF (tile%process_action(iproc) == INHERIT_) CYCLE
         DO ivar=1,tile%mem(iproc)%p%no_of_vars
-          SELECT TYPE (var => tile%mem(iproc)%p%vars(ivar)%p)
-          CLASS IS (t_jsb_var_real2d)
+          ASSOCIATE (var => tile%mem(iproc)%p%vars(ivar)%p)
             CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
             var%subset_type = itype
-          CLASS IS (t_jsb_var_real3d)
-            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-            var%subset_type = itype
-          END SELECT
+          END ASSOCIATE
         END DO
+
+        IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
+          & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
 
       END DO
 
@@ -647,6 +677,8 @@ CONTAINS
           CYCLE
         END SELECT
 
+        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
+
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
@@ -707,6 +739,8 @@ CONTAINS
         CASE (SKIP_, INHERIT_)
           CYCLE
         END SELECT
+
+        IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
 
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars

@@ -134,6 +134,7 @@ CONTAINS
     INTEGER  :: i, itile
     INTEGER  :: iniyear, currentyear
     REAL(wp) :: dtime
+    REAL(wp) :: accelerate_nlcc
     REAL(wp), ALLOCATABLE :: fuel(:) !!$ TR this should be the sum of the YASSO AWEN pools
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_nlcc'
     REAL(wp), POINTER  ::  var_collect(:,:)
@@ -155,7 +156,6 @@ CONTAINS
     REAL(wp), POINTER  ::  sla(:,:)
     REAL(wp), POINTER  ::  cover_fract_pot_previous_year(:,:)
     REAL(wp), POINTER  ::  cover_fract_sum(:)
-    REAL(wp), PARAMETER  ::  accelerate_nlcc = 1._wp
     REAL(wp), ALLOCATABLE  :: fract_fpc_max(:,:)
 
     ! Declare process memories
@@ -205,8 +205,8 @@ CONTAINS
     dtime   = options%dtime
     !X if necessary: steplen = options%steplen
 
-    ! If process is not active on this tile, do nothing
-    !IF (.NOT. tile%Is_process_active(NLCC_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    !IF (.NOT. tile%Is_process_calculated(NLCC_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -331,6 +331,7 @@ CONTAINS
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
 
+    accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
     init_running_mean_years = dsl4jsb_Config(NLCC_)%init_running_mean_years
     IF (init_running_mean_years > currentyear-iniyear) THEN
        init_running_means = dsl4jsb_Config(NLCC_)%init_running_means

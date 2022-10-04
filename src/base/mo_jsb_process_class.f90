@@ -29,7 +29,7 @@ MODULE mo_jsb_process_class
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-      & PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, VEG_
+    &       PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -38,7 +38,8 @@ MODULE mo_jsb_process_class
     CLASS(t_jsb_config), POINTER  :: config => NULL()
     TYPE(t_jsb_process_task_p), ALLOCATABLE :: task_list(:)
     INTEGER                       :: owner_model_id
-    LOGICAL                       :: l_changes_fractions=.FALSE.  !< Does this process change tile fractions?
+    LOGICAL                       :: l_changes_fractions = .FALSE.  !< Does this process change tile fractions?
+    LOGICAL                       :: has_memory = .TRUE.  !< Does this process has an own memory module
     TYPE(t_jsb_lcc_proc)          :: lcc_relocations ! pointers required for relocations
   CONTAINS
     PROCEDURE :: Configure => Configure_process
@@ -54,7 +55,7 @@ MODULE mo_jsb_process_class
 
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
-      & FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, VEG_
+      &           FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
   END ENUM
 
   ! Process actions
@@ -109,10 +110,18 @@ CONTAINS
       return_value = 'tcq'
     CASE (ALCC_)
       return_value = 'alcc'
+    CASE (FLCC_)
+      return_value = 'flcc'
+    CASE (WLCC_)
+      return_value = 'wlcc'
     CASE (NLCC_)
       return_value = 'nlcc'
     CASE (VEG_)
       return_value = 'veg'
+    CASE (SB_)
+      return_value = 'sb'
+    CASE (SPQ_)
+      return_value = 'spq'
     CASE DEFAULT
       return_value = ''
     END SELECT
@@ -161,10 +170,18 @@ CONTAINS
       return_value = TCQ_
     CASE ('alcc')
       return_value = ALCC_
+    CASE ('flcc')
+      return_value = FLCC_
+    CASE ('wlcc')
+      return_value = WLCC_
     CASE ('nlcc')
       return_value = NLCC_
     CASE ('veg')
       return_value = VEG_
+    CASE ('sb')
+      return_value = SB_
+    CASE ('spq')
+      return_value = SPQ_
     CASE DEFAULT
       return_value = 0
     END SELECT

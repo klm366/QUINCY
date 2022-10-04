@@ -14,7 +14,7 @@ MODULE mo_assimi_init
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_QUINCY
   USE mo_jsb_class,           ONLY: get_model
 
   IMPLICIT NONE
@@ -84,7 +84,12 @@ CONTAINS
     ! 0.4 Process Activity, Debug Option
     model => Get_model(tile%owner_model_id)
     IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
-    IF (.NOT. model%config%use_quincy) RETURN
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_QUINCY)
+      IF (debug_on()) CALL message(TRIM(routine), 'Use model_scheme MODEL_QUINCY')
+    CASE DEFAULT
+      RETURN
+    END SELECT
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of assimi memory (quincy) for tile '// &
       &                          TRIM(tile%name))
     ! ---------------------------

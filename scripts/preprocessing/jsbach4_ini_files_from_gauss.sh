@@ -10,28 +10,36 @@
 # 
 # Based on scripts from Veronika Gayler, Thomas Raddatz and Marco Giorgetta
 #
+# The script generates cover fractions relative to the parent tile of the
+# respective tiles. This is what ICON-Land generally expects, unless namelist
+# parameter 'relative_fractions_in_file = .false.' (jsb_model_nml).
+#
+# Note: It might be useful to check the jsbach4_ini_files_from_gauss.sh version
+#       stored with the intitial files of the previous revision to compare
+#       parameter settings.
+#
 set -eu
 #_____________________________________________________________________________
 
 # Settings
 
-coupled=false      # land sea mask for coupled experiment?
+coupled=false                # land sea mask for coupled experiment?
 
-refinement=R02B04
-bisections=4
+refinement=R02B04            # ICON-Land grid resolution
+bisections=${refinement#*B}  # Determines Gaussian source grid resolution (see below)
 atmGridID=0043
-oceGridID=0036    # required for coupled configurations
-revision=r00xx
-revision_ext=r0001
+oceGridID=0036               # Required for coupled configurations
+revision=r00xx               # Revision directory that will be generated
+revision_ext=r0001           # Extpar revision used
 start_year=1850
 end_year=1850
 
-#ggrids="T63"                   # additional gaussian grids for jsbach4 (to run with echam6)
-ggrids=""                       # disable gaussian grids
+#ggrids="T63"                # additional Gaussian grids for jsbach4 (to run with echam6)
+ggrids=""                    # disable Gaussian grids
 
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
-  mlogin*|mistralpp*)
+  mlogin*|mistralpp*|levante*)
     output_root=/pool/data/ICON/grids/public/mpim
     # output_root=/pool/data/ICON/grids/private/jsbach/mpim
     # output_root=/work/mj0060/m212005/ini_files
@@ -41,7 +49,7 @@ case `hostname` in
     ;;
 esac
 
-debug=false             # true/false
+debug=false   # true/false
 debug_remap_scheme=nn
 
 dryrun=false  # Process files in workdir, but don't copy them to the destination folder (true/false)
@@ -93,7 +101,7 @@ varlist="glac lake init_moist snow roughness_length albedo elevation
 fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max 
 albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
 soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity 
-moisture_pot hyd_cond_sat wilting_point bclapp root_depth layer_moist
+moisture_pot hyd_cond_sat wilting_point bclapp fract_org_sl root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
 
@@ -112,6 +120,14 @@ set +u
 . ${MODULESHOME}/init/bash
 module unload cdo nco netcdf nag
 case `hostname` in
+  levante*)
+    module unload netcdf-c
+    module load cdo/2.0.5-gcc-11.2.0
+    module load nco/5.0.6-gcc-11.2.0
+    module load netcdf-c/4.8.1-gcc-11.2.0
+    module load nag/7.1-gcc-11.2.0
+    module list
+    ;;
   mlogin*|mistralpp*)
     module load cdo/1.9.6-magicsxx-gcc64
     module load nco/4.6.7-gcc48
@@ -189,6 +205,12 @@ function generate_gauss_data {
   ./jsbach_init_file.ksh #vg >& /dev/null
   mv jsbach_*.nc ../
 
+  # Add fields from different source
+  if [[ $varlist == *"fract_org_sl"* ]]; then
+    ${cdo} remapycon,${source_res}grid ${pool_prepare}05/wise_som-fract_05deg_jsbsoillayers.nc \
+        ../gauss_${source_res}_fract_org_sl.nc
+  fi
+
 }
 
 function generate_land_sea_mask {
@@ -197,15 +219,37 @@ function generate_land_sea_mask {
 
   temp=$(mktemp -u --tmpdir=.)
 
-  ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
-  ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
-    -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
-
   if [[ ${coupled} == "true" ]]
   then
+
     ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${icon_grid_file} \
       -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
+
+    # Glacier mask
+    ${cdo} remapycon,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} -gtc,0.5   ${temp} ${grid_name}_glac-05_remap.nc
+    ${cdo} -gtc,0.001 ${temp} ${grid_name}_glac-0001_remap.nc
+    # The glacier mask corresponds to the 0.5 mask within the continents and to the 0.001 mask
+    # at the costs to avoid non-glacier land cells North of Greenland or at the Antarctic coast.
+    ${cdo} ifthenelse -gtc,0.7 ${coupled_lsf_file}   \
+          ${grid_name}_glac-05_remap.nc ${grid_name}_glac-0001_remap.nc \
+          ${grid_name}_glac_remap.tmp.nc
+    ${cdo} setvar,glac -mul -gtc,0 ${grid_name}_notsea.nc ${grid_name}_glac_remap.tmp.nc ${grid_name}_glac_remap.nc
+
   else
+    # Make sure, the icon grid file includes a valid land sea mask
+    if [[ $(cdo -s output -fldsum -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} | tr -d ' ') == 0 ]]
+    then
+      echo "Invalid land sea mask in icon_grid_file ${icon_grid_file}:"
+      echo "Variable cell_sea_land_mask does not have any land grid cells."
+      echo "Check if there is another grid file, e.g. with suffix _Glsm.nc."
+      exit 1
+    fi
+
+    ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
+      -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
+
     ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
       -ifthenelse -setmisstoc,0 -masklonlatbox,0.,360.,-60.,90. -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} \
       -max ${grid_name}_glac_remap.nc -setgrid,${icon_grid_file} -selvar,FR_LAND_TOPO ${extpar_file} \
@@ -218,7 +262,7 @@ function generate_land_sea_mask {
   # Set small lake fractions below 0.01 to zero
   ${cdo} setvar,lake -setrtoc,-1,0.01,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
   ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
-  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc \
+  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -ltc,0.5 ${grid_name}_glac_remap.nc -ifthen -gec,0.999 ${grid_name}_notsea.nc \
 	 -setrtoc,-1,0.01,0 ${temp} ${grid_name}_lake_remap.nc
 
   rm ${temp}
@@ -264,7 +308,7 @@ function extrapolate_var {
       ;;
     lai_clim | veg_fract | veg_ratio_max | roughness_length_oro | \
     soil_depth | bclapp | soil_field_cap | heat_capacity | heat_conductivity | hyd_cond_sat | \
-    moisture_pot | pore_size_index | soil_porosity | wilting_point )
+    moisture_pot | pore_size_index | soil_porosity | wilting_point | fract_org_sl )
       echo "Extrapolating $var ..."
       ${cdo} setvar,${var} -fillmiss -ifthen gauss_${source_res}_notsea_miss.nc \
              gauss_${source_res}_${var}.nc gauss_${source_res}_${var}_ext.nc
@@ -382,9 +426,11 @@ function remap_var {
   #     ${cdo} gec,0.5 ${grid_name}_glac_remap.nc ${temp}
   #     mv ${temp} ${grid_name}_glac_remap.nc
   # fi
-  # Copy attributes
-  [[ -f gauss_${source_res}_${var}.nc ]] && \
+  # Copy attributes but delete CDI_grid_type otherwise it messes up icon grid files (only necessary with new nco version on levante)
+  if [ -f gauss_${source_res}_${var}.nc ]; then
       ncks -A -C -H -v ${var} gauss_${source_res}_${var}.nc ${grid_name}_${var}_remap.nc >& /dev/null
+      ncatted -O -a CDI_grid_type,,d,, ${grid_name}_${var}_remap.nc >& /dev/null
+  fi
   [[ -f ${grid_name}_${var}_remap.nc ]] && debug_file ${grid_name}_${var}_remap.nc
   return 0
 }
@@ -393,10 +439,10 @@ function pseudo_remap_var {
 
   local var=$1     # Variable name
 
-  [[ ! -f ${grid_name}_notsea.nc ]] && cdo setvar,notsea gauss_${grid_name}_slm.nc ${grid_name}_notsea.nc
+  [[ ! -f ${grid_name}_notsea.nc ]] && ${cdo} setvar,notsea gauss_${grid_name}_slm.nc ${grid_name}_notsea.nc
   if [[ ${var} == oro* ]]; then
   	VAR=$(echo ${var} | tr -s 'a-z' 'A-Z')
-	  cdo -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
+	  ${cdo} -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
   else 
 	  ln -s gauss_${grid_name}_${var}.nc ${grid_name}_${var}_remap.nc
   fi
@@ -430,6 +476,7 @@ function generate_fractions {
   ${cdo} setvar,land -mul ${grid_name}_notsea.nc ${grid_name}_fract_land.nc ${grid_name}_land.nc
   ncatted -a long_name,land,m,c,'Fraction of land' ${grid_name}_land.nc
   debug_file ${grid_name}_land.nc
+
   # Generate PFT fractions
   local i=1
   for npfts in $npfts_list
@@ -463,21 +510,25 @@ function generate_fractions {
       done        
     fi
   done
-
 }
 
 function crosscheck_vars {
 
+  # Set minimum soil depth of non-glacier grid cells to 0.01
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
   mv ${temp} ${grid_name}_soil_depth_remap.nc
   debug_file ${grid_name}_soil_depth_remap.nc
+
+  # Calculate maximum soil water amount from soil depth and field capacity
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} mul ${grid_name}_soil_field_cap_remap.nc ${grid_name}_soil_depth_remap.nc max_soilwater.nc
   ${cdo} min ${grid_name}_maxmoist_remap.nc max_soilwater.nc ${temp}
   mv ${temp} ${grid_name}_maxmoist_remap.nc
   debug_file ${grid_name}_maxmoist_remap.nc
   rm max_soilwater.nc
+
+  # Set missing value of surface temperature to 280K
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} setmisstoc,280 ${grid_name}_surf_temp_remap.nc ${temp}
   mv ${temp} ${grid_name}_surf_temp_remap.nc
@@ -536,9 +587,8 @@ function generate_output_files {
           ${grid_name}_glac.nc \
           ${outfile}
     fi
-    cdo showattribute,comment ${input_file} | tail -n +2 > comment.txt
-    cdo setattribute,FILE=comment.txt ${outfile} ${temp} && mv ${temp} ${outfile}
-    rm comment.txt
+    comment=$(cdo -s showattribute,comment ${input_file} | sed -e 's/\\n//g' -e 's/\"//g' | tr '\n' '; ' | tr -s " " | cut -d "=" -f2)
+    ${cdo} setattribute,comment="${comment}" ${outfile} ${temp} && mv ${temp} ${outfile}
 
     #ncrename -d cell,ncells ${outfile} >& /dev/null
     copy_uuid ${outfile}
@@ -569,6 +619,7 @@ function generate_output_files {
   ${cdo} merge \
       ${grid_name}_soil_depth_remap.nc \
       ${grid_name}_root_depth_remap.nc \
+      ${grid_name}_fract_org_sl_remap.nc \
       ${grid_name}_bclapp_remap.nc \
       ${grid_name}_soil_field_cap_remap.nc \
       ${grid_name}_heat_capacity_remap.nc \
@@ -579,7 +630,6 @@ function generate_output_files {
       ${grid_name}_soil_porosity_remap.nc \
       ${grid_name}_wilting_point_remap.nc \
       ${grid_name}_fao_remap.nc \
-      ${grid_name}_maxmoist_remap.nc \
       ${outfile}
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
@@ -656,8 +706,8 @@ function generate_frac_output_files {
           ${grid_name}_glac.nc \
           ${outfile}
     fi
-    cdo showattribute,comment ${input_file} | tail -n +2 > comment.txt
-    cdo setattribute,FILE=comment.txt ${outfile} ${temp} && mv ${temp} ${outfile}
+    comment=$(cdo -s showattribute,comment ${input_file} | sed -e 's/\\n//g' -e 's/\"//g' | tr '\n' '; ' | tr -s " " | cut -d "=" -f2)
+    ${cdo} setattribute,comment="${comment}" ${outfile} ${temp} && mv ${temp} ${outfile}
     rm comment.txt
 
     #ncrename -d cell,ncells ${outfile} >& /dev/null
@@ -671,6 +721,8 @@ function modify_soil_and_root_depth {
 
   local soil_depth=${grid_name}_soil_depth_remap.nc
   local root_depth=${grid_name}_root_depth_remap.nc
+  local maxmoist=${grid_name}_maxmoist_remap.nc
+  local soil_field_cap=${grid_name}_soil_field_cap_remap.nc
 
   local temp=temp_$$
 
@@ -688,12 +740,8 @@ function modify_soil_and_root_depth {
   ${cdo} add ${temp}_soil_depth_EQ.nc ${temp}_soil_depth_NH.nc ${temp}_soil_depth_EQ_NH.nc
   ${cdo} add ${temp}_soil_depth_EQ_NH.nc ${temp}_soil_depth_SH.nc ${temp}_soil_depth_all.nc
 
-  # root depth
-  ${cdo} mulc,0.7 -mul ${root_depth} -setmisstoc,0. ${temp}_EQ_mask.nc ${temp}_root_depth_EQ.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_NH_mask.nc ${temp}_root_depth_NH.nc
-  ${cdo} mul -addc,0.2 ${root_depth} -setmisstoc,0. ${temp}_SH_mask.nc ${temp}_root_depth_SH.nc
-  ${cdo} add ${temp}_root_depth_EQ.nc ${temp}_root_depth_NH.nc ${temp}_root_depth_EQ_NH.nc
-  ${cdo} add ${temp}_root_depth_EQ_NH.nc ${temp}_root_depth_SH.nc ${temp}_root_depth_all.nc
+  # compute root depth based on maximum root zone moisture and field capacity
+  ${cdo} -setname,root_depth -div ${maxmoist} ${soil_field_cap} ${temp}_root_depth_all.nc
 
   # keep minimum values (0.3m for root depth and 0.5m for soil depth)
   ${cdo} gtc,0.5 ${temp}_soil_depth_all.nc ${temp}_soil_depth_all_05.nc
@@ -750,7 +798,7 @@ do
   if [[ ${jsb4icon} == true ]]; then
     if [[ $bisection -ge 8  ]]
     then
-      cdo="${cdo} -f nc4 -P 8"
+      ## cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
       ulimit -s unlimited
       ulimit -v unlimited
       ulimit -m unlimited
@@ -764,7 +812,8 @@ do
     fi
 
     grid_name=${refinement}
-    source_res=${source_res_dict[${bisection}]}
+    bisect=$(echo ${bisection} | tr -d ^0)
+    source_res=${source_res_dict[${bisect}]}
   else         # jsbach4 on gaussian grid
     grid_name=${bisection}
     remap_scheme=ycon
@@ -818,7 +867,7 @@ do
   cd mpiesm-landveg
   git config core.sparseCheckout true
   echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
-  git checkout 83462fbc
+  git checkout 5fd38a895
   mv contrib/initial_tarfiles/ ..
   cd ../initial_tarfiles
   rm -rf ../mpiesm-landveg

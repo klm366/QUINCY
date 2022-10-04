@@ -20,7 +20,7 @@ MODULE mo_pheno_init
   USE mo_exception,           ONLY: message, finish
   USE mo_jsb_control,         ONLY: debug_on
 
-  USE mo_jsb_model_class,     ONLY: t_jsb_model
+  USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_class,           ONLY: get_model
@@ -71,13 +71,14 @@ CONTAINS
       CALL pheno_read_init_vars(tile)
     END IF
 
-    ! select init routine depending on the "use_quincy" flag
-    IF (.NOT. model%config%use_quincy) THEN
+    ! select init routine depending on the model_scheme
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_JSBACH)
       CALL pheno_init_bc(tile)
       CALL pheno_init_ic(tile)
-    ELSE IF (model%config%use_quincy) THEN     ! quincy
+    CASE (MODEL_QUINCY)
       CALL pheno_init_q_(tile)                 ! contains code parts of jsbach4 pheno init
-    END IF
+    END SELECT
 
     IF (tile%Is_last_process_tile(PHENO_)) THEN
         CALL pheno_finalize_init_vars()
@@ -357,8 +358,8 @@ CONTAINS
     !!
     !! init growing_season, lai_max, lai
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
-      ! lai_max == jsbach4 lctlib parameter
-      lai_max(:,:) = dsl4jsb_Lctlib_param(MaxLAI)
+      ! lai_max
+      lai_max(:,:) = 6.0_wp  ! for jsbach4 a lctlib parameter 'dsl4jsb_Lctlib_param(MaxLAI)' is available
       ! lai init should also work with 0.0_wp (in QUINCY canopy it is initialized with 6.0_wp)
       lai(:,:)     = 1.0_wp
       ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
@@ -372,34 +373,6 @@ CONTAINS
       lai_max(:,:)        = 1.0_wp
       lai(:,:)            = 0.0_wp
       growing_season(:,:) = false
-    ENDIF
-
-    !> 2.0 jsbach4 "pheno init" code copied with minor modifications
-    !!
-    
-    !> 2.1 get fract_fpc_max
-    ! Maximum foliage projected cover
-    IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
-    dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
-    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
-    
-    !> 2.2 calc initial fract_fpc 
-    IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
-      !$claw expand
-      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover(                &
-        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
-        & dsl4jsb_Lctlib_param(ClumpinessFactor))
-    ELSE
-      ! other than PFT tiles (in jsbach4 used in case l_compat401=.TRUE.)
-      !$claw expand
-      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
-        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), 2._wp)
-    ENDIF
-    
-    !> 2.3 veg_fract_correction (a factor between 0 and 1, not modified at runtime, see pheno mem class for some docu)
-    IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
-      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-        & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
     ENDIF
 
   END SUBROUTINE pheno_init_q_
