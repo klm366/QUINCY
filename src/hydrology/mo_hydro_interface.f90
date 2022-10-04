@@ -33,7 +33,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -47,7 +47,6 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
-  dsl4jsb_Use_memory(ASSIMI_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -979,16 +978,6 @@ CONTAINS
 
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
-    ! @todo check if this declaration is even necessary
-    dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
-    dsl4jsb_Real3D_onChunk :: wtr_soil_pwp_sl
-    dsl4jsb_Real3D_onChunk :: root_depth_sl
-    dsl4jsb_Real2D_onChunk :: tpe_overflow
-
-
     ! Locally allocated vectors
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1403,7 +1392,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(ASSIMI_)
 
     TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
