@@ -1980,6 +1980,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)         ! out
     END IF
     IF (tile%is_vegetation .OR. tile%is_land) THEN
+      dsl4jsb_Get_var2D_onChunk(HD_,       w_river_res)       ! in
+      dsl4jsb_Get_var2D_onChunk(HD_,       w_overl_res)       ! in
       dsl4jsb_Get_var2D_onChunk(HD_,       fract_river)       ! in
       dsl4jsb_Get_var2D_onChunk(HD_,       fract_overl)       ! in
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)               ! in

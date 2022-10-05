@@ -13,7 +13,7 @@
 
 MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
-!#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
+#if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish, message, message_text
@@ -842,9 +842,11 @@ CONTAINS
       discharge(:,:) = 0._wp
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
-
       discharge_lake(:,:) = 0._wp
       riverflow_lake(:,:) = 0._wp
+
+      ! Enable the next line for debugging ... but this only works on one (!) processor, i.e. no halos
+      ! outflow_count(:,:) = nsplit(:,:)
 
       global_outflow  = global_sum_array((outflow_runoff(:,:)    & 
                                         + outflow_drainage(:,:)  & 
@@ -856,10 +858,6 @@ CONTAINS
         riverflow_lake(:,:) = outflow_rivers(:,:)
         outflow_rivers(:,:) = 0._wp
       END WHERE
-
-      ! Enable the next line for debugging ... but this only works on one (!) processor, i.e. no halos
-      ! outflow_count(:,:) = nsplit(:,:)
-
 
       IF (debug_hd) THEN
         ! Consistency check: There should not be outflow in pure ocean cells
@@ -1239,22 +1237,19 @@ CONTAINS
                   nneigh_mask(nnjc(nnm),nnblk(nnm)) = .TRUE.
                 END IF
               END DO
-              ! 3 neighbor cells minimum outflow height
+              ! neighbor cell minimum outflow height
               outflow_mins(:,:) = 0._wp
-              DO nm = 1, SIZE(njc)
-                ! neighbor cells minimum outflow height
-                l = FINDLOC(grid%patch%cells%neighbor_idx(njc(nm),nblk(nm),:), jc, DIM=1)
-                IF (outflow_min(njc(nm),nblk(nm),nl) /= 0._wp) THEN
-                   outflow_mins(njc(nm),nblk(nm))= outflow_min(njc(nm),nblk(nm),nl)
-                   ! neighbor's 3 neighbor cells minimum outflow height
-                   DO nnm = 1, SIZE(nnjc)
-                     nl =  FINDLOC(grid%patch%cells%neighbor_idx(nnjc(nnm),nnblk(nnm),:), njc(nm), DIM=1)
-                     IF (outflow_min(nnjc(nnm),nnblk(nnm),nl) /= 0._wp) THEN
-                       outflow_mins(nnjc(nnm),nnblk(nnm)) = outflow_min(nnjc(nnm),nnblk(nnm),nl)
-                     END IF
-                   END DO
-                END IF
-              END DO
+              l = FINDLOC(grid%patch%cells%neighbor_idx(njc(n),nblk(n),:), jc, DIM=1)
+              IF (outflow_min(njc(n),l,nblk(n)) /= 0._wp) THEN
+                 outflow_mins(njc(n),nblk(n))= outflow_min(njc(n),l,nblk(n))
+                 ! neighbor's neighbor cells minimum outflow height
+                 DO nnm = 1, SIZE(nnjc)
+                   nl =  FINDLOC(grid%patch%cells%neighbor_idx(nnjc(nnm),nnblk(nnm),:), njc(n), DIM=1)
+                   IF (outflow_min(nnjc(nnm),nl,nnblk(nnm)) /= 0._wp) THEN
+                     outflow_mins(nnjc(nnm),nnblk(nnm)) = outflow_min(nnjc(nnm),nl,nnblk(nnm))
+                   END IF
+                 END DO
+              END IF
 
               ! inflow 
               IF(height_dyn(jc,blk) == MINVAL(PACK(height_dyn(:,:),nneigh_mask(:,:))) .AND. &
@@ -1328,7 +1323,7 @@ CONTAINS
 
       ! checkout water budget conservation: outlet overflow
       global_lake_volume_error=global_lake_volume-global_sum_array((volume_lake(:,:)+overflow_lake(:,:)*steplen)*in_domain(:,:))
-      IF (ABS(global_lake_volume_error)/global_lake_volume > 10._wp*EPSILON(1._wp)) THEN
+      IF (ABS(global_lake_volume_error)/MAX(global_lake_volume, EPSILON(1._wp)) > 10._wp*EPSILON(1._wp)) THEN
         WRITE (message_text,*) 'Lake water conservation problem: outlet overflow imbalance: ', &
              global_lake_volume_error,' m3'
         CALL finish (TRIM(routine), message_text)
@@ -1617,5 +1612,5 @@ CONTAINS
 
   END SUBROUTINE hd_check_water_budget
 
-!#endif
+#endif
 END MODULE mo_hd_interface
