@@ -46,8 +46,7 @@ MODULE mo_hydro_config_class
       & l_organic,           & !< Use organic component of soil layers
       & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
-      & l_soilhydnew           !< Switch to new soil hydrology scheme
+      & l_infil_subzero        !< Allow infiltration at soil temperatures below 0°C
     INTEGER               :: &
       & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
       & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean 
@@ -77,8 +76,7 @@ CONTAINS
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
-    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
-                                 & l_soilhydnew
+    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -95,7 +93,6 @@ CONTAINS
       & l_socmap,                   &
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
-      & l_soilhydnew,               &
       & soilhydmodel,               &
       & interpol_mean
 
@@ -126,7 +123,6 @@ CONTAINS
     l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
-    l_soilhydnew      = .TRUE.
     soilhydmodel      = "BrooksCorey"
     interpol_mean     = "upstream"
 
@@ -174,10 +170,6 @@ CONTAINS
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
-
-    config%l_soilhydnew        = l_soilhydnew
-    IF (l_soilhydnew ) &
-      & CALL message(TRIM(routine), 'Running new soil hydrology ...')
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))
     CASE("brookscorey")
