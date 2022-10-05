@@ -16,7 +16,7 @@ MODULE mo_hydro_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message, finish
+  USE mo_exception,          ONLY: message, finish, message_text
   USE mo_jsb_control,        ONLY: debug_on
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -130,6 +130,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
+    LOGICAL,  POINTER          :: is_in_domain(:,:) ! T: cell in domain (not halo)
     TYPE(t_input_file) :: input_file
     INTEGER :: isoil, nproma, nblks, nsoil
 
@@ -146,6 +147,7 @@ CONTAINS
     nblks  = grid%Get_nblks()
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 
     ALLOCATE( &
       & hydro_init_vars%elevation       (nproma, nblks),       &
@@ -243,9 +245,27 @@ CONTAINS
       ptr_2D => input_file%Read_2d(                 &
         & variable_name='moisture_pot',             &
         & fill_array = hydro_init_vars%matrix_pot)
-      ! @todo as soon as matrix potential is read in with correct (negative) values,
-      !       the 0.2 has to be set to -0.2
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp)
+      ! @todo Currently, the matrix potential is given with a positiv sign in the bc data while
+      !       it should be negativ from a soil physics perspective and is expected as such from
+      !       the soil hydrology routine. As matrix potential should be corrected in the bc data
+      !       at some point in the future, we check here for negative or positive values and
+      !       convert as necessary.
+      WHERE(.NOT. is_in_domain(:,:) .OR. ABS(ptr_2D(:,:)) > 1.0e+20_wp)
+        ! Exclude values outside of the domain and (standard) missing values
+        ptr_2D(:,:) = 0._wp
+      ENDWHERE
+      IF (ALL(ptr_2D(:,:) < 1.0e-10_wp)) THEN
+        ! Correct: all values are negative
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), -0.2_wp, ptr_2D(:,:) <= 0._wp)
+      ELSE IF (ALL(ptr_2D(:,:) > -1.0e-10_wp)) THEN
+        ! False: all values are positive --> convert to negative values
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp) * (-1._wp)
+      ELSE
+        ! Totally wrong: dataset contains positive and negativ values
+        WRITE (message_text,*) 'Found positive and negative values in soil moisture matrix potential: ', &
+          & MINVAL(ptr_2D(:,:)),' <-> ',MAXVAL(ptr_2D(:,:))
+        CALL finish (TRIM(routine), message_text)
+      END IF
 
       ! Exponent B in Clapp and Hornberger
       ptr_2D => input_file%Read_2d(                 &
@@ -391,16 +411,7 @@ CONTAINS
       dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat) = hydro_init_vars%hyd_cond_sat
 
       ! Matrix potential
-      ! @todo Currently, the matrix potential is given with a positiv sign in the bc data while
-      !       it should be negativ from a soil physics perspective and is expected as such from
-      !       the soil hydrology routine. Thus, it is converted here.
-      !       However, this needs to be adapted as soon as we switch to the correct values
-      !       in the bc file.
-      IF (ANY(hydro_init_vars%matrix_pot < -1.0e-10_wp)) &
-        & CALL finish(TRIM(routine), 'The incorrect (positive) matrix potential values '// &
-        &   ' seem to be replaced by correct (negative) values. Check and adapt mo_hydro_init')
-
-      dsl4jsb_var_ptr(HYDRO_, matrix_pot) = -hydro_init_vars%matrix_pot
+      dsl4jsb_var_ptr(HYDRO_, matrix_pot) = hydro_init_vars%matrix_pot
 
       ! Exponent B in Clapp and Hornberger
       dsl4jsb_var_ptr(HYDRO_, bclapp) = hydro_init_vars%bclapp
