@@ -335,6 +335,7 @@ CONTAINS
     init_running_mean_years = dsl4jsb_Config(NLCC_)%init_running_mean_years
     IF (init_running_mean_years > currentyear-iniyear) THEN
        init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
+       PRINT*, 'init_running_mean_years: ', currentyear-iniyear, ' year'
     ELSE
        init_running_means = .FALSE.
     ENDIF
