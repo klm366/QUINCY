@@ -632,15 +632,18 @@ CONTAINS
     !where (fuel_ < 0.) fuel_ = 0.
     where (fuel_ < 0.15) fuel_ = 0.
     where (fuel_ > 1.)   fuel_ = 1.
-    burned_fract = burned_fract*fuel_(:)
-    !burned_fract = burned_fract*(fuel_(:)**2)
+    burned_fract = burned_fract*(fuel_(:)**2)  ! v1
+    !burned_fract = burned_fract*fuel_(:)
+    
 
     q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
     where (q_rel_air_ < 0.) q_rel_air_ = 0.
-    where (q_rel_air_ > 100.) q_rel_air_ = 100.
-    q_rel_air_(:) = 1._wp / (1._wp + exp(-20._wp*((q_rel_air_(:)/100.)-0.5)))
-    burned_fract = burned_fract*(1.-q_rel_air_(:))
-    !burned_fract = burned_fract*((1.-q_rel_air_(:)/100.)**2)
+    !where (q_rel_air_ > 100.) q_rel_air_ = 100.
+    where (q_rel_air_ > 70.) q_rel_air_ = 100.
+    burned_fract = burned_fract*((1.-q_rel_air_(:)/100.)**2)  ! v1
+    !q_rel_air_(:) = 1._wp / (1._wp + exp(-20._wp*((q_rel_air_(:)/100.)-0.5)))
+    !burned_fract = burned_fract*(1.-q_rel_air_(:))
+    
 
     !where (burned_fract < 0.) burned_fract = 0.
     !where (burned_fract > 1.) burned_fract = 1.
