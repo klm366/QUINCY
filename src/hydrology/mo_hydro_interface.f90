@@ -1056,6 +1056,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: root_depth_sl
     dsl4jsb_Real2D_onChunk :: tpe_overflow
 
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
+    dsl4jsb_Real3D_onChunk :: latdrain_sl
+    dsl4jsb_Real3D_onChunk :: drain_lat_sl
+    dsl4jsb_Real3D_onChunk :: drain_perm_sl
+
+
     dsl4jsb_Real2D_onChunk :: pdv_1d_out
 
     ! Locally allocated vectors
@@ -1120,7 +1126,11 @@ CONTAINS
       fract_org_sl(:,:) = 0._wp
     END IF
 
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, pdv_1d_out        )
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl      )
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, latdrain_sl        )
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl       )
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_perm_sl      )
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, pdv_1d_out         )
 
     pdv_1d_out = 0._wp
 
@@ -1149,16 +1159,15 @@ CONTAINS
       wtr_pond_max(:) = 0.0_wp
     END IF
 
-    ! Latdrain flag
+    ! Latdrain/ frozen drain flags
     ! For testing purposes assuming no lateral drainage from lowland depression
     IF (tile%contains_lowland .AND. tile%contains_depression) THEN
-      l_latdrain = .FALSE.
       l_frzdrain = .FALSE.
+      l_latdrain = .FALSE.
     ELSE
-      l_latdrain = .TRUE.
       l_frzdrain = .TRUE.
+      l_latdrain = .TRUE.
     END IF
-    !
     !pdv <
 
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
@@ -1219,8 +1228,8 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl      ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, drain_perm_sl     )      &
+      & drain_lat_sl(:,:),     &
+      & drain_perm_sl(:,:)     &
       & )
 
     !pdv >
@@ -1228,42 +1237,46 @@ CONTAINS
     ! on macroscale, lateral drainage in unfrozen soils is assumed to 
     ! reach bedrock boundary before reaching the lower tile.
     ! In frozen soils lateral drainage can not reach bedrock boundary and 
-    ! flows to lower (macroscale) tile
+    ! flows to lower (macroscale) tile, however this is only the case if
+    ! the permafrost extends upwards into the soil above bedrock
 
+    pdv_1d_out(:) = 0._wp
 
-      IF (tile%contains_upland .AND. tile%contains_depression) THEN
-        IF (dsl4jsb_Config(HYDRO_)%l_macrotrans_subsurf) THEN
-          dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl           ) = &
-          &  dsl4jsb_var3D_onChunk (HYDRO_, drain_perm_sl      )
-        ELSE
-          dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl           ) = 0._wp
-        END IF
+    dsl4jsb_Get_var2D_onChunk(SSE_,    thaw_depth_max_ym1)       ! in
+    IF (tile%contains_upland .AND. tile%contains_depression) THEN
+      IF (dsl4jsb_Config(HYDRO_)%l_macrotrans_subsurf) THEN
+        DO i = 1, nc
+          IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &
+           &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! For cells where thaw depth is below modeld depth
+            latdrain_sl(i,:) = drain_perm_sl(i,:)
+            pdv_1d_out(i) = 1._wp
+          ELSE
+            latdrain_sl(i,:) = 0._wp
+          END IF
+        END DO
       ELSE
-        dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl           ) = &
-        &  dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl       ) + &
-        &  dsl4jsb_var3D_onChunk (HYDRO_, drain_perm_sl      )
+        latdrain_sl(:,:) = 0._wp
       END IF
+    ELSE
+      DO i = 1, nc
+          IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &
+           &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! For cells where thaw depth is below modeld depth
+          latdrain_sl(i,:) = drain_lat_sl(i,:) + drain_perm_sl(i,:)
+          pdv_1d_out(i) = 1._wp
+        ELSE
+          latdrain_sl(i,:) = drain_lat_sl(i,:)
+        END IF
+      END DO
+    END IF
     !pdv <
 
     dsl4jsb_var2D_onChunk (HYDRO_, weq_pond           ) = &
     &  dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond        ) + &
     &  dsl4jsb_var2D_onChunk (HYDRO_, ice_pond        )
 
-
-
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond_max)
-
-    pdv_1d_out(:) = 0._wp
-
-    DO i = 1, nc
-      IF (weq_pond_max(i) > 1.E-20_wp .AND. weq_pond(i) > 1.E-20_wp) THEN
-        pdv_1d_out(i) = (weq_pond(i) / weq_pond_max(i))**0.5_wp
-      END IF
-    END DO
-
-
 
     DO i = 1, nc
       IF (weq_pond_max(i) > 1.E-20_wp .AND. weq_pond(i) > 1.E-20_wp) THEN

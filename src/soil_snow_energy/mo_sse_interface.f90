@@ -135,6 +135,8 @@ CONTAINS
     USE mo_sse_process,            ONLY: calc_soil_temperature, calc_snow_temperature, calc_soiltemp_old
     USE mo_jsb_physical_constants, ONLY: alf, rhoh2o, dens_snow
     USE mo_sse_constants,          ONLY: snow_depth_min
+    USE mo_jsb_time,               ONLY: is_newyear
+
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -176,6 +178,8 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
     dsl4jsb_Real2D_onChunk :: thaw_depth
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
@@ -274,6 +278,8 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_melt_sl)      ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! out
     END IF
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)  ! out
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
@@ -460,6 +466,7 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_top                          (:  ), &
+        & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
@@ -488,6 +495,7 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
         & t_soil_top                          (:  ), &
+        & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
         ! inout
@@ -513,6 +521,15 @@ CONTAINS
       !$claw acc exit data delete(ws_max_sl)
       DEALLOCATE(ws_max_sl)
     END IF
+
+    !pdv > calculating maximum thaw_depths
+    IF ((.NOT. lstart) .AND. is_newyear(options%current_datetime, options%dtime)) THEN
+      thaw_depth_max_ym1(:) = thaw_depth_max(:)
+      thaw_depth_max(:) = 0._wp
+    ELSE
+      thaw_depth_max(:) = MAX(thaw_depth_max(:),thaw_depth(:))
+    END IF
+    !pdv <
 
     !$claw acc data present(grnd_hflx,hcap_grnd,snow_fract,grnd_hflx_snow,grnd_hflx_soil,hcap_grnd_snow,hcap_grnd_soil)
     !$claw acc parallel loop gang vector
@@ -580,6 +597,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_melt_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pot_scool_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1,    weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
