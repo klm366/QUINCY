@@ -88,9 +88,10 @@ CONTAINS
   !!
   PURE ELEMENTAL SUBROUTINE calc_drainage_transport(        &
     & dtime, fract_to_retention, retention_time,            &
-    & source_fract, target_fract, field_cap_target,         &
+    & source_fract, target_fract, field_cap_source,  field_cap_target,         &
     & latdrain_source, drainage_source, wtr_latflow_source, &
-    & wtr_latflow_target, latdrain_retention_target, wtr_soil_target &
+    & wtr_latflow_target, latdrain_retention_target,        &
+    & wtr_soil_source, wtr_soil_target &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -100,18 +101,22 @@ CONTAINS
       &                        retention_time,     &
       &                        source_fract,       & !< area fraction of water source tile
       &                        target_fract,       & !< area fraction of water target tile
+      &                        field_cap_source,   & !< soil field capacity of source tile
       &                        field_cap_target      !< soil field capacity of target tile
     REAL(wp), INTENT(inout) :: latdrain_source,    & !< lateral drainage on source tile
       &                        drainage_source,    & !< bottom drainage on source tile
       &                        wtr_latflow_source, & !< lateral water flow from source tile
       &                        wtr_latflow_target, & !< lateral water flow towards target tile
       &                        latdrain_retention_target, &
+      &                        wtr_soil_source,    & !< soil water storage on source tile
       &                        wtr_soil_target       !< soil water storage on target tile
-
     ! Local variables
-    REAL(wp)                :: latflow_act,        &
+    REAL(wp)                :: src2trgt,           &
+      &                        trgt2src,           &
+      &                        latflow_act,        &
       &                        wtr_to_retention,   &
-      &                        wtr_from_retention
+      &                        wtr_from_retention, &
+      &                        wtr_remoist
 
     !> Update target soil with lateral drainage from source tile
     !!   *** DUMMY implementation which later on will be replaced with a physics based process ***
@@ -123,22 +128,49 @@ CONTAINS
     !!   water balance
 
     IF (target_fract > 1.0e-10_wp) THEN
+      src2trgt           = source_fract / target_fract
       ! Substract diagnosed lateral drainage from total drainage
       ! and from latflow of srouce tile
       drainage_source    = drainage_source    - latdrain_source
       wtr_latflow_source = wtr_latflow_source - latdrain_source
       ! Scale and add all lateral drainage to target tile soil layer
-      latflow_act        = latdrain_source * (source_fract / target_fract)
+      latflow_act        = latdrain_source * src2trgt
       wtr_latflow_target = wtr_latflow_target + latflow_act
       latdrain_source    = 0._wp
 
+      ! converting fluxes into volume
       latflow_act        = latflow_act * dtime / rhoh2o
+      ! and add to the retention resersoir of the target tile
+      ! or to the tile directly if retention reservoir is not taken into considderation (micro scale)
       wtr_to_retention   = fract_to_retention * latflow_act
       wtr_soil_target    = wtr_soil_target + latflow_act - wtr_to_retention
       latdrain_retention_target = latdrain_retention_target + wtr_to_retention
+      ! calculate fluxes from retention reservoir to soil column in target tile
+      ! and adding water to soil and subtracting it from reservoir
       wtr_from_retention = latdrain_retention_target * dtime / retention_time
       latdrain_retention_target = latdrain_retention_target - wtr_from_retention
       wtr_soil_target           = wtr_soil_target           + wtr_from_retention
+      ! water that has not left the reservoir can remoist the soil in the source tile
+      ! if water is below the field capacity
+      IF (source_fract > 1.0e-10_wp .AND. &
+          latdrain_retention_target > 1.0e-10_wp .AND. &
+          wtr_soil_source < field_cap_source) THEN
+        trgt2src    = target_fract / source_fract
+        ! calculating the maximum amount of water that re-enters the source tile
+        wtr_remoist = MIN(latdrain_retention_target*trgt2src, &
+                          field_cap_source - wtr_soil_source)
+        ! add it to the soil in the tile
+        wtr_soil_source = wtr_soil_source + wtr_remoist
+        ! adjust the diagnosed lateral flux from source to sink
+        latflow_act        = wtr_remoist * rhoh2o / dtime
+        wtr_latflow_source = wtr_latflow_source + latflow_act
+        !latdrain_source    = latdrain_source + latflow_act
+        ! update the retention reservoir on the target tile
+        latdrain_retention_target = latdrain_retention_target - wtr_remoist * src2trgt
+        ! and adjust the lateral flux to the target tile
+        latflow_act        = wtr_remoist * src2trgt * rhoh2o / dtime            
+        wtr_latflow_target = wtr_latflow_target - latflow_act
+      END IF
     END IF
 
   END SUBROUTINE calc_drainage_transport
@@ -215,6 +247,7 @@ CONTAINS
       &      wtr_latflow_lvt, wtr_latflow_dpr, wtr_soil_lvt, wtr_soil_dpr, diffus_lvt, diffus_dpr  &
       &      )
 
+    USE mo_jsb_math_constants,     ONLY: pi
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_hydro_process,          ONLY: get_conductivies_diffusivities
 
@@ -320,19 +353,13 @@ CONTAINS
 
 
 
-!    REAL(wp), PARAMETER ::     Pi           = 3.1415927_wp,  &
-!      &                        length_scale = 1.0_wp,        & ! assumed diameter of depressions (could be input field / namelist para)
+!    REAL(wp), PARAMETER ::     length_scale = 1.0_wp,        & ! assumed diameter of depressions (could be input field / namelist para)
 !      &                        h_offset     = 0.1_wp,        & ! hight difference between ridge and depression (should later be input field)
 !      &                        ck           = 8.0_wp           ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
 
-    REAL(wp) ::     Pi,              &
-      &             length_scale,    & ! assumed diameter of depressions (could be input field / namelist para)
+    REAL(wp) ::     length_scale,    & ! assumed diameter of depressions (could be input field / namelist para)
 !      &             h_offset,        & ! hight difference between ridge and depression (should later be input field)
       &             ck                 ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
-
-
-    Pi           = 3.1415927_wp  
-    !h_offset     = 0.1_wp           ! hight difference between ridge and depression (should later be input field)
 
     nrgrd         = nsoil * 2 + 3
 
@@ -351,8 +378,8 @@ CONTAINS
     fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
 
     !Assumption of circular depression with A = 1m² with in a circular elevation
-    !length_scale = ((1._wp/Pi)**0.5_wp+((1._wp/fr_dpr_rel)/Pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
-    length_scale = ((1._wp/fr_dpr_rel)/Pi)**0.5_wp                      ! From center to outer rim  
+    !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
+    length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
 
     ! Fist calculate the standing water at the surface of both tiles ... with the assumption that runoff is instant
     wtr_pond_total = wtr_pond_lvt * fr_lvt_rel + wtr_pond_dpr * fr_dpr_rel
@@ -454,7 +481,7 @@ CONTAINS
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_lvt, z_dpr)
 
-    len_inter = ((4._wp * Pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m² within elevation area x
+    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m² within elevation area x
     
     DO i = 1, nrgrd
       IF (i_lvt <= nsoil .AND. i_dpr <= nsoil .AND. dsoil_lvt(i_lvt) > 0._wp .AND. dsoil_dpr(MAX(i_dpr,1)) > 0._wp) THEN ! Above Bedrock in both tiles

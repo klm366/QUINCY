@@ -210,6 +210,7 @@ CONTAINS
       &                                  calc_intertile_diffusion,&
       &                                  calc_intertile_diffusion_new
 
+    USE mo_jsb_math_constants,     ONLY: pi
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     ! Arguments
@@ -245,6 +246,8 @@ CONTAINS
     dsl4jsb_Def_memory_tile(HYDRO_, sibl_tile)
 
     ! Declare pointers to variables in memory
+
+    dsl4jsb_Real2D_onChunk :: micro_slope
 
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
@@ -291,6 +294,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: source_fract    !< Fractions of water source tile
     REAL(wp), DIMENSION(options%nc) :: target_fract    !< Fractions of water target tile
     REAL(wp), DIMENSION(options%nc) :: wtr_pond_max  ! < demporary solution
+    REAL(wp), DIMENSION(options%nc) :: fr_dpr_rel
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -317,6 +321,9 @@ CONTAINS
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(MIX_,   wtr_latflow)      ! inout
+
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, micro_slope)      ! inout
+
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)         ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, latdrain_sl)      ! inout
@@ -340,6 +347,8 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_diffus_sl)
 !pdv <
     END IF
+
+    micro_slope(:) = 0._wp
 
     ! Transport water from between tiles
     ! @todo currently, lateral transport is only considered on tiles that contain soil
@@ -445,12 +454,14 @@ CONTAINS
                 & retention_time,                &
                 & source_fract(:),               & !< in
                 & target_fract(:),               & !< in
+                & wtr_soil_fc_sl(:,i),           & !< in
                 & wtr_soil_fc_sl_sibl_tile(:,i), & !< in
                 & latdrain_sl(:,i),              & !< inout
                 & drainage(:),                   & !< inout
                 & wtr_latflow(:),                & !< inout
                 & wtr_latflow_sibl_tile(:),      & !< inout
                 & latdrain_retention_sibl_tile(:,i), &
+                & wtr_soil_sl(:,i),              & !< inout
                 & wtr_soil_sl_sibl_tile(:,i)     & !< inout
                 & )
             ENDDO
@@ -513,6 +524,10 @@ CONTAINS
             DO i = 1, nc
               IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp .AND. &
                   wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
+
+              fr_dpr_rel(i)  = target_fract(i)/(source_fract(i) + target_fract(i))
+              micro_slope(i) = dsl4jsb_Config(HYDRO_)%max_pond_depth &
+                           & / ((1._wp/fr_dpr_rel(i))/pi)**0.5_wp
 
               CALL calc_intertile_diffusion_new(nsoil,                   &
                  & dsl4jsb_Config(HYDRO_)%i_shm, dtime,                  &

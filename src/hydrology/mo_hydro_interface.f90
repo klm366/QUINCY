@@ -1026,6 +1026,7 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1063,6 +1064,9 @@ CONTAINS
 
 
     dsl4jsb_Real2D_onChunk :: pdv_1d_out
+    dsl4jsb_Real2D_onChunk :: oro_stddev
+    dsl4jsb_Real2D_onChunk :: micro_slope
+    dsl4jsb_Real2D_onChunk :: macro_slope
 
     ! Locally allocated vectors
 
@@ -1078,7 +1082,12 @@ CONTAINS
 ! pdv <
 
     INTEGER  :: iblk, ics, ice, nc, i
-    REAL(wp) :: dtime, max_slope_tile
+    REAL(wp) :: dtime, max_slope_tile, &
+              & sigma_0, sigma_max
+
+
+    REAL(wp) :: slope(options%nc)
+
     INTEGER  :: nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
@@ -1131,6 +1140,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl       )
     dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_perm_sl      )
     dsl4jsb_Get_var2D_onChunk(HYDRO_, pdv_1d_out         )
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, oro_stddev         )
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, micro_slope        )
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, macro_slope        )
 
     pdv_1d_out = 0._wp
 
@@ -1151,6 +1163,17 @@ CONTAINS
     ELSE
       max_slope_tile = 0.01_wp
     END IF
+
+    IF (tile%contains_upland) THEN
+      sigma_0     = oro_var_min
+      sigma_max   = oro_var_max * 64._wp / REAL(grid%nlat_g, wp) ! @todo: site level
+      macro_slope(:) = MIN(max_slope_tile, &
+                & MAX(0.01_wp, (oro_stddev(:)-sigma_0) / (oro_stddev(:)+ sigma_max)))
+    ELSE
+      macro_slope(:) = 0.01_wp
+    END IF
+
+    slope(:) = MIN(0.5_wp, macro_slope(:) + micro_slope(:))
 
     IF (tile%contains_depression) THEN
       wtr_pond_max(:) = MAX(0._wp,dsl4jsb_Config(HYDRO_)%max_pond_depth &
@@ -1203,8 +1226,9 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ),     &
-      &                                t_soil_sl     (:,1),     &
+      & slope(:),                                               &
+      & oro_stddev(:),                                          &
+      & t_soil_sl(:,1),                                         &
       & wtr_pond_max(:),                                        &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
@@ -1240,7 +1264,7 @@ CONTAINS
     ! flows to lower (macroscale) tile, however this is only the case if
     ! the permafrost extends upwards into the soil above bedrock
 
-    pdv_1d_out(:) = 0._wp
+    pdv_1d_out(:) = macro_slope(:)
 
     dsl4jsb_Get_var2D_onChunk(SSE_,    thaw_depth_max_ym1)       ! in
     IF (tile%contains_upland .AND. tile%contains_depression) THEN
@@ -1248,10 +1272,9 @@ CONTAINS
         DO i = 1, nc
           IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &
            &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! For cells where thaw depth is below modeld depth
-            latdrain_sl(i,:) = drain_perm_sl(i,:)
-            pdv_1d_out(i) = 1._wp
+            latdrain_sl(i,:) = drain_lat_sl(i,:) + drain_perm_sl(i,:)
           ELSE
-            latdrain_sl(i,:) = 0._wp
+             latdrain_sl(i,:) = 0._wp
           END IF
         END DO
       ELSE
@@ -1259,10 +1282,9 @@ CONTAINS
       END IF
     ELSE
       DO i = 1, nc
-          IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &
+        IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &
            &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! For cells where thaw depth is below modeld depth
           latdrain_sl(i,:) = drain_lat_sl(i,:) + drain_perm_sl(i,:)
-          pdv_1d_out(i) = 1._wp
         ELSE
           latdrain_sl(i,:) = drain_lat_sl(i,:)
         END IF

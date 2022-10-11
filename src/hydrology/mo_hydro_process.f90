@@ -494,7 +494,7 @@ CONTAINS
     & soil_depth_sl, root_depth_sl, fract_org_sl,                                           &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,       &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                               &
-    & oro_stddev, t_soil_sl1, wtr_pond_max,                                               &
+    & slope, oro_stddev, t_soil_sl1, wtr_pond_max,                                               &
     & water_to_soil, evapotrans_soil, transpiration,                                        &
     ! inout
     & wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow,                                     &
@@ -533,7 +533,7 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, fract_org_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & oro_stddev, t_soil_sl1, wtr_pond_max, water_to_soil, &
+      & slope, oro_stddev, t_soil_sl1, wtr_pond_max, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & wtr_pond, tpe_overflow
@@ -689,7 +689,7 @@ CONTAINS
 
       CALL soilhyd_new(nc, nsoil, dtime, i_shm, i_interpol,                                &
         &     l_hydro_q, l_latdrain, l_frzdrain,                                           &
-        &     wtr_pond_max, soil_depth_sl, wsat_sl_wi, field_cap_sl_wi, hyd_cond_sat_sl, &
+        &     wtr_pond_max, slope, soil_depth_sl, wsat_sl_wi, field_cap_sl_wi, hyd_cond_sat_sl, &
         &     bclapp_sl, matrix_pot_sl, pore_size_index_sl, p_wilt_sl_wi,                  &
         &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,  wtr_pond,                  &
         &     infilt,runoff_dunne, drainage, drain_rock, drain_lat_sl, drain_perm_sl,       &
@@ -1612,7 +1612,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
   SUBROUTINE soilhyd_new(nc, nsoil, dtime,     &
     & i_shm, i_interpol, l_hydro_q, l_latdrain, l_frzdrain,    &
-    & wtr_pond_max, dsoil,                                                   &
+    & wtr_pond_max, slope, dsoil,                              &
     & wsat_sl, field_cap_sl, hyd_cond_sat_sl,                  &
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl, p_wilt_sl, &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl, wtr_pond, &
@@ -1622,6 +1622,9 @@ CONTAINS
     & weq_soilhyd_err, &
     !pdv <
     & ltpe_closed, ltpe_open)
+
+
+    USE mo_jsb_math_constants,     ONLY: pi
 
     !----------------------------------------------------------------------------------------------
     !
@@ -1641,6 +1644,7 @@ CONTAINS
     LOGICAL, INTENT(IN)             :: l_latdrain
     LOGICAL, INTENT(IN)             :: l_frzdrain
     REAL(wp), INTENT(IN)            :: wtr_pond_max(:)
+    REAL(wp), INTENT(IN)            :: slope(:)
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wsat_sl(:,:)               ! Maximum storage in each soil layer (porosity) [m]
     REAL(wp), INTENT(IN)            :: field_cap_sl(:,:)          ! field capacity of the soil layer [m]
@@ -1691,7 +1695,9 @@ CONTAINS
     REAL(wp) :: field_cap_sl_ni(nc,nsoil)           ! field capacity of the soil layer (reduced by ice) [m]
     REAL(wp) :: p_wilt_sl_ni(nc,nsoil)              ! wilting point - reduced relative to soil ice fraction [m]
 
+    LOGICAL  :: l_latdrain_new
 
+    l_latdrain_new = .TRUE.
     !$claw acc data &
     !$claw acc present(dsoil, wsat_sl, field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl, &
     !$claw acc         pore_size_index_sl, p_wilt_sl, wtr_soil_sl, drainage, tpe_overflow, ice_soil_sl)          &
@@ -1833,6 +1839,25 @@ CONTAINS
     END DO
 !pdv < 
 
+!pdv >
+    IF (l_latdrain_new) THEN
+! Update soil hyd.-porperties
+      CALL get_conductivies_diffusivities_column(                          &
+          & i_shm, i_interpol,                                             &
+          & dtime,                                                         &
+          & nc,nsoil,                                                      &
+          & nsoil_act(:), dsoil(:,:),                                      &
+          & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_scool_sl(:,:),    &
+          & wsat_sl(:,:), field_cap_sl(:,:), p_wilt_sl(:,:),               &
+          & hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),                      &
+          & bclapp_sl(:,:), pore_size_index_sl(:,:),                       &
+          & ice_impede_sl(:,:),                                            &
+          & hyd_cond_sl(:,:), diffus_sl(:,:),                              &
+          & hyd_cond_li(:,:), diffus_li(:,:)                               &
+          )
+    END IF
+!pdv <
+
     DO j=1,nc
       !
       !> Drainage pt.2
@@ -1850,49 +1875,76 @@ CONTAINS
       !> Calculating lateral drainage from all but the lowest layer above bedrock
         !
         !> Drainage pt.2a --- from all soils (impeded in the presence of ice)
-
-        IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN          ! drainage occurs only with mobile water
-          ! Slow drainage
-          IF (field_cap_sl(j,i) > ws_rsdl_sl(j,i)) THEN
-            drain_sl(j) = zdrmin * (wtr_soil_sl(j,i) - ws_rsdl_sl(j,i)) / (field_cap_sl(j,i)-ws_rsdl_sl(j,i))
+        IF (.NOT. l_latdrain_new) THEN
+          IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN          ! drainage occurs only with mobile water
+            ! Slow drainage
+            IF (field_cap_sl(j,i) > ws_rsdl_sl(j,i)) THEN
+              drain_sl(j) = zdrmin * (wtr_soil_sl(j,i) - ws_rsdl_sl(j,i)) / (field_cap_sl(j,i)-ws_rsdl_sl(j,i))
+            ELSE
+              drain_sl(j) = 0._wp
+            END IF
+            ! Fast drainage
+            IF (wtr_soil_sl(j,i) > ws_crit(j)) THEN
+              drain_crit(j) = (zdrmax-zdrmin) * ((wtr_soil_sl(j,i) - ws_crit(j)) / (wsat_sl(j,i) - ws_crit(j)))**zdrexp
+              drain_sl(j) = drain_sl(j) + MIN(drain_crit(j), (wtr_soil_sl(j,i) - ws_crit(j))/dtime)
+            END IF
+            ! drainage is limited by the soil moisture within the layer and ice impedence
+            drain_sl(j) = ice_impede(j) * MIN(drain_sl(j) * dtime, (wtr_soil_sl(j,i) - ws_rsdl_sl(j,i)))
           ELSE
             drain_sl(j) = 0._wp
           END IF
-          ! Fast drainage
-          IF (wtr_soil_sl(j,i) > ws_crit(j)) THEN
-            drain_crit(j) = (zdrmax-zdrmin) * ((wtr_soil_sl(j,i) - ws_crit(j)) / (wsat_sl(j,i) - ws_crit(j)))**zdrexp
-            drain_sl(j) = drain_sl(j) + MIN(drain_crit(j), (wtr_soil_sl(j,i) - ws_crit(j))/dtime)
-          END IF
-          ! drainage is limited by the soil moisture within the layer and ice impedence
-          drain_sl(j) = ice_impede(j) * MIN(drain_sl(j) * dtime, (wtr_soil_sl(j,i) - ws_rsdl_sl(j,i)))
-        ELSE
-          drain_sl(j) = 0._wp
-        END IF
 
-        IF ((.NOT. ltpe_closed) .AND. l_latdrain) THEN
-          IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN
-            wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
-            drain_lat(j,i)   = drain_lat(j,i)  + drain_sl(j)  ! When taking this for hydrotiles make sure its no longer added to drainage !
-            drainage(j)      = drainage(j) + drain_sl(j)      ! and add it to the total drainage
-          END IF
-        END IF                                       ! no drainage for TPE closed case
-        !
-        !> Drainage pt.2b --- Drainage from supersaturated, frozen soils
-        !  The equation is essentially a dummy and an actual formula is needed
-        IF (l_hydro_q .AND. ice_impede(j) < 0.5_wp .AND. l_frzdrain) THEN         
-          ! Horizontal flow on top of the frozen soil fraction - comarativly fast ?
-          ws_free(j)           = MAX(field_cap_sl_ni(j,i) * zwdfre, EPSILON(1._wp))  ! soil moisture above which drainage strongly increases
-          IF (wtr_soil_sl(j,i) > ws_free(j)) THEN
-            IF (wsat_sl_ni(j,i) > ws_free(j)) THEN
-              drain_crit(j)      = (zdrmax-zdrmin) * ((wtr_soil_sl(j,i) - ws_free(j)) / (wsat_sl_ni(j,i) - ws_free(j)))**zdrexp
-            ELSE
-              drain_crit(j)      = zdrmax - zdrmin             
+          IF ((.NOT. ltpe_closed) .AND. l_latdrain) THEN
+            IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN
+              wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
+              drain_lat(j,i)   = drain_lat(j,i)  + drain_sl(j)  ! When taking this for hydrotiles make sure its no longer added to drainage !
+              drainage(j)      = drainage(j) + drain_sl(j)      ! and add it to the total drainage
             END IF
-            drain_sl(j)          = MIN(dtime* MAX(hyd_cond_sat_sl(j,i),drain_crit(j)), wtr_soil_sl(j,i) - ws_free(j))
-            drain_frozen(j,i)    = drain_frozen(j,i)   + drain_sl(j)
-            drainage(j)          = drainage(j)         + drain_sl(j)   ! and add it to the total drainage
-            wtr_soil_sl(j,i)     = wtr_soil_sl(j,i)    - drain_sl(j)   ! remove drainage of the layer from soil moisture
+          END IF                                       ! no drainage for TPE closed case
+          !
+          !> Drainage pt.2b --- Drainage from supersaturated, frozen soils
+          !  The equation is essentially a dummy and an actual formula is needed
+          IF (l_hydro_q .AND. ice_impede(j) < 0.5_wp .AND. l_frzdrain) THEN
+            ! Horizontal flow on top of the frozen soil fraction - comarativly fast ?
+            ws_free(j)           = MAX(field_cap_sl_ni(j,i) * zwdfre, EPSILON(1._wp))  ! soil moisture above which drainage strongly increases
+            IF (wtr_soil_sl(j,i) > ws_free(j)) THEN
+              IF (wsat_sl_ni(j,i) > ws_free(j)) THEN
+                drain_crit(j)      = (zdrmax-zdrmin) * ((wtr_soil_sl(j,i) - ws_free(j)) / (wsat_sl_ni(j,i) - ws_free(j)))**zdrexp
+              ELSE
+                drain_crit(j)      = zdrmax - zdrmin
+              END IF
+              drain_sl(j)          = MIN(dtime* MAX(hyd_cond_sat_sl(j,i),drain_crit(j)), wtr_soil_sl(j,i) - ws_free(j))
+              drain_frozen(j,i)    = drain_frozen(j,i)   + drain_sl(j)
+              drainage(j)          = drainage(j)         + drain_sl(j)   ! and add it to the total drainage
+              wtr_soil_sl(j,i)     = wtr_soil_sl(j,i)    - drain_sl(j)   ! remove drainage of the layer from soil moisture
+            END IF
           END IF
+        ELSE
+!          ws_free(j) = MAX(field_cap_sl_ni(j,i) * zwdfre, EPSILON(1._wp))  ! soil moisture above which drainage strongly increases
+!          ! 1.) Caluclate drainage for all soils
+!          drain_sl(j) = MIN(ice_impede(j) * hyd_cond_sl(j,i) * SIN(slope(i)*pi/2._wp) * dtime, MAX(0._wp, wtr_soil_sl(j,i)-ws_rsdl_sl(j,i)))
+          drain_sl(j) = MIN(hyd_cond_sl(j,i) * SIN(slope(i)*pi/2._wp) * dtime, MAX(0._wp, wtr_soil_sl(j,i)-ws_rsdl_sl(j,i)))
+          IF ((.NOT. ltpe_closed) .AND. l_latdrain) THEN
+            IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN
+              wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
+              drain_lat(j,i)   = drain_lat(j,i)  + drain_sl(j)  ! When taking this for hydrotiles make sure its no longer added to drainage !
+              drainage(j)      = drainage(j) + drain_sl(j)      ! and add it to the total drainage
+            END IF
+          END IF
+!          !2.) Supersaturated soils
+!          IF (wtr_soil_sl(j,i) > ws_free(j)) THEN        ! drainage occurs only with mobile water
+!            IF (ws_free(j) > ws_rsdl_sl(j,i)) THEN
+!              drain_sl(j) = MIN(MAX(0._wp, (hyd_cond_sat_sl(j,i) - hyd_cond_sl(j,i)) * SIN(slope(i)*pi/2._wp)  * dtime), &
+!                          &     MAX(0._wp, wtr_soil_sl(j,i)-field_cap_sl_ni(j,i)))
+!              IF ((.NOT. ltpe_closed) .AND. l_latdrain) THEN
+!                IF (wtr_soil_sl(j,i) > ws_rsdl_sl(j,i)) THEN
+!                  wtr_soil_sl(j,i) = wtr_soil_sl(j,i) - drain_sl(j) ! remove drainage of the layer from soil moisture
+!                  drain_frozen(j,i)= drain_frozen(j,i)   + drain_sl(j)
+!                  drainage(j)      = drainage(j) + drain_sl(j)      ! and add it to the total drainage
+!                END IF
+!              END IF
+!            END IF
+!          END IF
         END IF
       END DO
 

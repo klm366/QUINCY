@@ -80,7 +80,9 @@ MODULE mo_hydro_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
-      & oro_stddev              !< Standard deviation of orography
+      & oro_stddev,           & !< Standard deviation of orography
+      & macro_slope,          & !< Standard deviation of orography
+      & micro_slope             !< Standard deviation of orography
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -324,6 +326,7 @@ CONTAINS
       & t_cf('runoff_retention', 'm (water equivalent)', 'Runoff retention reservoir'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
       & output_level=BASIC, initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! Total evapotranspiration, including sublimation
@@ -444,6 +447,7 @@ CONTAINS
       & t_cf('latdrain_retention', 'kg m-2 s-1', 'Retention reservoir for lateral drainage'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
       & loutput=.TRUE., output_level=BASIC,                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
@@ -538,6 +542,24 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'micro_slope', mem%micro_slope,                        &
+      & hgrid, surface,                                                              &
+      & t_cf('micro_slope', '/', 'micro_slope'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'macro_slope', mem%macro_slope,                        &
+      & hgrid, surface,                                                              &
+      & t_cf('macro_slope', '/', 'macro_slope'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.01_wp )
 
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
