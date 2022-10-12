@@ -76,10 +76,10 @@ MODULE mo_hd_memory_class
       w_overl_res     , &  !< overland reservoir water content [m] 
       w_river_res_old , &  !< river reservoir water content [m]
       w_overl_res_old , &  !< overland reservoir water content [m]
-      fract_river     , &  !< river reservoir wetskin fraction [m]
-      fract_overl     , &  !< overland reservoir wetskin fraction [m]
-      volume_river_seas_mean, &  !< month mean river water volume storage [m3]
-      volume_overl_seas_mean, &  !< month mean overland water volume storage [m3]
+      fract_river     , &  !< river reservoir wetskin fraction [-]
+      fract_overl     , &  !< overland reservoir wetskin fraction [-]
+      volume_river_seas_mean, &  !< month mean river water volume storage [m]
+      volume_overl_seas_mean, &  !< month mean overland water volume storage [m]
       local_budget    , &  !< total HD reservoir content
       local_fluxes    , &  !< grid cell in- and outflow
       local_wbal_error, &  !< grid cell water balance error
@@ -96,9 +96,9 @@ MODULE mo_hd_memory_class
       riverflow_res,          &  !< content of groundflow reservoir cascade
       volumes_lake,           &  !< lake volumes from lookup table [m3]
       areas_lake,             &  !< lake areas from looup table [m2]
-      heights_lake,           &  !< lake heights from loopup tbale [m]
-      volume_river_seas,      &  !< lake water volume storage [m3]
-      volume_overl_seas,      &  !< lake water volume storage [m3]      
+      heights_lake,           &  !< lake heights from loopup table [m]
+      volume_river_seas,      &  !< lake water volume storage [m]
+      volume_overl_seas,      &  !< lake water volume storage [m]      
       outflow_min                !< outflow minimum height [m]
 
     ! Diagnostic global land means/sums e.g. for monitoring (only available with ICON)
@@ -253,7 +253,7 @@ CONTAINS
 
      CALL mem%Add_var( 'inflow_outlet', mem%inflow_outlet,                   &
       & hgrid, surface,                                                      &
-      & t_cf('inflow_outlet', 'm3', 'outlet outflow to HD'),                 &
+      & t_cf('inflow_outlet', 'm3/s', 'outlet outflow to HD'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -261,7 +261,7 @@ CONTAINS
 
      CALL mem%Add_var( 'outflow_outlet', mem%outflow_outlet,                 &
       & hgrid, surface,                                                      &
-      & t_cf('outflow_outlet', 'm3', 'lake outflow to outlet'),              &
+      & t_cf('outflow_outlet', 'm3/s', 'lake outflow to outlet'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -308,7 +308,7 @@ CONTAINS
 
      CALL mem%Add_var( 'inflow_lake', mem%inflow_lake,                       &
       & hgrid, surface,                                                      &
-      & t_cf('inflow_lake', 'm3', 'lake inflow to neighbor grid cell'),      &
+      & t_cf('inflow_lake', 'm3/s', 'lake inflow to neighbor grid cell'),      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -316,7 +316,7 @@ CONTAINS
 
      CALL mem%Add_var( 'outflow_lake', mem%outflow_lake,                     &
       & hgrid, surface,                                                      &
-      & t_cf('outflow_lake', 'm3', 'lake outflow to neighbor grid cell'),    &
+      & t_cf('outflow_lake', 'm3/s', 'lake outflow to neighbor grid cell'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -324,7 +324,7 @@ CONTAINS
 
      CALL mem%Add_var( 'overflow_lake', mem%overflow_lake,                   &
       & hgrid, surface,                                                      &
-      & t_cf('overflow_lake', 'm3', 'lake outflow to neighbor grid cell'),   &
+      & t_cf('overflow_lake', 'm3/s', 'lake outflow to neighbor grid cell'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -464,7 +464,7 @@ CONTAINS
 
     CALL mem%Add_var( 'volume_river_seas_mean', mem%volume_river_seas_mean,  &
       & hgrid, surface,                                                      &
-      & t_cf('volume_river_seas_mean', 'm3', 'seas mean river volume'),      &
+      & t_cf('volume_river_seas_mean', 'm', 'seas mean river volume'),      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -472,7 +472,7 @@ CONTAINS
 
     CALL mem%Add_var( 'volume_overl_seas_mean', mem%volume_overl_seas_mean,  &
       & hgrid, surface,                                                      &
-      & t_cf('volume_overl_seas_mean', 'm3', 'seas mean overland volume'),   &
+      & t_cf('volume_overl_seas_mean', 'm', 'seas mean overland volume'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -565,21 +565,21 @@ CONTAINS
 
     CALL mem%Add_var( 'areas_lake', mem%areas_lake,                          &
       & hgrid, dl_l,                                                         &
-      & t_cf('areas_lake', 'm3', 'lookup lake areas'),                       &
+      & t_cf('areas_lake', 'm2', 'lookup lake areas'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &           
       & prefix, suffix,                                                      &           
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )                                     
 
     CALL mem%Add_var( 'heights_lake', mem%heights_lake,                      &
       & hgrid, dl_l,                                                         &
-      & t_cf('heights_lake', 'm3', 'lookup lake heights'),                   &
+      & t_cf('heights_lake', 'm', 'lookup lake heights'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &           
       & prefix, suffix,                                                      &           
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )  
 
     CALL mem%Add_var( 'volume_river_seas', mem%volume_river_seas,            &
       & hgrid, day_1y,                                                       &
-      & t_cf('volume_river_seas', 'm3', 'lake minum volume'),                &
+      & t_cf('volume_river_seas', 'm', 'lake minum volume'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &
@@ -587,7 +587,7 @@ CONTAINS
 
     CALL mem%Add_var( 'volume_overl_seas', mem%volume_overl_seas,            &
       & hgrid, day_1y,                                                       &
-      & t_cf('volume_overl_seas', 'm3', 'lake minum volume'),                &
+      & t_cf('volume_overl_seas', 'm', 'lake minum volume'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &

@@ -281,7 +281,7 @@ CONTAINS
       local_budget_old(:) = local_budget(:)
 
       IF (model%config%use_wetskins) THEN
-        ! reservoir wetskin evaporation [m3]
+        ! reservoir evaporation: unit conversions [m] -> [m3]
         CALL evapo_wetskin (w_river(:)*area, veg_fract(:), nc, riverflow_res(:,:))
         CALL evapo_wetskin (w_overl(:)*area, veg_fract(:), nc, overlflow_res(:,:))
       ENDIF

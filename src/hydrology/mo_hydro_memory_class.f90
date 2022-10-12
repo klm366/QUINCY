@@ -101,7 +101,7 @@ MODULE mo_hydro_memory_class
 
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
-      !& evapo_soil,           & !< Evaporation from ground                                                  [kg m-2 s-1]
+      !& evapo_soil,           & !< Evaporation from ground                                                 [kg m-2 s-1]
       & evapo_skin,           & !< Evaporation from skin reservoir                                          [kg m-2 s-1]
       & evapo_river,          & !< Evaporation from skin reservoir                                          [m]
       & evapo_overl,          & !< Evaporation from skin reservoir                                          [m]
