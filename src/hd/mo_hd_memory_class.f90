@@ -52,17 +52,21 @@ MODULE mo_hd_memory_class
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
+      outflow_outlet  , &  !< outlet outflow from lake [m3/s]
+      inflow_outlet   , &  !< lake outlet outflow to HD [m3/s]
       discharge_lake  , &  !< lake discharge (storage changes) [m3/s]
       runoff_lake     , &  !< lake inflow from over lake runoff (P-E) [m3/s]
-      riverflow_lake , &  !< river discharge from upstream cells into lake [m3/s]
-      overflow_lake   , &  !< new lake outflow to outlet [m3/s]
-      drainage_lake   , &  !< old lake outflow to outlet [m3/s]
-      lake_inflow     , &  !< lake inflow from neighbor grid cell [m3/s]
-      lake_outflow    , &  !< lake outflow to neighbor grid cell [m3/s]
+      riverflow_lake  , &  !< river discharge into lake [m3/s]
+      overlflow_lake  , &  !< overland flow into lake [m3/s]
+      baseflow_lake   , &  !< base flow discharge into lake [m3/s]
+      inflow_lake     , &  !< lake inflow from neighbor grid cell [m3/s]
+      outflow_lake    , &  !< lake outflow to neighbor grid cell [m3/s]
+      overflow_lake   , &  !< lake overflow outflow [m3/s]
+      water_budget_lake, &  !< lake water budget [m3/s]
       volume_lake     , &  !< lake water volume storage [m3]
       area_lake       , &  !< lake area of endorheic lakes [m^2]
       height_lake     , &  !< lake height of endorheic lakes [m]
-      fract_lake       , &  !< lake fraction of endorheic lakes [-]
+      fract_lake      , &  !< lake fraction of endorheic lakes [-]
       volume_lake_max , &  !< maximum lake water volume of endorheic lakes [m^3]
       height_oro_min  , &  !< minimum elevation within ICON grid cell [m]
       height_dyn      , &  !< minimum dynamic height within ICON grid cell [m]
@@ -228,6 +232,7 @@ CONTAINS
       & t_cf('outflow_runoff', 'm3/s', 'grid cell outflow due to runoff'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & output_level=BASIC,                                                              &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'outflow_drainage', mem%outflow_drainage,                          &
@@ -235,6 +240,7 @@ CONTAINS
       & t_cf('outflow_drainage', 'm3/s', 'grid cell outflow due to drainage'),           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & output_level=BASIC,                                                              &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'outflow_rivers', mem%outflow_rivers,                              &
@@ -242,6 +248,23 @@ CONTAINS
       & t_cf('outflow_rivers', 'm3/s', 'grid cell outflow due to rivers'),               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & output_level=BASIC,                                                              &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'inflow_outlet', mem%inflow_outlet,                   &
+      & hgrid, surface,                                                      &
+      & t_cf('inflow_outlet', 'm3', 'outlet outflow to HD'),                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'outflow_outlet', mem%outflow_outlet,                 &
+      & hgrid, surface,                                                      &
+      & t_cf('outflow_outlet', 'm3', 'lake outflow to outlet'),              &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
      CALL mem%Add_var( 'discharge_lake', mem%discharge_lake,                 &
@@ -249,7 +272,6 @@ CONTAINS
       & t_cf('discharge_lake', 'm3/s', 'lake discharge'),                    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
      CALL mem%Add_var( 'runoff_lake', mem%runoff_lake,                       &
@@ -268,33 +290,49 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
+     CALL mem%Add_var( 'overlflow_lake', mem%overlflow_lake,                 &
+      & hgrid, surface,                                                      &
+      & t_cf('overlflow_lake', 'm3/s', 'overland flow into lake'),           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'baseflow_lake', mem%baseflow_lake,                   &
+      & hgrid, surface,                                                      &
+      & t_cf('baseflow_lake', 'm3/s', 'baseflow into lake'),                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'inflow_lake', mem%inflow_lake,                       &
+      & hgrid, surface,                                                      &
+      & t_cf('inflow_lake', 'm3', 'lake inflow to neighbor grid cell'),      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+     CALL mem%Add_var( 'outflow_lake', mem%outflow_lake,                     &
+      & hgrid, surface,                                                      &
+      & t_cf('outflow_lake', 'm3', 'lake outflow to neighbor grid cell'),    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
      CALL mem%Add_var( 'overflow_lake', mem%overflow_lake,                   &
       & hgrid, surface,                                                      &
-      & t_cf('overflow_lake', 'm3', 'lake outflow to outlet'),               &
+      & t_cf('overflow_lake', 'm3', 'lake outflow to neighbor grid cell'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-     CALL mem%Add_var( 'drainage_lake', mem%drainage_lake,                 &
+    CALL mem%Add_var( 'water_budget_lake', mem%water_budget_lake,            &
       & hgrid, surface,                                                      &
-      & t_cf('drainage_lake', 'm3', 'lake outflow to outlet'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
-
-     CALL mem%Add_var( 'lake_inflow', mem%lake_inflow,                       &
-      & hgrid, surface,                                                      &
-      & t_cf('lake_inflow', 'm3', 'lake inflow to neighbor grid cell'),      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
-
-     CALL mem%Add_var( 'lake_outflow', mem%lake_outflow,                     &
-      & hgrid, surface,                                                      &
-      & t_cf('lake_outflow', 'm3', 'lake outflow to neighbor grid cell'),    &
+      & t_cf('water_budget_lake', 'm3/s', 'lake volume changes'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -340,7 +378,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL mem%Add_var( 'height_oro_min', mem%height_oro_min,                              &
+    CALL mem%Add_var( 'height_oro_min', mem%height_oro_min,                  &
       & hgrid, surface,                                                      &
       & t_cf('height_oro_min', 'm', 'minimum elevation within grid cell'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -429,6 +467,7 @@ CONTAINS
       & t_cf('volume_river_seas_mean', 'm3', 'seas mean river volume'),      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp)
 
     CALL mem%Add_var( 'volume_overl_seas_mean', mem%volume_overl_seas_mean,  &
@@ -436,6 +475,7 @@ CONTAINS
       & t_cf('volume_overl_seas_mean', 'm3', 'seas mean overland volume'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
+      & output_level=BASIC,                                                  &
       & initval_r=0.0_wp)
 
     CALL mem%Add_var( 'local_budget', mem%local_budget,                                  &
@@ -497,6 +537,7 @@ CONTAINS
       & t_cf('overlflow_res', '', 'content of the overland flow reservoir'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & output_level=BASIC,                                                              &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'baseflow_res', mem%baseflow_res,                                  &
@@ -504,6 +545,7 @@ CONTAINS
       & t_cf('baseflow_res', '', 'content of the baseflow reservoir'),                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & output_level=BASIC,                                                              &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'riverflow_res', mem%riverflow_res,                                &
@@ -511,6 +553,7 @@ CONTAINS
       & t_cf('riverflow_res', '', 'content of the riverflow reservoir'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
+      & output_level=BASIC,                                                              &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'volumes_lake', mem%volumes_lake,                      &
@@ -534,12 +577,12 @@ CONTAINS
       & prefix, suffix,                                                      &           
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )  
 
-    CALL mem%Add_var( 'volume_river_seas', mem%volume_river_seas,                      &
+    CALL mem%Add_var( 'volume_river_seas', mem%volume_river_seas,            &
       & hgrid, day_1y,                                                       &
       & t_cf('volume_river_seas', 'm3', 'lake minum volume'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                                 &
+      & lrestart=.TRUE.,                                                     &
       & initval_r=0.0_wp)
 
     CALL mem%Add_var( 'volume_overl_seas', mem%volume_overl_seas,            &
@@ -547,7 +590,7 @@ CONTAINS
       & t_cf('volume_overl_seas', 'm3', 'lake minum volume'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & lrestart=.TRUE.,                                                                 &
+      & lrestart=.TRUE.,                                                     &
       & initval_r=0.0_wp)                      
 
     CALL mem%Add_var( 'outflow_min', mem%outflow_min,                        &
