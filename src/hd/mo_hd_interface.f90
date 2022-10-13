@@ -983,7 +983,7 @@ CONTAINS
       discharge_lake(:,:) =  riverflow_lake(:,:) + overlflow_lake(:,:) + baseflow_lake(:,:) + runoff_lake(:,:)
       ! lake water storage [m3]
       water_budget_lake(:,:)  = riverflow_lake(:,:) + overlflow_lake(:,:) + baseflow_lake(:,:) + runoff_lake(:,:)
-      volume_lake(:,:) = volume_lake(:,:) + water_budget_lake(:,:)
+      volume_lake(:,:) = volume_lake(:,:) + water_budget_lake(:,:) * steplen
 
       ! global integrals
       global_discharge       = global_sum_array(discharge(:,:)*in_domain(:,:))
