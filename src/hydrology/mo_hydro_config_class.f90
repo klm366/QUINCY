@@ -324,4 +324,3 @@ CONTAINS
 
   END SUBROUTINE Init_hydro_config
 
-#endif

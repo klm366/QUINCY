@@ -2624,4 +2624,3 @@ CONTAINS
   END SUBROUTINE get_soilhyd_properties
 
 #endif
-END MODULE mo_hydro_process

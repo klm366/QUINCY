@@ -223,6 +223,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
+    LOGICAL,  POINTER          :: is_in_domain(:,:) ! T: cell in domain (not halo)
     TYPE(t_input_file) :: input_file
     INTEGER :: isoil, nproma, nblks, nsoil
 
