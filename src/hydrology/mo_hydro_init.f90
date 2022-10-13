@@ -16,7 +16,7 @@ MODULE mo_hydro_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message, message_text, warning
+  USE mo_exception,          ONLY: message, message_text, warning, finish
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -104,7 +104,7 @@ MODULE mo_hydro_init
       & root_depth       (:,:) => NULL(), &
       & weq_snow_soil    (:,:) => NULL(), &
       & wtr_soil_sl    (:,:,:) => NULL(), &
-      & fract_org_sl    (:,:,:) => NULL(), &
+      & fract_org_sl   (:,:,:) => NULL(), &
       & fr_sand          (:,:) => NULL(), &
       & fr_silt          (:,:) => NULL(), &
       & fr_clay          (:,:) => NULL(), &
@@ -196,8 +196,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
+    LOGICAL,  POINTER          :: is_in_domain(:,:) ! T: cell in domain (not halo)
     TYPE(t_input_file) :: input_file
-    INTEGER :: i, isoil, nproma, nblks, nsoil
+    INTEGER :: isoil, nproma, nblks, nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
@@ -215,6 +216,7 @@ CONTAINS
     nblks  = grid%Get_nblks()
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 
     ALLOCATE( &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
@@ -314,7 +316,8 @@ CONTAINS
         & variable_name='root_depth',                &
         & fill_array = hydro_init_vars%root_depth)
         hydro_init_vars%root_depth = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-        hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)  ! Temporary fix (root depth in bc file is sometimes larger then soil depth)
+        hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)  ! Temporary fix:
+        !  (root depth in bc file is sometimes larger then soil depth)
 
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
         ! Volumetric soil porosity
@@ -345,7 +348,27 @@ CONTAINS
         ptr_2D => input_file%Read_2d(                  &
           & variable_name='moisture_pot',              &
           & fill_array = hydro_init_vars%matrix_pot)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp)
+        ! @todo Currently, the matrix potential is given with a positiv sign in the bc data while
+        !       it should be negativ from a soil physics perspective and is expected as such from
+        !       the soil hydrology routine. As matrix potential should be corrected in the bc data
+        !       at some point in the future, we check here for negative or positive values and
+        !       convert as necessary.
+        WHERE(.NOT. is_in_domain(:,:) .OR. ABS(ptr_2D(:,:)) > 1.0e+20_wp)
+          ! Exclude values outside of the domain and (standard) missing values
+          ptr_2D(:,:) = 0._wp
+        ENDWHERE
+        IF (ALL(ptr_2D(:,:) < 1.0e-10_wp)) THEN
+          ! Correct: all values are negative
+          ptr_2D(:,:) = MERGE(ptr_2D(:,:), -0.2_wp, ptr_2D(:,:) <= 0._wp)
+        ELSE IF (ALL(ptr_2D(:,:) > -1.0e-10_wp)) THEN
+          ! False: all values are positive --> convert to negative values
+          ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp) * (-1._wp)
+        ELSE
+          ! Totally wrong: dataset contains positive and negativ values
+          WRITE (message_text,*) 'Found positive and negative values in soil moisture matrix potential: ', &
+            & MINVAL(ptr_2D(:,:)),' <-> ',MAXVAL(ptr_2D(:,:))
+          CALL finish (TRIM(routine), message_text)
+        END IF
 
         ! Exponent B in Clapp and Hornberger
         ptr_2D => input_file%Read_2d(                  &
@@ -486,20 +509,6 @@ CONTAINS
            hydro_init_vars%bclapp(:,:))
 
       END IF ! l_soil_texture
-
-      CALL input_file%Close()
-
-    END IF
-
-    IF (tile%contains_vegetation) THEN
-
-      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_filename), model%grid_id)
-
-      ptr_2D => input_file%Read_2d(   &
-        & variable_name='root_depth', &
-        & fill_array = hydro_init_vars%root_depth)
-      hydro_init_vars%root_depth = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-      hydro_init_vars%root_depth = MIN(hydro_init_vars%root_depth, hydro_init_vars%soil_depth)  ! Temporary fix (root depth sometimes larger then soil depth)
 
       CALL input_file%Close()
 
@@ -766,8 +775,6 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_hydro_constants,     ONLY: vol_porosity_org_top, vol_field_cap_org_top, vol_p_wilt_org_top, &
-                                  &   vol_porosity_org_below, vol_field_cap_org_below, vol_p_wilt_org_below
     USE mo_hydro_util,          ONLY: get_amount_in_rootzone
     USE mo_util,                ONLY: ifs2soil
 
@@ -823,14 +830,6 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     soil_w => Get_vgrid('soil_depth_water')
-    nsoil = soil_w%n_levels
-
-    ! quincy_jsbach: will be removed and re-implemented
-    !dsl4jsb_Get_config(SSE_)
-    !grid   => Get_grid(model%grid_id)
-    !nproma = grid%Get_nproma()
-    !nblks  = grid%Get_nblks()
-    ! quincy_jsbach<<<
 
     ! Get hydrology config
     dsl4jsb_Get_config(HYDRO_)
@@ -950,7 +949,7 @@ CONTAINS
       dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl) = MAX(0._wp,                                          &
         & dsl4jsb_var3D_onDomain(HYDRO_, vol_p_wilt_sl)    * dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)  &
         & - dsl4jsb_var3D_onDomain(HYDRO_, ice_soil_sl))
-      
+
       ! @todo: The interpolation of the initial layer moisture from T63 to the ICON grid leads to positive values where the
       ! water content should actually be zero. Therefore, make sure that water content is not larger than field capacity.
 
@@ -980,7 +979,7 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), 0.2_wp, &
           & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp )
       IF (dsl4jsb_Config(HYDRO_)%w_soil_limit > 0._wp) THEN
-        dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MIN( & 
+        dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MIN( &
         & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
@@ -1015,35 +1014,6 @@ CONTAINS
 
       !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone),     &
       !$acc             dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel))
-      
-      ! quincy_jsbach: will be removed and re-implemented
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_fc),  &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_pwp))
-      !IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      !  ! adjust initial water amount to prescribed theta
-      !  ! wtr_rootzone(:)        = wtr_rootzone_pwp(:) + & 
-      !  !                         dsl4jsb_Config(SSE_)%soil_theta_prescribe * (wtr_rootzone_fc(:) - wtr_rootzone_pwp(:)) 
-      !  wtr_rootzone_theta(:,:) = dsl4jsb_Config(SSE_)%soil_theta_prescribe
-      !  ! in case there is no water in the root zone
-      !  WHERE (MIN(wtr_rootzone_fc(:,:), wtr_rootzone(:,:)) > eps8)
-      !    rootzone_wpot(:,:) = saxtonA(:,1,:) * &
-      !      & (MIN(wtr_rootzone_fc(:,:), wtr_rootzone(:,:)) / root_depth(:,:)) ** saxtonB(:,1,:)
-      !  ELSEWHERE
-      !    rootzone_wpot(:,:) = 0.0_wp
-      !  ENd WHERE
-      !  
-      !  !> 7.2 soil water potential per layer
-      !  !! 
-      !  ! in case a soil-layer width (soil_depth_sl) is zero AND wtr_soil_fc_sl & wtr_soil_sl is zero (hlp1 should not become zero)
-      !  ! (it seem that these two are always zero at the same time, i.e., not useing .OR.)
-      !  WHERE((soil_depth_sl(:,:,:) > eps8) .AND. (MIN(wtr_soil_fc_sl(:,:,:), wtr_soil_sl(:,:,:)) > eps8))
-      !    hlp1(:,:,:)          = MIN(wtr_soil_fc_sl(:,:,:), wtr_soil_sl(:,:,:)) / soil_depth_sl(:,:,:)
-      !    soil_wpot_sl(:,:,:) = saxtonA(:,:,:) * hlp1(:,:,:) ** saxtonB(:,:,:)
-      !  ELSEWHERE
-      !    soil_wpot_sl(:,:,:) = 0.0_wp 
-      !  END WHERE
-      !END IF ! quincy
-      ! quincy_jsbach<<<
 
     END IF ! Tile with vegetation
 
@@ -1350,7 +1320,6 @@ CONTAINS
   SUBROUTINE hydro_sanitize_state(tile)
 
     USE mo_util, ONLY: soil_depth_to_layers_2d
-    USE mo_hydro_process, ONLY: zfcmin
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -1358,6 +1327,7 @@ CONTAINS
 
     !> If water content exceeds field capacity by more than this factor prior to sanitization, a warning is issued.
     REAL(wp), PARAMETER :: warn_level_weq_soil_excess = 1.05_wp
+    REAL(wp), PARAMETER :: zfcmin = 1.e-10_wp              ! minimum field capacity (or rather epsilon?)
 
     INTEGER :: maxloc_weq_soil_excess(3)
     TYPE(t_jsb_vgrid), POINTER :: soil_w

@@ -20,6 +20,15 @@ MODULE mo_hydro_constants
   IMPLICIT NONE
   PUBLIC
 
+  INTEGER, PARAMETER ::                    &
+    ! Identifiers used for the soil hydrology model
+    & BooksCorey_      = 1,                &
+    & ClappHornberger_ = 2,                &
+    & VanGenuchten_    = 3,                &
+    ! Identifiers used for the interpolation scheme
+    & Upstream_        = 1,                &
+    & Arithmetic_      = 2
+
   REAL(wp), PARAMETER ::                   &
     ! Parameters used for snow cover fraction
     & wsn2fract_eps    = 1.E-12_wp,        &
@@ -55,7 +64,7 @@ MODULE mo_hydro_constants
     & vol_p_wilt_org_top      = 0.255_wp,      & !< volumetricwilting point of organic layer [m/m]
     & hyd_cond_sat_org_top    = 0.0001_wp,     & !< Saturated hydraulic conductivity of organic part of soil layer [m/s]
     & bclapp_org_top          = 4._wp,         & !< Exponent b in Clapp and Hornberger of organic part of soil layer  []
-    & matrix_pot_org_top      = 0.1_wp,        & !< Matrix potential of organic part of soil layer [m]
+    & matrix_pot_org_top      = -0.1_wp,       & !< Matrix potential of organic part of soil layer [m]
                                                  ! (values (roughy) from Chadburn 2022)
     & pore_size_index_org_top = 0.7_wp,        & !< Pore size distribution index of organic part of soil layer []
     ! Parameters for organic soil component (deep layers)
@@ -64,12 +73,11 @@ MODULE mo_hydro_constants
     & vol_p_wilt_org_below    = 0.255_wp,      & !< volumetricwilting point of organic layer [m/m]
     & hyd_cond_sat_org_below  = 0.00000001_wp, & !< Saturated hydraulic conductivity of organic part of soil layer [m/s]
     & bclapp_org_below        = 8._wp,         & !< Exponent b in Clapp and Hornberger of organic part of soil layer  []
-    & matrix_pot_org_below    = 1.0_wp,        & !< Matrix potential of organic part of soil layer [m]
+    & matrix_pot_org_below    = -1.0_wp,       & !< Matrix potential of organic part of soil layer [m]
                                                  ! (values (roughy) from Chadburn 2022)
     & pore_size_index_org_below = 0.7_wp,      & !< Pore size distribution index of organic part of soil layer []
-    & thresh_org          = 0.5_wp,            & !< Threshold of organic material above which connected flow pathways form
-
-    & beta_perc           = 0.139_wp             !< Parameter from percolation theory
+    & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
+    & beta_perc               = 0.139_wp         !< Parameter from percolation theory
 
   ! quincy_jsbach: will be removed and re-implemented >>>
   ! constants in pedo-transfer functions according to Saxton & Rawls 2006
