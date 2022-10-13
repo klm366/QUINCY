@@ -1079,6 +1079,7 @@ CONTAINS
 ! pdv >
     LOGICAL  :: l_latdrain
     LOGICAL  :: l_frzdrain
+    LOGICAL  :: l_pf_soil(options%nc)
 ! pdv <
 
     INTEGER  :: iblk, ics, ice, nc, i
@@ -1192,6 +1193,20 @@ CONTAINS
       l_latdrain = .TRUE.
     END IF
     !pdv <
+    !pdv >
+    ! Simple diagnostic for permafrost reaching into the soil above the berock
+    ! impeding fluxes into the "groundwater" 
+    dsl4jsb_Get_var2D_onChunk(SSE_,    thaw_depth_max_ym1)       ! in
+    DO i = 1, nc
+      IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth below soil depth ... 
+       &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! ... and not at maximum.
+        l_pf_soil(i)=.TRUE.
+      ELSE
+        l_pf_soil(i)=.FALSE.
+      END IF
+    END DO
+    !pdv <
+
 
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
@@ -1206,7 +1221,7 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%l_infiltnew,                     &
       & dsl4jsb_Config(HYDRO_)%l_hydro_q,                       &
       & l_latdrain,                                             &
-      & l_frzdrain,                                          &
+      & l_frzdrain,                                             &
       & dsl4jsb_Config(HYDRO_)%manning_n,                       &
       & dsl4jsb_Config(HYDRO_)%dt_sat,                          &
       & max_slope_tile,                                         &
@@ -1215,6 +1230,7 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%i_infil,                         &
       & dsl4jsb_Config(HYDRO_)%i_testing1,                      &
       & dsl4jsb_Config(HYDRO_)%i_testing2,                      &
+      & l_pf_soil(:),                                           &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       &                                fract_org_sl  (:,:),     &
@@ -1258,8 +1274,8 @@ CONTAINS
 
     !pdv >
     ! For testing only
-    ! on macroscale, lateral drainage in unfrozen soils is assumed to 
-    ! reach bedrock boundary before reaching the lower tile.
+    ! l_macrotrans_subsurf == .false. -> on macroscale, lateral drainage in unfrozen soils
+    ! is assumed to reach bedrock boundary before reaching the lower tile.
     ! In frozen soils lateral drainage can not reach bedrock boundary and 
     ! flows to lower (macroscale) tile, however this is only the case if
     ! the permafrost extends upwards into the soil above bedrock
@@ -1270,8 +1286,7 @@ CONTAINS
     IF (tile%contains_upland .AND. tile%contains_depression) THEN
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_macrotrans_subsurf) THEN
         DO i = 1, nc
-          IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &
-           &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! For cells where thaw depth is below modeld depth
+          IF (l_pf_soil(i)) THEN ! PF in soil above bedrock
             latdrain_sl(i,:) = drain_lat_sl(i,:) + drain_perm_sl(i,:)
           ELSE
              latdrain_sl(i,:) = 0._wp
