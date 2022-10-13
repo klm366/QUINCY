@@ -322,7 +322,7 @@ CONTAINS
       & t_cf('infilt_over', 'kg m-2 s-1', 'Surface layer overflow'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE., output_level=BASIC,                                        &
+      & lrestart=.FALSE.                                                             &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'drainage', mem%drainage,                                      &
@@ -339,7 +339,7 @@ CONTAINS
       & t_cf('drain_rock', 'kg m-2 s-1', 'Bottom drainage'),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE., output_level=BASIC,                                        &
+      & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'drain_lat', mem%drain_lat,                                    &
@@ -347,7 +347,7 @@ CONTAINS
       & t_cf('drain_lat', 'kg m-2 s-1', 'Subsurface lateral drainage'),              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE., output_level=BASIC,                                        &
+      & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
@@ -708,8 +708,7 @@ CONTAINS
         & t_cf('wtr_soilhyd_res', 'm3/(time step)', 'Vertical transport residual'),    &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & lrestart=.FALSE., output_level=BASIC,                                        &
-        & initval_r=0.0_wp )
+        & lrestart=.FALSE., initval_r=0.0_wp )
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,213, grib_bits)
