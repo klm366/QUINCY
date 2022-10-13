@@ -837,9 +837,9 @@ CONTAINS
         END IF
       END DO
 
-      ! CALL vert_transport(nc, n, d, alpha, dzf, top_bound, bot_bound, S, C, P, Q, X_old)
+      ! CALL calc_vertical_transport(nc, n, d, alpha, dzf, top_bound, bot_bound, S, C, P, Q, X_old)
       !   *-bound, S are fluxes i.e. x/sec
-      ws_vol_sl(i,1:nsoil_act(i))  = vert_transport(                    &
+      ws_vol_sl(i,1:nsoil_act(i))  = calc_vertical_transport(           &
                          & nsoil_act(i), dtime, 1._wp,                  &
                          & dsoil(i,1:nsoil_act(i)),                     & ! Layer thickness
                          & (infilt(i) + evapo_soil_sl1(i)) / dtime,     & ! Upper boundary condition
@@ -955,25 +955,28 @@ CONTAINS
       !      this is a very simplistic assumption. For e.g. high resolution simulations it might
       !      be worthwile to consider lateral drainage as a reservoir outflow with a predefined
       !      lagtime to allow for oversaturation of soils.
-      DO j = nsoil, 1, -1
-        ! If maximum moisture is exceeded, add the excess water to lateral drainage
-        IF (wtr_soil_sl(i,j) > wtr_field_cap_sl(i,j)) THEN
-          drain_sl(i)      = wtr_soil_sl(i,j) - wtr_field_cap_sl(i,j) ! Put excess water in lateral drainage
-          wtr_soil_sl(i,j) = wtr_soil_sl(i,j) - drain_sl(i)           ! remove lateral drainage of the layer from soil moisture
-          IF (.NOT. ltpe_closed) THEN
-            ! Add excess water to lateral drainage
-            drain_lat(i,j)   = drain_lat(i,j)  + drain_sl(i)
-          ELSE
-            ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
-            tpe_overflow(i) = tpe_overflow(i) + drain_sl(i)
-          END IF
-        ELSE IF (ltpe_closed) THEN
-          ! refill soil moisture from overflow pool
-          remoist(i)       = MIN(tpe_overflow(i), wtr_field_cap_sl(i,j) - wtr_soil_sl(i,j))
-          wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + remoist(i)
-          tpe_overflow(i)  = tpe_overflow(i) - remoist(i)
-        END IF
-      END DO
+      ! @todo In the current model configuration lateral drainage seems to deteriorate river
+      !      discharge while it has little effect on evapotranspiration. Therefore it is 
+      !      disabled, but this should be revised, e.g. for high resolution simulations.
+      ! DO j = nsoil, 1, -1
+      !   ! If maximum moisture is exceeded, add the excess water to lateral drainage
+      !   IF (wtr_soil_sl(i,j) > wtr_field_cap_sl(i,j)) THEN
+      !     drain_sl(i)      = wtr_soil_sl(i,j) - wtr_field_cap_sl(i,j) ! Put excess water in lateral drainage
+      !     wtr_soil_sl(i,j) = wtr_soil_sl(i,j) - drain_sl(i)           ! remove lateral drainage of the layer from soil moisture
+      !     IF (.NOT. ltpe_closed) THEN
+      !       ! Add excess water to lateral drainage
+      !       drain_lat(i,j)   = drain_lat(i,j)  + drain_sl(i)
+      !     ELSE
+      !       ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
+      !       tpe_overflow(i) = tpe_overflow(i) + drain_sl(i)
+      !     END IF
+      !   ELSE IF (ltpe_closed) THEN
+      !     ! refill soil moisture from overflow pool
+      !     remoist(i)       = MIN(tpe_overflow(i), wtr_field_cap_sl(i,j) - wtr_soil_sl(i,j))
+      !     wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + remoist(i)
+      !     tpe_overflow(i)  = tpe_overflow(i) - remoist(i)
+      !   END IF
+      ! END DO
 
       ! Modification for TPE (open)
       IF (ltpe_open) THEN
@@ -1497,14 +1500,20 @@ CONTAINS
 
   END FUNCTION get_water_stress_factor
 
-  FUNCTION vert_transport(n, dt, alpha, dzf, top_bound, bot_bound, S, C, P, Q, X_old) &
+  FUNCTION calc_vertical_transport(n, dt, alpha, dzf, top_bound, bot_bound, S, C, P, Q, X_old) &
     &      RESULT(X_new)
 
   ! INPUT
   INTEGER, INTENT(in) :: n                          ! number of active soil levels
   REAL(wp), Intent(in):: dt, alpha,            &    ! time step
-                       & top_bound, bot_bound, &    ! boundary conditions
-                       & dzf(n), C(n), S(n), Q(n), P(n), X_old(n)
+                       & top_bound, bot_bound, &    ! fluxes at upper and lower boundary
+                       & dzf(n),               &    ! soil layer thickness 
+                       & C(n),                 &    ! heat capacity if used for heat transport,
+                                                    ! set to 1 for water transport
+                       & S(n),                 &    ! prescribed water/heat change flux per layer
+                       & Q(n),                 &    ! Diffusivity at (upper) layer boundaries
+                       & P(n),                 &    ! Conductivity at (upper) layer boundaries
+                       & X_old(n)                   ! Normalized soil state for every layer
 
   ! OUTPUT
   REAL(wp)           :: X_new(n)
@@ -1545,9 +1554,13 @@ CONTAINS
     END IF
   END DO
 
+  ! This solver uses LU-decomposition to solve the tridiagonal matrix.
+  ! It is based on the routine tridiag (page 43) in the
+  ! Numerical Recipes in Fortran. 2nd Edition, 1992, ISBN 0-521-43064-X
+
   IF( matrix(1,2) .EQ. 0.0) THEN
-    WRITE (message_text,*) 'tridiag: something went terribly wrong ... rewrite equations!', C(1), dzf(1)
-    CALL finish('vert_transport', message_text)
+    WRITE (message_text,*) 'something went terribly wrong ... rewrite equations!', C(1), dzf(1)
+    CALL finish('calc_vertical_transport', message_text)
   END IF
   bet  = matrix(1,2)
   X_new(1) = matrix(1,4)/bet
@@ -1556,7 +1569,7 @@ CONTAINS
     bet    = matrix(j,2) - matrix(j,1) * gam(j)
     IF( bet .EQ. 0.0) THEN
       WRITE (message_text,*) 'tridiag: matrix couldn t be solved !'
-      CALL finish('vert_transport', message_text)
+      CALL finish('calc_vertical_transport', message_text)
     END IF
     X_new(j)   = (matrix(j,4) - matrix(j,1) * X_new(j-1)) / bet
   END DO
@@ -1564,7 +1577,7 @@ CONTAINS
     X_new(j)= X_new(j) - gam(j+1) * X_new(j+1)
   END DO
 
-  END FUNCTION vert_transport
+  END FUNCTION calc_vertical_transport
 
   SUBROUTINE get_conductivies_diffusivities(     &
             & soilhydmodel, interpol_mean,       &
