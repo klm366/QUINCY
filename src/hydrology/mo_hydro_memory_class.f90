@@ -136,7 +136,7 @@ MODULE mo_hydro_memory_class
       & wtr_freeze_sl,        & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
       & ice_melt_sl,          & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
       & drain_lat_sl,         & !< drainage on soil level
-      & drain_perm_sl,        & !< drainage on soil level in frozen soils
+
       & latdrain_sl,          & !< Lateral drainage flux                                                    [kg m-2 s-1]
       & latdrain_retention,   & !< Drainage retention reservoir                                             [m water equivalent]
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
@@ -419,15 +419,6 @@ CONTAINS
     CALL mem%Add_var( 'drain_lat_sl', mem%drain_lat_sl,                              &
       & hgrid, soil_w,                                                               &
       & t_cf('drain_lat_sl', 'kg m-2 s-1', 'Lateral drainage'),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & loutput=.TRUE., output_level=BASIC,                                          &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-   CALL mem%Add_var( 'drain_perm_sl', mem%drain_perm_sl,                             &
-      & hgrid, soil_w,                                                               &
-      & t_cf('drain_perm_sl', 'kg m-2 s-1', 'Drainage frozen soils'),                &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &

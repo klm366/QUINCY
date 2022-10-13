@@ -51,10 +51,6 @@ MODULE mo_hydro_config_class
       & l_organic,           & !< Use organic component of soil layers
       & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0°C
-      & l_soilhydnew,        &
-      & l_infiltnew,         &
-      & l_hydro_q,           &
       & l_macrotrans_subsurf
 
     INTEGER               :: &
@@ -88,8 +84,7 @@ CONTAINS
     REAL(wp)                    :: manning_n, dt_sat, max_slope, max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=10)           :: scheme_stom_cond
-    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
-                                 & l_soilhydnew, l_infiltnew, l_hydro_q, l_macrotrans_subsurf
+    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_macrotrans_subsurf
     INTEGER                     :: i_shm, i_interpol, i_infil, i_testing1, i_testing2
 
     NAMELIST /jsb_hydro_nml/        &
@@ -110,10 +105,6 @@ CONTAINS
       & l_organic,                  &
       & l_socmap,                   &
       & l_glac_in_soil,             &
-      & l_infil_subzero,            &
-      & l_soilhydnew,               & 
-      & l_infiltnew,                &
-      & l_hydro_q,                  &
       & l_macrotrans_subsurf,       &
       & i_shm,                      &
       & i_interpol,                 &
@@ -151,10 +142,6 @@ CONTAINS
     l_organic         = .TRUE.
     l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
-    l_infil_subzero   = .TRUE.
-    l_soilhydnew      = .FALSE.
-    l_infiltnew       = .FALSE.
-    l_hydro_q         = .FALSE.
     l_macrotrans_subsurf = .TRUE.
     i_shm             = 1
     i_interpol        = 1
@@ -209,15 +196,6 @@ CONTAINS
       & CALL message(TRIM(routine), 'Replacing organic carbon fractions with map from bc file: ' //TRIM(logical2string(l_socmap)))
 
     config%l_glac_in_soil      = l_glac_in_soil
-    config%l_infil_subzero     = l_infil_subzero
-    IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
-
-    config%l_soilhydnew        = l_soilhydnew 
-    IF (l_soilhydnew ) CALL message(TRIM(routine), 'Running new soil hydrology ...')
-    config%l_infiltnew         = l_infiltnew 
-    IF (l_infiltnew ) CALL message(TRIM(routine), 'Running new infiltration scheme ...')
-    config%l_hydro_q           = l_hydro_q 
-    IF (l_hydro_q) CALL message(TRIM(routine), 'Running with Q-Arctic add ons ...')
 
     config%l_macrotrans_subsurf = l_macrotrans_subsurf
     config%i_shm      = i_shm

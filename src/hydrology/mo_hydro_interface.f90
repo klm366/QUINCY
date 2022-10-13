@@ -1060,7 +1060,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
     dsl4jsb_Real3D_onChunk :: latdrain_sl
     dsl4jsb_Real3D_onChunk :: drain_lat_sl
-    dsl4jsb_Real3D_onChunk :: drain_perm_sl
 
 
     dsl4jsb_Real2D_onChunk :: pdv_1d_out
@@ -1078,7 +1077,6 @@ CONTAINS
     LOGICAL  :: ltpe_closed
 ! pdv >
     LOGICAL  :: l_latdrain
-    LOGICAL  :: l_frzdrain
     LOGICAL  :: l_pf_soil(options%nc)
 ! pdv <
 
@@ -1139,7 +1137,6 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl      )
     dsl4jsb_Get_var3D_onChunk(HYDRO_, latdrain_sl        )
     dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl       )
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_perm_sl      )
     dsl4jsb_Get_var2D_onChunk(HYDRO_, pdv_1d_out         )
     dsl4jsb_Get_var2D_onChunk(HYDRO_, oro_stddev         )
     dsl4jsb_Get_var2D_onChunk(HYDRO_, micro_slope        )
@@ -1183,19 +1180,21 @@ CONTAINS
       wtr_pond_max(:) = 0.0_wp
     END IF
 
-    ! Latdrain/ frozen drain flags
+    ! Latdrain drain flag
     ! For testing purposes assuming no lateral drainage from lowland depression
     IF (tile%contains_lowland .AND. tile%contains_depression) THEN
-      l_frzdrain = .FALSE.
       l_latdrain = .FALSE.
     ELSE
-      l_frzdrain = .TRUE.
       l_latdrain = .TRUE.
     END IF
     !pdv <
     !pdv >
     ! Simple diagnostic for permafrost reaching into the soil above the berock
-    ! impeding fluxes into the "groundwater" 
+    ! impeding fluxes into the "groundwater"
+
+    !!!!!!! HERE IT WOULD ALSO BE POSSIBLE TO PRESCRIBE A l_pf_soil
+    !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS 
+    !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     dsl4jsb_Get_var2D_onChunk(SSE_,    thaw_depth_max_ym1)       ! in
     DO i = 1, nc
       IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth below soil depth ... 
@@ -1216,12 +1215,7 @@ CONTAINS
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
-      & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
-      & dsl4jsb_Config(HYDRO_)%l_soilhydnew,                    &
-      & dsl4jsb_Config(HYDRO_)%l_infiltnew,                     &
-      & dsl4jsb_Config(HYDRO_)%l_hydro_q,                       &
       & l_latdrain,                                             &
-      & l_frzdrain,                                             &
       & dsl4jsb_Config(HYDRO_)%manning_n,                       &
       & dsl4jsb_Config(HYDRO_)%dt_sat,                          &
       & max_slope_tile,                                         &
@@ -1268,8 +1262,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
-      & drain_lat_sl(:,:),     &
-      & drain_perm_sl(:,:)     &
+      & drain_lat_sl(:,:)     &
       & )
 
     !pdv >
@@ -1287,16 +1280,16 @@ CONTAINS
       IF (.NOT. dsl4jsb_Config(HYDRO_)%l_macrotrans_subsurf) THEN
         DO i = 1, nc
           IF (l_pf_soil(i)) THEN ! PF in soil above bedrock
-            latdrain_sl(i,:) = drain_lat_sl(i,:) + drain_perm_sl(i,:)
+            latdrain_sl(i,:) = drain_lat_sl(i,:)
           ELSE
              latdrain_sl(i,:) = 0._wp
           END IF
         END DO
       ELSE
-        latdrain_sl(:,:) = drain_lat_sl(:,:) + drain_perm_sl(:,:)
+        latdrain_sl(:,:) = drain_lat_sl(:,:)
       END IF
     ELSE
-      latdrain_sl(:,:) = drain_lat_sl(:,:) + drain_perm_sl(:,:)
+      latdrain_sl(:,:) = drain_lat_sl(:,:)
     END IF
     !pdv <
 
@@ -1368,7 +1361,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_perm_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_pond,        weighted_by_fract)
