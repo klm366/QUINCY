@@ -1268,7 +1268,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SSE_,    thaw_depth_max_ym1)       ! in
     IF (tile%contains_upland .AND. tile%contains_depression) THEN
-      IF (dsl4jsb_Config(HYDRO_)%l_macrotrans_subsurf) THEN
+      IF (.NOT. dsl4jsb_Config(HYDRO_)%l_macrotrans_subsurf) THEN
         DO i = 1, nc
           IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &
            &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! For cells where thaw depth is below modeld depth
@@ -1278,17 +1278,10 @@ CONTAINS
           END IF
         END DO
       ELSE
-        latdrain_sl(:,:) = 0._wp
+        latdrain_sl(:,:) = drain_lat_sl(:,:) + drain_perm_sl(:,:)
       END IF
     ELSE
-      DO i = 1, nc
-        IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &
-           &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! For cells where thaw depth is below modeld depth
-          latdrain_sl(i,:) = drain_lat_sl(i,:) + drain_perm_sl(i,:)
-        ELSE
-          latdrain_sl(i,:) = drain_lat_sl(i,:)
-        END IF
-      END DO
+      latdrain_sl(:,:) = drain_lat_sl(:,:) + drain_perm_sl(:,:)
     END IF
     !pdv <
 
