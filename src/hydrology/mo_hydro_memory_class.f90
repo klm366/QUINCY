@@ -322,7 +322,7 @@ CONTAINS
       & t_cf('infilt_over', 'kg m-2 s-1', 'Surface layer overflow'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE.                                                             &
+      & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'drainage', mem%drainage,                                      &
