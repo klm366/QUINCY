@@ -201,7 +201,7 @@ CONTAINS
       &      )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_hydro_process,          ONLY: get_conductivies_diffusivities
+    USE mo_hydro_process,          ONLY: get_conductivies_diffusivities_mix
 
     INTEGER, INTENT(in)     :: nsoil,               & !< number of soil layers
                                i_shm                  !< Choice of soil hydrological model
@@ -376,13 +376,13 @@ CONTAINS
 
 
     varindex      = 1
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
                     & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
                     & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
                     & ice_impede_lvt(:))
 
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
                     & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
                     & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &
@@ -390,13 +390,13 @@ CONTAINS
 
 
     varindex      = 2
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
                     & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
                     & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
                     & k_lvt(:))
 
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
                     & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
                     & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &
@@ -404,13 +404,13 @@ CONTAINS
 
 
     varindex      = 4
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
                     & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
                     & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
                     & mpot_lvt(:))
 
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
                     & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
                     & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &
@@ -634,7 +634,7 @@ CONTAINS
       &      )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_hydro_process,          ONLY: get_conductivies_diffusivities
+    USE mo_hydro_process,          ONLY: get_conductivies_diffusivities_mix
 
     INTEGER, INTENT(in)     :: nsoil,               & !< number of soil layers
                                i_shm                  !< Choice of soil hydrological model
@@ -788,13 +788,13 @@ CONTAINS
 
 
     varindex      = 1
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
                     & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
                     & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
                     & ice_impede_lvt(:))
 
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
                     & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
                     & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &
@@ -802,13 +802,13 @@ CONTAINS
 
 
     varindex      = 2
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
                     & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
                     & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
                     & k_lvt(:))
 
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
                     & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
                     & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &
@@ -816,13 +816,13 @@ CONTAINS
 
 
     varindex      = 4
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
                     & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
                     & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
                     & mpot_lvt(:))
 
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
+    call get_conductivies_diffusivities_mix(i_shm,varindex,                                   &
                     & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
                     & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
                     & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &

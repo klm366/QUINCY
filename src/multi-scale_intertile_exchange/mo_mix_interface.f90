@@ -474,7 +474,7 @@ CONTAINS
 
               CALL calc_intertile_diffusion_new(nsoil,                   &
 !              CALL calc_intertile_diffusion_reduced(nsoil,               &
-                 & dsl4jsb_Config(HYDRO_)%i_shm, dtime,                  &
+                 & dsl4jsb_Config(HYDRO_)%soilhydmodel, dtime,                  &
                  & source_fract(i),      target_fract(i),                &
                  & soil_depth_sl(i,:),   soil_depth_sl_sibl_tile(i,:),   &
                  & wtr_soil_fc_sl(i,:),  wtr_soil_fc_sl_sibl_tile(i,:),  &
