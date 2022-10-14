@@ -262,6 +262,12 @@ CONTAINS
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE IF (iproc == L2A_) THEN
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
+          ! if there is no process action defined, then we assume that the parent tile has defined it as on_leaves
+          !   otherwise the process would 
+          ! after finish contructing the tiles we know how the tile tree is structured -> ON_LEAFS_ is not needed anymore then
+          !   then, after tile tree construction (with init tile), 
+          !      the AGGREGATE ON_TILE INHERIT SKIP are the process actions used for the tiles
+          !   i.e., the SKIP and ON_LEAFS_ process actions are transformed in one of the above for four process actions
           ELSE
             CALL return_ptr%Set_process_action(iproc, ON_LEAFS_, action_to_parents=AGGREGATE_)
           END IF
@@ -1303,4 +1309,3 @@ CONTAINS
     DO iproc=1,max_no_of_processes
       IF (this%process_action(iproc) > 0) THEN
         ! Print names of processes running on the tile
-        CALL message('     Process '//Get_process_name(iproc), 'Action '//Get_action_name(this%process_action(iproc)))
