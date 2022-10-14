@@ -72,8 +72,10 @@ MODULE mo_jsb_tile
 
 CONTAINS
 
-  !> Constructs the tile object and returns the pointer to the tile
-  !
+  ! ======================================================================================================= !
+  !> 
+  !> Constructs the tile object, as part of the tile tree, and returns the pointer to the tile
+  !>
   FUNCTION Construct_tile(name, description, processes, lct, &
     & process_actions, parent, model_id, fract_filename, fract_varname) RESULT(return_ptr)
 
@@ -106,6 +108,7 @@ CONTAINS
     ALLOCATE(t_jsb_tile::return_ptr)
 
     ! Add the parent tile to the actual tile (for all but the box tile)
+    ! init the parent with information (properties) from the state machine only
     IF (PRESENT(parent)) THEN
       parent_tmp => parent
       CALL return_ptr%Init_state(name, description, parent_tmp)
@@ -115,13 +118,14 @@ CONTAINS
 
     ! Initialize further components of t_jsb_tile_abstract extended type
 
+    ! allocate parent tile
     ALLOCATE(return_ptr%process_action(max_no_of_processes))
-
+    ! as defined in usecase, check if each process has one action (e.g., on_tile etc.)
     IF (PRESENT(processes) .AND. PRESENT(process_actions)) THEN
       IF (SIZE(processes) /= SIZE(process_actions)) &
         & CALL finish(TRIM(routine), 'Size of processes and process_actions must be equal!')
     END IF
-
+    ! give owner_model_id to child tiles from parent tile, hence, only box tile needs to get a owner_model_id
     IF (PRESENT(parent)) THEN
       SELECT TYPE (parent)
       CLASS IS (t_jsb_tile)
@@ -129,6 +133,7 @@ CONTAINS
         return_ptr%owner_model_id = parent%owner_model_id
       END SELECT
     ELSE
+      ! box tile already has a owner_model_id
       IF (PRESENT(model_id)) THEN
         return_ptr%owner_model_id = model_id
       ELSE
@@ -136,27 +141,34 @@ CONTAINS
       END IF
     END IF
 
+    ! get mode from model_id
     model => Get_model(return_ptr%owner_model_id)
     return_ptr%model => model
-
+    ! ..
     IF (ASSOCIATED(return_ptr%parent_tile)) THEN
       IF (.NOT. ASSOCIATED(return_ptr%parent_tile%first_child_tile)) THEN
           return_ptr%parent_tile%first_child_tile => return_ptr
       END IF
     END IF
     IF (ASSOCIATED(return_ptr%prev_sibling)) THEN
+      ! to avoid further SELECT TYPE, just define the CLASS/TYPE here
       SELECT TYPE (prev_sibling => return_ptr%prev_sibling)
       CLASS IS (t_jsb_tile)
         prev_sibling%next_sibling_tile => return_ptr
       END SELECT
     END IF
-
+    ! define lct - land cover type
+    ! each tile can have multiple lct, teh 1st one (1st element of the below vector) is the important one
+    !  other lct are "inherited" from leave tiles
+    !  if an lct is not provided for a tile, this tile gets the same lct as the parent
     IF (PRESENT(lct)) THEN
       IF (ASSOCIATED(return_ptr%parent_tile)) THEN
         IF (ASSOCIATED(return_ptr%parent_tile%parent_tile) .AND. (lct%id == LAND_TYPE .OR. lct%id == LAKE_TYPE)) &
           & CALL finish(TRIM(routine), 'Tiles with lct LAND_TYPE or LAKE_TYPE must be direct children of root tile.')
       END IF
+      ! add lct
       CALL return_ptr%Add_lct(lct)
+      ! add the lct of this tile to all parent tiles -> needed for aggregation of variables
       CALL return_ptr%Add_lct_to_parents(lct)
     ELSE
       ! If no lct is passed upon tile construction the primary lct of the parent tile is used
@@ -164,13 +176,17 @@ CONTAINS
         CALL return_ptr%Add_lct(return_ptr%parent_tile%lcts(1))
       END IF
     END IF
-
+    ! filename of the fract file
     IF (PRESENT(fract_filename)) THEN
+      ! use this filename
       return_ptr%fract_filename = TRIM(fract_filename)
     ELSE
+      ! use filename from namelist
       return_ptr%fract_filename = TRIM(model%config%fract_filename)
     END IF
-
+    ! what variable name to read the fraction from
+    ! 'fract_varname' is define in the usecase
+    ! if not defined in the usecase, it is set to "empty" here, but changed later
     IF (PRESENT(fract_varname)) THEN
       return_ptr%fract_varname = TRIM(fract_varname)
     ELSE
@@ -181,10 +197,15 @@ CONTAINS
     ALLOCATE(return_ptr%conserved_quantities(Get_number_of_types()))
 
     ! Loop over all processes and set actions for this tile
+    ! (init is going from box to bottom tile)
+    ! process action of each process, as defined in the usecase
     DO i=1,max_no_of_processes
+      ! default is SKIP, i.e., update_*() routine may not do anything
       return_ptr%process_action(i) = SKIP_
+      ! if process and config is associated
       IF (ASSOCIATED(model%processes(i)%p)) THEN
         IF (ASSOCIATED(model%processes(i)%p%config)) THEN
+          ! go on only if process is set ACTIVE, the default is FALSE; needs namelist setting to activate
           IF (.NOT. model%processes(i)%p%config%active) CYCLE
         END IF
       END IF
@@ -192,19 +213,22 @@ CONTAINS
       j = 0
       IF (PRESENT(processes)) THEN
         IF (SIZE(processes) > 0) THEN
+          ! j is the process that was explicitly defined in the usecase fir this tile
           j = one_of(i, processes) ! i counts through the number of all processes; j is the number of the i-process within
                                    ! the explicitly defined input processes for this tile (e.g. defined in init_usecase)
         END IF
       END IF
-      IF (j > 0) THEN ! the i-process was explicitly defined for this tile
+      ! the i-process was explicitly defined for this tile
+      IF (j > 0) THEN
         iproc = processes(j)
-
+        ! TODO hard coded checks of process dependencies - should not be handled here
         IF (iproc == SEB_ .AND. ALLOCATED(return_ptr%lcts)) THEN
           IF (return_ptr%lcts(1)%id /= LAND_TYPE .AND. return_ptr%lcts(1)%id /= LAKE_TYPE) THEN
             CALL finish(TRIM(routine), 'SEB_ process only allowed on tiles with lct LAND_TYPE or LAKE_TYPE.')
           END IF
         END IF
-
+        ! if there is a process action at this tile for the process
+        !  (would probably be not if process action is simply inherited from parent tile)
         IF (PRESENT(process_actions)) THEN
           CALL return_ptr%Set_process_action(iproc, process_actions(j), action_to_parents=AGGREGATE_)
         ELSE          ! use defaults if process_actions are not given
@@ -212,17 +236,21 @@ CONTAINS
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE IF (iproc == L2A_) THEN
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
+          ! if there is no process action defined, then we assume that the parent tile has defined it as on_leaves
+          !   otherwise the process would 
+          ! after finish contructing the tiles we know how the tile tree is structured -> ON_LEAFS_ is not needed anymore then
+          !   then, after tile tree construction (with init tile), 
+          !      the AGGREGATE ON_TILE INHERIT SKIP are the process actions used for the tiles
+          !   i.e., the SKIP and ON_LEAFS_ process actions are transformed in one of the above for four process actions
           ELSE
             CALL return_ptr%Set_process_action(iproc, ON_LEAFS_, action_to_parents=AGGREGATE_)
           END IF
         END IF
-!!$      ELSE IF (ASSOCIATED(return_ptr%prev_sibling)) THEN
-!!$        iproc = i
-!!$        SELECT TYPE (sibling => return_ptr%prev_sibling)
-!!$        CLASS IS (t_jsb_tile_abstract)
-!!$          return_ptr%process_action(iproc) = sibling%process_action(iproc)
-!!$        END SELECT
-      ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN  ! the i-process was NOT explicitly defined for this tile
+      ! the i-process was NOT explicitly defined for this tile
+      ! "ASSOCIATED(return_ptr%parent_tile)" asks whether we are at the box tile or not
+      ! then look at the process action of the parent tile, and by default INHERIT 
+      !   the tile would use the memory of the parent tile
+      ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN  
         !IF (return_ptr%parent_tile%process_action(i) > AGGREGATE_) THEN
           iproc = i
           SELECT CASE (return_ptr%parent_tile%process_action(iproc))
@@ -230,6 +258,7 @@ CONTAINS
             CALL return_ptr%Set_process_action(iproc, return_ptr%parent_tile%process_action(iproc))
             !return_ptr%parent_tile%process_action(iproc) = AGGREGATE_
           CASE (ON_TILE_)
+            ! especially for L2A_ we want to do nothing on the child tiles of the box tile
             IF (iproc == L2A_) THEN
               CALL return_ptr%Set_process_action(iproc, SKIP_)
             ELSE
