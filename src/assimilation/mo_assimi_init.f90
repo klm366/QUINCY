@@ -83,7 +83,7 @@ CONTAINS
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     model => Get_model(tile%owner_model_id)
-    IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
+    IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_QUINCY)
       IF (debug_on()) CALL message(TRIM(routine), 'Use model_scheme MODEL_QUINCY')

@@ -82,7 +82,7 @@ MODULE mo_jsb_model_class
     PROCEDURE :: Reset_tiles
     PROCEDURE :: Get_tile
     PROCEDURE :: Get_process
-    PROCEDURE :: Is_process_active
+    PROCEDURE :: Is_process_enabled
     PROCEDURE :: Queue_task
 !!$    PROCEDURE :: Get_process_configs
 !!$    PROCEDURE :: Process_task
@@ -181,23 +181,23 @@ CONTAINS
 
   END FUNCTION Get_process
 
-  LOGICAL FUNCTION Is_process_active(this, iproc)
+  LOGICAL FUNCTION Is_process_enabled(this, iproc)
 
     CLASS(t_jsb_model), INTENT(in) :: this
     INTEGER, INTENT(in) :: iproc
 
-    Is_process_active = .FALSE.
+    Is_process_enabled = .FALSE.
     IF (ASSOCIATED(this%processes(iproc)%p)) THEN
       IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
-        Is_process_active = this%processes(iproc)%p%config%active
+        Is_process_enabled = this%processes(iproc)%p%config%active
       ELSE 
         ! If the process is associated but the configuration is not associated 
         ! we assume here that the process is active on the model -- currently this is the case for l2a and a2l
-        Is_process_active = .TRUE.
+        Is_process_enabled = .TRUE.
       ENDIF
     ENDIF
 
-  END FUNCTION Is_process_active
+  END FUNCTION Is_process_enabled
 
   SUBROUTINE Queue_task(this, iproc, name)
 
@@ -570,14 +570,10 @@ CONTAINS
         IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) CYCLE
         IF (tile%process_action(iproc) == INHERIT_) CYCLE
         DO ivar=1,tile%mem(iproc)%p%no_of_vars
-          SELECT TYPE (var => tile%mem(iproc)%p%vars(ivar)%p)
-          CLASS IS (t_jsb_var_real2d)
+          ASSOCIATE (var => tile%mem(iproc)%p%vars(ivar)%p)
             CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
             var%subset_type = itype
-          CLASS IS (t_jsb_var_real3d)
-            CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-            var%subset_type = itype
-          END SELECT
+          END ASSOCIATE
         END DO
 
         IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &

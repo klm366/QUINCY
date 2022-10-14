@@ -183,6 +183,10 @@ CONTAINS
       READ(nml_unit, jsb_model_nml)
     END DO
 
+    IF (no_of_models == 0 ) THEN
+      CALL finish(routine, 'Namelist jsb_model_nml missing in '//TRIM(namelist_filename)// &
+        & '. One jsb_model_nml section is needed for each model incidence.')
+    END IF
     IF (no_of_models > max_no_of_models) THEN
       CALL finish(routine, 'no_of_models > max_no_of_models')
     ENDIF

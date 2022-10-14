@@ -1,4 +1,23 @@
 #! /bin/bash
+main_name="preprocess_LUH2.bash"
+# Cleaning up
+case ${1} in
+
+    "clean")
+        echo -n "Removing binaries and machine config..."
+        rm -rf ${BIN_DIR}
+        rm config
+        rm -f user_config
+        rm -f *.o*
+        rm ${main_name}
+        echo " done"
+        exit
+        ;;
+    *)
+        echo "To clean executables call ./compile clean."
+        ;;
+
+esac
 
 echo "On machine " $HOSTNAME
 
@@ -106,31 +125,14 @@ esac
 # Work directories
 SRC_DIR=./src
 BIN_DIR=./bin
+TOOLS_DIR=./tools
 # Source files
 SOURCE=( $SRC_DIR/* )
-
-# Cleaning up
-case ${1} in
-
-    "clean")
-        echo -n "Removing binaries and machine config..."
-        rm -rf ${BIN_DIR}
-        rm config
-        rm user_config
-        rm *.o*
-        echo " done"
-        exit
-        ;;
-    *)
-        echo "To clean executables call ./compile clean."
-        ;;
-
-esac
 
 if [ ! -d ${BIN_DIR} ]; then
     mkdir ${BIN_DIR}
 fi
-
+# Compile fortran programs
 for src in ${SOURCE[@]}; do
     TARGET=`basename ${src} .f90`.x
 
@@ -146,4 +148,37 @@ for src in ${SOURCE[@]}; do
     fi
 done
 
+# Create main run script
+# Get the options
+while getopts ":he:p:c:" option; do
+    case $option in
+        h) # display Help
+            Help
+            exit;;
+        e) # Enter a email address
+            user_email=$OPTARG;;
+        p) # Enter a number
+            project_number=$OPTARG;;
+        c) # Enter config file
+            user_config=$OPTARG;;
+        \?) # Invalid option
+            echo "Error: Invalid option"
+            exit;;
+    esac
+done
 
+if [[ ! -e ${main_name} || ${TOOLS_DIR}/MAIN_${main_name} -nt ${main_name} ]]; then
+    echo "Creating ${main_name}"
+    cp ${TOOLS_DIR}/MAIN_${main_name} ${main_name}
+fi
+
+if [[ ! -z ${user_email} ]]; then
+    sed -i 's/yourname@YOUR-INSTITUTE-DOMAIN/'"${user_email}"'/g' ${main_name}
+fi
+if [[ ! -z ${project_number} ]]; then
+    sed -i 's/YOUR-PROJECT/'"${project_number}"'/g' ${main_name}
+fi
+echo ${user_config}
+if [[ ! -z ${user_config} ]]; then
+    sed -i 's^YOUR-CONFIG-FILE^'"${user_config}"'^g' ${main_name}
+fi

@@ -33,7 +33,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, ASSIMI_, MIX_
+  dsl4jsb_Use_processes SEB_, SSE_, TURB_, PHENO_, A2L_, HYDRO_, MIX_
 
   ! Use of process configurations
   dsl4jsb_Use_config(SEB_)
@@ -47,7 +47,6 @@ MODULE mo_hydro_interface
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(PHENO_)
-  dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(MIX_)
 
   ! -------------------------------------------------------------------------------------------------------
@@ -419,6 +418,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapo_snow
     dsl4jsb_Real2D_onChunk :: snowmelt
+    dsl4jsb_Real2D_onChunk :: infilt
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: runoff_glac
@@ -470,6 +470,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,   snow)               ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapopot)           ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, infilt)             ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)             ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)           ! out
@@ -477,6 +478,7 @@ CONTAINS
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_0 tile_name=tile%name
       runoff  (:) = rain(:) + snow(:) + evapotrans(:)
+      infilt(:)   = 0._wp
       drainage(:) = 0._wp
       weq_snow(:) = 0._wp
       evapo_snow(:) = evapopot(:)
@@ -508,6 +510,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)     ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)    ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)       ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, infilt)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
 
@@ -577,6 +580,7 @@ CONTAINS
         & pme_glacier = runoff(:)          & !< out, P-E ... used as runoff for HD model
         & )
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_5 tile_name=tile%name
+      infilt(:)   = 0._wp
       drainage(:) = 0._wp
       weq_snow_soil(:) = 0._wp
       evapo_snow(:) = evapopot(:)
@@ -696,6 +700,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
 
@@ -972,7 +977,6 @@ CONTAINS
 
     ! Pointers to variables in memory
 
-    dsl4jsb_Real3D_onChunk :: fract_org_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     ! Locally allocated vectors
@@ -987,6 +991,9 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
     INTEGER  :: nsoil
+
+    REAL(wp), POINTER :: area(:)
+    REAL(wp) :: tile_fract(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1012,6 +1019,7 @@ CONTAINS
 
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+    area => grid%area(ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -1024,14 +1032,6 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
-    IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)   ! in
-    ELSE
-      ALLOCATE(fract_org_sl(nc, nsoil))
-      !$claw acc enter data create(fract_org_sl)
-      !$claw expand parallel update
-      fract_org_sl(:,:) = 0._wp
-    END IF
 
     ! @todo Temporary implementation of a surface pond reservoir to be used as target
     !   for lateral flows from upland areas. Needs to be revised as soon as real ponding
@@ -1049,9 +1049,11 @@ CONTAINS
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
+      & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
+      & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
+      & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
-      &                                fract_org_sl  (:,:),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, matrix_pot_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
@@ -1069,19 +1071,26 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl       ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          )      &
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl       ),     &  ! Temporary, as lateral drainage should no longer be computed by calc_soil_hydrology
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         )      &
       & )
 
-    IF (.NOT. dsl4jsb_Config(HYDRO_)%l_organic) THEN
-      !$claw acc exit data delete(fract_org_sl)
-      DEALLOCATE(fract_org_sl)
-    END IF
+    ! Convert soil hydrology balance error to volume
+    !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
+    !$claw acc parallel loop gang vector
+    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
+    dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_res) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_res) &
+      & * tile_fract(:) * area(:)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1119,13 +1128,18 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_fc_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt_over,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1387,7 +1401,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(HYDRO_)
-    dsl4jsb_Def_memory(ASSIMI_)
 
     TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract

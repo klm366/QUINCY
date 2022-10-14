@@ -26,7 +26,7 @@ set -eu
 coupled=false                # land sea mask for coupled experiment?
 
 refinement=R02B04            # ICON-Land grid resolution
-bisections=4                 # Determines Gaussian source grid resolution (see below)
+bisections=${refinement#*B}  # Determines Gaussian source grid resolution (see below)
 atmGridID=0043
 oceGridID=0036               # Required for coupled configurations
 revision=r00xx               # Revision directory that will be generated
@@ -219,24 +219,37 @@ function generate_land_sea_mask {
 
   temp=$(mktemp -u --tmpdir=.)
 
-  # Make sure, the icon grid file includes a valid land sea mask
-  if [[ $(cdo -s output -fldsum -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} | tr -d ' ') == 0 ]]
-  then
-    echo "Invalid land sea mask in icon_grid_file ${icon_grid_file}:"
-    echo "Variable cell_sea_land_mask does not have any land grid cells."
-    echo "Check if there is another grid file, e.g. with suffix _Glsm.nc."
-    exit 1
-  fi
-
-  ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
-  ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
-    -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
-
   if [[ ${coupled} == "true" ]]
   then
+
     ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${icon_grid_file} \
       -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
+
+    # Glacier mask
+    ${cdo} remapycon,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} -gtc,0.5   ${temp} ${grid_name}_glac-05_remap.nc
+    ${cdo} -gtc,0.001 ${temp} ${grid_name}_glac-0001_remap.nc
+    # The glacier mask corresponds to the 0.5 mask within the continents and to the 0.001 mask
+    # at the costs to avoid non-glacier land cells North of Greenland or at the Antarctic coast.
+    ${cdo} ifthenelse -gtc,0.7 ${coupled_lsf_file}   \
+          ${grid_name}_glac-05_remap.nc ${grid_name}_glac-0001_remap.nc \
+          ${grid_name}_glac_remap.tmp.nc
+    ${cdo} setvar,glac -mul -gtc,0 ${grid_name}_notsea.nc ${grid_name}_glac_remap.tmp.nc ${grid_name}_glac_remap.nc
+
   else
+    # Make sure, the icon grid file includes a valid land sea mask
+    if [[ $(cdo -s output -fldsum -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} | tr -d ' ') == 0 ]]
+    then
+      echo "Invalid land sea mask in icon_grid_file ${icon_grid_file}:"
+      echo "Variable cell_sea_land_mask does not have any land grid cells."
+      echo "Check if there is another grid file, e.g. with suffix _Glsm.nc."
+      exit 1
+    fi
+
+    ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
+      -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
+
     ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
       -ifthenelse -setmisstoc,0 -masklonlatbox,0.,360.,-60.,90. -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} \
       -max ${grid_name}_glac_remap.nc -setgrid,${icon_grid_file} -selvar,FR_LAND_TOPO ${extpar_file} \
@@ -249,7 +262,7 @@ function generate_land_sea_mask {
   # Set small lake fractions below 0.01 to zero
   ${cdo} setvar,lake -setrtoc,-1,0.01,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
   ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
-  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc \
+  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -ltc,0.5 ${grid_name}_glac_remap.nc -ifthen -gec,0.999 ${grid_name}_notsea.nc \
 	 -setrtoc,-1,0.01,0 ${temp} ${grid_name}_lake_remap.nc
 
   rm ${temp}
@@ -501,16 +514,21 @@ function generate_fractions {
 
 function crosscheck_vars {
 
+  # Set minimum soil depth of non-glacier grid cells to 0.01
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
   mv ${temp} ${grid_name}_soil_depth_remap.nc
   debug_file ${grid_name}_soil_depth_remap.nc
+
+  # Calculate maximum soil water amount from soil depth and field capacity
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} mul ${grid_name}_soil_field_cap_remap.nc ${grid_name}_soil_depth_remap.nc max_soilwater.nc
   ${cdo} min ${grid_name}_maxmoist_remap.nc max_soilwater.nc ${temp}
   mv ${temp} ${grid_name}_maxmoist_remap.nc
   debug_file ${grid_name}_maxmoist_remap.nc
   rm max_soilwater.nc
+
+  # Set missing value of surface temperature to 280K
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} setmisstoc,280 ${grid_name}_surf_temp_remap.nc ${temp}
   mv ${temp} ${grid_name}_surf_temp_remap.nc
@@ -794,7 +812,8 @@ do
     fi
 
     grid_name=${refinement}
-    source_res=${source_res_dict[${bisection}]}
+    bisect=$(echo ${bisection} | tr -d ^0)
+    source_res=${source_res_dict[${bisect}]}
   else         # jsbach4 on gaussian grid
     grid_name=${bisection}
     remap_scheme=ycon

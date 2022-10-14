@@ -148,7 +148,7 @@ CONTAINS
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading soil energy boundary conditions for tile '//TRIM(tile%name))
 
@@ -219,7 +219,7 @@ CONTAINS
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting soil energy boundary conditions for tile '//TRIM(tile%name))
 
@@ -286,7 +286,7 @@ CONTAINS
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing soil energy memory for tile '//TRIM(tile%name))
 
