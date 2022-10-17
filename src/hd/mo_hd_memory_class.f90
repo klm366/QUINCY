@@ -62,7 +62,7 @@ MODULE mo_hd_memory_class
       inflow_lake     , &  !< lake inflow from neighbor grid cell [m3/s]
       outflow_lake    , &  !< lake outflow to neighbor grid cell [m3/s]
       overflow_lake   , &  !< lake overflow outflow [m3/s]
-      water_budget_lake, &  !< lake water budget [m3/s]
+      volume_lake_old , &  !< lake water volume from previous time step [m3]
       volume_lake     , &  !< lake water volume storage [m3]
       area_lake       , &  !< lake area of endorheic lakes [m^2]
       height_lake     , &  !< lake height of endorheic lakes [m]
@@ -308,7 +308,7 @@ CONTAINS
 
      CALL mem%Add_var( 'inflow_lake', mem%inflow_lake,                       &
       & hgrid, surface,                                                      &
-      & t_cf('inflow_lake', 'm3/s', 'lake inflow to neighbor grid cell'),      &
+      & t_cf('inflow_lake', 'm3/s', 'lake inflow to neighbor grid cell'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -316,7 +316,7 @@ CONTAINS
 
      CALL mem%Add_var( 'outflow_lake', mem%outflow_lake,                     &
       & hgrid, surface,                                                      &
-      & t_cf('outflow_lake', 'm3/s', 'lake outflow to neighbor grid cell'),    &
+      & t_cf('outflow_lake', 'm3/s', 'lake outflow to neighbor grid cell'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
@@ -324,15 +324,15 @@ CONTAINS
 
      CALL mem%Add_var( 'overflow_lake', mem%overflow_lake,                   &
       & hgrid, surface,                                                      &
-      & t_cf('overflow_lake', 'm3/s', 'lake outflow to neighbor grid cell'),   &
+      & t_cf('overflow_lake', 'm3/s', 'lake outflow to neighbor grid cell'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'water_budget_lake', mem%water_budget_lake,            &
+    CALL mem%Add_var( 'volume_lake_old', mem%volume_lake_old,                &
       & hgrid, surface,                                                      &
-      & t_cf('water_budget_lake', 'm3/s', 'lake volume changes'),            &
+      & t_cf('volume_lake_old', 'm3', 'lake volume from previous time step'),&
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
