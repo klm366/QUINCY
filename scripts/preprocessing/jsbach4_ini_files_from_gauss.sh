@@ -180,6 +180,9 @@ function generate_gauss_data {
   export echam_fractional=${echam_fractional}  # initial file for echam runs with fractional land sea mask
   export masks_file=default                    # file with land sea mask (default: use echam land sea mask)
   export pool=/pool/data/ECHAM6/input/r0005/${res_atm}     # directories with echam input data
+  if [[ ${res_oce} == dCRUNCEP ]]; then
+    export pool=${pool_prepare}/${res_atm}/ECHAM6          # directory with echam input data
+  fi
   export pool_land=${pool_prepare}/${res_atm}
   export srcdir=.
   if [[ ${res_atm} == 05 ]]; then
@@ -945,7 +948,7 @@ do
     for npfts in $npfts_list
     do
       [[ $npfts -gt 0 ]] && pft_tag="${npfts}pfts_" || pft_tag=""
-      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${pft_tag}${grid_tag}$year.nc
+      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${grid_tag}${pft_tag}$year.nc
     done
     ${cpmv} ${grid_name}_bc_land_phys_$year.nc ${output_dir}/bc_land_phys_${grid_tag}$year.nc
     ${cpmv} ${grid_name}_bc_land_soil_$year.nc ${output_dir}/bc_land_soil_${grid_tag}$year.nc
