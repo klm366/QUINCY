@@ -192,6 +192,9 @@ CONTAINS
     REAL(wp), POINTER :: &
       & ptr_2D(:,  :),   &
       & ptr_3D(:,:,:)
+#ifdef __ICON
+    LOGICAL,  POINTER   :: is_in_domain(:,:) ! T: cell in domain (not halo)
+#endif
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -201,10 +204,6 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
 
-#ifdef __ICON
-    LOGICAL,  POINTER   :: is_in_domain(:,:) ! T: cell in domain (not halo)
-    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
-#endif
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -220,6 +219,9 @@ CONTAINS
     nblks  = grid%Get_nblks()
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+#ifdef __ICON
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+#endif
 
     ALLOCATE( &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
