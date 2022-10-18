@@ -861,11 +861,19 @@ CONTAINS
       END DO
 
       !< If lowest soil layer becomes negative, reduce bottom drainage
-      !    This only occures in rare cases when the bottom layer is very thin
+      !    In rare cases - when the bottom layer is very thin - also above layers might get negative.
+      !    Generally, this only happens right after initialization.
       IF (wtr_soil_sl(i, nsoil_act(i)) < 0._wp) THEN
-        drain_sl(i)                  = MAX(drain_rock(i) + wtr_soil_sl(i, nsoil_act(i)), 0._wp)
-        wtr_soil_sl(i, nsoil_act(i)) = MAX(wtr_soil_sl(i, nsoil_act(i)) + (drain_rock(i) - drain_sl(i)), 0._wp)
-        drain_rock(i)                = drain_sl(i)
+        DO j = nsoil_act(i), 1, -1
+          IF (wtr_soil_sl(i,j) < 0._wp) THEN
+            WRITE (message_text,*) 'Soil moisture correction needed at: ', i, j, ': ', wtr_soil_sl(i,:)
+            CALL message('soilhyd', message_text, all_print=.TRUE.)
+            drain_rock(i) = MAX((drain_rock(i) + wtr_soil_sl(i,j)), 0._wp)
+            wtr_soil_sl(i,j) = 0._wp
+            WRITE (message_text,*) 'After correction: wtr_soil_sl(i,:): ', i, j, ': ', wtr_soil_sl(i,:)
+            CALL message('soilhyd', message_text, all_print=.TRUE.)
+          END IF
+        END DO
       END IF
 
       !< subtract new soil state and bottom drainage (lower boundary condition) from water balance
