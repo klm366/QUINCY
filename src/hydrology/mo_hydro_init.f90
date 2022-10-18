@@ -126,7 +126,7 @@ CONTAINS
     REAL(wp), POINTER :: &
       & ptr_2D(:,  :),   &
       & ptr_3D(:,:,:)
-#ifdef __ICON
+#ifdef __ICON__
     LOGICAL,  POINTER   :: is_in_domain(:,:) ! T: cell in domain (not halo)
 #endif
 
@@ -150,7 +150,7 @@ CONTAINS
     nblks  = grid%Get_nblks()
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
-#ifdef __ICON
+#ifdef __ICON__
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
 #endif
 
