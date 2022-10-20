@@ -359,6 +359,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    ! Temporary, removed as soon as possible
     CALL mem%Add_var( 'latdrain_sl', mem%latdrain_sl,                                &
       & hgrid, soil_w,                                                               &
       & t_cf('latdrain_sl', 'kg m-2 s-1', 'Lateral drainage from soil layers'),      &

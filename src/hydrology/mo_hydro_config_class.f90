@@ -77,7 +77,6 @@ CONTAINS
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
-    INTEGER                     :: i_shm
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
