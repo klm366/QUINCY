@@ -990,7 +990,7 @@ do
     for npfts in $npfts_list
     do
       [[ $npfts -gt 0 ]] && pft_tag="${npfts}pfts_" || pft_tag=""
-      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${grid_tag}${pft_tag}$year.nc
+      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${pft_tag}${grid_tag}$year.nc
     done
     ${cpmv} ${grid_name}_bc_land_phys_$year.nc ${output_dir}/bc_land_phys_${grid_tag}$year.nc
     ${cpmv} ${grid_name}_bc_land_soil_$year.nc ${output_dir}/bc_land_soil_${grid_tag}$year.nc
