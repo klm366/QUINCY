@@ -577,7 +577,7 @@ CONTAINS
                               / (spread(embedding_min_max(:,2),1,nc)       - spread(embedding_min_max(:,1),1,nc))
     !lig_topo_variables(:,:)   = (lig_topo_variables(:,:)                   - spread(lig_topo_min_max(:,1),1,nc))   &
     !                          / (spread(lig_topo_min_max(:,2),1,nc)        - spread(lig_topo_min_max(:,1),1,nc))
-    anthro_variables(:,:)     = (anthro_variables(:,1:4)                   - spread(anthropogenic_min_max(1:4,1),1,nc))   &
+    anthro_variables(:,1:4)   = (anthro_variables(:,1:4)                   - spread(anthropogenic_min_max(1:4,1),1,nc))   &
                               / (spread(anthropogenic_min_max(1:4,2),1,nc) - spread(anthropogenic_min_max(1:4,1),1,nc))
     
     !if (maxval(emb_variables(:,1))>1.1 .or. minval(emb_variables(:,1))<-0.1) then
