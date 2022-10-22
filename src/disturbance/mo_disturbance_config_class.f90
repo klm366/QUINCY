@@ -49,8 +49,8 @@ MODULE mo_disturb_config_class
                          d_climate_hidden,       & ! <Rackhun Son>
                          d_vegetation_input,     & ! <Rackhun Son>
                          d_vegetation_hidden,    & ! <Rackhun Son>
-                         d_lnt_input,            & ! <Rackhun Son>
-                         d_lnt_hidden,           & ! <Rackhun Son>
+                         !d_lnt_input,            & ! <Rackhun Son>
+                         !d_lnt_hidden,           & ! <Rackhun Son>
                          d_ant_input,            & ! <Rackhun Son>
                          d_ant_hidden,           & ! <Rackhun Son>
                          d_output,               & ! <Rackhun Son>
@@ -193,7 +193,7 @@ CONTAINS
 
     INTEGER :: d_climate_input,    d_climate_hidden       ! <Rackhun Son>
     INTEGER :: d_vegetation_input, d_vegetation_hidden    ! <Rackhun Son>
-    INTEGER :: d_lnt_input,        d_lnt_hidden           ! <Rackhun Son>
+    !INTEGER :: d_lnt_input,        d_lnt_hidden           ! <Rackhun Son>
     INTEGER :: d_ant_input,        d_ant_hidden           ! <Rackhun Son>
     INTEGER :: d_emb_input,        d_emb_hidden           ! <Rackhun Son>
     INTEGER :: d_output,           d_emb_output           ! <Rackhun Son>
@@ -307,12 +307,12 @@ CONTAINS
     d_vegetation_hidden = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='d_lnt_input')
-    d_lnt_input = SIZE(ptr_1D)
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='d_lnt_hidden')
-    d_lnt_hidden = SIZE(ptr_1D)
-    DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='d_lnt_input')
+    !d_lnt_input = SIZE(ptr_1D)
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='d_lnt_hidden')
+    !d_lnt_hidden = SIZE(ptr_1D)
+    !DEALLOCATE(ptr_1D)
 
     ptr_1D => input_file%Read_1d(variable_name='d_ant_input')
     d_ant_input = SIZE(ptr_1D)
@@ -446,18 +446,18 @@ CONTAINS
     vegetation_out_bias = ptr_1D
     DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer1_weight')
-    lightning_topography_layer1_weight = RESHAPE(ptr_1D, (/d_lnt_input, d_lnt_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer1_bias')
-    lightning_topography_layer1_bias = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer2_weight')
-    lightning_topography_layer2_weight = RESHAPE(ptr_1D, (/d_lnt_hidden, d_output/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer2_bias')
-    lightning_topography_layer2_bias = ptr_1D
-    DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer1_weight')
+    !lightning_topography_layer1_weight = RESHAPE(ptr_1D, (/d_lnt_input, d_lnt_hidden/), order=(/2, 1/))
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer1_bias')
+    !lightning_topography_layer1_bias = ptr_1D
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer2_weight')
+    !lightning_topography_layer2_weight = RESHAPE(ptr_1D, (/d_lnt_hidden, d_output/), order=(/2, 1/))
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer2_bias')
+    !lightning_topography_layer2_bias = ptr_1D
+    !DEALLOCATE(ptr_1D)
 
     ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer1_weight')
     anthropogenic_layer1_weight = RESHAPE(ptr_1D, (/d_ant_input, d_ant_hidden/), order=(/2, 1/))
@@ -508,9 +508,9 @@ CONTAINS
     ptr_1D => input_file%Read_1d(variable_name='embedding_min_max')
     embedding_min_max = RESHAPE(ptr_1D, (/9, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='lightning_topography_min_max')
-    lightning_topography_min_max = RESHAPE(ptr_1D, (/d_lnt_input, 2/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='lightning_topography_min_max')
+    !lightning_topography_min_max = RESHAPE(ptr_1D, (/d_lnt_input, 2/), order=(/2, 1/))
+    !DEALLOCATE(ptr_1D)
     ptr_1D => input_file%Read_1d(variable_name='anthropogenic_min_max')
     anthropogenic_min_max = RESHAPE(ptr_1D, (/d_ant_input, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
@@ -552,8 +552,8 @@ CONTAINS
     config%d_climate_hidden         = d_climate_hidden         ! <Rackhun Son>
     config%d_vegetation_input       = d_vegetation_input       ! <Rackhun Son>
     config%d_vegetation_hidden      = d_vegetation_hidden      ! <Rackhun Son>
-    config%d_lnt_input              = d_lnt_input              ! <Rackhun Son>
-    config%d_lnt_hidden             = d_lnt_hidden             ! <Rackhun Son>
+    !config%d_lnt_input              = d_lnt_input              ! <Rackhun Son>
+    !config%d_lnt_hidden             = d_lnt_hidden             ! <Rackhun Son>
     config%d_ant_input              = d_ant_input              ! <Rackhun Son>
     config%d_ant_hidden             = d_ant_hidden             ! <Rackhun Son>
     config%d_output                 = d_output                 ! <Rackhun Son>

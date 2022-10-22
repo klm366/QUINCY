@@ -43,11 +43,11 @@ MODULE mo_disturb_init
 
       & slope(:,:),                     &
       & roughness(:,:),                 &
-      & topographic_position_idx(:,:),  &
-      & terrain_ruggedness_idx(:,:),    &
-      & vector_ruggedness_measure(:,:), &
-      & profile_curvature(:,:),         &
-      & tangential_curvature(:,:),      &
+      !& topographic_position_idx(:,:),  &
+      !& terrain_ruggedness_idx(:,:),    &
+      !& vector_ruggedness_measure(:,:), &
+      !& profile_curvature(:,:),         &
+      !& tangential_curvature(:,:),      &
 
       & population_density(:,:),        &
       & gdp(:,:),                       &
@@ -123,11 +123,11 @@ CONTAINS
 
       & disturb_init_vars%slope,                       &
       & disturb_init_vars%roughness,                   &
-      & disturb_init_vars%topographic_position_idx,    &
-      & disturb_init_vars%terrain_ruggedness_idx,      &
-      & disturb_init_vars%vector_ruggedness_measure,   &
-      & disturb_init_vars%profile_curvature,           &
-      & disturb_init_vars%tangential_curvature,        &
+      !& disturb_init_vars%topographic_position_idx,    &
+      !& disturb_init_vars%terrain_ruggedness_idx,      &
+      !& disturb_init_vars%vector_ruggedness_measure,   &
+      !& disturb_init_vars%profile_curvature,           &
+      !& disturb_init_vars%tangential_curvature,        &
 
       & disturb_init_vars%population_density,          &
       & disturb_init_vars%gdp,                         &
@@ -191,11 +191,11 @@ CONTAINS
 
       & disturb_init_vars%slope(nproma, nblks),                                      &
       & disturb_init_vars%roughness(nproma, nblks),                                  &
-      & disturb_init_vars%topographic_position_idx(nproma, nblks),                   &
-      & disturb_init_vars%terrain_ruggedness_idx(nproma, nblks),                     &
-      & disturb_init_vars%vector_ruggedness_measure(nproma, nblks),                  &
-      & disturb_init_vars%profile_curvature(nproma, nblks),                          &
-      & disturb_init_vars%tangential_curvature(nproma, nblks),                       &
+      !& disturb_init_vars%topographic_position_idx(nproma, nblks),                   &
+      !& disturb_init_vars%terrain_ruggedness_idx(nproma, nblks),                     &
+      !& disturb_init_vars%vector_ruggedness_measure(nproma, nblks),                  &
+      !& disturb_init_vars%profile_curvature(nproma, nblks),                          &
+      !& disturb_init_vars%tangential_curvature(nproma, nblks),                       &
 
       & disturb_init_vars%population_density(nproma, nblks),                         &
       & disturb_init_vars%gdp(nproma, nblks),                                        &
@@ -241,11 +241,11 @@ CONTAINS
 
     disturb_init_vars%slope                    (:,:) = missval
     disturb_init_vars%roughness                (:,:) = missval
-    disturb_init_vars%topographic_position_idx (:,:) = missval
-    disturb_init_vars%terrain_ruggedness_idx   (:,:) = missval
-    disturb_init_vars%vector_ruggedness_measure(:,:) = missval
-    disturb_init_vars%profile_curvature        (:,:) = missval
-    disturb_init_vars%tangential_curvature     (:,:) = missval
+    !disturb_init_vars%topographic_position_idx (:,:) = missval
+    !disturb_init_vars%terrain_ruggedness_idx   (:,:) = missval
+    !disturb_init_vars%vector_ruggedness_measure(:,:) = missval
+    !disturb_init_vars%profile_curvature        (:,:) = missval
+    !disturb_init_vars%tangential_curvature     (:,:) = missval
 
     disturb_init_vars%population_density       (:,:) = missval
     disturb_init_vars%gdp                      (:,:) = missval
@@ -309,30 +309,30 @@ CONTAINS
     disturb_init_vars%roughness(:,:) = ptr_2D(:,:)
     DEALLOCATE(ptr_2D)
 
-    ptr_2D => input_file%Read_2d(    &
-      & variable_name='tpi')
-    disturb_init_vars%topographic_position_idx(:,:) = ptr_2D(:,:)
-    DEALLOCATE(ptr_2D)
+    !ptr_2D => input_file%Read_2d(    &
+    !  & variable_name='tpi')
+    !disturb_init_vars%topographic_position_idx(:,:) = ptr_2D(:,:)
+    !DEALLOCATE(ptr_2D)
 
-    ptr_2D => input_file%Read_2d(    &
-      & variable_name='tri')
-    disturb_init_vars%terrain_ruggedness_idx(:,:) = ptr_2D(:,:)
-    DEALLOCATE(ptr_2D)
+    !ptr_2D => input_file%Read_2d(    &
+    !  & variable_name='tri')
+    !disturb_init_vars%terrain_ruggedness_idx(:,:) = ptr_2D(:,:)
+    !DEALLOCATE(ptr_2D)
 
-    ptr_2D => input_file%Read_2d(    &
-      & variable_name='vrm')
-    disturb_init_vars%vector_ruggedness_measure(:,:) = ptr_2D(:,:)
-    DEALLOCATE(ptr_2D)
+    !ptr_2D => input_file%Read_2d(    &
+    !  & variable_name='vrm')
+    !disturb_init_vars%vector_ruggedness_measure(:,:) = ptr_2D(:,:)
+    !DEALLOCATE(ptr_2D)
 
-    ptr_2D => input_file%Read_2d(    &
-      & variable_name='pcurv')
-    disturb_init_vars%profile_curvature(:,:) = ptr_2D(:,:)
-    DEALLOCATE(ptr_2D)
+    !ptr_2D => input_file%Read_2d(    &
+    !  & variable_name='pcurv')
+    !disturb_init_vars%profile_curvature(:,:) = ptr_2D(:,:)
+    !DEALLOCATE(ptr_2D)
 
-    ptr_2D => input_file%Read_2d(    &
-      & variable_name='tcurv')
-    disturb_init_vars%tangential_curvature(:,:) = ptr_2D(:,:)
-    DEALLOCATE(ptr_2D)
+    !ptr_2D => input_file%Read_2d(    &
+    !  & variable_name='tcurv')
+    !disturb_init_vars%tangential_curvature(:,:) = ptr_2D(:,:)
+    !DEALLOCATE(ptr_2D)
 
     CALL input_file%Close()
 
@@ -610,11 +610,11 @@ CONTAINS
 
     dsl4jsb_memory(DISTURB_)%slope(:,:)                     = disturb_init_vars%slope(:,:)
     dsl4jsb_memory(DISTURB_)%roughness(:,:)                 = disturb_init_vars%roughness(:,:)
-    dsl4jsb_memory(DISTURB_)%topographic_position_idx(:,:)  = disturb_init_vars%topographic_position_idx(:,:)
-    dsl4jsb_memory(DISTURB_)%terrain_ruggedness_idx(:,:)    = disturb_init_vars%terrain_ruggedness_idx(:,:)
-    dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(:,:) = disturb_init_vars%vector_ruggedness_measure(:,:)
-    dsl4jsb_memory(DISTURB_)%profile_curvature(:,:)         = disturb_init_vars%profile_curvature(:,:)
-    dsl4jsb_memory(DISTURB_)%tangential_curvature(:,:)      = disturb_init_vars%tangential_curvature(:,:)
+    !dsl4jsb_memory(DISTURB_)%topographic_position_idx(:,:)  = disturb_init_vars%topographic_position_idx(:,:)
+    !sl4jsb_memory(DISTURB_)%terrain_ruggedness_idx(:,:)    = disturb_init_vars%terrain_ruggedness_idx(:,:)
+    !dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(:,:) = disturb_init_vars%vector_ruggedness_measure(:,:)
+    !dsl4jsb_memory(DISTURB_)%profile_curvature(:,:)         = disturb_init_vars%profile_curvature(:,:)
+    !dsl4jsb_memory(DISTURB_)%tangential_curvature(:,:)      = disturb_init_vars%tangential_curvature(:,:)
 
     ! Anthropogenic factors
     IF (debug_on()) CALL message(TRIM(routine), 'setting anthropogenic factors ...')

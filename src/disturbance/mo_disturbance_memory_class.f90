@@ -73,11 +73,11 @@ MODULE mo_disturb_memory_class
   
   REAL(wp), POINTER :: slope(:,:)                     => NULL()   ! slope                     (nproma,nblks) <Rackhun Son>
   REAL(wp), POINTER :: roughness(:,:)                 => NULL()   ! roughness                 (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: topographic_position_idx(:,:)  => NULL()   ! topographic_position_idx  (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: terrain_ruggedness_idx(:,:)    => NULL()   ! terrain_ruggedness_idx    (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: vector_ruggedness_measure(:,:) => NULL()   ! vector_ruggedness_measure (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: profile_curvature(:,:)         => NULL()   ! profile_curvature         (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: tangential_curvature(:,:)      => NULL()   ! tangential_curvature      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: topographic_position_idx(:,:)  => NULL()   ! topographic_position_idx  (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: terrain_ruggedness_idx(:,:)    => NULL()   ! terrain_ruggedness_idx    (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: vector_ruggedness_measure(:,:) => NULL()   ! vector_ruggedness_measure (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: profile_curvature(:,:)         => NULL()   ! profile_curvature         (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: tangential_curvature(:,:)      => NULL()   ! tangential_curvature      (nproma,nblks) <Rackhun Son>
 
   REAL(wp), POINTER :: population_density(:,:)        => NULL()   ! population_density        (nproma,nblks) <Rackhun Son>
   REAL(wp), POINTER :: gdp(:,:)                       => NULL()   ! gdp                       (nproma,nblks) <Rackhun Son>
@@ -158,11 +158,11 @@ CONTAINS
 
     ALLOCATE(mem%slope                     (hgrid%nproma, hgrid%nblks))   ! slope <Rackhun Son>
     ALLOCATE(mem%roughness                 (hgrid%nproma, hgrid%nblks))   ! roughness <Rackhun Son>
-    ALLOCATE(mem%topographic_position_idx  (hgrid%nproma, hgrid%nblks))   ! topographic position idx <Rackhun Son>
-    ALLOCATE(mem%terrain_ruggedness_idx    (hgrid%nproma, hgrid%nblks))   ! terrain ruggedness idx <Rackhun Son>
-    ALLOCATE(mem%vector_ruggedness_measure (hgrid%nproma, hgrid%nblks))   ! vector ruggedness measure <Rackhun Son>
-    ALLOCATE(mem%profile_curvature         (hgrid%nproma, hgrid%nblks))   ! profile curvature <Rackhun Son>
-    ALLOCATE(mem%tangential_curvature      (hgrid%nproma, hgrid%nblks))   ! tangential curvature <Rackhun Son>
+    !ALLOCATE(mem%topographic_position_idx  (hgrid%nproma, hgrid%nblks))   ! topographic position idx <Rackhun Son>
+    !ALLOCATE(mem%terrain_ruggedness_idx    (hgrid%nproma, hgrid%nblks))   ! terrain ruggedness idx <Rackhun Son>
+    !ALLOCATE(mem%vector_ruggedness_measure (hgrid%nproma, hgrid%nblks))   ! vector ruggedness measure <Rackhun Son>
+    !ALLOCATE(mem%profile_curvature         (hgrid%nproma, hgrid%nblks))   ! profile curvature <Rackhun Son>
+    !ALLOCATE(mem%tangential_curvature      (hgrid%nproma, hgrid%nblks))   ! tangential curvature <Rackhun Son>
 
     ALLOCATE(mem%population_density        (hgrid%nproma, hgrid%nblks))   ! population density <Rackhun Son>
     ALLOCATE(mem%gdp                       (hgrid%nproma, hgrid%nblks))   ! gdp <Rackhun Son>

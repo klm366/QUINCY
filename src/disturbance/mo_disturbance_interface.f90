@@ -251,11 +251,11 @@ CONTAINS
     REAL(wp), POINTER      :: lightning_climatology(:)
     REAL(wp), POINTER      :: slope(:)
     REAL(wp), POINTER      :: roughness(:)
-    REAL(wp), POINTER      :: topographic_position_idx(:)
-    REAL(wp), POINTER      :: terrain_ruggedness_idx(:)
-    REAL(wp), POINTER      :: vector_ruggedness_measure(:)
-    REAL(wp), POINTER      :: profile_curvature(:)
-    REAL(wp), POINTER      :: tangential_curvature(:)
+    !REAL(wp), POINTER      :: topographic_position_idx(:)
+    !REAL(wp), POINTER      :: terrain_ruggedness_idx(:)
+    !REAL(wp), POINTER      :: vector_ruggedness_measure(:)
+    !REAL(wp), POINTER      :: profile_curvature(:)
+    !REAL(wp), POINTER      :: tangential_curvature(:)
 
     REAL(wp), POINTER      :: population_density(:)
     REAL(wp), POINTER      :: gdp(:)
@@ -570,11 +570,11 @@ CONTAINS
 
         slope                     => dsl4jsb_memory(DISTURB_)%slope(ics:ice, iblk)                     ! <Rackhun Son>
         roughness                 => dsl4jsb_memory(DISTURB_)%roughness(ics:ice, iblk)                 ! <Rackhun Son>
-        topographic_position_idx  => dsl4jsb_memory(DISTURB_)%topographic_position_idx(ics:ice, iblk)  ! <Rackhun Son>
-        terrain_ruggedness_idx    => dsl4jsb_memory(DISTURB_)%terrain_ruggedness_idx(ics:ice, iblk)    ! <Rackhun Son>
-        vector_ruggedness_measure => dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(ics:ice, iblk) ! <Rackhun Son>
-        profile_curvature         => dsl4jsb_memory(DISTURB_)%profile_curvature(ics:ice, iblk)         ! <Rackhun Son>
-        tangential_curvature      => dsl4jsb_memory(DISTURB_)%tangential_curvature(ics:ice, iblk)      ! <Rackhun Son>
+        !topographic_position_idx  => dsl4jsb_memory(DISTURB_)%topographic_position_idx(ics:ice, iblk)  ! <Rackhun Son>
+        !terrain_ruggedness_idx    => dsl4jsb_memory(DISTURB_)%terrain_ruggedness_idx(ics:ice, iblk)    ! <Rackhun Son>
+        !vector_ruggedness_measure => dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(ics:ice, iblk) ! <Rackhun Son>
+        !profile_curvature         => dsl4jsb_memory(DISTURB_)%profile_curvature(ics:ice, iblk)         ! <Rackhun Son>
+        !tangential_curvature      => dsl4jsb_memory(DISTURB_)%tangential_curvature(ics:ice, iblk)      ! <Rackhun Son>
 
         population_density        => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk)        ! <Rackhun Son>
         gdp                       => dsl4jsb_memory(DISTURB_)%gdp(ics:ice, iblk)                       ! <Rackhun Son>
@@ -686,16 +686,15 @@ CONTAINS
              !& fuel(:),             fuel_yearly(:),                   &
               & fuel(:),                                               &
               & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,        &
-              !& population_density(:),                                 &
               & lightning_climatology(:),                              &
               & elevation(:),                                          &
               & slope(:),                                              &
               & roughness(:),                                          &
-              & topographic_position_idx(:),                           &
-              & terrain_ruggedness_idx(:),                             &
-              & vector_ruggedness_measure(:),                          &
-              & profile_curvature(:),                                  &
-              & tangential_curvature(:),                               &
+              !& topographic_position_idx(:),                           &
+              !& terrain_ruggedness_idx(:),                             &
+              !& vector_ruggedness_measure(:),                          &
+              !& profile_curvature(:),                                  &
+              !& tangential_curvature(:),                               &
 
               & population_density(:),                                 &
               & gdp(:),                                                &
@@ -723,8 +722,8 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%d_climate_hidden,             &
               & dsl4jsb_Config(DISTURB_)%d_vegetation_input,           &
               & dsl4jsb_Config(DISTURB_)%d_vegetation_hidden,          &
-              & dsl4jsb_Config(DISTURB_)%d_lnt_input,                  &
-              & dsl4jsb_Config(DISTURB_)%d_lnt_hidden,                 &
+              !& dsl4jsb_Config(DISTURB_)%d_lnt_input,                  &
+              !& dsl4jsb_Config(DISTURB_)%d_lnt_hidden,                 &
               & dsl4jsb_Config(DISTURB_)%d_ant_input,                  &
               & dsl4jsb_Config(DISTURB_)%d_ant_hidden,                 &
               & dsl4jsb_Config(DISTURB_)%d_output,                     &
@@ -770,10 +769,10 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%vegetation_out_weight,        &
               & dsl4jsb_Config(DISTURB_)%vegetation_out_bias,          &
 
-              & dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_weight, &
-              & dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_bias,   &
-              & dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_weight, &
-              & dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_bias,   &
+              !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_weight, &
+              !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_bias,   &
+              !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_weight, &
+              !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_bias,   &
 
               & dsl4jsb_Config(DISTURB_)%anthropogenic_layer1_weight, &
               & dsl4jsb_Config(DISTURB_)%anthropogenic_layer1_bias,   &
@@ -793,7 +792,7 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%climate_min_max,              &
               & dsl4jsb_Config(DISTURB_)%vegetation_min_max,           &
               & dsl4jsb_Config(DISTURB_)%embedding_min_max,            &
-              & dsl4jsb_Config(DISTURB_)%lightning_topography_min_max, &
+              !& dsl4jsb_Config(DISTURB_)%lightning_topography_min_max, &
               & dsl4jsb_Config(DISTURB_)%anthropogenic_min_max,        &
               
               & climate_lstm_hidden(:,:),                              & ! inout
