@@ -51,6 +51,8 @@ MODULE mo_disturb_config_class
                          d_vegetation_hidden,    & ! <Rackhun Son>
                          d_lnt_input,            & ! <Rackhun Son>
                          d_lnt_hidden,           & ! <Rackhun Son>
+                         d_ant_input,            & ! <Rackhun Son>
+                         d_ant_hidden,           & ! <Rackhun Son>
                          d_output,               & ! <Rackhun Son>
                          d_emb_input,            & ! <Rackhun Son>
                          d_emb_hidden,           & ! <Rackhun Son>
@@ -76,48 +78,27 @@ MODULE mo_disturb_config_class
     REAL(wp), ALLOCATABLE :: vegetation_h2o_weight(:,:), vegetation_h2o_bias(:) ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: vegetation_out_weight(:,:), vegetation_out_bias(:) ! dl fire model parameters <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: lightning_topography_layer1_weight(:,:), lightning_topography_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: lightning_topography_layer2_weight(:,:), lightning_topography_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
-
     REAL(wp), ALLOCATABLE :: climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
     
     REAL(wp), ALLOCATABLE :: vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
 
+    REAL(wp), ALLOCATABLE :: lightning_topography_layer1_weight(:,:), lightning_topography_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: lightning_topography_layer2_weight(:,:), lightning_topography_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
+
+    REAL(wp), ALLOCATABLE :: anthropogenic_layer1_weight(:,:), anthropogenic_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: anthropogenic_layer2_weight(:,:), anthropogenic_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
+
     REAL(wp), ALLOCATABLE :: climate_min_max(:,:)                ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: vegetation_min_max(:,:)             ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: embedding_min_max(:,:)              ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: lightning_topography_min_max(:,:)   ! dl fire model parameters <Rackhun Son>
-    
-    !REAL(wp), ALLOCATABLE :: t_air_minmax(:), t_air_ano_minmax(:), t_air_clim_minmax(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: q_rel_minmax(:), q_rel_ano_minmax(:), q_rel_clim_minmax(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: q_minmax(:),     q_ano_minmax(:),     q_clim_minmax(:)     ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: swl1_minmax(:),  swl1_ano_minmax(:),  swl1_clim_minmax(:)  ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: swl2_minmax(:),  swl2_ano_minmax(:),  swl2_clim_minmax(:)  ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: swl3_minmax(:),  swl3_ano_minmax(:),  swl3_clim_minmax(:)  ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: swl4_minmax(:),  swl4_ano_minmax(:),  swl4_clim_minmax(:)  ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: lai_minmax(:),   lai_ano_minmax(:),   lai_clim_minmax(:)   ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: anthropogenic_min_max(:,:)          ! dl fire model parameters <Rackhun Son>
 
-    !REAL(wp), ALLOCATABLE :: wind_10m_minmax(:)                       ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: rain_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: population_density_minmax(:)             ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: lightning_climatology_minmax(:)          ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: elevation_minmax(:)                      ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: agb_minmax(:)                            ! dl fire model parameters <Rackhun Son>
-    
-    !REAL(wp), ALLOCATABLE :: pft1_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft2_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft3_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft4_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft5_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft6_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft7_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft8_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft9_minmax(:)                           ! dl fire model parameters <Rackhun Son>
-
-  CHARACTER(len=filename_max) :: bc_lightning_filename         ! lightning frequency (daily) for fire <Rackhun Son>
-  CHARACTER(len=filename_max) :: bc_topography_filename        ! topographical complexity for fire    <Rackhun Son>
+  CHARACTER(len=filename_max) :: bc_lightning_filename          ! lightning frequency (daily) for fire <Rackhun Son>
+  CHARACTER(len=filename_max) :: bc_topography_filename         ! topographical complexity for fire    <Rackhun Son>
+  CHARACTER(len=filename_max) :: bc_anthropogenic_filename      ! topographical complexity for fire    <Rackhun Son>
   !CHARACTER(len=filename_max) :: bc_population_filename        ! population density (daily) for fire  <Rackhun Son>
   CHARACTER(len=filename_max) :: dl_fire_model_params_filename ! dl fire model parameters <Rackhun Son>
   CHARACTER(len=filename_max) :: dl_local_clim_t_air_filename   ! OBS local mean for dl fire model <Rackhun Son>
@@ -155,8 +136,9 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    CHARACTER(len=filename_max) :: bc_lightning_filename         ! lightning frequency (daily) for fire  <Rackhun Son>
+    CHARACTER(len=filename_max) :: bc_lightning_filename         ! lightning frequency (daily) for fire   <Rackhun Son>
     CHARACTER(len=filename_max) :: bc_topography_filename        ! topographical complexity for fire      <Rackhun Son>
+    CHARACTER(len=filename_max) :: bc_anthropogenic_filename     ! anthropogenic factor for fire          <Rackhun Son>
     !CHARACTER(len=filename_max) :: bc_population_filename        ! population density (daily) for fire  <Rackhun Son>
     CHARACTER(len=filename_max) :: dl_fire_model_params_filename ! dl fire model parameters               <Rackhun Son>
 
@@ -212,6 +194,7 @@ CONTAINS
     INTEGER :: d_climate_input,    d_climate_hidden       ! <Rackhun Son>
     INTEGER :: d_vegetation_input, d_vegetation_hidden    ! <Rackhun Son>
     INTEGER :: d_lnt_input,        d_lnt_hidden           ! <Rackhun Son>
+    INTEGER :: d_ant_input,        d_ant_hidden           ! <Rackhun Son>
     INTEGER :: d_emb_input,        d_emb_hidden           ! <Rackhun Son>
     INTEGER :: d_output,           d_emb_output           ! <Rackhun Son>
 
@@ -235,45 +218,24 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: vegetation_h2o_weight(:,:), vegetation_h2o_bias(:) ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: vegetation_out_weight(:,:), vegetation_out_bias(:) ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: lightning_topography_layer1_weight(:,:), lightning_topography_layer1_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: lightning_topography_layer2_weight(:,:), lightning_topography_layer2_bias(:) ! <Rackhun Son>
-
     REAL(wp), ALLOCATABLE :: climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:) ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:) ! <Rackhun Son>
 
     REAL(wp), ALLOCATABLE :: vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:) ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:) ! <Rackhun Son>
 
+    REAL(wp), ALLOCATABLE :: lightning_topography_layer1_weight(:,:), lightning_topography_layer1_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: lightning_topography_layer2_weight(:,:), lightning_topography_layer2_bias(:) ! <Rackhun Son>
+
+    REAL(wp), ALLOCATABLE :: anthropogenic_layer1_weight(:,:), anthropogenic_layer1_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: anthropogenic_layer2_weight(:,:), anthropogenic_layer2_bias(:) ! <Rackhun Son>
+
     REAL(wp), ALLOCATABLE :: climate_min_max(:,:)                 ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: vegetation_min_max(:,:)              ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: embedding_min_max(:,:)               ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: lightning_topography_min_max(:,:)    ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: anthropogenic_min_max(:,:)           ! <Rackhun Son>
     
-    !REAL(wp), ALLOCATABLE :: t_air_minmax(:), t_air_ano_minmax(:), t_air_clim_minmax(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: q_rel_minmax(:), q_rel_ano_minmax(:), q_rel_clim_minmax(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: q_minmax(:),     q_ano_minmax(:),     q_clim_minmax(:)     ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: swl1_minmax(:),  swl1_ano_minmax(:),  swl1_clim_minmax(:)  ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: swl2_minmax(:),  swl2_ano_minmax(:),  swl2_clim_minmax(:)  ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: swl3_minmax(:),  swl3_ano_minmax(:),  swl3_clim_minmax(:)  ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: swl4_minmax(:),  swl4_ano_minmax(:),  swl4_clim_minmax(:)  ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: lai_minmax(:),   lai_ano_minmax(:),   lai_clim_minmax(:)   ! <Rackhun Son>
-
-    !REAL(wp), ALLOCATABLE :: wind_10m_minmax(:)                         ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: rain_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: population_density_minmax(:)               ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: lightning_climatology_minmax(:)            ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: elevation_minmax(:)                        ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: agb_minmax(:)                              ! <Rackhun Son>
-
-    !REAL(wp), ALLOCATABLE :: pft1_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft2_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft3_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft4_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft5_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft6_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft7_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft8_minmax(:)                             ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: pft9_minmax(:)                             ! <Rackhun Son>
 
     TYPE(t_jsb_vgrid), POINTER :: daily            ! New axis for the day of year <Rackhun Son>
     !TYPE(t_jsb_vgrid), POINTER :: monthly           ! New axis for month           <Rackhun Son>
@@ -290,6 +252,7 @@ CONTAINS
     ic_filename            = 'ic_land_disturb.nc'
     bc_lightning_filename  = 'bc_land_lightning.nc'      ! lightning frequency (daily) for fire <Rackhun Son>
     bc_topography_filename = 'bc_land_topography.nc'     ! topographical complexity for fire    <Rackhun Son>
+    bc_anthropogenic_filename = 'bc_anthropogenic.nc'    ! anthropogenic factor for fire        <Rackhun Son>
     !bc_population_filename = 'bc_land_population.nc'     ! population density (daily) for fire  <Rackhun Son>
     dl_fire_model_params_filename = 'dl_model_params.nc' ! dl fire model parameters             <Rackhun Son>
 
@@ -349,6 +312,13 @@ CONTAINS
     DEALLOCATE(ptr_1D)
     ptr_1D => input_file%Read_1d(variable_name='d_lnt_hidden')
     d_lnt_hidden = SIZE(ptr_1D)
+    DEALLOCATE(ptr_1D)
+
+    ptr_1D => input_file%Read_1d(variable_name='d_ant_input')
+    d_ant_input = SIZE(ptr_1D)
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_ant_hidden')
+    d_ant_hidden = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
 
     ptr_1D => input_file%Read_1d(variable_name='d_output')
@@ -489,6 +459,19 @@ CONTAINS
     lightning_topography_layer2_bias = ptr_1D
     DEALLOCATE(ptr_1D)
 
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer1_weight')
+    anthropogenic_layer1_weight = RESHAPE(ptr_1D, (/d_ant_input, d_ant_hidden/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer1_bias')
+    anthropogenic_layer1_bias = ptr_1D
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer2_weight')
+    anthropogenic_layer2_weight = RESHAPE(ptr_1D, (/d_ant_hidden, d_output/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer2_bias')
+    anthropogenic_layer2_bias = ptr_1D
+    DEALLOCATE(ptr_1D)
+
     ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer1_weight')
     climate_emb_layer1_weight = RESHAPE(ptr_1D, (/d_emb_input, d_emb_hidden/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
@@ -528,146 +511,18 @@ CONTAINS
     ptr_1D => input_file%Read_1d(variable_name='lightning_topography_min_max')
     lightning_topography_min_max = RESHAPE(ptr_1D, (/d_lnt_input, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='t2m_min_max')
-    !t_air_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='t2m_ano_min_max')
-    !t_air_ano_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='t2m_clim_min_max')
-    !t_air_clim_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='rh_min_max')
-    !q_rel_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='rh_ano_min_max')
-    !q_rel_ano_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='rh_clim_min_max')
-    !q_rel_clim_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='q_min_max')
-    !q_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='q_ano_min_max')
-    !q_ano_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='q_clim_min_max')
-    !q_clim_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='ws_min_max')
-    !wind_10m_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='rain_min_max')
-    !rain_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='sw1_min_max')
-    !swl1_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='sw1_ano_min_max')
-    !swl1_ano_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='sw1_clim_min_max')
-    !swl1_clim_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='sw2_min_max')
-    !swl2_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='sw2_ano_min_max')
-    !swl2_ano_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='sw2_clim_min_max')
-    !swl2_clim_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='sw3_min_max')
-    !swl3_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='sw3_ano_min_max')
-    !swl3_ano_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='sw3_clim_min_max')
-    !swl3_clim_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='sw4_min_max')
-    !swl4_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='sw4_ano_min_max')
-    !swl4_ano_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='sw4_clim_min_max')
-    !swl4_clim_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='lai_min_max')
-    !lai_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='lai_ano_min_max')
-    !lai_ano_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='lai_clim_min_max')
-    !lai_clim_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='population_min_max')
-    !population_density_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='lightning_min_max')
-    !lightning_climatology_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='elevation_min_max')
-    !elevation_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='agb_min_max')
-    !agb_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
-    !ptr_1D => input_file%Read_1d(variable_name='pft1_min_max')
-    !pft1_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='pft2_min_max')
-    !pft2_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='pft3_min_max')
-    !pft3_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='pft4_min_max')
-    !pft4_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='pft5_min_max')
-    !pft5_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='pft6_min_max')
-    !pft6_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='pft7_min_max')
-    !pft7_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='pft8_min_max')
-    !pft8_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='pft9_min_max')
-    !pft9_minmax = ptr_1D
-    !DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_min_max')
+    anthropogenic_min_max = RESHAPE(ptr_1D, (/d_ant_input, 2/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
 
 
     ! Write resulting values in config memory
     config%active                 = active
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
-    config%bc_lightning_filename  = bc_lightning_filename    ! lightning frequency (daily) for fire       <Rackhun Son>
-    config%bc_topography_filename = bc_topography_filename   ! topographical complexity (daily) for fire  <Rackhun Son>
+    config%bc_lightning_filename  = bc_lightning_filename          ! lightning frequency (daily) for fire       <Rackhun Son>
+    config%bc_topography_filename = bc_topography_filename         ! topographical complexity (daily) for fire  <Rackhun Son>
+    config%bc_anthropogenic_filename = bc_anthropogenic_filename   ! anthropogenic for fire                     <Rackhun Son>
     !config%bc_population_filename = bc_population_filename  ! population density (daily) for fire        <Rackhun Son>
     config%dl_fire_model_params_filename = dl_fire_model_params_filename ! dl fire model parameters       <Rackhun Son>
 
@@ -699,6 +554,8 @@ CONTAINS
     config%d_vegetation_hidden      = d_vegetation_hidden      ! <Rackhun Son>
     config%d_lnt_input              = d_lnt_input              ! <Rackhun Son>
     config%d_lnt_hidden             = d_lnt_hidden             ! <Rackhun Son>
+    config%d_ant_input              = d_ant_input              ! <Rackhun Son>
+    config%d_ant_hidden             = d_ant_hidden             ! <Rackhun Son>
     config%d_output                 = d_output                 ! <Rackhun Son>
     config%d_emb_input              = d_emb_input              ! <Rackhun Son>
     config%d_emb_hidden             = d_emb_hidden             ! <Rackhun Son>
@@ -747,6 +604,11 @@ CONTAINS
     config%lightning_topography_layer2_weight = lightning_topography_layer2_weight   ! <Rackhun Son>
     config%lightning_topography_layer2_bias   = lightning_topography_layer2_bias     ! <Rackhun Son>
 
+    config%anthropogenic_layer1_weight = anthropogenic_layer1_weight   ! <Rackhun Son>
+    config%anthropogenic_layer1_bias   = anthropogenic_layer1_bias     ! <Rackhun Son>
+    config%anthropogenic_layer2_weight = anthropogenic_layer2_weight   ! <Rackhun Son>
+    config%anthropogenic_layer2_bias   = anthropogenic_layer2_bias     ! <Rackhun Son>
+
     config%climate_emb_layer1_weight    = climate_emb_layer1_weight    ! <Rackhun Son>
     config%climate_emb_layer1_bias      = climate_emb_layer1_bias      ! <Rackhun Son>
     config%climate_emb_layer2_weight    = climate_emb_layer2_weight    ! <Rackhun Son>
@@ -761,46 +623,8 @@ CONTAINS
     config%vegetation_min_max           = vegetation_min_max           ! <Rackhun Son>
     config%embedding_min_max            = embedding_min_max            ! <Rackhun Son>
     config%lightning_topography_min_max = lightning_topography_min_max ! <Rackhun Son>
+    config%anthropogenic_min_max        = anthropogenic_min_max        ! <Rackhun Son>
 
-    !config%t_air_minmax                 = t_air_minmax
-    !config%t_air_ano_minmax             = t_air_ano_minmax
-    !config%t_air_clim_minmax            = t_air_clim_minmax
-    !config%q_rel_minmax                 = q_rel_minmax
-    !config%q_rel_ano_minmax             = q_rel_ano_minmax
-    !config%q_rel_clim_minmax            = q_rel_clim_minmax
-    !config%q_minmax                     = q_minmax
-    !config%q_ano_minmax                 = q_ano_minmax
-    !config%q_clim_minmax                = q_clim_minmax
-    !config%wind_10m_minmax              = wind_10m_minmax
-    !config%rain_minmax                  = rain_minmax
-    !config%swl1_minmax                  = swl1_minmax
-    !config%swl1_ano_minmax              = swl1_ano_minmax
-    !config%swl1_clim_minmax             = swl1_clim_minmax
-    !config%swl2_minmax                  = swl2_minmax
-    !config%swl2_ano_minmax              = swl2_ano_minmax
-    !config%swl2_clim_minmax             = swl2_clim_minmax
-    !config%swl3_minmax                  = swl3_minmax
-    !config%swl3_ano_minmax              = swl3_ano_minmax
-    !config%swl3_clim_minmax             = swl3_clim_minmax
-    !config%swl4_minmax                  = swl4_minmax
-    !config%swl4_ano_minmax              = swl4_ano_minmax
-    !config%swl4_clim_minmax             = swl4_clim_minmax
-    !config%lai_minmax                   = lai_minmax
-    !config%lai_ano_minmax               = lai_ano_minmax
-    !config%lai_clim_minmax              = lai_clim_minmax
-    !config%population_density_minmax    = population_density_minmax
-    !config%lightning_climatology_minmax = lightning_climatology_minmax
-    !config%elevation_minmax             = elevation_minmax
-    !config%agb_minmax                   = agb_minmax
-    !config%pft1_minmax                  = pft1_minmax
-    !config%pft2_minmax                  = pft2_minmax
-    !config%pft3_minmax                  = pft3_minmax
-    !config%pft4_minmax                  = pft4_minmax
-    !config%pft5_minmax                  = pft5_minmax
-    !config%pft6_minmax                  = pft6_minmax
-    !config%pft7_minmax                  = pft7_minmax
-    !config%pft8_minmax                  = pft8_minmax
-    !config%pft9_minmax                  = pft9_minmax
 
     ! New axis for the day of year <Rackhun Son>
     daily => new_vgrid('daily', ZAXIS_GENERIC, 366, units='day')

@@ -49,7 +49,24 @@ MODULE mo_disturb_init
       & profile_curvature(:,:),         &
       & tangential_curvature(:,:),      &
 
-      !& population_density(:,:,:), &
+      & population_density(:,:),        &
+      & gdp(:,:),                       &
+      & hdi(:,:),                       &
+      & road_density(:,:),              &
+      & land_use_state_c3ann(:,:),      &
+      & land_use_state_c3nfx(:,:),      &
+      & land_use_state_c3per(:,:),      &
+      & land_use_state_c4ann(:,:),      &
+      & land_use_state_c4per(:,:),      &
+      & land_use_state_pastr(:,:),      &
+      & land_use_state_primf(:,:),      &
+      & land_use_state_primn(:,:),      &
+      & land_use_state_range(:,:),      &
+      & land_use_state_secdf(:,:),      &
+      & land_use_state_secdn(:,:),      &
+      & land_use_state_secma(:,:),      &
+      & land_use_state_secmb(:,:),      &
+      & land_use_state_urban(:,:),      &
 
       & t_air_local_clim(:,:,:),        &
       & q_rel_local_clim(:,:,:),        &
@@ -112,6 +129,25 @@ CONTAINS
       & disturb_init_vars%profile_curvature,           &
       & disturb_init_vars%tangential_curvature,        &
 
+      & disturb_init_vars%population_density,          &
+      & disturb_init_vars%gdp,                         &
+      & disturb_init_vars%hdi,                         &
+      & disturb_init_vars%road_density,                &
+      & disturb_init_vars%land_use_state_c3ann,        &
+      & disturb_init_vars%land_use_state_c3nfx,        &
+      & disturb_init_vars%land_use_state_c3per,        &
+      & disturb_init_vars%land_use_state_c4ann,        &
+      & disturb_init_vars%land_use_state_c4per,        &
+      & disturb_init_vars%land_use_state_pastr,        &
+      & disturb_init_vars%land_use_state_primf,        &
+      & disturb_init_vars%land_use_state_primn,        &
+      & disturb_init_vars%land_use_state_range,        &
+      & disturb_init_vars%land_use_state_secdf,        &
+      & disturb_init_vars%land_use_state_secdn,        &
+      & disturb_init_vars%land_use_state_secma,        &
+      & disturb_init_vars%land_use_state_secmb,        &
+      & disturb_init_vars%land_use_state_urban,        &
+
       & disturb_init_vars%t_air_local_clim,            &
       & disturb_init_vars%q_rel_local_clim,            &
       & disturb_init_vars%q_local_clim,                &
@@ -161,6 +197,25 @@ CONTAINS
       & disturb_init_vars%profile_curvature(nproma, nblks),                          &
       & disturb_init_vars%tangential_curvature(nproma, nblks),                       &
 
+      & disturb_init_vars%population_density(nproma, nblks),                         &
+      & disturb_init_vars%gdp(nproma, nblks),                                        &
+      & disturb_init_vars%hdi(nproma, nblks),                                        &
+      & disturb_init_vars%road_density(nproma, nblks),                               &
+      & disturb_init_vars%land_use_state_c3ann(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_c3nfx(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_c3per(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_c4ann(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_c4per(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_pastr(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_primf(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_primn(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_range(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_secdf(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_secdn(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_secma(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_secmb(nproma, nblks),                       &
+      & disturb_init_vars%land_use_state_urban(nproma, nblks),                       &
+
       & disturb_init_vars%t_air_local_clim (nproma, nblks, 1:366),                   &
       & disturb_init_vars%q_rel_local_clim (nproma, nblks, 1:366),                   &
       & disturb_init_vars%q_local_clim     (nproma, nblks, 1:366),                   &
@@ -191,6 +246,25 @@ CONTAINS
     disturb_init_vars%vector_ruggedness_measure(:,:) = missval
     disturb_init_vars%profile_curvature        (:,:) = missval
     disturb_init_vars%tangential_curvature     (:,:) = missval
+
+    disturb_init_vars%population_density       (:,:) = missval
+    disturb_init_vars%gdp                      (:,:) = missval
+    disturb_init_vars%hdi                      (:,:) = missval
+    disturb_init_vars%road_density             (:,:) = missval
+    disturb_init_vars%land_use_state_c3ann     (:,:) = missval
+    disturb_init_vars%land_use_state_c3nfx     (:,:) = missval
+    disturb_init_vars%land_use_state_c3per     (:,:) = missval
+    disturb_init_vars%land_use_state_c4ann     (:,:) = missval
+    disturb_init_vars%land_use_state_c4per     (:,:) = missval
+    disturb_init_vars%land_use_state_pastr     (:,:) = missval
+    disturb_init_vars%land_use_state_primf     (:,:) = missval
+    disturb_init_vars%land_use_state_primn     (:,:) = missval
+    disturb_init_vars%land_use_state_range     (:,:) = missval
+    disturb_init_vars%land_use_state_secdf     (:,:) = missval
+    disturb_init_vars%land_use_state_secdn     (:,:) = missval
+    disturb_init_vars%land_use_state_secma     (:,:) = missval
+    disturb_init_vars%land_use_state_secmb     (:,:) = missval
+    disturb_init_vars%land_use_state_urban     (:,:) = missval
 
     disturb_init_vars%t_air_local_clim (:,:,:) = missval
     disturb_init_vars%q_rel_local_clim (:,:,:) = missval
@@ -261,6 +335,104 @@ CONTAINS
     DEALLOCATE(ptr_2D)
 
     CALL input_file%Close()
+
+    !  anthropogenic factors
+    IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (anthropogenic factors) init from ' &
+      &                          //TRIM(dsl4jsb_Config(DISTURB_)%bc_anthropogenic_filename))
+
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%bc_anthropogenic_filename), model%grid_id)
+
+    IF (debug_on()) CALL message(TRIM(routine), 'reading anthropogenic variables ...')
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='population_density')
+    disturb_init_vars%population_density(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='gdp')
+    disturb_init_vars%gdp(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='hdi')
+    disturb_init_vars%hdi(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='road_density')
+    disturb_init_vars%road_density(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_c3ann')
+    disturb_init_vars%land_use_state_c3ann(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_c3nfx')
+    disturb_init_vars%land_use_state_c3nfx(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_c3per')
+    disturb_init_vars%land_use_state_c3per(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_c4ann')
+    disturb_init_vars%land_use_state_c4ann(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_c4per')
+    disturb_init_vars%land_use_state_c4per(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_pastr')
+    disturb_init_vars%land_use_state_pastr(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_primf')
+    disturb_init_vars%land_use_state_primf(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_primn')
+    disturb_init_vars%land_use_state_primn(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_range')
+    disturb_init_vars%land_use_state_range(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_secdf')
+    disturb_init_vars%land_use_state_secdf(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_secdn')
+    disturb_init_vars%land_use_state_secdn(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_secma')
+    disturb_init_vars%land_use_state_secma(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_secmb')
+    disturb_init_vars%land_use_state_secmb(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
+    ptr_2D => input_file%Read_2d(    &
+      & variable_name='LUS_urban')
+    disturb_init_vars%land_use_state_urban(:,:) = ptr_2D(:,:)
+    DEALLOCATE(ptr_2D)
+
 
     ! population density
     !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (population density) init from ' &
@@ -443,7 +615,30 @@ CONTAINS
     dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(:,:) = disturb_init_vars%vector_ruggedness_measure(:,:)
     dsl4jsb_memory(DISTURB_)%profile_curvature(:,:)         = disturb_init_vars%profile_curvature(:,:)
     dsl4jsb_memory(DISTURB_)%tangential_curvature(:,:)      = disturb_init_vars%tangential_curvature(:,:)
-    
+
+    ! Anthropogenic factors
+    IF (debug_on()) CALL message(TRIM(routine), 'setting anthropogenic factors ...')
+
+    dsl4jsb_memory(DISTURB_)%population_density(:,:)        = disturb_init_vars%population_density(:,:)
+    dsl4jsb_memory(DISTURB_)%gdp(:,:)                       = disturb_init_vars%gdp(:,:)
+    dsl4jsb_memory(DISTURB_)%hdi(:,:)                       = disturb_init_vars%hdi(:,:)
+    dsl4jsb_memory(DISTURB_)%road_density(:,:)              = disturb_init_vars%road_density(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_c3ann(:,:)      = disturb_init_vars%land_use_state_c3ann(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_c3nfx(:,:)      = disturb_init_vars%land_use_state_c3nfx(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_c3per(:,:)      = disturb_init_vars%land_use_state_c3per(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_c4ann(:,:)      = disturb_init_vars%land_use_state_c4ann(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_c4per(:,:)      = disturb_init_vars%land_use_state_c4per(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_pastr(:,:)      = disturb_init_vars%land_use_state_pastr(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_primf(:,:)      = disturb_init_vars%land_use_state_primf(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_primn(:,:)      = disturb_init_vars%land_use_state_primn(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_range(:,:)      = disturb_init_vars%land_use_state_range(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_secdf(:,:)      = disturb_init_vars%land_use_state_secdf(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_secdn(:,:)      = disturb_init_vars%land_use_state_secdn(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_secma(:,:)      = disturb_init_vars%land_use_state_secma(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_secmb(:,:)      = disturb_init_vars%land_use_state_secmb(:,:)
+    dsl4jsb_memory(DISTURB_)%land_use_state_urban(:,:)      = disturb_init_vars%land_use_state_urban(:,:)
+
+
     ! population density
     !IF (debug_on()) CALL message(TRIM(routine), 'setting population density ...')
     !dsl4jsb_memory(DISTURB_)%population_density(:,:,:) = disturb_init_vars%population_density(:,:,:)

@@ -152,9 +152,6 @@ CONTAINS
 
     USE mo_jsb_time_iface,        ONLY: get_year_day    ! <Rackhun Son>
     USE mo_time_config,           ONLY: time_config     ! <Rackhun Son>
-    !!!! These will be removed after the FUEL issue
-    !USE mo_fuel_process,          ONLY: calc_fuel_jsbach
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -189,17 +186,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: max_wind_10m
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf
     dsl4jsb_Real2D_onChunk :: q_rel_air_climbuf_yDay
-
-    !!!! These will be removed after the FUEL issue
-    !dsl4jsb_Real2D_onChunk :: c_acid_ag1_ta
-    !dsl4jsb_Real2D_onChunk :: c_water_ag1_ta
-    !dsl4jsb_Real2D_onChunk :: c_ethanol_ag1_ta
-    !dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag1_ta
-    !dsl4jsb_Real2D_onChunk :: c_acid_ag2_ta
-    !dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
-    !dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
-    !dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     ! axuxiliary input variables for fire
     dsl4jsb_Real2D_onChunk :: t_air                  ! temperature [K]   <Rackhun Son>
@@ -270,7 +256,26 @@ CONTAINS
     REAL(wp), POINTER      :: vector_ruggedness_measure(:)
     REAL(wp), POINTER      :: profile_curvature(:)
     REAL(wp), POINTER      :: tangential_curvature(:)
-    !REAL(wp), POINTER      :: population_density(:)
+
+    REAL(wp), POINTER      :: population_density(:)
+    REAL(wp), POINTER      :: gdp(:)
+    REAL(wp), POINTER      :: hdi(:)
+    REAL(wp), POINTER      :: road_density(:)
+    REAL(wp), POINTER      :: land_use_state_c3ann(:)
+    REAL(wp), POINTER      :: land_use_state_c3nfx(:)
+    REAL(wp), POINTER      :: land_use_state_c3per(:)
+    REAL(wp), POINTER      :: land_use_state_c4ann(:)
+    REAL(wp), POINTER      :: land_use_state_c4per(:)
+    REAL(wp), POINTER      :: land_use_state_pastr(:)
+    REAL(wp), POINTER      :: land_use_state_primf(:)
+    REAL(wp), POINTER      :: land_use_state_primn(:)
+    REAL(wp), POINTER      :: land_use_state_range(:)
+    REAL(wp), POINTER      :: land_use_state_secdf(:)
+    REAL(wp), POINTER      :: land_use_state_secdn(:)
+    REAL(wp), POINTER      :: land_use_state_secma(:)
+    REAL(wp), POINTER      :: land_use_state_secmb(:)
+    REAL(wp), POINTER      :: land_use_state_urban(:)
+
     REAL(wp), POINTER      :: t_air_local_clim(:)
     REAL(wp), POINTER      :: q_rel_local_clim(:)
     REAL(wp), POINTER      :: q_local_clim(:)
@@ -374,22 +379,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_green_2_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_dist_woods_2_soil)  ! out
     
-    !!!! These will be removed after the FUEL issue 
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag1_ta)            ! in
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag1_ta)           ! in
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag1_ta)         ! in
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag1_ta)      ! in
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_acid_ag2_ta)            ! in
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_water_ag2_ta)           ! in
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_ethanol_ag2_ta)         ! in
-    !dsl4jsb_Get_var2D_onChunk(CARBON_,    c_nonsoluble_ag2_ta)      ! in
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)          ! in
     ! -------------------------------------------------------------------------------------------------- !
 
-    q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
-    !q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
+    !q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
+    q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
 
     ! For each time step update the climate buffer
 
@@ -410,11 +404,6 @@ CONTAINS
     END IF
 
     ! calculate volumetric soil water content <Rackhun Son> 
-    !swl1(:) = wtr_soil_sl(:,1) / (soil_depth_sl(:,1)+1e-8_wp)
-    !swl2(:) = wtr_soil_sl(:,2) / (soil_depth_sl(:,2)+1e-8_wp)
-    !swl3(:) = wtr_soil_sl(:,3) / (soil_depth_sl(:,3)+1e-8_wp)
-    !swl4(:) = wtr_soil_sl(:,4) / (soil_depth_sl(:,4)+1e-8_wp)
-
     DO i = 1, size(soil_depth_sl, dim=1)
       IF (soil_depth_sl(i,1) > 0._wp) THEN
         swl1(i) = wtr_soil_sl(i,1) / soil_depth_sl(i,1)
@@ -465,24 +454,6 @@ CONTAINS
     lai_ave(:)   = lai_ave(:)   + lai(:)      *(options%dtime/60._wp/60._wp/24._wp)
 
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
-
-      !!!! These will be removed after the FUEL issue 
-      !CALL calc_fuel_jsbach(       &
-      !  & c_acid_ag1_ta(:),        & ! in
-      !  & c_water_ag1_ta(:),       & ! in
-      !  & c_ethanol_ag1_ta(:),     & ! in
-      !  & c_nonsoluble_ag1_ta(:),  & ! in
-      !  & c_acid_ag2_ta(:),        & ! in
-      !  & c_water_ag2_ta(:),       & ! in
-      !  & c_ethanol_ag2_ta(:),     & ! in
-      !  & c_nonsoluble_ag2_ta(:),  & ! in
-      !  & fract_fpc_max(:),        & ! in
-      !  & fuel(:)                  & ! out
-      !  & )
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      !if (SUM(fuel) > 0) then
-      !  print*, SUM(fuel)
-      !endif
 
       ! calculate auxiliary variables for DL fire model   <Rackhun Son>
       IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
@@ -605,6 +576,25 @@ CONTAINS
         profile_curvature         => dsl4jsb_memory(DISTURB_)%profile_curvature(ics:ice, iblk)         ! <Rackhun Son>
         tangential_curvature      => dsl4jsb_memory(DISTURB_)%tangential_curvature(ics:ice, iblk)      ! <Rackhun Son>
 
+        population_density        => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk)        ! <Rackhun Son>
+        gdp                       => dsl4jsb_memory(DISTURB_)%gdp(ics:ice, iblk)                       ! <Rackhun Son>
+        hdi                       => dsl4jsb_memory(DISTURB_)%hdi(ics:ice, iblk)                       ! <Rackhun Son>
+        road_density              => dsl4jsb_memory(DISTURB_)%road_density(ics:ice, iblk)              ! <Rackhun Son>
+        land_use_state_c3ann      => dsl4jsb_memory(DISTURB_)%land_use_state_c3ann(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_c3nfx      => dsl4jsb_memory(DISTURB_)%land_use_state_c3nfx(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_c3per      => dsl4jsb_memory(DISTURB_)%land_use_state_c3per(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_c4ann      => dsl4jsb_memory(DISTURB_)%land_use_state_c4ann(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_c4per      => dsl4jsb_memory(DISTURB_)%land_use_state_c4per(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_pastr      => dsl4jsb_memory(DISTURB_)%land_use_state_pastr(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_primf      => dsl4jsb_memory(DISTURB_)%land_use_state_primf(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_primn      => dsl4jsb_memory(DISTURB_)%land_use_state_primn(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_range      => dsl4jsb_memory(DISTURB_)%land_use_state_range(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_secdf      => dsl4jsb_memory(DISTURB_)%land_use_state_secdf(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_secdn      => dsl4jsb_memory(DISTURB_)%land_use_state_secdn(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_secma      => dsl4jsb_memory(DISTURB_)%land_use_state_secma(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_secmb      => dsl4jsb_memory(DISTURB_)%land_use_state_secmb(ics:ice, iblk)      ! <Rackhun Son>
+        land_use_state_urban      => dsl4jsb_memory(DISTURB_)%land_use_state_urban(ics:ice, iblk)      ! <Rackhun Son>
+
         !population_density    => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk, day_of_year)       ! <Rackhun Son>
 
         t_air_local_clim      => dsl4jsb_memory(DISTURB_)%t_air_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
@@ -627,19 +617,6 @@ CONTAINS
         !lai_local_clim        => dsl4jsb_memory(DISTURB_)%lai_local_clim(ics:ice, iblk, imo)           ! <Rackhun Son>
         
       ENDIF
-
-      !print*, t_air_min_bias(1)
-
-      ! reset daily statistics
-      !t_air_ave(:) = 0._wp
-      !q_ave(:) = 0._wp
-      !q_rel_ave(:) = 0._wp
-      !ws10_ave(:) = 0._wp
-      !swl1_ave(:) = 0._wp
-      !swl2_ave(:) = 0._wp
-      !swl3_ave(:) = 0._wp
-      !swl4_ave(:) = 0._wp
-      !lai_ave(:) = 0._wp
 
       burned_fract(:) = 0._wp
       IF (      dsl4jsb_Lctlib_param(dynamic_PFT) &
@@ -674,10 +651,6 @@ CONTAINS
             CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
           CASE (4) !! Read burned_fract
           CASE (5) !! DL based new fire algoritm   <Rackhun Son>
-            !IF (maxval(fuel) /= 0.) print*, minval(fuel), maxval(fuel)
-            !if (SUM(c_acid_ag1_ta)>0) then
-            !  print*, SUM(c_acid_ag1_ta)
-            !endif
 
             CALL burned_fract_dl(                                         &
               !& t_air(:),                                                 &
@@ -686,6 +659,7 @@ CONTAINS
               !& q_rel_air(:),                                             &
               & q_rel_ave(:),                                             &
               & q_rel_local_clim(:), q_rel_clim(:,day_of_year)/diff_year, &
+              & q_rel_air_climbuf(:), dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
               !& q_air(:),                                                 &
               & q_ave(:),                                                 &
               & q_local_clim(:),     q_clim(:,day_of_year)/diff_year,     &
@@ -711,6 +685,7 @@ CONTAINS
               & modified_pfts_fract(:,:),                              &
              !& fuel(:),             fuel_yearly(:),                   &
               & fuel(:),                                               &
+              & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,        &
               !& population_density(:),                                 &
               & lightning_climatology(:),                              &
               & elevation(:),                                          &
@@ -722,6 +697,25 @@ CONTAINS
               & profile_curvature(:),                                  &
               & tangential_curvature(:),                               &
 
+              & population_density(:),                                 &
+              & gdp(:),                                                &
+              & hdi(:),                                                &
+              & road_density(:),                                       &
+              & land_use_state_c3ann(:),                               &
+              & land_use_state_c3nfx(:),                               &
+              & land_use_state_c3per(:),                               &
+              & land_use_state_c4ann(:),                               &
+              & land_use_state_c4per(:),                               &
+              & land_use_state_pastr(:),                               &
+              & land_use_state_primf(:),                               &
+              & land_use_state_primn(:),                               &
+              & land_use_state_range(:),                               &
+              & land_use_state_secdf(:),                               &
+              & land_use_state_secdn(:),                               &
+              & land_use_state_secma(:),                               &
+              & land_use_state_secmb(:),                               &
+              & land_use_state_urban(:),                               &
+
               & nc,                                                    &
               & tile%name,                                             &
 
@@ -731,6 +725,8 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%d_vegetation_hidden,          &
               & dsl4jsb_Config(DISTURB_)%d_lnt_input,                  &
               & dsl4jsb_Config(DISTURB_)%d_lnt_hidden,                 &
+              & dsl4jsb_Config(DISTURB_)%d_ant_input,                  &
+              & dsl4jsb_Config(DISTURB_)%d_ant_hidden,                 &
               & dsl4jsb_Config(DISTURB_)%d_output,                     &
               & dsl4jsb_Config(DISTURB_)%d_emb_input,                  &
               & dsl4jsb_Config(DISTURB_)%d_emb_hidden,                 &
@@ -779,6 +775,11 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_weight, &
               & dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_bias,   &
 
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_layer1_weight, &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_layer1_bias,   &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_layer2_weight, &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_layer2_bias,   &
+
               & dsl4jsb_Config(DISTURB_)%climate_emb_layer1_weight,    &
               & dsl4jsb_Config(DISTURB_)%climate_emb_layer1_bias,      &
               & dsl4jsb_Config(DISTURB_)%climate_emb_layer2_weight,    &
@@ -793,46 +794,7 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%vegetation_min_max,           &
               & dsl4jsb_Config(DISTURB_)%embedding_min_max,            &
               & dsl4jsb_Config(DISTURB_)%lightning_topography_min_max, &
-
-              !& dsl4jsb_Config(DISTURB_)%t_air_minmax,                 &
-              !& dsl4jsb_Config(DISTURB_)%t_air_ano_minmax,             &
-              !& dsl4jsb_Config(DISTURB_)%t_air_clim_minmax,            &
-              !& dsl4jsb_Config(DISTURB_)%q_rel_minmax,                 &
-              !& dsl4jsb_Config(DISTURB_)%q_rel_ano_minmax,             &
-              !& dsl4jsb_Config(DISTURB_)%q_rel_clim_minmax,            &
-              !& dsl4jsb_Config(DISTURB_)%q_minmax,                     &
-              !& dsl4jsb_Config(DISTURB_)%q_ano_minmax,                 &
-              !& dsl4jsb_Config(DISTURB_)%q_clim_minmax,                &
-              !& dsl4jsb_Config(DISTURB_)%wind_10m_minmax,              &
-              !& dsl4jsb_Config(DISTURB_)%rain_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%swl1_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%swl1_ano_minmax,              &
-              !& dsl4jsb_Config(DISTURB_)%swl1_clim_minmax,             &
-              !& dsl4jsb_Config(DISTURB_)%swl2_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%swl2_ano_minmax,              &
-              !& dsl4jsb_Config(DISTURB_)%swl2_clim_minmax,             &
-              !& dsl4jsb_Config(DISTURB_)%swl3_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%swl3_ano_minmax,              &
-              !& dsl4jsb_Config(DISTURB_)%swl3_clim_minmax,             &
-              !& dsl4jsb_Config(DISTURB_)%swl4_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%swl4_ano_minmax,              &
-              !& dsl4jsb_Config(DISTURB_)%swl4_clim_minmax,             &
-              !& dsl4jsb_Config(DISTURB_)%lai_minmax,                   &
-              !& dsl4jsb_Config(DISTURB_)%lai_ano_minmax,               &
-              !& dsl4jsb_Config(DISTURB_)%lai_clim_minmax,              &
-              !& dsl4jsb_Config(DISTURB_)%population_density_minmax,    &
-              !& dsl4jsb_Config(DISTURB_)%lightning_climatology_minmax, &
-              !& dsl4jsb_Config(DISTURB_)%elevation_minmax,             &
-              !& dsl4jsb_Config(DISTURB_)%agb_minmax,                   &
-              !& dsl4jsb_Config(DISTURB_)%pft1_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%pft2_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%pft3_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%pft4_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%pft5_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%pft6_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%pft7_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%pft8_minmax,                  &
-              !& dsl4jsb_Config(DISTURB_)%pft9_minmax,                  &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_min_max,        &
               
               & climate_lstm_hidden(:,:),                              & ! inout
               & climate_lstm_cell(:,:),                                & ! inout
@@ -845,6 +807,7 @@ CONTAINS
             CALL finish('disturbed_fract','Unknown fire algorithm')
         END SELECT
       END IF
+
       ! reset daily statistics
       t_air_ave(:) = 0.
       q_ave(:) = 0.
