@@ -131,7 +131,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: discharge
-    dsl4jsb_Real2D_onChunk :: sub_discharge
     dsl4jsb_Real2D_onChunk :: w_river
     dsl4jsb_Real2D_onChunk :: w_overl
     dsl4jsb_Real2D_onChunk :: evapo_river
@@ -240,14 +239,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, discharge)   ! in
-    dsl4jsb_Get_var2D_onChunk(HYDro_, sub_discharge)! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_river) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_overl) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_river)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_overl)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, oro_stddev)  ! in
 
-    dsl4jsb_Get_var2D_onChunk(HD_, outflow_outlet)   ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, outflow_outlet)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_overlflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_overlflow)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_baseflow)     ! in
@@ -300,7 +298,7 @@ CONTAINS
       inflow(:)  = inflow(:) + outflow_outlet(:)
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
-      inflow(:) = drainage(:) * tile_fract(:) * area / rhoh2o + sub_discharge(:)
+      inflow(:) = drainage(:) * tile_fract(:) * area / rhoh2o
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_baseflow(:),  nres_baseflow(:),  baseflow_res(:,:),  outflow_drainage(:))
 
       inflow(:) = discharge(:)
@@ -359,7 +357,6 @@ CONTAINS
         local_fluxes(:) =  runoff(:)   * tile_fract(:) * area(:) / rhoh2o         &
           &              + drainage(:) * tile_fract(:) * area(:) / rhoh2o         &
           &              + discharge(:)                                           &
-          &              + sub_discharge(:)                                      &
           &              + evapo_river(:) * area(:) / steplen                     & !< river evaporation [m] -> [m3/s] 
           &              + evapo_overl(:) * area(:) / steplen                     & !< river evaporation [m] -> [m3/s] 
           &              - lake_runoff(:) * lake_fract(:) * area / rhoh2o         &
@@ -730,7 +727,6 @@ CONTAINS
       & outflow_resid,         &
       & outflow_count,         &
       & discharge,             &
-      & sub_discharge,         &
       & discharge_ocean,       &
       & internal_drain,        &
       & discharge_lake,        &
@@ -747,7 +743,6 @@ CONTAINS
 
     REAL(wp) ::                 &
       & global_discharge,       &  ! global sum of discharge to the ocean
-      & global_sub_discharge,   & 
       & global_outflow,         &
       & global_internal_drain,  &
       & global_discharge_lake,      &
@@ -821,7 +816,6 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onDomain(HD_, outflow_count)    ! OUT
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! OUT
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, sub_discharge)   ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, internal_drain)  ! OUT
 
@@ -850,7 +844,6 @@ CONTAINS
       CALL sync_patch_array(sync_c, grid%patch, outflow_rivers(:,:))
 
       discharge(:,:) = 0._wp
-      sub_discharge(:,:) = 0._wp
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
       discharge_lake(:,:) = 0._wp
@@ -867,9 +860,7 @@ CONTAINS
       WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
         ! lake water drained into internal lake
         riverflow_lake(:,:) = outflow_rivers(:,:)
-        baseflow_lake(:,:) = outflow_drainage(:,:)
         outflow_rivers(:,:) = 0._wp
-        outflow_drainage(:,:) = 0._wp
       END WHERE
 
       IF (debug_hd) THEN
@@ -901,26 +892,21 @@ CONTAINS
 #if defined(__NVCOMPILER)
               discharge(jc,blk) =  discharge(jc,blk)                      &
                                  + ( ( outflow_runoff(jc_us,blk_us)       &
+                                     + outflow_drainage(jc_us,blk_us)     &
                                      + outflow_rivers(jc_us,blk_us)   )   &
-                                   / nsplit(jc_us,blk_us)             )
-              sub_discharge(jc,blk) =  sub_discharge(jc,blk)              &
-                                     + (outflow_drainage(jc_us,blk_us)    &
-                                     / nsplit(jc_us,blk_us)           )
+                                   / nsplit(jc_us,blk_us)               )
 #else
               IF (use_bifurcated_rivers) THEN
-                discharge(jc,blk) =  discharge(jc,blk)                    &
-                                   + ( ( outflow_runoff(jc_us,blk_us)     &
-                                       + outflow_rivers(jc_us,blk_us)  )  &
-                                     / nsplit(jc_us,blk_us)            )
-                sub_discharge(jc,blk) =  sub_discharge(jc,blk)            &
-                                       + (outflow_drainage(jc_us,blk_us)  &
-                                       / nsplit(jc_us,blk_us)          )
+                discharge(jc,blk) =  discharge(jc,blk)                      &
+                                   + ( ( outflow_runoff(jc_us,blk_us)       &
+                                       + outflow_drainage(jc_us,blk_us)     &
+                                       + outflow_rivers(jc_us,blk_us)   )   &
+                                     / nsplit(jc_us,blk_us)               )
               ELSE
-                discharge(jc,blk) =  discharge(jc,blk)                    &
-                                   + outflow_runoff(jc_us,blk_us)         &
+                discharge(jc,blk) =  discharge(jc,blk)               &
+                                   + outflow_runoff(jc_us,blk_us)    &
+                                   + outflow_drainage(jc_us,blk_us)  &
                                    + outflow_rivers(jc_us,blk_us)
-                sub_discharge(jc,blk) =  sub_discharge(jc,blk)            &
-                                       + outflow_drainage(jc_us,blk_us)                
               END IF
 #endif
               ! Enable the next six lines for debugging ... but this only works on one (!) processor, i.e. no halos
@@ -973,26 +959,23 @@ CONTAINS
 
       WHERE (hd_mask(:,:) <= 0._wp)
         ! ocean inflow cells
-        discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) &
-                             + discharge(:,:) + sub_discharge(:,:)
+        discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
-        sub_discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp .AND. basin_mask(:,:) == 0._wp)
         ! internal drainage cells
-        internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) &
-                            + discharge(:,:) + sub_discharge(:,:)
+        internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
-        sub_discharge(:,:) = 0._wp
       ELSE WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
         ! lake water drained into internal lake
         discharge(:,:) = discharge(:,:)
-        sub_discharge(:,:) = sub_discharge(:,:)
+        baseflow_lake(:,:) = outflow_drainage(:,:)
         overlflow_lake(:,:) = outflow_runoff(:,:)
         outflow_runoff(:,:) = 0._wp
+        outflow_drainage(:,:) = 0._wp
       END WHERE
       ! inflow at lake sink points
       discharge_lake(:,:) =  riverflow_lake(:,:) + overlflow_lake(:,:) + baseflow_lake(:,:) + runoff_lake(:,:)
@@ -1006,7 +989,6 @@ CONTAINS
 
       ! global integrals
       global_discharge       = global_sum_array(discharge(:,:)*in_domain(:,:))
-      global_sub_discharge       = global_sum_array(sub_discharge(:,:)*in_domain(:,:))
       global_internal_drain  = global_sum_array(internal_drain(:,:)*in_domain(:,:))
       global_discharge_lake  = global_sum_array(discharge_lake(:,:)*in_domain(:,:))
       global_discharge_ocean = global_sum_array(discharge_ocean(:,:)*in_domain(:,:))
@@ -1019,14 +1001,13 @@ CONTAINS
         CALL message (routine, message_text)
         WRITE (message_text,*) 'global discharge (land): ', global_discharge, ' m3/s'
         CALL message (routine, message_text)
-        WRITE (message_text,*) 'global base discharge  : ', global_sub_discharge, ' m3/s'
         WRITE (message_text,*) 'discharge to the ocean : ', global_discharge_ocean, ' m3/s'
         CALL message (routine, message_text)
         WRITE (message_text,*) 'internal drainage      : ', global_internal_drain, ' m3/s'
         CALL message (routine, message_text)
         WRITE (message_text,*) 'Water budget error     : ', &
-          & global_outflow - global_discharge - global_sub_discharge - global_discharge_ocean - &
-          & global_internal_drain - global_discharge_lake, ' m3/s'
+          & global_outflow - global_discharge - global_discharge_ocean - global_internal_drain - &
+          & global_discharge_lake, ' m3/s'
         CALL message (routine, message_text)
       END IF
 
@@ -1053,13 +1034,12 @@ CONTAINS
       ! Dummy discharge: the discharge is distributed to all coastal ocean cells, weighted by cosine of latitude
 
       global_discharge = global_sum_array(discharge(:,:) * in_domain(:,:))
-      global_sub_discharge = global_sum_array(sub_discharge(:,:) * in_domain(:,:))
 
       ALLOCATE(cos_lat(SIZE(is_in_domain,1),SIZE(is_in_domain,2)))
       cos_lat(:,:) = MERGE(COS(deg2rad * grid%lat(:,:)), 0._wp, coast_ocean(:,:) > 0.5_wp)  ! coast_ocean is either 0. or 1.
       sum_weights = global_sum_array(coast_ocean(:,:) * cos_lat(:,:) * in_domain(:,:))
       WHERE (coast_ocean(:,:) > 0.5_wp)
-        discharge_ocean(:,:) = (global_sub_discharge + global_discharge) * cos_lat(:,:) / sum_weights
+        discharge_ocean(:,:) = global_discharge * cos_lat(:,:) / sum_weights
       ELSEWHERE
         discharge_ocean(:,:) = 0._wp
       END WHERE
@@ -1439,7 +1419,6 @@ CONTAINS
       & runoff               , &
       & drainage             , &
       & discharge            , &
-      & sub_discharge        , &
       & inflow_outlet        , &
       & riverflow_lake       , &
       & overlflow_lake       , &
@@ -1539,7 +1518,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, runoff)          ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, drainage)        ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
-    dsl4jsb_Get_var2D_onDomain(HYDRO_, sub_discharge)   ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, evapo_river)     ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, evapo_overl)     ! IN
@@ -1576,8 +1554,7 @@ CONTAINS
       &   SUM(overlflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in overland flow reservoirs
       & + SUM(baseflow_res (:,:,:), DIM=2) * in_domain(:,:) & !< water in baseflow reservoir
       & + SUM(riverflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in riverflow reservoirs
-      & + discharge(:,:) * in_domain(:,:) * steplen         & !< river discharge [m3/s -> m3]
-      & + sub_discharge(:,:) * in_domain(:,:) * steplen       !< sub-subface discharge [m3/s -> m3]
+      & + discharge(:,:) * in_domain(:,:) * steplen           !< river discharge [m3/s -> m3]
     global_water_budget = global_sum_array(water_budget(:,:))
 
     IF (debug_hd) THEN
@@ -1593,9 +1570,6 @@ CONTAINS
       CALL message(routine, message_text)
       WRITE(message_text,*) '-   discharge             : ', &
            global_sum_array(discharge*in_domain)*steplen, ' m3'
-      CALL message(routine, message_text)
-      WRITE(message_text,*) '-   sub_discharge         : ', &
-           global_sum_array(sub_discharge*in_domain)*steplen, ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-->          total budget : ', global_water_budget, ' m3'
       CALL message(routine, message_text)

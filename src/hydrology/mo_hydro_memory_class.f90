@@ -61,7 +61,6 @@ MODULE mo_hydro_memory_class
       & runoff,               & !< surface runoff
       & drainage,             & !< drainage
       & discharge,            & !< discharge (local)
-      & sub_discharge,        & !< sub-sirface discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
       & internal_drain          !< internal drain
 
@@ -324,13 +323,6 @@ CONTAINS
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
       & hgrid, surface,                                                              &
       & t_cf('discharge', 'kg m-2 s-1', 'Local discharge'),                          &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'sub_discharge', mem%sub_discharge,                            &
-      & hgrid, surface,                                                              &
-      & t_cf('sub_discharge', 'kg m-2 s-1', 'Local sub-surface discharge'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
