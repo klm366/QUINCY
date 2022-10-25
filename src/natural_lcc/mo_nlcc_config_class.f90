@@ -89,7 +89,7 @@ CONTAINS
     init_nlcc           = .FALSE.
     accelerate_nlcc     = 1._wp
 
-    init_running_mean_years = 2
+    init_running_mean_years = 3
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -106,10 +106,6 @@ CONTAINS
     config%init_nlcc         = init_nlcc
     IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
     config%accelerate_nlcc   = accelerate_nlcc
-    IF (accelerate_nlcc /= 1._wp) THEN
-      WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
-      CALL message(TRIM(routine), message_text)
-    END IF
 
     config%init_running_mean_years  = init_running_mean_years
 

@@ -22,7 +22,7 @@ MODULE mo_nlcc_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message_text, message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -291,14 +291,19 @@ CONTAINS
 !!$ TR    dsl4jsb_Get_var2D_onChunk(PHENO_, fract_fpc_max)    ! out
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)            ! in
 
-    IF (is_time_experiment_start(options%current_datetime)) THEN
-      lstart = .TRUE.
-    ELSE
-      lstart = .FALSE.
-    END IF
     new_year = is_newyear(options%current_datetime, options%dtime)
     new_month = is_newmonth(options%current_datetime, options%dtime)
     new_day = is_newday(options%current_datetime, options%dtime)
+
+    IF (currentyear==iniyear .OR. dsl4jsb_Config(NLCC_)%init_nlcc) THEN
+      lstart = .TRUE.
+      IF (new_year) THEN
+        WRITE(message_text, *) 'NLCC is initalized', currentyear
+        CALL message(TRIM(routine), message_text)
+      END IF
+    ELSE
+      lstart = .FALSE.
+    END IF
 
     ! import cover fractions from grid
     ALLOCATE (cover_fract_sum(nc))
@@ -331,12 +336,21 @@ CONTAINS
        pot_fpc(:,:) = act_fpc(:,:) !!$ TR to be improved (scale, non-woodies = 0, etc.)
     ENDIF
 
-    accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
     init_running_mean_years = dsl4jsb_Config(NLCC_)%init_running_mean_years
     IF (init_running_mean_years > currentyear-iniyear) THEN
-       init_running_means = dsl4jsb_Config(NLCC_)%init_running_means
+      init_running_means = .TRUE.
+      accelerate_nlcc    = 1._wp
+      IF (new_year) THEN
+        WRITE(message_text, *) 'NLCC initalized with running mean ', currentyear
+        CALL message(TRIM(routine), message_text)
+      END IF
     ELSE
-       init_running_means = .FALSE.
+      init_running_means = .FALSE.
+      accelerate_nlcc    = dsl4jsb_Config(NLCC_)%accelerate_nlcc
+      IF (accelerate_nlcc /= 1._wp .AND. new_year) THEN
+        WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
+        CALL message(TRIM(routine), message_text)
+      END IF
     ENDIF
     init_mmtemp20 = .TRUE.
     IF (MAXVAL(min_mmtemp20(:)) > 999._wp .OR. MINVAL(max_mmtemp20(:)) < -999._wp) init_mmtemp20 = .FALSE.

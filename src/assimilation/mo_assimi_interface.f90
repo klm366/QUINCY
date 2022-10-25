@@ -22,7 +22,7 @@ MODULE mo_assimi_interface
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_jsb_time,        ONLY: is_time_experiment_start, get_year_at_experiment_start, get_year
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message_text, message
 
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -1096,9 +1096,13 @@ CONTAINS
 
     init_running_mean_years = dsl4jsb_Config(ASSIMI_)%init_running_mean_years
     IF (init_running_mean_years > currentyear-iniyear) THEN
-       init_running_means = dsl4jsb_Config(ASSIMI_)%init_running_means
+      init_running_means = .TRUE.
+      IF (new_year) THEN
+        WRITE(message_text, *) 'ASSIMI initalized with running mean ', currentyear
+        CALL message(TRIM(routine), message_text)
+      END IF
     ELSE
-       init_running_means = .FALSE.
+      init_running_means = .FALSE.
     ENDIF
     init_NPP = .TRUE.
     IF (MINVAL(NPP_mean_5year(:)) < -999._wp) init_NPP = .FALSE.

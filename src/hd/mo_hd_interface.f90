@@ -1274,7 +1274,7 @@ CONTAINS
                 height_lake_diff = MIN(height_lake(njc(n),nblk(n)), height_dyn(njc(n),nblk(n)) - height_dyn(jc,blk))
                 CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
                 u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
-                k_lake           = neigh_dist/u_lake
+                k_lake           = neigh_dist/MAX(u_lake, EPSILON(1._wp))
                 ncount = COUNT(height_dyn(jc,blk)   == PACK(height_dyn(:,:)  ,nneigh_mask(:,:)) .AND. &
                                outflow_mins(jc,blk) >= PACK(outflow_mins(:,:),nneigh_mask(:,:)))
                 inflow_lake(jc,blk) = inflow_lake(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, &
@@ -1289,7 +1289,7 @@ CONTAINS
                 height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
                 CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
                 u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
-                k_lake           = neigh_dist/u_lake
+                k_lake           = neigh_dist/MAX(u_lake, EPSILON(1._wp))
                 ncount = COUNT(height_dyn(njc(n),nblk(n))   == PACK(height_dyn(:,:)  ,neigh_mask(:,:)) .AND. &
                                outflow_mins(njc(n),nblk(n)) >= PACK(outflow_mins(:,:),neigh_mask(:,:)))
                 outflow_lake(jc,blk) = outflow_lake(jc,blk) - MIN(volume_lake(jc,blk)/k_lake, &

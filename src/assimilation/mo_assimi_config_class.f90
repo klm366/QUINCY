@@ -111,7 +111,7 @@ CONTAINS
     bc_filename         = 'bc_land_assimi.nc'
     ic_filename         = 'ic_land_assimi.nc'
     init_running_means  = .FALSE.
-    init_running_mean_years = 2
+    init_running_mean_years = 3
     ncanopy             = 3
     !X e.g: use_alb_veg_simple        = .FALSE.
     !! quincy
