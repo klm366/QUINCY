@@ -22,7 +22,7 @@ MODULE mo_seb_memory_class
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE
+  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_physical_constants, ONLY: tmelt
 
@@ -222,7 +222,9 @@ CONTAINS
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     ! Additional variables for LAND lct
-    IF (One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
+    IF (One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
+      & One_of(VEG_TYPE, lct_ids(:)) > 0 .OR. &
+      & One_of(GLACIER_TYPE, lct_ids(:)) > 0) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
