@@ -506,7 +506,7 @@ CONTAINS
     vegetation_min_max = RESHAPE(ptr_1D, (/d_vegetation_input, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
     ptr_1D => input_file%Read_1d(variable_name='embedding_min_max')
-    embedding_min_max = RESHAPE(ptr_1D, (/9, 2/), order=(/2, 1/))
+    embedding_min_max = RESHAPE(ptr_1D, (/13, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
     !ptr_1D => input_file%Read_1d(variable_name='lightning_topography_min_max')
     !lightning_topography_min_max = RESHAPE(ptr_1D, (/d_lnt_input, 2/), order=(/2, 1/))

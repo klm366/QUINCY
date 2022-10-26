@@ -318,6 +318,7 @@ CONTAINS
       climate_emb_output(nc, d_emb_output),              &
       vegetation_emb_output(nc, d_emb_output),           &
 
+      no_fire_cover(nc),                                 &
       fuel_(nc),                                         &
       q_rel_air_(nc)
 
@@ -433,6 +434,14 @@ CONTAINS
     climate_variables(:,6) = q_air - q_clim_m
     climate_variables(:,7) = wind_10m 
     climate_variables(:,8) = rain*86400
+    !climate_variables(:,1) = t_air
+    !climate_variables(:,2) = t_air - t_clim_m
+    !climate_variables(:,3) = q_rel_air
+    !climate_variables(:,4) = q_rel_air - q_rel_clim_m
+    !climate_variables(:,5) = q_air
+    !climate_variables(:,6) = q_air - q_clim_m
+    !climate_variables(:,7) = wind_10m 
+    !climate_variables(:,8) = rain*86400
     !climate_variables(:,9) = swl1 - swl1_clim_m + swl1_clim_o
     !climate_variables(:,10)= swl1 - swl1_clim_m
     !climate_variables(:,11)= swl2 - swl2_clim_m + swl2_clim_o
@@ -469,6 +478,16 @@ CONTAINS
     vegetation_variables(:,8) = swl3 - swl3_clim_m
     vegetation_variables(:,9) = swl4 - swl4_clim_m + swl4_clim_o
     vegetation_variables(:,10)= swl4 - swl4_clim_m
+    !vegetation_variables(:,1) = lai
+    !vegetation_variables(:,2) = lai  - lai_clim_m
+    !vegetation_variables(:,3) = swl1
+    !vegetation_variables(:,4) = swl1 - swl1_clim_m
+    !vegetation_variables(:,5) = swl2
+    !vegetation_variables(:,6) = swl2 - swl2_clim_m
+    !vegetation_variables(:,7) = swl3
+    !vegetation_variables(:,8) = swl3 - swl3_clim_m
+    !vegetation_variables(:,9) = swl4
+    !vegetation_variables(:,10)= swl4 - swl4_clim_m
 
     !lig_topo_variables(:,1) = lightning_climatology
     !lig_topo_variables(:,2) = elevation
@@ -479,23 +498,6 @@ CONTAINS
     !lig_topo_variables(:,7) = vector_ruggedness_measure
     !lig_topo_variables(:,8) = profile_curvature
     !lig_topo_variables(:,9) = tangential_curvature
-
-    !anthro_variables(:,1) = gdp
-    !anthro_variables(:,2) = hdi
-    !anthro_variables(:,3) = land_use_state_c3ann
-    !anthro_variables(:,4) = land_use_state_c3nfx
-    !anthro_variables(:,5) = land_use_state_c3per
-    !anthro_variables(:,6) = land_use_state_c4ann
-    !anthro_variables(:,7) = land_use_state_c4per
-    !anthro_variables(:,8) = land_use_state_pastr
-    !anthro_variables(:,9) = land_use_state_primf
-    !anthro_variables(:,10)= land_use_state_primn
-    !anthro_variables(:,11)= land_use_state_range
-    !anthro_variables(:,12)= land_use_state_secdf
-    !anthro_variables(:,13)= land_use_state_secdn
-    !anthro_variables(:,14)= land_use_state_secma
-    !anthro_variables(:,15)= land_use_state_secmb
-    !anthro_variables(:,16)= land_use_state_urban
 
     anthro_variables(:,1) = population_density
     anthro_variables(:,2) = gdp
@@ -583,7 +585,6 @@ CONTAINS
     !if (maxval(emb_variables(:,1))>1.1 .or. minval(emb_variables(:,1))<-0.1) then
     !  print*, '1', minval(emb_variables(:,1)), maxval(emb_variables(:,1))
     !endif
-
 
     ! climate-LSTM model
     climate_lstm_i = matmul(climate_variables,   climate_i2i_weight) + spread(climate_i2i_bias, 1, nc) &
@@ -718,38 +719,47 @@ CONTAINS
                      * vegetation_lstm_output_      &
                      !* lig_topo_network_output      &
                      * anthro_network_output        &
-                     * modified_pfts_fract(:,:8), dim=2)
+                     * modified_pfts_fract(:,1:8), dim=2)
 
     where (burned_fract < 0.) burned_fract = 0.
     !where (burned_fract > 1.) burned_fract = 1.
     !where (burned_fract > 100.) burned_fract = 100.
-    burned_fract = burned_fract/100.
+    burned_fract(:) = burned_fract(:)/100.
 
-    burned_fract = burned_fract*(1-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
+    no_fire_cover(:) = modified_pfts_fract(:,9)+modified_pfts_fract(:,1)
+
+    where (modified_pfts_fract(:,9) > 0.3) no_fire_cover = 1.
+    !where (modified_pfts_fract(:,1) > 0.2) no_fire_cover = 1.
+
+    !burned_fract(:) = burned_fract(:)*(1.-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
+    burned_fract(:) = burned_fract(:)*(1.-no_fire_cover(:))
+
+    !print*, maxval(modified_pfts_fract(:,9)+modified_pfts_fract(:,1)), maxval(modified_pfts_fract(:,9))
 
     fuel_(:) = emb_variables(:,9)
-    !where (fuel_ < 0.) fuel_ = 0.
-    !where (fuel_ < 0.15) fuel_ = 0.
-    where (fuel_ < 0.)   fuel_ = 0.
-    where (fuel_ > 1.)   fuel_ = 1.
-    where (fuel < fire_litter_threshold) fuel_ = 0.
+    !where (fuel_ < 0.)   fuel_ = 0.
+    !where (fuel_ > 1.)   fuel_ = 1.
+    !where (fuel < fire_litter_threshold/2) fuel_ = 0.
     !burned_fract = burned_fract*(fuel_(:)**2)  ! v1
-    burned_fract = burned_fract*fuel_(:)  ! v1
-    !burned_fract = burned_fract*fuel_(:)
-    
+    burned_fract(:) = burned_fract(:)*fuel_(:)  ! v1
+    !burned_fract(:) = burned_fract(:)*emb_variables(:,9)  ! v1
 
-    q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
-    !q_rel_air_(:) = q_rel_air(:)
+
+    !q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
+    !q_rel_air_(:) = q_rel_air_(:)/100.
+    q_rel_air_(:) = q_rel_air(:)
     where (q_rel_air_ < 0.) q_rel_air_ = 0.
     where (q_rel_air_ > 100.) q_rel_air_ = 100.
-    where (q_rel_air_climbuf > fire_rel_hum_threshold) q_rel_air_ = 100.
+    !where (q_rel_air_climbuf > fire_rel_hum_threshold) q_rel_air_ = 100.
+    !where (q_rel_air_ > fire_rel_hum_threshold) q_rel_air_ = 100.
+    
 
     !burned_fract = burned_fract*((1.-q_rel_air_(:)/100.)**2)  ! v1
-    burned_fract = burned_fract*(1.-q_rel_air_(:)/100.)  ! v1
+    burned_fract(:) = burned_fract(:)*(1.-q_rel_air_(:)/100.)  ! v1
     !q_rel_air_(:) = 1._wp / (1._wp + exp(-20._wp*((q_rel_air_(:)/100.)-0.5)))
     !burned_fract = burned_fract*(1.-q_rel_air_(:))
     
-
+    !burned_fract(:) = burned_fract(:)/100.
     !where (burned_fract < 0.) burned_fract = 0.
     where (burned_fract > 1.) burned_fract = 1.
 
@@ -760,9 +770,6 @@ CONTAINS
     !if (maxval(burned_fract) .gt. 0) then
     !  print*, maxval(burned_fract)
     !endif
-
-
-    
 
     !print*, MAXVAL(burned_fract), MAXVAL(burned_fract)  
 
@@ -780,23 +787,6 @@ CONTAINS
     !q_rel_air_(:) = 1._wp / (1._wp + exp(-10._wp*(q_rel_air_(:)-0.5)))
     !q_rel_air_(:) = 1._wp / (1._wp + exp(-15._wp*(q_rel_air_(:)-0.5)))
     !q_rel_air_(:) = 1._wp / (1._wp + exp(-25._wp*(q_rel_air_(:)-0.5)))
-
-    !burned_fract = burned_fract*((1._wp-q_rel_air_)**2)
-
-    ! ratio for (dry) fuel
-    !where (emb_variables(:,9) < 0._wp) emb_variables(:,9) = 0._wp
-    !burned_fract = burned_fract*(emb_variables(:,9)**1)
-    !fuel_(:) = (fuel(:) - agb_minmax(1))/(agb_minmax(2) - agb_minmax(1)) 
-    !fuel_(:) = emb_variables(:,9)
-    !where (fuel_ < 0._wp) fuel_ = 0._wp
-    !burned_fract = burned_fract*(fuel_(:)**2)
-
-    !where (burned_fract < 0._wp) burned_fract = 0._wp
-    !where (burned_fract > 1._wp) burned_fract = 1._wp 
-
-    !if (isnan(burned_fract(1))) then
-    !  print*, 'burned_fract'
-    !endif
     
   END SUBROUTINE burned_fract_dl
 

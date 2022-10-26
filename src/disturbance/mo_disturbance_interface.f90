@@ -38,7 +38,7 @@ MODULE mo_disturb_interface
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
   dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_
-  dsl4jsb_Use_processes PHENO_, HYDRO_    ! <Rackhun Son>
+  dsl4jsb_Use_processes PHENO_, HYDRO_   ! <Rackhun Son>
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
@@ -173,6 +173,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)                       ! <Rackhun Son>
     dsl4jsb_Def_memory(HYDRO_)                       ! <Rackhun Son>
+
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(CARBON_)
 
