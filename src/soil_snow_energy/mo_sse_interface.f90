@@ -267,7 +267,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_acoef)    ! inout
       dsl4jsb_Get_var3D_onChunk(SSE_, t_snow_bcoef)    ! inout
     END IF
-    IF (.NOT. tile%is_glacier) THEN
+    ! IF (.NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)    ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)  ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)    ! in
@@ -277,7 +277,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_freeze_sl)    ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_melt_sl)      ! out
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_pot_scool_sl) ! out
-    END IF
+    ! END IF
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max)      ! out
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)  ! out
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out

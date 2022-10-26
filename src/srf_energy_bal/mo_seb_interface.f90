@@ -200,7 +200,7 @@ CONTAINS
 
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
-    ELSE IF (tile%is_land) THEN
+    ELSE IF (tile%is_land .OR. tile%is_vegetation .OR. tile%is_glacier) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type '//TRIM(tile%lcts(1)%name)//' on tile '//TRIM(tile%name))
@@ -394,11 +394,9 @@ CONTAINS
         !$claw acc end data
       END IF
 
-      
-
     ELSE
 
-      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+      CALL finish(TRIM(routine), 'Called for invalid lct_type: '//tile%name)
 
     END IF
 
@@ -463,7 +461,7 @@ CONTAINS
 
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%contains_land .OR. tile%contains_vegetation .OR. tile%contains_glacier) THEN
       CALL update_asselin_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
@@ -528,10 +526,10 @@ CONTAINS
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%contains_land .OR. tile%contains_vegetation .OR. tile%contains_glacier) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE
-      CALL finish(TRIM(routine), 'Called for invalid lct_type')
+      CALL finish(TRIM(routine), 'Called for invalid lct_type'//tile%name)
     END IF
 
   END SUBROUTINE update_surface_fluxes

@@ -223,31 +223,29 @@ CONTAINS
           & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
-          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
-          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
-            & processes = (/HYDRO_, SSE_/), &
-            & process_actions = (/ON_TILE_, ON_TILE_/), &
+            & processes = (/SEB_, HYDRO_, SSE_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
             ! & lct=t_jsb_lct(GLACIER_TYPE, lib_id=1), parent=land_tile)
         END IF
 
         !>veg_tile
         !!
-        ! default jsb4: HYDRO_ & SSE_ are active at veg tile only to save runtime
+        ! default jsb4: SEB_, HYDRO_ & SSE_ are active at veg tile only to save runtime
         SELECT CASE (model%config%model_scheme)
         CASE (MODEL_JSBACH)
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
-            & processes       = (/HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+            & processes       = (/SEB_,     HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
 
@@ -332,7 +330,7 @@ CONTAINS
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
     ! IF (ASSOCIATED(lake_tile)) CONTINUE
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
-        
+
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
@@ -434,30 +432,28 @@ CONTAINS
           & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
-          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
-          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
           & fract_varname='equal')   ! Fraction = 1.
       END IF
 
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
-            & processes       = (/HYDRO_,   MIX_,     SSE_/), &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_/), &
+            & processes       = (/SEB_,     HYDRO_,   MIX_,     SSE_/), &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_/), &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile)
         END IF
 
         ! Create identical tile trees for the different hydrological settings
         DO t=1,ntopo
 
-          ! MIX_, HYDRO_ and SSE_ are active at veg tiles only to save runtime
+          ! MIX_, SEB_, HYDRO_ and SSE_ are active at veg tiles only to save runtime
           veg_tile => t_jsb_tile('veg_'//TRIM(topo_shortnames(t)),                      &
             & 'Vegetation tile ('//TRIM(topo_longnames(t))//')', &
-            & processes       = (/MIX_,     HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
-            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
+            & processes       = (/MIX_,     SEB_,     HYDRO_,   SSE_,     ASSIMI_,   PHENO_/),    &
+            & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg_'//TRIM(topo_shortnames(t)))
           CALL veg_tile%Add_lct(t_jsb_lct(macrotopo_types(t)))
