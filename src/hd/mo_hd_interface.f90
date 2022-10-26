@@ -147,6 +147,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: ret_riverflow
     dsl4jsb_Real2D_onChunk :: nres_riverflow
     dsl4jsb_Real2D_onChunk :: basin_mask
+    dsl4jsb_Real2D_onChunk :: hd_mask
     dsl4jsb_Real2D_onChunk :: runoff_lake
     dsl4jsb_Real2D_onChunk :: w_river_res
     dsl4jsb_Real2D_onChunk :: w_overl_res
@@ -253,6 +254,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HD_, ret_riverflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_riverflow)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, hd_mask)          ! in
     dsl4jsb_Get_var2D_onChunk(HD_, runoff_lake)      ! in
     dsl4jsb_Get_var2D_onChunk(HD_, volume_river_seas_mean)! inout
     dsl4jsb_Get_var2D_onChunk(HD_, volume_overl_seas_mean)! inout
@@ -299,6 +301,12 @@ CONTAINS
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
       inflow(:) = drainage(:) * tile_fract(:) * area / rhoh2o
+      WHERE (hd_mask(:) == 2._wp .AND.  basin_mask(:) > 0._wp)
+        ret_baseflow(:)= 7300._wp
+        inflow(:) = inflow(:) + discharge(:)
+        discharge(:) = 0._wp
+        ret_riverflow(:) = 0.2_wp
+      END WHERE
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_baseflow(:),  nres_baseflow(:),  baseflow_res(:,:),  outflow_drainage(:))
 
       inflow(:) = discharge(:)
