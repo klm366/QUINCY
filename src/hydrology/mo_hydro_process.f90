@@ -424,6 +424,7 @@ CONTAINS
   ! @param [out]     p_wilt_l           Water content at permanent wilting point in soil layers [m]
   ! @param [out]     runoff             Runoff
   ! @param [out]     drainage           Drainage
+  ! @param [inout]   ws_negative        sum of negative soil moisture
   !
   SUBROUTINE calc_soil_hydrology(                                                                                &
     ! in
@@ -435,7 +436,7 @@ CONTAINS
     ! inout
     & ws, ws_l, soil_ice_l, w_soil_overflow,                                                                     &
     ! out
-    & wsat_l, field_cap_l, p_wilt_l, runoff, drainage                                                            &
+    & wsat_l, field_cap_l, p_wilt_l, runoff, drainage, ws_negative                                               &
     & )
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
@@ -463,6 +464,8 @@ CONTAINS
       & ws_l, soil_ice_l
     REAL(wp), INTENT(out), DIMENSION(:) :: &
       & runoff, drainage
+    REAL(wp), INTENT(inout), DIMENSION(:) :: &
+      & ws_negative
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wsat_l, field_cap_l, p_wilt_l
 
@@ -640,7 +643,7 @@ CONTAINS
     !    - first half of the water
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_0
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
-         ws_l, drainage, w_soil_overflow)
+         ws_l, drainage, ws_negative, w_soil_overflow)
 
     ! Drainage calculation with multi-layer soil scheme
     CALL soilhyd(nidx, nsoil, delta_time, ilog, jllog, ws_l, soil_depth_l, &
@@ -652,7 +655,7 @@ CONTAINS
     !    - second half of the water
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_digest_infilt_1
     CALL digest_infilt(nidx, nsoil, ltpe_closed, field_cap_l, infilt, &
-         ws_l, drainage, w_soil_overflow)
+         ws_l, drainage, ws_negative, w_soil_overflow)
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     ! Note: ws only includes the soil moisture within the root zone
@@ -1343,6 +1346,7 @@ CONTAINS
     & infilt,                &
     & ws_l,                  &
     & drainage,              &
+    & ws_negative,           &
     & w_soil_overflow        &
     & )
 
@@ -1361,11 +1365,13 @@ CONTAINS
 
     REAL(wp), INTENT(inout)  :: ws_l(:,:)               ! water content of the soil layer [m]
     REAL(wp), INTENT(inout)  :: drainage(:)             ! drainage [m]
+    REAL(wp), INTENT(inout)  :: ws_negative(:)          ! sum of negative soil moisture [m]
     REAL(wp), INTENT(inout)  :: w_soil_overflow(:)      ! For TPE
 
     ! local variables
 
     INTEGER  :: jk, i
+    INTEGER  :: max2d(2)
     REAL(wp) :: excess(nidx)         ! excess water after infiltration
 
     !------------------------------------------------------------------------------------------------
@@ -1410,13 +1416,15 @@ CONTAINS
 !TODO deal with that
 #ifndef _OPENACC
     IF (ANY(ws_l(:,:) < 0._wp)) THEN
-      WRITE (message_text,*) 'negative soil moisture: ', MINVAL(ws_l), ' at ', MINLOC(ws_l)
-      IF (ANY(ws_l(:,:) < -EPSILON(1._wp))) THEN
-        CALL finish ('digest_infilt', message_text)
-      ELSE
-        CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
-        ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
+      max2d(:) = MINLOC(ws_l(:,:))
+      IF (ws_l(max2d(1),max2d(2)) < -1.e-20_wp) THEN
+         WRITE (message_text,*) 'negative soil moisture: ', ws_l(max2d(1),max2d(2)), ' at ', max2d(:)
+         CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
       END IF
+      DO jk =1,nsoil
+         ws_negative(:) = ws_negative(:) + MIN(ws_l(:,jk), 0._wp)
+      END DO
+      ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
     END IF
 #endif
 

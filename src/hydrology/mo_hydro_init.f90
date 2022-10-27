@@ -17,7 +17,7 @@ MODULE mo_hydro_init
 
   USE mo_kind,               ONLY: wp
   USE mo_exception,          ONLY: message
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
@@ -37,6 +37,19 @@ MODULE mo_hydro_init
   IMPLICIT NONE
   PRIVATE
 
+  REAL(wp), PARAMETER ::  porosity_sand = 0.364_wp   !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 sand
+  REAL(wp), PARAMETER ::  porosity_silt = 0.455_wp   !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 loam
+  REAL(wp), PARAMETER ::  porosity_clay = 0.507_wp   !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 clay
+  REAL(wp), PARAMETER ::  porosity_oc = 0.863_wp     !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 peat
+  REAL(wp), PARAMETER ::  field_cap_sand = 0.196_wp  !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 sand
+  REAL(wp), PARAMETER ::  field_cap_silt = 0.340_wp  !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 loam
+  REAL(wp), PARAMETER ::  field_cap_clay = 0.463_wp  !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 clay
+  REAL(wp), PARAMETER ::  field_cap_oc = 0.763_wp    !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 peat
+  REAL(wp), PARAMETER ::  hyd_cond_sand = 4.79e-5_wp !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 sand
+  REAL(wp), PARAMETER ::  hyd_cond_silt = 5.31e-6_wp !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 loam
+  REAL(wp), PARAMETER ::  hyd_cond_clay = 8.50e-8_wp !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 clay
+  REAL(wp), PARAMETER ::  hyd_cond_oc = 5.80e-8_wp   !!$ TR parameter taken from TERRA, s. sfc_terra_data.f90 peat
+
   PUBLIC :: hydro_init
 
   TYPE t_hydro_init_vars
@@ -55,6 +68,14 @@ MODULE mo_hydro_init
       & root_depth     (:,:) => NULL(), &
       & w_snow_soil    (:,:) => NULL(), &
       & w_soil_sl    (:,:,:) => NULL(), &
+      & fr_sand        (:,:) => NULL(), &
+      & fr_silt        (:,:) => NULL(), &
+      & fr_clay        (:,:) => NULL(), &
+      & fr_oc          (:,:) => NULL(), &
+      & fr_sand_deep   (:,:) => NULL(), &
+      & fr_silt_deep   (:,:) => NULL(), &
+      & fr_clay_deep   (:,:) => NULL(), &
+      & fr_oc_deep     (:,:) => NULL(), &
       & ifs_smi_sl   (:,:,:) => NULL(), &
       & ifs_w_snow     (:,:) => NULL()
   END TYPE t_hydro_init_vars
@@ -97,7 +118,6 @@ CONTAINS
   SUBROUTINE hydro_finalize_init_vars
 
     DEALLOCATE( &
-      & hydro_init_vars%elevation       ,       &
       & hydro_init_vars%oro_stddev      ,       &
       & hydro_init_vars%soil_depth      ,       &
       & hydro_init_vars%max_moist       ,       &
@@ -109,8 +129,17 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   ,       &
       & hydro_init_vars%vol_p_wilt      ,       &
       & hydro_init_vars%root_depth      ,       &
+      & hydro_init_vars%fr_sand         ,       &
+      & hydro_init_vars%fr_silt         ,       &
+      & hydro_init_vars%fr_clay         ,       &
+      & hydro_init_vars%fr_oc           ,       &
+      & hydro_init_vars%fr_sand_deep    ,       &
+      & hydro_init_vars%fr_silt_deep    ,       &
+      & hydro_init_vars%fr_clay_deep    ,       &
+      & hydro_init_vars%fr_oc_deep      ,       &
       & hydro_init_vars%w_snow_soil)
 
+    IF (ASSOCIATED(hydro_init_vars%elevation)) DEALLOCATE(hydro_init_vars%elevation)
     IF (ASSOCIATED(hydro_init_vars%w_soil_sl)) DEALLOCATE(hydro_init_vars%w_soil_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl)) DEALLOCATE(hydro_init_vars%ifs_smi_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_w_snow)) DEALLOCATE(hydro_init_vars%ifs_w_snow)
@@ -148,7 +177,6 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     ALLOCATE( &
-      & hydro_init_vars%elevation       (nproma, nblks),       &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
       & hydro_init_vars%soil_depth      (nproma, nblks),       &
       & hydro_init_vars%max_moist       (nproma, nblks),       &
@@ -160,10 +188,17 @@ CONTAINS
       & hydro_init_vars%vol_field_cap   (nproma, nblks),       &
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
+      & hydro_init_vars%fr_sand         (nproma, nblks),       &
+      & hydro_init_vars%fr_silt         (nproma, nblks),       &
+      & hydro_init_vars%fr_clay         (nproma, nblks),       &
+      & hydro_init_vars%fr_oc           (nproma, nblks),       &
+      & hydro_init_vars%fr_sand_deep    (nproma, nblks),       &
+      & hydro_init_vars%fr_silt_deep    (nproma, nblks),       &
+      & hydro_init_vars%fr_clay_deep    (nproma, nblks),       &
+      & hydro_init_vars%fr_oc_deep      (nproma, nblks),       &
       & hydro_init_vars%w_snow_soil     (nproma, nblks)        &
       & )
 
-      hydro_init_vars%elevation      (:,:)   = missval
       hydro_init_vars%oro_stddev     (:,:)   = missval
       hydro_init_vars%soil_depth     (:,:)   = missval
       hydro_init_vars%max_moist      (:,:)   = missval
@@ -175,8 +210,20 @@ CONTAINS
       hydro_init_vars%vol_field_cap  (:,:)   = missval
       hydro_init_vars%vol_p_wilt     (:,:)   = missval
       hydro_init_vars%root_depth     (:,:)   = missval
+      hydro_init_vars%fr_sand        (:,:)   = missval
+      hydro_init_vars%fr_silt        (:,:)   = missval
+      hydro_init_vars%fr_clay        (:,:)   = missval
+      hydro_init_vars%fr_oc          (:,:)   = missval
+      hydro_init_vars%fr_sand_deep   (:,:)   = missval
+      hydro_init_vars%fr_silt_deep   (:,:)   = missval
+      hydro_init_vars%fr_clay_deep   (:,:)   = missval
+      hydro_init_vars%fr_oc_deep     (:,:)   = missval
       hydro_init_vars%w_snow_soil    (:,:)   = missval
 
+    IF (jsbach_runs_standalone()) THEN
+       ALLOCATE(hydro_init_vars%elevation(nproma,nblks))
+       hydro_init_vars%elevation(:,:) = missval
+    END IF
     IF (model%config%init_from_ifs) THEN
       ALLOCATE(hydro_init_vars%ifs_smi_sl(nproma,ifs_nsoil,nblks))
       hydro_init_vars%ifs_smi_sl(:,:,:) = missval
@@ -195,10 +242,12 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HYDRO_)%bc_sso_filename), model%grid_id)
 
     ! Orography ...
-    ptr_2D => input_file%Read_2d(  &
-      & variable_name='elevation', &
-      & fill_array = hydro_init_vars%elevation)
-    hydro_init_vars%elevation = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    IF (jsbach_runs_standalone()) THEN
+       ptr_2D => input_file%Read_2d(  &
+         & variable_name='elevation', &
+         & fill_array = hydro_init_vars%elevation)
+       hydro_init_vars%elevation = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    END IF
 
     ptr_2D => input_file%Read_2d(  &
       & variable_name='orostd',    &
@@ -268,6 +317,55 @@ CONTAINS
       ptr_2D => input_file%Read_2d(                                 &
         & variable_name='wilting_point',                            &
         & fill_array=hydro_init_vars%vol_p_wilt)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      !!$ TR soil texture information
+      ! fraction of sand upper soil [%]
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='FR_SAND',                            &
+        & fill_array=hydro_init_vars%fr_sand)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      ! fraction of silt upper soil [%]
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='FR_SILT',                            &
+        & fill_array=hydro_init_vars%fr_silt)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      ! fraction of clay upper soil [%]
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='FR_CLAY',                            &
+        & fill_array=hydro_init_vars%fr_clay)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      ! fraction of organic upper soil
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='FR_OC',                            &
+        & fill_array=hydro_init_vars%fr_oc)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      ! fraction of sand deep soil [%]
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='SUB_FR_SAND',                            &
+        & fill_array=hydro_init_vars%fr_sand_deep)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      ! fraction of silt deep soil [%]
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='SUB_FR_SILT',                            &
+        & fill_array=hydro_init_vars%fr_silt_deep)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      ! fraction of clay deep soil [%]
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='SUB_FR_CLAY',                            &
+        & fill_array=hydro_init_vars%fr_clay_deep)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+      ! fraction of organic deep soil
+      ptr_2D => input_file%Read_2d(                                 &
+        & variable_name='SUB_FR_OC',                            &
+        & fill_array=hydro_init_vars%fr_oc_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
       CALL input_file%Close()
@@ -367,7 +465,7 @@ CONTAINS
     !----------
 
     ! Orography ...
-    dsl4jsb_var2D_onDomain(HYDRO_,elevation) = hydro_init_vars%elevation
+    IF (jsbach_runs_standalone()) dsl4jsb_var2D_onDomain(HYDRO_,elevation) = hydro_init_vars%elevation
 
     dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev) = hydro_init_vars%oro_stddev
 
@@ -387,14 +485,76 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(HYDRO_, soil_depth),                          & ! Total soil depth until bedrock (from textures)
         & soil_w%dz(:))                                                          ! Soil layer thicknesses
 
-      ! Maximum root zone soil moisture
-      ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
-      dsl4jsb_var2D_onDomain(HYDRO_, max_moist) = hydro_init_vars%max_moist
+      !!$ TR soil texture
+      dsl4jsb_var_ptr(HYDRO_, fr_sand) = hydro_init_vars%fr_sand
+      dsl4jsb_var_ptr(HYDRO_, fr_silt) = hydro_init_vars%fr_silt
+      dsl4jsb_var_ptr(HYDRO_, fr_clay) = hydro_init_vars%fr_clay
+      dsl4jsb_var_ptr(HYDRO_, fr_oc) = hydro_init_vars%fr_oc
+      dsl4jsb_var_ptr(HYDRO_, fr_sand_deep) = hydro_init_vars%fr_sand_deep
+      dsl4jsb_var_ptr(HYDRO_, fr_silt_deep) = hydro_init_vars%fr_silt_deep
+      dsl4jsb_var_ptr(HYDRO_, fr_clay_deep) = hydro_init_vars%fr_clay_deep
+      dsl4jsb_var_ptr(HYDRO_, fr_oc_deep) = hydro_init_vars%fr_oc_deep
+
+!!$ TR care about missing values or too low values in the fractions of
+!!$ TR sand, silt, clay, and organic material
+      WHERE (hydro_init_vars%fr_sand(:,:) .lt. -0.001_wp .OR. &
+             hydro_init_vars%fr_silt(:,:) .lt. -0.001_wp .OR. &
+             hydro_init_vars%fr_clay(:,:) .lt. -0.001_wp)
+         hydro_init_vars%fr_sand(:,:) = 100._wp / 3._wp
+         hydro_init_vars%fr_silt(:,:) = 100._wp / 3._wp
+         hydro_init_vars%fr_clay(:,:) = 100._wp / 3._wp
+      END WHERE
+
+      WHERE ((hydro_init_vars%fr_sand(:,:) + hydro_init_vars%fr_silt(:,:) + hydro_init_vars%fr_clay(:,:)) .lt. 99.5_wp)
+         hydro_init_vars%fr_sand(:,:) = 100._wp / 3._wp
+         hydro_init_vars%fr_silt(:,:) = 100._wp / 3._wp
+         hydro_init_vars%fr_clay(:,:) = 100._wp / 3._wp
+      END WHERE
+
+      WHERE (hydro_init_vars%fr_sand_deep(:,:) .lt. -0.001_wp .OR. &
+             hydro_init_vars%fr_silt_deep(:,:) .lt. -0.001_wp .OR. &
+             hydro_init_vars%fr_clay_deep(:,:) .lt. -0.001_wp)
+         hydro_init_vars%fr_sand_deep(:,:) = 100._wp / 3._wp
+         hydro_init_vars%fr_silt_deep(:,:) = 100._wp / 3._wp
+         hydro_init_vars%fr_clay_deep(:,:) = 100._wp / 3._wp
+      END WHERE
+
+      WHERE ((hydro_init_vars%fr_sand_deep(:,:) + hydro_init_vars%fr_silt_deep(:,:) + &
+            hydro_init_vars%fr_clay_deep(:,:)) .lt. 99.5_wp)
+         hydro_init_vars%fr_sand_deep(:,:) = 100._wp / 3._wp
+         hydro_init_vars%fr_silt_deep(:,:) = 100._wp / 3._wp
+         hydro_init_vars%fr_clay_deep(:,:) = 100._wp / 3._wp
+      END WHERE
+
+      hydro_init_vars%fr_oc(:,:) = MAX(hydro_init_vars%fr_oc(:,:),0._wp)
+      hydro_init_vars%fr_oc_deep(:,:) = MAX(hydro_init_vars%fr_oc_deep(:,:),0._wp)
 
       ! Volumetric soil porosity
+      !!$ TR overwriting soil porosity incl. organic fraction
+      hydro_init_vars%vol_porosity(:,:) = MAX(1._wp - ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) &
+                                          * 0.005_wp),0._wp) * &
+                                          MAX(((hydro_init_vars%fr_sand(:,:) + hydro_init_vars%fr_sand_deep(:,:)) &
+                                          * 0.005_wp * porosity_sand) + &
+                                          ((hydro_init_vars%fr_silt(:,:) + hydro_init_vars%fr_silt_deep(:,:)) &
+                                          * 0.005_wp * porosity_silt) + &
+                                          ((hydro_init_vars%fr_clay(:,:) + hydro_init_vars%fr_clay_deep(:,:)) &
+                                          * 0.005_wp * porosity_clay), porosity_sand) &
+                                          + ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) * 0.005_wp) &
+                                          * porosity_oc
       dsl4jsb_var_ptr(HYDRO_, vol_porosity) = hydro_init_vars%vol_porosity
 
       ! Saturated hydraulic conductivity
+      !!$ TR overwriting hydraulic conductivity with ckw0 and ckw1 from TERRA and incl. organic fraction
+      hydro_init_vars%hyd_cond_sat(:,:) = MAX(1._wp - ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) &
+                                          * 0.005_wp),0._wp) * &
+                                          MAX(((hydro_init_vars%fr_sand(:,:) + hydro_init_vars%fr_sand_deep(:,:)) &
+                                          * 0.005_wp * hyd_cond_sand) + &
+                                          ((hydro_init_vars%fr_silt(:,:) + hydro_init_vars%fr_silt_deep(:,:)) &
+                                          * 0.005_wp * hyd_cond_silt) + &
+                                          ((hydro_init_vars%fr_clay(:,:) + hydro_init_vars%fr_clay_deep(:,:)) &
+                                          * 0.005_wp * hyd_cond_clay), hyd_cond_clay) &
+                                          + ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) * 0.005_wp) &
+                                          * hyd_cond_oc
       dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat) = hydro_init_vars%hyd_cond_sat
 
       ! Matrix potential
@@ -407,12 +567,31 @@ CONTAINS
       dsl4jsb_var_ptr(HYDRO_, pore_size_index) = hydro_init_vars%pore_size_index
 
       ! Volumetric field capacity [m/m]
+      !!$ TR overwriting field capacity incl. organic fraction
+      hydro_init_vars%vol_field_cap(:,:) = MAX(1._wp - ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) &
+                                           * 0.005_wp),0._wp) * &
+                                           MAX(((hydro_init_vars%fr_sand(:,:) + hydro_init_vars%fr_sand_deep(:,:)) &
+                                           * 0.005_wp * field_cap_sand) + &
+                                           ((hydro_init_vars%fr_silt(:,:) + hydro_init_vars%fr_silt_deep(:,:)) &
+                                           * 0.005_wp * field_cap_silt) + &
+                                           ((hydro_init_vars%fr_clay(:,:) + hydro_init_vars%fr_clay_deep(:,:)) &
+                                           * 0.005_wp * field_cap_clay), field_cap_sand) &
+                                           + ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) * 0.005_wp) &
+                                           * field_cap_oc
       dsl4jsb_var_ptr(HYDRO_, vol_field_cap) = hydro_init_vars%vol_field_cap
 
       ! Get water content at field capacity by multiplying volumetric field capacity with soil layer thicknesses
       DO i=1,nsoil
-        dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,i,:) = hydro_init_vars%vol_field_cap(:,:) * dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
+         dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl) (:,i,:) = hydro_init_vars%vol_field_cap(:,:) * &
+                                                        dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
+
+      ! Maximum root zone soil moisture
+      !!$ TR crosscheck max_moist <= vol_field_cap x soil_depth
+      hydro_init_vars%max_moist(:,:) = MIN(hydro_init_vars%vol_field_cap(:,:) * hydro_init_vars%soil_depth(:,:), &
+                                           hydro_init_vars%max_moist(:,:))
+      ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
+      dsl4jsb_var2D_onDomain(HYDRO_, max_moist) = hydro_init_vars%max_moist
 
       ! Volumetric permanent wilting point
       ! @todo: Do we need this for bare soil tiles?
@@ -420,12 +599,14 @@ CONTAINS
 
       ! Get permanent wilting point by multiplying with soil layer thicknesses
       DO i=1,nsoil
-        dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl) (:,i,:) = hydro_init_vars%vol_p_wilt(:,:) * dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
+         dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl) (:,i,:) = hydro_init_vars%vol_p_wilt(:,:) * &
+                                                         dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
       ! Get water holding capacity (water content at saturation) by multiplying volumetric porosity with soil layer thicknesses
       DO i=1,nsoil
-        dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
+         dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl) (:,i,:) = dsl4jsb_var2D_onDomain(HYDRO_,vol_porosity) * &
+                                                         dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
       !$acc update device(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl), &
