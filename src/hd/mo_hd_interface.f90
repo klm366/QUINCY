@@ -381,9 +381,9 @@ CONTAINS
             jc_us  =  nidx_upstream(jc,n,blk)
             blk_us =  bidx_upstream(jc,n,blk)
             IF (jc_us > 0 .and. blk_us > 0) THEN
-            ! Workaround for NVIDIA compiler 21.3 internal compiler error
+            ! Workaround for NVIDIA compiler < 22.9 internal compiler error
             ! Note that nsplit is set to 1._wp for use_bifurcated_rivers=false
-#if defined(__NVCOMPILER)
+#if defined(__NVCOMPILER) && (__NVCOMPILER_MAJOR__ < 22  || (__NVCOMPILER_MAJOR__ == 22 && __NVCOMPILER_MINOR__ < 9))
               discharge(jc,blk) =  discharge(jc,blk)                      &
                                  + ( ( outflow_runoff(jc_us,blk_us)       &
                                      + outflow_drainage(jc_us,blk_us)     &
