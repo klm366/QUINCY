@@ -711,15 +711,6 @@ CONTAINS
     USE mo_jsb4_forcing,               ONLY: forcing_options, get_interface_variables_from_external_forcing
     USE mo_radiation_orbit,            ONLY: orbit_kepler, orbit_vsop87, get_orbit_times
     USE mo_radiation_solar_parameters, ONLY: solar_parameters
-    USE mo_radiation_config,           ONLY: config_month_perp => month_perp, &
-      &                                      config_lyr_perp => lyr_perp, &
-      &                                      config_yr_perp => yr_perp, &
-      &                                      config_clonp => clonp, &
-      &                                      config_cobld => cobld, &
-      &                                      config_cecc => cecc, &
-      &                                      config_l_orbvsop87 => l_orbvsop87
-    USE mo_run_config,                 ONLY: iforcing
-    USE mo_impl_constants,             ONLY: inwp, iaes
     USE mo_aes_rad_config,             ONLY: aes_rad_config
     USE mo_jsb_physical_constants,     ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,               ONLY: Get_omp_thread
@@ -754,12 +745,13 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
   
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
+    LOGICAL               :: lyr_perp = .FALSE. ! This switch has no effect on the results but we need it as a dummmy.
+    INTEGER               :: yr_perp  = -99999  ! Year if (lyr_perp == .TRUE.). We need it as a dummy.
     REAL(wp)              :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun
     REAL(wp), ALLOCATABLE :: daylight_frc(:,:) ! daylight fraction (0 or 1) with diurnal cycle
-    REAL(wp)              :: cecc, cobld, clonp
-    INTEGER               :: month_perp, yr_perp
+    REAL(wp), POINTER     :: cecc, cobld, clonp
     INTEGER , POINTER     :: icosmu0
-    LOGICAL               :: l_orbvsop87, lyr_perp
+    LOGICAL , POINTER     :: l_orbvsop87
     REAL(wp)              :: dt_ext
     LOGICAL, POINTER      :: ldiur, l_sph_symm_irr
   
@@ -828,26 +820,12 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_memory(HYDRO_)
 
-      SELECT CASE(iforcing)
-      CASE(iaes)
-        l_orbvsop87   = aes_rad_config(1)% l_orbvsop87 ! Default: .TRUE.
-        cecc          = aes_rad_config(1)% cecc
-        cobld         = aes_rad_config(1)% cobld
-        clonp         = aes_rad_config(1)% clonp
-        lyr_perp      = aes_rad_config(1)% lyr_perp
-        yr_perp       = aes_rad_config(1)% yr_perp
-        month_perp    = aes_rad_config(1)% nmonth
-      CASE(inwp)
-        l_orbvsop87   = config_l_orbvsop87 ! Default: .TRUE.
-        cecc          = config_cecc
-        cobld         = config_cobld
-        clonp         = config_clonp
-        lyr_perp      = config_lyr_perp
-        yr_perp       = config_yr_perp
-        month_perp    = config_month_perp
-      END SELECT
+      l_orbvsop87   => aes_rad_config(1)% l_orbvsop87 ! Default: .TRUE.
+      cecc          => aes_rad_config(1)% cecc
+      cobld         => aes_rad_config(1)% cobld
+      clonp         => aes_rad_config(1)% clonp
 
-      CALL get_orbit_times(l_orbvsop87, datetime_old, lyr_perp, yr_perp, month_perp, & ! in
+      CALL get_orbit_times(l_orbvsop87, datetime_old, lyr_perp, yr_perp, & ! in
         &                  time_of_day, orbit_date)                        ! out.
 
       IF (l_orbvsop87) THEN
