@@ -180,7 +180,7 @@ CONTAINS
     END IF
 
     WHERE (height_lake(:) > EPSILON(1._wp))
-       ml_depth(:) = MAX(0.1_wp, height_lake(:))
+       ml_depth(:) = MAX(1._wp, height_lake(:))
     ELSE WHERE
        ml_depth(:) = dsl4jsb_Config(SEB_)%lake_mixed_layer_depth
     END WHERE 
