@@ -275,8 +275,9 @@ CONTAINS
   END FUNCTION Construct_tile
 
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
-  !       been completely constructed. Therefore, Init_tile is called from init_model_common.
-  !
+  !       been completely constructed. Init_tile is called for each tile from jsbach_init (CALL tile%Init,
+  !       in mo_jsb_model_init.f90). The corresponding Init_interface is defined in mo_jsb_tile_class.
+
   SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, grid_id, in_var_groups)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
@@ -284,12 +285,12 @@ CONTAINS
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_grid,            ONLY: Get_vgrid
 
-    CLASS(t_jsb_tile), INTENT(inout) :: this
-    CHARACTER(len=*),  INTENT(in)    :: varlist_name
-    CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
-    CHARACTER(len=*),  INTENT(in)    :: suffix
-    INTEGER,           INTENT(in)    :: grid_id
-    LOGICAL,           INTENT(in)    :: in_var_groups
+    CLASS(t_jsb_tile), INTENT(inout) :: this              ! Current tile
+    CHARACTER(len=*),  INTENT(in)    :: varlist_name      ! Model shortname
+    CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names (generally empty)
+    CHARACTER(len=*),  INTENT(in)    :: suffix            ! Suffix for variable names
+    INTEGER,           INTENT(in)    :: grid_id           ! Grid id
+    LOGICAL,           INTENT(in)    :: in_var_groups     ! Should output be written for this tile?
 
     INTEGER                               :: iproc
     TYPE(t_jsb_model), POINTER            :: model
@@ -297,8 +298,8 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER   :: parent_tile => NULL()
     CHARACTER(LEN=:), ALLOCATABLE         :: process_name
 
-    CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc
-    CHARACTER(len=3)              :: model_id_suffix                    ! Suffix for domain if more than one model
+    CHARACTER(len=:), ALLOCATABLE :: varlist_name_loc     ! Local varlist name
+    CHARACTER(len=3)              :: model_id_suffix      ! Suffix for domain if more than one model
     INTEGER                       :: no_of_children, child_no
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_tile'
@@ -308,32 +309,36 @@ CONTAINS
     WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
 
     model => this%model
-    this%grid_id = grid_id
+    this%grid_id = grid_id                ! Defined for convenience
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
     !$acc enter data create(this%mem)
 
     ! Loop over all processes and initialize memory for this tile
-    parent_tile => this%parent_tile
+    parent_tile => this%parent_tile       ! Defined for convenience
     DO iproc=1,max_no_of_processes
 
       this%mem(iproc)%p => NULL()
 
-      IF (this%process_action(iproc) == SKIP_) CYCLE
+      IF (this%process_action(iproc) == SKIP_) CYCLE      ! Nothing needs to be done
 
+      ! If current tile is a leaf, we replace ON_LEAF by ON_TILE and set the parent tile to AGGREGATE
       IF (this%process_action(iproc) == ON_LEAFS_) THEN
         IF (ASSOCIATED(parent_tile)) parent_tile%process_action(iproc) = AGGREGATE_
         IF (.NOT. this%Has_children()) this%process_action(iproc) = ON_TILE_
       END IF
 
+      ! Not all processes need memory (compare process_factory):
       ! Only create / link memory for processes that have a memory
       IF (.NOT. model%processes(iproc)%p%has_memory) CYCLE
 
       process_name = Get_process_name(iproc)
 
       IF (this%process_action(iproc) == INHERIT_) THEN
+        ! We do not need to generate memory, just use the memory of the parent.
         this%mem(iproc)%p => parent_tile%mem(iproc)%p
+        ! No output is needed for the tile, as the parent output is identical (???).
         this%mem(iproc)%p%in_var_groups = in_var_groups
         __acc_attach(this%mem(iproc)%p)
         IF (debug_on()) &
@@ -341,12 +346,14 @@ CONTAINS
           &                             ' on tile '//TRIM(this%name)//' to parent')
       ELSE
         ! this%param(iproc)%p => t_jsb_param(iproc)
-        tmp_ptr => Create_process_memory(iproc)
+        tmp_ptr => Create_process_memory(iproc) ! Create memory for the specific process
         __acc_attach(tmp_ptr)
-        this%mem(iproc)%p => tmp_ptr
-        __acc_attach(this%mem(iproc)%p)
+        this%mem(iproc)%p => tmp_ptr     !TODO: Still needed? Same as this%mem(iproc)%p%owner_proc_id  (see below)
+        __acc_attach(this%mem(iproc)%p)  !      (Needs to be tested on gpu)
         this%mem(iproc)%p%id = iproc
 
+        ! Perparations needed for the Init process memory function called below
+        ! Generate variable list name. Each process has its own variable list; used in add_var
         IF (get_no_of_models() > 1) THEN
           varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
         ELSE
@@ -354,6 +361,7 @@ CONTAINS
         END IF
         this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
   
+        ! Also the memory of the parent tile is available on the current tile (if it has a parent).
         IF (ASSOCIATED(parent_tile)) this%mem(iproc)%p%parent => parent_tile%mem(iproc)%p
 
         this%mem(iproc)%p%grid_id = grid_id
@@ -367,6 +375,7 @@ CONTAINS
         !$acc update device(this%mem(iproc)%p)
         !$acc enter data create(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
+          !TODO: check if prefix is still needed ...
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
@@ -375,14 +384,15 @@ CONTAINS
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
-        IF (ASSOCIATED(parent_tile)) THEN
-          no_of_children = parent_tile%Get_no_of_children()
+        ! Make the current tile's memory available from the parent tile
+        IF (ASSOCIATED(parent_tile)) THEN                               ! Tile has a parent (i.e. this is not the box tile)
+          no_of_children = parent_tile%Get_no_of_children()             ! Total number of siblings
           IF (.NOT. ASSOCIATED(parent_tile%mem(iproc)%p%children) .AND. no_of_children > 0) THEN
-            parent_tile%mem(iproc)%p%no_of_children = no_of_children
-            ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children))
+            parent_tile%mem(iproc)%p%no_of_children = no_of_children    !TODO: this line probaby not needed
+            ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children)) ! Allocate memory for all siblings
             !$acc enter data create(parent_tile%mem(iproc)%p%children)
           END IF
-          child_no = this%path(this%level)
+          child_no = this%path(this%level)                ! Index of the child (i.e. the current tile; comes from state machine)
           parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
           !$acc update device(parent_tile%mem(iproc)%p%children(child_no)%p)
           __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
