@@ -517,69 +517,71 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp)
 
-      CALL mem%Add_var( 'fr_sand', mem%fr_sand,                                &
-        & hgrid, surface,                                                      &
-        & t_cf('fraction_sand', '', 'Fraction of sand in upper soil'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+      IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
+        CALL mem%Add_var( 'fr_sand', mem%fr_sand,                                &
+          & hgrid, surface,                                                      &
+          & t_cf('fraction_sand', '', 'Fraction of sand in upper soil'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & lrestart=.FALSE.,                                                    &
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'fr_silt', mem%fr_silt,                                &
-        & hgrid, surface,                                                      &
-        & t_cf('fraction_silt', '', 'Fraction of silt in upper soil'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        CALL mem%Add_var( 'fr_silt', mem%fr_silt,                                &
+          & hgrid, surface,                                                      &
+          & t_cf('fraction_silt', '', 'Fraction of silt in upper soil'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & lrestart=.FALSE.,                                                    &
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'fr_clay', mem%fr_clay,                                &
-        & hgrid, surface,                                                      &
-        & t_cf('fraction_clay', '', 'Fraction of clay in upper soil'),         &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        CALL mem%Add_var( 'fr_clay', mem%fr_clay,                                &
+          & hgrid, surface,                                                      &
+          & t_cf('fraction_clay', '', 'Fraction of clay in upper soil'),         &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & lrestart=.FALSE.,                                                    &
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'fr_oc', mem%fr_oc,                                    &
-        & hgrid, surface,                                                      &
-        & t_cf('fraction_oc', '', 'Fraction of organic in upper soil'),        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        CALL mem%Add_var( 'fr_oc', mem%fr_oc,                                    &
+          & hgrid, surface,                                                      &
+          & t_cf('fraction_oc', '', 'Fraction of organic in upper soil'),        &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & lrestart=.FALSE.,                                                    &
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'fr_sand_deep', mem%fr_sand_deep,                      &
-        & hgrid, surface,                                                      &
-        & t_cf('fraction_sand_deep', '', 'Fraction of sand in lower soil'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        CALL mem%Add_var( 'fr_sand_deep', mem%fr_sand_deep,                      &
+          & hgrid, surface,                                                      &
+          & t_cf('fraction_sand_deep', '', 'Fraction of sand in lower soil'),    &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & lrestart=.FALSE.,                                                    &
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'fr_silt_deep', mem%fr_silt_deep,                      &
-        & hgrid, surface,                                                      &
-        & t_cf('fraction_silt_deep', '', 'Fraction of silt in lower soil'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        CALL mem%Add_var( 'fr_silt_deep', mem%fr_silt_deep,                      &
+          & hgrid, surface,                                                      &
+          & t_cf('fraction_silt_deep', '', 'Fraction of silt in lower soil'),    &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & lrestart=.FALSE.,                                                    &
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'fr_clay_deep', mem%fr_clay_deep,                      &
-        & hgrid, surface,                                                      &
-        & t_cf('fraction_clay_deep', '', 'Fraction of clay in lower soil'),    &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        CALL mem%Add_var( 'fr_clay_deep', mem%fr_clay_deep,                      &
+          & hgrid, surface,                                                      &
+          & t_cf('fraction_clay_deep', '', 'Fraction of clay in lower soil'),    &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & lrestart=.FALSE.,                                                    &
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-      CALL mem%Add_var( 'fr_oc_deep', mem%fr_oc_deep,                          &
-        & hgrid, surface,                                                      &
-        & t_cf('fraction_oc_deep', '', 'Fraction of organic in lower soil'),   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-        & prefix, suffix,                                                      &
-        & lrestart=.FALSE.,                                                    &
-        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+        CALL mem%Add_var( 'fr_oc_deep', mem%fr_oc_deep,                          &
+          & hgrid, surface,                                                      &
+          & t_cf('fraction_oc_deep', '', 'Fraction of organic in lower soil'),   &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+          & prefix, suffix,                                                      &
+          & lrestart=.FALSE.,                                                    &
+          & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+      END IF ! l_soil_texture
 
       CALL mem%Add_var( 'vol_field_cap_sl', mem%vol_field_cap_sl,              &
         & hgrid, soil_w,                                                       &
