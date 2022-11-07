@@ -142,9 +142,10 @@ CONTAINS
       & canopy_pre_snow,      & !< snow depth on the canopy prior to its update
       & evapotrans_no_snow,   & !< evapotranspiration without snow evaporation [m]
       & evapo_snow_pot_in_m,  & !< potential snow evaporation
+      & fract_wtr,            & !< wet skin fraction witout river and overland reservoir
       & evapo_skin_pot_in_m,  & !< potential evaporation from wet surface (skin reservoir)
-      & evapo_river_pot_in_m,      & !< potential evaporation from wet surface (river reservoir)
-      & evapo_overl_pot_in_m,      & !< potential evaporation from wet surface (overl reservoir)
+      & evapo_river_pot_in_m, & !< potential evaporation from wet surface (river reservoir)
+      & evapo_overl_pot_in_m, & !< potential evaporation from wet surface (overl reservoir)
       & rain_to_skinres,      & !< amount of rain going into the skin reservoir
       & wtr_skin_pre_rain       !< amount of water in the skin reservoir prior to the update [m]
 
@@ -179,7 +180,8 @@ CONTAINS
     transpiration_in_m  = transpiration * dtime/rhoh2o
     evapo_snow_pot_in_m = fract_snow    * evapopot * dtime/rhoh2o
     evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
-    evapo_skin_pot_in_m  = (1._wp - fract_snow) * fract_wet   * evapopot * dtime/rhoh2o
+    fract_wtr = fract_wet - fract_river - fract_overl
+    evapo_skin_pot_in_m  = (1._wp - fract_snow) * fract_wtr   * evapopot * dtime/rhoh2o
     evapo_river_pot_in_m = (1._wp - fract_snow) * fract_river * evapopot * dtime/rhoh2o
     evapo_overl_pot_in_m = (1._wp - fract_snow) * fract_overl * evapopot * dtime/rhoh2o
 
