@@ -542,10 +542,6 @@ CONTAINS
 
         ENDIF
 
-        !if (isnan(fuel(1))) then
-        !  print*, 'fuel'
-        !endif
-
         ! modify pft fractions for Fire
         !modified_pfts_fract(:,1) = fract_snow_soil(:)
         !modified_pfts_fract(:,2) = pfts_fract(:,1)*(1-fract_snow_soil(:))*fract_fpc_max     ! Tropical broadleaf evergreen
@@ -571,11 +567,6 @@ CONTAINS
 
         slope                     => dsl4jsb_memory(DISTURB_)%slope(ics:ice, iblk)                     ! <Rackhun Son>
         roughness                 => dsl4jsb_memory(DISTURB_)%roughness(ics:ice, iblk)                 ! <Rackhun Son>
-        !topographic_position_idx  => dsl4jsb_memory(DISTURB_)%topographic_position_idx(ics:ice, iblk)  ! <Rackhun Son>
-        !terrain_ruggedness_idx    => dsl4jsb_memory(DISTURB_)%terrain_ruggedness_idx(ics:ice, iblk)    ! <Rackhun Son>
-        !vector_ruggedness_measure => dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(ics:ice, iblk) ! <Rackhun Son>
-        !profile_curvature         => dsl4jsb_memory(DISTURB_)%profile_curvature(ics:ice, iblk)         ! <Rackhun Son>
-        !tangential_curvature      => dsl4jsb_memory(DISTURB_)%tangential_curvature(ics:ice, iblk)      ! <Rackhun Son>
 
         population_density        => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk)        ! <Rackhun Son>
         gdp                       => dsl4jsb_memory(DISTURB_)%gdp(ics:ice, iblk)                       ! <Rackhun Son>
@@ -596,8 +587,6 @@ CONTAINS
         land_use_state_secmb      => dsl4jsb_memory(DISTURB_)%land_use_state_secmb(ics:ice, iblk)      ! <Rackhun Son>
         land_use_state_urban      => dsl4jsb_memory(DISTURB_)%land_use_state_urban(ics:ice, iblk)      ! <Rackhun Son>
 
-        !population_density    => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk, day_of_year)       ! <Rackhun Son>
-
         t_air_local_clim      => dsl4jsb_memory(DISTURB_)%t_air_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
         q_rel_local_clim      => dsl4jsb_memory(DISTURB_)%q_rel_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
         q_local_clim          => dsl4jsb_memory(DISTURB_)%q_local_clim(ics:ice, iblk, day_of_year)             ! <Rackhun Son>
@@ -607,15 +596,6 @@ CONTAINS
         swvl3_local_clim      => dsl4jsb_memory(DISTURB_)%swvl3_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
         swvl4_local_clim      => dsl4jsb_memory(DISTURB_)%swvl4_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
         lai_local_clim        => dsl4jsb_memory(DISTURB_)%lai_local_clim(ics:ice, iblk, day_of_year)           ! <Rackhun Son>
-        !t_air_local_clim      => dsl4jsb_memory(DISTURB_)%t_air_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
-        !q_rel_local_clim      => dsl4jsb_memory(DISTURB_)%q_rel_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
-        !q_local_clim          => dsl4jsb_memory(DISTURB_)%q_local_clim(ics:ice, iblk, imo)             ! <Rackhun Son>
-        !!ws10_local_clim       => dsl4jsb_memory(DISTURB_)%ws10_local_clim(ics:ice, iblk, imo)          ! <Rackhun Son>
-        !swvl1_local_clim      => dsl4jsb_memory(DISTURB_)%swvl1_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
-        !swvl2_local_clim      => dsl4jsb_memory(DISTURB_)%swvl2_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
-        !swvl3_local_clim      => dsl4jsb_memory(DISTURB_)%swvl3_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
-        !swvl4_local_clim      => dsl4jsb_memory(DISTURB_)%swvl4_local_clim(ics:ice, iblk, imo)         ! <Rackhun Son>
-        !lai_local_clim        => dsl4jsb_memory(DISTURB_)%lai_local_clim(ics:ice, iblk, imo)           ! <Rackhun Son>
         
       ENDIF
 
@@ -684,7 +664,6 @@ CONTAINS
               & lai_ave(:),                                               &
               & lai_local_clim(:),   lai_clim(:,day_of_year)/diff_year,   &
               & modified_pfts_fract(:,:),                              &
-             !& fuel(:),             fuel_yearly(:),                   &
               & fuel(:),                                               &
               & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,        &
               & lightning_climatology(:),                              &

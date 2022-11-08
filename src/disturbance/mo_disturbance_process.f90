@@ -318,112 +318,12 @@ CONTAINS
       climate_emb_output(nc, d_emb_output),              &
       vegetation_emb_output(nc, d_emb_output),           &
 
-      no_fire_cover(nc),                                 &
+      no_fire(nc),                                       &
       fuel_(nc),                                         &
       q_rel_air_(nc)
 
     REAL(wp) ::  scale
     INTEGER  ::  pft_idx
-
-    !climate_variables(:,1) = (t_air                 - t_air_minmax(1))                     &
-    !climate_variables(:,1) = (t_air-t_clim_m+t_clim_o - t_air_minmax(1))             &
-    !                       / (t_air_minmax(2)       - t_air_minmax(1))
-    !climate_variables(:,2) = (t_air-t_clim_m        - t_air_ano_minmax(1))           &
-    !                       / (t_air_ano_minmax(2)   - t_air_ano_minmax(1)) 
-    !climate_variables(:,3) = (q_rel_air             - q_rel_minmax(1))                     &
-    !climate_variables(:,3) = (q_rel_air-q_rel_clim_m+q_rel_clim_o - q_rel_minmax(1)) &
-    !                       / (q_rel_minmax(2)       - q_rel_minmax(1)) 
-    !climate_variables(:,4) = (q_rel_air-q_rel_clim_m- q_rel_ano_minmax(1))           &
-    !                       / (q_rel_ano_minmax(2)   - q_rel_ano_minmax(1)) 
-    !climate_variables(:,5) = (q_air                 - q_minmax(1))                         &
-    !climate_variables(:,5) = (q_air-q_clim_m+q_clim_o - q_minmax(1))                 &
-    !                       / (q_minmax(2)           - q_minmax(1)) 
-    !climate_variables(:,6) = (q_air-q_clim_m        - q_ano_minmax(1))               &
-    !                       / (q_ano_minmax(2)       - q_ano_minmax(1)) 
-    !climate_variables(:,7) = (wind_10m              - wind_10m_minmax(1))            &
-    !                       / (wind_10m_minmax(2)    - wind_10m_minmax(1)) 
-    !climate_variables(:,8) = (rain*86400            - rain_minmax(1))                &
-    !                       / (rain_minmax(2)        - rain_minmax(1)) 
-    !climate_variables(:,9) = (swl1                  - swl1_minmax(1))                      &
-    !climate_variables(:,9) = (swl1-swl1_clim_m+swl1_clim_o - swl1_minmax(1))         &
-    !                       / (swl1_minmax(2)        - swl1_minmax(1)) 
-    !climate_variables(:,10)= (swl1-swl1_clim_m      - swl1_ano_minmax(1))            &
-    !                       / (swl1_ano_minmax(2)    - swl1_ano_minmax(1)) 
-    !climate_variables(:,11)= (swl2                  - swl2_minmax(1))                      &
-    !climate_variables(:,11)= (swl2-swl2_clim_m+swl2_clim_o - swl2_minmax(1))         &
-    !                       / (swl2_minmax(2)        - swl2_minmax(1))
-    !climate_variables(:,12)= (swl2-swl2_clim_m      - swl2_ano_minmax(1))            &
-    !                       / (swl2_ano_minmax(2)    - swl2_ano_minmax(1))  
-    !climate_variables(:,13)= (swl3                  - swl3_minmax(1))                      &
-    !climate_variables(:,13)= (swl3-swl3_clim_m+swl3_clim_o - swl3_minmax(1))         &
-    !                       / (swl3_minmax(2)        - swl3_minmax(1))
-    !climate_variables(:,14)= (swl3-swl3_clim_m      - swl3_ano_minmax(1))            &
-    !                       / (swl3_ano_minmax(2)    - swl3_ano_minmax(1))  
-    !climate_variables(:,15)= (swl4                  - swl4_minmax(1))                      &
-    !climate_variables(:,15)= (swl4-swl4_clim_m+swl4_clim_o - swl4_minmax(1))         &
-    !                       / (swl4_minmax(2)        - swl4_minmax(1))
-    !climate_variables(:,16)= (swl4-swl4_clim_m      - swl4_ano_minmax(1))            &
-    !                       / (swl4_ano_minmax(2)    - swl4_ano_minmax(1)) 
-    
-    !vegetation_variables(:,1) = (lai-lai_clim_m+lai_clim_o - lai_minmax(1))          &
-    !                          / (lai_minmax(2)    - lai_minmax(1))
-    !vegetation_variables(:,2) = (lai-lai_clim_m   - lai_ano_minmax(1))               &
-    !                          / (lai_ano_minmax(2)- lai_ano_minmax(1))
-
-    !static_variables(:,1) = (population_density             - population_density_minmax(1))    &
-    !                      / (population_density_minmax(2)   - population_density_minmax(1))
-    !static_variables(:,2) = (lightning_climatology          - lightning_climatology_minmax(1)) &
-    !                      / (lightning_climatology_minmax(2)- lightning_climatology_minmax(1))
-    !static_variables(:,3) = (elevation                      - elevation_minmax(1))             &
-    !                      / (elevation_minmax(2)            - elevation_minmax(1))  
-
-    !emb_variables(:,1) = (t_clim_o             - t_air_clim_minmax(1)) &
-    !                   / (t_air_clim_minmax(2) - t_air_clim_minmax(1)) 
-    !emb_variables(:,2) = (q_rel_clim_o         - q_rel_clim_minmax(1)) &
-    !                   / (q_rel_clim_minmax(2) - q_rel_clim_minmax(1))
-    !emb_variables(:,3) = (q_clim_o             - q_clim_minmax(1))     &
-    !                   / (q_clim_minmax(2)     - q_clim_minmax(1))
-    !emb_variables(:,4) = (swl1_clim_o          - swl1_clim_minmax(1))  &
-    !                   / (swl1_clim_minmax(2)  - swl1_clim_minmax(1)) 
-    !emb_variables(:,5) = (swl2_clim_o          - swl2_clim_minmax(1))  &
-    !                   / (swl2_clim_minmax(2)  - swl2_clim_minmax(1)) 
-    !emb_variables(:,6) = (swl3_clim_o          - swl3_clim_minmax(1))  &
-    !                   / (swl3_clim_minmax(2)  - swl3_clim_minmax(1)) 
-    !emb_variables(:,7) = (swl4_clim_o          - swl4_clim_minmax(1))  &
-    !                   / (swl4_clim_minmax(2)  - swl4_clim_minmax(1))
-    !emb_variables(:,8) = (lai_clim_o           - lai_clim_minmax(1))   &
-    !                   / (lai_clim_minmax(2)   - lai_clim_minmax(1)) 
-    !emb_variables(:,9) = (fuel                 - agb_minmax(1))        &
-    !                   / (agb_minmax(2)        - agb_minmax(1)) 
-    !emb_variables(:,9) = (fuel_yearly          - agb_minmax(1))        &
-    !                   / (agb_minmax(2)        - agb_minmax(1)) 
-    !emb_variables(:,10)= modified_pfts_fract(:,1)
-    !emb_variables(:,10)= (modified_pfts_fract(:,1) - pft1_minmax(1))   &
-    !                   / (pft1_minmax(2)           - pft1_minmax(1))
-    !emb_variables(:,11)= modified_pfts_fract(:,2)
-    !emb_variables(:,11)= (modified_pfts_fract(:,2) - pft2_minmax(1))   &
-    !                   / (pft2_minmax(2)           - pft2_minmax(1))
-    !emb_variables(:,12)= modified_pfts_fract(:,3)
-    !emb_variables(:,12)= (modified_pfts_fract(:,3) - pft3_minmax(1))   &
-    !                   / (pft3_minmax(2)           - pft3_minmax(1))
-    !emb_variables(:,13)= modified_pfts_fract(:,4)
-    !emb_variables(:,13)= (modified_pfts_fract(:,4) - pft4_minmax(1))   &
-    !                   / (pft4_minmax(2)           - pft4_minmax(1))
-    !emb_variables(:,14)= modified_pfts_fract(:,5)
-    !emb_variables(:,14)= (modified_pfts_fract(:,5) - pft5_minmax(1))   &
-    !                   / (pft5_minmax(2)           - pft5_minmax(1))
-    !emb_variables(:,15)= modified_pfts_fract(:,6)
-    !emb_variables(:,15)= (modified_pfts_fract(:,6) - pft6_minmax(1))   &
-    !                   / (pft6_minmax(2)           - pft6_minmax(1))
-    !emb_variables(:,16)= modified_pfts_fract(:,7)
-    !emb_variables(:,16)= (modified_pfts_fract(:,7) - pft7_minmax(1))   &
-    !                   / (pft7_minmax(2)           - pft7_minmax(1))
-    !emb_variables(:,17)= modified_pfts_fract(:,8)
-    !emb_variables(:,17)= (modified_pfts_fract(:,8) - pft8_minmax(1))   &
-    !                   / (pft8_minmax(2)           - pft8_minmax(1))
-    !emb_variables(:,18)= modified_pfts_fract(:,9)
-    !emb_variables(:,18)= (modified_pfts_fract(:,9) - pft9_minmax(1))   &
-    !                   / (pft9_minmax(2)           - pft9_minmax(1))
 
 
     climate_variables(:,1) = t_air - t_clim_m + t_clim_o
@@ -442,31 +342,6 @@ CONTAINS
     !climate_variables(:,6) = q_air - q_clim_m
     !climate_variables(:,7) = wind_10m 
     !climate_variables(:,8) = rain*86400
-    !climate_variables(:,9) = swl1 - swl1_clim_m + swl1_clim_o
-    !climate_variables(:,10)= swl1 - swl1_clim_m
-    !climate_variables(:,11)= swl2 - swl2_clim_m + swl2_clim_o
-    !climate_variables(:,12)= swl2 - swl2_clim_m
-    !climate_variables(:,13)= swl3 - swl3_clim_m + swl3_clim_o
-    !climate_variables(:,14)= swl3 - swl3_clim_m
-    !climate_variables(:,15)= swl4 - swl4_clim_m + swl4_clim_o
-    !climate_variables(:,16)= swl4 - swl4_clim_m
-
-    !climate_variables(:,1) = t_air
-    !climate_variables(:,2) = t_air - t_clim_m
-    !climate_variables(:,3) = q_rel_air
-    !climate_variables(:,4) = q_rel_air - q_rel_clim_m
-    !climate_variables(:,5) = q_air
-    !climate_variables(:,6) = q_air - q_clim_m
-    !climate_variables(:,7) = wind_10m 
-    !climate_variables(:,8) = rain*86400
-    !climate_variables(:,9) = swl1
-    !climate_variables(:,10)= swl1 - swl1_clim_m
-    !climate_variables(:,11)= swl2
-    !climate_variables(:,12)= swl2 - swl2_clim_m
-    !climate_variables(:,13)= swl3
-    !climate_variables(:,14)= swl3 - swl3_clim_m
-    !climate_variables(:,15)= swl4
-    !climate_variables(:,16)= swl4 - swl4_clim_m
 
     vegetation_variables(:,1) = lai  - lai_clim_m  + lai_clim_o
     vegetation_variables(:,2) = lai  - lai_clim_m
@@ -488,16 +363,6 @@ CONTAINS
     !vegetation_variables(:,8) = swl3 - swl3_clim_m
     !vegetation_variables(:,9) = swl4
     !vegetation_variables(:,10)= swl4 - swl4_clim_m
-
-    !lig_topo_variables(:,1) = lightning_climatology
-    !lig_topo_variables(:,2) = elevation
-    !lig_topo_variables(:,3) = slope
-    !lig_topo_variables(:,4) = roughness
-    !lig_topo_variables(:,5) = topographic_position_idx
-    !lig_topo_variables(:,6) = terrain_ruggedness_idx
-    !lig_topo_variables(:,7) = vector_ruggedness_measure
-    !lig_topo_variables(:,8) = profile_curvature
-    !lig_topo_variables(:,9) = tangential_curvature
 
     anthro_variables(:,1) = population_density
     anthro_variables(:,2) = gdp
@@ -539,15 +404,6 @@ CONTAINS
     emb_variables(:,11)= elevation
     emb_variables(:,12)= slope
     emb_variables(:,13)= roughness
-    !emb_variables(:,10)= modified_pfts_fract(:,1)
-    !emb_variables(:,11)= modified_pfts_fract(:,2)
-    !emb_variables(:,12)= modified_pfts_fract(:,3)
-    !emb_variables(:,13)= modified_pfts_fract(:,4)
-    !emb_variables(:,14)= modified_pfts_fract(:,5)
-    !emb_variables(:,15)= modified_pfts_fract(:,6)
-    !emb_variables(:,16)= modified_pfts_fract(:,7)
-    !emb_variables(:,17)= modified_pfts_fract(:,8)
-    !emb_variables(:,18)= modified_pfts_fract(:,9)
     emb_variables(:,14)= modified_pfts_fract(:,1)
     emb_variables(:,15)= modified_pfts_fract(:,2)
     emb_variables(:,16)= modified_pfts_fract(:,3)
@@ -558,15 +414,6 @@ CONTAINS
     emb_variables(:,21)= modified_pfts_fract(:,8)
     emb_variables(:,22)= modified_pfts_fract(:,9)
 
-    !where (climate_variables(:,3) < 0.)  climate_variables(:,3)  = 0.
-    !where (climate_variables(:,5) < 0.)  climate_variables(:,5)  = 0.
-    !where (climate_variables(:,7) < 0.)  climate_variables(:,7)  = 0.
-    !where (climate_variables(:,8) < 0.)  climate_variables(:,8)  = 0.
-    !where (climate_variables(:,9) < 0.)  climate_variables(:,9)  = 0.
-    !where (climate_variables(:,11) < 0.) climate_variables(:,11) = 0.
-    !where (climate_variables(:,13) < 0.) climate_variables(:,13) = 0.
-    !where (climate_variables(:,15) < 0.) climate_variables(:,15) = 0.
-    !where (vegetation_variables(:,1) < 0.) vegetation_variables(:,1) = 0.
 
     ! Normalize
     climate_variables(:,:)    = (climate_variables(:,:)                    - spread(climate_min_max(:,1),1,nc))    &
@@ -672,95 +519,49 @@ CONTAINS
     anthro_network_output = matmul(anthro_network_act, anthropogenic_layer2_weight) + spread(anthropogenic_layer2_bias, 1, nc)
 
 
-    ! output
-    !IF (tilename == 'pft01') THEN 
-    !  pft_idx = 2
-    !  scale = 1._wp
-    !ELSE IF (tilename == 'pft02') THEN
-    !  pft_idx = 3
-    !  scale = 1._wp
-    !ELSE IF (tilename == 'pft03') THEN
-    !  pft_idx = 4
-    !  scale = 1._wp
-    !ELSE IF (tilename == 'pft04') THEN
-    !  pft_idx = 5
-    !  scale = 1._wp
-    !ELSE IF (tilename == 'pft05') THEN
-    !  pft_idx = 6
-    !  scale = 1._wp
-    !ELSE IF (tilename == 'pft06') THEN
-    !  pft_idx = 7
-    !  scale = 1._wp
-    !ELSE IF (tilename == 'pft07') THEN
-    !  pft_idx = 8
-    !  scale = 1._wp/2._wp
-    !ELSE IF (tilename == 'pft08') THEN
-    !  pft_idx = 8
-    !  scale = 1._wp/2._wp
-    !ELSE
-    !  print*, 'new land cover type'
-    !endif
-    
-    !burned_fract = climate_lstm_output_(:,pft_idx)                &
-    !             * vegetation_lstm_output_(:,pft_idx)             &
-    !             * lig_topo_network_output(:,pft_idx)             &
-    !             * modified_pfts_fract(:,pft_idx)                 &
-    !             * scale/100.
-
-    !burned_fract = burned_fract                                   &
-    !             + climate_lstm_output_(:,1)                      &
-    !             * vegetation_lstm_output_(:,1)                   &
-    !             * lig_topo_network_output(:,1)                   &
-    !             * modified_pfts_fract(:,1)                       &
-    !             * scale/100./8.
-                 !* 8._wp / 100
-
     burned_fract = sum(climate_lstm_output_         &
                      * vegetation_lstm_output_      &
                      !* lig_topo_network_output      &
                      * anthro_network_output        &
                      * modified_pfts_fract(:,1:8), dim=2)
 
-    where (burned_fract < 0.) burned_fract = 0.
-    !where (burned_fract > 1.) burned_fract = 1.
-    !where (burned_fract > 100.) burned_fract = 100.
     burned_fract(:) = burned_fract(:)/100.
+    !where (burned_fract > 26919.82) burned_fract = 26919.82
 
-    no_fire_cover(:) = modified_pfts_fract(:,9)+modified_pfts_fract(:,1)
+    ! version 1
+    !no_fire(:) = 1. - modified_pfts_fract(:,9) - modified_pfts_fract(:,1)
+    !where (modified_pfts_fract(:,9) > 0.3) no_fire = 0.
+    !where (modified_pfts_fract(:,1) > 0.3) no_fire = 0.
+    !burned_fract(:) = burned_fract(:)*no_fire(:)
 
-    where (modified_pfts_fract(:,9) > 0.3) no_fire_cover = 1.
-    !where (modified_pfts_fract(:,1) > 0.2) no_fire_cover = 1.
-
-    !burned_fract(:) = burned_fract(:)*(1.-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
-    burned_fract(:) = burned_fract(:)*(1.-no_fire_cover(:))
-
-    !print*, maxval(modified_pfts_fract(:,9)+modified_pfts_fract(:,1)), maxval(modified_pfts_fract(:,9))
-
-    fuel_(:) = emb_variables(:,9)
-    !where (fuel_ < 0.)   fuel_ = 0.
-    !where (fuel_ > 1.)   fuel_ = 1.
-    !where (fuel < fire_litter_threshold/2) fuel_ = 0.
-    !burned_fract = burned_fract*(fuel_(:)**2)  ! v1
-    burned_fract(:) = burned_fract(:)*fuel_(:)  ! v1
-    !burned_fract(:) = burned_fract(:)*emb_variables(:,9)  ! v1
-
+    !fuel_(:) = emb_variables(:,9)
+    !burned_fract(:) = burned_fract(:)*fuel_(:)
 
     !q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
-    !q_rel_air_(:) = q_rel_air_(:)/100.
-    q_rel_air_(:) = q_rel_air(:)
+    !where (q_rel_air_ < 0.) q_rel_air_ = 0.
+    !where (q_rel_air_ > 100.) q_rel_air_ = 100.
+    !where (q_rel_air_ > fire_rel_hum_threshold) q_rel_air_ = 100.
+    !burned_fract(:) = burned_fract(:)*(1.-q_rel_air_(:)/100.)  ! v1
+
+
+    ! version 2
+    no_fire(:) = 1. - modified_pfts_fract(:,9) - modified_pfts_fract(:,1)
+    where (modified_pfts_fract(:,9) > 0.3) no_fire = 0.
+    where (modified_pfts_fract(:,1) > 0.2) no_fire = 0.
+
+    fuel_(:) = emb_variables(:,9)
+    !where (fuel < fire_litter_threshold) fuel_ = 0.
+  
+    q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
     where (q_rel_air_ < 0.) q_rel_air_ = 0.
     where (q_rel_air_ > 100.) q_rel_air_ = 100.
-    !where (q_rel_air_climbuf > fire_rel_hum_threshold) q_rel_air_ = 100.
     !where (q_rel_air_ > fire_rel_hum_threshold) q_rel_air_ = 100.
-    
+    where (q_rel_air_ > 60.) q_rel_air_ = 100.
+    !where (q_rel_air_ > 50.) q_rel_air_ = 100.
+    !where (q_rel_air_climbuf > fire_rel_hum_threshold) q_rel_air_ = 99.9999 
 
-    !burned_fract = burned_fract*((1.-q_rel_air_(:)/100.)**2)  ! v1
-    burned_fract(:) = burned_fract(:)*(1.-q_rel_air_(:)/100.)  ! v1
-    !q_rel_air_(:) = 1._wp / (1._wp + exp(-20._wp*((q_rel_air_(:)/100.)-0.5)))
-    !burned_fract = burned_fract*(1.-q_rel_air_(:))
-    
-    !burned_fract(:) = burned_fract(:)/100.
-    !where (burned_fract < 0.) burned_fract = 0.
+    burned_fract(:) = burned_fract(:)*no_fire(:)*fuel_(:)*(1.-q_rel_air_(:)/100.)
+    where (burned_fract < 0.) burned_fract = 0.
     where (burned_fract > 1.) burned_fract = 1.
 
     !if (maxval(burned_fract) .gt. 1e-3) then
