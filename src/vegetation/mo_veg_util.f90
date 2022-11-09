@@ -40,20 +40,18 @@ MODULE mo_veg_util
   USE mo_exception,   ONLY: message
 
   IMPLICIT NONE
+
   PRIVATE
   PUBLIC :: reset_veg_fluxes, update_time_average_vegetation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_util'
 
-
 CONTAINS
 
-
-  !-----------------------------------------------------------------------------------------------------
-  !> init/reset vegetation fluxes (with/to zero)
-  !! 
-  !! called prior to all Tasks
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
+  !>
+  !> set vegetation fluxes to zero
+  !>
   SUBROUTINE reset_veg_fluxes(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
@@ -62,39 +60,22 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: VEG_
     USE mo_jsb_math_constants,    ONLY: zero
-    
-    ! Use of process memories
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
-    ! Use of pools
+    dsl4jsb_Use_memory(VEG_)
 #ifdef __QUINCY_STANDALONE__
 #else
-    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool, t_veg_elements_pool
+    USE mo_veg_static_var_pointer,  ONLY: veg_growth, veg_litterfall, &
+      &                                   veg_exudation, veg_establishment, veg_reserve_use
 #endif
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
-    ! ---------------------------
-    ! 0.2 Local 
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER       :: model
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration, process memory and pools
-    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
-#ifdef __QUINCY_STANDALONE__
-#else
-    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_growth
-    dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_litterfall
-    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_exudation
-    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_establishment
-    dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_reserve_use
-#endif
-    ! Declare pointers to variables in memory
-    ! VEG_ 2D
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: maint_respiration_c13
@@ -129,37 +110,19 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
     dsl4jsb_Real2D_onChunk      :: unit_transpiration
-    ! Get local variables from options argument
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
+    ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
-    ! Get process config
-    ! Get process memories
-    dsl4jsb_Get_memory(VEG_)           ! veg__mem => veg_memory
-#ifdef __QUINCY_STANDALONE__
-#else
-    ! Get pools
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_growth,        veg_growth)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_litterfall,    veg_litterfall)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_exudation,     veg_exudation)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_establishment, veg_establishment)
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_reserve_use,   veg_reserve_use)
-    ! associate element-variables with chunk
-    CALL veg_growth%Associate_chunk_var_ptr(ics, ice, iblk)
-    CALL veg_litterfall%Associate_chunk_var_ptr(ics, ice, iblk)
-    CALL veg_exudation%Associate_chunk_var_ptr(ics, ice, iblk)
-    CALL veg_establishment%Associate_chunk_var_ptr(ics, ice, iblk)
-    CALL veg_reserve_use%Associate_chunk_var_ptr(ics, ice, iblk)
-#endif
-    ! Get process variables (Set pointers to variables in memory)
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
@@ -195,11 +158,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
     dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
 
-
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-
 
     ! flux pools
 #ifdef __QUINCY_STANDALONE__
@@ -255,11 +216,10 @@ CONTAINS
     ! other variables
     delta_dens_ind(:) = zero                 !< ??
     unit_transpiration(:) = zero             !< ??
-
   END SUBROUTINE reset_veg_fluxes
 
-
   ! ======================================================================================================= !
+  !>
   !> calculate time moving averages and daytime averages for VEG_
   !>
   SUBROUTINE update_time_average_vegetation(tile, options)

@@ -432,6 +432,8 @@ CONTAINS
     ! for now: only QUINCY land
     !
     CASE (MODEL_QUINCY)
+      ! declare and init static var pointers
+      CALL model%Queue_task(VEG_,     "init_veg_static_var_pointers")   ! 
       ! set flux variables to zero
       CALL model%Queue_task(ASSIMI_,  "reset_assimi_fluxes")        ! 
       CALL model%Queue_task(VEG_,     "reset_veg_fluxes")           ! 

@@ -44,6 +44,7 @@ MODULE mo_veg_interface
   USE mo_veg_dynamics,                ONLY: update_veg_dynamics
   USE mo_veg_growth,                  ONLY: update_veg_growth
   USE mo_veg_update_pools,            ONLY: update_veg_pools
+  USE mo_veg_static_var_pointer,      ONLY: init_veg_static_var_pointers
 
   ! Use of processes in this module
   dsl4jsb_Use_processes VEG_, PHENO_, RAD_, SB_
@@ -57,6 +58,16 @@ MODULE mo_veg_interface
   PRIVATE
   PUBLIC :: Register_veg_tasks
 
+
+  ! ======================================================================================================= !
+  !>
+  !> Type definition: init_veg_static_var_pointers
+  !>
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_init_veg_static_var_pointers
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => init_veg_static_var_pointers            !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_init_veg_static_var_pointers  !< Aggregates computed task variables
+  END TYPE tsk_init_veg_static_var_pointers
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_veg_fluxes task
@@ -118,6 +129,13 @@ MODULE mo_veg_interface
     PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_vegetation !< Aggregates computed task variables
   END TYPE tsk_time_average_vegetation
 
+  ! ======================================================================================================= !
+  !>
+  !> Constructor interface: init_veg_static_var_pointers task
+  !>
+  INTERFACE tsk_init_veg_static_var_pointers
+    PROCEDURE Create_task_init_veg_static_var_pointers         !< Constructor function for task
+  END INTERFACE tsk_init_veg_static_var_pointers
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: reset_veg_fluxes task
@@ -182,6 +200,7 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
+    CALL this%Register_task(tsk_init_veg_static_var_pointers(model_id))
     CALL this%Register_task(tsk_reset_veg_fluxes(model_id))
     CALL this%Register_task(tsk_veg_turnover(model_id))
     CALL this%Register_task(tsk_veg_dynamics(model_id))
@@ -191,6 +210,17 @@ CONTAINS
 
   END SUBROUTINE Register_veg_tasks
 
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor: reset_veg_fluxes task
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Create_task_init_veg_static_var_pointers(model_id) RESULT(return_ptr)
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_reset_veg_fluxes::return_ptr)
+    CALL return_ptr%Construct(name='init_veg_static_var_pointers', process_id=VEG_, owner_model_id=model_id)
+  END FUNCTION Create_task_init_veg_static_var_pointers
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_veg_fluxes task
@@ -321,6 +351,38 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
   
   END SUBROUTINE update_reset_veg_fluxes
+
+  ! ======================================================================================================= !
+  !>
+  !> Implementation of "aggregate": init_veg_static_var_pointers task
+  !> 
+  SUBROUTINE aggregate_init_veg_static_var_pointers(tile, options)
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_init_veg_static_var_pointers'
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model             => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_memory(VEG_)
+
+    ! nothing to do
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+  END SUBROUTINE aggregate_init_veg_static_var_pointers
   
   ! ======================================================================================================= !
   !>Implementation of "aggregate": reset_veg_fluxes task
