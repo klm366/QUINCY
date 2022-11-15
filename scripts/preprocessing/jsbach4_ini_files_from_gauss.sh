@@ -92,8 +92,6 @@ source_res_dict[9]=T255
 source_res_dict[10]=T255
 source_res_dict[11]=T255
 
-year=${start_year}
-
 #input_root=/pool/data/JSBACH/input
 
 # Note: glac must be at beginning of varlist
@@ -188,6 +186,9 @@ function generate_gauss_data {
   export echam_fractional=${echam_fractional}  # initial file for echam runs with fractional land sea mask
   export masks_file=default                    # file with land sea mask (default: use echam land sea mask)
   export pool=/pool/data/ECHAM6/input/r0005/${res_atm}     # directories with echam input data
+  if [[ ${res_oce} == dCRUNCEP ]]; then
+    export pool=${pool_prepare}/${res_atm}/ECHAM6          # directory with echam input data
+  fi
   export pool_land=${pool_prepare}/${res_atm}
   export srcdir=.
   if [[ ${res_atm} == 05 ]]; then
@@ -528,6 +529,12 @@ function crosscheck_vars {
   debug_file ${grid_name}_maxmoist_remap.nc
   rm max_soilwater.nc
 
+  # Make sure initial soil moisture is less then maxmoist
+  temp=$(mktemp -u --tmpdir=.)
+  ${cdo} -le ${grid_name}_init_moist_remap.nc ${grid_name}_maxmoist_remap.nc le-mask.tmp
+  ${cdo} ifthenelse le-mask.tmp ${grid_name}_init_moist_remap.nc ${grid_name}_maxmoist_remap.nc ${temp}
+  mv ${temp} ${grid_name}_init_moist_remap.c
+
   # Set missing value of surface temperature to 280K
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} setmisstoc,280 ${grid_name}_surf_temp_remap.nc ${temp}
@@ -825,6 +832,8 @@ do
   echo "===  Generating files for $grid_name from $source_res      ==="
   echo "=============================================================="
 
+  year=${start_year}
+
   if [[ ${jsb4icon} == true ]]; then
     icon_grid=icon_grid_${atmGridID}_${grid_name}_G.nc
 
@@ -859,18 +868,18 @@ do
   echo "===  Get initial_tarfiles from git.mpimet.mpg.de/git/mpiesm.git ==="
   echo "==================================================================="
 
-  # svn -r 9561 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
-  # svn has been moved to git, thus ...
-
-  git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
-  # git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
-  cd mpiesm-landveg
-  git config core.sparseCheckout true
-  echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
-  git checkout 5fd38a895
-  mv contrib/initial_tarfiles/ ..
-  cd ../initial_tarfiles
-  rm -rf ../mpiesm-landveg
+  if [[ ! -d initial_tarfiles ]]; then
+    git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
+    # git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
+    cd mpiesm-landveg
+    git config core.sparseCheckout true
+    echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
+    git checkout 5fd38a895
+    mv contrib/initial_tarfiles/ ..
+    cd ..
+    rm -rf mpiesm-landveg
+  fi
+  cd initial_tarfiles
 
   echo Creating Gaussian input file ...
   generate_gauss_data
@@ -929,6 +938,9 @@ do
 
   if [[ ${dryrun} != "true" ]]
   then
+    if [[ ${jsb4icon} != true ]]; then
+      output_dir=${output_root}/${revision}/${grid_name}
+    fi
     echo output directory ${output_dir}
     mkdir -p ${output_dir}
   fi
@@ -937,15 +949,16 @@ do
   then
     echo "Copying output files to ${output_dir}"
     [[ ${clean} == "true" ]] && cpmv="mv" || cpmv="cp -p"
+    [[ ${jsb4icon} == true ]] && grid_tag="" || grid_tag=${grid_name}${res_oce}_
     for npfts in $npfts_list
     do
       [[ $npfts -gt 0 ]] && pft_tag="${npfts}pfts_" || pft_tag=""
-      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${pft_tag}$year.nc
+      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${pft_tag}${grid_tag}$year.nc
     done
-    ${cpmv} ${grid_name}_bc_land_phys_$year.nc ${output_dir}/bc_land_phys_$year.nc
-    ${cpmv} ${grid_name}_bc_land_soil_$year.nc ${output_dir}/bc_land_soil_$year.nc
-    ${cpmv} ${grid_name}_bc_land_sso_$year.nc  ${output_dir}/bc_land_sso_$year.nc
-    ${cpmv} ${grid_name}_ic_land_soil_$year.nc ${output_dir}/ic_land_soil_$year.nc
+    ${cpmv} ${grid_name}_bc_land_phys_$year.nc ${output_dir}/bc_land_phys_${grid_tag}$year.nc
+    ${cpmv} ${grid_name}_bc_land_soil_$year.nc ${output_dir}/bc_land_soil_${grid_tag}$year.nc
+    ${cpmv} ${grid_name}_bc_land_sso_$year.nc ${output_dir}/bc_land_sso_${grid_tag}$year.nc
+    ${cpmv} ${grid_name}_ic_land_soil_$year.nc ${output_dir}/ic_land_soil_${grid_tag}$year.nc
 
     if [[ ${coupled} == "true" ]] && [[ ${hd_file}x != 'x' ]]
     then
