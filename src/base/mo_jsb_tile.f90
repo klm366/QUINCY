@@ -59,6 +59,7 @@ MODULE mo_jsb_tile
   END TYPE t_jsb_tile
 
   !> Used to create a vector of tiles
+  ! (Define a type only containing a pointer to enable referring to objects of t_jsb_tile in vectors)
   TYPE t_jsb_tile_p
     TYPE(t_jsb_tile), POINTER :: p
   END TYPE t_jsb_tile_p
@@ -84,7 +85,7 @@ CONTAINS
     USE mo_jsb_cqt_class,       ONLY: Get_number_of_types
     USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE
     USE mo_jsb_process_class,   ONLY: SEB_, A2L_, L2A_
-
+    ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
     INTEGER,           INTENT(in), OPTIONAL :: processes(:)
@@ -95,13 +96,13 @@ CONTAINS
     CHARACTER(len=*),  INTENT(in), OPTIONAL :: fract_filename !< Name of file with tile fractions
     CHARACTER(len=*),  INTENT(in), OPTIONAL :: fract_varname  !< Name of fraction variable in fract_filename
     CLASS(t_jsb_tile), POINTER              :: return_ptr
-
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),            POINTER :: model
     INTEGER                               :: i, j, iproc
     CLASS(t_State),               POINTER :: parent_tmp       !< Temporary pointer to the parent tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Construct_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Starting construction of tile '//TRIM(name))
 
     ! Allocate and initialize base structure (=state) for tile
@@ -274,24 +275,27 @@ CONTAINS
 
   END FUNCTION Construct_tile
 
+  ! ======================================================================================================= !
+  !> 
+  !> Init tile - in particular initialise memory for processes on the tile
+  !>
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
   !       been completely constructed. Init_tile is called for each tile from jsbach_init (CALL tile%Init,
   !       in mo_jsb_model_init.f90). The corresponding Init_interface is defined in mo_jsb_tile_class.
-
   SUBROUTINE Init_tile(this, varlist_name, prefix, suffix, grid_id, in_var_groups)
 
     USE mo_jsb_process_factory, ONLY: Create_process_memory
     USE mo_jsb_process_class,   ONLY: Get_process_name
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_grid,            ONLY: Get_vgrid
-
-    CLASS(t_jsb_tile), INTENT(inout) :: this              ! Current tile
-    CHARACTER(len=*),  INTENT(in)    :: varlist_name      ! Model shortname
-    CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names (generally empty)
-    CHARACTER(len=*),  INTENT(in)    :: suffix            ! Suffix for variable names
-    INTEGER,           INTENT(in)    :: grid_id           ! Grid id
-    LOGICAL,           INTENT(in)    :: in_var_groups     ! Should output be written for this tile?
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this              !< Current tile
+    CHARACTER(len=*),  INTENT(in)    :: varlist_name      !< Model shortname
+    CHARACTER(len=*),  INTENT(in)    :: prefix            !< Prefix for variable names (generally empty)
+    CHARACTER(len=*),  INTENT(in)    :: suffix            !< Suffix for variable names
+    INTEGER,           INTENT(in)    :: grid_id           !< Grid id
+    LOGICAL,           INTENT(in)    :: in_var_groups     !< Should output be written for this tile?
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER                               :: iproc
     TYPE(t_jsb_model), POINTER            :: model
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
@@ -303,7 +307,7 @@ CONTAINS
     INTEGER                       :: no_of_children, child_no
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile '//TRIM(this%name))
 
     WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
@@ -352,7 +356,7 @@ CONTAINS
         __acc_attach(this%mem(iproc)%p)  !      (Needs to be tested on gpu)
         this%mem(iproc)%p%id = iproc
 
-        ! Perparations needed for the Init process memory function called below
+        ! Preparations needed for the Init process memory function called below
         ! Generate variable list name. Each process has its own variable list; used in add_var
         IF (get_no_of_models() > 1) THEN
           varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)//'_'//model_id_suffix
@@ -388,7 +392,7 @@ CONTAINS
         IF (ASSOCIATED(parent_tile)) THEN                               ! Tile has a parent (i.e. this is not the box tile)
           no_of_children = parent_tile%Get_no_of_children()             ! Total number of siblings
           IF (.NOT. ASSOCIATED(parent_tile%mem(iproc)%p%children) .AND. no_of_children > 0) THEN
-            parent_tile%mem(iproc)%p%no_of_children = no_of_children    !TODO: this line probaby not needed
+            parent_tile%mem(iproc)%p%no_of_children = no_of_children    !TODO: this line is probably not needed
             ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children)) ! Allocate memory for all siblings
             !$acc enter data create(parent_tile%mem(iproc)%p%children)
           END IF
@@ -405,6 +409,10 @@ CONTAINS
 
   END SUBROUTINE Init_tile
 
+  ! ======================================================================================================= !
+  !> 
+  !> Add and initialise fraction variables for this tile - either from a file or according to specification 
+  !>
   SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
 
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
@@ -413,14 +421,24 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this              !< Current tile
+    CHARACTER(len=*),  INTENT(in)    :: varlist_name      !< Model shortname
+    CHARACTER(len=*),  INTENT(in)    :: prefix            !< Prefix for variable names (generally empty)
+    CHARACTER(len=*),  INTENT(in)    :: suffix            !< Suffix for variable names
+    INTEGER,           INTENT(in)    :: grid_id           !< Grid id
+    LOGICAL,           INTENT(in)    :: in_var_groups     !< Should output be written for this tile?
 
-    CLASS(t_jsb_tile), INTENT(inout) :: this
-    CHARACTER(len=*),  INTENT(in)    :: varlist_name
-    CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
-    CHARACTER(len=*),  INTENT(in)    :: suffix
-    LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
-    LOGICAL,           INTENT(in)    :: l_rel_fractions    ! Tile fractions in input file are relative wrt parent
-
+    CLASS(t_jsb_tile), INTENT(inout) :: this               !< Current tile
+    CHARACTER(len=*),  INTENT(in)    :: varlist_name       !< Model shortname
+    CHARACTER(len=*),  INTENT(in)    :: prefix             !< Prefix for variable names (generally empty)
+    CHARACTER(len=*),  INTENT(in)    :: suffix             !< Suffix for variable names
+    LOGICAL,           INTENT(in)    :: l_fixed_fractions
+      !< If tile fractions can change (active lcc process). I.a. determines if fracts go to restart file
+    LOGICAL,           INTENT(in)    :: l_rel_fractions
+      !< Tile fractions in input file are usually relative with respect to parent (historical reasons)
+      !< while the fractions in the code are absolute (with respect to the box tile)
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     CLASS(t_jsb_aggregator),                  POINTER :: aggregator
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
@@ -435,7 +453,7 @@ CONTAINS
     INTEGER :: isteptype, i, ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fractions_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing fractions on tile '//TRIM(this%name))
 
     hgrid   => Get_grid(this%grid_id)
@@ -443,13 +461,17 @@ CONTAINS
 
     table = tables(1)
 
+    ! -------------------------------------------------------------------------------------------------- !
+    ! Add fraction(s) of this tile to varlist
+
+    ! isteptype us used in the add_var below 
+    ! - if constant cdi knows that its not per timestep / i.e. not instantaneous
     IF (l_fixed_fractions) THEN
       isteptype = TSTEP_CONSTANT
     ELSE
       isteptype = TSTEP_INSTANT
     END IF
 
-    ! Add fraction(s) of this tile to stream
     WRITE(model_id_suffix, '(A1,I2.2)') 'D', this%owner_model_id
     IF (get_no_of_models() > 1) THEN
       varlist_name_loc = TRIM(varlist_name)//'_'//model_id_suffix
@@ -459,17 +481,24 @@ CONTAINS
 
     !$acc enter data copyin(this)
 
-    CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
-      & hgrid, surface,                                                                                         &
-      & t_cf('tile_fraction', '',                                                                          &
+    ! Note: uses a much simpler add_var routine than process variables do
+    ! Further, the fractions are direct components of the tile class and do not 'live' on a process memory
+    ! Therefore, as opposed to the process variables a temporal pointer (tmp_fract) is used here,
+    ! where variables on the process memory already use the corresponding pointer on the memory
+    ! In addition, there is also no process prefix on this variable in the output
+    CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                                    &
+      & hgrid, surface,                                                                                       &
+      & t_cf('tile_fraction', '',                                                                             &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
+      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
+    ! Now we need to set the tile component fract pointer to the just allocated memory
     CALL this%Set_fract_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
+    ! And reuse tmp_fract
     CALL jsb_add_var(varlist_name_loc, 'fract_max', tmp_fract,                         &
       & hgrid, surface,                                                                                         &
       & t_cf('tile_fraction_max', '',                                                                          &
@@ -500,10 +529,13 @@ CONTAINS
     CALL this%Set_fract_max_old_ptr(tmp_fract)
     NULLIFY(tmp_fract)
 
+    ! -------------------------------------------------------------------------------------------------- !
+    ! Initialize fraction(s) of this tile from input file
+  
+    ! **** here we continue next time ****
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE.
 
-    ! Initialize fraction(s) of this tile from input file
     ALLOCATE(tmp_fract(hgrid%nproma, hgrid%nblks))
     IF (TRIM(this%fract_varname) == 'equal') THEN
       IF (ASSOCIATED(this%parent_tile)) THEN
@@ -527,6 +559,7 @@ CONTAINS
       END IF
       IF (input_file%Has_var(TRIM(name_loc))) THEN
         return_pointer => input_file%Read_2d(variable_name=TRIM(name_loc))
+
         !
         ! TODO: For security set all values of the box fractions to 1 that are close to 1, and all box fractions to 0
         ! that are close to 0 (similar to mo_echam_phy_init) in order to account for precision errors
@@ -629,20 +662,23 @@ CONTAINS
 
   END SUBROUTINE Init_fractions_on_tile
 
-  ! This is called during initialization from model_init for each tile that is not a leaf.
+  ! ======================================================================================================= !
+  !> 
+  !> Init variabls on nodes (not-leave tiles); called during initialization from model_init
+  !>
   SUBROUTINE Init_vars_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
-
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(inout) :: this
-
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_memory), POINTER  :: mem
     CHARACTER(len=VARNAME_LEN)    :: name
     INTEGER                       :: iproc, i, no_of_children, child_no
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_vars_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing tile structure on vars '//TRIM(this%name))
 
     no_of_children = this%Get_no_of_children()
@@ -680,18 +716,19 @@ CONTAINS
   END SUBROUTINE Init_vars_on_tile
 
   ! ====================================================================================================== !
+  !> 
   !> Check if a given process is to be integrated on the tile: 
   !>  i.e. if the process action on this tile is one of ON_TILE_ or ON_SUBTREE_
-  !
+  !>
   LOGICAL FUNCTION Is_process_calculated_on_tile(this, iproc)
 
     USE mo_util,                ONLY: one_of
-
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(in) :: this  !< tile on which the process activity is to be checked
     INTEGER,           INTENT(in) :: iproc !< process for which the activity is to be checked
-
+    ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_calculated_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     ! Note: It's not necessary to test for ON_LEAFS_ because, after the tile tree has been completely
     !       set up, ON_LEAFS_ on a tile has been replaced by AGGREGATE_ and ON_TILE_ on the sub-tree.
     Is_process_calculated_on_tile = (one_of(this%process_action(iproc), (/ON_TILE_, ON_SUBTREE_/)) > 0)
@@ -699,19 +736,19 @@ CONTAINS
   END FUNCTION Is_process_calculated_on_tile
 
   ! ====================================================================================================== !
-  !
+  !>
   !> Check if a given process is to be active (integrated or aggregated) on the tile: 
   !>  i.e. if the process action on this tile is not SKIP_ or INHERIT_
-  !
+  !>
   LOGICAL FUNCTION Is_process_active_on_tile(this, iproc)
 
     USE mo_util,                ONLY: one_of
-
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(in) :: this  !< tile on which the process activity is to be checked
     INTEGER,           INTENT(in) :: iproc !< process for which the activity is to be checked
-
+    ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     Is_process_active_on_tile = (one_of(this%process_action(iproc), (/SKIP_, INHERIT_/)) < 0)
     
   END FUNCTION Is_process_active_on_tile
@@ -721,29 +758,27 @@ CONTAINS
   !> Check if the tile has memory for the process: i.e. if the process action on this tile is not SKIP_
   !
   LOGICAL FUNCTION Has_process_memory_on_tile(this, iproc)
-    CLASS(t_jsb_tile), INTENT(in) :: this !< tile for which the process memory is to be checked
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(in) :: this  !< tile for which the process memory is to be checked
     INTEGER,           INTENT(in) :: iproc !< process for which it is checked if memory is available
-
+    ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':Has_process_memory_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     Has_process_memory_on_tile = (.NOT. this%process_action(iproc) == SKIP_) 
   END FUNCTION Has_process_memory_on_tile
 
-  ! ================================================================================================================================
+  ! ======================================================================================================= !
   !>
-  !! @brief identifies the conserved quantity types in use on this tile and counts the number of conserved quantities 
-  !!        for each of these types on the given tile
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !
+  !> Identifies the conserved quantity types (CQTs) in use on this tile and counts conserved quantities (CQs) of each CQT
+  !>
   SUBROUTINE Count_conserved_quantities_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
     USE mo_jsb_cqt_class,       ONLY: Get_cqt_name, max_cqt_name_length
-
-    CLASS(t_jsb_tile), INTENT(inout) :: this
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are to be counted
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_memory), POINTER   :: mem
     INTEGER                        :: iproc, i, child_no, id, ind
     LOGICAL                        :: consQuanTypeInUse
@@ -751,7 +786,7 @@ CONTAINS
     CHARACTER(len=max_cqt_name_length) :: thisCQTName
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Count_conserved_quantities_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
     
     ! Loop over all processes
@@ -802,26 +837,24 @@ CONTAINS
 
   END SUBROUTINE Count_conserved_quantities_on_tile  
 
-  ! ================================================================================================================================
+  ! ======================================================================================================= !
   !>
-  !! @brief collects the pointers to the variables that are conserved quantities on the given tile
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !
+  !> Collects the pointers to the variables that are conserved quantities on the given tile
+  !>
   SUBROUTINE Collect_conserved_variables_on_tile(this)
 
     USE mo_jsb_memory_class,    ONLY: t_jsb_memory
     USE mo_jsb_varlist,         ONLY: VARNAME_LEN
-
-    CLASS(t_jsb_tile), INTENT(inout) :: this
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are collected
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_memory), POINTER  :: mem
     INTEGER                       :: iproc, i, child_no, id, ind, last_index, nrOfConsQuans
     LOGICAL                       :: consQuanTypeInUse    
     TYPE(t_jsb_consQuan), POINTER :: consQuanType
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_conserved_variables_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
     
     ! Loop over all processes
@@ -881,19 +914,21 @@ CONTAINS
 
   END SUBROUTINE Collect_conserved_variables_on_tile  
 
-
-  ! Task handler function for tile (HSM message handler)
+  ! ======================================================================================================= !
+  !>
+  !> Task handler function for tile (HSM message handler)
+  !>
   FUNCTION Process_task_on_tile(this, msg_in) RESULT(return_ptr)
 
     USE mo_util, ONLY: one_of, logical2string, int2string
     USE mo_jsb_parallel, ONLY: Get_omp_thread, Get_omp_no_of_threads
     USE mo_jsb_control,  ONLY: timer_on, timer_process_task
     USE mo_timer,        ONLY: timer_start, timer_stop
-
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile),  INTENT(inout) :: this
     CLASS(t_Message),   INTENT(in)    :: msg_in
     CLASS(t_Message),   POINTER       :: return_ptr
-
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
     !CLASS(t_jsb_task_msg), POINTER :: msg
     TYPE(t_Message), POINTER :: msg
@@ -904,7 +939,7 @@ CONTAINS
     INTEGER :: iblk, no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Process_task_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     no_omp_thread = Get_omp_thread()
 
     IF (timer_on('detail')) CALL timer_start(timer_process_task(this%owner_model_id))
@@ -1043,16 +1078,20 @@ CONTAINS
 
   END FUNCTION Process_task_on_tile
 
+  ! ======================================================================================================= !
+  !>
+  !> Print routine for the tile
+  !>
   SUBROUTINE Print_tile(this)
 
     USE mo_jsb_process_class,  ONLY: Get_process_name, Get_action_name
-
-    CLASS(t_jsb_tile), INTENT(in) :: this
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(in) :: this !< tile to be printed
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: ilct, iproc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Print_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     ! Print for basic type
     CALL this%Print_state()
 

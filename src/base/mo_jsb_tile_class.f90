@@ -87,10 +87,8 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_soil = .FALSE.         !< whether any lct of tile is one that has soil
     !
     INTEGER,                ALLOCATABLE    :: process_action(:)
-    ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
     REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
     REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to grid box)
-    ! REAL(wp), PRIVATE,          POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_old     (:,:)  !< Old fract
     REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
     CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
@@ -633,11 +631,17 @@ CONTAINS
 
   END SUBROUTINE Get_fraction_2d
 
+  ! ======================================================================================================= !
+  !> 
+  !> Sets the pointer on the tile to the passed pointer AND also updates the GPU pointer address
+  !>
+  ! this is an example why the encapsulation within the setter is important: not only the fract 
+  ! on the tile needs to be set but also the GPU pointer
   SUBROUTINE Set_fract_ptr(this, ptr)
-
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     REAL(wp), POINTER                         :: ptr(:,:)
-
+    ! -------------------------------------------------------------------------------------------------- !
     this%fract => ptr
     __acc_attach(this%fract)
 
