@@ -88,9 +88,7 @@ MODULE mo_jsb_tile_class
     !
     INTEGER,                ALLOCATABLE    :: process_action(:)
     REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
-    REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to grid box)
-    REAL(wp),                   POINTER    :: fract_old     (:,:)  !< Old fract
-    REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
+    REAL(wp),                   POINTER    :: fract_old (:,:)      !< Old fract
     CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
                                                                    !< must be either "fract[_max]_"//tile%name, or specified by
                                                                    !< fract_varname (in the use case).
@@ -128,9 +126,6 @@ MODULE mo_jsb_tile_class
     GENERIC                                :: Get_fraction => Get_fraction_1d, Get_fraction_2d
     PROCEDURE                              :: Set_fract_ptr
     PROCEDURE                              :: Set_fract_old_ptr
-    PROCEDURE                              :: Set_fract_max_ptr
-    PROCEDURE                              :: Set_fract_max_old_ptr
-    !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
     PROCEDURE                              :: Get_children_names
@@ -409,15 +404,14 @@ CONTAINS
 
   END SUBROUTINE Add_lct_to_parents
 
-  SUBROUTINE Set_fraction_1d(this, ics, ice, iblk, fract, fract_max, fract_old, fract_max_old)
+  SUBROUTINE Set_fraction_1d(this, ics, ice, iblk, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     INTEGER,                    INTENT(in)    :: ics, ice, iblk
     REAL(wp), OPTIONAL,         INTENT(in)    :: &
       & fract(:),        &
-      & fract_max(:),    &
-      & fract_old(:),    &
-      & fract_max_old(:)
+      & fract_old(:)
+      
 
     INTEGER :: ilct
 
@@ -452,15 +446,6 @@ CONTAINS
       END IF
     END IF
 
-    IF (PRESENT(fract_max)) THEN
-      IF (SIZE(fract_max) /= ice-ics+1) &
-       & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-      this%fract_max_old(ics:ice, iblk) = this%fract_max(ics:ice, iblk)
-      this%fract_max    (ics:ice, iblk) = fract_max(:)
-      !$acc update device(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk))
-    END IF
-
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old) /= ice-ics+1) &
        & CALL finish(TRIM(routine), 'Dimension mismatch')
@@ -469,24 +454,14 @@ CONTAINS
       !$acc update device(this%fract_old(ics:ice,iblk))
     END IF
 
-    IF (PRESENT(fract_max_old)) THEN
-      IF (SIZE(fract_max_old) /= ice-ics+1) &
-       & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-      this%fract_max_old(ics:ice, iblk) = fract_max_old(:)
-      !$acc update device(this%fract_max_old(ics:ice,iblk))
-    END IF
-
   END SUBROUTINE Set_fraction_1d
 
-  SUBROUTINE Set_fraction_2d(this, fract, fract_max, fract_old, fract_max_old)
+  SUBROUTINE Set_fraction_2d(this, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     REAL(wp), OPTIONAL,         INTENT(in)    :: &
       & fract(:,:),        &
-      & fract_max(:,:),    &
-      & fract_old(:,:),    &
-      & fract_max_old(:,:)
+      & fract_old(:,:)
 
     INTEGER :: ilct
 
@@ -524,18 +499,6 @@ CONTAINS
       END IF
     END IF
 
-    IF (PRESENT(fract_max)) THEN
-      IF (SIZE(fract_max,1) /= SIZE(this%fract_max,1) .OR. SIZE(fract_max,2) /= SIZE(this%fract_max,2)) &
-        & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-      IF (ANY(fract_max(:,:) /= this%fract_max(:,:))) THEN
-        this%fract_max_old(:,:) = this%fract_max(:,:)
-        this%fract_max    (:,:) = fract_max(:,:)
-        !$acc update device(this%fract_max, this%fract_max_old)
-      END IF
-
-    END IF
-
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old,1) /= SIZE(this%fract_old,1) .OR. SIZE(fract_old,2) /= SIZE(this%fract_old,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
@@ -547,28 +510,15 @@ CONTAINS
 
     END IF
 
-    IF (PRESENT(fract_max_old)) THEN
-      IF (SIZE(fract_max_old,1) /= SIZE(this%fract_max_old,1) .OR. SIZE(fract_max_old,2) /= SIZE(this%fract_max_old,2)) &
-        & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-      IF (ANY(fract_max_old(:,:) /= this%fract_max_old(:,:))) THEN
-        this%fract_max_old(:,:) = fract_max_old(:,:)
-        !$acc update device(this%fract_max_old)
-      END IF
-
-    END IF
-
   END SUBROUTINE Set_fraction_2d
 
-  SUBROUTINE Get_fraction_1d(this, ics, ice, iblk, fract, fract_max, fract_old, fract_max_old)
+  SUBROUTINE Get_fraction_1d(this, ics, ice, iblk, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: this
     INTEGER,                    INTENT(in)    :: ics, ice, iblk
     REAL(wp), OPTIONAL,         INTENT(inout) :: &
       & fract(:),        &
-      & fract_max(:),    &
-      & fract_old(:),    &
-      & fract_max_old(:)
+      & fract_old(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fraction_1d'
 
@@ -577,31 +527,19 @@ CONTAINS
       fract(:) = this%fract(ics:ice, iblk)
     END IF
 
-    IF (PRESENT(fract_max)) THEN
-      IF (SIZE(fract_max) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_max(:) = this%fract_max(ics:ice, iblk)
-    END IF
-
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
       fract_old(:) = this%fract_old(ics:ice, iblk)
     END IF
 
-    IF (PRESENT(fract_max_old)) THEN
-      IF (SIZE(fract_max_old) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_max_old(:) = this%fract_max_old(ics:ice, iblk)
-    END IF
-
   END SUBROUTINE Get_fraction_1d
 
-  SUBROUTINE Get_fraction_2d(this, fract, fract_max, fract_old, fract_max_old)
+  SUBROUTINE Get_fraction_2d(this, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: this
     REAL(wp), OPTIONAL,         INTENT(inout) :: &
       & fract(:,:),        &
-      & fract_max(:,:),    &
-      & fract_old(:,:),    &
-      & fract_max_old(:,:)
+      & fract_old(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fraction_2d'
 
@@ -611,22 +549,10 @@ CONTAINS
       fract(:,:) = this%fract(:,:)
     END IF
 
-    IF (PRESENT(fract_max)) THEN
-      IF (SIZE(fract_max,1) /= SIZE(this%fract_max,1) .OR. SIZE(fract_max,2) /= SIZE(this%fract_max,2)) &
-        & CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_max(:,:) = this%fract_max(:,:)
-    END IF
-
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old,1) /= SIZE(this%fract_old,1) .OR. SIZE(fract_old,2) /= SIZE(this%fract_old,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
       fract_old(:,:) = this%fract_old(:,:)
-    END IF
-
-    IF (PRESENT(fract_max_old)) THEN
-      IF (SIZE(fract_max_old,1) /= SIZE(this%fract_max_old,1) .OR. SIZE(fract_max_old,2) /= SIZE(this%fract_max_old,2)) &
-        & CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_max_old(:,:) = this%fract_max_old(:,:)
     END IF
 
   END SUBROUTINE Get_fraction_2d
@@ -656,26 +582,6 @@ CONTAINS
     __acc_attach(this%fract_old)
 
   END SUBROUTINE Set_fract_old_ptr
-
-  SUBROUTINE Set_fract_max_ptr(this, ptr)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
-
-    this%fract_max => ptr
-    __acc_attach(this%fract_max)
-
-  END SUBROUTINE Set_fract_max_ptr
-
-  SUBROUTINE Set_fract_max_old_ptr(this, ptr)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
-
-    this%fract_max_old => ptr
-    __acc_attach(this%fract_max_old)
-
-  END SUBROUTINE Set_fract_max_old_ptr
 
   SUBROUTINE Register_aggregator(this, aggregator)
 
