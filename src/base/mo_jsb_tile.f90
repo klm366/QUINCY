@@ -476,6 +476,10 @@ CONTAINS
 
   END SUBROUTINE Init_tile
 
+  ! ======================================================================================================= !
+  !> 
+  !> Add and initialise fraction variables for this tile - either from a file or according to specification 
+  !>
   SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
 
     USE mo_jsb_tile_class,      ONLY: t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
@@ -484,14 +488,24 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this              !< Current tile
+    CHARACTER(len=*),  INTENT(in)    :: varlist_name      !< Model shortname
+    CHARACTER(len=*),  INTENT(in)    :: prefix            !< Prefix for variable names (generally empty)
+    CHARACTER(len=*),  INTENT(in)    :: suffix            !< Suffix for variable names
+    INTEGER,           INTENT(in)    :: grid_id           !< Grid id
+    LOGICAL,           INTENT(in)    :: in_var_groups     !< Should output be written for this tile?
 
-    CLASS(t_jsb_tile), INTENT(inout) :: this
-    CHARACTER(len=*),  INTENT(in)    :: varlist_name
-    CHARACTER(len=*),  INTENT(in)    :: prefix            ! Prefix for variable names
-    CHARACTER(len=*),  INTENT(in)    :: suffix
-    LOGICAL,           INTENT(in)    :: l_fixed_fractions ! Tile fractions can change or not
-    LOGICAL,           INTENT(in)    :: l_rel_fractions    ! Tile fractions in input file are relative wrt parent
-
+    CLASS(t_jsb_tile), INTENT(inout) :: this               !< Current tile
+    CHARACTER(len=*),  INTENT(in)    :: varlist_name       !< Model shortname
+    CHARACTER(len=*),  INTENT(in)    :: prefix             !< Prefix for variable names (generally empty)
+    CHARACTER(len=*),  INTENT(in)    :: suffix             !< Suffix for variable names
+    LOGICAL,           INTENT(in)    :: l_fixed_fractions
+      !< If tile fractions can change (active lcc process). I.a. determines if fracts go to restart file
+    LOGICAL,           INTENT(in)    :: l_rel_fractions
+      !< Tile fractions in input file are usually relative with respect to parent (historical reasons)
+      !< while the fractions in the code are absolute (with respect to the box tile)
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator_weighted_by_fract
     CLASS(t_jsb_aggregator),                  POINTER :: aggregator
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
@@ -506,7 +520,7 @@ CONTAINS
     INTEGER :: isteptype, i, ilct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_fractions_on_tile'
-
+    ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing fractions on tile '//TRIM(this%name))
 
     hgrid   => Get_grid(this%grid_id)
@@ -563,6 +577,10 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     ! Initialize fraction(s) of this tile from input file
 
+    ! -------------------------------------------------------------------------------------------------- !
+    ! Initialize fraction(s) of this tile from input file
+  
+    ! **** here we continue next time ****
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE. ! default: fraction of tile is changing
 
@@ -1308,4 +1326,3 @@ CONTAINS
 
     DO iproc=1,max_no_of_processes
       IF (this%process_action(iproc) > 0) THEN
-        ! Print names of processes running on the tile
