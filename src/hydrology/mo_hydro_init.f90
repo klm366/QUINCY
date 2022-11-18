@@ -281,17 +281,25 @@ CONTAINS
         hydro_init_vars%max_moist = MIN(hydro_init_vars%max_moist, dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
-      ! Volumetric soil porosity
-      ptr_2D => input_file%Read_2d(                            &
-        & fill_array = hydro_init_vars%vol_porosity,  &
-        & variable_name='soil_porosity')
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp)
+      IF (.NOT. dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
+        ! Volumetric soil porosity
+        ptr_2D => input_file%Read_2d(                            &
+          & fill_array = hydro_init_vars%vol_porosity,  &
+          & variable_name='soil_porosity')
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) >= 0._wp)
 
-      ! Saturated hydraulic conductivity
-      ptr_2D => input_file%Read_2d(                 &
-        & variable_name='hyd_cond_sat',             &
-        & fill_array = hydro_init_vars%hyd_cond_sat)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 4.e-6_wp, ptr_2D(:,:) >= 0._wp)
+        ! Saturated hydraulic conductivity
+        ptr_2D => input_file%Read_2d(                 &
+          & variable_name='hyd_cond_sat',             &
+          & fill_array = hydro_init_vars%hyd_cond_sat)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 4.e-6_wp, ptr_2D(:,:) >= 0._wp)
+
+        ! Volumetric field capacity [m/m]
+        ptr_2D => input_file%Read_2d(       &
+          & variable_name='soil_field_cap', &
+          & fill_array = hydro_init_vars%vol_field_cap)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+      END IF ! .NOT. l_soil_texture
 
       ! Matrix potential
       ptr_2D => input_file%Read_2d(                 &
@@ -311,14 +319,7 @@ CONTAINS
         & fill_array = hydro_init_vars%pore_size_index)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0._wp)
 
-      ! Volumetric field capacity [m/m]
-      ptr_2D => input_file%Read_2d(       &
-        & variable_name='soil_field_cap', & ! TODO change name in infile to w_soil_fcvol or another name that indicates "volumetric"
-        & fill_array = hydro_init_vars%vol_field_cap)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-
       ! Volumetric permanent wilting point
-      ! @todo: Do we need this for bare soil tiles?
       ptr_2D => input_file%Read_2d(                                 &
         & variable_name='wilting_point',                            &
         & fill_array=hydro_init_vars%vol_p_wilt)
