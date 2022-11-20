@@ -16,7 +16,7 @@ MODULE mo_hydro_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message
+  USE mo_exception,          ONLY: message, message_text, warning
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -51,7 +51,7 @@ MODULE mo_hydro_init
   REAL(wp), PARAMETER ::  hyd_cond_oc = 5.80e-8_wp   ! parameter taken from TERRA, s. sfc_terra_data.f90 peat
   REAL(wp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp ! factor to compensate profile of hyd_cond_sat with depth in TERRA
 
-  PUBLIC :: hydro_init
+  PUBLIC :: hydro_init, hydro_sanitize_state
 
   TYPE t_hydro_init_vars
     REAL(wp), POINTER ::                &
@@ -1022,6 +1022,91 @@ CONTAINS
     !$acc vol_p_wilt_sl)
 
   END SUBROUTINE init_soil_properties
+
+
+  !> Sanitize hydro variables.
+  !!
+  !! Loading a model state from a file with lower than double precision can lead to model aborts because the state
+  !! violates model constraints due to rounding errors in soil water content and root depth. This routine sanitizes
+  !! the current state by limiting soil water and ice to the field capacity, and by recomputing the root depth.
+  SUBROUTINE hydro_sanitize_state(tile)
+
+    USE mo_util, ONLY: soil_depth_to_layers_2d
+    USE mo_hydro_process, ONLY: zfcmin
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_sanitize_state'
+
+    !> If water content exceeds field capacity by more than this factor prior to sanitization, a warning is issued.
+    REAL(wp), PARAMETER :: warn_level_w_soil_excess = 1.05_wp
+
+    INTEGER :: maxloc_w_soil_excess(3)
+    TYPE(t_jsb_vgrid), POINTER :: soil_w
+    INTEGER :: jl
+
+    dsl4jsb_Def_memory(HYDRO_)
+
+    dsl4jsb_Real2D_onDomain :: &
+      & root_depth,            &
+      & soil_depth
+
+    dsl4jsb_Real3D_onDomain :: &
+      & root_depth_sl,         &
+      & w_ice_sl,              &
+      & w_soil_fc_sl,          &
+      & w_soil_sl
+
+    IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
+
+    dsl4jsb_Get_memory(HYDRO_)
+
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, root_depth)
+    dsl4jsb_Get_var2D_onDomain(HYDRO_, soil_depth)
+
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, root_depth_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_fc_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, w_soil_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, w_ice_sl)
+
+    IF (tile%contains_soil) THEN
+
+      ! Only sanitize if any of the values might trip the constraints checker in `digest_evapotrans`.
+      ! This is done to preserve bit-identical restarts because the ice content may violate the constraint
+      ! `soil water + soil ice <= field capacity` during model runs.
+      IF (ANY(w_soil_sl(:,:,:) + w_ice_sl(:,:,:) > w_soil_fc_sl(:,:,:) + zfcmin)) THEN
+
+        ! Issue a warning if current soil water exceeds field capacity by more than a factor of
+        ! `warn_level_w_soil_excess` anywhere.
+        IF (ANY(w_soil_sl(:,:,:) > warn_level_w_soil_excess * (w_soil_fc_sl(:,:,:) + zfcmin))) THEN
+          maxloc_w_soil_excess(:) = MAXLOC(w_soil_sl(:,:,:) + w_ice_sl(:,:,:) - w_soil_fc_sl(:,:,:))
+          WRITE (message_text,*) 'liquid water content above field capacity at ', maxloc_w_soil_excess(:), &
+            & ': w_soil_sl = ', w_soil_sl(maxloc_w_soil_excess(1), maxloc_w_soil_excess(2), maxloc_w_soil_excess(3)), &
+            & ', w_soil_fc_sl = ', &
+            & w_soil_fc_sl(maxloc_w_soil_excess(1), maxloc_w_soil_excess(2), maxloc_w_soil_excess(3))
+          CALL warning(routine, message_text)
+        END IF
+
+        w_soil_sl(:,:,:) = MIN(w_soil_sl(:,:,:), w_soil_fc_sl(:,:,:))
+
+        ! Limit ice content such that soil water + soil ice <= field capacity.
+        w_ice_sl(:,:,:) = MAX(0._wp, MIN(w_ice_sl(:,:,:), w_soil_fc_sl(:,:,:) - w_soil_sl(:,:,:)))
+
+        !$acc update device(w_soil_sl, w_ice_sl)
+      END IF
+    END IF
+
+    IF (tile%contains_vegetation) THEN
+      ! Due to rounding, the root depth in a layer might differ from the soil depth even though the layer is contained
+      ! in the root zone. The might not add up to the total root depth for the same reason. Fix by recomputing.
+      soil_w => Get_vgrid('soil_depth_water')
+      root_depth(:,:) = MIN(root_depth(:,:), soil_depth(:,:))
+      root_depth_sl(:,:,:) = soil_depth_to_layers_2d(root_depth(:,:), soil_w%dz(:))
+
+      !$acc update device(root_depth, root_depth_sl)
+    END IF
+
+  END SUBROUTINE hydro_sanitize_state
 
 #endif
 END MODULE mo_hydro_init

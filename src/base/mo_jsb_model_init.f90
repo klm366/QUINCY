@@ -717,6 +717,7 @@ CONTAINS
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_carbon_init,         ONLY: carbon_read_cpools
+    USE mo_hydro_init,          ONLY: hydro_sanitize_state
     USE mo_util,                ONLY: one_of
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -760,6 +761,10 @@ CONTAINS
       ! TBD: Loop over processes instead of explicit
       IF (one_of(tile%process_action(CARBON_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
+      END IF
+
+      IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+        CALL hydro_sanitize_state(tile)
       END IF
 
       CALL model%Goto_next_tile(tile)

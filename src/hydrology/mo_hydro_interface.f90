@@ -1199,8 +1199,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: beta_soil_gs
     dsl4jsb_Real2D_onChunk :: beta_soil_ps
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk, ics, ice, ic
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
+    REAL(wp) :: ztmp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1266,12 +1267,14 @@ CONTAINS
     !!
     !! the below calc are somewhat preliminary, the original quincy code is kept below, but outcommented
     IF (model%config%use_quincy) THEN
-      WHERE ((w_soil_root(:) - w_soil_root_pwp(:)) > eps8)
-        beta_soil_gs(:) = MIN( MAX( 0.0_wp, 2.0_wp * (w_soil_root(:) - w_soil_root_pwp(:)) / &
-                                            (w_soil_root_fc(:) - w_soil_root_pwp(:))), 1.0_wp) 
-      ELSEWHERE
-        beta_soil_gs(:) = 0.0_wp
-      END WHERE
+      DO ic=ics,ice
+        ztmp = w_soil_root(ic) - w_soil_root_pwp(ic)
+        IF (ztmp > eps8) THEN
+          beta_soil_gs(ic) = MIN( MAX( 0.0_wp, 2.0_wp * ztmp / (w_soil_root_fc(ic) - w_soil_root_pwp(ic))), 1.0_wp)
+        ELSE
+          beta_soil_gs(ic) = 0.0_wp
+        END IF
+      END DO
       beta_soil_ps(:) = beta_soil_gs(:)
           !! original way of calc beta_soil_* in quincy
           !beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
