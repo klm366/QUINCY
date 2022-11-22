@@ -1327,9 +1327,9 @@ CONTAINS
 
     IF (ANY(wtr_soil_sl(:,:) < 0._wp)) THEN
       WRITE (message_text,*) 'negative soil moisture (beginning): ', MINVAL(wtr_soil_sl), ' at ', MINLOC(wtr_soil_sl)
-      CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      ! wtr_soil_sl(:,:) = MAX(wtr_soil_sl(:,:), 0._wp)
+      !CALL finish ('digest_evapotrans', message_text)
+       CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+       wtr_soil_sl(:,:) = MAX(wtr_soil_sl(:,:), EPSILON(1._wp))
     END IF
 
     DO i = 1, nc
@@ -1438,18 +1438,18 @@ CONTAINS
 #ifndef _OPENACC
     ! make sure there is no negative soil ice
     IF (ANY(ice_soil_sl(:,:) < 0._wp)) THEN
-      WRITE (message_text,*) 'negative soil ice: ', MINVAL(ice_soil_sl), ' at ', MINLOC(ice_soil_sl)
-      CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      ! ice_soil_sl(:,:) = MAX(ice_soil_sl(:,:), 0._wp)
+      !WRITE (message_text,*) 'negative soil ice: ', MINVAL(ice_soil_sl), ' at ', MINLOC(ice_soil_sl)
+      !CALL finish ('digest_evapotrans', message_text)
+       CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+       ice_soil_sl(:,:) = MAX(ice_soil_sl(:,:), EPSILON(1._wp))
     END IF
 
     ! make sure there is no negative soil moisture and soil moisture does not exceed field capacity
     IF (ANY(wtr_soil_sl(:,:) < 0._wp)) THEN
       WRITE (message_text,*) 'negative soil moisture (end): ', MINVAL(wtr_soil_sl), ' at ', MINLOC(wtr_soil_sl)
-      CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
-      ! wtr_soil_sl(:,:) = MAX(wtr_soil_sl(:,:), 0._wp)
+      !CALL finish ('digest_evapotrans', message_text)
+       CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+       wtr_soil_sl(:,:) = MAX(wtr_soil_sl(:,:), EPSILON(1._wp))
     END IF
     ! pdv > Idea is to allow supersaturation (i.e. fc > ws > wsat)
     !IF (ANY(wtr_soil_sl(:,:) > field_cap_sl(:,:) + zfcmin)) THEN
