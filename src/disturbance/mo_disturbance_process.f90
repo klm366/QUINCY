@@ -151,9 +151,9 @@ CONTAINS
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
     ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-    USE mo_exception,              ONLY: message_text
-    USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
-    USE mo_jsb_physical_constants, ONLY: rvd1
+    USE mo_exception,                ONLY: message_text
+    USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
+    USE mo_jsb_physical_constants,   ONLY: rvd1
 
     INTEGER,  INTENT(IN) :: nc
     REAL(wp), INTENT(IN) :: temp(nc)      ! Air temperature at level [K]
