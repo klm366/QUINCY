@@ -420,6 +420,9 @@ CONTAINS
                                              * 0.5_wp * field_cap_clay), field_cap_sand) &
                                              + ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) * 0.5_wp) &
                                              * field_cap_oc
+        ! crosscheck max_moist <= vol_field_cap x soil_depth
+        hydro_init_vars%max_moist(:,:) = MIN(hydro_init_vars%vol_field_cap(:,:) * hydro_init_vars%soil_depth(:,:), &
+                                             hydro_init_vars%max_moist(:,:))
       END IF ! l_soil_texture
 
       CALL input_file%Close()
@@ -564,9 +567,6 @@ CONTAINS
       END DO
 
       ! Maximum root zone soil moisture
-      ! crosscheck max_moist <= vol_field_cap x soil_depth
-      hydro_init_vars%max_moist(:,:) = MIN(hydro_init_vars%vol_field_cap(:,:) * hydro_init_vars%soil_depth(:,:), &
-                                           hydro_init_vars%max_moist(:,:))
       ! max_moist is zero over glaciers ... but since we do this only for tiles with soil, we set max_moist to 0.2 over glaciers
       dsl4jsb_var2D_onDomain(HYDRO_, max_moist) = hydro_init_vars%max_moist
 
