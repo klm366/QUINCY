@@ -201,4 +201,3 @@ CONTAINS
   END SUBROUTINE Init_turb_memory
 
 #endif
-END MODULE mo_turb_memory_class

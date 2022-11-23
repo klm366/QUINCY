@@ -809,7 +809,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile, land_tile, lake_tile
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -891,6 +891,47 @@ CONTAINS
     nproma = grid%Get_nproma()
 
     CALL model%Get_top_tile(tile)
+    IF (tile%contains_lake) THEN
+      ! We need separate variables for the land and the lake tile and cannot use the box tile.
+
+      ! Get pointer to the land tile
+      nt = tile%Get_no_of_children()
+      DO it=1,nt
+        IF (it == 1) THEN
+          land_tile => tile%Get_first_child_tile()
+        ELSE
+          land_tile => land_tile%Get_next_sibling_tile()
+        END IF
+        ! Exit if the land tile was found
+        IF (TRIM(land_tile%name) == 'land') EXIT
+      END DO
+      dsl4jsb_Get_memory_tile(SEB_, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             land_tile)
+      dsl4jsb_Get_memory_tile(TURB_, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       land_tile)
+
+      ! Get pointer to the lake tile
+      nt = tile%Get_no_of_children()
+      DO it=1,nt
+        IF (it == 1) THEN
+          lake_tile => tile%Get_first_child_tile()
+        ELSE
+          lake_tile => lake_tile%Get_next_sibling_tile()
+        END IF
+        ! Exit if the lake tile was found
+        IF (TRIM(lake_tile%name) == 'lake') EXIT
+      END DO
+      dsl4jsb_Get_memory_tile(SEB_, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             lake_tile)
+      dsl4jsb_Get_memory_tile(TURB_, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       lake_tile)
+    END IF
 
     startblk = grid%Get_blk_start()
     endblk   = grid%Get_blk_end()
