@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the Task update_spq_physics
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20160104)
+!! First version by Soenke Zaehle (20160104)
 !!
 MODULE mo_spq_update_physics
 #ifndef __NO_JSBACH__

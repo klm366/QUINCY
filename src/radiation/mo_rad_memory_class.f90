@@ -171,21 +171,21 @@ MODULE mo_rad_memory_class
     TYPE(t_jsb_var_real2d)  :: &
       & arad_vis_can,                 & !< radiation in VIS range absorbed by the canopy [W m-2]
       & arad_nir_can,                 & !< radiation in NIR range absorbed by the canopy [W m-2]
-      & appfd,                        & !< absorbed Photosynthetically Active Photon Flux Density [µmol m-2 s-1]
+      & appfd,                        & !< absorbed Photosynthetically Active Photon Flux Density [micro-mol m-2 s-1]
       & rfr_ratio_boc,                & !< red to far-red ratio at the bottom of the canopy [unitless]
       & rfr_ratio_boc_tvegdyn_mavg      !< red to far-red ratio at the bottom of the canopy [unitless]
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
-      & ppfd_sunlit_cl                , & !< Photosynthetically Active Photon Flux Density on sunlit leaves [µmol m-2 s-1]
-      & ppfd_shaded_cl                , & !< Photosynthetically Active Photon Flux Density on shaded leaves [µmol m-2 s-1]
-      & ppfd_sunlit_daytime_cl        , & !< average PPFD on sunlit leaves of the previous day [µmol m-2 s-1]
-      & ppfd_shaded_daytime_cl        , & !< average PPFD on shaded leaves of the previous day [µmol m-2 s-1]
-      & ppfd_sunlit_daytime_dacc_cl   , & !< daily accumulated PPFD on sunlit leaves [µmol m-2 d-1] 
-      & ppfd_shaded_daytime_dacc_cl   , & !< daily accumulated PPFD on shaded leaves of the previous day [µmol m-2 d-1]
-      & ppfd_sunlit_tfrac_mavg_cl     , & !< average PPFD on sunlit leaves at tfrac-timescale [µmol m-2 s-1] 
-      & ppfd_shaded_tfrac_mavg_cl     , & !< average PPFD on shaded leaves at tfrac-timescale [µmol m-2 s-1]
-      & ppfd_sunlit_tcnl_mavg_cl      , & !< average PPFD on sunlit leaves at tcnl-timescale [µmol m-2 s-1]
-      & ppfd_shaded_tcnl_mavg_cl          !< average PPFD on shaded leaves at tcnl-timescale [µmol m-2 s-1]
+      & ppfd_sunlit_cl                , & !< Photosynthetically Active Photon Flux Density on sunlit leaves [micro-mol m-2 s-1]
+      & ppfd_shaded_cl                , & !< Photosynthetically Active Photon Flux Density on shaded leaves [micro-mol m-2 s-1]
+      & ppfd_sunlit_daytime_cl        , & !< average PPFD on sunlit leaves of the previous day [micro-mol m-2 s-1]
+      & ppfd_shaded_daytime_cl        , & !< average PPFD on shaded leaves of the previous day [micro-mol m-2 s-1]
+      & ppfd_sunlit_daytime_dacc_cl   , & !< daily accumulated PPFD on sunlit leaves [micro-mol m-2 d-1] 
+      & ppfd_shaded_daytime_dacc_cl   , & !< daily accumulated PPFD on shaded leaves of the previous day [micro-mol m-2 d-1]
+      & ppfd_sunlit_tfrac_mavg_cl     , & !< average PPFD on sunlit leaves at tfrac-timescale [micro-mol m-2 s-1] 
+      & ppfd_shaded_tfrac_mavg_cl     , & !< average PPFD on shaded leaves at tfrac-timescale [micro-mol m-2 s-1]
+      & ppfd_sunlit_tcnl_mavg_cl      , & !< average PPFD on sunlit leaves at tcnl-timescale [micro-mol m-2 s-1]
+      & ppfd_shaded_tcnl_mavg_cl          !< average PPFD on shaded leaves at tcnl-timescale [micro-mol m-2 s-1]
 
     TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(ncanopy)
       & arad_sunlit_vis_cl          , & !< absorbed radiation in visible band on sunlit leaves [W m-2]
@@ -1247,7 +1247,7 @@ CONTAINS
     
         CALL mem%Add_var('appfd', mem%appfd, &
           & hgrid, surface, &
-          & t_cf('appfd', 'µmol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density'), &
+          & t_cf('appfd', 'micro-mol m-2 s-1', 'absorbed Photosynthetically Active Photon Flux Density'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1280,7 +1280,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_sunlit_cl', mem%ppfd_sunlit_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_sunlit_cl', 'µmol m-2 s-1', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
+          & t_cf('ppfd_sunlit_cl', 'micro-mol m-2 s-1', 'Photosynthetically Active Photon Flux Density on sunlit leaves'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1291,7 +1291,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_shaded_cl', mem%ppfd_shaded_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_shaded_cl', 'µmol m-2 s-1', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
+          & t_cf('ppfd_shaded_cl', 'micro-mol m-2 s-1', 'Photosynthetically Active Photon Flux Density on shaded leaves'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1302,7 +1302,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_sunlit_daytime_cl', mem%ppfd_sunlit_daytime_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_sunlit_daytime_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves of the previous day'), &
+          & t_cf('ppfd_sunlit_daytime_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves of the previous day'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1313,7 +1313,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_shaded_daytime_cl', mem%ppfd_shaded_daytime_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_shaded_daytime_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves of the previous day'), &
+          & t_cf('ppfd_shaded_daytime_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves of the previous day'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1324,7 +1324,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_sunlit_daytime_dacc_cl', mem%ppfd_sunlit_daytime_dacc_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_sunlit_daytime_dacc_cl', 'µmol m-2 d-1', 'daily accumulated PPFD on sunlit leaves'), &
+          & t_cf('ppfd_sunlit_daytime_dacc_cl', 'micro-mol m-2 d-1', 'daily accumulated PPFD on sunlit leaves'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1335,7 +1335,8 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_shaded_daytime_dacc_cl', mem%ppfd_shaded_daytime_dacc_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_shaded_daytime_dacc_cl', 'µmol m-2 d-1', 'daily accumulated PPFD on shaded leaves of the previous day'), &
+          & t_cf('ppfd_shaded_daytime_dacc_cl', 'micro-mol m-2 d-1', &
+          &      'daily accumulated PPFD on shaded leaves of the previous day'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1346,7 +1347,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_sunlit_tfrac_mavg_cl', mem%ppfd_sunlit_tfrac_mavg_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_sunlit_tfrac_mavg_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves at tfrac-timescale'), &
+          & t_cf('ppfd_sunlit_tfrac_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves at tfrac-timescale'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1357,7 +1358,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_shaded_tfrac_mavg_cl', mem%ppfd_shaded_tfrac_mavg_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_shaded_tfrac_mavg_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves at tfrac-timescale'), &
+          & t_cf('ppfd_shaded_tfrac_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves at tfrac-timescale'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1368,7 +1369,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_sunlit_tcnl_mavg_cl', mem%ppfd_sunlit_tcnl_mavg_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_sunlit_tcnl_mavg_cl', 'µmol m-2 s-1', 'average PPFD on sunlit leaves at tcnl-timescale'), &
+          & t_cf('ppfd_sunlit_tcnl_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on sunlit leaves at tcnl-timescale'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &
@@ -1379,7 +1380,7 @@ CONTAINS
     
         CALL mem%Add_var('ppfd_shaded_tcnl_mavg_cl', mem%ppfd_shaded_tcnl_mavg_cl, &
           & hgrid, vgrid_canopy, &
-          & t_cf('ppfd_shaded_tcnl_mavg_cl', 'µmol m-2 s-1', 'average PPFD on shaded leaves at tcnl-timescale'), &
+          & t_cf('ppfd_shaded_tcnl_mavg_cl', 'micro-mol m-2 s-1', 'average PPFD on shaded leaves at tcnl-timescale'), &
           & t_grib1(table, 255, grib_bits), &
           & t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix, &

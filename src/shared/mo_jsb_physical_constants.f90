@@ -111,7 +111,7 @@ MODULE mo_jsb_physical_constants
   ! isotope standards
   REAL(wp), PARAMETER :: &
     & PDB_STANDARD_C13           = 0.0112372_wp                    , &  !< 13C/12C PDB standard
-    & AAB_STANDARD_C14           = 0.2261_wp                       , &  !< 0.95·0.238 Bq/gC is the absolute specific activity of 
+    & AAB_STANDARD_C14           = 0.2261_wp                       , &  !< 0.95*0.238 Bq/gC is the absolute specific activity of 
                                                                           !< the radiocarbon standard (i.e. 95% of the activity of the OxA-I standard)
     & ATM_STANDARD_N15           = 0.0036765_wp                    , &  !< 15N/14N atmospheric standard, Robinson 2001, TREE
     & AvogadroC                  = 6.022_wp * 1.e23_wp             , &  !< Avogadro Number

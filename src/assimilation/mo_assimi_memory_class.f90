@@ -120,14 +120,14 @@ MODULE mo_assimi_memory_class
     TYPE(t_jsb_var_real2d) ::     &
       & gross_assimilation          !< jsbach4: Gross photosynthesis on tile area at each time step
                                     !<          [mol(co2) / ( m^2(canopy ground) * s) ]  (mean value)
-                                    !< quincy: canopy-integrated gross assimilation rate [µmol CO2 m-2 s-1] 
+                                    !< quincy: canopy-integrated gross assimilation rate [micro-mol CO2 m-2 s-1] 
 
     TYPE(t_jsb_var_real3d) ::     &
       & gross_assimilation_cl,    & !< jsbach4: Gross photosynthesis [ mol(co2) / (m^2(leaf area) * s) ]
                                     !<          Note, this is the gross assimilation on the leaf area that actually exists.
                                     !<          The influence of the lai on the existing leaf area is aready included.
                                     !<          It is not the ground area below canopy!
-                                    !< quincy:  gross assimilation rate per canopy layer [µmol CO2 m-2 s-1]
+                                    !< quincy:  gross assimilation rate per canopy layer [micro-mol CO2 m-2 s-1]
       & canopy_cond_cl,           & !< jsbach4: Canopy conductance per layer and per leaf area
                                     !< quincy:  conductance for water per canopy layer [m s-1]
       & co2_conc_leaf_cl            !< jsbach4: CO2 concentration inside leaf [ mol(CO2)/ mol(AIR) ]
@@ -139,15 +139,15 @@ MODULE mo_assimi_memory_class
 
     ! fluxes
     TYPE(t_jsb_var_real2d)    :: &
-      & gross_assimilation_C13    , &  !< canopy-integrated gross assimilation rate [µmol 13CO2 m-2 s-1]
-      & gross_assimilation_C14    , &  !< canopy-integrated gross assimilation rate [µmol 14CO2 m-2 s-1]
-      & net_assimilation          , &  !< canopy-integrated net assimilation rate [µmol CO2 m-2 s-1] 
-      & net_assimilation_boc      , &  !< net assimilation rate at the bottom of the canopy [µmol CO2 m-2 s-1] 
-      & maint_respiration_leaf         !< canopy-integrated foliar respiration rate [µmol CO2 m-2 s-1]
+      & gross_assimilation_C13    , &  !< canopy-integrated gross assimilation rate [micro-mol 13CO2 m-2 s-1]
+      & gross_assimilation_C14    , &  !< canopy-integrated gross assimilation rate [micro-mol 14CO2 m-2 s-1]
+      & net_assimilation          , &  !< canopy-integrated net assimilation rate [micro-mol CO2 m-2 s-1] 
+      & net_assimilation_boc      , &  !< net assimilation rate at the bottom of the canopy [micro-mol CO2 m-2 s-1] 
+      & maint_respiration_leaf         !< canopy-integrated foliar respiration rate [micro-mol CO2 m-2 s-1]
 
     TYPE(t_jsb_var_real3d)    :: &
-      & net_assimilation_cl       , &  !< net assimilation rate per canopy layer [µmol CO2 m-2 s-1]
-      & maint_respiration_leaf_cl      !< foliar respiration rate per canopy layer [µmol CO2 m-2 s-1]
+      & net_assimilation_cl       , &  !< net assimilation rate per canopy layer [micro-mol CO2 m-2 s-1]
+      & maint_respiration_leaf_cl      !< foliar respiration rate per canopy layer [micro-mol CO2 m-2 s-1]
 
     ! other 
     TYPE(t_jsb_var_real2d)    :: &
@@ -157,13 +157,13 @@ MODULE mo_assimi_memory_class
       & beta_soil_gs   , &  !< scaling factor to account for soil moisture constraints on conductance [unitless]
       & canopy_cond    , &  !< canopy-integrated conductance for water [m s-1]
       & co2_conc_leaf  , &  !< canopy-integrated internal leaf CO2 concentration [ppm]
-      & t_jmax_opt     , &  !< optimal temperature for electron transport of photosynthesis [°C]
+      & t_jmax_opt     , &  !< optimal temperature for electron transport of photosynthesis [degC]
       & vpd                 !< 2m air vapour pressure deficit [Pa]
 
     ! diagnostics
     TYPE(t_jsb_var_real3d)    :: &
-      & jmax_cl                   , &  !< maximum rate of electron transport [µmol CO2 m-2 s-1]
-      & vcmax_cl                       !< maximum rate of carboxylation [µmol CO2 m-2 s-1]
+      & jmax_cl                   , &  !< maximum rate of electron transport [micro-mol CO2 m-2 s-1]
+      & vcmax_cl                       !< maximum rate of carboxylation [micro-mol CO2 m-2 s-1]
 
     ! averaging
     TYPE(t_jsb_var_real2d)    :: &

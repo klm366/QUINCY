@@ -20,7 +20,7 @@
 !! @brief Initialization of the the soil_biogeochemistry memory.
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 MODULE mo_sb_init
 #ifndef __NO_JSBACH__
