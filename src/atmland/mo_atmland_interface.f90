@@ -520,8 +520,10 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     TYPE(t_jsb_model), POINTER :: model
+    CLASS(t_jsb_tile_abstract), POINTER :: land_tile
+    dsl4jsb_Def_memory_tile(TURB_, land_tile)
 
-    INTEGER ::  iblk, ics, ice, nc, i, j
+    INTEGER ::  iblk, ics, ice, nc, i, j, it, nt
     REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
@@ -532,7 +534,9 @@ CONTAINS
       & qsat_star_ptr, &
       & s_star_ptr, &
       & fact_q_air_ptr, &
+      & fact_q_air_land_tile, &
       & fact_qsat_srf_ptr, &
+      & fact_qsat_srf_land_tile, &
       & evapopot_ptr, &
       & evapotrans_lnd_ptr, &
       & latent_hflx_lnd_ptr, &
@@ -641,6 +645,22 @@ CONTAINS
     ! Exchange fields on the land tile
     ! --------------------------------
 
+    IF (tile%contains_lake) THEN
+      ! For some variables the atmosphere expects values for the land tile (excluding lakes).
+      ! Thus we define a pointer to the land tile.
+      nt = tile%Get_no_of_children()
+      DO it=1,nt
+        IF (it == 1) THEN
+          land_tile => tile%Get_first_child_tile()
+        ELSE
+          land_tile => land_tile%Get_next_sibling_tile()
+        END IF
+        ! Exit if the land tile was found
+        IF (TRIM(land_tile%name) == 'land') EXIT
+      END DO
+      dsl4jsb_Get_memory_tile(TURB_, land_tile)
+    END IF
+
     IF (PRESENT(t_srf)) THEN
       t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t_filt)
       !$acc data present(t_srf, t_filt_ptr)
@@ -678,20 +698,20 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(fact_q_air)) THEN
-      fact_q_air_ptr => dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
-      !$acc data present(fact_q_air, fact_q_air_ptr)
+      dsl4jsb_Get_var2d_onChunk_tile_name(TURB_, fact_q_air, land_tile)
+      !$acc data present(fact_q_air, fact_q_air_land_tile)
       !$acc parallel loop
       DO i=1,nc
-        fact_q_air(i) = fact_q_air_ptr(i)
+        fact_q_air(i) = fact_q_air_land_tile(i)
       END DO
       !$acc end data
     END IF
     IF (PRESENT(fact_qsat_srf)) THEN
-      fact_qsat_srf_ptr => dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
-      !$acc data present(fact_qsat_srf, fact_qsat_srf_ptr)
+      dsl4jsb_Get_var2d_onChunk_tile_name(TURB_, fact_qsat_srf, land_tile)
+      !$acc data present(fact_qsat_srf, fact_qsat_srf_land_tile)
       !$acc parallel loop
       DO i=1,nc
-        fact_qsat_srf(i) = fact_qsat_srf_ptr(i)
+        fact_qsat_srf(i) = fact_qsat_srf_land_tile(i)
       END DO
       !$acc end data
     END IF

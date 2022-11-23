@@ -457,7 +457,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (.NOT. tile%Is_process_calculated(TURB_) .OR. tile%contains_lake) RETURN
+    IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -570,7 +570,7 @@ CONTAINS
       END DO
       !$claw acc end data
 
-    ELSE IF (tile%contains_glacier) THEN
+    ELSE IF (tile%contains_glacier .OR. tile%is_lake) THEN
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_5 tile_name=tile%name
       fact_qsat_soil(:) = 1._wp
       fact_qair_soil(:) = 1._wp
