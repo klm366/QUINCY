@@ -195,18 +195,33 @@ CONTAINS
 
     CASE ('weighted_to_coast')
 
-      input_file = jsb_netcdf_open_input(TRIM(grid%filename), model%id)
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%bc_filename), model%grid_id)
 
       ! coastal ocean cells
       cell_sea_land_mask => input_file%Read_2d_int( &
         & variable_name='cell_sea_land_mask')
       dsl4jsb_var2D_onDomain(HD_, coast_ocean) = &
         & MERGE(1._wp, 0._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+      dsl4jsb_var2D_onDomain(HD_, hd_mask) = &
+        & MERGE(0._wp, 1._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
       DEALLOCATE(cell_sea_land_mask)
 
       CALL input_file%Close()
 
     CASE ('zero')
+
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(HD_)%bc_filename), model%grid_id)
+      
+      ! coastal ocean cells
+      cell_sea_land_mask => input_file%Read_2d_int( &
+        & variable_name='cell_sea_land_mask')
+      dsl4jsb_var2D_onDomain(HD_, hd_mask) = &
+        & MERGE(0._wp, 1._wp, cell_sea_land_mask(:,:) == SEA_BOUNDARY)
+      DEALLOCATE(cell_sea_land_mask)
+      
+      CALL input_file%Close()
+      
+      CASE ('none')      
 
     END SELECT
 
