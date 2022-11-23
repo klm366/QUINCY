@@ -2,10 +2,10 @@
 !! @brief functions needed to calculate variables affecting the atm-land interface 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-19)
+!! First version by Soenke Zaehle (2015-12-19)
 !!
 MODULE mo_atmland_util
 #ifndef __NO_JSBACH__
@@ -142,7 +142,7 @@ CONTAINS
     REAL(wp) :: esat            ! saturating vapour pressure (Pa)
     REAL(wp) :: a               ! Pa
     REAL(wp) :: b               ! no unit / einheitenlos
-    REAL(wp) :: c               ! °C
+    REAL(wp) :: c               ! degC
     REAL(wp) :: tmin            ! K 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_spec_humidity_sat'
 

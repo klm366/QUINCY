@@ -20,7 +20,7 @@
 !! @brief Contains constants for the spq process
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
 !! First version by Jan Engel (2016-07-21)

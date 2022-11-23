@@ -367,7 +367,7 @@ MODULE mo_pheno_process
         END IF
         IF(lai > PhenoParam%all%LAI_negligible) THEN
            ! otherwise nothing to do
-           grRate = PhenoParam%EG%growthRate ! R: xtmp zu grRate geändert um Konsistent zu bleiben mit anderen Aufrufen wie 
+           grRate = PhenoParam%EG%growthRate ! R: xtmp zu grRate geaendert um Konsistent zu bleiben mit anderen Aufrufen wie 
                                              !    z.B. bei crops....
            lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
         END IF
@@ -419,7 +419,7 @@ MODULE mo_pheno_process
                                 previous_day_NPP_pot_rate_ca, &
                                 pseudo_soil_temp,      &
                                 w_soil_filling,        & ! Fractional filling of the soil water buckets.
-                                                         ! R: in JSBACH3 wurde für Crops immer der soil layer 1,
+                                                         ! R: in JSBACH3 wurde fuer Crops immer der soil layer 1,
                                                          !    d.h. der oberste Layer verwendet!
                                 previous_day_temp_min, &
                                 previous_day_temp_max
@@ -466,7 +466,7 @@ MODULE mo_pheno_process
 
      IF (previous_day_NPP_pot_rate_ca > - 1.E-10_wp) THEN
        NPP_positive = .TRUE.  ! Do not set to zero, as crops could never grow then...
-                              ! R: Sehr kleinen negativen Wert gewählt =>
+                              ! R: Sehr kleinen negativen Wert gewaehlt =>
                               !    wenn die Umweltbedingungen so sind, dass crops zumindest
                               !    kein wesentlich negatives NPP hatten, dann heat sum bilden.
                               !    Beispielwerte von avg_NPP_yDayMean:

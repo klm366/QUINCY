@@ -394,7 +394,7 @@ CONTAINS
   ! @param [in]      nsoil               Number of soil layers
   ! @param [in]      nlat                (Effective) number of latitudes
   ! @param [in]      dtime               Time step [s]
-  ! @param [in]      l_infil_subzero     Allow infiltration at soil temperatures below 0°C
+  ! @param [in]      l_infil_subzero     Allow infiltration at soil temperatures below 0degC
   ! @param [in]      soil_depth_sl       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_sl       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      hyd_cond_sat_sl     Hydraulic conductivity of saturated soil [m/s]

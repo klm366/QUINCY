@@ -105,7 +105,7 @@ MODULE mo_pheno_memory_class
                                           ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                           ! canopy area = veg_fract_correction * tile area.
                                           ! var (tile area) = veg_fract_correction * var(canopy area).
-                                          ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
+                                          ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wueste" und Vegetation
                                           !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                           ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
 
@@ -137,7 +137,7 @@ MODULE mo_pheno_memory_class
                                                             !< used as logical: 0 = FALSE / 1 = TRUE
 
     TYPE(t_jsb_var_real2d)          :: &
-                                    gdd                 , & !< growing degree days above 5°C [K day]
+                                    gdd                 , & !< growing degree days above 5degC [K day]
                                     nd_dormance         , & !< number of days since last growing season [# days]
                                     lai_max                 !< maximum lai - from site specific lai data [m2 m-2]
 

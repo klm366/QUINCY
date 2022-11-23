@@ -20,10 +20,10 @@
 !! @brief Contains the routines for plant turnover related processes 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !!
 MODULE mo_veg_turnover
 #ifndef __NO_JSBACH__
@@ -454,7 +454,7 @@ CONTAINS
     TYPE(t_veg_tissues_pool),        INTENT(inout) :: veg_growth                   !< current growth rate of vegetation pools
     TYPE(t_veg_tissues_pool),        INTENT(inout) :: veg_litterfall               !< current litter fall from vegetation pools
 #endif
-    REAL(wp), DIMENSION(nc),         INTENT(out)   :: net_growth                   !< current net growth (µmol C / m2 / s) 
+    REAL(wp), DIMENSION(nc),         INTENT(out)   :: net_growth                   !< current net growth (micro-mol C / m2 / s) 
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(nc)           :: fturn_leaf                   , & !< fraction of leaves turning over 
