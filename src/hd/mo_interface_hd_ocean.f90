@@ -24,13 +24,15 @@ MODULE mo_interface_hd_ocean
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
   USE mo_coupling_config,     ONLY: is_coupled_run
 #ifdef YAC_coupling
-  USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name
+  USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name, &
+    &                               yac_fdef_mask, YAC_LOCATION_CELL
 #endif
 
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
-  dsl4jsb_Use_processes HYDRO_
+  dsl4jsb_Use_processes HYDRO_, HD_
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(HD_)
 
   IMPLICIT NONE
   PRIVATE
@@ -45,23 +47,82 @@ MODULE mo_interface_hd_ocean
 CONTAINS
 
 #ifdef YAC_coupling
-  SUBROUTINE jsb_fdef_hd_fields(comp_id, cell_point_ids, cell_mask_id)
+  SUBROUTINE jsb_fdef_hd_fields(comp_id, cell_point_ids, grid_id, n_patch_cells)
 
-    INTEGER, INTENT(in) :: comp_id
-    INTEGER, INTENT(in) :: cell_point_ids(:)
-    INTEGER, INTENT(in) :: cell_mask_id(:)
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
+    USE mo_jsb_class,          ONLY: Get_model
+    USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+    USE mo_jsb_grid,           ONLY: Get_grid
+
+    INTEGER, INTENT(in) :: comp_id           ! yac component id
+    INTEGER, INTENT(in) :: cell_point_ids(:) ! yac point is
+    INTEGER, INTENT(in) :: grid_id           ! yac grid id
+    INTEGER, INTENT(in) :: n_patch_cells     ! number of cells (compute + halo) 
+                                            ! n_patch_cells is <= nproma*nblks
+    ! Local variables
+    !
+    TYPE(t_jsb_grid),  POINTER    :: grid
+    TYPE(t_jsb_model), POINTER    :: model
+
+    CLASS(t_jsb_tile_abstract), POINTER :: tile
 
     INTEGER :: field_id
+    INTEGER :: cell_mask_ids(1)
+    INTEGER :: model_id
+    INTEGER :: jb, jc
+    INTEGER :: nproma, nblks
+    LOGICAL,  ALLOCATABLE :: is_valid(:)
+
+    dsl4jsb_Def_memory(HD_)
+    dsl4jsb_Real2D_onDomain :: hd_mask
+
+    model_id = 1 ! does not work when nesting is active
+
+    model => Get_model(model_id)
+    grid  => Get_grid(model%grid_id)
+
+    CALL model%Get_top_tile(tile)
+    dsl4jsb_Get_memory(HD_)
+
+    nproma = grid%Get_nproma()
+    nblks  = grid%Get_nblks()
+
+    ! Define the HD mask for YAC.
+    ! It shall contain ocean coast points only for
+    ! source point mapping (source_to_target_map)
+
+    ALLOCATE(is_valid(nproma*nblks))
+
+    is_valid(:) = .FALSE.
+
+    dsl4jsb_Get_var2D_onDomain(HD_, hd_mask)
+
+    DO jb = 1, nblks
+      DO jc = 1, nproma
+        IF ( hd_mask(jc, jb) .EQ. 0.0 ) THEN
+          is_valid((jb-1)*nproma+jc) = .TRUE.
+        END IF
+      END DO
+    END DO
+
+    CALL yac_fdef_mask (       &
+      & grid_id,               &
+      & n_patch_cells,         &
+      & YAC_LOCATION_CELL,     &
+      & is_valid,              &
+      & cell_mask_ids(1) )
 
     CALL yac_fdef_field_mask ( &
       & 'river_runoff',        &
       & comp_id,               &
       & cell_point_ids,        &
-      & cell_mask_id,          &
+      & cell_mask_ids(1),      &
       & 1,                     &
       & field_id )
 
-  END SUBROUTINE jsb_fdef_hd_fields
+      DEALLOCATE(is_valid)
+
+    END SUBROUTINE jsb_fdef_hd_fields
 #endif
 
   SUBROUTINE interface_hd_ocean(tile, options)
