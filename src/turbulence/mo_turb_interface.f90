@@ -254,8 +254,8 @@ CONTAINS
         !      if a multi-layer snow model is implemented.
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_4 tile_name=tile%name
         rough_bare_star(:) = (1._wp - fract_snow_soil(:)) * rough_bare_star(:) + fract_snow_soil(:) * rough_snow_star(:)
-        ! Modify roughness length heat for vegetation by snow cover if not forest or if standalone
-        IF (.NOT. dsl4jsb_Lctlib_param(ForestFlag) .OR. jsbach_runs_standalone()) THEN
+        ! Reduce roughness length of non-forest vegetation in case of snow
+        IF (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) THEN
           !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_5 tile_name=tile%name
           rough_veg_star(:) = (1._wp - fract_snow_soil(:)) * rough_veg_star(:) + fract_snow_soil(:) * rough_snow_star(:)
         END IF
