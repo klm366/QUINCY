@@ -420,7 +420,7 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
-    & nc, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                                    &
+    & nc, l_fract, lat, lon, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                &
     & l_infil_subzero, soilhydmodel, interpol_mean, w_soil_wilt_fract,                   &
     & soil_depth_sl, root_depth_sl,                                                      &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
@@ -446,10 +446,12 @@ CONTAINS
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero
+    LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! Tile fraction > 0
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
+      & lat, lon,                              &
       & oro_stddev, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
@@ -532,6 +534,16 @@ CONTAINS
     infilt_over(:)    = 0._wp
     drain_rock(:)     = 0._wp
     drain_lat_sl(:,:) = 0._wp
+
+    ! Check for unrealistic water to soil fluxes
+    DO i = 1, nc
+      IF (water_to_soil(i) > 1.0e+3_wp .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'Water to soil flux is far outside of realistic bounds at ', &
+          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+          & 'Water to soil: ', water_to_soil(i)
+        CALL finish ('calc_soil_hydrology', message_text)
+      END IF
+    END DO
 
     !---------------------
     !> 1. Infiltration
@@ -629,7 +641,7 @@ CONTAINS
 
     wtr_soilhyd_res(:) = 0._wp
 
-    CALL soilhyd(nc, nsoil, dtime, soilhydmodel, interpol_mean,                      &
+    CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, soilhydmodel, interpol_mean,   &
       &     w_soil_wilt_fract, soil_depth_sl, wtr_field_cap_sl, wtr_wsat_sl,         &
       &     hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,       &
       &     bclapp_sl, matrix_pot_sl, pore_size_index_sl,                            &
@@ -669,7 +681,7 @@ CONTAINS
   !!   by Philipp de Vrese (MPI-M)
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
-  SUBROUTINE soilhyd(nc, nsoil, dtime,                             &
+  SUBROUTINE soilhyd(nc, l_fract, lat, lon, nsoil, dtime,          &
     & soilhydmodel, interpol_mean,                                 &
     & w_soil_wilt_fract, dsoil,                                    &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,              &
@@ -682,6 +694,9 @@ CONTAINS
     & ltpe_closed, ltpe_open)
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
+    LOGICAL,  INTENT(IN)            :: l_fract(:)                 ! Tile fraction > 0
+    REAL(wp), INTENT(IN)            :: lat(:)                     ! Grid cell latitudes
+    REAL(wp), INTENT(IN)            :: lon(:)                     ! Grid cell longitudes
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
     INTEGER,  INTENT(in)            :: soilhydmodel               ! hydrology model scheme
     INTEGER,  INTENT(in)            :: interpol_mean              ! lateral interpolation scheme
@@ -746,13 +761,15 @@ CONTAINS
     !$claw acc         remoist, zmvg_sl, wtr_transp_residual, wtr_transp_corr, wtr_exinfcap, wtr_exwsat)
 
     !$claw acc parallel loop gang vector collapse(2)
-    ! Determine the number of soil layers above bedrock
 
-
-    IF (ANY(wtr_soil_sl(:,:) < 0._wp)) THEN
-      WRITE (message_text,*) 'negative soil moisture (start): ', MINVAL(wtr_soil_sl), ' at ', MINLOC(wtr_soil_sl)
-      CALL finish ('soilhyd', message_text)
-    END IF
+    DO i = 1, nc
+      IF (ANY(wtr_soil_sl(i,:) < 0._wp) .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
+          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+          & 'Soil moisture:    ', wtr_soil_sl(i,:)
+        CALL finish ('soilhyd', message_text)
+      END IF
+    END DO
 
     !> Calculation of soil saturation, field capacity and wilting point taking into account soil ice
     !
@@ -799,9 +816,10 @@ CONTAINS
 
     !< Diagnose evapotranspiration fluxes from the different soil layer based on the available
     !    mobile water
-    CALL diagnose_evapotrans(nc, nsoil, w_soil_wilt_fract, root_depth_sl, dsoil, wtr_field_cap_sl, &
-      &                      transpiration_in_m, evapo_soil_in_m, wtr_soil_sl - wtr_rsdl_sl,       &
-      &                      evapo_soil_sl1, transpiration_sl, deficit_evapotrans)
+    CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, w_soil_wilt_fract, root_depth_sl, &
+      &                      dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m,   &
+      &                      wtr_soil_sl - wtr_rsdl_sl, evapo_soil_sl1, transpiration_sl,    &
+      &                      deficit_evapotrans)
 
     DO i = 1, nc
       ! Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
@@ -863,14 +881,20 @@ CONTAINS
       !< If lowest soil layer becomes negative, reduce bottom drainage
       !    In rare cases - when the bottom layer is very thin - also above layers might get negative.
       !    Generally, this only happens right after initialization.
-      IF (wtr_soil_sl(i, nsoil_act(i)) < 0._wp) THEN
+      IF (wtr_soil_sl(i, nsoil_act(i)) < 0._wp .AND. l_fract(i)) THEN
         DO j = nsoil_act(i), 1, -1
           IF (wtr_soil_sl(i,j) < 0._wp) THEN
-            WRITE (message_text,*) 'Soil moisture correction needed at: ', i, j, ': ', wtr_soil_sl(i,:)
+            WRITE (message_text,*) 'Soil moisture correction needed at ', &
+              &  lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+              & 'Soil moisture:   ', wtr_soil_sl(i,:), NEW_LINE('a'), &
+              & 'Bottom drainage: ', drain_rock(i)
             CALL message('soilhyd', message_text, all_print=.TRUE.)
             drain_rock(i) = MAX((drain_rock(i) + wtr_soil_sl(i,j)), 0._wp)
             wtr_soil_sl(i,j) = 0._wp
-            WRITE (message_text,*) 'After correction: wtr_soil_sl(i,:): ', i, j, ': ', wtr_soil_sl(i,:)
+            WRITE (message_text,*) 'After correction: wtr_soil_sl(i,:): ', &
+              & lat(i),'N and ',lon(i), 'E: ', NEW_LINE('a'), &
+              & 'Soil moisture:   ', wtr_soil_sl(i,:), NEW_LINE('a'), &
+              & 'Bottom drainage: ', drain_rock(i)
             CALL message('soilhyd', message_text, all_print=.TRUE.)
           END IF
         END DO
@@ -885,8 +909,15 @@ CONTAINS
     !< Correct for the vertical transport error.
     DO i = 1, nc
       !< 1. Complain if the overall transport error is too large
-      IF (ABS(wtr_transp_residual(i)) > 1.0e-10_wp) THEN
-        WRITE (message_text,*) 'Soil water transport residual too large: ', wtr_soilhyd_res(i), ' at ', i
+      IF (ABS(wtr_transp_residual(i)) > 1.0e-10_wp .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'Soil water transport residual too large at ', &
+          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+          & 'Transport residual: ', wtr_transp_residual(i), NEW_LINE('a'), &
+          & 'Infiltration:       ', infilt(i), NEW_LINE('a'), &
+          & 'Soil evaporation:   ', evapo_soil_sl1(i), NEW_LINE('a'), &
+          & 'Bottom drainage:    ', drain_rock(i), NEW_LINE('a'), &
+          & 'Transpiration:      ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'Soil moisture:      ', wtr_soil_sl(i,:)
         CALL finish ('soilhyd', message_text)
       END IF
 
@@ -910,9 +941,15 @@ CONTAINS
       END DO
 
       !> 4. Complain if correction is not sufficient
-      IF (ABS(wtr_transp_residual(i)) > 1.0e-20_wp) THEN
-        WRITE (message_text,*) 'Remaining soil water transport residual: ', wtr_transp_residual(i), ' at ', i, &
-          & drain_rock(i), wtr_soil_sl(i,:)
+      IF (ABS(wtr_transp_residual(i)) > 1.0e-10_wp .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'Cannot correct soil water transport residual at ', &
+          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+          & 'Transport residual: ', wtr_transp_residual(i), NEW_LINE('a'), &
+          & 'Infiltration:       ', infilt(i), NEW_LINE('a'), &
+          & 'Soil evaporation:   ', evapo_soil_sl1(i), NEW_LINE('a'), &
+          & 'Bottom drainage:    ', drain_rock(i), NEW_LINE('a'), &
+          & 'Transpiration:      ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'Soil moisture:      ', wtr_soil_sl(i,:)
         CALL finish ('soilhyd', message_text)
       END IF
     END DO
@@ -1006,19 +1043,37 @@ CONTAINS
     infilt_over(:) = wtr_exinfcap(:) + wtr_exwsat(:)
 
     ! Check value range for soil moisture
-    IF (ANY(wtr_soil_sl(:,:) < -1.0E-10_wp)) THEN
-      WRITE (message_text,*) 'negative soil moisture (end): ', MINVAL(wtr_soil_sl), ' at ', MINLOC(wtr_soil_sl)
-      CALL finish ('soilhyd', message_text)
-    ELSE IF (ANY(wtr_soil_sl(:,:) < 0.0_wp)) THEN
-      WRITE (message_text,*) 'negative soil moisture (end): ', MINVAL(wtr_soil_sl), ' at ', MINLOC(wtr_soil_sl)
-      CALL message ('soilhyd', message_text)
-      wtr_soil_sl(:,:) = MAX(wtr_soil_sl(:,:), 0.0_wp)
-    END IF
+    DO i = 1, nc
+      IF (ANY(wtr_soil_sl(i,:) < -EPSILON(1.0_wp)) .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'negative soil moisture (routine end) at ', &
+          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+          & 'Infiltration:     ', infilt(i), NEW_LINE('a'), &
+          & 'Soil evaporation: ', evapo_soil_sl1(i), NEW_LINE('a'), &
+          & 'Bottom drainage:  ', drain_rock(i), NEW_LINE('a'), &
+          & 'Transpiration:    ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'Soil moisture:    ', wtr_soil_sl(i,:)
+        CALL finish ('soilhyd', message_text)
+      ELSE IF (ANY(wtr_soil_sl(i,:) < 0.0_wp) .AND. l_fract(i)) THEN
+        ! WRITE (message_text,*) 'setting negative soil moisture (routine end) to zero at ', &
+        !   & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+        !   & 'Soil moisture:    ', wtr_soil_sl(i,:)
+        ! Enable for debugging purpose, otherwise it fills up the logfile
+        ! CALL message ('soilhyd', message_text)
+        wtr_soil_sl(i,:) = MAX(wtr_soil_sl(i,:), 0.0_wp)
+      END IF
 
-    IF (ANY(wtr_soil_sl(:,:) > wtr_wsat_sl(:,:) + 1.0e-10_wp)) THEN
-      WRITE (message_text,*) 'soil moisture exceeds saturation capacity: ', MAXVAL(wtr_soil_sl), ' at ', MAXLOC(wtr_soil_sl)
-      CALL finish ('soilhyd', message_text)
-    END IF
+      IF (ANY(wtr_soil_sl(i,:) > wtr_wsat_sl(i,:) + EPSILON(1.0_wp)) .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'soil moisture exceeds saturation capacity(routine end) at ', &
+          &  lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+          & 'Infiltration:       ', infilt(i), NEW_LINE('a'), &
+          & 'Soil evaporation:   ', evapo_soil_sl1(i), NEW_LINE('a'), &
+          & 'Bottom drainage:    ', drain_rock(i), NEW_LINE('a'), &
+          & 'Transpiration:      ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'Soil moisture:      ', wtr_soil_sl(i,:), NEW_LINE('a'), &
+          & 'Saturation capcity: ', wtr_wsat_sl(i,:)
+        CALL finish ('soilhyd', message_text)
+      END IF
+    END DO
 
     !$claw acc end parallel
     !$claw acc end data
@@ -1029,6 +1084,9 @@ CONTAINS
 
   SUBROUTINE diagnose_evapotrans( &
     & nc,                         &
+    & l_fract,                    &
+    & lat,                        &
+    & lon,                        &
     & nsoil,                      &
     & w_soil_wilt_fract,          &
     & droot,                      &
@@ -1056,6 +1114,9 @@ CONTAINS
     ! arguments
 
     INTEGER,  INTENT(in)     :: nc                      ! vector length
+    LOGICAL,  INTENT(IN)     :: l_fract(:)              ! Tile fraction > 0
+    REAL(wp), INTENT(IN)     :: lat(:)                  ! Grid cell latitudes
+    REAL(wp), INTENT(IN)     :: lon(:)                  ! Grid cell longitudes
     INTEGER,  INTENT(in)     :: nsoil                   ! number of soil layers
     REAL(wp), INTENT(in)     :: w_soil_wilt_fract       ! fractional plant wilting point [/]
     REAL(wp), INTENT(in)     :: droot(:,:)              ! root depth within layer [m]
@@ -1098,10 +1159,14 @@ CONTAINS
     !$claw acc loop gang vector
 
 
-    IF (ANY(wtr_soil_sl(:,:) < 0._wp)) THEN
-      WRITE (message_text,*) 'negative soil moisture (beginning): ', MINVAL(wtr_soil_sl), ' at ', MINLOC(wtr_soil_sl)
-      CALL finish ('diagnose_evapotrans', message_text)
-    END IF
+    DO i = 1, nc
+      IF (ANY(wtr_soil_sl(i,:) < 0._wp) .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
+          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+          & 'Soil moisture: ', wtr_soil_sl(i,:)
+        CALL finish ('diagnose_evapotrans', message_text)
+      END IF
+    END DO
 
     ! Initialize dummy soil moisture storage, because the real soil moisture storage
     !   is only to be changed during the vertical transport
@@ -1207,11 +1272,18 @@ CONTAINS
     !$claw acc end data
 
 #ifndef _OPENACC
-    ! make sure there is no negative soil moisture and soil moisture does not exceed field capacity
-    IF (ANY(dummy_wtr_soil(:,:) < 0._wp)) THEN
-      WRITE (message_text,*) 'negative soil moisture (end): ', MINVAL(dummy_wtr_soil), ' at ', MINLOC(dummy_wtr_soil)
-      CALL finish ('diagnose_evapotrans', message_text)
-    END IF
+    ! make sure there is no negative soil moisture after applying ET
+    DO i = 1, nc
+      IF (ANY(dummy_wtr_soil(i,:) < 0._wp) .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'negative soil moisture (routine end) at ', &
+          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+          & 'Soil evaporation: ', evapo_soil_sl1(i), NEW_LINE('a'), &
+          & 'Transpiration:    ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'ET deficit:       ', deficit_evapotrans(i), NEW_LINE('a'), &
+          & 'Soil moisture:    ', dummy_wtr_soil(i,:)
+        CALL finish ('diagnose_evapotrans', message_text)
+      END IF
+    END DO
 #endif
 
   END SUBROUTINE diagnose_evapotrans
