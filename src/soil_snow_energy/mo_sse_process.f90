@@ -503,7 +503,7 @@ CONTAINS
 
     IF (.NOT. lstart) THEN
 
-      !$claw acc parallel default(none) present(t_srf_unfilt,t_soil_sl,t_soil_acoef,t_soil_bcoef)
+      !$claw acc parallel default(present) present(t_srf_unfilt,t_soil_sl,t_soil_acoef,t_soil_bcoef)
 
       ! uppermost layer
       !$claw acc loop gang vector 
@@ -601,7 +601,7 @@ CONTAINS
     !------------------------------------------------------------------------------------------------
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
     !------------------------------------------------------------------------------------------------
-    !$claw acc parallel default(none) present(zdz1,zdz2,zd1,heat_cap,heat_cond)
+    !$claw acc parallel default(present) present(zdz1,zdz2,zd1,heat_cap,heat_cond)
     !$claw acc loop gang vector collapse(2)
     DO jk = 1, nsoil
       DO jl=1,nidx
@@ -629,7 +629,7 @@ CONTAINS
     z1(:,:) = 0._wp
 
     ! lowest soil layer
-    !$claw acc parallel loop default(none) present(zdz1,zdz2,z1) gang vector
+    !$claw acc parallel loop default(present) present(zdz1,zdz2,z1) gang vector
     DO jl=1,nidx
       z1(jl,nsoil-1) = zdz2(jl,nsoil) + zdz1(jl,nsoil-1)
     END DO
