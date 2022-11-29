@@ -837,15 +837,16 @@ for bisection in $bisections $ggrids
 do
   [[ $(echo ${bisection} | cut -c1) == T ]] && jsb4icon=false || jsb4icon=true
   if [[ ${jsb4icon} == true ]]; then
-    if [[ $bisection -ge 8  ]]
+    bisect=$(echo ${bisection} | awk '{print $1 + 0}')
+    if [[ $bisect -ge 8  ]]
     then
-      ## cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
+      # cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
       ulimit -s unlimited
       ulimit -v unlimited
       ulimit -m unlimited
     fi
 
-    if [[ $bisection -le 5 ]]
+    if [[ $bisect -le 5 ]]
     then
       remap_scheme=ycon
     else
