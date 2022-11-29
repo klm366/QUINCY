@@ -645,21 +645,19 @@ CONTAINS
     ! Exchange fields on the land tile
     ! --------------------------------
 
-    IF (tile%contains_lake) THEN
-      ! For some variables the atmosphere expects values for the land tile (excluding lakes).
-      ! Thus we define a pointer to the land tile.
-      nt = tile%Get_no_of_children()
-      DO it=1,nt
-        IF (it == 1) THEN
-          land_tile => tile%Get_first_child_tile()
-        ELSE
-          land_tile => land_tile%Get_next_sibling_tile()
-        END IF
-        ! Exit if the land tile was found
-        IF (TRIM(land_tile%name) == 'land') EXIT
-      END DO
-      dsl4jsb_Get_memory_tile(TURB_, land_tile)
-    END IF
+    ! For some variables the atmosphere expects values for the land tile (excluding lakes).
+    ! Thus we define a pointer to the land tile.
+    nt = tile%Get_no_of_children()
+    DO it=1,nt
+      IF (it == 1) THEN
+        land_tile => tile%Get_first_child_tile()
+      ELSE
+        land_tile => land_tile%Get_next_sibling_tile()
+      END IF
+      ! Exit if the land tile was found
+      IF (TRIM(land_tile%name) == 'land') EXIT
+    END DO
+    dsl4jsb_Get_memory_tile(TURB_, land_tile)
 
     IF (PRESENT(t_srf)) THEN
       t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t_filt)
