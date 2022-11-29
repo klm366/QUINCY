@@ -1304,4 +1304,3 @@ CONTAINS
     !$ACC END DATA
 
   END SUBROUTINE update_land2atm
-
