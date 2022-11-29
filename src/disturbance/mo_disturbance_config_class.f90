@@ -45,60 +45,59 @@ MODULE mo_disturb_config_class
                          fire_tau_woody,         & ! return period of fire for woody PFT [year] at 0% relative humidity
                          fire_tau_grass            ! return period of fire for grass PFT [year] at 0% relative humidity
 
-    INTEGER           :: d_climate_input,        & ! <Rackhun Son>
-                         d_climate_hidden,       & ! <Rackhun Son>
-                         d_vegetation_input,     & ! <Rackhun Son>
-                         d_vegetation_hidden,    & ! <Rackhun Son>
-                         !d_lnt_input,            & ! <Rackhun Son>
-                         !d_lnt_hidden,           & ! <Rackhun Son>
-                         d_ant_input,            & ! <Rackhun Son>
-                         d_ant_hidden,           & ! <Rackhun Son>
+    INTEGER           :: d_weather_input,        & ! <Rackhun Son>
+                         d_weather_hidden,       & ! <Rackhun Son>
+                         d_land_input,           & ! <Rackhun Son>
+                         d_land_input_n_pft,     & ! <Rackhun Son>
+                         d_land_hidden,          & ! <Rackhun Son>
+                         d_anthro_input,         & ! <Rackhun Son>
+                         d_anthro_hidden,        & ! <Rackhun Son>
                          d_output,               & ! <Rackhun Son>
-                         d_emb_input,            & ! <Rackhun Son>
-                         d_emb_hidden,           & ! <Rackhun Son>
-                         d_emb_output              ! <Rackhun Son>
+                         d_region                  ! <Rackhun Son>'[
+                         !d_emb_input,            & ! <Rackhun Son>
+                         !d_emb_hidden,           & ! <Rackhun Son>
+                         !d_emb_output              ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: climate_i2i_weight(:,:), climate_i2i_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_h2i_weight(:,:), climate_h2i_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_i2f_weight(:,:), climate_i2f_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_h2f_weight(:,:), climate_h2f_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_i2g_weight(:,:), climate_i2g_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_h2g_weight(:,:), climate_h2g_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_i2o_weight(:,:), climate_i2o_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_h2o_weight(:,:), climate_h2o_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_out_weight(:,:), climate_out_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_i2i_weight(:,:), weather_i2i_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_h2i_weight(:,:), weather_h2i_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_i2f_weight(:,:), weather_i2f_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_h2f_weight(:,:), weather_h2f_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_i2g_weight(:,:), weather_i2g_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_h2g_weight(:,:), weather_h2g_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_i2o_weight(:,:), weather_i2o_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_h2o_weight(:,:), weather_h2o_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_out_weight(:,:), weather_out_bias(:) ! dl fire model parameters <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: vegetation_i2i_weight(:,:), vegetation_i2i_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_h2i_weight(:,:), vegetation_h2i_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_i2f_weight(:,:), vegetation_i2f_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_h2f_weight(:,:), vegetation_h2f_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_i2g_weight(:,:), vegetation_i2g_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_h2g_weight(:,:), vegetation_h2g_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_i2o_weight(:,:), vegetation_i2o_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_h2o_weight(:,:), vegetation_h2o_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_out_weight(:,:), vegetation_out_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_i2i_weight(:,:), land_i2i_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_h2i_weight(:,:), land_h2i_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_i2f_weight(:,:), land_i2f_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_h2f_weight(:,:), land_h2f_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_i2g_weight(:,:), land_i2g_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_h2g_weight(:,:), land_h2g_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_i2o_weight(:,:), land_i2o_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_h2o_weight(:,:), land_h2o_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_out_weight(:,:), land_out_bias(:) ! dl fire model parameters <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
-    
-    REAL(wp), ALLOCATABLE :: vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: lightning_topography_layer1_weight(:,:), lightning_topography_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: lightning_topography_layer2_weight(:,:), lightning_topography_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: lightning_topography_layer1_weight(:,:), lightning_topography_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: lightning_topography_layer2_weight(:,:), lightning_topography_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: anthropogenic_l1_weight(:,:), anthropogenic_l1_bias(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: anthropogenic_l2_weight(:,:), anthropogenic_l2_bias(:) ! dl fire model parameters <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: anthropogenic_layer1_weight(:,:), anthropogenic_layer1_bias(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: anthropogenic_layer2_weight(:,:), anthropogenic_layer2_bias(:) ! dl fire model parameters <Rackhun Son>
-
-    REAL(wp), ALLOCATABLE :: climate_min_max(:,:)                ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_min_max(:,:)             ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: embedding_min_max(:,:)              ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: lightning_topography_min_max(:,:)   ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_min_max(:,:)                ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_min_max(:,:)                   ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: anthropogenic_min_max(:,:)          ! dl fire model parameters <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: embedding_min_max(:,:)              ! dl fire model parameters <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: lightning_topography_min_max(:,:)   ! dl fire model parameters <Rackhun Son>
 
   CHARACTER(len=filename_max) :: bc_lightning_filename          ! lightning frequency (daily) for fire <Rackhun Son>
   CHARACTER(len=filename_max) :: bc_topography_filename         ! topographical complexity for fire    <Rackhun Son>
-  CHARACTER(len=filename_max) :: bc_anthropogenic_filename      ! topographical complexity for fire    <Rackhun Son>
+  CHARACTER(len=filename_max) :: bc_anthropogenic_filename      ! anthropogenic factors for fire    <Rackhun Son>
+  CHARACTER(len=filename_max) :: bc_gfed_region_filename        ! GFED4 reference regions for fire    <Rackhun Son>
   !CHARACTER(len=filename_max) :: bc_population_filename        ! population density (daily) for fire  <Rackhun Son>
   CHARACTER(len=filename_max) :: dl_fire_model_params_filename ! dl fire model parameters <Rackhun Son>
   CHARACTER(len=filename_max) :: dl_local_clim_t_air_filename   ! OBS local mean for dl fire model <Rackhun Son>
@@ -139,6 +138,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: bc_lightning_filename         ! lightning frequency (daily) for fire   <Rackhun Son>
     CHARACTER(len=filename_max) :: bc_topography_filename        ! topographical complexity for fire      <Rackhun Son>
     CHARACTER(len=filename_max) :: bc_anthropogenic_filename     ! anthropogenic factor for fire          <Rackhun Son>
+    CHARACTER(len=filename_max) :: bc_gfed_region_filename       ! GFED4 reference regions  for fire      <Rackhun Son>
     !CHARACTER(len=filename_max) :: bc_population_filename        ! population density (daily) for fire  <Rackhun Son>
     CHARACTER(len=filename_max) :: dl_fire_model_params_filename ! dl fire model parameters               <Rackhun Son>
 
@@ -191,56 +191,59 @@ CONTAINS
     TYPE(t_input_file) :: input_file   ! <Rackhun Son>
     REAL(wp), POINTER  :: ptr_1D(:)    ! <Rackhun Son>
 
-    INTEGER :: d_climate_input,    d_climate_hidden       ! <Rackhun Son>
-    INTEGER :: d_vegetation_input, d_vegetation_hidden    ! <Rackhun Son>
+    INTEGER :: d_weather_input,    d_weather_hidden       ! <Rackhun Son>
+    INTEGER :: d_land_input,       d_land_hidden          ! <Rackhun Son>
+    INTEGER :: d_land_input_n_pft                         ! <Rackhun Son>
+    INTEGER :: d_anthro_input,     d_anthro_hidden        ! <Rackhun Son>
+    INTEGER :: d_output,           d_region               ! <Rackhun Son>
     !INTEGER :: d_lnt_input,        d_lnt_hidden           ! <Rackhun Son>
-    INTEGER :: d_ant_input,        d_ant_hidden           ! <Rackhun Son>
-    INTEGER :: d_emb_input,        d_emb_hidden           ! <Rackhun Son>
-    INTEGER :: d_output,           d_emb_output           ! <Rackhun Son>
+    !INTEGER :: d_emb_input,        d_emb_hidden           ! <Rackhun Son>
+    !INTEGER :: d_output,           d_emb_output           ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: climate_i2i_weight(:,:), climate_i2i_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_h2i_weight(:,:), climate_h2i_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_i2f_weight(:,:), climate_i2f_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_h2f_weight(:,:), climate_h2f_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_i2g_weight(:,:), climate_i2g_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_h2g_weight(:,:), climate_h2g_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_i2o_weight(:,:), climate_i2o_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_h2o_weight(:,:), climate_h2o_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_out_weight(:,:), climate_out_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_i2i_weight(:,:), weather_i2i_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_h2i_weight(:,:), weather_h2i_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_i2f_weight(:,:), weather_i2f_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_h2f_weight(:,:), weather_h2f_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_i2g_weight(:,:), weather_i2g_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_h2g_weight(:,:), weather_h2g_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_i2o_weight(:,:), weather_i2o_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_h2o_weight(:,:), weather_h2o_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_out_weight(:,:), weather_out_bias(:) ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: vegetation_i2i_weight(:,:), vegetation_i2i_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_h2i_weight(:,:), vegetation_h2i_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_i2f_weight(:,:), vegetation_i2f_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_h2f_weight(:,:), vegetation_h2f_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_i2g_weight(:,:), vegetation_i2g_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_h2g_weight(:,:), vegetation_h2g_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_i2o_weight(:,:), vegetation_i2o_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_h2o_weight(:,:), vegetation_h2o_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_out_weight(:,:), vegetation_out_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_i2i_weight(:,:), land_i2i_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_h2i_weight(:,:), land_h2i_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_i2f_weight(:,:), land_i2f_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_h2f_weight(:,:), land_h2f_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_i2g_weight(:,:), land_i2g_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_h2g_weight(:,:), land_h2g_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_i2o_weight(:,:), land_i2o_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_h2o_weight(:,:), land_h2o_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_out_weight(:,:), land_out_bias(:) ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:) ! <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:) ! <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:) ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:) ! <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:) ! <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:) ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: lightning_topography_layer1_weight(:,:), lightning_topography_layer1_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: lightning_topography_layer2_weight(:,:), lightning_topography_layer2_bias(:) ! <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: lightning_topography_layer1_weight(:,:), lightning_topography_layer1_bias(:) ! <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: lightning_topography_layer2_weight(:,:), lightning_topography_layer2_bias(:) ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: anthropogenic_layer1_weight(:,:), anthropogenic_layer1_bias(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: anthropogenic_layer2_weight(:,:), anthropogenic_layer2_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: anthropogenic_l1_weight(:,:), anthropogenic_l1_bias(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: anthropogenic_l2_weight(:,:), anthropogenic_l2_bias(:) ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: climate_min_max(:,:)                 ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vegetation_min_max(:,:)              ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: embedding_min_max(:,:)               ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: lightning_topography_min_max(:,:)    ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: weather_min_max(:,:)                 ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: land_min_max(:,:)                    ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: anthropogenic_min_max(:,:)           ! <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: embedding_min_max(:,:)               ! <Rackhun Son>
+    !REAL(wp), ALLOCATABLE :: lightning_topography_min_max(:,:)    ! <Rackhun Son>
+    
     
 
     TYPE(t_jsb_vgrid), POINTER :: daily            ! New axis for the day of year <Rackhun Son>
-    !TYPE(t_jsb_vgrid), POINTER :: monthly           ! New axis for month           <Rackhun Son>
-    TYPE(t_jsb_vgrid), POINTER :: d_climate_lstm    ! New axis for climate LSTM    <Rackhun Son>
-    TYPE(t_jsb_vgrid), POINTER :: d_vegetation_lstm ! New axis for vegetation LSTM <Rackhun Son>
+    !TYPE(t_jsb_vgrid), POINTER :: monthly           ! New axis for month          <Rackhun Son>
+    TYPE(t_jsb_vgrid), POINTER :: d_weather_lstm   ! New axis for weather LSTM    <Rackhun Son>
+    TYPE(t_jsb_vgrid), POINTER :: d_land_lstm      ! New axis for land LSTM       <Rackhun Son>
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_config'
 
@@ -253,6 +256,7 @@ CONTAINS
     bc_lightning_filename  = 'bc_land_lightning.nc'      ! lightning frequency (daily) for fire <Rackhun Son>
     bc_topography_filename = 'bc_land_topography.nc'     ! topographical complexity for fire    <Rackhun Son>
     bc_anthropogenic_filename = 'bc_anthropogenic.nc'    ! anthropogenic factor for fire        <Rackhun Son>
+    bc_gfed_region_filename   = 'bc_land_gfed.nc'    ! anthropogenic factor for fire        <Rackhun Son>
     !bc_population_filename = 'bc_land_population.nc'     ! population density (daily) for fire  <Rackhun Son>
     dl_fire_model_params_filename = 'dl_model_params.nc' ! dl fire model parameters             <Rackhun Son>
 
@@ -293,18 +297,21 @@ CONTAINS
     input_file = jsb_netcdf_open_input(dl_fire_model_params_filename)
 
     ! Read model dimensions  <Rackhun Son>
-    ptr_1D => input_file%Read_1d(variable_name='d_climate_input')
-    d_climate_input = SIZE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_weather_input')
+    d_weather_input = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='d_climate_hidden')
-    d_climate_hidden = SIZE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_weather_hidden')
+    d_weather_hidden = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='d_vegetation_input')
-    d_vegetation_input = SIZE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_land_input')
+    d_land_input = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='d_vegetation_hidden')
-    d_vegetation_hidden = SIZE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_land_input_n_pft')
+    d_land_input_n_pft = SIZE(ptr_1D)
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_land_hidden')
+    d_land_hidden = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
 
     !ptr_1D => input_file%Read_1d(variable_name='d_lnt_input')
@@ -314,136 +321,139 @@ CONTAINS
     !d_lnt_hidden = SIZE(ptr_1D)
     !DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='d_ant_input')
-    d_ant_input = SIZE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_anthro_input')
+    d_anthro_input = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='d_ant_hidden')
-    d_ant_hidden = SIZE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_anthro_hidden')
+    d_anthro_hidden = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
 
     ptr_1D => input_file%Read_1d(variable_name='d_output')
     d_output = SIZE(ptr_1D)
     DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='d_region')
+    d_region = SIZE(ptr_1D)
+    DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='d_emb_input')
-    d_emb_input = SIZE(ptr_1D)
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='d_emb_hidden')
-    d_emb_hidden = SIZE(ptr_1D)
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='d_emb_output')
-    d_emb_output = SIZE(ptr_1D)
-    DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='d_emb_input')
+    !d_emb_input = SIZE(ptr_1D)
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='d_emb_hidden')
+    !d_emb_hidden = SIZE(ptr_1D)
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='d_emb_output')
+    !d_emb_output = SIZE(ptr_1D)
+    !DEALLOCATE(ptr_1D)
 
     ! Read model parameters  <Rackhun Son>
-    ptr_1D => input_file%Read_1d(variable_name='climate_i2i_weight')
-    climate_i2i_weight = RESHAPE(ptr_1D, (/d_climate_input, d_climate_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_i2i_weight')
+    weather_i2i_weight = RESHAPE(ptr_1D, (/d_weather_input, d_weather_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_i2i_bias')
-    climate_i2i_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_i2i_bias')
+    weather_i2i_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_h2i_weight')
-    climate_h2i_weight = RESHAPE(ptr_1D, (/d_climate_hidden, d_climate_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_h2i_weight')
+    weather_h2i_weight = RESHAPE(ptr_1D, (/d_weather_hidden, d_weather_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_h2i_bias')
-    climate_h2i_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_h2i_bias')
+    weather_h2i_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_i2f_weight')
-    climate_i2f_weight = RESHAPE(ptr_1D, (/d_climate_input, d_climate_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_i2f_weight')
+    weather_i2f_weight = RESHAPE(ptr_1D, (/d_weather_input, d_weather_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_i2f_bias')
-    climate_i2f_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_i2f_bias')
+    weather_i2f_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_h2f_weight')
-    climate_h2f_weight = RESHAPE(ptr_1D, (/d_climate_hidden, d_climate_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_h2f_weight')
+    weather_h2f_weight = RESHAPE(ptr_1D, (/d_weather_hidden, d_weather_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_h2f_bias')
-    climate_h2f_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_h2f_bias')
+    weather_h2f_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_i2g_weight')
-    climate_i2g_weight = RESHAPE(ptr_1D, (/d_climate_input, d_climate_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_i2g_weight')
+    weather_i2g_weight = RESHAPE(ptr_1D, (/d_weather_input, d_weather_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_i2g_bias')
-    climate_i2g_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_i2g_bias')
+    weather_i2g_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_h2g_weight')
-    climate_h2g_weight = RESHAPE(ptr_1D, (/d_climate_hidden, d_climate_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_h2g_weight')
+    weather_h2g_weight = RESHAPE(ptr_1D, (/d_weather_hidden, d_weather_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_h2g_bias')
-    climate_h2g_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_h2g_bias')
+    weather_h2g_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_i2o_weight')
-    climate_i2o_weight = RESHAPE(ptr_1D, (/d_climate_input, d_climate_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_i2o_weight')
+    weather_i2o_weight = RESHAPE(ptr_1D, (/d_weather_input, d_weather_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_i2o_bias')
-    climate_i2o_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_i2o_bias')
+    weather_i2o_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_h2o_weight')
-    climate_h2o_weight = RESHAPE(ptr_1D, (/d_climate_hidden, d_climate_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_h2o_weight')
+    weather_h2o_weight = RESHAPE(ptr_1D, (/d_weather_hidden, d_weather_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_h2o_bias')
-    climate_h2o_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_h2o_bias')
+    weather_h2o_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_out_weight')
-    climate_out_weight = RESHAPE(ptr_1D, (/d_climate_hidden, d_output*d_emb_output/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_out_weight')
+    weather_out_weight = RESHAPE(ptr_1D, (/d_weather_hidden, d_output*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_out_bias')
-    climate_out_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='weather_out_bias')
+    weather_out_bias = ptr_1D
     DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_i2i_weight')
-    vegetation_i2i_weight = RESHAPE(ptr_1D, (/d_vegetation_input, d_vegetation_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_i2i_weight')
+    land_i2i_weight = RESHAPE(ptr_1D, (/d_land_input_n_pft, d_land_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_i2i_bias')
-    vegetation_i2i_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_i2i_bias')
+    land_i2i_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_h2i_weight')
-    vegetation_h2i_weight = RESHAPE(ptr_1D, (/d_vegetation_hidden, d_vegetation_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_h2i_weight')
+    land_h2i_weight = RESHAPE(ptr_1D, (/d_land_hidden, d_land_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_h2i_bias')
-    vegetation_h2i_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_h2i_bias')
+    land_h2i_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_i2f_weight')
-    vegetation_i2f_weight = RESHAPE(ptr_1D, (/d_vegetation_input, d_vegetation_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_i2f_weight')
+    land_i2f_weight = RESHAPE(ptr_1D, (/d_land_input_n_pft, d_land_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_i2f_bias')
-    vegetation_i2f_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_i2f_bias')
+    land_i2f_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_h2f_weight')
-    vegetation_h2f_weight = RESHAPE(ptr_1D, (/d_vegetation_hidden, d_vegetation_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_h2f_weight')
+    land_h2f_weight = RESHAPE(ptr_1D, (/d_land_hidden, d_land_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_h2f_bias')
-    vegetation_h2f_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_h2f_bias')
+    land_h2f_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_i2g_weight')
-    vegetation_i2g_weight = RESHAPE(ptr_1D, (/d_vegetation_input, d_vegetation_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_i2g_weight')
+    land_i2g_weight = RESHAPE(ptr_1D, (/d_land_input_n_pft, d_land_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_i2g_bias')
-    vegetation_i2g_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_i2g_bias')
+    land_i2g_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_h2g_weight')
-    vegetation_h2g_weight = RESHAPE(ptr_1D, (/d_vegetation_hidden, d_vegetation_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_h2g_weight')
+    land_h2g_weight = RESHAPE(ptr_1D, (/d_land_hidden, d_land_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_h2g_bias')
-    vegetation_h2g_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_h2g_bias')
+    land_h2g_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_i2o_weight')
-    vegetation_i2o_weight = RESHAPE(ptr_1D, (/d_vegetation_input, d_vegetation_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_i2o_weight')
+    land_i2o_weight = RESHAPE(ptr_1D, (/d_land_input_n_pft, d_land_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_i2o_bias')
-    vegetation_i2o_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_i2o_bias')
+    land_i2o_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_h2o_weight')
-    vegetation_h2o_weight = RESHAPE(ptr_1D, (/d_vegetation_hidden, d_vegetation_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_h2o_weight')
+    land_h2o_weight = RESHAPE(ptr_1D, (/d_land_hidden, d_land_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_h2o_bias')
-    vegetation_h2o_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_h2o_bias')
+    land_h2o_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_out_weight')
-    vegetation_out_weight = RESHAPE(ptr_1D, (/d_vegetation_hidden, d_output*d_emb_output/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_out_weight')
+    land_out_weight = RESHAPE(ptr_1D, (/d_land_hidden, d_output*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_out_bias')
-    vegetation_out_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='land_out_bias')
+    land_out_bias = ptr_1D
     DEALLOCATE(ptr_1D)
 
     !ptr_1D => input_file%Read_1d(variable_name='lightning_topography_layer1_weight')
@@ -459,70 +469,71 @@ CONTAINS
     !lightning_topography_layer2_bias = ptr_1D
     !DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer1_weight')
-    anthropogenic_layer1_weight = RESHAPE(ptr_1D, (/d_ant_input, d_ant_hidden/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_l1_weight')
+    anthropogenic_l1_weight = RESHAPE(ptr_1D, (/d_anthro_input, d_anthro_hidden*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer1_bias')
-    anthropogenic_layer1_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_l1_bias')
+    anthropogenic_l1_bias = ptr_1D
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer2_weight')
-    anthropogenic_layer2_weight = RESHAPE(ptr_1D, (/d_ant_hidden, d_output/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_l2_weight')
+    anthropogenic_l2_weight = RESHAPE(ptr_1D, (/d_anthro_hidden, d_output*d_region/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_layer2_bias')
-    anthropogenic_layer2_bias = ptr_1D
-    DEALLOCATE(ptr_1D)
-
-    ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer1_weight')
-    climate_emb_layer1_weight = RESHAPE(ptr_1D, (/d_emb_input, d_emb_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer1_bias')
-    climate_emb_layer1_bias = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer2_weight')
-    climate_emb_layer2_weight = RESHAPE(ptr_1D, (/d_emb_hidden, d_emb_output/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer2_bias')
-    climate_emb_layer2_bias = ptr_1D
+    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_l2_bias')
+    anthropogenic_l2_bias = ptr_1D
     DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_emb_layer1_weight')
-    vegetation_emb_layer1_weight = RESHAPE(ptr_1D, (/d_emb_input, d_emb_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_emb_layer1_bias')
-    vegetation_emb_layer1_bias = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_emb_layer2_weight')
-    vegetation_emb_layer2_weight = RESHAPE(ptr_1D, (/d_emb_hidden, d_emb_output/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_emb_layer2_bias')
-    vegetation_emb_layer2_bias = ptr_1D
-    DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer1_weight')
+    !climate_emb_layer1_weight = RESHAPE(ptr_1D, (/d_emb_input, d_emb_hidden/), order=(/2, 1/))
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer1_bias')
+    !climate_emb_layer1_bias = ptr_1D
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer2_weight')
+    !climate_emb_layer2_weight = RESHAPE(ptr_1D, (/d_emb_hidden, d_emb_output/), order=(/2, 1/))
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='climate_emb_layer2_bias')
+    !climate_emb_layer2_bias = ptr_1D
+    !DEALLOCATE(ptr_1D)
+
+    !ptr_1D => input_file%Read_1d(variable_name='vegetation_emb_layer1_weight')
+    !vegetation_emb_layer1_weight = RESHAPE(ptr_1D, (/d_emb_input, d_emb_hidden/), order=(/2, 1/))
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='vegetation_emb_layer1_bias')
+    !vegetation_emb_layer1_bias = ptr_1D
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='vegetation_emb_layer2_weight')
+    !vegetation_emb_layer2_weight = RESHAPE(ptr_1D, (/d_emb_hidden, d_emb_output/), order=(/2, 1/))
+    !DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='vegetation_emb_layer2_bias')
+    !vegetation_emb_layer2_bias = ptr_1D
+    !DEALLOCATE(ptr_1D)
 
     ! Read parameters min/max normalization  <Rackhun Son>
-    ptr_1D => input_file%Read_1d(variable_name='climate_min_max')
-    climate_min_max = RESHAPE(ptr_1D, (/d_climate_input, 2/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='weather_min_max')
+    weather_min_max = RESHAPE(ptr_1D, (/d_weather_input*d_region, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='vegetation_min_max')
-    vegetation_min_max = RESHAPE(ptr_1D, (/d_vegetation_input, 2/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='land_min_max')
+    land_min_max = RESHAPE(ptr_1D, (/d_land_input*d_region, 2/), order=(/2, 1/))
+    !land_min_max = RESHAPE(ptr_1D, (/14*d_region, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='embedding_min_max')
-    embedding_min_max = RESHAPE(ptr_1D, (/13, 2/), order=(/2, 1/))
+    ptr_1D => input_file%Read_1d(variable_name='anthro_min_max')
+    anthropogenic_min_max = RESHAPE(ptr_1D, (/d_anthro_input*d_region, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
+    !ptr_1D => input_file%Read_1d(variable_name='embedding_min_max')
+    !embedding_min_max = RESHAPE(ptr_1D, (/13, 2/), order=(/2, 1/))
+    !DEALLOCATE(ptr_1D)
     !ptr_1D => input_file%Read_1d(variable_name='lightning_topography_min_max')
     !lightning_topography_min_max = RESHAPE(ptr_1D, (/d_lnt_input, 2/), order=(/2, 1/))
     !DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='anthropogenic_min_max')
-    anthropogenic_min_max = RESHAPE(ptr_1D, (/d_ant_input, 2/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-
-
+    
     ! Write resulting values in config memory
     config%active                 = active
     config%ic_filename            = ic_filename
     config%bc_filename            = bc_filename
     config%bc_lightning_filename  = bc_lightning_filename          ! lightning frequency (daily) for fire       <Rackhun Son>
     config%bc_topography_filename = bc_topography_filename         ! topographical complexity (daily) for fire  <Rackhun Son>
-    config%bc_anthropogenic_filename = bc_anthropogenic_filename   ! anthropogenic for fire                     <Rackhun Son>
+    config%bc_anthropogenic_filename = bc_anthropogenic_filename   ! anthropogenic factors for fire             <Rackhun Son>
+    config%bc_gfed_region_filename= bc_gfed_region_filename        ! GFED4 reference region  for fire           <Rackhun Son>
     !config%bc_population_filename = bc_population_filename  ! population density (daily) for fire        <Rackhun Son>
     config%dl_fire_model_params_filename = dl_fire_model_params_filename ! dl fire model parameters       <Rackhun Son>
 
@@ -548,82 +559,86 @@ CONTAINS
     config%wnd_threshold          = wnd_threshold
     config%wnd_damage_scale       = wnd_damage_scale
 
-    config%d_climate_input          = d_climate_input          ! <Rackhun Son>
-    config%d_climate_hidden         = d_climate_hidden         ! <Rackhun Son>
-    config%d_vegetation_input       = d_vegetation_input       ! <Rackhun Son>
-    config%d_vegetation_hidden      = d_vegetation_hidden      ! <Rackhun Son>
-    !config%d_lnt_input              = d_lnt_input              ! <Rackhun Son>
-    !config%d_lnt_hidden             = d_lnt_hidden             ! <Rackhun Son>
-    config%d_ant_input              = d_ant_input              ! <Rackhun Son>
-    config%d_ant_hidden             = d_ant_hidden             ! <Rackhun Son>
-    config%d_output                 = d_output                 ! <Rackhun Son>
-    config%d_emb_input              = d_emb_input              ! <Rackhun Son>
-    config%d_emb_hidden             = d_emb_hidden             ! <Rackhun Son>
-    config%d_emb_output             = d_emb_output             ! <Rackhun Son>
+    config%d_weather_input        = d_weather_input          ! <Rackhun Son>
+    config%d_weather_hidden       = d_weather_hidden         ! <Rackhun Son>
+    config%d_land_input           = d_land_input             ! <Rackhun Son>
+    config%d_land_input_n_pft     = d_land_input_n_pft       ! <Rackhun Son>
+    config%d_land_hidden          = d_land_hidden            ! <Rackhun Son>
+    config%d_anthro_input         = d_anthro_input           ! <Rackhun Son>
+    config%d_anthro_hidden        = d_anthro_hidden          ! <Rackhun Son>
+    !config%d_lnt_input            = d_lnt_input              ! <Rackhun Son>
+    !config%d_lnt_hidden           = d_lnt_hidden             ! <Rackhun Son>
 
-    config%climate_i2i_weight       = climate_i2i_weight       ! <Rackhun Son> 
-    config%climate_i2i_bias         = climate_i2i_bias         ! <Rackhun Son>
-    config%climate_h2i_weight       = climate_h2i_weight       ! <Rackhun Son>
-    config%climate_h2i_bias         = climate_h2i_bias         ! <Rackhun Son>
-    config%climate_i2f_weight       = climate_i2f_weight       ! <Rackhun Son>
-    config%climate_i2f_bias         = climate_i2f_bias         ! <Rackhun Son>
-    config%climate_h2f_weight       = climate_h2f_weight       ! <Rackhun Son>
-    config%climate_h2f_bias         = climate_h2f_bias         ! <Rackhun Son>
-    config%climate_i2g_weight       = climate_i2g_weight       ! <Rackhun Son>
-    config%climate_i2g_bias         = climate_i2g_bias         ! <Rackhun Son>
-    config%climate_h2g_weight       = climate_h2g_weight       ! <Rackhun Son>
-    config%climate_h2g_bias         = climate_h2g_bias         ! <Rackhun Son>
-    config%climate_i2o_weight       = climate_i2o_weight       ! <Rackhun Son>
-    config%climate_i2o_bias         = climate_i2o_bias         ! <Rackhun Son>
-    config%climate_h2o_weight       = climate_h2o_weight       ! <Rackhun Son>
-    config%climate_h2o_bias         = climate_h2o_bias         ! <Rackhun Son>
-    config%climate_out_weight       = climate_out_weight       ! <Rackhun Son>
-    config%climate_out_bias         = climate_out_bias         ! <Rackhun Son>
+    config%d_output               = d_output                 ! <Rackhun Son>
+    config%d_region               = d_region                 ! <Rackhun Son>
+    !config%d_emb_input            = d_emb_input              ! <Rackhun Son>
+    !config%d_emb_hidden           = d_emb_hidden             ! <Rackhun Son>
+    !config%d_emb_output           = d_emb_output             ! <Rackhun Son>
 
-    config%vegetation_i2i_weight    = vegetation_i2i_weight    ! <Rackhun Son>
-    config%vegetation_i2i_bias      = vegetation_i2i_bias      ! <Rackhun Son>
-    config%vegetation_h2i_weight    = vegetation_h2i_weight    ! <Rackhun Son>
-    config%vegetation_h2i_bias      = vegetation_h2i_bias      ! <Rackhun Son>
-    config%vegetation_i2f_weight    = vegetation_i2f_weight    ! <Rackhun Son>
-    config%vegetation_i2f_bias      = vegetation_i2f_bias      ! <Rackhun Son>
-    config%vegetation_h2f_weight    = vegetation_h2f_weight    ! <Rackhun Son>
-    config%vegetation_h2f_bias      = vegetation_h2f_bias      ! <Rackhun Son>
-    config%vegetation_i2g_weight    = vegetation_i2g_weight    ! <Rackhun Son>
-    config%vegetation_i2g_bias      = vegetation_i2g_bias      ! <Rackhun Son>
-    config%vegetation_h2g_weight    = vegetation_h2g_weight    ! <Rackhun Son>
-    config%vegetation_h2g_bias      = vegetation_h2g_bias      ! <Rackhun Son>
-    config%vegetation_i2o_weight    = vegetation_i2o_weight    ! <Rackhun Son>
-    config%vegetation_i2o_bias      = vegetation_i2o_bias      ! <Rackhun Son>
-    config%vegetation_h2o_weight    = vegetation_h2o_weight    ! <Rackhun Son>
-    config%vegetation_h2o_bias      = vegetation_h2o_bias      ! <Rackhun Son>
-    config%vegetation_out_weight    = vegetation_out_weight    ! <Rackhun Son>
-    config%vegetation_out_bias      = vegetation_out_bias      ! <Rackhun Son>
+    config%weather_i2i_weight     = weather_i2i_weight       ! <Rackhun Son> 
+    config%weather_i2i_bias       = weather_i2i_bias         ! <Rackhun Son>
+    config%weather_h2i_weight     = weather_h2i_weight       ! <Rackhun Son>
+    config%weather_h2i_bias       = weather_h2i_bias         ! <Rackhun Son>
+    config%weather_i2f_weight     = weather_i2f_weight       ! <Rackhun Son>
+    config%weather_i2f_bias       = weather_i2f_bias         ! <Rackhun Son>
+    config%weather_h2f_weight     = weather_h2f_weight       ! <Rackhun Son>
+    config%weather_h2f_bias       = weather_h2f_bias         ! <Rackhun Son>
+    config%weather_i2g_weight     = weather_i2g_weight       ! <Rackhun Son>
+    config%weather_i2g_bias       = weather_i2g_bias         ! <Rackhun Son>
+    config%weather_h2g_weight     = weather_h2g_weight       ! <Rackhun Son>
+    config%weather_h2g_bias       = weather_h2g_bias         ! <Rackhun Son>
+    config%weather_i2o_weight     = weather_i2o_weight       ! <Rackhun Son>
+    config%weather_i2o_bias       = weather_i2o_bias         ! <Rackhun Son>
+    config%weather_h2o_weight     = weather_h2o_weight       ! <Rackhun Son>
+    config%weather_h2o_bias       = weather_h2o_bias         ! <Rackhun Son>
+    config%weather_out_weight     = weather_out_weight       ! <Rackhun Son>
+    config%weather_out_bias       = weather_out_bias         ! <Rackhun Son>
 
-    config%lightning_topography_layer1_weight = lightning_topography_layer1_weight   ! <Rackhun Son>
-    config%lightning_topography_layer1_bias   = lightning_topography_layer1_bias     ! <Rackhun Son>
-    config%lightning_topography_layer2_weight = lightning_topography_layer2_weight   ! <Rackhun Son>
-    config%lightning_topography_layer2_bias   = lightning_topography_layer2_bias     ! <Rackhun Son>
+    config%land_i2i_weight        = land_i2i_weight          ! <Rackhun Son>
+    config%land_i2i_bias          = land_i2i_bias            ! <Rackhun Son>
+    config%land_h2i_weight        = land_h2i_weight          ! <Rackhun Son>
+    config%land_h2i_bias          = land_h2i_bias            ! <Rackhun Son>
+    config%land_i2f_weight        = land_i2f_weight          ! <Rackhun Son>
+    config%land_i2f_bias          = land_i2f_bias            ! <Rackhun Son>
+    config%land_h2f_weight        = land_h2f_weight          ! <Rackhun Son>
+    config%land_h2f_bias          = land_h2f_bias            ! <Rackhun Son>
+    config%land_i2g_weight        = land_i2g_weight          ! <Rackhun Son>
+    config%land_i2g_bias          = land_i2g_bias            ! <Rackhun Son>
+    config%land_h2g_weight        = land_h2g_weight          ! <Rackhun Son>
+    config%land_h2g_bias          = land_h2g_bias            ! <Rackhun Son>
+    config%land_i2o_weight        = land_i2o_weight          ! <Rackhun Son>
+    config%land_i2o_bias          = land_i2o_bias            ! <Rackhun Son>
+    config%land_h2o_weight        = land_h2o_weight          ! <Rackhun Son>
+    config%land_h2o_bias          = land_h2o_bias            ! <Rackhun Son>
+    config%land_out_weight        = land_out_weight          ! <Rackhun Son>
+    config%land_out_bias          = land_out_bias            ! <Rackhun Son>
 
-    config%anthropogenic_layer1_weight = anthropogenic_layer1_weight   ! <Rackhun Son>
-    config%anthropogenic_layer1_bias   = anthropogenic_layer1_bias     ! <Rackhun Son>
-    config%anthropogenic_layer2_weight = anthropogenic_layer2_weight   ! <Rackhun Son>
-    config%anthropogenic_layer2_bias   = anthropogenic_layer2_bias     ! <Rackhun Son>
+    config%anthropogenic_l1_weight= anthropogenic_l1_weight  ! <Rackhun Son>
+    config%anthropogenic_l1_bias  = anthropogenic_l1_bias    ! <Rackhun Son>
+    config%anthropogenic_l2_weight= anthropogenic_l2_weight  ! <Rackhun Son>
+    config%anthropogenic_l2_bias  = anthropogenic_l2_bias    ! <Rackhun Son>
 
-    config%climate_emb_layer1_weight    = climate_emb_layer1_weight    ! <Rackhun Son>
-    config%climate_emb_layer1_bias      = climate_emb_layer1_bias      ! <Rackhun Son>
-    config%climate_emb_layer2_weight    = climate_emb_layer2_weight    ! <Rackhun Son>
-    config%climate_emb_layer2_bias      = climate_emb_layer2_bias      ! <Rackhun Son>
+    config%weather_min_max        = weather_min_max          ! <Rackhun Son>
+    config%land_min_max           = land_min_max             ! <Rackhun Son>
+    config%anthropogenic_min_max  = anthropogenic_min_max    ! <Rackhun Son>
 
-    config%vegetation_emb_layer1_weight = vegetation_emb_layer1_weight ! <Rackhun Son>
-    config%vegetation_emb_layer1_bias   = vegetation_emb_layer1_bias   ! <Rackhun Son>
-    config%vegetation_emb_layer2_weight = vegetation_emb_layer2_weight ! <Rackhun Son>
-    config%vegetation_emb_layer2_bias   = vegetation_emb_layer2_bias   ! <Rackhun Son>
+    !config%lightning_topography_layer1_weight = lightning_topography_layer1_weight   ! <Rackhun Son>
+    !config%lightning_topography_layer1_bias   = lightning_topography_layer1_bias     ! <Rackhun Son>
+    !config%lightning_topography_layer2_weight = lightning_topography_layer2_weight   ! <Rackhun Son>
+    !config%lightning_topography_layer2_bias   = lightning_topography_layer2_bias     ! <Rackhun Son>
 
-    config%climate_min_max              = climate_min_max              ! <Rackhun Son>
-    config%vegetation_min_max           = vegetation_min_max           ! <Rackhun Son>
-    config%embedding_min_max            = embedding_min_max            ! <Rackhun Son>
-    config%lightning_topography_min_max = lightning_topography_min_max ! <Rackhun Son>
-    config%anthropogenic_min_max        = anthropogenic_min_max        ! <Rackhun Son>
+    !config%climate_emb_layer1_weight    = climate_emb_layer1_weight    ! <Rackhun Son>
+    !config%climate_emb_layer1_bias      = climate_emb_layer1_bias      ! <Rackhun Son>
+    !config%climate_emb_layer2_weight    = climate_emb_layer2_weight    ! <Rackhun Son>
+    !config%climate_emb_layer2_bias      = climate_emb_layer2_bias      ! <Rackhun Son>
+
+    !config%vegetation_emb_layer1_weight = vegetation_emb_layer1_weight ! <Rackhun Son>
+    !config%vegetation_emb_layer1_bias   = vegetation_emb_layer1_bias   ! <Rackhun Son>
+    !config%vegetation_emb_layer2_weight = vegetation_emb_layer2_weight ! <Rackhun Son>
+    !config%vegetation_emb_layer2_bias   = vegetation_emb_layer2_bias   ! <Rackhun Son>
+
+    !config%embedding_min_max            = embedding_min_max            ! <Rackhun Son>
+    !config%lightning_topography_min_max = lightning_topography_min_max ! <Rackhun Son>
 
 
     ! New axis for the day of year <Rackhun Son>
@@ -632,13 +647,21 @@ CONTAINS
     CALL Register_vgrid(daily)
     !CALL Register_vgrid(monthly)
 
-    ! New axis for climate LSTM <Rackhun Son>
-    d_climate_lstm => new_vgrid('d_climate_lstm', ZAXIS_GENERIC, d_climate_hidden, units='')
-    CALL Register_vgrid(d_climate_lstm)
+    ! New axis for weather LSTM <Rackhun Son>
+    d_weather_lstm => new_vgrid('d_weather_lstm', ZAXIS_GENERIC, d_weather_hidden*d_region, units='')
+    CALL Register_vgrid(d_weather_lstm)
 
-    ! New axis for vegetation LSTM <Rackhun Son>
-    d_vegetation_lstm => new_vgrid('d_vegetation_lstm', ZAXIS_GENERIC, d_vegetation_hidden, units='')
-    CALL Register_vgrid(d_vegetation_lstm)
+    ! New axis for land LSTM <Rackhun Son>
+    d_land_lstm => new_vgrid('d_land_lstm', ZAXIS_GENERIC, d_land_hidden*d_region, units='')
+    CALL Register_vgrid(d_land_lstm)
+
+    ! New axis for weather LSTM <Rackhun Son>
+    !d_weather_lstm => new_vgrid('d_weather_lstm', ZAXIS_GENERIC, d_weather_hidden, units='')
+    !CALL Register_vgrid(d_weather_lstm)
+
+    ! New axis for land LSTM <Rackhun Son>
+    !d_land_lstm => new_vgrid('d_land_lstm', ZAXIS_GENERIC, d_land_hidden, units='')
+    !CALL Register_vgrid(d_land_lstm)
 
   END SUBROUTINE Init_disturb_config
 

@@ -77,7 +77,7 @@ CONTAINS
   SUBROUTINE burned_fract_dl( &
     & t_air,       t_clim_o,      t_clim_m,       & ! in
     & q_rel_air,   q_rel_clim_o,  q_rel_clim_m,   & ! in
-    & q_rel_air_climbuf, fire_rel_hum_threshold,  & ! in
+    !& q_rel_air_climbuf, fire_rel_hum_threshold,  & ! in
     & q_air,       q_clim_o,      q_clim_m,       & ! in
     & wind_10m,                                   & ! in
     & rain,                                       & ! in
@@ -86,19 +86,24 @@ CONTAINS
     & swl3,        swl3_clim_o,   swl3_clim_m,    & ! in
     & swl4,        swl4_clim_o,   swl4_clim_m,    & ! in
     & lai,         lai_clim_o,    lai_clim_m,     & ! in
+    !& t_air,        t_clim,                       & ! in
+    !& q_rel_air,    q_rel_clim,                   & ! in
+    !& q_air,        q_clim,                       & ! in
+    !& wind_10m,                                   & ! in
+    !& rain,                                       & ! in
+    !& swl1,        swl1_clim,                     & ! in
+    !& swl2,        swl2_clim,                     & ! in
+    !& swl3,        swl3_clim,                     & ! in
+    !& swl4,        swl4_clim,                     & ! in
+    !& lai,         lai_clim,                      & ! in
     & modified_pfts_fract,                        & ! in
-    !& fuel,        fuel_yearly,                   & ! in
-    & fuel, fire_litter_threshold,                & ! in
-    !& population_density,                         & ! in
+    & fuel,                                       & ! in
+    !& fire_litter_threshold,                     & ! in
+    !& population_density,                        & ! in
     & lightning_climatology,                      & ! in
     & elevation,                                  & ! in
     & slope,                                      & ! in
     & roughness,                                  & ! in
-    !& topographic_position_idx,                   & ! in
-    !& terrain_ruggedness_idx,                     & ! in
-    !& vector_ruggedness_measure,                  & ! in
-    !& profile_curvature,                          & ! in
-    !& tangential_curvature,                       & ! in
 
     & population_density,                         & ! in
     & gdp,                                        & ! in
@@ -122,55 +127,58 @@ CONTAINS
     & nc,                                         & ! in
     & tilename,                                   & ! in
 
-    & d_climate_input,     d_climate_hidden,      & ! in
-    & d_vegetation_input,  d_vegetation_hidden,   & ! in
-    !& d_lnt_input,         d_lnt_hidden,          & ! in
-    & d_ant_input,         d_ant_hidden,          & ! in
-    & d_output,                                   & ! in
-    & d_emb_input,         d_emb_hidden,          & ! in
-    & d_emb_output,                               & ! in
+    & d_weather_input,     d_weather_hidden,      & ! in
+    & d_land_input,        d_land_hidden,         & ! in
+    & d_land_input_n_pft,                         & ! in
+    !& d_lnt_input,         d_lnt_hidden,         & ! in
+    & d_anthro_input,      d_anthro_hidden,       & ! in
+    & d_output,            d_region,              & ! in
+    !& d_emb_input,         d_emb_hidden,          & ! in
+    !& d_emb_output,                               & ! in
 
-    & climate_i2i_weight, climate_i2i_bias,       & ! in
-    & climate_h2i_weight, climate_h2i_bias,       & ! in
-    & climate_i2f_weight, climate_i2f_bias,       & ! in
-    & climate_h2f_weight, climate_h2f_bias,       & ! in
-    & climate_i2g_weight, climate_i2g_bias,       & ! in
-    & climate_h2g_weight, climate_h2g_bias,       & ! in
-    & climate_i2o_weight, climate_i2o_bias,       & ! in
-    & climate_h2o_weight, climate_h2o_bias,       & ! in
-    & climate_out_weight, climate_out_bias,       & ! in
+    & weather_i2i_weight, weather_i2i_bias,       & ! in
+    & weather_h2i_weight, weather_h2i_bias,       & ! in
+    & weather_i2f_weight, weather_i2f_bias,       & ! in
+    & weather_h2f_weight, weather_h2f_bias,       & ! in
+    & weather_i2g_weight, weather_i2g_bias,       & ! in
+    & weather_h2g_weight, weather_h2g_bias,       & ! in
+    & weather_i2o_weight, weather_i2o_bias,       & ! in
+    & weather_h2o_weight, weather_h2o_bias,       & ! in
+    & weather_out_weight, weather_out_bias,       & ! in
 
-    & vegetation_i2i_weight, vegetation_i2i_bias, & ! in
-    & vegetation_h2i_weight, vegetation_h2i_bias, & ! in
-    & vegetation_i2f_weight, vegetation_i2f_bias, & ! in
-    & vegetation_h2f_weight, vegetation_h2f_bias, & ! in
-    & vegetation_i2g_weight, vegetation_i2g_bias, & ! in
-    & vegetation_h2g_weight, vegetation_h2g_bias, & ! in
-    & vegetation_i2o_weight, vegetation_i2o_bias, & ! in
-    & vegetation_h2o_weight, vegetation_h2o_bias, & ! in
-    & vegetation_out_weight, vegetation_out_bias, & ! in
+    & land_i2i_weight,    land_i2i_bias,          & ! in
+    & land_h2i_weight,    land_h2i_bias,          & ! in
+    & land_i2f_weight,    land_i2f_bias,          & ! in
+    & land_h2f_weight,    land_h2f_bias,          & ! in
+    & land_i2g_weight,    land_i2g_bias,          & ! in
+    & land_h2g_weight,    land_h2g_bias,          & ! in
+    & land_i2o_weight,    land_i2o_bias,          & ! in
+    & land_h2o_weight,    land_h2o_bias,          & ! in
+    & land_out_weight,    land_out_bias,          & ! in
+
+    & anthropogenic_l1_weight, anthropogenic_l1_bias,  & ! in
+    & anthropogenic_l2_weight, anthropogenic_l2_bias,  & ! in
 
     !& lig_topo_layer1_weight,  lig_topo_layer1_bias,  & ! in
     !& lig_topo_layer2_weight,  lig_topo_layer2_bias,  & ! in
 
-    & anthropogenic_layer1_weight,  anthropogenic_layer1_bias,  & ! in
-    & anthropogenic_layer2_weight,  anthropogenic_layer2_bias,  & ! in
+    !& climate_emb_layer1_weight,    climate_emb_layer1_bias,      & ! in
+    !& climate_emb_layer2_weight,    climate_emb_layer2_bias,      & ! in
+    !& vegetation_emb_layer1_weight, vegetation_emb_layer1_bias,   & ! in
+    !& vegetation_emb_layer2_weight, vegetation_emb_layer2_bias,   & ! in
+ 
+    & w_minmax,                                   & ! in 
+    & l_minmax,                                   & ! in
+    & a_minmax,                                   & ! in
+    !& embedding_min_max,                         & ! in
+    !& lig_topo_min_max,                          & ! in
 
-    & climate_emb_layer1_weight,    climate_emb_layer1_bias,      & ! in
-    & climate_emb_layer2_weight,    climate_emb_layer2_bias,      & ! in
-    & vegetation_emb_layer1_weight, vegetation_emb_layer1_bias,   & ! in
-    & vegetation_emb_layer2_weight, vegetation_emb_layer2_bias,   & ! in
+    & gfed_region,                                & ! in
 
-    & climate_min_max,               & ! in 
-    & vegetation_min_max,            & ! in
-    & embedding_min_max,             & ! in
-    !& lig_topo_min_max,              & ! in
-    & anthropogenic_min_max,         & ! in
-
-    & climate_lstm_hidden,                        & ! inout
-    & climate_lstm_cell,                          & ! inout
-    & vegetation_lstm_hidden,                     & ! inout
-    & vegetation_lstm_cell,                       & ! inout
+    & weather_lstm_hidden,                        & ! inout
+    & weather_lstm_cell,                          & ! inout
+    & land_lstm_hidden,                           & ! inout
+    & land_lstm_cell,                             & ! inout
     & burned_fract                                & ! inout
     & )
 
@@ -178,7 +186,7 @@ CONTAINS
     REAL(wp), INTENT(in) ::                             &
       & t_air(:),     t_clim_o(:),     t_clim_m(:),     &
       & q_rel_air(:), q_rel_clim_o(:), q_rel_clim_m(:), &
-      & q_rel_air_climbuf(:), fire_rel_hum_threshold,   &
+      !& q_rel_air_climbuf(:), fire_rel_hum_threshold,   &
       & q_air(:),     q_clim_o(:),     q_clim_m(:),     &
       & wind_10m(:),                                    &
       & rain(:),                                        &
@@ -187,18 +195,24 @@ CONTAINS
       & swl3(:),      swl3_clim_o(:),  swl3_clim_m(:),  &
       & swl4(:),      swl4_clim_o(:),  swl4_clim_m(:),  &
       & lai(:),       lai_clim_o(:),   lai_clim_m(:),   &
-      & modified_pfts_fract(:,:),                       &
+      !& t_air(:),     t_clim(:),                         &
+      !& q_rel_air(:), q_rel_clim(:),                     &
+      !& q_air(:),     q_clim(:),                         &
+      !& wind_10m(:),                                     &
+      !& rain(:),                                         &
+      !& swl1(:),      swl1_clim(:),                      &
+      !& swl2(:),      swl2_clim(:),                      &
+      !& swl3(:),      swl3_clim(:),                      &
+      !& swl4(:),      swl4_clim(:),                      &
+      !& lai(:),       lai_clim(:),                       &
+      & modified_pfts_fract(:,:),                        &
       !& fuel(:),       fuel_yearly(:),                  &
-      & fuel(:), fire_litter_threshold,                 &
-      & lightning_climatology(:),                       &
-      & elevation(:),                                   &
-      & slope(:),                                       &
-      & roughness(:),                                   &
-      !& topographic_position_idx(:),                    &
-      !& terrain_ruggedness_idx(:),                      &
-      !& vector_ruggedness_measure(:),                   &
-      !& profile_curvature(:),                           &
-      !& tangential_curvature(:),                        &
+      & fuel(:),                                         &
+      !& fire_litter_threshold,                          &
+      & lightning_climatology(:),                        &
+      & elevation(:),                                    &
+      & slope(:),                                        &
+      & roughness(:),                                    &
 
       & population_density(:),                          &
       & gdp(:),                                               &
@@ -219,178 +233,195 @@ CONTAINS
       & land_use_state_secmb(:),                              &
       & land_use_state_urban(:),                              &
 
-      & climate_i2i_weight(:,:),    climate_i2i_bias(:),      &
-      & climate_h2i_weight(:,:),    climate_h2i_bias(:),      &
-      & climate_i2f_weight(:,:),    climate_i2f_bias(:),      &
-      & climate_h2f_weight(:,:),    climate_h2f_bias(:),      &
-      & climate_i2g_weight(:,:),    climate_i2g_bias(:),      &
-      & climate_h2g_weight(:,:),    climate_h2g_bias(:),      &
-      & climate_i2o_weight(:,:),    climate_i2o_bias(:),      &
-      & climate_h2o_weight(:,:),    climate_h2o_bias(:),      &
-      & climate_out_weight(:,:),    climate_out_bias(:),      &
+      & weather_i2i_weight(:,:),    weather_i2i_bias(:),      &
+      & weather_h2i_weight(:,:),    weather_h2i_bias(:),      &
+      & weather_i2f_weight(:,:),    weather_i2f_bias(:),      &
+      & weather_h2f_weight(:,:),    weather_h2f_bias(:),      &
+      & weather_i2g_weight(:,:),    weather_i2g_bias(:),      &
+      & weather_h2g_weight(:,:),    weather_h2g_bias(:),      &
+      & weather_i2o_weight(:,:),    weather_i2o_bias(:),      &
+      & weather_h2o_weight(:,:),    weather_h2o_bias(:),      &
+      & weather_out_weight(:,:),    weather_out_bias(:),      &
       
-      & vegetation_i2i_weight(:,:), vegetation_i2i_bias(:),   &
-      & vegetation_h2i_weight(:,:), vegetation_h2i_bias(:),   &
-      & vegetation_i2f_weight(:,:), vegetation_i2f_bias(:),   &
-      & vegetation_h2f_weight(:,:), vegetation_h2f_bias(:),   &
-      & vegetation_i2g_weight(:,:), vegetation_i2g_bias(:),   &
-      & vegetation_h2g_weight(:,:), vegetation_h2g_bias(:),   &
-      & vegetation_i2o_weight(:,:), vegetation_i2o_bias(:),   &
-      & vegetation_h2o_weight(:,:), vegetation_h2o_bias(:),   &
-      & vegetation_out_weight(:,:), vegetation_out_bias(:),   &
+      & land_i2i_weight(:,:),       land_i2i_bias(:),         &
+      & land_h2i_weight(:,:),       land_h2i_bias(:),         &
+      & land_i2f_weight(:,:),       land_i2f_bias(:),         &
+      & land_h2f_weight(:,:),       land_h2f_bias(:),         &
+      & land_i2g_weight(:,:),       land_i2g_bias(:),         &
+      & land_h2g_weight(:,:),       land_h2g_bias(:),         &
+      & land_i2o_weight(:,:),       land_i2o_bias(:),         &
+      & land_h2o_weight(:,:),       land_h2o_bias(:),         &
+      & land_out_weight(:,:),       land_out_bias(:),         &
+
+      & anthropogenic_l1_weight(:,:),                         &
+      & anthropogenic_l1_bias(:),                             &
+      & anthropogenic_l2_weight(:,:),                         &
+      & anthropogenic_l2_bias(:),                             &
 
       !& lig_topo_layer1_weight(:,:),              &
       !& lig_topo_layer1_bias(:),                  &
       !& lig_topo_layer2_weight(:,:),              &
       !& lig_topo_layer2_bias(:),                  &
 
-      & anthropogenic_layer1_weight(:,:),         &
-      & anthropogenic_layer1_bias(:),             &
-      & anthropogenic_layer2_weight(:,:),         &
-      & anthropogenic_layer2_bias(:),             &
+      !& climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:),       &
+      !& climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:),       &
 
-      & climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:),       &
-      & climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:),       &
+      !& vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:), &
+      !& vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:), &
 
-      & vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:), &
-      & vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:), &
-
-      & climate_min_max(:,:),              &
-      & vegetation_min_max(:,:),           &
-      & embedding_min_max(:,:),            &
+      & w_minmax(:,:),                                       &
+      & l_minmax(:,:),                                       &
+      & a_minmax(:,:),                                       &
+      !& embedding_min_max(:,:),            &
       !& lig_topo_min_max(:,:),             &
-      & anthropogenic_min_max(:,:)
+      & gfed_region(:)
+      
 
     INTEGER, INTENT(in) ::                          &
       & nc,                                         & ! in
-      & d_climate_input,     d_climate_hidden,      & ! in
-      & d_vegetation_input,  d_vegetation_hidden,   & ! in
-      !& d_lnt_input,         d_lnt_hidden,          & ! in
-      & d_ant_input,         d_ant_hidden,          & ! in
-      & d_output,                                   & ! in
-      & d_emb_input,         d_emb_hidden,          & ! in
-      & d_emb_output                                  ! in
+      & d_weather_input,     d_weather_hidden,      & ! in
+      & d_land_input,        d_land_hidden,         & ! in
+      & d_land_input_n_pft,                         & ! in
+      & d_anthro_input,      d_anthro_hidden,       & ! in
+      & d_output,            d_region                 ! in
+      !& d_lnt_input,         d_lnt_hidden,         & ! in
+      !& d_emb_input,         d_emb_hidden,         & ! in
+      !& d_emb_output                                 ! in
 
     CHARACTER(len=*), INTENT(in)::                  &
       & tilename                                      ! in
 
     ! Output Arguments
     REAL(wp), INTENT(inout) ::                      &
-      & climate_lstm_hidden(:,:),                   & ! inout
-      & climate_lstm_cell(:,:),                     & ! inout
-      & vegetation_lstm_hidden(:,:),                & ! inout
-      & vegetation_lstm_cell(:,:),                  & ! inout
+      & weather_lstm_hidden(:,:),                   & ! inout
+      & weather_lstm_cell(:,:),                     & ! inout
+      & land_lstm_hidden(:,:),                      & ! inout
+      & land_lstm_cell(:,:),                        & ! inout
       & burned_fract(:)                               ! inout
 
     ! Locals
     REAL(wp) ::                                          &
-      climate_variables(nc, d_climate_input),            &
-      climate_lstm_i(nc, d_climate_hidden),              &
-      climate_lstm_f(nc, d_climate_hidden),              &
-      climate_lstm_g(nc, d_climate_hidden),              &
-      climate_lstm_o(nc, d_climate_hidden),              &
-      climate_lstm_output(nc, d_output*d_emb_output),    &
-      climate_lstm_output_(nc, d_output),                &
-      climate_score(nc, d_emb_output),                   &
+      weather_inputs(nc, d_weather_input),               &
+      weather_lstm_i(nc, d_weather_hidden),              &
+      weather_lstm_f(nc, d_weather_hidden),              &
+      weather_lstm_g(nc, d_weather_hidden),              &
+      weather_lstm_o(nc, d_weather_hidden),              &
+      weather_lstm_outputs(nc, d_output),                &
+      weather_lstm_outputs_sum(nc, d_output),            &
+      !weather_lstm_output_(nc, d_output),               &
+      !climate_score(nc, d_emb_output),                  &
 
-      vegetation_variables(nc, d_vegetation_input),      &
-      vegetation_lstm_i(nc, d_vegetation_hidden),        &
-      vegetation_lstm_f(nc, d_vegetation_hidden),        &
-      vegetation_lstm_g(nc, d_vegetation_hidden),        &
-      vegetation_lstm_o(nc, d_vegetation_hidden),        &
-      vegetation_lstm_output(nc, d_output*d_emb_output), &
-      vegetation_lstm_output_(nc, d_output),             &
-      vegetation_score(nc, d_emb_output),                &
+      !& regional_w_i2i_w(d_weather_input, d_weather_hidden), &
+      !& regional_w_i2i_b(d_weather_hidden),                  &
+      !& regional_w_h2i_w(d_weather_hidden,d_weather_hidden), &
+      !& regional_w_h2i_b(d_weather_hidden),                  &
+      !& regional_w_i2f_w(d_weather_input, d_weather_hidden), &
+      !& regional_w_i2f_b(d_weather_hidden),                  &
+      !& regional_w_h2f_w(d_weather_hidden,d_weather_hidden), &
+      !& regional_w_h2f_b(d_weather_hidden),                  &
+      !& regional_w_i2g_w(d_weather_input, d_weather_hidden), &
+      !& regional_w_i2g_b(d_weather_hidden),                  &
+      !& regional_w_h2g_w(d_weather_hidden,d_weather_hidden), &
+      !& regional_w_h2g_b(d_weather_hidden),                  &
+      !& regional_w_i2o_w(d_weather_input, d_weather_hidden), &
+      !& regional_w_i2o_b(d_weather_hidden),                  &
+      !& regional_w_h2o_w(d_weather_hidden,d_weather_hidden), &
+      !& regional_w_h2o_b(d_weather_hidden),                  &
+      !& regional_w_out_w(d_weather_hidden, d_output),        &
+      !& regional_w_out_b(d_output),                          &
+
+      land_inputs(nc, d_land_input_n_pft),               &
+      land_lstm_i(nc, d_land_hidden),                    &
+      land_lstm_f(nc, d_land_hidden),                    &
+      land_lstm_g(nc, d_land_hidden),                    &
+      land_lstm_o(nc, d_land_hidden),                    &
+      land_lstm_outputs(nc, d_output),                   &
+      land_lstm_outputs_sum(nc, d_output),               &
+      !vegetation_lstm_output_(nc, d_output),            &
+      !vegetation_score(nc, d_emb_output),               &
+
+      !& regional_l_i2i_w(d_land_input, d_land_hidden),   &
+      !& regional_l_i2i_b(d_land_hidden),                 &
+      !& regional_l_h2i_w(d_land_hidden,d_land_hidden),   &
+      !& regional_l_h2i_b(d_land_hidden),                 &
+      !& regional_l_i2f_w(d_land_input, d_land_hidden),   &
+      !& regional_l_i2f_b(d_land_hidden),                 &
+      !& regional_l_h2f_w(d_land_hidden,d_land_hidden),   &
+      !& regional_l_h2f_b(d_land_hidden),                 &
+      !& regional_l_i2g_w(d_land_input, d_land_hidden),   &
+      !& regional_l_i2g_b(d_land_hidden),                 &
+      !& regional_l_h2g_w(d_land_hidden,d_land_hidden),   &
+      !& regional_l_h2g_b(d_land_hidden),                 &
+      !& regional_l_i2o_w(d_land_input, d_land_hidden),   &
+      !& regional_l_i2o_b(d_land_hidden),                 &
+      !& regional_l_h2o_w(d_land_hidden,d_land_hidden),   &
+      !& regional_l_h2o_b(d_land_hidden),                 &
+      !& regional_l_out_w(d_land_hidden, d_output),       &
+      !& regional_l_out_b(d_output),                      &
+
+      anthro_inputs(nc, d_anthro_input),                 &
+      anthro_nn(nc, d_anthro_hidden),                    &
+      anthro_nn_act(nc, d_anthro_hidden),                &
+      anthro_nn_outputs(nc, d_output),                   &
+      anthro_nn_outputs_sum(nc, d_output),               &
+
+      & regional_a_l1_w(d_anthro_input, d_anthro_hidden), &
+      & regional_a_l1_b(d_anthro_hidden),                 &
+      & reginoal_a_l2_w(d_anthro_hidden, d_output),       &
+      & regional_a_l2_b(d_output),                        &
 
       !lig_topo_variables(nc, d_lnt_input),               &
       !lig_topo_network(nc, d_lnt_hidden),                &
       !lig_topo_network_act(nc, d_lnt_hidden),            &
       !lig_topo_network_output(nc, d_output),             &
 
-      anthro_variables(nc, d_ant_input),                 &
-      anthro_network(nc, d_ant_hidden),                  &
-      anthro_network_act(nc, d_ant_hidden),              &
-      anthro_network_output(nc, d_output),               &
+      !emb_variables(nc, d_emb_input),                    &
+      !emb_network(nc, d_emb_hidden),                     &
+      !emb_network_act(nc, d_emb_hidden),                 &
+      !climate_emb_output(nc, d_emb_output),              &
+      !vegetation_emb_output(nc, d_emb_output),           &
 
-      emb_variables(nc, d_emb_input),                    &
-      emb_network(nc, d_emb_hidden),                     &
-      emb_network_act(nc, d_emb_hidden),                 &
-      climate_emb_output(nc, d_emb_output),              &
-      vegetation_emb_output(nc, d_emb_output),           &
+      !no_fire(nc),                                       &
+      dum1(nc), dum2(nc), dum3(nc), dum4(nc), &
+      num1(nc), num2(nc), num3(nc), num4(nc), &
+      !fuel_constraint(nc, d_region),                      &
+      fuel_constraint(nc),                      &
+      q_rel_air_constraint(nc)
 
-      no_fire(nc),                                       &
-      fuel_(nc),                                         &
-      q_rel_air_(nc)
 
     REAL(wp) ::  scale
-    INTEGER  ::  pft_idx
+    INTEGER  ::  pft_idx, r_i, w_i, l_i, a_i, nc_i
+    INTEGER  ::  is, ie, hs, he, os, oe
 
 
-    climate_variables(:,1) = t_air - t_clim_m + t_clim_o
-    climate_variables(:,2) = t_air - t_clim_m
-    climate_variables(:,3) = q_rel_air - q_rel_clim_m + q_rel_clim_o
-    climate_variables(:,4) = q_rel_air - q_rel_clim_m
-    climate_variables(:,5) = q_air - q_clim_m + q_clim_o
-    climate_variables(:,6) = q_air - q_clim_m
-    climate_variables(:,7) = wind_10m 
-    climate_variables(:,8) = rain*86400
-    !climate_variables(:,1) = t_air
+    !climate_variables(:,1) = t_air - t_clim_m + t_clim_o
     !climate_variables(:,2) = t_air - t_clim_m
-    !climate_variables(:,3) = q_rel_air
+    !climate_variables(:,3) = q_rel_air - q_rel_clim_m + q_rel_clim_o
     !climate_variables(:,4) = q_rel_air - q_rel_clim_m
-    !climate_variables(:,5) = q_air
+    !climate_variables(:,5) = q_air - q_clim_m + q_clim_o
     !climate_variables(:,6) = q_air - q_clim_m
     !climate_variables(:,7) = wind_10m 
     !climate_variables(:,8) = rain*86400
 
-    vegetation_variables(:,1) = lai  - lai_clim_m  + lai_clim_o
-    vegetation_variables(:,2) = lai  - lai_clim_m
-    vegetation_variables(:,3) = swl1 - swl1_clim_m + swl1_clim_o
-    vegetation_variables(:,4) = swl1 - swl1_clim_m
-    vegetation_variables(:,5) = swl2 - swl2_clim_m + swl2_clim_o
-    vegetation_variables(:,6) = swl2 - swl2_clim_m
-    vegetation_variables(:,7) = swl3 - swl3_clim_m + swl3_clim_o
-    vegetation_variables(:,8) = swl3 - swl3_clim_m
-    vegetation_variables(:,9) = swl4 - swl4_clim_m + swl4_clim_o
-    vegetation_variables(:,10)= swl4 - swl4_clim_m
-    !vegetation_variables(:,1) = lai
+    !vegetation_variables(:,1) = lai  - lai_clim_m  + lai_clim_o
     !vegetation_variables(:,2) = lai  - lai_clim_m
-    !vegetation_variables(:,3) = swl1
+    !vegetation_variables(:,3) = swl1 - swl1_clim_m + swl1_clim_o
     !vegetation_variables(:,4) = swl1 - swl1_clim_m
-    !vegetation_variables(:,5) = swl2
+    !vegetation_variables(:,5) = swl2 - swl2_clim_m + swl2_clim_o
     !vegetation_variables(:,6) = swl2 - swl2_clim_m
-    !vegetation_variables(:,7) = swl3
+    !vegetation_variables(:,7) = swl3 - swl3_clim_m + swl3_clim_o
     !vegetation_variables(:,8) = swl3 - swl3_clim_m
-    !vegetation_variables(:,9) = swl4
+    !vegetation_variables(:,9) = swl4 - swl4_clim_m + swl4_clim_o
     !vegetation_variables(:,10)= swl4 - swl4_clim_m
 
-    anthro_variables(:,1) = population_density
-    anthro_variables(:,2) = gdp
-    anthro_variables(:,3) = hdi
-    anthro_variables(:,4) = road_density
-    anthro_variables(:,5) = land_use_state_c3ann
-    anthro_variables(:,6) = land_use_state_c3nfx
-    anthro_variables(:,7) = land_use_state_c3per
-    anthro_variables(:,8) = land_use_state_c4ann
-    anthro_variables(:,9) = land_use_state_c4per
-    anthro_variables(:,10)= land_use_state_pastr
-    anthro_variables(:,11)= land_use_state_primf
-    anthro_variables(:,12)= land_use_state_primn
-    anthro_variables(:,13)= land_use_state_range
-    anthro_variables(:,14)= land_use_state_secdf
-    anthro_variables(:,15)= land_use_state_secdn
-    anthro_variables(:,16)= land_use_state_secma
-    anthro_variables(:,17)= land_use_state_secmb
-    anthro_variables(:,18)= land_use_state_urban
-
-    emb_variables(:,1) = t_clim_o
-    emb_variables(:,2) = q_rel_clim_o
-    emb_variables(:,3) = q_clim_o
-    emb_variables(:,4) = swl1_clim_o
-    emb_variables(:,5) = swl2_clim_o
-    emb_variables(:,6) = swl3_clim_o 
-    emb_variables(:,7) = swl4_clim_o
-    emb_variables(:,8) = lai_clim_o
+    !emb_variables(:,1) = t_clim_o
+    !emb_variables(:,2) = q_rel_clim_o
+    !emb_variables(:,3) = q_clim_o
+    !emb_variables(:,4) = swl1_clim_o
+    !emb_variables(:,5) = swl2_clim_o
+    !emb_variables(:,6) = swl3_clim_o 
+    !emb_variables(:,7) = swl4_clim_o
+    !emb_variables(:,8) = lai_clim_o
     !emb_variables(:,1) = t_clim_m
     !emb_variables(:,2) = q_rel_clim_m
     !emb_variables(:,3) = q_clim_m
@@ -399,110 +430,425 @@ CONTAINS
     !emb_variables(:,6) = swl3_clim_m 
     !emb_variables(:,7) = swl4_clim_m
     !emb_variables(:,8) = lai_clim_m
-    emb_variables(:,9) = fuel
-    emb_variables(:,10)= lightning_climatology
-    emb_variables(:,11)= elevation
-    emb_variables(:,12)= slope
-    emb_variables(:,13)= roughness
-    emb_variables(:,14)= modified_pfts_fract(:,1)
-    emb_variables(:,15)= modified_pfts_fract(:,2)
-    emb_variables(:,16)= modified_pfts_fract(:,3)
-    emb_variables(:,17)= modified_pfts_fract(:,4)
-    emb_variables(:,18)= modified_pfts_fract(:,5)
-    emb_variables(:,19)= modified_pfts_fract(:,6)
-    emb_variables(:,20)= modified_pfts_fract(:,7)
-    emb_variables(:,21)= modified_pfts_fract(:,8)
-    emb_variables(:,22)= modified_pfts_fract(:,9)
+    !emb_variables(:,9) = fuel
+    !emb_variables(:,10)= lightning_climatology
+    !emb_variables(:,11)= elevation
+    !emb_variables(:,12)= slope
+    !emb_variables(:,13)= roughness
+    !emb_variables(:,14)= modified_pfts_fract(:,1)
+    !emb_variables(:,15)= modified_pfts_fract(:,2)
+    !emb_variables(:,16)= modified_pfts_fract(:,3)
+    !emb_variables(:,17)= modified_pfts_fract(:,4)
+    !emb_variables(:,18)= modified_pfts_fract(:,5)
+    !emb_variables(:,19)= modified_pfts_fract(:,6)
+    !emb_variables(:,20)= modified_pfts_fract(:,7)
+    !emb_variables(:,21)= modified_pfts_fract(:,8)
+    !emb_variables(:,22)= modified_pfts_fract(:,9)
+
+    !anthro_variables(:,1) = population_density
+    !anthro_variables(:,2) = gdp
+    !anthro_variables(:,3) = hdi
+    !anthro_variables(:,4) = road_density
+    !anthro_variables(:,5) = land_use_state_c3ann
+    !anthro_variables(:,6) = land_use_state_c3nfx
+    !anthro_variables(:,7) = land_use_state_c3per
+    !anthro_variables(:,8) = land_use_state_c4ann
+    !anthro_variables(:,9) = land_use_state_c4per
+    !anthro_variables(:,10)= land_use_state_pastr
+    !anthro_variables(:,11)= land_use_state_primf
+    !anthro_variables(:,12)= land_use_state_primn
+    !anthro_variables(:,13)= land_use_state_range
+    !anthro_variables(:,14)= land_use_state_secdf
+    !anthro_variables(:,15)= land_use_state_secdn
+    !anthro_variables(:,16)= land_use_state_secma
+    !anthro_variables(:,17)= land_use_state_secmb
+    !anthro_variables(:,18)= land_use_state_urban
+
+    ! initialize
+    weather_lstm_outputs_sum(:,:) = 0.
+    land_lstm_outputs_sum(:,:)    = 0.
+    anthro_nn_outputs_sum(:,:)    = 0.
+    !fuel_constraint(:,:)          = 0.
+    fuel_constraint(:)          = 0.
+
+    DO r_i=1,d_region
+      w_i = (r_i-1)*d_weather_input
+      l_i = (r_i-1)*d_land_input
+      a_i = (r_i-1)*d_anthro_input
+
+      weather_inputs(:,:) = 0.
+      land_inputs(:,:)    = 0.
+      anthro_inputs(:,:)  = 0.
+
+    DO nc_i=1,nc
+      ! reginally normalized input
+      !print*, gfed_region(nc_i), int(gfed_region(nc_i))
+      IF (r_i .eq. int(gfed_region(nc_i))) THEN
+        !print*, shape(w_minmax), r_i, w_minmax(1+w_i,2), w_minmax(1+w_i,1)
+        weather_inputs(nc_i,1) = (t_air(nc_i)                   - w_minmax(1+w_i,1)) &
+                               / (w_minmax(1+w_i,2)             - w_minmax(1+w_i,1)+1e-10)
+        weather_inputs(nc_i,2) = (t_air(nc_i)-t_clim_m(nc_i)    - w_minmax(2+w_i,1)) &
+                               / (w_minmax(2+w_i,2)             - w_minmax(2+w_i,1)+1e-10)
+        weather_inputs(nc_i,3) = (q_rel_air(nc_i)               - w_minmax(3+w_i,1)) &
+                               / (w_minmax(3+w_i,2)             - w_minmax(3+w_i,1)+1e-10)
+        weather_inputs(nc_i,4) = (q_rel_air(nc_i)-q_rel_clim_m(nc_i) - w_minmax(4+w_i,1)) &
+                               / (w_minmax(4+w_i,2)                  - w_minmax(4+w_i,1)+1e-10)
+        weather_inputs(nc_i,5) = (q_air(nc_i)                   - w_minmax(5+w_i,1)) &
+                               / (w_minmax(5+w_i,2)             - w_minmax(5+w_i,1)+1e-10)
+        weather_inputs(nc_i,6) = (q_air(nc_i)-q_clim_m(nc_i)    - w_minmax(6+w_i,1)) &
+                               / (w_minmax(6+w_i,2)             - w_minmax(6+w_i,1)+1e-10)
+
+        !weather_inputs(nc_i,1) = (t_air(nc_i)-t_clim_m(nc_i)+t_clim_o(nc_i) - w_minmax(1+w_i,1)) &
+        !                       / (w_minmax(1+w_i,2)           - w_minmax(1+w_i,1)+1e-10)
+        !weather_inputs(nc_i,2) = (t_air(nc_i)-t_clim_m(nc_i)  - w_minmax(2+w_i,1)) &
+        !                       / (w_minmax(2+w_i,2)           - w_minmax(2+w_i,1)+1e-10)
+        !weather_inputs(nc_i,3) = (q_rel_air(nc_i)-q_rel_clim_m(nc_i)+q_rel_clim_o(nc_i) - w_minmax(3+w_i,1)) &
+        !                       / (w_minmax(3+w_i,2)           - w_minmax(3+w_i,1)+1e-10)
+        !weather_inputs(nc_i,4) = (q_rel_air(nc_i)-q_rel_clim_m(nc_i) - w_minmax(4+w_i,1)) &
+        !                       / (w_minmax(4+w_i,2)                - w_minmax(4+w_i,1)+1e-10)
+        !weather_inputs(nc_i,5) = (q_air(nc_i)-q_clim_m(nc_i)+q_clim_o(nc_i) - w_minmax(5+w_i,1)) &
+        !                       / (w_minmax(5+w_i,2)           - w_minmax(5+w_i,1)+1e-10)
+        !weather_inputs(nc_i,6) = (q_air(nc_i)-q_clim_m(nc_i)    - w_minmax(6+w_i,1)) &
+        !                       / (w_minmax(6+w_i,2)           - w_minmax(6+w_i,1)+1e-10)
+        weather_inputs(nc_i,7) = (wind_10m(nc_i)              - w_minmax(7+w_i,1)) &
+                               / (w_minmax(7+w_i,2)           - w_minmax(7+w_i,1)+1e-10)
+        weather_inputs(nc_i,8) = (rain(nc_i)*86400            - w_minmax(8+w_i,1)) &
+                               / (w_minmax(8+w_i,2)           - w_minmax(8+w_i,1)+1e-10)
+        weather_inputs(nc_i,9) = (lightning_climatology(nc_i) - w_minmax(9+w_i,1)) &
+                               / (w_minmax(9+w_i,2)           - w_minmax(9+w_i,1)+1e-10)
+
+        land_inputs(nc_i,1) = (lai(nc_i)                    - l_minmax(1+l_i,1))  &
+                            / (l_minmax(1+l_i,2)            - l_minmax(1+l_i,1)+1e-10)
+        land_inputs(nc_i,2) = (lai(nc_i)-lai_clim_m(nc_i)   - l_minmax(2+l_i,1))  &
+                            / (l_minmax(2+l_i,2)            - l_minmax(2+l_i,1)+1e-10)
+        land_inputs(nc_i,3) = (swl1(nc_i)                   - l_minmax(3+l_i,1))  &
+                            / (l_minmax(3+l_i,2)            - l_minmax(3+l_i,1)+1e-10)
+        land_inputs(nc_i,4) = (swl1(nc_i)-swl1_clim_m(nc_i) - l_minmax(4+l_i,1))  &
+                            / (l_minmax(4+l_i,2)            - l_minmax(4+l_i,1)+1e-10)
+        land_inputs(nc_i,5) = (swl2(nc_i)                   - l_minmax(5+l_i,1))  &
+                            / (l_minmax(5+l_i,2)            - l_minmax(5+l_i,1)+1e-10)
+        land_inputs(nc_i,6) = (swl2(nc_i)-swl2_clim_m(nc_i) - l_minmax(6+l_i,1))  &
+                            / (l_minmax(6+l_i,2)            - l_minmax(6+l_i,1)+1e-10)
+        land_inputs(nc_i,7) = (swl3(nc_i)                   - l_minmax(7+l_i,1))  &
+                            / (l_minmax(7+l_i,2)            - l_minmax(7+l_i,1)+1e-10)
+        land_inputs(nc_i,8) = (swl3(nc_i)-swl3_clim_m(nc_i) - l_minmax(8+l_i,1))  &
+                            / (l_minmax(8+l_i,2)            - l_minmax(8+l_i,1)+1e-10)
+        land_inputs(nc_i,9) = (swl4(nc_i)                   - l_minmax(9+l_i,1))  &
+                            / (l_minmax(9+l_i,2)            - l_minmax(9+l_i,1)+1e-10)
+        land_inputs(nc_i,10)= (swl4(nc_i)-swl4_clim_m(nc_i) - l_minmax(10+l_i,1)) &
+                            / (l_minmax(10+l_i,2)           - l_minmax(10+l_i,1)+1e-10)
+
+        !print*, shape(l_minmax), r_i, l_minmax(12+l_i,2), l_minmax(12+l_i,1)
+        !land_inputs(nc_i,1) = (lai(nc_i)-lai_clim_m(nc_i)+lai_clim_o(nc_i) - l_minmax(1+l_i,1))  &
+        !                    / (l_minmax(1+l_i,2)          - l_minmax(1+l_i,1)+1e-10)
+        !land_inputs(nc_i,2) = (lai(nc_i)-lai_clim_m(nc_i)   - l_minmax(2+l_i,1))  &
+        !                    / (l_minmax(2+l_i,2)          - l_minmax(2+l_i,1)+1e-10)
+        !land_inputs(nc_i,3) = (swl1(nc_i)-swl1_clim_m(nc_i)+swl1_clim_o(nc_i) - l_minmax(3+l_i,1))  &
+        !                    / (l_minmax(3+l_i,2)          - l_minmax(3+l_i,1)+1e-10)
+        !land_inputs(nc_i,4) = (swl1(nc_i)-swl1_clim_m(nc_i) - l_minmax(4+l_i,1))  &
+        !                    / (l_minmax(4+l_i,2)          - l_minmax(4+l_i,1)+1e-10)
+        !land_inputs(nc_i,5) = (swl2(nc_i)-swl2_clim_m(nc_i)+swl2_clim_o(nc_i) - l_minmax(5+l_i,1))  &
+        !                    / (l_minmax(5+l_i,2)          - l_minmax(5+l_i,1)+1e-10)
+        !land_inputs(nc_i,6) = (swl2(nc_i)-swl2_clim_m(nc_i) - l_minmax(6+l_i,1))  &
+        !                   / (l_minmax(6+l_i,2)          - l_minmax(6+l_i,1)+1e-10)
+        !land_inputs(nc_i,7) = (swl3(nc_i)-swl3_clim_m(nc_i)+swl3_clim_o(nc_i) - l_minmax(7+l_i,1))  &
+        !                    / (l_minmax(7+l_i,2)          - l_minmax(7+l_i,1)+1e-10)
+        !land_inputs(nc_i,8) = (swl3(nc_i)-swl3_clim_m(nc_i) - l_minmax(8+l_i,1))  &
+        !                    / (l_minmax(8+l_i,2)          - l_minmax(8+l_i,1)+1e-10)
+        !land_inputs(nc_i,9) = (swl4(nc_i)-swl4_clim_m(nc_i)+swl4_clim_o(nc_i) - l_minmax(9+l_i,1))  &
+        !                    / (l_minmax(9+l_i,2)          - l_minmax(9+l_i,1)+1e-10)
+        !land_inputs(nc_i,10)= (swl4(nc_i)-swl4_clim_m(nc_i) - l_minmax(10+l_i,1)) &
+        !                    / (l_minmax(10+l_i,2)         - l_minmax(10+l_i,1)+1e-10)
+        land_inputs(nc_i,11)= (fuel(nc_i)                 - l_minmax(11+l_i,1)) &
+                            / (l_minmax(11+l_i,2)         - l_minmax(11+l_i,1)+1e-10)
+        land_inputs(nc_i,12)= (elevation(nc_i)            - l_minmax(12+l_i,1)) &
+                            / (l_minmax(12+l_i,2)         - l_minmax(12+l_i,1)+1e-10)
+        land_inputs(nc_i,13)= (slope(nc_i)                - l_minmax(13+l_i,1)) &
+                            / (l_minmax(13+l_i,2)         - l_minmax(13+l_i,1)+1e-10)
+        land_inputs(nc_i,14)= (roughness(nc_i)            - l_minmax(14+l_i,1)) &
+                            / (l_minmax(14+l_i,2)         - l_minmax(14+l_i,1)+1e-10)
+        
+        land_inputs(nc_i,15)= modified_pfts_fract(nc_i,1)
+        land_inputs(nc_i,16)= modified_pfts_fract(nc_i,2)
+        land_inputs(nc_i,17)= modified_pfts_fract(nc_i,3)
+        land_inputs(nc_i,18)= modified_pfts_fract(nc_i,4)
+        land_inputs(nc_i,19)= modified_pfts_fract(nc_i,5)
+        land_inputs(nc_i,20)= modified_pfts_fract(nc_i,6)
+        land_inputs(nc_i,21)= modified_pfts_fract(nc_i,7)
+        land_inputs(nc_i,22)= modified_pfts_fract(nc_i,8)
+        land_inputs(nc_i,23)= modified_pfts_fract(nc_i,9)
+
+        
+        !print*, shape(a_minmax), r_i, a_minmax(3+a_i,2), a_minmax(3+a_i,1)
+        anthro_inputs(nc_i,1) = (LOG(population_density(nc_i)+1)   - a_minmax(1+a_i,1))  &
+                              / (a_minmax(1+a_i,2)                 - a_minmax(1+a_i,1)+1e-10)
+        anthro_inputs(nc_i,2) = (gdp(nc_i)                  - a_minmax(2+a_i,1))  &
+                              / (a_minmax(2+a_i,2)          - a_minmax(2+a_i,1)+1e-10)
+        anthro_inputs(nc_i,3) = (hdi(nc_i)                  - a_minmax(3+a_i,1))  &
+                              / (a_minmax(3+a_i,2)          - a_minmax(3+a_i,1)+1e-10)
+        anthro_inputs(nc_i,4) = (LOG(road_density(nc_i)+1)         - a_minmax(4+a_i,1))  &
+                              / (a_minmax(4+a_i,2)                 - a_minmax(4+a_i,1)+1e-10)
+        anthro_inputs(nc_i,5) = (land_use_state_c3ann(nc_i) - a_minmax(5+a_i,1))  &
+                              / (a_minmax(5+a_i,2)          - a_minmax(5+a_i,1)+1e-10)
+        anthro_inputs(nc_i,6) = (land_use_state_c3nfx(nc_i) - a_minmax(6+a_i,1))  &
+                              / (a_minmax(6+a_i,2)          - a_minmax(6+a_i,1)+1e-10)
+        anthro_inputs(nc_i,7) = (land_use_state_c3per(nc_i) - a_minmax(7+a_i,1))  &
+                              / (a_minmax(7+a_i,2)          - a_minmax(7+a_i,1)+1e-10)
+        anthro_inputs(nc_i,8) = (land_use_state_c4ann(nc_i) - a_minmax(8+a_i,1))  &
+                              / (a_minmax(8+a_i,2)          - a_minmax(8+a_i,1)+1e-10)
+        anthro_inputs(nc_i,9) = (land_use_state_c4per(nc_i) - a_minmax(9+a_i,1))  &
+                              / (a_minmax(9+a_i,2)          - a_minmax(9+a_i,1)+1e-10)
+        anthro_inputs(nc_i,10)= (land_use_state_pastr(nc_i) - a_minmax(10+a_i,1)) &
+                              / (a_minmax(10+a_i,2)         - a_minmax(10+a_i,1)+1e-10)
+        anthro_inputs(nc_i,11)= (land_use_state_primf(nc_i) - a_minmax(11+a_i,1)) &
+                              / (a_minmax(11+a_i,2)         - a_minmax(11+a_i,1)+1e-10)
+        anthro_inputs(nc_i,12)= (land_use_state_primn(nc_i) - a_minmax(12+a_i,1)) &
+                              / (a_minmax(12+a_i,2)         - a_minmax(12+a_i,1)+1e-10)
+        anthro_inputs(nc_i,13)= (land_use_state_range(nc_i) - a_minmax(13+a_i,1)) &
+                              / (a_minmax(13+a_i,2)         - a_minmax(13+a_i,1)+1e-10)
+        anthro_inputs(nc_i,14)= (land_use_state_secdf(nc_i) - a_minmax(14+a_i,1)) &
+                              / (a_minmax(14+a_i,2)         - a_minmax(14+a_i,1)+1e-10)
+        anthro_inputs(nc_i,15)= (land_use_state_secdn(nc_i) - a_minmax(15+a_i,1)) &
+                              / (a_minmax(15+a_i,2)         - a_minmax(15+a_i,1)+1e-10)
+        anthro_inputs(nc_i,16)= (land_use_state_secma(nc_i) - a_minmax(16+a_i,1)) &
+                              / (a_minmax(16+a_i,2)         - a_minmax(16+a_i,1)+1e-10)
+        anthro_inputs(nc_i,17)= (land_use_state_secmb(nc_i) - a_minmax(17+a_i,1)) &
+                              / (a_minmax(17+a_i,2)         - a_minmax(17+a_i,1)+1e-10)
+        anthro_inputs(nc_i,18)= (land_use_state_urban(nc_i) - a_minmax(18+a_i,1)) &
+                              / (a_minmax(18+a_i,2)         - a_minmax(18+a_i,1)+1e-10)
+
+        !fuel_constraint(nc_i, r_i) = land_inputs(nc_i,11)
+        fuel_constraint(nc_i) = land_inputs(nc_i,11)
+
+      ENDIF
+    ENDDO   ! nc iteration
+
+      os=1+(r_i-1)*d_output
+      oe=r_i*d_output
+
+      ! weather-LSTM model
+      hs=1+(r_i-1)*d_weather_hidden
+      he=r_i*d_weather_hidden
+      
+      weather_lstm_i = matmul(weather_inputs, weather_i2i_weight(:,hs:he)) + spread(weather_i2i_bias(hs:he),1,nc) &
+       + matmul(weather_lstm_hidden(:,hs:he), weather_h2i_weight(:,hs:he)) + spread(weather_h2i_bias(hs:he),1,nc)
+      weather_lstm_f = matmul(weather_inputs, weather_i2f_weight(:,hs:he)) + spread(weather_i2f_bias(hs:he),1,nc) &
+       + matmul(weather_lstm_hidden(:,hs:he), weather_h2f_weight(:,hs:he)) + spread(weather_h2f_bias(hs:he),1,nc)
+      weather_lstm_g = matmul(weather_inputs, weather_i2g_weight(:,hs:he)) + spread(weather_i2g_bias(hs:he),1,nc) &
+       + matmul(weather_lstm_hidden(:,hs:he), weather_h2g_weight(:,hs:he)) + spread(weather_h2g_bias(hs:he),1,nc)
+      weather_lstm_o = matmul(weather_inputs, weather_i2o_weight(:,hs:he)) + spread(weather_i2o_bias(hs:he),1,nc) &
+       + matmul(weather_lstm_hidden(:,hs:he), weather_h2o_weight(:,hs:he)) + spread(weather_h2o_bias(hs:he),1,nc)
+
+      weather_lstm_i = 1/(1+exp(-weather_lstm_i))
+      weather_lstm_f = 1/(1+exp(-weather_lstm_f))
+      weather_lstm_g = tanh(weather_lstm_g)
+      weather_lstm_o = 1/(1+exp(-weather_lstm_o))
+
+      weather_lstm_cell(:,hs:he)   = weather_lstm_f * weather_lstm_cell(:,hs:he) &
+                                   + weather_lstm_i * weather_lstm_g
+      weather_lstm_hidden(:,hs:he) = weather_lstm_o * tanh(weather_lstm_cell(:,hs:he))
+
+      weather_lstm_outputs = matmul(weather_lstm_hidden(:,hs:he), weather_out_weight(:,os:oe)) &
+                           + spread(weather_out_bias(os:oe),1,nc)
+
+      ! make 0 for other regions
+      where (spread(gfed_region, 2, d_output) /= float(r_i)) weather_lstm_outputs = 0.
+      weather_lstm_outputs_sum(:,:) = weather_lstm_outputs_sum(:,:) + weather_lstm_outputs(:,:)
+
+
+      ! land-LSTM model
+      hs=1+(r_i-1)*d_land_hidden
+      he=r_i*d_land_hidden
+      
+      land_lstm_i =    matmul(land_inputs, land_i2i_weight(:,hs:he)) + spread(land_i2i_bias(hs:he),1,nc) &
+       + matmul(land_lstm_hidden(:,hs:he), land_h2i_weight(:,hs:he)) + spread(land_h2i_bias(hs:he),1,nc)
+      land_lstm_f =    matmul(land_inputs, land_i2f_weight(:,hs:he)) + spread(land_i2f_bias(hs:he),1,nc) &
+       + matmul(land_lstm_hidden(:,hs:he), land_h2f_weight(:,hs:he)) + spread(land_h2f_bias(hs:he),1,nc)
+      land_lstm_g =    matmul(land_inputs, land_i2g_weight(:,hs:he)) + spread(land_i2g_bias(hs:he),1,nc) &
+       + matmul(land_lstm_hidden(:,hs:he), land_h2g_weight(:,hs:he)) + spread(land_h2g_bias(hs:he),1,nc)
+      land_lstm_o =    matmul(land_inputs, land_i2o_weight(:,hs:he)) + spread(land_i2o_bias(hs:he),1,nc) &
+       + matmul(land_lstm_hidden(:,hs:he), land_h2o_weight(:,hs:he)) + spread(land_h2o_bias(hs:he),1,nc)
+
+
+      land_lstm_i = 1/(1+exp(-land_lstm_i))
+      land_lstm_f = 1/(1+exp(-land_lstm_f))
+      land_lstm_g = tanh(land_lstm_g)
+      land_lstm_o = 1/(1+exp(-land_lstm_o))
+
+      land_lstm_cell(:,hs:he)   = land_lstm_f * land_lstm_cell(:,hs:he) &
+                                + land_lstm_i * land_lstm_g
+      land_lstm_hidden(:,hs:he) = land_lstm_o * tanh(land_lstm_cell(:,hs:he))
+
+      land_lstm_outputs = matmul(land_lstm_hidden(:,hs:he), land_out_weight(:,os:oe)) &
+                        + spread(land_out_bias(os:oe),1,nc)
+
+      ! make 0 for other regions
+      where (spread(gfed_region, 2, d_output) /= float(r_i)) land_lstm_outputs = 0.
+      land_lstm_outputs_sum(:,:) = land_lstm_outputs_sum(:,:) + land_lstm_outputs(:,:)
+
+
+      ! anthropogenic NN model
+      hs=1+(r_i-1)*d_anthro_hidden
+      he=r_i*d_anthro_hidden
+
+      anthro_nn = matmul(anthro_inputs, anthropogenic_l1_weight(:,hs:he)) &
+                + spread(anthropogenic_l1_bias(hs:he),1,nc)
+      anthro_nn_act = log(1+exp(anthro_nn))
+      where (anthro_nn > 20) anthro_nn_act = anthro_nn
+      anthro_nn_outputs = matmul(anthro_nn_act, anthropogenic_l2_weight(:,os:oe)) &
+                        + spread(anthropogenic_l2_bias(os:oe),1,nc)
+
+      ! make 0 for other regions
+      where (spread(gfed_region, 2, d_output) /= float(r_i)) anthro_nn_outputs = 0.
+      anthro_nn_outputs_sum(:,:) = anthro_nn_outputs_sum(:,:) + anthro_nn_outputs(:,:)
+
+    ENDDO   ! r (region) iteration
+
+    !dum1 = sum(weather_lstm_outputs_sum, dim=2)
+    !dum2 = sum(land_lstm_outputs_sum, dim=2)
+    !dum3 = sum(anthro_nn_outputs_sum, dim=2)
+    !dum4 = sum(fuel_constraint, dim=2)
+
+    !where(gfed_region /= 9) dum1 = 0.
+    !where(gfed_region /= 9) dum2 = 0.
+    !where(gfed_region /= 9) dum3 = 0.
+    where(gfed_region /= 9) fuel_constraint = 0.
+
+    !num1 = gfed_region
+    !num2 = gfed_region
+    !num3 = gfed_region
+    num4 = gfed_region
+
+    !where(gfed_region /= 9) num1 = 0.
+    !where(gfed_region /= 9) num2 = 0.
+    !where(gfed_region /= 9) num3 = 0.
+    !where(gfed_region /= 9) num4 = 0.
+    !where(gfed_region == 9) num1 = 1.
+    !where(gfed_region == 9) num2 = 1.
+    !where(gfed_region == 9) num3 = 1.
+    where(gfed_region == 9) num4 = 1.
+
+    !print*, sum(dum1)/(sum(num1)+1e-7), sum(dum2)/(sum(num2)+1e-7), sum(dum3)/(sum(num3)+1e-7), sum(dum4)/(sum(num4)+1e-7)
+    if (sum(fuel_constraint) /= 0.) then
+      print*, sum(fuel_constraint)/(sum(num4)+1e-7)
+    endif
+
+    burned_fract = sum(weather_lstm_outputs_sum     &
+                     * land_lstm_outputs_sum        &
+                     * anthro_nn_outputs_sum        &
+                     * modified_pfts_fract(:,1:8), dim=2)
+
+    burned_fract(:) = burned_fract(:)/100.
+    burned_fract(:) = burned_fract(:)*(1.-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
+
+    !burned_fract(:) = burned_fract(:)*sum(fuel_constraint, dim=2)
+    burned_fract(:) = burned_fract(:)*fuel_constraint
+
+    !if (maxval(fuel_constraint) .gt. 0.1) then
+    !  print*, minval(fuel_constraint), maxval(fuel_constraint), maxval(fuel)
+    !endif
+
+    q_rel_air_constraint(:) = q_rel_air(:)/100.
+    !q_rel_air_constraint(:) = (q_rel_air(:)-q_rel_clim_m(:)+q_rel_clim_o(:))/100.
+    q_rel_air_constraint(:) = 1/(1+exp(-20*(q_rel_air_constraint(:)-0.5)))
+    !where (q_rel_air_constraint > 0.6) q_rel_air_constraint = 1.
+    burned_fract(:) = burned_fract(:)*(1-q_rel_air_constraint(:))
+
+    where (burned_fract < 0.) burned_fract = 0.
+    where (burned_fract > 1.) burned_fract = 1.
+
+
+    
 
 
     ! Normalize
-    climate_variables(:,:)    = (climate_variables(:,:)                    - spread(climate_min_max(:,1),1,nc))    &
-                              / (spread(climate_min_max(:,2),1,nc)         - spread(climate_min_max(:,1),1,nc))
-    vegetation_variables(:,:) = (vegetation_variables(:,:)                 - spread(vegetation_min_max(:,1),1,nc)) &
-                              / (spread(vegetation_min_max(:,2),1,nc)      - spread(vegetation_min_max(:,1),1,nc))
+    !climate_variables(:,:)    = (climate_variables(:,:)                    - spread(climate_min_max(:,1),1,nc))    &
+    !                          / (spread(climate_min_max(:,2),1,nc)         - spread(climate_min_max(:,1),1,nc))
+    !vegetation_variables(:,:) = (vegetation_variables(:,:)                 - spread(vegetation_min_max(:,1),1,nc)) &
+    !                          / (spread(vegetation_min_max(:,2),1,nc)      - spread(vegetation_min_max(:,1),1,nc))
     !emb_variables(:,1:9)      = (emb_variables(:,1:9)                      - spread(embedding_min_max(:,1),1,nc))  &
     !                          / (spread(embedding_min_max(:,2),1,nc)       - spread(embedding_min_max(:,1),1,nc))
-    emb_variables(:,1:13)     = (emb_variables(:,1:13)                     - spread(embedding_min_max(:,1),1,nc))  &
-                              / (spread(embedding_min_max(:,2),1,nc)       - spread(embedding_min_max(:,1),1,nc))
+    !emb_variables(:,1:13)     = (emb_variables(:,1:13)                     - spread(embedding_min_max(:,1),1,nc))  &
+    !                          / (spread(embedding_min_max(:,2),1,nc)       - spread(embedding_min_max(:,1),1,nc))
     !lig_topo_variables(:,:)   = (lig_topo_variables(:,:)                   - spread(lig_topo_min_max(:,1),1,nc))   &
     !                          / (spread(lig_topo_min_max(:,2),1,nc)        - spread(lig_topo_min_max(:,1),1,nc))
-    anthro_variables(:,1:4)   = (anthro_variables(:,1:4)                   - spread(anthropogenic_min_max(1:4,1),1,nc))   &
-                              / (spread(anthropogenic_min_max(1:4,2),1,nc) - spread(anthropogenic_min_max(1:4,1),1,nc))
+    !anthro_variables(:,1:4)   = (anthro_variables(:,1:4)                   - spread(anthropogenic_min_max(1:4,1),1,nc))   &
+    !                          / (spread(anthropogenic_min_max(1:4,2),1,nc) - spread(anthropogenic_min_max(1:4,1),1,nc))
     
     !if (maxval(emb_variables(:,1))>1.1 .or. minval(emb_variables(:,1))<-0.1) then
     !  print*, '1', minval(emb_variables(:,1)), maxval(emb_variables(:,1))
     !endif
 
     ! climate-LSTM model
-    climate_lstm_i = matmul(climate_variables,   climate_i2i_weight) + spread(climate_i2i_bias, 1, nc) &
-                   + matmul(climate_lstm_hidden, climate_h2i_weight) + spread(climate_h2i_bias, 1, nc)
-    climate_lstm_f = matmul(climate_variables,   climate_i2f_weight) + spread(climate_i2f_bias, 1, nc) &
-                   + matmul(climate_lstm_hidden, climate_h2f_weight) + spread(climate_h2f_bias, 1, nc)
-    climate_lstm_g = matmul(climate_variables,   climate_i2g_weight) + spread(climate_i2g_bias, 1, nc) &
-                   + matmul(climate_lstm_hidden, climate_h2g_weight) + spread(climate_h2g_bias, 1, nc)
-    climate_lstm_o = matmul(climate_variables,   climate_i2o_weight) + spread(climate_i2o_bias, 1, nc) &
-                   + matmul(climate_lstm_hidden, climate_h2o_weight) + spread(climate_h2o_bias, 1, nc)
+    !climate_lstm_i = matmul(climate_variables,   climate_i2i_weight) + spread(climate_i2i_bias, 1, nc) &
+    !               + matmul(climate_lstm_hidden, climate_h2i_weight) + spread(climate_h2i_bias, 1, nc)
+    !climate_lstm_f = matmul(climate_variables,   climate_i2f_weight) + spread(climate_i2f_bias, 1, nc) &
+    !               + matmul(climate_lstm_hidden, climate_h2f_weight) + spread(climate_h2f_bias, 1, nc)
+    !climate_lstm_g = matmul(climate_variables,   climate_i2g_weight) + spread(climate_i2g_bias, 1, nc) &
+    !               + matmul(climate_lstm_hidden, climate_h2g_weight) + spread(climate_h2g_bias, 1, nc)
+    !climate_lstm_o = matmul(climate_variables,   climate_i2o_weight) + spread(climate_i2o_bias, 1, nc) &
+    !               + matmul(climate_lstm_hidden, climate_h2o_weight) + spread(climate_h2o_bias, 1, nc)
          
-    climate_lstm_i = 1/(1+exp(-climate_lstm_i))
-    climate_lstm_f = 1/(1+exp(-climate_lstm_f))
-    climate_lstm_g = tanh(climate_lstm_g)
-    climate_lstm_o = 1/(1+exp(-climate_lstm_o))
+    !climate_lstm_i = 1/(1+exp(-climate_lstm_i))
+    !climate_lstm_f = 1/(1+exp(-climate_lstm_f))
+    !climate_lstm_g = tanh(climate_lstm_g)
+    !climate_lstm_o = 1/(1+exp(-climate_lstm_o))
 
-    climate_lstm_cell   = climate_lstm_f*climate_lstm_cell + climate_lstm_i*climate_lstm_g 
-    climate_lstm_hidden = climate_lstm_o*tanh(climate_lstm_cell)
-    climate_lstm_output = matmul(climate_lstm_hidden, climate_out_weight) + spread(climate_out_bias, 1, nc)
+    !climate_lstm_cell   = climate_lstm_f*climate_lstm_cell + climate_lstm_i*climate_lstm_g 
+    !climate_lstm_hidden = climate_lstm_o*tanh(climate_lstm_cell)
+    !climate_lstm_output = matmul(climate_lstm_hidden, climate_out_weight) + spread(climate_out_bias, 1, nc)
 
 
     ! climate emb NN model
-    emb_network = matmul(emb_variables, climate_emb_layer1_weight) + spread(climate_emb_layer1_bias, 1, nc)
-    emb_network_act = log(1+exp(emb_network))
-    where (emb_network > 20) emb_network_act = emb_network
-    climate_emb_output = matmul(emb_network_act, climate_emb_layer2_weight) + spread(climate_emb_layer2_bias, 1, nc)
-    where (climate_emb_output > 700._wp) climate_emb_output = 700._wp
+    !emb_network = matmul(emb_variables, climate_emb_layer1_weight) + spread(climate_emb_layer1_bias, 1, nc)
+    !emb_network_act = log(1+exp(emb_network))
+    !where (emb_network > 20) emb_network_act = emb_network
+    !climate_emb_output = matmul(emb_network_act, climate_emb_layer2_weight) + spread(climate_emb_layer2_bias, 1, nc)
+    !where (climate_emb_output > 700._wp) climate_emb_output = 700._wp
 
-    climate_score = exp(climate_emb_output)
-    climate_score = climate_score / spread(sum(climate_score,dim=2), 2, d_emb_output)
+    !climate_score = exp(climate_emb_output)
+    !climate_score = climate_score / spread(sum(climate_score,dim=2), 2, d_emb_output)
 
-    climate_lstm_output_ = sum(                                      &
-      reshape(climate_lstm_output, (/nc, d_output, d_emb_output/))   &
-      *spread(climate_score, 2, d_output)                            &
-      , dim=3)
+    !climate_lstm_output_ = sum(                                      &
+    !  reshape(climate_lstm_output, (/nc, d_output, d_emb_output/))   &
+    !  *spread(climate_score, 2, d_output)                            &
+    !  , dim=3)
 
 
     ! vegetation-LSTM model
-    vegetation_lstm_i = matmul(vegetation_variables,   vegetation_i2i_weight) + spread(vegetation_i2i_bias, 1, nc) &
-                      + matmul(vegetation_lstm_hidden, vegetation_h2i_weight) + spread(vegetation_h2i_bias, 1, nc)
-    vegetation_lstm_f = matmul(vegetation_variables,   vegetation_i2f_weight) + spread(vegetation_i2f_bias, 1, nc) &
-                      + matmul(vegetation_lstm_hidden, vegetation_h2f_weight) + spread(vegetation_h2f_bias, 1, nc)
-    vegetation_lstm_g = matmul(vegetation_variables,   vegetation_i2g_weight) + spread(vegetation_i2g_bias, 1, nc) &
-                      + matmul(vegetation_lstm_hidden, vegetation_h2g_weight) + spread(vegetation_h2g_bias, 1, nc)
-    vegetation_lstm_o = matmul(vegetation_variables,   vegetation_i2o_weight) + spread(vegetation_i2o_bias, 1, nc) &
-                      + matmul(vegetation_lstm_hidden, vegetation_h2o_weight) + spread(vegetation_h2o_bias, 1, nc)
+    !vegetation_lstm_i = matmul(vegetation_variables,   vegetation_i2i_weight) + spread(vegetation_i2i_bias, 1, nc) &
+    !                  + matmul(vegetation_lstm_hidden, vegetation_h2i_weight) + spread(vegetation_h2i_bias, 1, nc)
+    !vegetation_lstm_f = matmul(vegetation_variables,   vegetation_i2f_weight) + spread(vegetation_i2f_bias, 1, nc) &
+    !                  + matmul(vegetation_lstm_hidden, vegetation_h2f_weight) + spread(vegetation_h2f_bias, 1, nc)
+    !vegetation_lstm_g = matmul(vegetation_variables,   vegetation_i2g_weight) + spread(vegetation_i2g_bias, 1, nc) &
+    !                  + matmul(vegetation_lstm_hidden, vegetation_h2g_weight) + spread(vegetation_h2g_bias, 1, nc)
+    !vegetation_lstm_o = matmul(vegetation_variables,   vegetation_i2o_weight) + spread(vegetation_i2o_bias, 1, nc) &
+    !                  + matmul(vegetation_lstm_hidden, vegetation_h2o_weight) + spread(vegetation_h2o_bias, 1, nc)
 
-    vegetation_lstm_i = 1/(1+exp(-vegetation_lstm_i))
-    vegetation_lstm_f = 1/(1+exp(-vegetation_lstm_f))
-    vegetation_lstm_g = tanh(vegetation_lstm_g)
-    vegetation_lstm_o = 1/(1+exp(-vegetation_lstm_o))
+    !vegetation_lstm_i = 1/(1+exp(-vegetation_lstm_i))
+    !vegetation_lstm_f = 1/(1+exp(-vegetation_lstm_f))
+    !vegetation_lstm_g = tanh(vegetation_lstm_g)
+    !vegetation_lstm_o = 1/(1+exp(-vegetation_lstm_o))
 
-    vegetation_lstm_cell   = vegetation_lstm_f*vegetation_lstm_cell + vegetation_lstm_i*vegetation_lstm_g
-    vegetation_lstm_hidden = vegetation_lstm_o*tanh(vegetation_lstm_cell)
-    vegetation_lstm_output = matmul(vegetation_lstm_hidden, vegetation_out_weight) + spread(vegetation_out_bias, 1, nc)
+    !vegetation_lstm_cell   = vegetation_lstm_f*vegetation_lstm_cell + vegetation_lstm_i*vegetation_lstm_g
+    !vegetation_lstm_hidden = vegetation_lstm_o*tanh(vegetation_lstm_cell)
+    !vegetation_lstm_output = matmul(vegetation_lstm_hidden, vegetation_out_weight) + spread(vegetation_out_bias, 1, nc)
 
 
     ! vegetation emb NN model
-    emb_network = matmul(emb_variables, vegetation_emb_layer1_weight) + spread(vegetation_emb_layer1_bias, 1, nc)
-    emb_network_act = log(1+exp(emb_network))
-    where (emb_network > 20) emb_network_act = emb_network
-    vegetation_emb_output = matmul(emb_network_act, vegetation_emb_layer2_weight) + spread(vegetation_emb_layer2_bias, 1, nc)
-    where (vegetation_emb_output > 700._wp) vegetation_emb_output = 700._wp
+    !emb_network = matmul(emb_variables, vegetation_emb_layer1_weight) + spread(vegetation_emb_layer1_bias, 1, nc)
+    !emb_network_act = log(1+exp(emb_network))
+    !where (emb_network > 20) emb_network_act = emb_network
+    !vegetation_emb_output = matmul(emb_network_act, vegetation_emb_layer2_weight) + spread(vegetation_emb_layer2_bias, 1, nc)
+    !where (vegetation_emb_output > 700._wp) vegetation_emb_output = 700._wp
 
-    vegetation_score = exp(vegetation_emb_output)
-    vegetation_score = vegetation_score / spread(sum(vegetation_score,dim=2), 2, d_emb_output)
+    !vegetation_score = exp(vegetation_emb_output)
+    !vegetation_score = vegetation_score / spread(sum(vegetation_score,dim=2), 2, d_emb_output)
 
-    vegetation_lstm_output_ = sum(                                      &
-      reshape(vegetation_lstm_output, (/nc, d_output, d_emb_output/))   &
-      *spread(vegetation_score, 2, d_output)                            &
-      , dim=3)
+    !vegetation_lstm_output_ = sum(                                      &
+    !  reshape(vegetation_lstm_output, (/nc, d_output, d_emb_output/))   &
+    !  *spread(vegetation_score, 2, d_output)                            &
+    !  , dim=3)
     
 
     ! lightning & topography NN model
@@ -513,19 +859,19 @@ CONTAINS
 
 
     ! anthropogenic NN model
-    anthro_network = matmul(anthro_variables, anthropogenic_layer1_weight) + spread(anthropogenic_layer1_bias, 1, nc)
-    anthro_network_act = log(1+exp(anthro_network))
-    where (anthro_network > 20) anthro_network_act = anthro_network
-    anthro_network_output = matmul(anthro_network_act, anthropogenic_layer2_weight) + spread(anthropogenic_layer2_bias, 1, nc)
+    !anthro_network = matmul(anthro_variables, anthropogenic_layer1_weight) + spread(anthropogenic_layer1_bias, 1, nc)
+    !anthro_network_act = log(1+exp(anthro_network))
+    !where (anthro_network > 20) anthro_network_act = anthro_network
+    !anthro_network_output = matmul(anthro_network_act, anthropogenic_layer2_weight) + spread(anthropogenic_layer2_bias, 1, nc)
 
 
-    burned_fract = sum(climate_lstm_output_         &
-                     * vegetation_lstm_output_      &
+    !burned_fract = sum(climate_lstm_output_         &
+    !                 * vegetation_lstm_output_      &
                      !* lig_topo_network_output      &
-                     * anthro_network_output        &
-                     * modified_pfts_fract(:,1:8), dim=2)
+    !                 * anthro_network_output        &
+    !                 * modified_pfts_fract(:,1:8), dim=2)
 
-    burned_fract(:) = burned_fract(:)/100.
+    !burned_fract(:) = burned_fract(:)/100.
     !where (burned_fract > 26919.82) burned_fract = 26919.82
 
     ! version 1
@@ -545,24 +891,24 @@ CONTAINS
 
 
     ! version 2
-    no_fire(:) = 1. - modified_pfts_fract(:,9) - modified_pfts_fract(:,1)
-    where (modified_pfts_fract(:,9) > 0.3) no_fire = 0.
-    where (modified_pfts_fract(:,1) > 0.2) no_fire = 0.
+    !no_fire(:) = 1. - modified_pfts_fract(:,9) - modified_pfts_fract(:,1)
+    !where (modified_pfts_fract(:,9) > 0.3) no_fire = 0.
+    !where (modified_pfts_fract(:,1) > 0.2) no_fire = 0.
 
-    fuel_(:) = emb_variables(:,9)
+    !fuel_(:) = emb_variables(:,9)
     !where (fuel < fire_litter_threshold) fuel_ = 0.
   
-    q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
-    where (q_rel_air_ < 0.) q_rel_air_ = 0.
-    where (q_rel_air_ > 100.) q_rel_air_ = 100.
+    !q_rel_air_(:) = q_rel_air(:) - q_rel_clim_m(:) + q_rel_clim_o(:)
+    !where (q_rel_air_ < 0.) q_rel_air_ = 0.
+    !where (q_rel_air_ > 100.) q_rel_air_ = 100.
     !where (q_rel_air_ > fire_rel_hum_threshold) q_rel_air_ = 100.
-    where (q_rel_air_ > 60.) q_rel_air_ = 100.
+    !where (q_rel_air_ > 60.) q_rel_air_ = 100.
     !where (q_rel_air_ > 50.) q_rel_air_ = 100.
     !where (q_rel_air_climbuf > fire_rel_hum_threshold) q_rel_air_ = 99.9999 
 
-    burned_fract(:) = burned_fract(:)*no_fire(:)*fuel_(:)*(1.-q_rel_air_(:)/100.)
-    where (burned_fract < 0.) burned_fract = 0.
-    where (burned_fract > 1.) burned_fract = 1.
+    !burned_fract(:) = burned_fract(:)*no_fire(:)*fuel_(:)*(1.-q_rel_air_(:)/100.)
+    !where (burned_fract < 0.) burned_fract = 0.
+    !where (burned_fract > 1.) burned_fract = 1.
 
     !if (maxval(burned_fract) .gt. 1e-3) then
     !  print*, maxval(burned_fract)*100, minval(burned_fract)*100

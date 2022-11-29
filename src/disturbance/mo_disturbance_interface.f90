@@ -220,12 +220,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: swl3_clim              ! daily climatology of volumetric soil water content in the 3rd layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: swl4_clim              ! daily climatology of volumetric soil water content in the 4th layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: lai_clim               ! daily climatology of LAI <Rackhun Son>
-    dsl4jsb_Real2D_onChunk :: fuel_yearly            ! yearly mean of Fuel <Rackhun Son>
+    !dsl4jsb_Real2D_onChunk :: fuel_yearly            ! yearly mean of Fuel <Rackhun Son>
 
-    dsl4jsb_Real3D_onChunk :: climate_lstm_hidden    ! LSTM hidden/cell <Rackhun>
-    dsl4jsb_Real3D_onChunk :: climate_lstm_cell      ! LSTM hidden/cell <Rackhun>
-    dsl4jsb_Real3D_onChunk :: vegetation_lstm_hidden ! LSTM hidden/cell <Rackhun>
-    dsl4jsb_Real3D_onChunk :: vegetation_lstm_cell   ! LSTM hidden/cell <Rackhun>
+    dsl4jsb_Real3D_onChunk :: weather_lstm_hidden    ! LSTM hidden/cell <Rackhun>
+    dsl4jsb_Real3D_onChunk :: weather_lstm_cell      ! LSTM hidden/cell <Rackhun>
+    dsl4jsb_Real3D_onChunk :: land_lstm_hidden       ! LSTM hidden/cell <Rackhun>
+    dsl4jsb_Real3D_onChunk :: land_lstm_cell         ! LSTM hidden/cell <Rackhun>
 
     dsl4jsb_Real2D_onChunk :: burned_fract
     dsl4jsb_Real2D_onChunk :: damaged_fract
@@ -277,6 +277,8 @@ CONTAINS
     REAL(wp), POINTER      :: land_use_state_secmb(:)
     REAL(wp), POINTER      :: land_use_state_urban(:)
 
+    REAL(wp), POINTER      :: gfed_region(:)
+
     REAL(wp), POINTER      :: t_air_local_clim(:)
     REAL(wp), POINTER      :: q_rel_local_clim(:)
     REAL(wp), POINTER      :: q_local_clim(:)
@@ -298,9 +300,9 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    iyr     = options%current_datetime%date%year   ! <Rackhun Son> 
-    imo     = INT(options%current_datetime%date%month)   ! <Rackhun Son> 
-    idy     = options%current_datetime%date%day     ! <Rackhun Son> 
+    iyr     = options%current_datetime%date%year        ! <Rackhun Son> 
+    imo     = INT(options%current_datetime%date%month)  ! <Rackhun Son> 
+    idy     = options%current_datetime%date%day         ! <Rackhun Son> 
 
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(DISTURB_)) RETURN
@@ -366,12 +368,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl3_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl4_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   lai_clim)                 ! in <Rackhun Son>
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   fuel_yearly)              ! in <Rackhun Son>
+    !dsl4jsb_Get_var2D_onChunk(DISTURB_,   fuel_yearly)              ! in <Rackhun Son>
 
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   climate_lstm_hidden)      ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   climate_lstm_cell)        ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   vegetation_lstm_hidden)   ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   vegetation_lstm_cell)     ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   weather_lstm_hidden)      ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   weather_lstm_cell)        ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   land_lstm_hidden)         ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   land_lstm_cell)           ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
@@ -383,8 +385,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)          ! in
     ! -------------------------------------------------------------------------------------------------- !
 
-    !q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
-    q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
+    q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
+    !q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
 
     ! For each time step update the climate buffer
 
@@ -587,6 +589,8 @@ CONTAINS
         land_use_state_secmb      => dsl4jsb_memory(DISTURB_)%land_use_state_secmb(ics:ice, iblk)      ! <Rackhun Son>
         land_use_state_urban      => dsl4jsb_memory(DISTURB_)%land_use_state_urban(ics:ice, iblk)      ! <Rackhun Son>
 
+        gfed_region               => dsl4jsb_memory(DISTURB_)%gfed_region(ics:ice, iblk)               ! <Rackhun Son>
+
         t_air_local_clim      => dsl4jsb_memory(DISTURB_)%t_air_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
         q_rel_local_clim      => dsl4jsb_memory(DISTURB_)%q_rel_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
         q_local_clim          => dsl4jsb_memory(DISTURB_)%q_local_clim(ics:ice, iblk, day_of_year)             ! <Rackhun Son>
@@ -634,151 +638,159 @@ CONTAINS
           CASE (5) !! DL based new fire algoritm   <Rackhun Son>
 
             CALL burned_fract_dl(                                         &
-              !& t_air(:),                                                 &
+              !& t_air(:),                                                &
               & t_air_ave(:),                                             &
-              & t_air_local_clim(:), t_air_clim(:,day_of_year)/diff_year, &  
-              !& q_rel_air(:),                                             &
+              & t_air_local_clim(:),                                      &       
+              & t_air_clim(:,day_of_year)/diff_year,                      &  
+              !& q_rel_air(:),                                            &
               & q_rel_ave(:),                                             &
-              & q_rel_local_clim(:), q_rel_clim(:,day_of_year)/diff_year, &
-              & q_rel_air_climbuf(:), dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
-              !& q_air(:),                                                 &
+              & q_rel_local_clim(:),                                      &
+              & q_rel_clim(:,day_of_year)/diff_year,                      &
+              !& q_rel_air_climbuf(:), dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
+              !& q_air(:),                                                &
               & q_ave(:),                                                 &
-              & q_local_clim(:),     q_clim(:,day_of_year)/diff_year,     &
+              & q_local_clim(:),                                          &
+              & q_clim(:,day_of_year)/diff_year,                          &
               & ws10_ave(:),                                              &
-              !& wind_10m(:),                                              &
-              & rain_ave(:),                                                  &
-              !& rain(:),                                                  &
-              !& swl1(:),                                                  &
+              !& wind_10m(:),                                             &
+              & rain_ave(:),                                              &
+              !& rain(:),                                                 &
+              !& swl1(:),                                                 &
               & swl1_ave(:),                                              &
-              & swvl1_local_clim(:), swl1_clim(:,day_of_year)/diff_year,  &
-              !& swl2(:),                                                  &
+              & swvl1_local_clim(:),                                      &
+              & swl1_clim(:,day_of_year)/diff_year,                       &
+              !& swl2(:),                                                 &
               & swl2_ave(:),                                              &
-              & swvl2_local_clim(:), swl2_clim(:,day_of_year)/diff_year,  &
-              !& swl3(:),                                                  &
+              & swvl2_local_clim(:),                                      &
+              & swl2_clim(:,day_of_year)/diff_year,                       &
+              !& swl3(:),                                                 &
               & swl3_ave(:),                                              &
-              & swvl3_local_clim(:), swl3_clim(:,day_of_year)/diff_year,  &
-              !& swl4(:),                                                  &
+              & swvl3_local_clim(:),                                      &
+              & swl3_clim(:,day_of_year)/diff_year,                       &
+              !& swl4(:),                                                 &
               & swl4_ave(:),                                              &
-              & swvl4_local_clim(:), swl4_clim(:,day_of_year)/diff_year,  &
-              !& lai(:),                                                   &
+              & swvl4_local_clim(:),                                      &
+              & swl4_clim(:,day_of_year)/diff_year,                       &
+              !& lai(:),                                                  &
               & lai_ave(:),                                               &
-              & lai_local_clim(:),   lai_clim(:,day_of_year)/diff_year,   &
-              & modified_pfts_fract(:,:),                              &
-              & fuel(:),                                               &
-              & dsl4jsb_Config(DISTURB_)%fire_litter_threshold,        &
-              & lightning_climatology(:),                              &
-              & elevation(:),                                          &
-              & slope(:),                                              &
-              & roughness(:),                                          &
-              !& topographic_position_idx(:),                           &
-              !& terrain_ruggedness_idx(:),                             &
-              !& vector_ruggedness_measure(:),                          &
-              !& profile_curvature(:),                                  &
-              !& tangential_curvature(:),                               &
+              & lai_local_clim(:),                                        &
+              & lai_clim(:,day_of_year)/diff_year,                        &
+              & modified_pfts_fract(:,:),                                 &
+              & fuel(:),                                                  &
+              !& fuel(:)*fract_fpc_max(:),                                 &
+              !& dsl4jsb_Config(DISTURB_)%fire_litter_threshold,          &
+              & lightning_climatology(:),                                 &
+              & elevation(:),                                             &
+              & slope(:),                                                 &
+              & roughness(:),                                             &
 
-              & population_density(:),                                 &
-              & gdp(:),                                                &
-              & hdi(:),                                                &
-              & road_density(:),                                       &
-              & land_use_state_c3ann(:),                               &
-              & land_use_state_c3nfx(:),                               &
-              & land_use_state_c3per(:),                               &
-              & land_use_state_c4ann(:),                               &
-              & land_use_state_c4per(:),                               &
-              & land_use_state_pastr(:),                               &
-              & land_use_state_primf(:),                               &
-              & land_use_state_primn(:),                               &
-              & land_use_state_range(:),                               &
-              & land_use_state_secdf(:),                               &
-              & land_use_state_secdn(:),                               &
-              & land_use_state_secma(:),                               &
-              & land_use_state_secmb(:),                               &
-              & land_use_state_urban(:),                               &
+              & population_density(:),                                   &
+              & gdp(:),                                                  &
+              & hdi(:),                                                  &
+              & road_density(:),                                         &
+              & land_use_state_c3ann(:),                                 &
+              & land_use_state_c3nfx(:),                                 &
+              & land_use_state_c3per(:),                                 &
+              & land_use_state_c4ann(:),                                 &
+              & land_use_state_c4per(:),                                 &
+              & land_use_state_pastr(:),                                 &
+              & land_use_state_primf(:),                                 &
+              & land_use_state_primn(:),                                 &
+              & land_use_state_range(:),                                 &
+              & land_use_state_secdf(:),                                 &
+              & land_use_state_secdn(:),                                 &
+              & land_use_state_secma(:),                                 &
+              & land_use_state_secmb(:),                                 &
+              & land_use_state_urban(:),                                 &
 
-              & nc,                                                    &
-              & tile%name,                                             &
+              & nc,                                                      &
+              & tile%name,                                               &
 
-              & dsl4jsb_Config(DISTURB_)%d_climate_input,              &
-              & dsl4jsb_Config(DISTURB_)%d_climate_hidden,             &
-              & dsl4jsb_Config(DISTURB_)%d_vegetation_input,           &
-              & dsl4jsb_Config(DISTURB_)%d_vegetation_hidden,          &
-              !& dsl4jsb_Config(DISTURB_)%d_lnt_input,                  &
-              !& dsl4jsb_Config(DISTURB_)%d_lnt_hidden,                 &
-              & dsl4jsb_Config(DISTURB_)%d_ant_input,                  &
-              & dsl4jsb_Config(DISTURB_)%d_ant_hidden,                 &
-              & dsl4jsb_Config(DISTURB_)%d_output,                     &
-              & dsl4jsb_Config(DISTURB_)%d_emb_input,                  &
-              & dsl4jsb_Config(DISTURB_)%d_emb_hidden,                 &
-              & dsl4jsb_Config(DISTURB_)%d_emb_output,                 &
+              & dsl4jsb_Config(DISTURB_)%d_weather_input,                &
+              & dsl4jsb_Config(DISTURB_)%d_weather_hidden,               &
+              & dsl4jsb_Config(DISTURB_)%d_land_input,                   &
+              & dsl4jsb_Config(DISTURB_)%d_land_hidden,                  &
+              & dsl4jsb_Config(DISTURB_)%d_land_input_n_pft,             &
+              & dsl4jsb_Config(DISTURB_)%d_anthro_input,                 &
+              & dsl4jsb_Config(DISTURB_)%d_anthro_hidden,                &
+              & dsl4jsb_Config(DISTURB_)%d_output,                       &
+              & dsl4jsb_Config(DISTURB_)%d_region,                       &
+              !& dsl4jsb_Config(DISTURB_)%d_lnt_input,                   &
+              !& dsl4jsb_Config(DISTURB_)%d_lnt_hidden,                  &
+              !& dsl4jsb_Config(DISTURB_)%d_emb_input,                   &
+              !& dsl4jsb_Config(DISTURB_)%d_emb_hidden,                  &
+              !& dsl4jsb_Config(DISTURB_)%d_emb_output,                  &
 
-              & dsl4jsb_Config(DISTURB_)%climate_i2i_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_i2i_bias,             &
-              & dsl4jsb_Config(DISTURB_)%climate_h2i_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_h2i_bias,             &
-              & dsl4jsb_Config(DISTURB_)%climate_i2f_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_i2f_bias,             &
-              & dsl4jsb_Config(DISTURB_)%climate_h2f_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_h2f_bias,             &
-              & dsl4jsb_Config(DISTURB_)%climate_i2g_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_i2g_bias,             &
-              & dsl4jsb_Config(DISTURB_)%climate_h2g_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_h2g_bias,             &
-              & dsl4jsb_Config(DISTURB_)%climate_i2o_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_i2o_bias,             &
-              & dsl4jsb_Config(DISTURB_)%climate_h2o_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_h2o_bias,             &
-              & dsl4jsb_Config(DISTURB_)%climate_out_weight,           &
-              & dsl4jsb_Config(DISTURB_)%climate_out_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_i2i_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_i2i_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_h2i_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_h2i_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_i2f_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_i2f_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_h2f_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_h2f_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_i2g_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_i2g_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_h2g_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_h2g_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_i2o_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_i2o_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_h2o_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_h2o_bias,             &
+              & dsl4jsb_Config(DISTURB_)%weather_out_weight,           &
+              & dsl4jsb_Config(DISTURB_)%weather_out_bias,             &
 
-              & dsl4jsb_Config(DISTURB_)%vegetation_i2i_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_i2i_bias,          &
-              & dsl4jsb_Config(DISTURB_)%vegetation_h2i_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_h2i_bias,          &
-              & dsl4jsb_Config(DISTURB_)%vegetation_i2f_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_i2f_bias,          &
-              & dsl4jsb_Config(DISTURB_)%vegetation_h2f_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_h2f_bias,          &
-              & dsl4jsb_Config(DISTURB_)%vegetation_i2g_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_i2g_bias,          &
-              & dsl4jsb_Config(DISTURB_)%vegetation_h2g_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_h2g_bias,          &
-              & dsl4jsb_Config(DISTURB_)%vegetation_i2o_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_i2o_bias,          &
-              & dsl4jsb_Config(DISTURB_)%vegetation_h2o_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_h2o_bias,          &
-              & dsl4jsb_Config(DISTURB_)%vegetation_out_weight,        &
-              & dsl4jsb_Config(DISTURB_)%vegetation_out_bias,          &
+              & dsl4jsb_Config(DISTURB_)%land_i2i_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_i2i_bias,                &
+              & dsl4jsb_Config(DISTURB_)%land_h2i_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_h2i_bias,                &
+              & dsl4jsb_Config(DISTURB_)%land_i2f_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_i2f_bias,                &
+              & dsl4jsb_Config(DISTURB_)%land_h2f_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_h2f_bias,                &
+              & dsl4jsb_Config(DISTURB_)%land_i2g_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_i2g_bias,                &
+              & dsl4jsb_Config(DISTURB_)%land_h2g_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_h2g_bias,                &
+              & dsl4jsb_Config(DISTURB_)%land_i2o_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_i2o_bias,                &
+              & dsl4jsb_Config(DISTURB_)%land_h2o_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_h2o_bias,                &
+              & dsl4jsb_Config(DISTURB_)%land_out_weight,              &
+              & dsl4jsb_Config(DISTURB_)%land_out_bias,                &
+
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_l1_weight,      &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_l1_bias,        &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_l2_weight,      &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_l2_bias,        &
 
               !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_weight, &
               !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_bias,   &
               !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_weight, &
               !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer2_bias,   &
 
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_layer1_weight, &
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_layer1_bias,   &
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_layer2_weight, &
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_layer2_bias,   &
+              !& dsl4jsb_Config(DISTURB_)%climate_emb_layer1_weight,    &
+              !& dsl4jsb_Config(DISTURB_)%climate_emb_layer1_bias,      &
+              !& dsl4jsb_Config(DISTURB_)%climate_emb_layer2_weight,    &
+              !& dsl4jsb_Config(DISTURB_)%climate_emb_layer2_bias,      &
 
-              & dsl4jsb_Config(DISTURB_)%climate_emb_layer1_weight,    &
-              & dsl4jsb_Config(DISTURB_)%climate_emb_layer1_bias,      &
-              & dsl4jsb_Config(DISTURB_)%climate_emb_layer2_weight,    &
-              & dsl4jsb_Config(DISTURB_)%climate_emb_layer2_bias,      &
+              !& dsl4jsb_Config(DISTURB_)%vegetation_emb_layer1_weight, &
+              !& dsl4jsb_Config(DISTURB_)%vegetation_emb_layer1_bias,   &
+              !& dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_weight, &
+              !& dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_bias,   &
 
-              & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer1_weight, &
-              & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer1_bias,   &
-              & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_weight, &
-              & dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_bias,   &
-
-              & dsl4jsb_Config(DISTURB_)%climate_min_max,              &
-              & dsl4jsb_Config(DISTURB_)%vegetation_min_max,           &
-              & dsl4jsb_Config(DISTURB_)%embedding_min_max,            &
-              !& dsl4jsb_Config(DISTURB_)%lightning_topography_min_max, &
+              & dsl4jsb_Config(DISTURB_)%weather_min_max,              &
+              & dsl4jsb_Config(DISTURB_)%land_min_max,                 &
               & dsl4jsb_Config(DISTURB_)%anthropogenic_min_max,        &
+              !& dsl4jsb_Config(DISTURB_)%embedding_min_max,            &
+              !& dsl4jsb_Config(DISTURB_)%lightning_topography_min_max, &
+
+              & gfed_region(:),                                        &
               
-              & climate_lstm_hidden(:,:),                              & ! inout
-              & climate_lstm_cell(:,:),                                & ! inout
-              & vegetation_lstm_hidden(:,:),                           & ! inout
-              & vegetation_lstm_cell(:,:),                             & ! inout
+              & weather_lstm_hidden(:,:),                              & ! inout
+              & weather_lstm_cell(:,:),                                & ! inout
+              & land_lstm_hidden(:,:),                                 & ! inout
+              & land_lstm_cell(:,:),                                   & ! inout
               & burned_fract(:)                                        & ! inout
               & )
 
