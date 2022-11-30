@@ -509,8 +509,8 @@ CONTAINS
     ENDIF
 
     ! --- wind
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%wind_speed, wind_air)
-    wind_10m = wind_air
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%wind_speed, wind_10m)
+    wind_air = wind_10m
 
     ! --- CO2 concentration
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%CO2_concentr, CO2_air)
