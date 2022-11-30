@@ -58,6 +58,12 @@ MODULE mo_hydro_init
   REAL(wp), PARAMETER ::  hyd_cond_clay = 8.50e-8_wp
   REAL(wp), PARAMETER ::  hyd_cond_oc = 5.80e-8_wp
 
+  ! wilting point (fraction of volume, called cpwp in TERRA)
+  REAL(wp), PARAMETER ::  wilt_sand = 0.042_wp
+  REAL(wp), PARAMETER ::  wilt_silt = 0.11_wp
+  REAL(wp), PARAMETER ::  wilt_clay = 0.257_wp
+  REAL(wp), PARAMETER ::  wilt_oc = 0.265_wp
+
   ! factor to compensate profile of hyd_cond_sat with depth in TERRA
   REAL(wp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp
 
@@ -309,6 +315,12 @@ CONTAINS
           & variable_name='soil_field_cap', &
           & fill_array = hydro_init_vars%vol_field_cap)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+
+        ! Volumetric permanent wilting point
+        ptr_2D => input_file%Read_2d(                                 &
+          & variable_name='wilting_point',                            &
+          & fill_array=hydro_init_vars%vol_p_wilt)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
       END IF ! .NOT. l_soil_texture
 
       ! Matrix potential
@@ -328,12 +340,6 @@ CONTAINS
         & variable_name='pore_size_index',          &
         & fill_array = hydro_init_vars%pore_size_index)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0._wp)
-
-      ! Volumetric permanent wilting point
-      ptr_2D => input_file%Read_2d(                                 &
-        & variable_name='wilting_point',                            &
-        & fill_array=hydro_init_vars%vol_p_wilt)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
       ! soil texture information
       IF (dsl4jsb_Config(HYDRO_)%l_soil_texture) THEN
@@ -386,40 +392,42 @@ CONTAINS
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! calculate volumetric soil porosity incl. organic fraction
-        hydro_init_vars%vol_porosity(:,:) = MAX(1._wp - ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) &
-                                            * 0.5_wp),0._wp) * &
-                                            MAX(((hydro_init_vars%fr_sand(:,:) + hydro_init_vars%fr_sand_deep(:,:)) &
-                                            * 0.5_wp * porosity_sand) + &
-                                            ((hydro_init_vars%fr_silt(:,:) + hydro_init_vars%fr_silt_deep(:,:)) &
-                                            * 0.5_wp * porosity_silt) + &
-                                            ((hydro_init_vars%fr_clay(:,:) + hydro_init_vars%fr_clay_deep(:,:)) &
-                                            * 0.5_wp * porosity_clay), porosity_sand) &
-                                            + ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) * 0.5_wp) &
-                                            * porosity_oc
+        !$claw sca forward update savepoint=ser_jsb_hydro_init_from_texture_0 tile_name=tile%name
+        CALL hydro_init_from_texture( &
+           porosity_sand, porosity_silt, porosity_clay, porosity_oc,                                                &
+           hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
+           hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
+           hydro_init_vars%vol_porosity(:,:))
 
         ! calculate saturated hydraulic conductivity incl. organic fraction
-        hydro_init_vars%hyd_cond_sat(:,:) = (MAX(1._wp - ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) &
-                                            * 0.5_wp),0._wp) * &
-                                            MAX(((hydro_init_vars%fr_sand(:,:) + hydro_init_vars%fr_sand_deep(:,:)) &
-                                            * 0.5_wp * hyd_cond_sand) + &
-                                            ((hydro_init_vars%fr_silt(:,:) + hydro_init_vars%fr_silt_deep(:,:)) &
-                                            * 0.5_wp * hyd_cond_silt) + &
-                                            ((hydro_init_vars%fr_clay(:,:) + hydro_init_vars%fr_clay_deep(:,:)) &
-                                            * 0.5_wp * hyd_cond_clay), hyd_cond_clay) &
-                                            + ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) * 0.5_wp) &
-                                            * hyd_cond_oc) * hyd_cond_sat_profile
+        !$claw sca forward update savepoint=ser_jsb_hydro_init_from_texture_1 tile_name=tile%name
+        CALL hydro_init_from_texture( &
+           hyd_cond_sand, hyd_cond_silt, hyd_cond_clay, hyd_cond_oc,                                                &
+           hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
+           hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
+           hydro_init_vars%hyd_cond_sat(:,:))
+        hydro_init_vars%hyd_cond_sat(:,:) = hydro_init_vars%hyd_cond_sat(:,:) * hyd_cond_sat_profile
 
         ! calculate volumetric field capacity [m/m] incl. organic fraction
-        hydro_init_vars%vol_field_cap(:,:) = MAX(1._wp - ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) &
-                                             * 0.5_wp),0._wp) * &
-                                             MAX(((hydro_init_vars%fr_sand(:,:) + hydro_init_vars%fr_sand_deep(:,:)) &
-                                             * 0.5_wp * field_cap_sand) + &
-                                             ((hydro_init_vars%fr_silt(:,:) + hydro_init_vars%fr_silt_deep(:,:)) &
-                                             * 0.5_wp * field_cap_silt) + &
-                                             ((hydro_init_vars%fr_clay(:,:) + hydro_init_vars%fr_clay_deep(:,:)) &
-                                             * 0.5_wp * field_cap_clay), field_cap_sand) &
-                                             + ((hydro_init_vars%fr_oc(:,:) + hydro_init_vars%fr_oc_deep(:,:)) * 0.5_wp) &
-                                             * field_cap_oc
+        !$claw sca forward update savepoint=ser_jsb_hydro_init_from_texture_2 tile_name=tile%name
+        CALL hydro_init_from_texture( &
+           field_cap_sand, field_cap_silt, field_cap_clay, field_cap_oc,                                            &
+           hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
+           hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
+           hydro_init_vars%vol_field_cap(:,:))
+
+        ! calculate plant wilting point incl. organic fraction
+        !$claw sca forward update savepoint=ser_jsb_hydro_init_from_texture_3 tile_name=tile%name
+        CALL hydro_init_from_texture( &
+           wilt_sand, wilt_silt, wilt_clay, wilt_oc,                                                                &
+           hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
+           hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
+           hydro_init_vars%vol_p_wilt(:,:))
+
         ! crosscheck max_moist <= vol_field_cap x soil_depth
         hydro_init_vars%max_moist(:,:) = MIN(hydro_init_vars%vol_field_cap(:,:) * hydro_init_vars%soil_depth(:,:), &
                                              hydro_init_vars%max_moist(:,:))
@@ -1049,6 +1057,44 @@ CONTAINS
     END IF
 
   END SUBROUTINE hydro_sanitize_state
+
+  !> Calculate soil hydrological parameters fom soil texture.
+  !!
+  !! Input to this routine should conform:
+  !! fraction_sand + fraction_silt + fraction_clay = 1
+  !! fraction_sand_deep + fraction_silt_deep + fraction_clay_deep = 1
+  !! Properties of upper soil and deep soil are identical. Their composition is averaged.
+  !! The organic fraction of the soil is the non-mineral fraction of the soil.
+  PURE ELEMENTAL SUBROUTINE hydro_init_from_texture(                &
+    & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &
+    & fraction_sand, fraction_silt, fraction_clay,                  &
+    & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
+    & fraction_oc, fraction_oc_deep,                                &
+    & parameter_from_texture)
+
+    REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
+    !$claw model-data
+    REAL(wp), INTENT(in)  ::                                      &
+      fraction_sand, fraction_silt, fraction_clay,                &
+      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep, &
+      fraction_oc, fraction_oc_deep
+    REAL(wp), INTENT(out)  ::  parameter_from_texture
+    !$claw end model-data
+
+    !$claw sca
+
+    parameter_from_texture = MAX(1._wp - ((fraction_oc + fraction_oc_deep) &
+                             * 0.5_wp),0._wp) *                            &
+                             MAX(((fraction_sand + fraction_sand_deep)     &
+                             * 0.5_wp * parameter_sand) +                  &
+                             ((fraction_silt + fraction_silt_deep)         &
+                             * 0.5_wp * parameter_silt) +                  &
+                             ((fraction_clay + fraction_clay_deep)         &
+                             * 0.5_wp * parameter_clay), parameter_sand)   &
+                             + ((fraction_oc + fraction_oc_deep)           &
+                             * 0.5_wp) * parameter_oc
+
+  END SUBROUTINE hydro_init_from_texture
 
 #endif
 END MODULE mo_hydro_init
