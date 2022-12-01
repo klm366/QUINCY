@@ -34,6 +34,7 @@ MODULE mo_jsb_process_factory
   USE mo_tlcc_memory_class,    ONLY: t_tlcc_memory
   USE mo_tcq_memory_class,     ONLY: t_tcq_memory  
   USE mo_alcc_memory_class,    ONLY: t_alcc_memory
+  USE mo_dynveg_memory_class,  ONLY: t_dynveg_memory
   USE mo_veg_memory_class,     ONLY: t_veg_memory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
@@ -70,12 +71,14 @@ MODULE mo_jsb_process_factory
   USE mo_tcq_config_class,      ONLY: t_tcq_config
   USE mo_alcc_interface,        ONLY: Register_alcc_tasks
   USE mo_alcc_config_class,     ONLY: t_alcc_config
+  USE mo_dynveg_interface,      ONLY: Register_dynveg_tasks
+  USE mo_dynveg_config_class,   ONLY: t_dynveg_config
   USE mo_veg_interface,         ONLY: Register_veg_tasks
   USE mo_veg_config_class,      ONLY: t_veg_config
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, TLCC_, TCQ_, ALCC_, VEG_
+    & PPLCC_, TLCC_, TCQ_, ALCC_, DYNVEG_, VEG_
 
   IMPLICIT NONE
   PRIVATE
@@ -153,6 +156,10 @@ CONTAINS
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_alcc_tasks(return_ptr, model_id)
       ALLOCATE(t_alcc_config::return_ptr%config)
+    CASE (DYNVEG_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_dynveg_tasks(return_ptr, model_id)
+      ALLOCATE(t_dynveg_config::return_ptr%config)
     CASE (VEG_)
       CALL Register_veg_tasks(return_ptr, model_id)
       ALLOCATE(t_veg_config::return_ptr%config)
@@ -184,6 +191,7 @@ CONTAINS
     USE mo_tlcc_memory_class,    ONLY: max_no_of_tlcc_vars => max_no_of_vars
     USE mo_tcq_memory_class,     ONLY: max_no_of_tcq_vars => max_no_of_vars
     USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
+    USE mo_dynveg_memory_class,  ONLY: max_no_of_dynveg_vars => max_no_of_vars
     USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
@@ -246,6 +254,9 @@ CONTAINS
     CASE (ALCC_)
       ALLOCATE(t_alcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_alcc_vars
+    CASE (DYNVEG_)
+      ALLOCATE(t_dynveg_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_dynveg_vars
     CASE (VEG_)
       ALLOCATE(t_veg_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_veg_vars
