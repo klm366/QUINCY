@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the shortwave surface radiation budget (fapar & albedo) 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !!
 !! 18-08-2016: update to include VIS And NIR albedo calculation for the canopy
 !! 24-08-2016: update to include two-stream approximation and soil albedo 

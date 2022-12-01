@@ -281,31 +281,6 @@ CONTAINS
           CALL veg_tile%Set_process_action(TLCC_, ON_TILE_, AGGREGATE_)
         END IF
 
-          ! R: TBD: DISTURB_ ist kein Task von CARBON_,
-          !         da es die cover fractions der pfts verändert und nur als Nebeneffekt auch die C-Pools
-          !         verändert. Er würde im Prinzip auch ablaufen ohne den Prozess CARBON_ und würde auch
-          !         auf alle anderen Stoffpools wirken. Außerdem soll CARBON_ später wie NITROGEN_
-          !         oder andere Stoffpools gehandelt werden. Diese Prozesse haben bis
-          !         auf ihre Fixierung kaum eigene Tasks sondern werden von anderen Prozessen verändert.
-          !         => die Stoffpools sollten langfristig evtl. gar keine Prozesse sein
-          !
-          !         DISTURB_ braucht CARBON,
-          !         da es C-Pools als Input für die Feuerberechnung braucht und sollte diese auch verändern
-          !         wenn der CARBON Prozess existiert. Dies ist ein grundsätzliches Problem: Prozesse benötigen
-          !         - oder sogar verändern - evtl. Variablen, die eigentlich zu einem anderen Prozess gehören.
-          !         Das bedeutet der Speicher des anderen Prozesses muß angelegt werden auch wenn dieser
-          !         Prozess gar nicht abläuft. Dazu müsste wohl am besten eine Prozedur die die Namelist-
-          !         Einträge entwprechend umändert geschrieben werden oder wenn Usecases benutzt werden
-          !         (wie hier) der entsprechende Prozess dennoch definiert werden, auch wenn in der Queue-
-          !         Liste nachher kein Task dieses Prozesses auftaucht.
-          !
-          !         DISTURB_ braucht PHENO wg. veg_fract_correct s.o.
-          !
-          !         CARBON_ braucht DISTURB_ nicht!
-          !
-          !         Manche Prozeduren sollen nur ausgeführt werden wenn beide Prozesse aktiv sind.
-          !         In DISTURB_ z.B. die dazugehörige C-Umverteilung bei Feuer und Winbruch.
-          !         Dies habe ich mit "IF ( tile%Is_process_calculated(CARBON_) ) THEN" gemacht.
           !
           IF (model%processes(CARBON_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(CARBON_, ON_LEAFS_, AGGREGATE_)

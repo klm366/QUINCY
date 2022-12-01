@@ -20,7 +20,7 @@
 !! @brief Contains the routines for biophysical rate modifiers
 !!
 !! @author
-!!  Sönke Zaehle 
+!!  Soenke Zaehle 
 !!
 !! @par Revision History
 !! First version by Jan Engel (20170509): copyied from mo_sb_simple_model.f90

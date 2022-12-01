@@ -452,27 +452,19 @@ CONTAINS
     !   if applicable: associate REAL element vectors with %ptrm1 & %ptr2d/3d
     IF (ALLOCATED(this%element_list)) THEN
       DO i=1,SIZE(this%element_list)
-        SELECT TYPE (element => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real2d)
+        ASSOCIATE (element => this%element_list(i)%p)
           CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           element%subset_type = itype
-        CLASS IS (t_jsb_var_real3d)
-          CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-          element%subset_type = itype
-        END SELECT
+        END ASSOCIATE
       END DO
     END IF
 
     IF (ALLOCATED(this%var_list)) THEN
       DO i=1,SIZE(this%var_list)
-        SELECT TYPE (var => this%var_list(i)%p)
-        CLASS IS (t_jsb_var_real2d)
+        ASSOCIATE (var => this%var_list(i)%p)
           CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           var%subset_type = itype
-        CLASS IS (t_jsb_var_real3d)
-          CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-          var%subset_type = itype
-        END SELECT
+        END ASSOCIATE
       END DO
     END IF
 

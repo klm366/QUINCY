@@ -93,6 +93,17 @@ MODULE mo_veg_memory_class
 #endif
 
     !------------------------------------------------------------------------------------------------------ !
+    !>veg_pool diagnostics - summary of C, N, P, C13, C14, N15 across the pool
+    !> 
+    TYPE(t_jsb_var_real2d)          :: &   
+                                    veg_pool_total_c      , &         !< sum of all veg_pool%*%carbon      [mol C / m2]
+                                    veg_pool_total_n      , &         !< sum of all veg_pool%*%nitrogen    [mol C / m2]
+                                    veg_pool_total_p      , &         !< sum of all veg_pool%*%phosphorus  [mol C / m2]
+                                    veg_pool_total_c13    , &         !< sum of all veg_pool%*%carbon13
+                                    veg_pool_total_c14    , &         !< sum of all veg_pool%*%carbon14
+                                    veg_pool_total_n15                !< sum of all veg_pool%*%nitrogen15
+
+    !------------------------------------------------------------------------------------------------------ !
     !>basic plant 2D
     !>
     TYPE(t_jsb_var_real2d)          :: &   
@@ -118,11 +129,6 @@ MODULE mo_veg_memory_class
     ! basic plant 3D 
     TYPE(t_jsb_var_real3d)          :: &    ! DIMENSION(soil_layer_sb)
                                     root_fraction_sl                 !< fractions of root per layer [unitless]
-    ! veg_pool diagnostics
-    TYPE(t_jsb_var_real2d)          :: &   
-                                    total_veg_pool_c  , &            !< sum of all veg_pool%*%carbon      [mol C / m2]
-                                    total_veg_pool_n  , &            !< sum of all veg_pool%*%nitrogen    [mol C / m2]
-                                    total_veg_pool_p                 !< sum of all veg_pool%*%phosphorus  [mol C / m2]
 
     !------------------------------------------------------------------------------------------------------ !
     !>target C:N and N:P ratios for various non-leaf tissues (mol/mol)
@@ -154,28 +160,28 @@ MODULE mo_veg_memory_class
     !>fluxes
     !>
     TYPE(t_jsb_var_real2d)          :: &   
-                                    maint_respiration_pot         , & !< potential maintenance respiration [µmol CO2 m-2 s-1]
-                                    maint_respiration             , & !< maintenance respiration [µmol CO2 m-2 s-1]
-                                    maint_respiration_c13         , & !< maintenance respiration [µmol 13CO2 m-2 s-1]
-                                    maint_respiration_c14         , & !< maintenance respiration [µmol 14CO2 m-2 s-1]
-                                    growth_respiration            , & !< growth respiration [µmol CO2 m-2 s-1]
-                                    growth_respiration_c13        , & !< growth respiration [µmol 13CO2 m-2 s-1]
-                                    growth_respiration_c14        , & !< growth respiration [µmol 14CO2 m-2 s-1]
-                                    n_transform_respiration       , & !< respiration associated with N transformation [µmol CO2 m-2 s-1]
-                                    n_fixation_respiration        , & !< respiration associated with N fixation [µmol CO2 m-2 s-1]
-                                    n_processing_respiration      , & !< respiration associated with N processing [µmol CO2 m-2 s-1]
-                                    n_processing_respiration_c13  , & !< respiration associated with N processing [µmol 13CO2 m-2 s-1]
-                                    n_processing_respiration_c14  , & !< respiration associated with N processing [µmol 14CO2 m-2 s-1]
-                                    npp                           , & !< net primary production [µmol CO2 m-2 s-1]
-                                    npp_c13                       , & !< net primary production [µmol 13CO2 m-2 s-1]
-                                    npp_c14                       , & !< net primary production [µmol 14CO2 m-2 s-1]
-                                    uptake_nh4                    , & !< NH4 uptake from soil [µmol N m-2 s-1]
-                                    uptake_nh4_n15                , & !< 15NH4 uptake from soil [µmol N m-2 s-1]
-                                    uptake_no3                    , & !< NO3 uptake from soil [µmol N m-2 s-1]
-                                    uptake_no3_n15                , & !< 15NO3 uptake from soil [µmol N m-2 s-1]
-                                    uptake_po4                    , & !< PO4 uptake from soil [µmol P m-2 s-1]
-                                    n_fixation                    , & !< symbiontic N fixation [µmol N m-2 s-1]
-                                    n_fixation_n15                , & !< symbiontic N fixation [µmol 15N m-2 s-1]
+                                    maint_respiration_pot         , & !< potential maintenance respiration [micro-mol CO2 m-2 s-1]
+                                    maint_respiration             , & !< maintenance respiration [micro-mol CO2 m-2 s-1]
+                                    maint_respiration_c13         , & !< maintenance respiration [micro-mol 13CO2 m-2 s-1]
+                                    maint_respiration_c14         , & !< maintenance respiration [micro-mol 14CO2 m-2 s-1]
+                                    growth_respiration            , & !< growth respiration [micro-mol CO2 m-2 s-1]
+                                    growth_respiration_c13        , & !< growth respiration [micro-mol 13CO2 m-2 s-1]
+                                    growth_respiration_c14        , & !< growth respiration [micro-mol 14CO2 m-2 s-1]
+                                    n_transform_respiration       , & !< respiration associated with N transformation [micro-mol CO2 m-2 s-1]
+                                    n_fixation_respiration        , & !< respiration associated with N fixation [micro-mol CO2 m-2 s-1]
+                                    n_processing_respiration      , & !< respiration associated with N processing [micro-mol CO2 m-2 s-1]
+                                    n_processing_respiration_c13  , & !< respiration associated with N processing [micro-mol 13CO2 m-2 s-1]
+                                    n_processing_respiration_c14  , & !< respiration associated with N processing [micro-mol 14CO2 m-2 s-1]
+                                    npp                           , & !< net primary production [micro-mol CO2 m-2 s-1]
+                                    npp_c13                       , & !< net primary production [micro-mol 13CO2 m-2 s-1]
+                                    npp_c14                       , & !< net primary production [micro-mol 14CO2 m-2 s-1]
+                                    uptake_nh4                    , & !< NH4 uptake from soil [micro-mol N m-2 s-1]
+                                    uptake_nh4_n15                , & !< 15NH4 uptake from soil [micro-mol N m-2 s-1]
+                                    uptake_no3                    , & !< NO3 uptake from soil [micro-mol N m-2 s-1]
+                                    uptake_no3_n15                , & !< 15NO3 uptake from soil [micro-mol N m-2 s-1]
+                                    uptake_po4                    , & !< PO4 uptake from soil [micro-mol P m-2 s-1]
+                                    n_fixation                    , & !< symbiontic N fixation [micro-mol N m-2 s-1]
+                                    n_fixation_n15                , & !< symbiontic N fixation [micro-mol 15N m-2 s-1]
                                     recycling_leaf_n              , & !< net flux of N from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     recycling_leaf_n15            , & !< net flux of 15N from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     recycling_leaf_p              , & !< net flux of P from leaf to labile (senescence and maintenance) [mol m-2 timestep-1]
@@ -185,19 +191,19 @@ MODULE mo_veg_memory_class
                                     recycling_heart_wood_n        , & !< net flux of N from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     recycling_heart_wood_n15      , & !< net flux of 15N from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
                                     recycling_heart_wood_p        , & !< net flux of P from sapwood to labile (senescence and maintenance) [mol m-2 timestep-1]
-                                    net_growth                        !< npp minus turnover [µmol CO2 m-2 s-1]
+                                    net_growth                        !< npp minus turnover [micro-mol CO2 m-2 s-1]
 
     !------------------------------------------------------------------------------------------------------ !
     !>everything else
     !>
     TYPE(t_jsb_var_real2d)          :: &   
-                                    fmaint_rate_root          , & !< current N-specific maintentance respiration [~µmol C mol-1 N s-1]
-                                    unit_npp                  , & !< incremental change in NPP [µmol CO2 m-2 s-1]
+                                    fmaint_rate_root          , & !< current N-specific maintentance respiration [~micro-mol C mol-1 N s-1]
+                                    unit_npp                  , & !< incremental change in NPP [micro-mol CO2 m-2 s-1]
                                     unit_transpiration        , & !< incremental change in transpiration [kg m-2 s-1]
-                                    unit_uptake_n_pot         , & !< incremental change in potential N uptake per unit root carbon [µmol N m-2 s-1]
-                                    unit_uptake_p_pot         , & !< incremental change in potential P uptake per unit root carbon [µmol P m-2 s-1]
-                                    unit_uptake_n_act         , & !< incremental change in actual N uptake per unit root carbon [µmol N m-2 s-1]
-                                    unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon [µmol P m-2 s-1]
+                                    unit_uptake_n_pot         , & !< incremental change in potential N uptake per unit root carbon [micro-mol N m-2 s-1]
+                                    unit_uptake_p_pot         , & !< incremental change in potential P uptake per unit root carbon [micro-mol P m-2 s-1]
+                                    unit_uptake_n_act         , & !< incremental change in actual N uptake per unit root carbon [micro-mol N m-2 s-1]
+                                    unit_uptake_p_act         , & !< incremental change in actual P uptake per unit root carbon [micro-mol P m-2 s-1]
                                     delta_dens_ind            , & !< change in density of individuals [# m-2 timestep-1]
                                     cost_n_uptake_root        , & !< actual cost for N uptake by roots [mol C mol-1 N]
                                     cost_n_fixation           , & !< actual cost for N uptake through fixation [mol C mol-1 N]
@@ -240,8 +246,8 @@ MODULE mo_veg_memory_class
     !> 
     ! 1.1 conditions for the labile pool dynamics
     TYPE(t_jsb_var_real2d)          :: &   
-                                    gpp_tlabile_mavg               , &  !< gpp  [µmol m-2 s-1]
-                                    maint_respiration_tlabile_mavg , &  !< maintenance respiration [µmol m-2 s-1]
+                                    gpp_tlabile_mavg               , &  !< gpp  [micro-mol m-2 s-1]
+                                    maint_respiration_tlabile_mavg , &  !< maintenance respiration [micro-mol m-2 s-1]
                                     growth_req_n_tlabile_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions time-averaged [mol N m-2 s-1]
                                     growth_req_p_tlabile_mavg           !< moles P required for a unit of N growth under current allocation fractions time-averaged [mol P m-2 s-1]
     ! 1.2 conditions for phenology calculations
@@ -249,7 +255,7 @@ MODULE mo_veg_memory_class
                                     t_air_tphen_mavg                    !< air temperature time-averaged [K]
     ! 1.3 memory for plant uptake (average demand over a couple of days to get rid of diurnal C cycle)
     TYPE(t_jsb_var_real2d)          :: &   
-                                    npp_tuptake_mavg               , &  !< npp of the last week [µmol m-2 s-1]
+                                    npp_tuptake_mavg               , &  !< npp of the last week [micro-mol m-2 s-1]
                                     demand_uptake_n_tuptake_mavg   , &  !< scalar of Vmax for root N uptake time-averaged [unitless]
                                     demand_uptake_p_tuptake_mavg   , &  !< scalar of Vmax for root P uptake time-averaged [unitless]
                                     growth_req_n_tuptake_mavg      , &  !< moles N required for a unit of C growth under current allocation fractions time-averaged [mol N m-2 s-1]
@@ -274,23 +280,23 @@ MODULE mo_veg_memory_class
                                     co2_mixing_ratio_tcnl_mavg     , &  !< co2 mixing ratio of the air time-averaged [co2 in ppm]
                                     ga_tcnl_mavg                   , &  !< aerodynamic conductance time-averaged [m s-1]
                                     beta_sinklim_ps_tcnl_mavg      , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
-                                    uptake_n_tcnl_mavg             , &  !< root N uptake time-averaged [µmol N m-2 s-1]
+                                    uptake_n_tcnl_mavg             , &  !< root N uptake time-averaged [micro-mol N m-2 s-1]
                                     growth_cn_tcnl_mavg            , &  !< new growth CN ratio time-averaged [mol C mol-1 N]
                                     growth_np_tcnl_mavg            , &  !< new growth NP ratio time-averaged [mol N mol-1 P]
-                                    npp_tcnl_mavg                  , &  !< NPP time-averaged [µmol CO2 m-2 s-1]
+                                    npp_tcnl_mavg                  , &  !< NPP time-averaged [micro-mol CO2 m-2 s-1]
                                     fmaint_rate_tcnl_mavg          , &  !< maintenance respiration rate per unit N for roots
                                     labile_nitrogen_tcnl_mavg      , &  !< labile nitrogen vegetation pool time-averaged [mol N m-2]
                                     labile_carbon_tcnl_mavg        , &  !< labile carbon vegetation pool time-averaged [mol C m-2]
                                     labile_phosphorus_tcnl_mavg         !< labile phosphorus vegetation pool time-averaged [mol P m-2]
     ! 1.6 conditions for photosynthesis for the optimisation of biomass allocation fractions
     TYPE(t_jsb_var_real2d)          :: &   
-                                    npp_talloc_mavg                , &  !< NPP [µmol m-2 s-1]
-                                    n_fixation_talloc_mavg         , &  !< N fixation time-averaged [µmol N m-2 s-1]
+                                    npp_talloc_mavg                , &  !< NPP [micro-mol m-2 s-1]
+                                    n_fixation_talloc_mavg         , &  !< N fixation time-averaged [micro-mol N m-2 s-1]
                                     transpiration_talloc_mavg      , &  !< transpiration time-averaged [kg m-2 s-1]
-                                    unit_npp_talloc_mavg           , &  !< rate of change in NPP with  increment in leaf mass [µmol C mol-1]
+                                    unit_npp_talloc_mavg           , &  !< rate of change in NPP with  increment in leaf mass [micro-mol C mol-1]
                                     unit_transpiration_talloc_mavg , &  !< incremental change in transpiration time-averaged [kg m-2 s-1]
-                                    unit_uptake_n_talloc_mavg      , &  !< actual rate of N uptkae per unit root [µmol N mol-1]
-                                    unit_uptake_p_talloc_mavg      , &  !< actual rate of P uptake per unit root [µmol P mol-1]
+                                    unit_uptake_n_talloc_mavg      , &  !< actual rate of N uptkae per unit root [micro-mol N mol-1]
+                                    unit_uptake_p_talloc_mavg      , &  !< actual rate of P uptake per unit root [micro-mol P mol-1]
                                     dphi_talloc_mavg               , &  !< leaf-soil water potential gradient [MPa]
                                     growth_cn_talloc_mavg          , &  !< plant growth cn ratio, equivalent to 1/growth_req_n time-averaged [mol C mol-1 N]
                                     growth_cp_talloc_mavg          , &  !< plant growth cp ratio, equivalent to 1/(growthreq_n*growth_req_p) time-averaged [mol C mol-1 P]
@@ -305,14 +311,14 @@ MODULE mo_veg_memory_class
     ! 1.7 memory over root life time 
     TYPE(t_jsb_var_real2d)          :: &   
                                     leaf2root_troot_mavg           , &  !< leaf to root mass ratio time-averaged [unitless]
-                                    unit_npp_troot_mavg            , &  !< rate of change in NPP with increment in leaf mass [µmol C mol-1]
-                                    unit_uptake_n_pot_troot_mavg   , &  !< rate of N uptkae per unit root [µmol N mol-1]
-                                    unit_uptake_p_pot_troot_mavg   , &  !< rate of P uptake per unit root [µmol P mol-1]
-                                    fmaint_rate_troot_mavg              !< moving average of N-specific maintentance respiration [~µmol C mol-1 N s-1]
+                                    unit_npp_troot_mavg            , &  !< rate of change in NPP with increment in leaf mass [micro-mol C mol-1]
+                                    unit_uptake_n_pot_troot_mavg   , &  !< rate of N uptkae per unit root [micro-mol N mol-1]
+                                    unit_uptake_p_pot_troot_mavg   , &  !< rate of P uptake per unit root [micro-mol P mol-1]
+                                    fmaint_rate_troot_mavg              !< moving average of N-specific maintentance respiration [~micro-mol C mol-1 N s-1]
     ! 1.8 memory over timescale of vegetation dynamics 
     TYPE(t_jsb_var_real2d)          :: &   
-                                    an_boc_tvegdyn_mavg            , &  !< net photosynthesis at bottom of canopy, lowest canopy layer existing time-averaged [µmol m-2 s-1]
-                                    net_growth_tvegdyn_mavg        , &  !< net growth, npp minus turnover [µmol C m-2 s-1]
+                                    an_boc_tvegdyn_mavg            , &  !< net photosynthesis at bottom of canopy, lowest canopy layer existing time-averaged [micro-mol m-2 s-1]
+                                    net_growth_tvegdyn_mavg        , &  !< net growth, npp minus turnover [micro-mol C m-2 s-1]
                                     lai_tvegdyn_mavg                    !< lai time-averaged [m2 m-2]
     ! 1.9 variables for respiration accclimation 
     TYPE(t_jsb_var_real2d)          :: &   
@@ -654,76 +660,76 @@ CONTAINS
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.TRUE.,                                                                              &
-        & lrestart=.TRUE.,                                                                             &
-        & output_level=BASIC,                                                                          &
-        & initval_r=0.0_wp )
+        & output_level = BASIC,                                                                        &
+        & loutput = .TRUE.,                                                                            &
+        & lrestart = .TRUE.,                                                                           &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_growth, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_litterfall, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_total_flux, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_falloc, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
 
       ! add all variables in the veg_elements_pool to the VEG_ memory
       CALL mem%Add_var(mem%veg_main_pool%veg_total_biomass, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.TRUE.,                                                                              &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_exudation, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_establishment, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
       CALL mem%Add_var(mem%veg_main_pool%veg_reserve_use, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &
-        & loutput=.FALSE.,                                                                             &
-        & lrestart=.FALSE.,                                                                            &
-        & output_level=FULL,                                                                           &
-        & initval_r=0.0_wp )
+        & output_level = FULL,                                                                         &
+        & loutput = .FALSE.,                                                                           &
+        & lrestart = .FALSE.,                                                                          &
+        & initval_r = 0.0_wp )
 
       ! output to logfile all pools & their variables at model-init 
       ! (maybe use for debugging; its quite a long list)
@@ -737,13 +743,82 @@ CONTAINS
       !>2.0 2D & 3D variables
       !> 
 
+      ! diagnostic variables specific to QUINCY pools in ICON-Land
+      CALL mem%Add_var('veg_pool_total_c', mem%veg_pool_total_c, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_c', '[mol C / m2]', 'total C, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_total_n', mem%veg_pool_total_n, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_n', '[mol C / m2]', 'total N, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_total_p', mem%veg_pool_total_p, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_p', '[mol C / m2]', 'total P, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+        
+      CALL mem%Add_var('veg_pool_total_c13', mem%veg_pool_total_c13, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_c13', '..', 'total C13, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_total_c14', mem%veg_pool_total_c14, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_c14', '..', 'total C14, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('veg_pool_total_n15', mem%veg_pool_total_n15, &
+        & hgrid, surface, &
+        & t_cf('veg_pool_total_n15', '..', 'total N15, sum of all veg_pool tissues'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+
+      ! normal VEG_ variables (not specific to QUINCY pools in ICON-Land)
       CALL mem%Add_var('height', mem%height, &
         & hgrid, surface, &
         & t_cf('height', 'm', 'plant height'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -753,7 +828,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -763,7 +839,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -773,7 +850,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -783,7 +861,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -793,7 +872,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -803,7 +883,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -813,7 +894,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -823,7 +905,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -833,6 +916,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -843,7 +927,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -853,7 +938,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -863,7 +949,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -873,7 +960,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -883,6 +971,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = BASIC, &
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -893,7 +982,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -903,7 +993,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -913,38 +1004,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('total_veg_pool_c', mem%total_veg_pool_c, &
-        & hgrid, surface, &
-        & t_cf('total_veg_pool_c', '[mol C / m2]', 'total C, sum of all veg_pool tissues'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('total_veg_pool_n', mem%total_veg_pool_n, &
-        & hgrid, surface, &
-        & t_cf('total_veg_pool_n', '[mol C / m2]', 'total N, sum of all veg_pool tissues'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)
-
-      CALL mem%Add_var('total_veg_pool_p', mem%total_veg_pool_p, &
-        & hgrid, surface, &
-        & t_cf('total_veg_pool_p', '[mol C / m2]', 'total P, sum of all veg_pool tissues'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('target_cn_fine_root', mem%target_cn_fine_root, &
@@ -953,7 +1015,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -963,7 +1026,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -973,7 +1037,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -983,7 +1048,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -993,7 +1059,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1003,7 +1070,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1013,7 +1081,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1023,7 +1092,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1033,6 +1103,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1043,6 +1114,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1053,6 +1125,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1063,6 +1136,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1073,6 +1147,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1083,6 +1158,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1093,226 +1169,249 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('maint_respiration_pot', mem%maint_respiration_pot, &
         & hgrid, surface, &
-        & t_cf('maint_respiration_pot', 'µmol CO2 m-2 s-1', 'potential maintenance respiration'), &
+        & t_cf('maint_respiration_pot', 'micro-mol CO2 m-2 s-1', 'potential maintenance respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('maint_respiration', mem%maint_respiration, &
         & hgrid, surface, &
-        & t_cf('maint_respiration', 'µmol CO2 m-2 s-1', 'maintenance respiration'), &
+        & t_cf('maint_respiration', 'micro-mol CO2 m-2 s-1', 'maintenance respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('maint_respiration_c13', mem%maint_respiration_c13, &
         & hgrid, surface, &
-        & t_cf('maint_respiration_c13', 'µmol 13CO2 m-2 s-1', 'maintenance respiration'), &
+        & t_cf('maint_respiration_c13', 'micro-mol 13CO2 m-2 s-1', 'maintenance respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('maint_respiration_c14', mem%maint_respiration_c14, &
         & hgrid, surface, &
-        & t_cf('maint_respiration_c14', 'µmol 14CO2 m-2 s-1', 'maintenance respiration'), &
+        & t_cf('maint_respiration_c14', 'micro-mol 14CO2 m-2 s-1', 'maintenance respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('growth_respiration', mem%growth_respiration, &
         & hgrid, surface, &
-        & t_cf('growth_respiration', 'µmol CO2 m-2 s-1', 'growth respiration'), &
+        & t_cf('growth_respiration', 'micro-mol CO2 m-2 s-1', 'growth respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('growth_respiration_c13', mem%growth_respiration_c13, &
         & hgrid, surface, &
-        & t_cf('growth_respiration_c13', 'µmol 13CO2 m-2 s-1', 'growth respiration'), &
+        & t_cf('growth_respiration_c13', 'micro-mol 13CO2 m-2 s-1', 'growth respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('growth_respiration_c14', mem%growth_respiration_c14, &
         & hgrid, surface, &
-        & t_cf('growth_respiration_c14', 'µmol 14CO2 m-2 s-1', 'growth respiration'), &
+        & t_cf('growth_respiration_c14', 'micro-mol 14CO2 m-2 s-1', 'growth respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('n_transform_respiration', mem%n_transform_respiration, &
         & hgrid, surface, &
-        & t_cf('n_transform_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N transformation'), &
+        & t_cf('n_transform_respiration', 'micro-mol CO2 m-2 s-1', 'respiration associated with N transformation'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('n_fixation_respiration', mem%n_fixation_respiration, &
         & hgrid, surface, &
-        & t_cf('n_fixation_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N fixation'), &
+        & t_cf('n_fixation_respiration', 'micro-mol CO2 m-2 s-1', 'respiration associated with N fixation'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('n_processing_respiration', mem%n_processing_respiration, &
         & hgrid, surface, &
-        & t_cf('n_processing_respiration', 'µmol CO2 m-2 s-1', 'respiration associated with N processing'), &
+        & t_cf('n_processing_respiration', 'micro-mol CO2 m-2 s-1', 'respiration associated with N processing'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('n_processing_respiration_c13', mem%n_processing_respiration_c13, &
         & hgrid, surface, &
-        & t_cf('n_processing_respiration_c13', 'µmol 13CO2 m-2 s-1', 'respiration associated with N processing'), &
+        & t_cf('n_processing_respiration_c13', 'micro-mol 13CO2 m-2 s-1', 'respiration associated with N processing'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('n_processing_respiration_c14', mem%n_processing_respiration_c14, &
         & hgrid, surface, &
-        & t_cf('n_processing_respiration_c14', 'µmol 14CO2 m-2 s-1', 'respiration associated with N processing'), &
+        & t_cf('n_processing_respiration_c14', 'micro-mol 14CO2 m-2 s-1', 'respiration associated with N processing'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('npp', mem%npp, &
         & hgrid, surface, &
-        & t_cf('npp', 'µmol CO2 m-2 s-1', 'net primary production'), &
+        & t_cf('npp', 'micro-mol CO2 m-2 s-1', 'net primary production'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('npp_c13', mem%npp_c13, &
         & hgrid, surface, &
-        & t_cf('npp_c13', 'µmol 13CO2 m-2 s-1', 'net primary production'), &
+        & t_cf('npp_c13', 'micro-mol 13CO2 m-2 s-1', 'net primary production'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('npp_c14', mem%npp_c14, &
         & hgrid, surface, &
-        & t_cf('npp_c14', 'µmol 14CO2 m-2 s-1', 'net primary production'), &
+        & t_cf('npp_c14', 'micro-mol 14CO2 m-2 s-1', 'net primary production'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('uptake_nh4', mem%uptake_nh4, &
         & hgrid, surface, &
-        & t_cf('uptake_nh4', 'µmol N m-2 s-1', 'NH4 uptake from soil'), &
+        & t_cf('uptake_nh4', 'micro-mol N m-2 s-1', 'NH4 uptake from soil'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('uptake_nh4_n15', mem%uptake_nh4_n15, &
         & hgrid, surface, &
-        & t_cf('uptake_nh4_n15', 'µmol N m-2 s-1', '15NH4 uptake from soil'), &
+        & t_cf('uptake_nh4_n15', 'micro-mol N m-2 s-1', '15NH4 uptake from soil'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('uptake_no3', mem%uptake_no3, &
         & hgrid, surface, &
-        & t_cf('uptake_no3', 'µmol N m-2 s-1', 'NO3 uptake from soil'), &
+        & t_cf('uptake_no3', 'micro-mol N m-2 s-1', 'NO3 uptake from soil'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('uptake_no3_n15', mem%uptake_no3_n15, &
         & hgrid, surface, &
-        & t_cf('uptake_no3_n15', 'µmol N m-2 s-1', '15NO3 uptake from soil'), &
+        & t_cf('uptake_no3_n15', 'micro-mol N m-2 s-1', '15NO3 uptake from soil'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('uptake_po4', mem%uptake_po4, &
         & hgrid, surface, &
-        & t_cf('uptake_po4', 'µmol P m-2 s-1', 'PO4 uptake from soil'), &
+        & t_cf('uptake_po4', 'micro-mol P m-2 s-1', 'PO4 uptake from soil'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('n_fixation', mem%n_fixation, &
         & hgrid, surface, &
-        & t_cf('n_fixation', 'µmol N m-2 s-1', 'symbiontic N fixation'), &
+        & t_cf('n_fixation', 'micro-mol N m-2 s-1', 'symbiontic N fixation'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('n_fixation_n15', mem%n_fixation_n15, &
         & hgrid, surface, &
-        & t_cf('n_fixation_n15', 'µmol 15N m-2 s-1', 'symbiontic N fixation'), &
+        & t_cf('n_fixation_n15', 'micro-mol 15N m-2 s-1', 'symbiontic N fixation'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1323,6 +1422,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1333,6 +1433,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1343,6 +1444,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1353,6 +1455,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1363,6 +1466,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1373,6 +1477,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1383,6 +1488,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1393,6 +1499,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1403,26 +1510,29 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('net_growth', mem%net_growth, &
         & hgrid, surface, &
-        & t_cf('net_growth', 'µmol CO2 m-2 s-1', 'npp minus turnover'), &
+        & t_cf('net_growth', 'micro-mol CO2 m-2 s-1', 'npp minus turnover'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('fmaint_rate_root', mem%fmaint_rate_root, &
         & hgrid, surface, &
-        & t_cf('fmaint_rate_root', '~µmol C mol-1 N s-1', 'current N-specific maintentance respiration'), &
+        & t_cf('fmaint_rate_root', '~micro-mol C mol-1 N s-1', 'current N-specific maintentance respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1433,6 +1543,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1443,6 +1554,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1453,6 +1565,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1463,6 +1576,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1473,6 +1587,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1483,6 +1598,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1493,6 +1609,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1503,6 +1620,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1513,6 +1631,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1523,7 +1642,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & loutput = .FALSE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
   
@@ -1533,6 +1653,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1543,6 +1664,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1553,6 +1675,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1563,6 +1686,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
@@ -1573,6 +1697,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1583,6 +1708,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1593,6 +1719,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1603,6 +1730,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1613,6 +1741,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1623,6 +1752,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1633,6 +1763,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1643,6 +1774,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1653,6 +1785,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1663,6 +1796,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1673,6 +1807,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1683,6 +1818,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1693,6 +1829,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1703,6 +1840,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1713,26 +1851,29 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('gpp_tlabile_mavg', mem%gpp_tlabile_mavg, &
         & hgrid, surface, &
-        & t_cf('gpp_tlabile_mavg', 'µmol m-2 s-1', 'gpp '), &
+        & t_cf('gpp_tlabile_mavg', 'micro-mol m-2 s-1', 'gpp '), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('maint_respiration_tlabile_mavg', mem%maint_respiration_tlabile_mavg, &
         & hgrid, surface, &
-        & t_cf('maint_respiration_tlabile_mavg', 'µmol m-2 s-1', 'maintenance respiration'), &
+        & t_cf('maint_respiration_tlabile_mavg', 'micro-mol m-2 s-1', 'maintenance respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1743,6 +1884,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1753,6 +1895,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1763,16 +1906,18 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('npp_tuptake_mavg', mem%npp_tuptake_mavg, &
         & hgrid, surface, &
-        & t_cf('npp_tuptake_mavg', 'µmol m-2 s-1', 'npp of the last week'), &
+        & t_cf('npp_tuptake_mavg', 'micro-mol m-2 s-1', 'npp of the last week'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1783,6 +1928,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1793,6 +1939,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1803,6 +1950,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1813,6 +1961,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1823,6 +1972,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1833,6 +1983,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1843,6 +1994,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1853,6 +2005,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1863,6 +2016,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1873,6 +2027,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1883,6 +2038,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1893,6 +2049,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1903,6 +2060,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1913,6 +2071,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1923,6 +2082,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1933,6 +2093,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1943,6 +2104,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1953,6 +2115,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1963,6 +2126,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1973,6 +2137,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1983,6 +2148,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -1993,16 +2159,18 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('fmaint_rate_tcnl_mavg', mem%fmaint_rate_tcnl_mavg, &
         & hgrid, surface, &
-        & t_cf('fmaint_rate_tcnl_mavg', '~µmol C mol-1 N s-1', 'N-specific maintentance respiration for optmal leaf N'), &
+        & t_cf('fmaint_rate_tcnl_mavg', '~micro-mol C mol-1 N s-1', 'N-specific maintentance respiration for optmal leaf N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2013,6 +2181,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2023,6 +2192,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2033,6 +2203,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2040,10 +2211,11 @@ CONTAINS
   
       CALL mem%Add_var('npp_talloc_mavg', mem%npp_talloc_mavg, &
         & hgrid, surface, &
-        & t_cf('npp_talloc_mavg', 'µmol m-2 s-1', 'NPP'), &
+        & t_cf('npp_talloc_mavg', 'micro-mol m-2 s-1', 'NPP'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2054,6 +2226,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2064,16 +2237,18 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('unit_npp_talloc_mavg', mem%unit_npp_talloc_mavg, &
         & hgrid, surface, &
-        & t_cf('unit_npp_talloc_mavg', 'µmol C mol-1', 'rate of change in NPP with  increment in leaf mass'), &
+        & t_cf('unit_npp_talloc_mavg', 'micro-mol C mol-1', 'rate of change in NPP with  increment in leaf mass'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2084,26 +2259,29 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('unit_uptake_n_talloc_mavg', mem%unit_uptake_n_talloc_mavg, &
         & hgrid, surface, &
-        & t_cf('unit_uptake_n_talloc_mavg', 'µmol N mol-1', 'actual rate of N uptkae per unit root'), &
+        & t_cf('unit_uptake_n_talloc_mavg', 'micro-mol N mol-1', 'actual rate of N uptkae per unit root'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('unit_uptake_p_talloc_mavg', mem%unit_uptake_p_talloc_mavg, &
         & hgrid, surface, &
-        & t_cf('unit_uptake_p_talloc_mavg', 'µmol P mol-1', 'actual rate of P uptake per unit root'), &
+        & t_cf('unit_uptake_p_talloc_mavg', 'micro-mol P mol-1', 'actual rate of P uptake per unit root'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2114,6 +2292,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2124,6 +2303,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2134,6 +2314,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2144,6 +2325,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2154,6 +2336,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2164,6 +2347,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2174,6 +2358,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2184,6 +2369,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2194,6 +2380,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2204,6 +2391,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2214,6 +2402,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2224,46 +2413,51 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('unit_npp_troot_mavg', mem%unit_npp_troot_mavg, &
         & hgrid, surface, &
-        & t_cf('unit_npp_troot_mavg', 'µmol C mol-1', 'rate of change in NPP with increment in leaf mass'), &
+        & t_cf('unit_npp_troot_mavg', 'micro-mol C mol-1', 'rate of change in NPP with increment in leaf mass'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('unit_uptake_n_pot_troot_mavg', mem%unit_uptake_n_pot_troot_mavg, &
         & hgrid, surface, &
-        & t_cf('unit_uptake_n_pot_troot_mavg', 'µmol N mol-1', 'rate of N uptkae per unit root'), &
+        & t_cf('unit_uptake_n_pot_troot_mavg', 'micro-mol N mol-1', 'rate of N uptkae per unit root'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('unit_uptake_p_pot_troot_mavg', mem%unit_uptake_p_pot_troot_mavg, &
         & hgrid, surface, &
-        & t_cf('unit_uptake_p_pot_troot_mavg', 'µmol P mol-1', 'rate of P uptake per unit root'), &
+        & t_cf('unit_uptake_p_pot_troot_mavg', 'micro-mol P mol-1', 'rate of P uptake per unit root'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('fmaint_rate_troot_mavg', mem%fmaint_rate_troot_mavg, &
         & hgrid, surface, &
-        & t_cf('fmaint_rate_troot_mavg', '~µmol C mol-1 N s-1', 'moving average of N-specific maintentance respiration'), &
+        & t_cf('fmaint_rate_troot_mavg', '~micro-mol C mol-1 N s-1', 'moving average of N-specific maintentance respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2274,16 +2468,18 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
       CALL mem%Add_var('net_growth_tvegdyn_mavg', mem%net_growth_tvegdyn_mavg, &
         & hgrid, surface, &
-        & t_cf('net_growth_tvegdyn_mavg', 'µmol C m-2 s-1', 'net growth, npp minus turnover'), &
+        & t_cf('net_growth_tvegdyn_mavg', 'micro-mol C m-2 s-1', 'net growth, npp minus turnover'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2294,6 +2490,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2304,6 +2501,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2314,6 +2512,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2324,6 +2523,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2334,6 +2534,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
@@ -2344,6 +2545,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
+        & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)

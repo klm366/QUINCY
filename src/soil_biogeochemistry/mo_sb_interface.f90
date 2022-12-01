@@ -587,6 +587,18 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, enzyme_frac_poly_c_mavg        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, enzyme_frac_poly_n_mavg        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SB_, enzyme_frac_poly_p_mavg        , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_som_c            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_som_n            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_som_p            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_som_c13          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_som_c14          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_som_n15          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_c         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_n         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_p         , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_c13       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_c14       , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SB_, sb_pool_total_litter_n15       , weighted_by_fract)
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

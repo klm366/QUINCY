@@ -438,7 +438,7 @@ CONTAINS
     ! Go
 
     ! R: NUR ZUR SICHERHEIT:
-    !    Diese Abfrage sollte unnötig sein, da der Prozess Phänologie nur für veg tiles aufgerufen werden sollte.
+    !    Diese Abfrage sollte unnoetig sein, da der Prozess Phaenologie nur fuer veg tiles aufgerufen werden sollte.
     IF (.NOT. tile%is_vegetation) THEN
        CALL finish(TRIM(routine), 'The programm tries to calculate phenology on a non vegetated tile...')
     END IF
@@ -462,10 +462,10 @@ CONTAINS
 
     ! R: While the time issue is independent of the model or block, some calculations should not be done for each tile but only
     !    once for the whole hsm (tile%name == 'box'):
-    ! R: Die Berechnungen von update_previous_day_variables in JSBACH3 muß man bis auf NPP nicht für jedes Tile machen. Daher
-    !    habe ich die Berechnungen von NPP von den anderen Berechnungen in update_previous_day_variables für JSBACH4 getrennt.
-    !    Die Berechnungen die nicht für jedes Tile gemacht werden müssen sind in calc_previous_day_variables und die NPP-
-    !    Berechnungen werden im Folgenden vorgenommen. Außerdem ist calc_previous_day_variables nun dem SEB Prozess zugeordnet.
+    ! R: Die Berechnungen von update_previous_day_variables in JSBACH3 muss man bis auf NPP nicht fuer jedes Tile machen. Daher
+    !    habe ich die Berechnungen von NPP von den anderen Berechnungen in update_previous_day_variables fuer JSBACH4 getrennt.
+    !    Die Berechnungen die nicht fuer jedes Tile gemacht werden muessen sind in calc_previous_day_variables und die NPP-
+    !    Berechnungen werden im Folgenden vorgenommen. Ausserdem ist calc_previous_day_variables nun dem SEB Prozess zugeordnet.
     !    calc_pseudo_soil_temp habe ich auch dem SEB Prozess zugeordnet.
 
     ! day_NPP_sum contains the accumulated sum of NPP_pot_rate_ca and is computed in update_assimilation each time step
@@ -576,7 +576,7 @@ CONTAINS
        LaiMax_corrected(:) = MaxLAI
     END IF
 
-    ! R: wird jedes mal (d.h. für jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
+    ! R: wird jedes mal (d.h. fuer jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
     ! Secure minimum Max-LAI
 
     LAI_negligible_tmp = PhenoParam%all%LAI_negligible

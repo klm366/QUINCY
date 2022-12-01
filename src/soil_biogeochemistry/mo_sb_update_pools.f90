@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the Task update_sb_pools
 !!
 !! @author
-!!  Silvia Caldararu, Sönke Zaehle 
+!!  Silvia Caldararu, Soenke Zaehle 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
+!! First version by Soenke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
 !!
 MODULE mo_sb_update_pools
 #ifndef __NO_JSBACH__
@@ -296,6 +296,18 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: bulk_dens_corr_sl
     dsl4jsb_Real3D_onChunk :: bulk_soil_carbon_sl
     dsl4jsb_Real3D_onChunk :: soil_litter_carbon_sl
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c     
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_n     
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_p     
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c13   
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_c14   
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_som_n15   
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c  
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_n  
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_p  
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c13
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_c14
+    dsl4jsb_Real3D_onChunk :: sb_pool_total_litter_n15
     !------------------------------------------------------------------------------------------------------ !
     iblk      = options%iblk
     ics       = options%ics
@@ -542,6 +554,18 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_dens_corr_sl)           ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       bulk_soil_carbon_sl)         ! inout
     dsl4jsb_Get_var3D_onChunk(SB_,       soil_litter_carbon_sl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_n)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_p)         ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c13)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_c14)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_som_n15)       ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_n)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_p)      ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c13)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_c14)    ! out
+    dsl4jsb_Get_var3D_onChunk(SB_,       sb_pool_total_litter_n15)    ! out
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -726,7 +750,7 @@ CONTAINS
     !   sb_pool      = sb_pool      + par_transport 
     !   dom_cn(:,:)  = sb_pool%dom%carbon(:,:) / sb_pool%dom%nitrogen(:,:)
     !   dom_cp(:,:)  = sb_pool%dom%carbon(:,:) / sb_pool%dom%phosphorus(:,:)
-    !   !! convert inorganic transport fluxes to µmol m3 s-1 (for compatibility with simple_1d)
+    !   !! convert inorganic transport fluxes to micro-mol m3 s-1 (for compatibility with simple_1d)
     !   !!
     !   transport_nh4_solute(:,:)     = transport_nh4_solute(:,:)     * 1.e6_wp / dtime
     !   transport_nh4_assoc(:,:)      = transport_nh4_assoc(:,:)      * 1.e6_wp / dtime
@@ -817,7 +841,7 @@ CONTAINS
     !>
     p_deposition_sl(:,:) = 0._wp
     WHERE (soil_depth_sl(:,1) > eps8)
-      p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) ! µmol P / m3 / s
+      p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) ! micro-mol P / m3 / s
     END WHERE
     
     !>  10.1 init vertical variables
@@ -1046,6 +1070,46 @@ CONTAINS
        SUM(plant_uptake_nh4_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)                + &
        SUM(plant_uptake_no3_n15_sl(:,:) * soil_depth_sl(:,:), DIM=2)) * dtime/1.e6_wp  
 
+    !>13.0 sb_pool diagnostics: sum C/N/P each across components pools into 3D variable
+    !>  differ between litter and SOM (soil organic matter) components
+    ! litter
+    sb_pool_total_litter_c(:,:) = &
+      & sb_pool%soluable_litter%carbon(:,:)     + sb_pool%polymeric_litter%carbon(:,:)     + sb_pool%woody_litter%carbon(:,:)
+    sb_pool_total_litter_n(:,:) = &
+      & sb_pool%soluable_litter%nitrogen(:,:)   + sb_pool%polymeric_litter%nitrogen(:,:)   + sb_pool%woody_litter%nitrogen(:,:)
+    sb_pool_total_litter_p(:,:) = &
+      & sb_pool%soluable_litter%phosphorus(:,:) + sb_pool%polymeric_litter%phosphorus(:,:) + sb_pool%woody_litter%phosphorus(:,:)
+    sb_pool_total_litter_c13(:,:) = &
+      & sb_pool%soluable_litter%carbon13(:,:)   + sb_pool%polymeric_litter%carbon13(:,:)   + sb_pool%woody_litter%carbon13(:,:)
+    sb_pool_total_litter_c14(:,:) = &
+      & sb_pool%soluable_litter%carbon14(:,:)   + sb_pool%polymeric_litter%carbon14(:,:)   + sb_pool%woody_litter%carbon14(:,:)
+    sb_pool_total_litter_n15(:,:) = &
+      & sb_pool%soluable_litter%nitrogen15(:,:) + sb_pool%polymeric_litter%nitrogen15(:,:) + sb_pool%woody_litter%nitrogen15(:,:)
+    ! SOM
+    sb_pool_total_som_c(:,:) = &
+      & sb_pool%dom%carbon(:,:)            + sb_pool%dom_assoc%carbon(:,:)      + sb_pool%fungi%carbon(:,:) + &
+      & sb_pool%mycorrhiza%carbon(:,:)     + sb_pool%microbial%carbon(:,:)      + &
+      & sb_pool%residue%carbon(:,:)        + sb_pool%residue_assoc%carbon(:,:)
+    sb_pool_total_som_c(:,:) = &
+      & sb_pool%dom%nitrogen(:,:)          + sb_pool%dom_assoc%nitrogen(:,:)    + sb_pool%fungi%nitrogen(:,:) + &
+      & sb_pool%mycorrhiza%nitrogen(:,:)   + sb_pool%microbial%nitrogen(:,:)    + &
+      & sb_pool%residue%nitrogen(:,:)      + sb_pool%residue_assoc%nitrogen(:,:)
+    sb_pool_total_som_p(:,:) = &
+      & sb_pool%dom%phosphorus(:,:)        + sb_pool%dom_assoc%phosphorus(:,:)  + sb_pool%fungi%phosphorus(:,:) + &
+      & sb_pool%mycorrhiza%phosphorus(:,:) + sb_pool%microbial%phosphorus(:,:)  + &
+      & sb_pool%residue%phosphorus(:,:)    + sb_pool%residue_assoc%phosphorus(:,:)
+    sb_pool_total_som_c13(:,:) = &
+      & sb_pool%dom%carbon13(:,:)          + sb_pool%dom_assoc%carbon13(:,:)    + sb_pool%fungi%carbon13(:,:) + &
+      & sb_pool%mycorrhiza%carbon13(:,:)   + sb_pool%microbial%carbon13(:,:)    + &
+      & sb_pool%residue%carbon13(:,:)      + sb_pool%residue_assoc%carbon13(:,:)
+    sb_pool_total_som_c14(:,:) = &
+      & sb_pool%dom%carbon14(:,:)          + sb_pool%dom_assoc%carbon14(:,:)    + sb_pool%fungi%carbon14(:,:) + &
+      & sb_pool%mycorrhiza%carbon14(:,:)   + sb_pool%microbial%carbon14(:,:)    + &
+      & sb_pool%residue%carbon14(:,:)      + sb_pool%residue_assoc%carbon14(:,:)
+    sb_pool_total_som_n15(:,:) = &
+      & sb_pool%dom%nitrogen15(:,:)        + sb_pool%dom_assoc%nitrogen15(:,:)  + sb_pool%fungi%nitrogen15(:,:) + &
+      & sb_pool%mycorrhiza%nitrogen15(:,:) + sb_pool%microbial%nitrogen15(:,:)  + &
+      & sb_pool%residue%nitrogen15(:,:)    + sb_pool%residue_assoc%nitrogen15(:,:)
 
   ! Deallocate local allocatable variables
   DEALLOCATE(p_deposition_sl)
@@ -1141,23 +1205,23 @@ CONTAINS
                                                                        km_slow_po4_act_sl, &         !< half saturation of po4 sorption in slow_assoc_po4, [mol P/ m3]
                                                                        k_adsorpt_po4_act_sl, &       !< slow adsorption rate of po4, [1 / s]
                                                                        k_desorpt_po4_act_sl, &       !< slow desorption rate of po4, [1 / s]
-                                                                       p_deposition_sl, &            !< actual P deposition rate, [µmol P / m3 / s]
-                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [µmol P / m3 / s]
-                                                                       transport_po4_solute, &       !< transport of soluble PO4 [µmol P / m3 / s]
-                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [µmol P / m3 / s]
-                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [µmol P / m3 / s]
-                                                                       weathering_po4, &             !< phosphorus weathering rate [µmol P / m3 / s]   
-                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [µmol P / m3 / s]
-                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [µmol P / m3 / s]
-                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [µmol P / m3 / s]
-                                                                       gross_mineralisation_po4, &   !< gross mineralisation of PO4 [µmol P / m3 / s]
-                                                                       net_mineralisation_po4        !< net mineralisation of PO4 [µmol P / m3 / s]
+                                                                       p_deposition_sl, &            !< actual P deposition rate, [micro-mol P / m3 / s]
+                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [micro-mol P / m3 / s]
+                                                                       transport_po4_solute, &       !< transport of soluble PO4 [micro-mol P / m3 / s]
+                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [micro-mol P / m3 / s]
+                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [micro-mol P / m3 / s]
+                                                                       weathering_po4, &             !< phosphorus weathering rate [micro-mol P / m3 / s]   
+                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [micro-mol P / m3 / s]
+                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [micro-mol P / m3 / s]
+                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [micro-mol P / m3 / s]
+                                                                       gross_mineralisation_po4, &   !< gross mineralisation of PO4 [micro-mol P / m3 / s]
+                                                                       net_mineralisation_po4        !< net mineralisation of PO4 [micro-mol P / m3 / s]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
                                                                        po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
                                                                        po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
-                                                                       occlusion_po4, &              !< phosphorus occlusion rate [µmol P / m3 / s]
-                                                                       slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [µmol P / m3 / s]
+                                                                       occlusion_po4, &              !< phosphorus occlusion rate [micro-mol P / m3 / s]
+                                                                       slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [micro-mol P / m3 / s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [micro-mol P / m3 / s]
 
     REAL(wp), DIMENSION(nc, nsoil_sb)           :: hlp1, hlp2, hlp3, hlp4, hlp5
     REAL(wp), DIMENSION(nc, nsoil_sb)           :: partition_coef_sol_po4_sl  !< partition coefficient to soluble po4
@@ -1305,7 +1369,7 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in)    :: km_slow                !< half-saturation concentration of Langmuir isotherm (mol/m3)
     REAL(wp), OPTIONAL, INTENT(in)    :: qmax_slow              !< maximum sorption capacity of adsorbed pool (mol/m3)
     REAL(wp), OPTIONAL, INTENT(inout) :: slow_partition_coef    !< partition coefficient to absorbed pool (po4 only)
-    REAL(wp), OPTIONAL, INTENT(inout) :: slow_exchange          !< slow exchange rate between soluble and absorbed po4 pool [µmol P / m3 / s], double Langmuir only
+    REAL(wp), OPTIONAL, INTENT(inout) :: slow_exchange          !< slow exchange rate between soluble and absorbed po4 pool [micro-mol P / m3 / s], double Langmuir only
 
     REAL(wp)                          :: hlp1, hlp2, hlp3, hlp4   
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_langmuir_kinetics'

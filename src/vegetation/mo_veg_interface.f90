@@ -20,10 +20,10 @@
 !! @brief Contains the interface for plant growth and turnover processes 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719)
 !!
 MODULE mo_veg_interface
@@ -604,9 +604,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(VEG_, npp_c13                     , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, npp_c14                     , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, n_fixation_n15              , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, total_veg_pool_c            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, total_veg_pool_n            , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, total_veg_pool_p            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_p            , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c13          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_c14          , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(VEG_, veg_pool_total_n15          , weighted_by_fract)
     ! VEG_ 3D
     dsl4jsb_Aggregate_onChunk(VEG_, leaf_nitrogen_cl            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, fn_rub_cl                   , weighted_by_fract)
