@@ -875,7 +875,7 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
-    !$acc parallel default(none) present(this, tile_ptrs2d_cache, var) private(icount, ichild)
+    !$acc parallel default(present) present(this, tile_ptrs2d_cache, var) private(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
       !$acc loop gang vector
@@ -998,7 +998,7 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
-    !$acc parallel default(none) present(this, tile_ptrs3d_cache, var) private(icount, ichild)
+    !$acc parallel default(present) present(this, tile_ptrs3d_cache, var) private(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
 
