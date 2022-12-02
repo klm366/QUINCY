@@ -645,11 +645,11 @@ CONTAINS
 !        ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
 !        ! par and fraction of absorbed PAR
 !        apar_per_lai_cl(:,icanopy) = par_down_mol(:) * faPAR_cl(:,icanopy) / (MAX(lai_cl(:,icanopy),1.e-10_wp))
-!        ! R: Folgendes fällt weg:
+!        ! R: Folgendes faellt weg:
 !        ! mask(1:nidx,itile) <--theLand%Surface%is_vegetation(kidx0:kidx1,1:ntiles)
 !        ! apar_per_lai_cl(:,icanopy) = MERGE(apar_per_lai_cl(:,icanopy),0._dp,mask(1:nidx,itile))
-!        ! Da damit die Wüstenflächen auf 0 gesetzt werden und JSBACH4 diese Prozedur dann
-!        ! gar nicht erst aufruft für diese tile.
+!        ! Da damit die Wuestenflaechen auf 0 gesetzt werden und JSBACH4 diese Prozedur dann
+!        ! gar nicht erst aufruft fuer diese tile.
 !        IF (waterLimitationFlag) THEN ! to make sure to accumulate only once per timestep
 !           apar_per_lai_cl_nacc(:,icanopy)  = apar_per_lai_cl_nacc(:,icanopy) + apar_per_lai_cl(:,icanopy) * dtime
 !           ! R: This whole workaround (acc_counter) should get abitary soon...

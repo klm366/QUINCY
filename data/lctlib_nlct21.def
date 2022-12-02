@@ -454,7 +454,7 @@ gdd_req_max 20.0 0 0 0 800 0 800 0 800 0 800 20.0 40.0 20.0 20.0 40.0 800 20.0 2
 #k_gdd_dormance: scaling factor in the GDD to number of dormant days relationship (days -1)        
 k_gdd_dormance 0.0027 0 0 0 0.007 0 0.007 0 0.0098 0 0.007 0.0027 0.0027 0.0027 0.0027 0.0027 0.007 0.0027 0.0027 0.0027 0.0027
         
-#t_air_senescence: weekly air temperature threshold inducing senescence of leaves (°C)        
+#t_air_senescence: weekly air temperature threshold inducing senescence of leaves ( degC)        
 # converted internally to K        
 t_air_senescence 0 0 0 0 8.5 0 8.5 0 5 0 8.5 0 0 0 0 0 8.5 0 0 0 0
         

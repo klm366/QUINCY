@@ -736,13 +736,29 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile, land_tile, lake_tile
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
-  
+
+    dsl4jsb_Def_memory_tile(SEB_, land_tile)
+    dsl4jsb_Real2D_onDomain :: t_land_tile
+    dsl4jsb_Def_memory_tile(TURB_, land_tile)
+    dsl4jsb_Real2D_onDomain :: fact_q_air_land_tile
+    dsl4jsb_Real2D_onDomain :: fact_qsat_srf_land_tile
+    dsl4jsb_Real2D_onDomain :: rough_h_land_tile
+    dsl4jsb_Real2D_onDomain :: rough_m_land_tile
+
+    dsl4jsb_Def_memory_tile(SEB_, lake_tile)
+    dsl4jsb_Real2D_onDomain :: t_lake_tile
+    dsl4jsb_Def_memory_tile(TURB_, lake_tile)
+    dsl4jsb_Real2D_onDomain :: fact_q_air_lake_tile
+    dsl4jsb_Real2D_onDomain :: fact_qsat_srf_lake_tile
+    dsl4jsb_Real2D_onDomain :: rough_h_lake_tile
+    dsl4jsb_Real2D_onDomain :: rough_m_lake_tile
+
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
   
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
@@ -752,7 +768,7 @@ CONTAINS
     LOGICAL :: l_shift_one_timestep    = .TRUE.
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
-    INTEGER :: nc
+    INTEGER :: nc, nt, it
     INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':perform_jsbach_for_timestep'
@@ -802,6 +818,47 @@ CONTAINS
     nblks  = grid%Get_nblks()
 
     CALL model%Get_top_tile(tile)
+    IF (tile%contains_lake) THEN
+      ! We need separate variables for the land and the lake tile and cannot use the box tile.
+
+      ! Get pointer to the land tile
+      nt = tile%Get_no_of_children()
+      DO it=1,nt
+        IF (it == 1) THEN
+          land_tile => tile%Get_first_child_tile()
+        ELSE
+          land_tile => land_tile%Get_next_sibling_tile()
+        END IF
+        ! Exit if the land tile was found
+        IF (TRIM(land_tile%name) == 'land') EXIT
+      END DO
+      dsl4jsb_Get_memory_tile(SEB_, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             land_tile)
+      dsl4jsb_Get_memory_tile(TURB_, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       land_tile)
+
+      ! Get pointer to the lake tile
+      nt = tile%Get_no_of_children()
+      DO it=1,nt
+        IF (it == 1) THEN
+          lake_tile => tile%Get_first_child_tile()
+        ELSE
+          lake_tile => lake_tile%Get_next_sibling_tile()
+        END IF
+        ! Exit if the lake tile was found
+        IF (TRIM(lake_tile%name) == 'lake') EXIT
+      END DO
+      dsl4jsb_Get_memory_tile(SEB_, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             lake_tile)
+      dsl4jsb_Get_memory_tile(TURB_, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       lake_tile)
+    END IF
 
     IF (l_force_from_obs) THEN
 
@@ -829,36 +886,86 @@ CONTAINS
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
-      CALL get_interface_variables_from_external_forcing( &
-        ! in
-        & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
-        & evapo_act2pot,                                                             &
-        & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
-        & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &
-        & dsl4jsb_var2D_onDomain(TURB_, fact_qsat_srf),                              &
-        & dsl4jsb_var2D_onDomain(TURB_, rough_h),                                    &
-        & dsl4jsb_var2D_onDomain(TURB_, rough_m),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
-        ! out
-        & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
-        & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
-        & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_air), &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
-        & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              & 
-        & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
-        & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-        & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, pch))
+      IF (model%config%use_lakes) THEN
+        CALL get_interface_variables_from_external_forcing( &
+          ! in
+          & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
+          & evapo_act2pot,                                                             &
+          & t_land_tile(:,:),                                                          &
+          & fact_q_air_land_tile(:,:),                                                 &
+          & fact_qsat_srf_land_tile(:,:),                                              &
+          & rough_h_land_tile(:,:),                                                    &
+          & rough_m_land_tile(:,:),                                                    &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
+          & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, pch),                                         &
+          ! Input for lakes (optional)
+          & t_lake_tile(:,:),                                                          &
+          & fact_q_air_lake_tile(:,:),                                                 &
+          & fact_qsat_srf_lake_tile(:,:),                                              &
+          & rough_h_lake_tile(:,:),                                                    &
+          & rough_m_lake_tile(:,:),                                                    &
+          ! Output for lakes (optional)
+          & dsl4jsb_var2D_onDomain(A2L_, drag_wtr),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, drag_ice),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_ice))
+      ELSE
+        CALL get_interface_variables_from_external_forcing( &
+          ! in
+          & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
+          & evapo_act2pot,                                                             &
+          & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
+          & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &
+          & dsl4jsb_var2D_onDomain(TURB_, fact_qsat_srf),                              &
+          & dsl4jsb_var2D_onDomain(TURB_, rough_h),                                    &
+          & dsl4jsb_var2D_onDomain(TURB_, rough_m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
+          & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, pch))
+      END IF
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 

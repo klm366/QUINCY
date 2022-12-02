@@ -6,7 +6,7 @@
 !! @par Revision History
 !!  Initial version (2019-06-07)
 !!    After Rouson, Xia and Xu (2011). Scientific Software Design - The Object-Oriented Way
-!!    See also Stewart, G. W. (2007). Memory leaks in derived types revisited. ACM SIGPLAN Fortran Forum, 22(3), 25–27. https://doi.org/10.1145/962180.962183
+!!    See also Stewart, G. W. (2007). Memory leaks in derived types revisited. ACM SIGPLAN Fortran Forum, 22(3), 25-27. https://doi.org/10.1145/962180.962183
 !!
 !! @par Copyright and License
 !!

@@ -1,6 +1,6 @@
 ! Program taken from the script collection of SW/TR (rewrite_transfer_matrix.f90) to 
 ! calculate relative from absolut transition data which was previously aggregated from LUH2_v1 data 
-! and then remap it from 0.25° to ires
+! and then remap it from 0.25 deg to ires
 !
 !-- JN 07.07.16: 
 !* changed the expected input grid

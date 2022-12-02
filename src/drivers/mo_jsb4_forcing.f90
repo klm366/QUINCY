@@ -208,11 +208,16 @@ CONTAINS
   !! @par History
   !! Used parts of jsbach3 mo_jsbalone_forcing: read_forcing / update_forcing and mo_jsbalone: update_driving  by Julia Nabel
   !!
-  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, icz, nblks, current_datetime, next_datetime, & 
-    & sinlat, coslat, lon, evapo_act2pot_proc, &
-    & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_air, &
-    & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
-    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
+  SUBROUTINE get_interface_variables_from_external_forcing(model_id, ics, ice, icz, nblks, &
+    & current_datetime, next_datetime, sinlat, coslat, lon, evapo_act2pot_proc,            &
+    & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
+    & cos_zenith_angle, CO2_air,                                                           &
+    & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
+    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
+    & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                   &
+    & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &
+    & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                        &
+    & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice)
 
     INTEGER,  INTENT(IN)  :: model_id, ics, ice, icz, nblks
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
@@ -221,11 +226,11 @@ CONTAINS
     REAL(wp), INTENT(IN)  :: coslat(:,:)
     REAL(wp), INTENT(IN)  :: lon(:,:)
     REAL(wp), INTENT(IN)  :: evapo_act2pot_proc(:,:)
-    REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)
-    REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)
-    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)
+    REAL(wp), INTENT(IN)  :: t_srf_proc(:,:)          ! In setups with lakes refering to the land tile
+    REAL(wp), INTENT(IN)  :: fact_q_air_proc(:,:)     !       ""
+    REAL(wp), INTENT(IN)  :: fact_qsat_srf_proc(:,:)  !       ""
+    REAL(wp), INTENT(IN)  :: rough_h_srf_proc(:,:)    !       ""
+    REAL(wp), INTENT(IN)  :: rough_m_srf_proc(:,:)    !       ""
     REAL(wp), INTENT(IN)  :: cos_zenith_angle(:,:)
 
     REAL(wp), INTENT(OUT) :: CO2_air(:,:)
@@ -248,6 +253,24 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: q_bcoef(:,:)
     REAL(wp), INTENT(OUT) :: pch(:,:)
 
+    ! Optional input for lakes
+    REAL(wp), OPTIONAL, INTENT(IN)  :: t_srf_lake(:,:)
+    REAL(wp), OPTIONAL, INTENT(IN)  :: fact_q_air_lake(:,:)
+    REAL(wp), OPTIONAL, INTENT(IN)  :: fact_qsat_srf_lake(:,:)
+    REAL(wp), OPTIONAL, INTENT(IN)  :: rough_h_srf_lake(:,:)
+    REAL(wp), OPTIONAL, INTENT(IN)  :: rough_m_srf_lake(:,:)
+    ! Optional output for lakes
+    REAL(wp), OPTIONAL, INTENT(OUT) :: drag_wtr(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: t_acoef_wtr(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_wtr(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_wtr(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_wtr(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: drag_ice(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: t_acoef_ice(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_ice(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_ice(:,:)
+    REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_ice(:,:)
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_interface_variables_from_external_forcing'
 
     TYPE(t_jsb_model),  POINTER  :: model
@@ -263,7 +286,7 @@ CONTAINS
     INTEGER  :: day_of_year
 
     REAL(wp), ALLOCATABLE :: t_air_C(:,:), tmax_data(:,:), tmin_data(:,:), rad_uv_down(:,:), &
-      &                      sat_spec_humidity(:,:), rel_humidity(:,:)
+      &                      sat_spec_humidity(:,:), rel_humidity(:,:), pch_lake(:,:)
     REAL(wp), ALLOCATABLE :: temporary_data1(:,:)
 
     ! TODO: help1 is rad_sw_down, help2 is rad_sw_down_pot, but these are (currently?) not required - remove?
@@ -276,12 +299,16 @@ CONTAINS
 
     !---------------------------------------------------------------------------------
 
+    model => get_model(model_id)
+    CALL model%Get_top_tile(tile)
+
     IF (iblk == nblks) THEN
       ic = icz
     ELSE
       ic = ice
     END IF
 
+    ! Initialization needed for grid cells beyond icz
     CO2_air(:,:)           = 0._wp
     t_air(:,:)             = 0._wp
     q_air(:,:)             = 0._wp
@@ -295,20 +322,11 @@ CONTAINS
     swpar_srf_down(:,:)    = 0._wp
     fract_par_diffuse(:,:) = 0._wp
     press_srf(:,:)         = 0._wp
-    drag_srf(:,:)          = 0._wp
-    t_acoef(:,:)           = 0._wp
-    t_bcoef(:,:)           = 0._wp
-    q_acoef(:,:)           = 0._wp
-    q_bcoef(:,:)           = 0._wp
-    pch(:,:)               = 0._wp
 
     ALLOCATE(help1(ice, nblks))
     ALLOCATE(help2(ice, nblks))
 
     ALLOCATE(temporary_data1(ice, nblks))
-
-    model => get_model(model_id)
-    CALL model%Get_top_tile(tile)
 
     ! --- temperature
     ! for temperature the variables used depend on the forcing frequency: tmin&tmax for daily data; t_air_C for timestep
@@ -491,8 +509,8 @@ CONTAINS
     ENDIF
 
     ! --- wind
-    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%wind_speed, wind_air)
-    wind_10m = wind_air
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%wind_speed, wind_10m)
+    wind_air = wind_10m
 
     ! --- CO2 concentration
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%CO2_concentr, CO2_air)
@@ -503,6 +521,23 @@ CONTAINS
     CALL get_remaining_input_for_jsb4_interface(nblks, ice, icz, t_air, press_srf, q_air, wind_air, &
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
       & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+
+    IF (model%config%use_lakes) THEN
+      ALLOCATE(pch_lake(ice, nblks))
+      ! Note: pch_lake is only defined, as pch should not be overwritten. As pch is only used for
+      !       calculations on vegetated tiles, pch_lake is not needed.
+      CALL get_remaining_input_for_jsb4_interface(nblks, ice, icz, t_air, press_srf, q_air, wind_air, &
+        & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake,        &
+        & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr, pch_lake)
+      ! As input variables for the lake tile refer to the frozen and unfrozen fractions, we cannot
+      ! provide separate exchange coefficients for water and ice. Both are set to identical values.
+      drag_ice    = drag_wtr
+      t_acoef_ice = t_acoef_wtr
+      t_bcoef_ice = t_bcoef_wtr
+      q_acoef_ice = q_acoef_wtr
+      q_bcoef_ice = q_bcoef_wtr
+      DEALLOCATE (pch_lake)
+    END IF
 
     ! ---- clean up
     DEALLOCATE(t_air_C)
@@ -1318,6 +1353,7 @@ CONTAINS
     zcons11 = 3._wp * cb * cc
     zcons12 = cvdifts * time_step_len * grav / rd
 
+    ! Initializations needed for grid cells beyond icz
     drag_srf(:,:) = 0._wp
     t_acoef(:,:)  = 0._wp
     t_bcoef(:,:)  = 0._wp
@@ -1341,9 +1377,9 @@ CONTAINS
 
       ! virtual potential air temperature (see mo_surface_boundary.f90)
       ! according to Saucier, WJ Principles of Meteoroligical Analyses
-      ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
+      ! tv = t * (1 + 0.61 * q )    ! virtual temperature
       ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
-      ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * qair) ! virtual potential temperature
+      ! tvd = tair * (100000/p_pa)^zkappa * (1 + vtmpc1 * qair) ! virtual potential temperature
       zsigma    = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
       air_pressure(1:ic) = zsigma * pressure(1:ic, iblk)
       ztvd(1:ic) = ( temp_air(1:ic, iblk) * ( 100000._wp/air_pressure(1:ic))**zkappa ) * ( 1._wp + vtmpc1 * qair(1:ic, iblk))
