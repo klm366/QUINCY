@@ -152,6 +152,7 @@ CONTAINS
       groups_loc(3:n_groups) = groups(:)
     END IF
 
+    ! calls the generic routine on the host model
     CALL add_var_list_element_r2d( &
       this_list, TRIM(name_loc), ptr, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%parameter, table=grib1%table, &
