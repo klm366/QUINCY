@@ -422,13 +422,6 @@ CONTAINS
     USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_tile), INTENT(inout) :: this              !< Current tile
-    CHARACTER(len=*),  INTENT(in)    :: varlist_name      !< Model shortname
-    CHARACTER(len=*),  INTENT(in)    :: prefix            !< Prefix for variable names (generally empty)
-    CHARACTER(len=*),  INTENT(in)    :: suffix            !< Suffix for variable names
-    INTEGER,           INTENT(in)    :: grid_id           !< Grid id
-    LOGICAL,           INTENT(in)    :: in_var_groups     !< Should output be written for this tile?
-
     CLASS(t_jsb_tile), INTENT(inout) :: this               !< Current tile
     CHARACTER(len=*),  INTENT(in)    :: varlist_name       !< Model shortname
     CHARACTER(len=*),  INTENT(in)    :: prefix             !< Prefix for variable names (generally empty)
