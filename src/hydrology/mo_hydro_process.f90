@@ -791,7 +791,7 @@ CONTAINS
     !  theta_s: soil moisture at stauration  -> field_cap
     !  theta_r: residual soil moisture       -> p_wilt
 
-    !$claw acc parallel default(none)
+    !$claw acc parallel default(present)
     !$claw acc loop gang vector
     DO j = 1, nidx
       percolation(j,nsoil) = 0._wp
