@@ -23,7 +23,7 @@ MODULE mo_jsbach_model
     &                     mtime_strerror, timedeltaToString, deallocateDatetime, deallocateTimedelta, &
     &                     OPERATOR(+), OPERATOR(==), OPERATOR(<), OPERATOR(>), OPERATOR(>=), &
     &                     event, eventGroup, newEvent, addEventToEventGroup, &
-    &                     NO_ERROR, MAX_DATETIME_STR_LEN, MAX_TIMEDELTA_STR_LEN, MAX_MTIME_ERROR_STR_LEN    
+    &                     NO_ERROR, MAX_DATETIME_STR_LEN, MAX_TIMEDELTA_STR_LEN, MAX_MTIME_ERROR_STR_LEN
   USE mo_timer,     ONLY: init_timer, timer_start, timer_stop, timers_level,    &
     &                     timer_model_init, print_timer,                        &
     &                     timer_domain_decomp, timer_compute_coeffs,            &
@@ -760,7 +760,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: rough_m_lake_tile
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-  
+
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
 
     LOGICAL :: l_force_from_obs
@@ -796,7 +796,7 @@ CONTAINS
 
     datetime_forcing => newDatetime(datetime_old)
     IF (l_first_forcing_file) THEN
-      IF (forcing_options%forcing_steps_per_file == 1  .AND. .NOT. l_force_from_obs ) THEN
+      IF (forcing_options%forcing_steps_per_day == 1  .AND. .NOT. l_force_from_obs ) THEN
         ! Go to next time step of next file
         CALL getPTStringFromSeconds(forcing_options%forcing_synchron_factor * dtime, dtime_string)
         dtime_mtime  => newTimedelta(dtime_string)
@@ -874,7 +874,7 @@ CONTAINS
 
       CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
       ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
-  
+
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
       ALLOCATE(evapo_act2pot(nproma, nblks))
       IF (is_time_experiment_start(datetime_old)) THEN
@@ -995,9 +995,9 @@ CONTAINS
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model%id))
 
       no_omp_thread = Get_omp_thread()
-  
+
       nc = ice - ics + 1
-  
+
       IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
       ! Update options

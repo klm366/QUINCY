@@ -29,7 +29,7 @@ MODULE mo_jsb4_forcing
 #ifndef __NO_JSBACH__
 
 #ifndef __ICON__
-  USE mo_time_control,    ONLY: lresume, lstart, get_year_day                    
+  USE mo_time_control,    ONLY: lresume, lstart, get_year_day
   USE mo_time_conversion, ONLY: IMerge_HMS2Sec, day_in_year, time_days
 #else
   USE mo_jsb_time,        ONLY: is_time_experiment_start, is_time_restart, get_year_day
@@ -136,8 +136,9 @@ MODULE mo_jsb4_forcing
 
   ! options controlling types of forcing data
   INTEGER,PARAMETER  :: DAILY_    = 1
-  INTEGER,PARAMETER  :: CONST_    = 2
-  INTEGER,PARAMETER  :: TIMESTEP_ = 3
+  INTEGER,PARAMETER  :: SUBDAILY_ = 2
+  INTEGER,PARAMETER  :: CONST_    = 3
+  INTEGER,PARAMETER  :: TIMESTEP_ = 4
   ! additional option for CO2
   INTEGER,PARAMETER  :: GHG_SCENARIO_  = 5
 
@@ -151,8 +152,8 @@ MODULE mo_jsb4_forcing
   TYPE forcing_options_type
     INTEGER  :: cyclic_nyears                  !! Number of years for cyclic forcing; default: 0 = no cyclic forcing
     INTEGER  :: cyclic_start_year              !! First year for cyclic forcing; default: 9999, i.e. use experiment start year
-    INTEGER  :: forcing_synchron_factor      
-    INTEGER  :: forcing_steps_per_file
+    INTEGER  :: forcing_synchron_factor
+    INTEGER  :: forcing_steps_per_day          !! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL  :: forcing_set_ocean_to_constants !! Specifies if external forcing is only defined for land cells (true)
     LOGICAL  :: air_temperature_as_timestep    !! Specifies if the air temperatures are given per timestep
     INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
@@ -354,7 +355,7 @@ CONTAINS
     IF(forcing_options%precip_in_mm_per_day) temporary_data1 = temporary_data1 * conv_prec_day
     ! compute rain and snow
     IF(forcing_options%air_temperature_as_timestep) THEN
-      IF(forcing_input%precipitation%frequency .EQ. DAILY_) THEN
+      IF(forcing_input%precipitation%frequency == DAILY_) THEN
         ! In case of daily precipitation the minimum and maximum read for air_temp are used
         CALL snow_and_rain_from_precip(rain(:,:), snow(:,:), temporary_data1(:,:), &
           & 0.5_wp*(MAXVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3) + MINVAL(forcing_input%air_temp%data_read(:,:,:),DIM=3)))
@@ -419,7 +420,7 @@ CONTAINS
         CALL sat_specific_humidity(ice, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
       ENDDO
       ! Get specific humidity
-      IF (forcing_input%rel_humidity%frequency .EQ. TIMESTEP_) THEN
+      IF (forcing_input%rel_humidity%frequency == TIMESTEP_ .OR. forcing_input%rel_humidity%frequency == SUBDAILY_) THEN
         q_air(:,:) = rel_humidity(:,:) * sat_spec_humidity(:,:) !TODO: Why *?
       ELSE
         IF (forcing_options%air_temperature_as_timestep) THEN
@@ -489,7 +490,7 @@ CONTAINS
     DEALLOCATE(rad_uv_down)
 
     ! --- compute longwave radiation
-    IF (forcing_input%longwave%frequency .EQ. TIMESTEP_) THEN
+    IF (forcing_input%longwave%frequency == TIMESTEP_ .OR. forcing_input%longwave%frequency == SUBDAILY_) THEN
       CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, &
         & forcing_input%longwave, lw_srf_down)
     ELSE
@@ -574,7 +575,7 @@ CONTAINS
     INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
                                         ! each atmospheric forcing time step that is read in      
-    INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72
+    INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)
     REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
@@ -631,7 +632,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
-    NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_file,             &
+    NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_day,              &
       & forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,                                         &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
       & forcing_temp_unit,                                                                                                    &
@@ -656,15 +657,14 @@ CONTAINS
     IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &
       & 'Violation of assertion: Reading forcing data not implemented for delta_time > day.')
 
-
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
       cyclic_nyears = 0             ! No cyclic forcing
       cyclic_start_year = 9999      ! Use year of experiment start for first cyclic year
       forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
                                     ! each atmospheric forcing time step that is read in
-      forcing_steps_per_file   = 72 ! The number of time steps included by the used forcing file(s), e.g. 72
-  
+      forcing_steps_per_day    = 72 ! The number of time steps included by the used forcing file(s) per day, e.g. 72
+
       forcing_set_ocean_to_constants = .TRUE.
       forcing_height_wind = defHeightWind
       forcing_height_humidity = defHeightHumidity
@@ -724,7 +724,12 @@ CONTAINS
       IF (cyclic_start_year == 9999) cyclic_start_year = get_year_at_experiment_start()
       forcing_options%cyclic_start_year       = cyclic_start_year
       forcing_options%forcing_synchron_factor = forcing_synchron_factor
-      forcing_options%forcing_steps_per_file  = forcing_steps_per_file
+      forcing_options%forcing_steps_per_day   = forcing_steps_per_day
+
+      IF ((forcing_steps_per_day > time_steps_per_day)) CALL finish(TRIM(routine), &
+        & 'Violation of assertion: Forcing time resolution higher than model time step.')
+      IF ((forcing_steps_per_day < 1)) CALL finish(TRIM(routine), &
+        & 'Violation of assertion: Forcing time step longer than 1 day is not yet implemented.')
 
       IF (cyclic_nyears > 0) THEN
         CALL message(routine, 'Using cyclic forcing from ' // TRIM(int2string(cyclic_nyears)) // ' years ' // &
@@ -736,7 +741,8 @@ CONTAINS
       forcing_options%heightHumidity = forcing_height_humidity
       ! --- Temperature timestep (if daily two variables - max and min - need to be read)
       forcing_options%air_temperature_as_timestep &
-        & = (frequency_key_to_constant_val('temperature', forcing_temp_frequ) .EQ. TIMESTEP_)
+        & = (frequency_key_to_constant_val('temperature', forcing_temp_frequ) == TIMESTEP_ .OR. &
+        &    frequency_key_to_constant_val('temperature', forcing_temp_frequ) == SUBDAILY_)
       ! --- Boolean indicating if forcing is only specified for land cells
       forcing_options%forcing_set_ocean_to_constants = forcing_set_ocean_to_constants
       IF(forcing_options%forcing_set_ocean_to_constants) THEN
@@ -783,7 +789,7 @@ CONTAINS
         forcing_options%conv_CO2_2_MassRatio = molarMassCO2_kg / molarMassDryAir_kg
       END SELECT
       ! --- get dimensions of CO2 data
-      IF (frequency_key_to_constant_val(CO2_varname, forcing_co2_frequ) .EQ. GHG_SCENARIO_) THEN
+      IF (frequency_key_to_constant_val(CO2_varname, forcing_co2_frequ) == GHG_SCENARIO_) THEN
         input_file =  netcdf_open_input(TRIM(forcing_co2_file_prefix))
         IF (input_file%get_dimlen('lon') == 1 .AND. input_file%get_dimlen('lat') == 1) THEN
           CALL message(TRIM(routine),'CO2 forcing set to a globally constant value')
@@ -799,8 +805,8 @@ CONTAINS
       ! forcing options
       CALL p_bcast(forcing_options%cyclic_nyears, p_io, mpi_comm)
       CALL p_bcast(forcing_options%cyclic_start_year, p_io, mpi_comm)
-      CALL p_bcast(forcing_synchron_factor, p_io, mpi_comm)
-      CALL p_bcast(forcing_steps_per_file, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%forcing_synchron_factor, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%forcing_steps_per_day, p_io, mpi_comm)
       CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io, mpi_comm)
       CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io, mpi_comm)
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io, mpi_comm)
@@ -930,7 +936,7 @@ CONTAINS
     frequency = forcing_input_variable%frequency
 
     ! ----- in case of constant forcing, only set correct constants and retun
-    IF (frequency .EQ. CONST_) THEN
+    IF (frequency == CONST_) THEN
       current_forcing_array(:,:) = forcing_input_variable%constantValue
       CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, current_forcing_array)
       RETURN
@@ -959,10 +965,15 @@ CONTAINS
 
     WRITE(year_label,'(i8.4)') year
     ydate = ISIGN(1,year)*(IABS(year)*10000+month*100+day)
-    ith_timestep = IMerge_HMS2Sec(hour, minute, second)/int(delta_time) + 1 !+1 because 00:00/X => 0; and 1 based vector
+    IF (forcing_input_variable%frequency == TIMESTEP_) THEN
+      ith_timestep = IMerge_HMS2Sec(hour, minute, second)/int(delta_time) + 1 !+1 because 00:00/X => 0; and 1 based vector
+    ELSE IF (forcing_input_variable%frequency == SUBDAILY_) THEN
+      ith_timestep = IMerge_HMS2Sec(hour, minute, second)/ &
+        & int(86400._wp/forcing_options%forcing_steps_per_day) + 1 !+1 because 00:00/X => 0; and 1 based vector
+    END IF
 
     ! ----- CO2 ghg_scenario exception: in case of ghg_scenario a single file is used, which contains one CO2 value per year
-    IF ((TRIM(forcing_input_variable%variable_name) .EQ. CO2_varname) .AND. (frequency .EQ. GHG_SCENARIO_)) THEN
+    IF ((TRIM(forcing_input_variable%variable_name) == CO2_varname) .AND. (frequency == GHG_SCENARIO_)) THEN
       IF (lstart .OR. lresume) THEN
         IF (my_process_is_stdio()) THEN
         ! in case of ghg_scenario the forcing_input_variable%file_name_prefix is expected to contain the whole filename
@@ -976,14 +987,14 @@ CONTAINS
         END IF
 
         IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
-        ALLOCATE(forcing_input_variable%data_read(ice, nblks, time_steps_per_day))
+        ALLOCATE(forcing_input_variable%data_read(ice, nblks, forcing_options%forcing_steps_per_day))
       ENDIF
 
       IF (new_year_forcing .OR. lstart .OR. lresume) THEN
         IF (my_process_is_stdio()) THEN
           ! find current year in the timevalues
           currentTimeStep = 1
-          DO WHILE (currentTimeStep .LE. forcing_input_variable%length_time_series)
+          DO WHILE (currentTimeStep <= forcing_input_variable%length_time_series)
             IF ( year .EQ. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
               EXIT
             ENDIF
@@ -1019,9 +1030,10 @@ CONTAINS
     ENDIF
 
     ! ----- For all other variables and frequencies:
-    !Assertion: Rest of the routine only implemented for daily or timestep frequency
-    IF ( (frequency .NE. TIMESTEP_) .AND. (frequency .NE. DAILY_) ) CALL finish(TRIM(routine), &
-      & 'Violation of assertion: routine only implemented for constant, daily or timestep frequency, please check program flow')
+    !Assertion: Rest of the routine only implemented for daily, subdaily or timestep frequency
+    IF ( (frequency /= TIMESTEP_) .AND. (frequency /= DAILY_)  .AND. (frequency /= SUBDAILY_)) &
+      &  CALL finish(TRIM(routine), 'Violation of assertion: routine only implemented for ' //&
+      &  'daily, subdaily or timestep frequency, please check program flow')
 
     ! TODO: test in case of lresume
 
@@ -1032,7 +1044,7 @@ CONTAINS
       IF (my_process_is_stdio()) THEN
         forcing_input_variable%input_file = jsb_netcdf_open_input( &
           & TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc')
-  
+
         CALL get_time_dimension(forcing_input_variable%input_file, forcing_input_variable)
 
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
@@ -1045,12 +1057,12 @@ CONTAINS
         thisDayStart = 0
         thisDayEnd = 0
         ! Determine current date in the file
-        DO WHILE (currentTimeStep .LE. forcing_input_variable%length_time_series)
-          IF ( ydate .EQ. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
+        DO WHILE (currentTimeStep <= forcing_input_variable%length_time_series)
+          IF ( ydate == INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
             IF (thisDayStart .EQ. 0) thisDayStart = currentTimeStep
             thisDayEnd = currentTimeStep
             currentTimeStep = currentTimeStep + 1
-          ELSEIF ( ydate .LT. INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
+          ELSEIF ( ydate < INT(forcing_input_variable%timevalues(currentTimeStep)) ) THEN
             currentTimeStep = currentTimeStep + 1
             EXIT
           ELSE
@@ -1059,8 +1071,8 @@ CONTAINS
         ENDDO
         currentTimeStep = currentTimeStep - 1
         ! Assert that current date has been found
-        IF (( currentTimeStep .GT. forcing_input_variable%length_time_series) &
-          & .OR. (( currentTimeStep .EQ. 1) .AND. ( ydate .NE. INT(forcing_input_variable%timevalues(1)))))  THEN
+        IF (( currentTimeStep > forcing_input_variable%length_time_series) &
+          & .OR. (( currentTimeStep == 1) .AND. ( ydate /= INT(forcing_input_variable%timevalues(1)))))  THEN
           WRITE (message_text,*) 'The forcing file "'&
             &//trim(TRIM(ADJUSTL(forcing_input_variable%file_name_prefix)) // TRIM(ADJUSTL(year_label)) // '.nc') &
             &//'" does not contain the required input date ',ydate, ' for the variable "' &
@@ -1079,11 +1091,7 @@ CONTAINS
       ENDIF
 
       IF(ASSOCIATED(forcing_input_variable%data_read)) DEALLOCATE(forcing_input_variable%data_read)
-      IF( frequency .EQ. TIMESTEP_ ) THEN
-        ALLOCATE(forcing_input_variable%data_read(ice, nblks, time_steps_per_day))
-      ELSEIF( frequency .EQ. DAILY_ ) THEN
-        ALLOCATE(forcing_input_variable%data_read(ice, nblks, 1))
-      END IF
+      ALLOCATE(forcing_input_variable%data_read(ice, nblks, forcing_options%forcing_steps_per_day))
 
       IF (forcing_input_variable%input_file%is_open) CALL forcing_input_variable%input_file%Close()
       forcing_input_variable%input_file = jsb_netcdf_open_input( &
@@ -1107,12 +1115,13 @@ CONTAINS
           & 'Day not found: ' //TRIM(int2string(ydate)))
 
         !Assertion: check for required number of timesteps
-        IF( frequency .EQ. TIMESTEP_ ) THEN
-          IF(thisDayEnd-thisDayStart+1 .NE. time_steps_per_day) CALL finish(TRIM(routine), &
-             & 'Forcing file does not contain the demanded number of time steps per day: ' //TRIM(int2string(time_steps_per_day)) &
-             & //' -- but: '//TRIM(int2string(thisDayEnd-thisDayStart+1)))
-        ELSEIF( frequency .EQ. DAILY_ ) THEN
-           IF(thisDayStart .NE. thisDayEnd) CALL finish(TRIM(routine), &
+        IF( frequency == TIMESTEP_ .OR. frequency == SUBDAILY_) THEN
+          IF(thisDayEnd-thisDayStart+1 /= forcing_options%forcing_steps_per_day) CALL finish(TRIM(routine), &
+             & 'Forcing file does not contain the demanded number of time steps per day: '  &
+             & //TRIM(int2string(forcing_options%forcing_steps_per_day)) //' -- but: '                      &
+             & //TRIM(int2string(thisDayEnd-thisDayStart+1)))
+        ELSEIF( frequency == DAILY_ ) THEN
+           IF(thisDayStart /= thisDayEnd) CALL finish(TRIM(routine), &
              & 'Forcing file contains more than one time step per day: ' //TRIM(int2string(thisDayEnd-thisDayStart+1)) &
              & //' -- daily reading only implemented for files with one time step per day.')
         ENDIF
@@ -1122,16 +1131,16 @@ CONTAINS
         & start_time_step=thisDayStart, end_time_step=thisDayEnd, fill_array=forcing_input_variable%data_read)
 
       ! Set the ocean cells of the read data to the constant ocean value and increase the start and end for the next day to be read
-      IF (forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
-        DO index_time = 1,time_steps_per_day
+      IF (forcing_input_variable%frequency == TIMESTEP_ .OR. forcing_input_variable%frequency == SUBDAILY_) THEN
+        DO index_time = 1, forcing_options%forcing_steps_per_day
           CALL set_ocean_cells(nblks, ics, ice, model_id, &
             & forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,index_time))
         ENDDO
         IF (do_advance) THEN
           forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
-          forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+time_steps_per_day
+          forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+forcing_options%forcing_steps_per_day
         END IF
-      ELSE IF (forcing_input_variable%frequency .EQ. DAILY_) THEN
+      ELSE IF (forcing_input_variable%frequency == DAILY_) THEN
         CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, &
           &                  forcing_input_variable%data_read(:,:,1))
         IF (do_advance) THEN
@@ -1141,9 +1150,9 @@ CONTAINS
       ENDIF
     ENDIF
 
-    IF(forcing_input_variable%frequency .EQ. TIMESTEP_) THEN
+    IF(forcing_input_variable%frequency == TIMESTEP_ .OR. forcing_input_variable%frequency == SUBDAILY_) THEN
       current_forcing_array = forcing_input_variable%data_read(:,:,ith_timestep)
-    ELSEIF(forcing_input_variable%frequency .EQ. DAILY_) THEN
+    ELSEIF(forcing_input_variable%frequency == DAILY_) THEN
       current_forcing_array = forcing_input_variable%data_read(:,:,1)
     ENDIF
 
@@ -1196,13 +1205,15 @@ CONTAINS
       CALL finish(TRIM(routine),'Reading files with monthly frequency is currently not supported, please implement.')
     CASE("daily")
       frequency_key_to_constant_val = DAILY_
+    CASE("subdaily")
+      frequency_key_to_constant_val = SUBDAILY_
     CASE("const")
       frequency_key_to_constant_val = CONST_
     CASE("timestep")
       frequency_key_to_constant_val = TIMESTEP_
     CASE default
       ! Test for ghg scenario exception for CO2
-      IF ((variable_name .EQ. CO2_varname) .AND. (TRIM(tolower(forcing_frequ_keyword)) .EQ. "ghg_scenario")) THEN
+      IF ((variable_name == CO2_varname) .AND. (TRIM(tolower(forcing_frequ_keyword)) == "ghg_scenario")) THEN
         frequency_key_to_constant_val = GHG_SCENARIO_
       ELSE
         CALL finish(TRIM(routine), 'Please specify a valid reading frequency for the variable '//TRIM(variable_name))
@@ -1880,7 +1891,7 @@ CONTAINS
 #ifndef __ICON__
     TYPE (time_days), INTENT (IN)  :: date  ! the considered simulation instant at that day in time-seconds format
 #else
-    TYPE (t_datetime), POINTER, INTENT (IN)  :: date 
+    TYPE (t_datetime), POINTER, INTENT (IN)  :: date
 #endif
     REAL(wp), INTENT (OUT) :: tmp(:,:)      ! estimated temperature
 
@@ -1919,7 +1930,7 @@ CONTAINS
       ELSE
         ic = ice
       END IF
-  
+
       DO i = 1,ic
         fract_UTC_offset = lon(i,j)/360._wp   ! difference between local time and UTC as fraction of a day
         fract_localtime = MOD(fract_timestep+fract_UTC_offset+2._wp,1._wp) ! local time as fraction of the local day (modulo 1)
@@ -2196,7 +2207,7 @@ CONTAINS
       & 1.000110_wp+3.4221E-2_wp*COS(day_angle)+1.280E-3_wp*SIN(day_angle)+7.19E-4_wp*COS(hlp_r)+7.7E-5_wp*SIN(hlp_r)
     K=13750.98708_wp
 
-    IF (forcing_input%shortwave%frequency .NE. TIMESTEP_) THEN
+    IF (forcing_input%shortwave%frequency /= TIMESTEP_ .AND. forcing_input%shortwave%frequency /= SUBDAILY_) THEN
       ! today's sum of top of the atmosphere radiation
       delta=-23.4_wp*pi/180._wp*COS(day_angle)
       u=sin_lat*SIN(delta)
@@ -2218,7 +2229,7 @@ CONTAINS
       rad_sw = rad_sw_in_corr * cos_zenith
 
     ELSE
-      ! time step forcing, use radiation directly
+      ! subdaily or time step forcing, use radiation directly
       rad_sw = rad_sw_in
     ENDIF
 
