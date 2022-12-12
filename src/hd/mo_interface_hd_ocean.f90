@@ -15,7 +15,7 @@ MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: finish
+  USE mo_exception,           ONLY: finish, message
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: Get_model
