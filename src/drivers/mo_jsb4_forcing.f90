@@ -917,7 +917,7 @@ CONTAINS
     INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
                                         ! each atmospheric forcing time step that is read in      
-    INTEGER  :: forcing_steps_per_file  ! The number of time steps included by the used forcing file(s), e.g. 72
+    INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)
     REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
@@ -1006,7 +1006,6 @@ CONTAINS
     ! Assertion: delta_time needs to be smaller or equal 86400
     IF ((delta_time > 86400._wp)) CALL finish(TRIM(routine), &
       & 'Violation of assertion: Reading forcing data not implemented for delta_time > day.')
-
 
     IF (my_process_is_stdio()) THEN
       ! ----- define default values for jsb_forcing_nml namelist parameters
@@ -2804,4 +2803,3 @@ CONTAINS
 
     day_in_year = INT(get_year_day(date))
 
-  END FUNCTION day_in_year
