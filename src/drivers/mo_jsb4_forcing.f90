@@ -663,7 +663,7 @@ CONTAINS
       cyclic_start_year = 9999      ! Use year of experiment start for first cyclic year
       forcing_synchron_factor  = 1  ! Factor defines how many time steps the JS4 driver performs for
                                     ! each atmospheric forcing time step that is read in
-      forcing_steps_per_day    = 72 ! The number of time steps included by the used forcing file(s) per day, e.g. 72
+      forcing_steps_per_day    = 1  ! Number of forcing time steps per day, e.g. 1 for daily forcing
 
       forcing_set_ocean_to_constants = .TRUE.
       forcing_height_wind = defHeightWind
