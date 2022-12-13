@@ -387,6 +387,7 @@ CONTAINS
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
+      CALL model%Queue_task(TOP_,    "innundated_area") ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       IF (.NOT. model%config%use_tmx) THEN
         CALL model%Queue_task(TURB_,   "surface_roughness")
@@ -647,6 +648,9 @@ CONTAINS
         IF (tile%Is_process_active(TCQ_)) THEN
           CALL tcq_init(tile)
         END IF
+        IF (tile%Is_process_active(TOP_)) THEN
+          CALL topmodel_init(tile)
+        END IF
 #ifndef __NO_JSBACH_HD__
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
@@ -846,6 +850,8 @@ CONTAINS
         IF (tile%Is_process_active(WLCC_)) THEN
           CALL wlcc_init_lcc(tile)
         END IF
+
+! StW: Need some topmodel stuff here?
       END SELECT
 
         IF (tile%Is_process_active(ALCC_)) THEN
@@ -993,4 +999,3 @@ CONTAINS
 #endif
 
   END SUBROUTINE jsbach_init_after_restart
-  ! ====================================================================================================== !

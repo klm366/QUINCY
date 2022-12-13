@@ -125,6 +125,8 @@ CONTAINS
       return_value = 'sb'
     CASE (SPQ_)
       return_value = 'spq'
+    CASE (TOP_)
+      return_value = 'top'
     CASE DEFAULT
       return_value = ''
     END SELECT
@@ -189,6 +191,8 @@ CONTAINS
       return_value = SB_
     CASE ('spq')
       return_value = SPQ_
+    CASE ('top')
+      return_value = TOP_
     CASE DEFAULT
       return_value = 0
     END SELECT

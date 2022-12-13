@@ -314,6 +314,8 @@ CONTAINS
         !$ACC ENTER DATA COPYIN(land_tile)
       END IF
 
+! StW: Extra peat tile needed?
+
         IF (model%config%use_glacier) THEN
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & processes = (/HYDRO_, SSE_/), &
