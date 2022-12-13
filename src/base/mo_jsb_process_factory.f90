@@ -40,6 +40,7 @@ MODULE mo_jsb_process_factory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
+  USE mo_top_memory_class,     ONLY: t_top_memory
   USE mo_rad_interface,        ONLY: Register_rad_tasks
   USE mo_rad_config_class,     ONLY: t_rad_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
@@ -84,10 +85,12 @@ MODULE mo_jsb_process_factory
   USE mo_sb_config_class,       ONLY: t_sb_config
   USE mo_spq_interface,         ONLY: Register_spq_tasks
   USE mo_spq_config_class,      ONLY: t_spq_config
+  USE mo_top_interface,         ONLY: Register_top_tasks
+  USE mo_top_config_class,      ONLY: t_top_config
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
+    & PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, TOP_
 
   IMPLICIT NONE
   PRIVATE
@@ -193,6 +196,9 @@ CONTAINS
     CASE (SPQ_)
       CALL Register_spq_tasks(return_ptr, model_id)
       ALLOCATE(t_spq_config::return_ptr%config)
+    CASE (TOP_)
+      CALL Register_top_tasks(return_ptr, model_id)
+      ALLOCATE(t_top_config::return_ptr%config)
     CASE DEFAULT
       return_ptr => NULL()
     END SELECT
@@ -229,6 +235,7 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,      ONLY: max_no_of_hd_vars => max_no_of_vars
 #endif
+    USE mo_top_memory_class,     ONLY: max_no_of_top_vars => max_no_of_vars
 
     INTEGER, INTENT(in) :: iproc
     CLASS(t_jsb_memory), POINTER   :: return_ptr
@@ -296,6 +303,9 @@ CONTAINS
     CASE (SPQ_)
       ALLOCATE(t_spq_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_spq_vars
+    CASE (TOP_)
+      ALLOCATE(t_top_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_top_vars
     END SELECT
 
     !$acc enter data create(return_ptr)

@@ -20,7 +20,7 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, TOP_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -193,6 +193,7 @@ CONTAINS
     USE mo_sb_init,             ONLY: sb_init
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_tcq_init,            ONLY: tcq_init
+    USE mo_top_init,       ONLY: topmodel_init
 
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
@@ -345,6 +346,7 @@ CONTAINS
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
+      CALL model%Queue_task(TOP_,    "innundated_area") ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
       CALL model%Queue_task(RAD_,    "albedo")
@@ -592,6 +594,9 @@ CONTAINS
         IF (tile%Is_process_active(TCQ_)) THEN
           CALL tcq_init(tile)
         END IF
+        IF (tile%Is_process_active(TOP_)) THEN
+          CALL topmodel_init(tile)
+        END IF
 #ifndef __NO_JSBACH_HD__
         IF (tile%Is_process_active(HD_)) THEN
           CALL hd_init_bc(tile)
@@ -763,6 +768,8 @@ CONTAINS
         IF (tile%Is_process_active(WLCC_)) THEN
           CALL wlcc_init_lcc(tile)
         END IF
+
+! StW: Need some topmodel stuff here?
       END SELECT
 
       CALL model%Goto_next_tile(tile)
