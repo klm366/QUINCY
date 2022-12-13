@@ -77,11 +77,11 @@ MODULE mo_jsb_memory_class
     GENERIC                                      :: Add_var => &
                                                     t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, t_jsb_memory_add_var_r3d
     PROCEDURE                                    :: Get_var_position
-    PROCEDURE                                    :: Collect_var_real2d  ! Collect var from its child tiles
+    PROCEDURE, PUBLIC                            :: Collect_var_real2d  ! Collect var from its child tiles
                                                                         ! R: Note, we do not want to keep a "var collection" in the memory
                                                                         !    because we already have all child values in the memory.
-    PROCEDURE                                    :: Collect_var_real3d  ! Collect var from its child tiles
-    PROCEDURE                                    :: HandDown_var_real2d ! Hand back var to child tiles
+    PROCEDURE, PUBLIC                            :: Collect_var_real3d  ! Collect var from its child tiles
+    PROCEDURE, PUBLIC                            :: HandDown_var_real2d ! Hand back var to child tiles
     PROCEDURE                                    :: Average_over_children_real2d ! Average var over the child tiles
   END TYPE t_jsb_memory
 

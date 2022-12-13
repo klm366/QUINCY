@@ -20,9 +20,10 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, A2L_, VEG_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, NLCC_, A2L_, VEG_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(NLCC_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -240,25 +241,41 @@ CONTAINS
     IF (.NOT. model%config%use_quincy) THEN
       ! Note: JN changed the order of the processes
       ! - processes potentially changing the area of a tile are conducted first in the timestep.
+      ! - the task npp_buffer is performed even before to provide already updated multi annual average
+      !   NPP to the NLCC process at the beginning of a year
       ! - PHENO processes were moved up: need to happen before C_NPP_pot_allocation for allometric
       !   considerations
   
+      IF (model%processes(NLCC_)%p%config%active) THEN
+        CALL model%Queue_task(ASSIMI_, "npp_buffer")
+      END IF
+
       ! ------------------------ tasks that can change area
       !
+      ! Note: PPLCC_ is automatically actived in mo_jsb_base.f90:jsbach_setup_models
+      ! if any process that changes area (e.g. TLCC_, NLCC_, ALCC_) is active.
+      !
       IF (model%processes(PPLCC_)%p%config%active) THEN
-        !! Prepare LCC tasks!
+        ! Prepare LCC tasks
         CALL model%Queue_task(PPLCC_, "pplcc_pre_lcc")
+      END IF
 
-        !***** Add LCC processes between pplcc_pre and pplcc_post *****
-        IF (model%processes(TLCC_)%p%config%active) THEN
-          CALL model%Queue_task(TLCC_, "tlcc")
-        END IF
+      !***** Add LCC processes between pplcc_pre and pplcc_post *****
+      !
+      IF (model%processes(TLCC_)%p%config%active) THEN
+        CALL model%Queue_task(TLCC_, "tlcc")
+      END IF
 
-        IF (model%processes(ALCC_)%p%config%active) THEN
-          CALL model%Queue_task(ALCC_, "alcc")
-        END IF
+      IF (model%processes(NLCC_)%p%config%active) THEN
+        CALL model%Queue_task(NLCC_, "nlcc")
+      END IF
 
-        !! Do postprocessing after all LCC tasks were executed!
+      IF (model%processes(ALCC_)%p%config%active) THEN
+        CALL model%Queue_task(ALCC_, "alcc")
+      END IF
+
+      IF (model%processes(PPLCC_)%p%config%active) THEN
+        ! Do postprocessing after all LCC tasks were executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
       END IF
 
@@ -428,7 +445,6 @@ CONTAINS
       !>     2.1 Initialize each tile
       !>
       ! Initialize tile process memories and read tile fractions
-      ! todo: once we have land use change or dynveg, l_fixed_fractions needs to be adapted
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
         & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
