@@ -41,7 +41,7 @@ MODULE mo_jsb4_forcing
   USE mo_math_constants,         ONLY: pi
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
-  USE mo_util_string,            ONLY: tolower, int2string
+  USE mo_util_string,            ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: tmelt, p0sl_bg, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
   USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants, 
                                                      ! however like this it is consistent with JSBACH
@@ -53,10 +53,11 @@ MODULE mo_jsb4_forcing
   USE mo_jsb_tile_class,         ONLY: t_jsb_tile_abstract
   USE mo_jsb_parallel,           ONLY: my_process_is_stdio, my_process_is_mpi_parallel, p_io, mpi_comm, p_bcast
   USE mo_jsb_io_netcdf,          ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_io_netcdf_iface,    ONLY:           &
-    & nf, nf_get_vara_double,                    & ! former nf_check
-    & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid, & ! from netcdf.inc
-    & NF_MAX_NAME, nf_get_att_text, NF_NOERR       ! from netcdf.inc
+  USE mo_jsb_io_netcdf_iface,    ONLY:                 &
+    & nf, nf_get_vara_double,                          & ! former nf_check
+    & nf_inq_dimid, nf_inq_dimlen, nf_inq_varid,       & ! from netcdf.inc
+    & NF_MAX_NAME, nf_get_att_text, nf_get_att_double, & ! from netcdf.inc
+    & NF_NOERR                                           ! from netcdf.inc
 
   USE mo_jsb_class,              ONLY: get_model
 
@@ -155,6 +156,7 @@ MODULE mo_jsb4_forcing
     INTEGER  :: forcing_synchron_factor
     INTEGER  :: forcing_steps_per_day          !! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL  :: forcing_set_ocean_to_constants !! Specifies if external forcing is only defined for land cells (true)
+    LOGICAL  :: forcing_set_miss_to_constants  !! Set missing value in forcing over land cells to constant values (= false)
     LOGICAL  :: air_temperature_as_timestep    !! Specifies if the air temperatures are given per timestep
     INTEGER  :: type_of_qair_forcing           !! Possible values: see 'options controlling atmospheric humidity input data'
     LOGICAL  :: precip_in_mm_per_day           !! Specifies units of precipitation input data: true: mm/day; false: kg/(m^2*s)
@@ -172,6 +174,7 @@ MODULE mo_jsb4_forcing
     INTEGER                  :: frequency = 0          !! Input data frequency (see 'options controlling types of forcing data')
     REAL(wp)                 :: ocean_value = 0._wp    !! Value used for ocean cells
     REAL(wp)                 :: constantValue = 0._wp  !! Value in case of frequency 'constant'
+    REAL(wp)                 :: missval = 1.0e+20_wp   !! Missing value
     INTEGER                  :: currentDayStart = 0    !! First time step in file corresponding to the current day
     INTEGER                  :: currentDayEnd = 0      !! Last time step in file corresponding to the current day
     INTEGER                  :: length_time_series     !! The number of time steps found in the data (only if my_process_is_stdio())
@@ -573,6 +576,7 @@ CONTAINS
     INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)
+    LOGICAL                :: forcing_set_miss_to_constants    !! Set missing value in forcing over land cells to constant values (= false)
     REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
     REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
 
@@ -628,7 +632,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_day,              &
-      & forcing_set_ocean_to_constants, forcing_height_wind, forcing_height_humidity,                                         &
+      & forcing_set_ocean_to_constants, forcing_set_miss_to_constants, forcing_height_wind, forcing_height_humidity,          &
       & forcing_temp_file_prefix, forcing_temp_frequ, forcing_temp_const_tmin, forcing_temp_const_tmax, forcing_temp_ocean,   &
       & forcing_temp_unit,                                                                                                    &
       & forcing_precip_file_prefix, forcing_precip_frequ, forcing_precip_const_precip,                                        &
@@ -661,6 +665,7 @@ CONTAINS
       forcing_steps_per_day    = 1  ! Number of forcing time steps per day, e.g. 1 for daily forcing
 
       forcing_set_ocean_to_constants = .TRUE.
+      forcing_set_miss_to_constants = .FALSE.
       forcing_height_wind = defHeightWind
       forcing_height_humidity = defHeightHumidity
 
@@ -747,6 +752,11 @@ CONTAINS
         CALL message(TRIM(routine),'forcing_set_ocean_to_constants = false: input is expected for all cells for all variables. '&
           & //'On ERROR: make sure that your forcing is actually defined for all cells for all variables!')
       ENDIF
+      forcing_options%forcing_set_miss_to_constants = forcing_set_miss_to_constants
+      IF(forcing_options%forcing_set_miss_to_constants) THEN
+        CALL message(TRIM(routine),&
+          & 'forcing_set_miss_to_constants == true: Missing values over land will be replace with ocean constants')
+      ENDIF
       ! --- Precipitation unit
       forcing_options%precip_in_mm_per_day = forcing_precip_in_mm_per_day
       IF(forcing_options%precip_in_mm_per_day) THEN
@@ -803,6 +813,7 @@ CONTAINS
       CALL p_bcast(forcing_options%forcing_synchron_factor, p_io, mpi_comm)
       CALL p_bcast(forcing_options%forcing_steps_per_day, p_io, mpi_comm)
       CALL p_bcast(forcing_options%forcing_set_ocean_to_constants, p_io, mpi_comm)
+      CALL p_bcast(forcing_options%forcing_set_miss_to_constants, p_io, mpi_comm)
       CALL p_bcast(forcing_options%air_temperature_as_timestep, p_io, mpi_comm)
       CALL p_bcast(forcing_options%precip_in_mm_per_day, p_io, mpi_comm)
       CALL p_bcast(forcing_options%type_of_qair_forcing, p_io, mpi_comm)
@@ -934,6 +945,7 @@ CONTAINS
     IF (frequency == CONST_) THEN
       current_forcing_array(:,:) = forcing_input_variable%constantValue
       CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, current_forcing_array)
+      CALL set_miss_cells(nblks, forcing_input_variable%missval, forcing_input_variable%ocean_value, current_forcing_array)
       RETURN
     ENDIF
 
@@ -1043,9 +1055,13 @@ CONTAINS
         CALL get_time_dimension(forcing_input_variable%input_file, forcing_input_variable)
 
         ! Assert: test that the netcdf file unit for this variable is the expected unit or at least equals unspecified_exp_unit
-        ! CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
         CALL test_unit(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
           & TRIM(forcing_input_variable%expectedUnit), TRIM(readUnit))
+        ! Read missing value for variable
+        IF (forcing_options%forcing_set_miss_to_constants) THEN
+          CALL get_missval(forcing_input_variable%input_file%file_id, TRIM(forcing_input_variable%variable_name), &
+            & forcing_input_variable%missval)
+        ENDIF
         ! TODO: further assertions? e.g. that lon lat are correct?
 
         currentTimeStep = 1
@@ -1130,6 +1146,8 @@ CONTAINS
         DO index_time = 1, forcing_options%forcing_steps_per_day
           CALL set_ocean_cells(nblks, ics, ice, model_id, &
             & forcing_input_variable%ocean_value, forcing_input_variable%data_read(:,:,index_time))
+          CALL set_miss_cells(nblks, forcing_input_variable%missval, forcing_input_variable%ocean_value, &
+            & forcing_input_variable%data_read(:,:,index_time))
         ENDDO
         IF (do_advance) THEN
           forcing_input_variable%currentDayStart=forcing_input_variable%currentDayEnd+1
@@ -1138,6 +1156,8 @@ CONTAINS
       ELSE IF (forcing_input_variable%frequency == DAILY_) THEN
         CALL set_ocean_cells(nblks, ics, ice, model_id, forcing_input_variable%ocean_value, &
           &                  forcing_input_variable%data_read(:,:,1))
+        CALL set_miss_cells(nblks, forcing_input_variable%missval, forcing_input_variable%ocean_value, &
+          &                 forcing_input_variable%data_read(:,:,1))
         IF (do_advance) THEN
           forcing_input_variable%currentDayStart=forcing_input_variable%currentDayStart+1
           forcing_input_variable%currentDayEnd=forcing_input_variable%currentDayEnd+1
@@ -1290,6 +1310,41 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE test_unit
+
+  !>
+  !! @brief reads and returns missing value for variable fields
+  !!
+  !! @par History
+  !! First version by Tobias Stacke (2022-12-23)
+  !!
+  SUBROUTINE get_missval(file_id, variable_name, missval)
+
+    INTEGER,         INTENT(IN)  :: file_id
+    CHARACTER(len=*),INTENT(IN)  :: variable_name
+    REAL(wp),        INTENT(OUT) :: missval
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_missval'
+
+    INTEGER :: nc_var_id, status
+
+    CALL nf(nf_inq_varid(file_id, TRIM(variable_name), nc_var_id), routine)
+    status = nf_get_att_double(file_id, nc_var_id, 'missing_value', missval)
+
+    IF (status == NF_NOERR) THEN
+      CALL message(TRIM(routine), &
+        & 'Found missing value '//TRIM(real2string(missval))//' for variable '//TRIM(variable_name))
+    ELSE
+      status = nf_get_att_double(file_id, nc_var_id, '_FillValue', missval)
+      IF (status == NF_NOERR) THEN
+        CALL message(TRIM(routine), &
+          & 'Found missing value '//TRIM(real2string(missval))//' for variable '//TRIM(variable_name))
+      ELSE
+        CALL finish(TRIM(routine), &
+          & 'No missing value found for variable '//TRIM(variable_name))
+      ENDIF
+    ENDIF
+
+  END SUBROUTINE get_missval
 
   SUBROUTINE finalize_external_forcing
 
@@ -1836,6 +1891,37 @@ CONTAINS
       END WHERE
     ENDDO
   END SUBROUTINE set_ocean_cells
+
+  !>
+  !! @brief replace missing values with the given constant
+  !!
+  !! @par History
+  !! First version by Tobias Stacke (2022-12-13)
+  !
+  !  Land sea masks of model grids and offline forcing data don't alway match exactly. If
+  !    the forcing dataset has missing values on land cell, the model will most likely
+  !    crash with temperature bound violations due to the missing values. This routine
+  !    replaces the missing value with a constant. Currently, the "ocean" value is
+  !    used for this.
+  SUBROUTINE set_miss_cells(nblks, missval, constant, array)
+
+    INTEGER, INTENT(IN)     :: nblks
+    REAL(wp), INTENT(IN)    :: missval, constant
+    REAL(wp), INTENT(INOUT) :: array(:,:)
+    INTEGER :: iblk
+
+    IF (.NOT. forcing_options%forcing_set_miss_to_constants) RETURN
+
+    ! Use REAL values for comparison in case the netCDF missing_value
+    ! attribute lacks double precision.
+
+    DO iblk = 1, nblks
+      WHERE (ABS(REAL(array(:,iblk)) - REAL(missval)) <= EPSILON(1.0))
+        array(:,iblk) = constant
+      END WHERE
+    ENDDO
+
+  END SUBROUTINE set_miss_cells
 
   !>
   !! @brief estimate timestep temperature from daily min- and max temperature
