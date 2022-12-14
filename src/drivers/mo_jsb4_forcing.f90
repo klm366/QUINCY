@@ -920,6 +920,7 @@ CONTAINS
     INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)
+    LOGICAL                :: forcing_set_miss_to_constants    !! Set missing value in forcing over land cells to constant values (= false)
     REAL(wp)               :: forcing_height_wind              !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
     REAL(wp)               :: forcing_height_humidity          !! jsb3: Defines lowest layer height-> where measurements are taken // -1: for ECHAM lowest layer values
 
