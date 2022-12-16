@@ -22,7 +22,6 @@ MODULE mo_carbon_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_jsb_time,        ONLY: get_day_length
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 

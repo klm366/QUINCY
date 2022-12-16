@@ -268,7 +268,8 @@ CONTAINS
 
     ! for tcq the transfer is simple - just put everything from a_veg to a_dead...
     CALL transfer_from_active_to_passive_var_onChunk(                            &
-      & lcc_relocations, i_tile, options, tcq_potential_active_vars(1), tcq_required_passive_vars(1))
+      & lcc_relocations, i_tile, options%iblk, options%ics, options%ice,         &
+      & tcq_potential_active_vars(1), tcq_required_passive_vars(1))
 
   END SUBROUTINE tcq_transfer_from_active_to_passive_vars_onChunk
 

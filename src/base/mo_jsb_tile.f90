@@ -317,6 +317,7 @@ CONTAINS
     INTEGER,           INTENT(in)    :: grid_id           !< Grid id
     LOGICAL,           INTENT(in)    :: in_var_groups     !< Should output be written for this tile?
     ! -------------------------------------------------------------------------------------------------- !
+
     INTEGER                               :: iproc
     TYPE(t_jsb_model), POINTER            :: model
     CLASS(t_jsb_memory), POINTER          :: tmp_ptr
@@ -548,8 +549,8 @@ CONTAINS
       & hgrid, surface,                                                                                       &
       & t_cf('tile_fraction', '',                                                                             &
       &      'fraction of grid box covered by tile '//TRIM(this%name)),                                       &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                    &
-      & prefix, suffix, lrestart=.NOT. l_fixed_fractions,                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                                      &
+      & prefix, suffix, loutput=.NOT. l_fixed_fractions, lrestart=.NOT. l_fixed_fractions,                    &
       & initval_r=0.0_wp, isteptype=isteptype, groups=[character(len=VARNAME_LEN) :: 'jsb_tile_fractions'])
 
     ! Now we need to set the tile component fract pointer to the just allocated memory
@@ -599,6 +600,16 @@ CONTAINS
         tmp_fract(:,:) = 1._wp
       END IF
       CALL this%Set_fraction(fract=tmp_fract(:,:))
+    ELSEIF (this%fract_varname == 'allFirst') THEN
+        IF(ASSOCIATED(this%parent)) THEN
+          CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
+          IF (.NOT. this%Is_first_child()) THEN
+            tmp_fract(:,:) = 0._wp
+          END IF
+        ELSE
+          tmp_fract(:,:) = 1._wp
+        END IF
+        CALL this%Set_fraction(fract=tmp_fract(:,:))
     ELSE
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
       ! Determine the name of the tile fraction variable in the input file

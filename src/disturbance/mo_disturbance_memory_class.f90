@@ -16,6 +16,8 @@ MODULE mo_disturb_memory_class
 
   USE mo_kind, ONLY: wp
 
+  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
 
