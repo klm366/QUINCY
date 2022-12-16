@@ -36,6 +36,7 @@ MODULE mo_jsb_impl_constants
 
   ! general parameters
   INTEGER, PARAMETER :: SHORT_NAME_LEN = 10
+  INTEGER, PARAMETER :: MEDIUM_NAME_LEN = 20
 
   ! using the functionality of LOGICAL var with REAL var
   REAL(wp), PARAMETER :: false            = 0.0_wp    !< just zero
