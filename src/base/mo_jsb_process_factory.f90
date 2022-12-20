@@ -98,7 +98,7 @@ MODULE mo_jsb_process_factory
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 23
+  INTEGER, PARAMETER :: max_no_of_processes = 42
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory'
 
