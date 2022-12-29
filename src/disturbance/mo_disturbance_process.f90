@@ -510,6 +510,7 @@ CONTAINS
         !                       / (w_minmax(5+w_i,2)           - w_minmax(5+w_i,1)+1e-10)
         !weather_inputs(nc_i,6) = (q_air(nc_i)-q_clim_m(nc_i)    - w_minmax(6+w_i,1)) &
         !                       / (w_minmax(6+w_i,2)           - w_minmax(6+w_i,1)+1e-10)
+
         weather_inputs(nc_i,7) = (wind_10m(nc_i)              - w_minmax(7+w_i,1)) &
                                / (w_minmax(7+w_i,2)           - w_minmax(7+w_i,1)+1e-10)
         weather_inputs(nc_i,8) = (rain(nc_i)*86400            - w_minmax(8+w_i,1)) &
@@ -558,7 +559,8 @@ CONTAINS
         !land_inputs(nc_i,9) = (swl4(nc_i)-swl4_clim_m(nc_i)+swl4_clim_o(nc_i) - l_minmax(9+l_i,1))  &
         !                    / (l_minmax(9+l_i,2)          - l_minmax(9+l_i,1)+1e-10)
         !land_inputs(nc_i,10)= (swl4(nc_i)-swl4_clim_m(nc_i) - l_minmax(10+l_i,1)) &
-        !                    / (l_minmax(10+l_i,2)         - l_minmax(10+l_i,1)+1e-10)
+        !                    / (l_minmax(10+l_i,2)         - l_minmax(10+l_i,1)+1e-10
+        
         land_inputs(nc_i,11)= (fuel(nc_i)                 - l_minmax(11+l_i,1)) &
                             / (l_minmax(11+l_i,2)         - l_minmax(11+l_i,1)+1e-10)
         land_inputs(nc_i,12)= (elevation(nc_i)            - l_minmax(12+l_i,1)) &
@@ -709,29 +711,29 @@ CONTAINS
     !dum3 = sum(anthro_nn_outputs_sum, dim=2)
     !dum4 = sum(fuel_constraint, dim=2)
 
-    !where(gfed_region /= 9) dum1 = 0.
-    !where(gfed_region /= 9) dum2 = 0.
-    !where(gfed_region /= 9) dum3 = 0.
-    where(gfed_region /= 9) fuel_constraint = 0.
+    !where(gfed_region /= 5) dum1 = 0.
+    !where(gfed_region /= 5) dum2 = 0.
+    !where(gfed_region /= 5) dum3 = 0.
+    !where(gfed_region /= 5) fuel_constraint = 0.
 
     !num1 = gfed_region
     !num2 = gfed_region
     !num3 = gfed_region
-    num4 = gfed_region
+    !num4 = gfed_region
 
-    !where(gfed_region /= 9) num1 = 0.
-    !where(gfed_region /= 9) num2 = 0.
-    !where(gfed_region /= 9) num3 = 0.
-    !where(gfed_region /= 9) num4 = 0.
-    !where(gfed_region == 9) num1 = 1.
-    !where(gfed_region == 9) num2 = 1.
-    !where(gfed_region == 9) num3 = 1.
-    where(gfed_region == 9) num4 = 1.
+    !where(gfed_region /= 5) num1 = 0.
+    !where(gfed_region /= 5) num2 = 0.
+    !where(gfed_region /= 5) num3 = 0.
+    !where(gfed_region /= 5) num4 = 0.
+    !where(gfed_region == 5) num1 = 1.
+    !where(gfed_region == 5) num2 = 1.
+    !where(gfed_region == 5) num3 = 1.
+    !where(gfed_region == 5) num4 = 1.
 
     !print*, sum(dum1)/(sum(num1)+1e-7), sum(dum2)/(sum(num2)+1e-7), sum(dum3)/(sum(num3)+1e-7), sum(dum4)/(sum(num4)+1e-7)
-    if (sum(fuel_constraint) /= 0.) then
-      print*, sum(fuel_constraint)/(sum(num4)+1e-7)
-    endif
+    !if (sum(fuel_constraint) /= 0.) then
+    !  print*, sum(fuel_constraint)/(sum(num4)+1e-7)
+    !endif
 
     burned_fract = sum(weather_lstm_outputs_sum     &
                      * land_lstm_outputs_sum        &
@@ -751,7 +753,9 @@ CONTAINS
     q_rel_air_constraint(:) = q_rel_air(:)/100.
     !q_rel_air_constraint(:) = (q_rel_air(:)-q_rel_clim_m(:)+q_rel_clim_o(:))/100.
     q_rel_air_constraint(:) = 1/(1+exp(-20*(q_rel_air_constraint(:)-0.5)))
-    !where (q_rel_air_constraint > 0.6) q_rel_air_constraint = 1.
+    !where (q_rel_air > 50) q_rel_air_constraint = 1.
+    where (q_rel_air > 60) q_rel_air_constraint = 1.
+    !where (q_rel_air > 70) q_rel_air_constraint = 1.
     burned_fract(:) = burned_fract(:)*(1-q_rel_air_constraint(:))
 
     where (burned_fract < 0.) burned_fract = 0.

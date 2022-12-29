@@ -385,8 +385,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)          ! in
     ! -------------------------------------------------------------------------------------------------- !
 
-    q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
-    !q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
+    !q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
+    q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
 
     ! For each time step update the climate buffer
 
@@ -510,20 +510,23 @@ CONTAINS
           ELSE
             !IF (diff_year < 1) Then
             !IF (diff_year < 10) Then
+            !IF (diff_year < 30) Then
+            !IF (diff_year < 5) Then
               !clim_ratio = MAX(30._wp/idy, 1._wp)
-            !  clim_ratio = MAX(10._wp/(diff_year+1), 1._wp)
+              !clim_ratio = MAX(10._wp/(diff_year+1), 1._wp)
+              !clim_ratio = MAX(30._wp/(diff_year+1), 1._wp)
             !ELSE
-            !  clim_ratio = 1._wp
+              !clim_ratio = 1._wp
             !ENDIF
 
-            !t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp + t_air_ave(:)*clim_ratio/10._wp
-            !q_clim(:,day_of_year)     = q_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp     + q_ave(:)*clim_ratio/10._wp
-            !q_rel_clim(:,day_of_year) = q_rel_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp + q_rel_ave(:)*clim_ratio/10._wp
-            !swl1_clim(:,day_of_year)  = swl1_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl1_ave(:)*clim_ratio/10._wp
-            !swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl2_ave(:)*clim_ratio/10._wp
-            !swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl3_ave(:)*clim_ratio/10._wp
-            !swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp  + swl4_ave(:)*clim_ratio/10._wp
-            !lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)*(10._wp-clim_ratio)/10._wp   + lai_ave(:)*clim_ratio/10._wp
+            !t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year)*(30._wp-clim_ratio)/30._wp + t_air_ave(:)*clim_ratio/30._wp
+            !q_clim(:,day_of_year)     = q_clim(:,day_of_year)*(30._wp-clim_ratio)/30._wp     + q_ave(:)*clim_ratio/30._wp
+            !q_rel_clim(:,day_of_year) = q_rel_clim(:,day_of_year)*(30._wp-clim_ratio)/30._wp + q_rel_ave(:)*clim_ratio/30._wp
+            !swl1_clim(:,day_of_year)  = swl1_clim(:,day_of_year)*(30._wp-clim_ratio)/30._wp  + swl1_ave(:)*clim_ratio/30._wp
+            !swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)*(30._wp-clim_ratio)/30._wp  + swl2_ave(:)*clim_ratio/30._wp
+            !swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)*(30._wp-clim_ratio)/30._wp  + swl3_ave(:)*clim_ratio/30._wp
+            !swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)*(30._wp-clim_ratio)/30._wp  + swl4_ave(:)*clim_ratio/30._wp
+            !lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)*(30._wp-clim_ratio)/30._wp   + lai_ave(:)*clim_ratio/30._wp
 
             t_air_clim(:,day_of_year) = t_air_clim(:,day_of_year) + t_air_ave(:)
             q_clim(:,day_of_year)     = q_clim(:,day_of_year)     + q_ave(:)
