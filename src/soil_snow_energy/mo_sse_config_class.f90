@@ -37,6 +37,7 @@ MODULE mo_sse_config_class
     !
     LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
     LOGICAL  :: l_heat_cond_map !< T: USe soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
+    LOGICAL  :: l_soil_texture  !< T: Deduce soil thermal parameters from soil texture
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing in thermal soil calculations
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
@@ -63,7 +64,8 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_freeze, l_supercool
+    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_soil_texture
+    LOGICAL  :: l_freeze, l_supercool
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow
     REAL(wp) :: dz_snow(max_snow_layers)
@@ -74,6 +76,7 @@ CONTAINS
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
+      & l_soil_texture,                         &
       & l_freeze, l_supercool, w_soil_critical, &
       & ic_filename, bc_filename
 
@@ -100,6 +103,7 @@ CONTAINS
     l_heat_cond_dyn  = .TRUE.
     l_heat_cap_map   = .FALSE.
     l_heat_cond_map  = .FALSE.
+    l_soil_texture   = .FALSE.
     l_freeze         = .FALSE.
     l_supercool      = .FALSE.
     w_soil_critical  = 5.85036E-3_wp
@@ -151,6 +155,14 @@ CONTAINS
     END IF
     config%l_heat_cap_map  = l_heat_cap_map
     config%l_heat_cond_map = l_heat_cond_map
+    config%l_soil_texture  = l_soil_texture
+    IF (l_soil_texture) THEN
+      IF (l_heat_cap_map .AND. l_heat_cond_map) THEN
+        CALL message(TRIM(routine), 'Using soil texture to derive heat capacity and heat conductivity')
+      ELSE
+        CALL finish(TRIM(routine), 'Use of soil texture requires l_heat_cap_map=true and l_heat_cond_map=true')
+      END IF
+    END IF
     config%l_freeze        = l_freeze
     config%l_supercool     = l_supercool
 
