@@ -38,7 +38,7 @@ MODULE mo_disturb_interface
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
   dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_, FLCC_, WLCC_
-  dsl4jsb_Use_processes PHENO_, HYDRO_   ! <Rackhun Son>
+  dsl4jsb_Use_processes PHENO_, HYDRO_, ANTHRO2L_   ! <Rackhun Son>
 
   ! Use of process configurations (t_disturb_config)
   dsl4jsb_Use_config(DISTURB_)
@@ -53,8 +53,9 @@ MODULE mo_disturb_interface
   dsl4jsb_Use_memory(FUEL_)
   dsl4jsb_Use_memory(CARBON_)
   dsl4jsb_Use_memory(SEB_)
-  dsl4jsb_Use_memory(PHENO_)    ! <Rackhun Son>
-  dsl4jsb_Use_memory(HYDRO_)    ! <Rackhun Son>
+  dsl4jsb_Use_memory(PHENO_)       ! <Rackhun Son>
+  dsl4jsb_Use_memory(HYDRO_)       ! <Rackhun Son>
+  dsl4jsb_Use_memory(ANTHRO2L_)    ! <Rackhun Son>
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -173,6 +174,7 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
     dsl4jsb_Def_memory(PHENO_)                       ! <Rackhun Son>
     dsl4jsb_Def_memory(HYDRO_)                       ! <Rackhun Son>
+    dsl4jsb_Def_memory(ANTHRO2L_)                    ! <Rackhun Son>
 
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(CARBON_)
@@ -222,6 +224,26 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: lai_clim               ! daily climatology of LAI <Rackhun Son>
     !dsl4jsb_Real2D_onChunk :: fuel_yearly            ! yearly mean of Fuel <Rackhun Son>
 
+    dsl4jsb_Real2D_onChunk :: a_temperature          ! daily average of temperature <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: a_rel_humidity         ! daily average of relative humidity <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: population             ! daily population density <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: gdp                    ! daily GDP density <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: hdi                    ! daily HDI density <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_primf         ! daily land_use_primf <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c4per         ! daily land_use_c4per <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_urban         ! daily land_use_urban <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_secdf         ! daily land_use_secdf <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_secma         ! daily land_use_secma <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_primn         ! daily land_use_primn <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_secdn         ! daily land_use_secdn <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c4ann         ! daily land_use_c4ann <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_pastr         ! daily land_use_pastr <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_range         ! daily land_use_range <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c3ann         ! daily land_use_c3ann <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c3nfx         ! daily land_use_c3nfx <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c3per         ! daily land_use_c3per <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_secmb         ! daily land_use_secmb <Rackhun Son> 
+
     dsl4jsb_Real3D_onChunk :: weather_lstm_hidden    ! LSTM hidden/cell <Rackhun>
     dsl4jsb_Real3D_onChunk :: weather_lstm_cell      ! LSTM hidden/cell <Rackhun>
     dsl4jsb_Real3D_onChunk :: land_lstm_hidden       ! LSTM hidden/cell <Rackhun>
@@ -258,24 +280,24 @@ CONTAINS
     !REAL(wp), POINTER      :: profile_curvature(:)
     !REAL(wp), POINTER      :: tangential_curvature(:)
 
-    REAL(wp), POINTER      :: population_density(:)
-    REAL(wp), POINTER      :: gdp(:)
-    REAL(wp), POINTER      :: hdi(:)
+    !REAL(wp), POINTER      :: population_density(:)
+    !REAL(wp), POINTER      :: gdp(:)
+    !REAL(wp), POINTER      :: hdi(:)
     REAL(wp), POINTER      :: road_density(:)
-    REAL(wp), POINTER      :: land_use_state_c3ann(:)
-    REAL(wp), POINTER      :: land_use_state_c3nfx(:)
-    REAL(wp), POINTER      :: land_use_state_c3per(:)
-    REAL(wp), POINTER      :: land_use_state_c4ann(:)
-    REAL(wp), POINTER      :: land_use_state_c4per(:)
-    REAL(wp), POINTER      :: land_use_state_pastr(:)
-    REAL(wp), POINTER      :: land_use_state_primf(:)
-    REAL(wp), POINTER      :: land_use_state_primn(:)
-    REAL(wp), POINTER      :: land_use_state_range(:)
-    REAL(wp), POINTER      :: land_use_state_secdf(:)
-    REAL(wp), POINTER      :: land_use_state_secdn(:)
-    REAL(wp), POINTER      :: land_use_state_secma(:)
-    REAL(wp), POINTER      :: land_use_state_secmb(:)
-    REAL(wp), POINTER      :: land_use_state_urban(:)
+    !REAL(wp), POINTER      :: land_use_state_c3ann(:)
+    !REAL(wp), POINTER      :: land_use_state_c3nfx(:)
+    !REAL(wp), POINTER      :: land_use_state_c3per(:)
+    !REAL(wp), POINTER      :: land_use_state_c4ann(:)
+    !REAL(wp), POINTER      :: land_use_state_c4per(:)
+    !REAL(wp), POINTER      :: land_use_state_pastr(:)
+    !REAL(wp), POINTER      :: land_use_state_primf(:)
+    !REAL(wp), POINTER      :: land_use_state_primn(:)
+    !REAL(wp), POINTER      :: land_use_state_range(:)
+    !REAL(wp), POINTER      :: land_use_state_secdf(:)
+    !REAL(wp), POINTER      :: land_use_state_secdn(:)
+    !REAL(wp), POINTER      :: land_use_state_secma(:)
+    !REAL(wp), POINTER      :: land_use_state_secmb(:)
+    !REAL(wp), POINTER      :: land_use_state_urban(:)
 
     REAL(wp), POINTER      :: gfed_region(:)
 
@@ -322,8 +344,9 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
-    dsl4jsb_Get_memory(PHENO_)    ! <Rackhun Son>
-    dsl4jsb_Get_memory(HYDRO_)    ! <Rackhun Son>
+    dsl4jsb_Get_memory(PHENO_)       ! <Rackhun Son>
+    dsl4jsb_Get_memory(HYDRO_)       ! <Rackhun Son>
+    dsl4jsb_Get_memory(ANTHRO2L_)    ! <Rackhun Son>
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(FUEL_,      fuel)                     ! in
@@ -347,6 +370,26 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,     elevation)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(HYDRO_,     wtr_soil_sl)              ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(HYDRO_,     soil_depth_sl)            ! in <Rackhun Son>
+
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  a_temperature)            ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  a_rel_humidity)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  population)               ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  gdp)                      ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  hdi)                      ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_primf)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c4per)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_urban)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secdf)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secma)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_primn)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secdn)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c4ann)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_pastr)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_range)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3ann)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3nfx)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3per)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secmb)           ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   t_air_ave)                ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_ave)                    ! in <Rackhun Son>
@@ -386,7 +429,8 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
 
     !q_rel_air(:) = get_relative_humidity_air(nc, q_air(:), t_unfilt(:), press_srf(:))
-    q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
+    !q_rel_air(:) = get_relative_humidity_air_v2(nc, q_air(:), t_air(:), press_srf(:))
+    q_rel_air(:) = a_rel_humidity(:)
 
     ! For each time step update the climate buffer
 
@@ -444,6 +488,7 @@ CONTAINS
 
     !where (q_rel_air > 100) q_rel_air = 100.
 
+    !t_air_ave(:) = t_air_ave(:) + a_temperature(:)*(options%dtime/60._wp/60._wp/24._wp)
     t_air_ave(:) = t_air_ave(:) + t_air(:)    *(options%dtime/60._wp/60._wp/24._wp)
     q_ave(:)     = q_ave(:)     + q_air(:)    *(options%dtime/60._wp/60._wp/24._wp)
     q_rel_ave(:) = q_rel_ave(:) + q_rel_air(:)*(options%dtime/60._wp/60._wp/24._wp)
@@ -573,24 +618,24 @@ CONTAINS
         slope                     => dsl4jsb_memory(DISTURB_)%slope(ics:ice, iblk)                     ! <Rackhun Son>
         roughness                 => dsl4jsb_memory(DISTURB_)%roughness(ics:ice, iblk)                 ! <Rackhun Son>
 
-        population_density        => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk)        ! <Rackhun Son>
-        gdp                       => dsl4jsb_memory(DISTURB_)%gdp(ics:ice, iblk)                       ! <Rackhun Son>
-        hdi                       => dsl4jsb_memory(DISTURB_)%hdi(ics:ice, iblk)                       ! <Rackhun Son>
+        !population_density        => dsl4jsb_memory(DISTURB_)%population_density(ics:ice, iblk)        ! <Rackhun Son>
+        !gdp                       => dsl4jsb_memory(DISTURB_)%gdp(ics:ice, iblk)                       ! <Rackhun Son>
+        !hdi                       => dsl4jsb_memory(DISTURB_)%hdi(ics:ice, iblk)                       ! <Rackhun Son>
         road_density              => dsl4jsb_memory(DISTURB_)%road_density(ics:ice, iblk)              ! <Rackhun Son>
-        land_use_state_c3ann      => dsl4jsb_memory(DISTURB_)%land_use_state_c3ann(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_c3nfx      => dsl4jsb_memory(DISTURB_)%land_use_state_c3nfx(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_c3per      => dsl4jsb_memory(DISTURB_)%land_use_state_c3per(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_c4ann      => dsl4jsb_memory(DISTURB_)%land_use_state_c4ann(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_c4per      => dsl4jsb_memory(DISTURB_)%land_use_state_c4per(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_pastr      => dsl4jsb_memory(DISTURB_)%land_use_state_pastr(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_primf      => dsl4jsb_memory(DISTURB_)%land_use_state_primf(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_primn      => dsl4jsb_memory(DISTURB_)%land_use_state_primn(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_range      => dsl4jsb_memory(DISTURB_)%land_use_state_range(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_secdf      => dsl4jsb_memory(DISTURB_)%land_use_state_secdf(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_secdn      => dsl4jsb_memory(DISTURB_)%land_use_state_secdn(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_secma      => dsl4jsb_memory(DISTURB_)%land_use_state_secma(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_secmb      => dsl4jsb_memory(DISTURB_)%land_use_state_secmb(ics:ice, iblk)      ! <Rackhun Son>
-        land_use_state_urban      => dsl4jsb_memory(DISTURB_)%land_use_state_urban(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_c3ann      => dsl4jsb_memory(DISTURB_)%land_use_state_c3ann(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_c3nfx      => dsl4jsb_memory(DISTURB_)%land_use_state_c3nfx(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_c3per      => dsl4jsb_memory(DISTURB_)%land_use_state_c3per(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_c4ann      => dsl4jsb_memory(DISTURB_)%land_use_state_c4ann(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_c4per      => dsl4jsb_memory(DISTURB_)%land_use_state_c4per(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_pastr      => dsl4jsb_memory(DISTURB_)%land_use_state_pastr(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_primf      => dsl4jsb_memory(DISTURB_)%land_use_state_primf(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_primn      => dsl4jsb_memory(DISTURB_)%land_use_state_primn(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_range      => dsl4jsb_memory(DISTURB_)%land_use_state_range(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_secdf      => dsl4jsb_memory(DISTURB_)%land_use_state_secdf(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_secdn      => dsl4jsb_memory(DISTURB_)%land_use_state_secdn(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_secma      => dsl4jsb_memory(DISTURB_)%land_use_state_secma(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_secmb      => dsl4jsb_memory(DISTURB_)%land_use_state_secmb(ics:ice, iblk)      ! <Rackhun Son>
+        !land_use_state_urban      => dsl4jsb_memory(DISTURB_)%land_use_state_urban(ics:ice, iblk)      ! <Rackhun Son>
 
         gfed_region               => dsl4jsb_memory(DISTURB_)%gfed_region(ics:ice, iblk)               ! <Rackhun Son>
 
@@ -687,85 +732,84 @@ CONTAINS
               & slope(:),                                                 &
               & roughness(:),                                             &
 
-              & population_density(:),                                   &
-              & gdp(:),                                                  &
-              & hdi(:),                                                  &
-              & road_density(:),                                         &
-              & land_use_state_c3ann(:),                                 &
-              & land_use_state_c3nfx(:),                                 &
-              & land_use_state_c3per(:),                                 &
-              & land_use_state_c4ann(:),                                 &
-              & land_use_state_c4per(:),                                 &
-              & land_use_state_pastr(:),                                 &
-              & land_use_state_primf(:),                                 &
-              & land_use_state_primn(:),                                 &
-              & land_use_state_range(:),                                 &
-              & land_use_state_secdf(:),                                 &
-              & land_use_state_secdn(:),                                 &
-              & land_use_state_secma(:),                                 &
-              & land_use_state_secmb(:),                                 &
-              & land_use_state_urban(:),                                 &
+              & population(:),                                            &
+              & gdp(:),                                                   &
+              & hdi(:),                                                   &
+              & road_density(:),                                          &
+              & land_use_c3ann(:),                                        &
+              & land_use_c3nfx(:),                                        &
+              & land_use_c3per(:),                                        &
+              & land_use_c4ann(:),                                        &
+              & land_use_c4per(:),                                        &
+              & land_use_pastr(:),                                        &
+              & land_use_primf(:),                                        &
+              & land_use_primn(:),                                        &
+              & land_use_range(:),                                        &
+              & land_use_secdf(:),                                        &
+              & land_use_secdn(:),                                        &
+              & land_use_secma(:),                                        &
+              & land_use_secmb(:),                                        &
+              & land_use_urban(:),                                        &
+              & nc,                                                       &
+              & tile%name,                                                &
 
-              & nc,                                                      &
-              & tile%name,                                               &
+              & dsl4jsb_Config(DISTURB_)%d_weather_input,                 &
+              & dsl4jsb_Config(DISTURB_)%d_weather_hidden,                &
+              & dsl4jsb_Config(DISTURB_)%d_land_input,                    &
+              & dsl4jsb_Config(DISTURB_)%d_land_hidden,                   &
+              & dsl4jsb_Config(DISTURB_)%d_land_input_n_pft,              &
+              & dsl4jsb_Config(DISTURB_)%d_anthro_input,                  &
+              & dsl4jsb_Config(DISTURB_)%d_anthro_hidden,                 &
+              & dsl4jsb_Config(DISTURB_)%d_output,                        &
+              & dsl4jsb_Config(DISTURB_)%d_region,                        &
+              !& dsl4jsb_Config(DISTURB_)%d_lnt_input,                    &
+              !& dsl4jsb_Config(DISTURB_)%d_lnt_hidden,                   &
+              !& dsl4jsb_Config(DISTURB_)%d_emb_input,                    &
+              !& dsl4jsb_Config(DISTURB_)%d_emb_hidden,                   &
+              !& dsl4jsb_Config(DISTURB_)%d_emb_output,                   &
 
-              & dsl4jsb_Config(DISTURB_)%d_weather_input,                &
-              & dsl4jsb_Config(DISTURB_)%d_weather_hidden,               &
-              & dsl4jsb_Config(DISTURB_)%d_land_input,                   &
-              & dsl4jsb_Config(DISTURB_)%d_land_hidden,                  &
-              & dsl4jsb_Config(DISTURB_)%d_land_input_n_pft,             &
-              & dsl4jsb_Config(DISTURB_)%d_anthro_input,                 &
-              & dsl4jsb_Config(DISTURB_)%d_anthro_hidden,                &
-              & dsl4jsb_Config(DISTURB_)%d_output,                       &
-              & dsl4jsb_Config(DISTURB_)%d_region,                       &
-              !& dsl4jsb_Config(DISTURB_)%d_lnt_input,                   &
-              !& dsl4jsb_Config(DISTURB_)%d_lnt_hidden,                  &
-              !& dsl4jsb_Config(DISTURB_)%d_emb_input,                   &
-              !& dsl4jsb_Config(DISTURB_)%d_emb_hidden,                  &
-              !& dsl4jsb_Config(DISTURB_)%d_emb_output,                  &
+              & dsl4jsb_Config(DISTURB_)%weather_i2i_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_i2i_bias,                &
+              & dsl4jsb_Config(DISTURB_)%weather_h2i_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_h2i_bias,                &
+              & dsl4jsb_Config(DISTURB_)%weather_i2f_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_i2f_bias,                &
+              & dsl4jsb_Config(DISTURB_)%weather_h2f_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_h2f_bias,                &
+              & dsl4jsb_Config(DISTURB_)%weather_i2g_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_i2g_bias,                &
+              & dsl4jsb_Config(DISTURB_)%weather_h2g_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_h2g_bias,                &
+              & dsl4jsb_Config(DISTURB_)%weather_i2o_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_i2o_bias,                &
+              & dsl4jsb_Config(DISTURB_)%weather_h2o_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_h2o_bias,                &
+              & dsl4jsb_Config(DISTURB_)%weather_out_weight,              &
+              & dsl4jsb_Config(DISTURB_)%weather_out_bias,                &
 
-              & dsl4jsb_Config(DISTURB_)%weather_i2i_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_i2i_bias,             &
-              & dsl4jsb_Config(DISTURB_)%weather_h2i_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_h2i_bias,             &
-              & dsl4jsb_Config(DISTURB_)%weather_i2f_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_i2f_bias,             &
-              & dsl4jsb_Config(DISTURB_)%weather_h2f_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_h2f_bias,             &
-              & dsl4jsb_Config(DISTURB_)%weather_i2g_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_i2g_bias,             &
-              & dsl4jsb_Config(DISTURB_)%weather_h2g_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_h2g_bias,             &
-              & dsl4jsb_Config(DISTURB_)%weather_i2o_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_i2o_bias,             &
-              & dsl4jsb_Config(DISTURB_)%weather_h2o_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_h2o_bias,             &
-              & dsl4jsb_Config(DISTURB_)%weather_out_weight,           &
-              & dsl4jsb_Config(DISTURB_)%weather_out_bias,             &
+              & dsl4jsb_Config(DISTURB_)%land_i2i_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_i2i_bias,                   &
+              & dsl4jsb_Config(DISTURB_)%land_h2i_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_h2i_bias,                   &
+              & dsl4jsb_Config(DISTURB_)%land_i2f_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_i2f_bias,                   &
+              & dsl4jsb_Config(DISTURB_)%land_h2f_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_h2f_bias,                   &
+              & dsl4jsb_Config(DISTURB_)%land_i2g_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_i2g_bias,                   &
+              & dsl4jsb_Config(DISTURB_)%land_h2g_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_h2g_bias,                   &
+              & dsl4jsb_Config(DISTURB_)%land_i2o_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_i2o_bias,                   &
+              & dsl4jsb_Config(DISTURB_)%land_h2o_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_h2o_bias,                   &
+              & dsl4jsb_Config(DISTURB_)%land_out_weight,                 &
+              & dsl4jsb_Config(DISTURB_)%land_out_bias,                   &
 
-              & dsl4jsb_Config(DISTURB_)%land_i2i_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_i2i_bias,                &
-              & dsl4jsb_Config(DISTURB_)%land_h2i_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_h2i_bias,                &
-              & dsl4jsb_Config(DISTURB_)%land_i2f_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_i2f_bias,                &
-              & dsl4jsb_Config(DISTURB_)%land_h2f_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_h2f_bias,                &
-              & dsl4jsb_Config(DISTURB_)%land_i2g_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_i2g_bias,                &
-              & dsl4jsb_Config(DISTURB_)%land_h2g_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_h2g_bias,                &
-              & dsl4jsb_Config(DISTURB_)%land_i2o_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_i2o_bias,                &
-              & dsl4jsb_Config(DISTURB_)%land_h2o_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_h2o_bias,                &
-              & dsl4jsb_Config(DISTURB_)%land_out_weight,              &
-              & dsl4jsb_Config(DISTURB_)%land_out_bias,                &
-
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_l1_weight,      &
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_l1_bias,        &
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_l2_weight,      &
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_l2_bias,        &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_l1_weight,         &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_l1_bias,           &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_l2_weight,         &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_l2_bias,           &
 
               !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_weight, &
               !& dsl4jsb_Config(DISTURB_)%lightning_topography_layer1_bias,   &
@@ -782,19 +826,19 @@ CONTAINS
               !& dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_weight, &
               !& dsl4jsb_Config(DISTURB_)%vegetation_emb_layer2_bias,   &
 
-              & dsl4jsb_Config(DISTURB_)%weather_min_max,              &
-              & dsl4jsb_Config(DISTURB_)%land_min_max,                 &
-              & dsl4jsb_Config(DISTURB_)%anthropogenic_min_max,        &
-              !& dsl4jsb_Config(DISTURB_)%embedding_min_max,            &
-              !& dsl4jsb_Config(DISTURB_)%lightning_topography_min_max, &
+              & dsl4jsb_Config(DISTURB_)%weather_min_max,                 &
+              & dsl4jsb_Config(DISTURB_)%land_min_max,                    &
+              & dsl4jsb_Config(DISTURB_)%anthropogenic_min_max,           &
+              !& dsl4jsb_Config(DISTURB_)%embedding_min_max,              &
+              !& dsl4jsb_Config(DISTURB_)%lightning_topography_min_max,   &
 
-              & gfed_region(:),                                        &
+              & gfed_region(:),                                           &
               
-              & weather_lstm_hidden(:,:),                              & ! inout
-              & weather_lstm_cell(:,:),                                & ! inout
-              & land_lstm_hidden(:,:),                                 & ! inout
-              & land_lstm_cell(:,:),                                   & ! inout
-              & burned_fract(:)                                        & ! inout
+              & weather_lstm_hidden(:,:),                                 & ! inout
+              & weather_lstm_cell(:,:),                                   & ! inout
+              & land_lstm_hidden(:,:),                                    & ! inout
+              & land_lstm_cell(:,:),                                      & ! inout
+              & burned_fract(:)                                           & ! inout
               & )
 
           CASE DEFAULT

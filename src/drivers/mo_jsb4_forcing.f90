@@ -126,6 +126,26 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: CO2_varname = 'CO2'
   CHARACTER(len=*), PARAMETER :: wspeed_varname = 'wspeed'
 
+  CHARACTER(len=*), PARAMETER :: temp_varname  = 'air_temp'         ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: rHcf_varname  = 'rHcf'             ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: popd_varname  = 'population'       ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: gdp_varname   = 'gdp'              ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: hdi_varname   = 'hdi'              ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: primf_varname = 'primf'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c4per_varname = 'c4per'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: urban_varname = 'urban'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: secdf_varname = 'secdf'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: secma_varname = 'secma'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: primn_varname = 'primn'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: secdn_varname = 'secdn'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c4ann_varname = 'c4ann'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: pastr_varname = 'pastr'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: range_varname = 'range'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c3ann_varname = 'c3ann'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c3nfx_varname = 'c3nfx'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c3per_varname = 'c3per'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: secmb_varname = 'secmb'            ! < Rackhun Son >
+
   ! expected units in forcing files (units of precipitation and co2 are specified in the namelist parameters)
   CHARACTER(len=*), PARAMETER :: exp_unit_temperature = 'degC'
   CHARACTER(len=*), PARAMETER :: exp_unit_radiation = 'W/m2'
@@ -133,6 +153,7 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: exp_unit_wspeed = 'm/s'
   CHARACTER(len=*), PARAMETER :: unit_precip_mm_day = 'mm/day'
   CHARACTER(len=*), PARAMETER :: unspecified_exp_unit = ''
+  CHARACTER(len=*), PARAMETER :: exp_unit_rHcf = '%'         ! < Rackhun Son >
 
   ! options controlling types of forcing data
   INTEGER,PARAMETER  :: DAILY_    = 1
@@ -197,6 +218,26 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: wind_speed    !! wind speed [m/s]
      TYPE(input_variable_type) :: rel_humidity  !! relative humidity [%]
      TYPE(input_variable_type) :: qair          !! specific humidity [kg/kg]
+
+     TYPE(input_variable_type) :: temp            !! temperature from anthropogenic forcing [K]
+     TYPE(input_variable_type) :: rHcf            !! relative humidity from anthropogenic forcing [%]
+     TYPE(input_variable_type) :: population      !! population density from anthropogenic forcing 
+     TYPE(input_variable_type) :: gdp             !! GDP from anthropogenic forcing 
+     TYPE(input_variable_type) :: hdi             !! HDI from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_primf  !! primf land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c4per  !! c4per land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_urban  !! urban land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_secdf  !! secdf land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_secma  !! secma land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_primn  !! primn land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_secdn  !! secdn land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c4ann  !! c4ann land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_pastr  !! pastr land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_range  !! range land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c3ann  !! c3ann land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c3nfx  !! c3nfx land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c3per  !! c3per land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_secmb  !! secmb land use from anthropogenic forcing
   END TYPE forcing_input_type
   TYPE(forcing_input_type),SAVE :: forcing_input
 
@@ -212,7 +253,10 @@ CONTAINS
     & sinlat, coslat, lon, evapo_act2pot_proc, &
     & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle, CO2_air, &
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, &
-    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch )
+    & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, &
+    & a_temperature, a_rel_humidity, population, gdp, hdi, &
+    & land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn, land_use_secdn, &
+    & land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx, land_use_c3per, land_use_secmb)   ! < Rackhun Son >
 
     INTEGER,  INTENT(IN)  :: model_id, ics, ice, icz, nblks
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
@@ -247,6 +291,26 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: q_acoef(:,:)
     REAL(wp), INTENT(OUT) :: q_bcoef(:,:)
     REAL(wp), INTENT(OUT) :: pch(:,:)
+
+    REAL(wp), INTENT(OUT) :: a_temperature(:,:)      ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: a_rel_humidity(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: population(:,:)         ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: gdp(:,:)                ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: hdi(:,:)                ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_primf(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c4per(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_urban(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_secdf(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_secma(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_primn(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_secdn(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c4ann(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_pastr(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_range(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c3ann(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c3nfx(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c3per(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_secmb(:,:)     ! < Rackhun Son >
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_interface_variables_from_external_forcing'
 
@@ -301,6 +365,26 @@ CONTAINS
     q_acoef(:,:)           = 0._wp
     q_bcoef(:,:)           = 0._wp
     pch(:,:)               = 0._wp
+
+    a_temperature(:,:)     = 0._wp      ! < Rackhun Son >
+    a_rel_humidity(:,:)    = 0._wp      ! < Rackhun Son >
+    population(:,:)        = 0._wp      ! < Rackhun Son >
+    gdp(:,:)               = 0._wp      ! < Rackhun Son >
+    hdi(:,:)               = 0._wp      ! < Rackhun Son >
+    land_use_primf(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c4per(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_urban(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_secdf(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_secma(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_primn(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_secdn(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c4ann(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_pastr(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_range(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c3ann(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c3nfx(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c3per(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_secmb(:,:)    = 0._wp      ! < Rackhun Son >
 
     ALLOCATE(help1(ice, nblks))
     ALLOCATE(help2(ice, nblks))
@@ -499,6 +583,30 @@ CONTAINS
     ! and convert to correct unit
     CO2_air = CO2_air * forcing_options%conv_CO2_2_MassRatio
 
+
+    ! --- anthropogenic  < Rackhun Son >
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%temp, a_temperature)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%rHcf, a_rel_humidity)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%population, population)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%gdp, gdp)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%hdi, hdi)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_primf, land_use_primf)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c4per, land_use_c4per)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_urban, land_use_urban)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secdf, land_use_secdf)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secma, land_use_secma)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_primn, land_use_primn)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secdn, land_use_secdn)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c4ann, land_use_c4ann)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_pastr, land_use_pastr)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_range, land_use_range)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3ann, land_use_c3ann)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3nfx, land_use_c3nfx)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3per, land_use_c3per)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secmb, land_use_secmb)
+
+    ! --------------------------------------------------------------------------------------------------------------
+
     ! --- compute remaining required input for jsb4 interface
     CALL get_remaining_input_for_jsb4_interface(nblks, ice, icz, t_air, press_srf, q_air, wind_air, &
       & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, &
@@ -594,6 +702,20 @@ CONTAINS
     REAL(wp)               :: forcing_qair_ocean               !! Constant value for ocean cells
     CHARACTER(len=128)     :: forcing_qair_unit                !! Expected unit of qair input
 
+    ! Anthropogenic forcings      < Rackhun Son >
+    CHARACTER(NF_MAX_NAME) :: forcing_rHcf_file_prefix       !! Prefix for files with rHcf data
+    CHARACTER(len=128)     :: forcing_rHcf_frequ               !! Frequency of rHcf forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_rHcf_const_rHcf          !! Constant value for rHcf [%]
+    REAL(wp)               :: forcing_rHcf_ocean               !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_rHcf_unit                !! Expected unit of rHcf input (default: [%])
+
+    CHARACTER(NF_MAX_NAME) :: forcing_anthro_file_prefix       !! Prefix for files with anthropogenic forcing data
+    CHARACTER(len=128)     :: forcing_anthro_frequ             !! Frequency of anthropogenic forcing data (DAILY/CONST/TIMESTEP)
+    REAL(wp)               :: forcing_anthro_const_anthro      !! Constant value for anthropogenic forcing
+    REAL(wp)               :: forcing_anthro_ocean             !! Constant value for ocean cells
+    CHARACTER(len=128)     :: forcing_anthro_unit              !! Expected unit of anthropogenic forcing input
+
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_forcing'
 
     NAMELIST /jsb_forcing_nml/ cyclic_nyears, cyclic_start_year, forcing_synchron_factor, forcing_steps_per_file,             &
@@ -607,7 +729,9 @@ CONTAINS
       & forcing_co2_file_prefix, forcing_co2_frequ, forcing_co2_const_co2, forcing_co2_ocean, forcing_co2_unit,               &
       & forcing_wind_file_prefix, forcing_wind_frequ, forcing_wind_const_wspeed, forcing_wind_ocean, forcing_wind_unit,       &
       & forcing_qair_file_prefix, forcing_qair_frequ, forcing_qair_type, forcing_qair_const_rh, forcing_qair_ocean,           &
-      & forcing_qair_unit
+      & forcing_qair_unit,                                                                                                    &
+      & forcing_rHcf_file_prefix, forcing_rHcf_frequ, forcing_rHcf_const_rHcf, forcing_rHcf_ocean, forcing_rHcf_unit,         &
+      & forcing_anthro_file_prefix, forcing_anthro_frequ, forcing_anthro_const_anthro, forcing_anthro_ocean, forcing_anthro_unit
 
     TYPE(t_jsb_model), POINTER :: model
     INTEGER:: nml_handler, read_status, f_unit
@@ -676,6 +800,19 @@ CONTAINS
       forcing_qair_const_rh = 100._wp
       forcing_qair_ocean = 1.0e-05
       forcing_qair_unit = exp_unit_qair
+
+      ! anthropogenic forcings    < Rackhun Son >
+      forcing_rHcf_file_prefix = 'anthro_'
+      forcing_rHcf_frequ = 'DAILY'
+      forcing_rHcf_const_rHcf = 0._wp
+      forcing_rHcf_ocean = 0._wp
+      forcing_rHcf_unit = exp_unit_rHcf
+
+      forcing_anthro_file_prefix = 'anthro_'
+      forcing_anthro_frequ = 'DAILY'
+      forcing_anthro_const_anthro = 0._wp
+      forcing_anthro_ocean = 0._wp
+      forcing_anthro_unit = unspecified_exp_unit
 
       ! ----- read the namelist
       model => get_model(model_id)
@@ -815,6 +952,19 @@ CONTAINS
       CALL p_bcast(forcing_qair_const_rh, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_ocean, p_io, mpi_comm)
       CALL p_bcast(forcing_qair_unit, p_io, mpi_comm)
+
+      ! Anthropogenic forcings    < Rackhun Son >
+      CALL p_bcast(forcing_rHcf_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_rHcf_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_rHcf_const_rHcf, p_io, mpi_comm)
+      CALL p_bcast(forcing_rHcf_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_rHcf_unit, p_io, mpi_comm)
+
+      CALL p_bcast(forcing_anthro_file_prefix, p_io, mpi_comm)
+      CALL p_bcast(forcing_anthro_frequ, p_io, mpi_comm)
+      CALL p_bcast(forcing_anthro_const_anthro, p_io, mpi_comm)
+      CALL p_bcast(forcing_anthro_ocean, p_io, mpi_comm)
+      CALL p_bcast(forcing_anthro_unit, p_io, mpi_comm)
     ENDIF
 
     ! ----- init forcing_input
@@ -856,6 +1006,47 @@ CONTAINS
     ! --- Wind
     CALL init_forcing_input_variable(wspeed_varname, forcing_wind_frequ, forcing_wind_ocean, &
       & forcing_wind_file_prefix, forcing_wind_unit, forcing_wind_const_wspeed, forcing_input%wind_speed)
+
+    ! Anthropogenic forcings < Rackhun Son >
+    ! --- rHcf
+    CALL init_forcing_input_variable(temp_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%temp)
+    CALL init_forcing_input_variable(rHcf_varname, forcing_rHcf_frequ, forcing_rHcf_ocean, &
+      & forcing_rHcf_file_prefix, forcing_rHcf_unit, forcing_rHcf_const_rHcf, forcing_input%rHcf)
+    CALL init_forcing_input_variable(popd_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%population)
+    CALL init_forcing_input_variable(gdp_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%gdp)
+    CALL init_forcing_input_variable(hdi_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%hdi)
+    CALL init_forcing_input_variable(primf_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_primf)
+    CALL init_forcing_input_variable(c4per_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c4per)
+    CALL init_forcing_input_variable(urban_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_urban)
+    CALL init_forcing_input_variable(secdf_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secdf)
+    CALL init_forcing_input_variable(secma_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secma)
+    CALL init_forcing_input_variable(primn_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_primn)
+    CALL init_forcing_input_variable(secdn_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secdn)
+    CALL init_forcing_input_variable(c4ann_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c4ann)
+    CALL init_forcing_input_variable(pastr_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_pastr)
+    CALL init_forcing_input_variable(range_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_range)
+    CALL init_forcing_input_variable(c3ann_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3ann)
+    CALL init_forcing_input_variable(c3nfx_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3nfx)
+    CALL init_forcing_input_variable(c3per_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3per) 
+    CALL init_forcing_input_variable(secmb_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secmb)
 
   END SUBROUTINE init_forcing
 

@@ -30,6 +30,8 @@ MODULE mo_jsb_interface
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear
 
+  USE mo_anthro2l_interface,  ONLY: update_anthro2l  ! <Rackhun Son>
+
   dsl4jsb_Use_processes CARBON_, ALCC_
 
   IMPLICIT NONE
@@ -104,8 +106,27 @@ CONTAINS
     & albedo_lice,                                                      & !< out
     & ice_fract_lake,                                                   & !< out
     ! For standalone jsbach
-    & evapopot                                                          & !< out; optional
-    & )
+    & evapopot,                                                         & !< out; optional
+    ! For anthropogenic forcing     < Rackhun Son >
+    & a_temperature,                                                    &
+    & a_rel_humidity,                                                   &
+    & population,                                                       &
+    & gdp,                                                              &
+    & hdi,                                                              &
+    & land_use_primf,                                                   &
+    & land_use_c4per,                                                   &
+    & land_use_urban,                                                   &
+    & land_use_secdf,                                                   &
+    & land_use_secma,                                                   &
+    & land_use_primn,                                                   &
+    & land_use_secdn,                                                   &
+    & land_use_c4ann,                                                   &
+    & land_use_pastr,                                                   &
+    & land_use_range,                                                   &
+    & land_use_c3ann,                                                   &
+    & land_use_c3nfx,                                                   &
+    & land_use_c3per,                                                   &
+    & land_use_secmb)
 
 #ifndef __ICON__
     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
@@ -200,6 +221,29 @@ CONTAINS
     ! For standalone jsbach:
     REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
 
+    ! For anthropogenic forcing:     < Rackhun Son >
+    REAL(wp), INTENT(in), OPTIONAL ::    &
+      & a_temperature(:),                &
+      & a_rel_humidity(:),               &
+      & population(:),                   &
+      & gdp(:),                          &
+      & hdi(:),                          &
+      & land_use_primf(:),               &
+      & land_use_c4per(:),               &
+      & land_use_urban(:),               &
+      & land_use_secdf(:),               &
+      & land_use_secma(:),               &
+      & land_use_primn(:),               &
+      & land_use_secdn(:),               &
+      & land_use_c4ann(:),               &
+      & land_use_pastr(:),               &
+      & land_use_range(:),               &
+      & land_use_c3ann(:),               &
+      & land_use_c3nfx(:),               &
+      & land_use_c3per(:),               &
+      & land_use_secmb(:)
+    
+
     ! Local variables
     CLASS(t_jsb_model),          POINTER :: model
     CLASS(t_jsb_tile_abstract),  POINTER :: tile
@@ -284,6 +328,35 @@ CONTAINS
       & q_bcoef_ice        = q_bcoef_ice            &
       & )
     NULLIFY(tile)
+
+    ! Anthropogegnic forcing     < Rackhun Son >
+    CALL model%Get_top_tile(tile)
+    CALL update_anthro2l(                           &
+      & tile,                                       &
+      & model%options(no_omp_thread),               &
+      & a_temperature      = a_temperature(:),      &
+      & a_rel_humidity     = a_rel_humidity(:),     &
+      & population         = population(:),         &
+      & gdp                = gdp(:),                &
+      & hdi                = hdi(:),                &
+      & land_use_primf     = land_use_primf(:),     &
+      & land_use_c4per     = land_use_c4per(:),     &
+      & land_use_urban     = land_use_urban(:),     &
+      & land_use_secdf     = land_use_secdf(:),     &
+      & land_use_secma     = land_use_secma(:),     &
+      & land_use_primn     = land_use_primn(:),     &
+      & land_use_secdn     = land_use_secdn(:),     &
+      & land_use_c4ann     = land_use_c4ann(:),     &
+      & land_use_pastr     = land_use_pastr(:),     &
+      & land_use_range     = land_use_range(:),     &
+      & land_use_c3ann     = land_use_c3ann(:),     &
+      & land_use_c3nfx     = land_use_c3nfx(:),     &
+      & land_use_c3per     = land_use_c3per(:),     &
+      & land_use_secmb     = land_use_secmb(:),     &
+      & DEBUG_VAR          = DEBUG_VAR              &
+      & )
+    NULLIFY(tile)
+    !------------------------------------------------
 
     ! Run tasks in queue
     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)

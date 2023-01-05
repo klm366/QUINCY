@@ -121,6 +121,26 @@ PROGRAM jsb4_driver
   REAL(wp), ALLOCATABLE :: pch(:,:)
   REAL(wp), ALLOCATABLE :: cos_zenith_angle(:,:)
 
+  REAL(wp), ALLOCATABLE :: a_temperature(:,:)       ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: a_rel_humidity(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: population(:,:)          ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: gdp(:,:)                 ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: hdi(:,:)                 ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_primf(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_c4per(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_urban(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_secdf(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_secma(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_primn(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_secdn(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_c4ann(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_pastr(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_range(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_c3ann(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_c3nfx(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_c3per(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: land_use_secmb(:,:)      ! < Rackhun Son >  
+
   !! TODO: so far not used in jsb4 but already read from forcing file/ calculated in mo_jsb4_forcing
   REAL(wp), ALLOCATABLE :: CO2_concentration(:,:)
   REAL(wp), ALLOCATABLE :: fract_par_diffuse(:,:)
@@ -254,6 +274,27 @@ PROGRAM jsb4_driver
   ALLOCATE(CO2_concentration(nproma, nblks))
   ALLOCATE(fract_par_diffuse(nproma, nblks))
 
+  ! anthropogenic forcing   < Rackhun Son >
+  ALLOCATE(a_temperature(nproma, nblks))
+  ALLOCATE(a_rel_humidity(nproma, nblks))
+  ALLOCATE(population(nproma, nblks))
+  ALLOCATE(gdp(nproma, nblks))
+  ALLOCATE(hdi(nproma, nblks))
+  ALLOCATE(land_use_primf(nproma, nblks))
+  ALLOCATE(land_use_c4per(nproma, nblks))
+  ALLOCATE(land_use_urban(nproma, nblks))
+  ALLOCATE(land_use_secdf(nproma, nblks))
+  ALLOCATE(land_use_secma(nproma, nblks))
+  ALLOCATE(land_use_primn(nproma, nblks))
+  ALLOCATE(land_use_secdn(nproma, nblks))
+  ALLOCATE(land_use_c4ann(nproma, nblks))
+  ALLOCATE(land_use_pastr(nproma, nblks))
+  ALLOCATE(land_use_range(nproma, nblks))
+  ALLOCATE(land_use_c3ann(nproma, nblks))
+  ALLOCATE(land_use_c3nfx(nproma, nblks))
+  ALLOCATE(land_use_c3per(nproma, nblks))
+  ALLOCATE(land_use_secmb(nproma, nblks))  
+
   ! output required for next timesteps forcing (if not reading interface vars)
   ALLOCATE(t_srf_proc(nproma, nblks))
   ALLOCATE(fact_q_air_proc(nproma, nblks))
@@ -384,8 +425,12 @@ PROGRAM jsb4_driver
         & sinlat, coslat, lon, evapo_act2pot_proc, &
         & t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, cos_zenith_angle,      &
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
-        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                              &
-        & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch)
+        & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                             &
+        & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                               &
+        & a_temperature, a_rel_humidity, population, gdp, hdi,                                                        & 
+        & land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn,             &
+        & land_use_secdn, land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx,             &
+        & land_use_c3per, land_use_secmb  ) ! < Rackhun Son >
       IF (timer_on()) CALL timer_stop(timer_forcing(1))
     ENDIF
 
@@ -418,7 +463,12 @@ PROGRAM jsb4_driver
         & evapotrans(ics:ice), latent_hflx(ics:ice), sensible_hflx(ics:ice), grnd_hflx(ics:ice), grnd_hcap(ics:ice),           &
         & rough_h_srf_proc(ics:ice,iblk), rough_m_srf_proc(ics:ice,iblk), q_snocpymlt(ics:ice),                                &
         & alb_vis_dir(ics:ice), alb_nir_dir(ics:ice),                                                                          &
-        & alb_vis_dif(ics:ice), alb_nir_dif(ics:ice), CO2_flux(ics:ice), evapopot=evapopot(ics:ice))
+        & alb_vis_dif(ics:ice), alb_nir_dif(ics:ice), CO2_flux(ics:ice), evapopot=evapopot(ics:ice),                           &
+        & a_temperature(ics:ice), a_rel_humidity(ics:ice), population(ics:ice), gdp(ics:ice), hdi(ics:ice),                    &
+        & land_use_primf(ics:ice), land_use_c4per(ics:ice), land_use_urban(ics:ice), land_use_secdf(ics:ice),                  &
+        & land_use_secma(ics:ice), land_use_primn(ics:ice), land_use_secdn(ics:ice), land_use_c4ann(ics:ice),                  &
+        & land_use_pastr(ics:ice), land_use_range(ics:ice), land_use_c3ann(ics:ice), land_use_c3nfx(ics:ice),                  &
+        & land_use_c3per(ics:ice), land_use_secmb(ics:ice))   ! < Rackhun Son >
 
       IF (.NOT. read_interface_vars) THEN
         ! TODO: if really required (only ERA-interim forcing data):
@@ -510,6 +560,26 @@ PROGRAM jsb4_driver
     DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, evapo_act2pot_proc)
     !DEALLOCATE(evapo_act_sum_proc, evapo_pot_sum_proc)
   ENDIF
+
+  DEALLOCATE(a_temperature)        ! < Rackhun Son >
+  DEALLOCATE(a_rel_humidity)       ! < Rackhun Son >
+  DEALLOCATE(population)           ! < Rackhun Son >  
+  DEALLOCATE(gdp)                  ! < Rackhun Son > 
+  DEALLOCATE(hdi)                  ! < Rackhun Son >
+  DEALLOCATE(land_use_primf)       ! < Rackhun Son >
+  DEALLOCATE(land_use_c4per)       ! < Rackhun Son >
+  DEALLOCATE(land_use_urban)       ! < Rackhun Son >
+  DEALLOCATE(land_use_secdf)       ! < Rackhun Son >
+  DEALLOCATE(land_use_secma)       ! < Rackhun Son >
+  DEALLOCATE(land_use_primn)       ! < Rackhun Son >
+  DEALLOCATE(land_use_secdn)       ! < Rackhun Son >
+  DEALLOCATE(land_use_c4ann)       ! < Rackhun Son >
+  DEALLOCATE(land_use_pastr)       ! < Rackhun Son >
+  DEALLOCATE(land_use_range)       ! < Rackhun Son >
+  DEALLOCATE(land_use_c3ann)       ! < Rackhun Son >
+  DEALLOCATE(land_use_c3nfx)       ! < Rackhun Son >
+  DEALLOCATE(land_use_c3per)       ! < Rackhun Son >
+  DEALLOCATE(land_use_secmb)       ! < Rackhun Son > 
 
   ! Stop MPI
   CALL p_stop

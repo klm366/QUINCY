@@ -714,11 +714,12 @@ CONTAINS
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
 
-    dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
+    dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_, ANTHRO2L_
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(SEB_)
     dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(HYDRO_)
+    dsl4jsb_Use_memory(ANTHRO2L_)     ! < Rackhun Son >
 
     REAL(wp)              , INTENT(in)            :: dtime          !< time step
     TYPE(datetime)        , POINTER               :: datetime_new   !< date and time at the end of this time step
@@ -742,6 +743,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(ANTHRO2L_)     ! < Rackhun Son >
   
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
   
@@ -809,6 +811,7 @@ CONTAINS
       dsl4jsb_Get_memory(SEB_)
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_memory(HYDRO_)
+      dsl4jsb_Get_memory(ANTHRO2L_)     ! < Rackhun Son >
 
       lon => grid%lon
       lat => grid%lat
@@ -845,7 +848,7 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
         & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
         & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_air), &
+        & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
         & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
         & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
         & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              & 
@@ -858,7 +861,27 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
         & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
         & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, pch))
+        & dsl4jsb_var2D_onDomain(A2L_, pch),                                         &
+        ! anthropogenic
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_temperature),                          &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_rel_humidity),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primf),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4per),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_urban),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdf),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secma),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primn),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdn),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4ann),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_pastr),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_range),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3ann),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3nfx),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3per),                         &
+        & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secmb)) 
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 

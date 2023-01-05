@@ -105,24 +105,24 @@ CONTAINS
     & slope,                                      & ! in
     & roughness,                                  & ! in
 
-    & population_density,                         & ! in
+    & population,                                 & ! in
     & gdp,                                        & ! in
     & hdi,                                        & ! in
     & road_density,                               & ! in
-    & land_use_state_c3ann,                       & ! in
-    & land_use_state_c3nfx,                       & ! in
-    & land_use_state_c3per,                       & ! in
-    & land_use_state_c4ann,                       & ! in
-    & land_use_state_c4per,                       & ! in
-    & land_use_state_pastr,                       & ! in
-    & land_use_state_primf,                       & ! in
-    & land_use_state_primn,                       & ! in
-    & land_use_state_range,                       & ! in
-    & land_use_state_secdf,                       & ! in
-    & land_use_state_secdn,                       & ! in
-    & land_use_state_secma,                       & ! in
-    & land_use_state_secmb,                       & ! in
-    & land_use_state_urban,                       & ! in
+    & land_use_c3ann,                             & ! in
+    & land_use_c3nfx,                             & ! in
+    & land_use_c3per,                             & ! in
+    & land_use_c4ann,                             & ! in
+    & land_use_c4per,                             & ! in
+    & land_use_pastr,                             & ! in
+    & land_use_primf,                             & ! in
+    & land_use_primn,                             & ! in
+    & land_use_range,                             & ! in
+    & land_use_secdf,                             & ! in
+    & land_use_secdn,                             & ! in
+    & land_use_secma,                             & ! in
+    & land_use_secmb,                             & ! in
+    & land_use_urban,                             & ! in
 
     & nc,                                         & ! in
     & tilename,                                   & ! in
@@ -195,43 +195,43 @@ CONTAINS
       & swl3(:),      swl3_clim_o(:),  swl3_clim_m(:),  &
       & swl4(:),      swl4_clim_o(:),  swl4_clim_m(:),  &
       & lai(:),       lai_clim_o(:),   lai_clim_m(:),   &
-      !& t_air(:),     t_clim(:),                         &
-      !& q_rel_air(:), q_rel_clim(:),                     &
-      !& q_air(:),     q_clim(:),                         &
-      !& wind_10m(:),                                     &
-      !& rain(:),                                         &
-      !& swl1(:),      swl1_clim(:),                      &
-      !& swl2(:),      swl2_clim(:),                      &
-      !& swl3(:),      swl3_clim(:),                      &
-      !& swl4(:),      swl4_clim(:),                      &
-      !& lai(:),       lai_clim(:),                       &
-      & modified_pfts_fract(:,:),                        &
-      !& fuel(:),       fuel_yearly(:),                  &
-      & fuel(:),                                         &
-      !& fire_litter_threshold,                          &
-      & lightning_climatology(:),                        &
-      & elevation(:),                                    &
-      & slope(:),                                        &
-      & roughness(:),                                    &
+      !& t_air(:),     t_clim(:),                       &
+      !& q_rel_air(:), q_rel_clim(:),                   &
+      !& q_air(:),     q_clim(:),                       &
+      !& wind_10m(:),                                   &
+      !& rain(:),                                       &
+      !& swl1(:),      swl1_clim(:),                    &
+      !& swl2(:),      swl2_clim(:),                    &
+      !& swl3(:),      swl3_clim(:),                    &
+      !& swl4(:),      swl4_clim(:),                    &
+      !& lai(:),       lai_clim(:),                     &
+      & modified_pfts_fract(:,:),                       &
+      !& fuel(:),       fuel_yearly(:),                 &
+      & fuel(:),                                        &
+      !& fire_litter_threshold,                         &
+      & lightning_climatology(:),                       &
+      & elevation(:),                                   &
+      & slope(:),                                       &
+      & roughness(:),                                   &
 
-      & population_density(:),                          &
-      & gdp(:),                                               &
-      & hdi(:),                                               &
-      & road_density(:),                                      &
-      & land_use_state_c3ann(:),                              &
-      & land_use_state_c3nfx(:),                              &
-      & land_use_state_c3per(:),                              &
-      & land_use_state_c4ann(:),                              &
-      & land_use_state_c4per(:),                              &
-      & land_use_state_pastr(:),                              &
-      & land_use_state_primf(:),                              &
-      & land_use_state_primn(:),                              &
-      & land_use_state_range(:),                              &
-      & land_use_state_secdf(:),                              &
-      & land_use_state_secdn(:),                              &
-      & land_use_state_secma(:),                              &
-      & land_use_state_secmb(:),                              &
-      & land_use_state_urban(:),                              &
+      & population(:),                                  &
+      & gdp(:),                                         &
+      & hdi(:),                                         &
+      & road_density(:),                                &
+      & land_use_c3ann(:),                              &
+      & land_use_c3nfx(:),                              &
+      & land_use_c3per(:),                              &
+      & land_use_c4ann(:),                              &
+      & land_use_c4per(:),                              &
+      & land_use_pastr(:),                              &
+      & land_use_primf(:),                              &
+      & land_use_primn(:),                              &
+      & land_use_range(:),                              &
+      & land_use_secdf(:),                              &
+      & land_use_secdn(:),                              &
+      & land_use_secma(:),                              &
+      & land_use_secmb(:),                              &
+      & land_use_urban(:),                              &
 
       & weather_i2i_weight(:,:),    weather_i2i_bias(:),      &
       & weather_h2i_weight(:,:),    weather_h2i_bias(:),      &
@@ -582,41 +582,41 @@ CONTAINS
 
         
         !print*, shape(a_minmax), r_i, a_minmax(3+a_i,2), a_minmax(3+a_i,1)
-        anthro_inputs(nc_i,1) = (LOG(population_density(nc_i)+1)   - a_minmax(1+a_i,1))  &
-                              / (a_minmax(1+a_i,2)                 - a_minmax(1+a_i,1)+1e-10)
+        anthro_inputs(nc_i,1) = (LOG(population(nc_i)+1)    - a_minmax(1+a_i,1))  &
+                              / (a_minmax(1+a_i,2)          - a_minmax(1+a_i,1)+1e-10)
         anthro_inputs(nc_i,2) = (gdp(nc_i)                  - a_minmax(2+a_i,1))  &
                               / (a_minmax(2+a_i,2)          - a_minmax(2+a_i,1)+1e-10)
         anthro_inputs(nc_i,3) = (hdi(nc_i)                  - a_minmax(3+a_i,1))  &
                               / (a_minmax(3+a_i,2)          - a_minmax(3+a_i,1)+1e-10)
-        anthro_inputs(nc_i,4) = (LOG(road_density(nc_i)+1)         - a_minmax(4+a_i,1))  &
-                              / (a_minmax(4+a_i,2)                 - a_minmax(4+a_i,1)+1e-10)
-        anthro_inputs(nc_i,5) = (land_use_state_c3ann(nc_i) - a_minmax(5+a_i,1))  &
+        anthro_inputs(nc_i,4) = (LOG(road_density(nc_i)+1)  - a_minmax(4+a_i,1))  &
+                              / (a_minmax(4+a_i,2)          - a_minmax(4+a_i,1)+1e-10)
+        anthro_inputs(nc_i,5) = (land_use_c3ann(nc_i)       - a_minmax(5+a_i,1))  &
                               / (a_minmax(5+a_i,2)          - a_minmax(5+a_i,1)+1e-10)
-        anthro_inputs(nc_i,6) = (land_use_state_c3nfx(nc_i) - a_minmax(6+a_i,1))  &
+        anthro_inputs(nc_i,6) = (land_use_c3nfx(nc_i)       - a_minmax(6+a_i,1))  &
                               / (a_minmax(6+a_i,2)          - a_minmax(6+a_i,1)+1e-10)
-        anthro_inputs(nc_i,7) = (land_use_state_c3per(nc_i) - a_minmax(7+a_i,1))  &
+        anthro_inputs(nc_i,7) = (land_use_c3per(nc_i)       - a_minmax(7+a_i,1))  &
                               / (a_minmax(7+a_i,2)          - a_minmax(7+a_i,1)+1e-10)
-        anthro_inputs(nc_i,8) = (land_use_state_c4ann(nc_i) - a_minmax(8+a_i,1))  &
+        anthro_inputs(nc_i,8) = (land_use_c4ann(nc_i)       - a_minmax(8+a_i,1))  &
                               / (a_minmax(8+a_i,2)          - a_minmax(8+a_i,1)+1e-10)
-        anthro_inputs(nc_i,9) = (land_use_state_c4per(nc_i) - a_minmax(9+a_i,1))  &
+        anthro_inputs(nc_i,9) = (land_use_c4per(nc_i)       - a_minmax(9+a_i,1))  &
                               / (a_minmax(9+a_i,2)          - a_minmax(9+a_i,1)+1e-10)
-        anthro_inputs(nc_i,10)= (land_use_state_pastr(nc_i) - a_minmax(10+a_i,1)) &
+        anthro_inputs(nc_i,10)= (land_use_pastr(nc_i)       - a_minmax(10+a_i,1)) &
                               / (a_minmax(10+a_i,2)         - a_minmax(10+a_i,1)+1e-10)
-        anthro_inputs(nc_i,11)= (land_use_state_primf(nc_i) - a_minmax(11+a_i,1)) &
+        anthro_inputs(nc_i,11)= (land_use_primf(nc_i)       - a_minmax(11+a_i,1)) &
                               / (a_minmax(11+a_i,2)         - a_minmax(11+a_i,1)+1e-10)
-        anthro_inputs(nc_i,12)= (land_use_state_primn(nc_i) - a_minmax(12+a_i,1)) &
+        anthro_inputs(nc_i,12)= (land_use_primn(nc_i)       - a_minmax(12+a_i,1)) &
                               / (a_minmax(12+a_i,2)         - a_minmax(12+a_i,1)+1e-10)
-        anthro_inputs(nc_i,13)= (land_use_state_range(nc_i) - a_minmax(13+a_i,1)) &
+        anthro_inputs(nc_i,13)= (land_use_range(nc_i)       - a_minmax(13+a_i,1)) &
                               / (a_minmax(13+a_i,2)         - a_minmax(13+a_i,1)+1e-10)
-        anthro_inputs(nc_i,14)= (land_use_state_secdf(nc_i) - a_minmax(14+a_i,1)) &
+        anthro_inputs(nc_i,14)= (land_use_secdf(nc_i)       - a_minmax(14+a_i,1)) &
                               / (a_minmax(14+a_i,2)         - a_minmax(14+a_i,1)+1e-10)
-        anthro_inputs(nc_i,15)= (land_use_state_secdn(nc_i) - a_minmax(15+a_i,1)) &
+        anthro_inputs(nc_i,15)= (land_use_secdn(nc_i)       - a_minmax(15+a_i,1)) &
                               / (a_minmax(15+a_i,2)         - a_minmax(15+a_i,1)+1e-10)
-        anthro_inputs(nc_i,16)= (land_use_state_secma(nc_i) - a_minmax(16+a_i,1)) &
+        anthro_inputs(nc_i,16)= (land_use_secma(nc_i)       - a_minmax(16+a_i,1)) &
                               / (a_minmax(16+a_i,2)         - a_minmax(16+a_i,1)+1e-10)
-        anthro_inputs(nc_i,17)= (land_use_state_secmb(nc_i) - a_minmax(17+a_i,1)) &
+        anthro_inputs(nc_i,17)= (land_use_secmb(nc_i)       - a_minmax(17+a_i,1)) &
                               / (a_minmax(17+a_i,2)         - a_minmax(17+a_i,1)+1e-10)
-        anthro_inputs(nc_i,18)= (land_use_state_urban(nc_i) - a_minmax(18+a_i,1)) &
+        anthro_inputs(nc_i,18)= (land_use_urban(nc_i)       - a_minmax(18+a_i,1)) &
                               / (a_minmax(18+a_i,2)         - a_minmax(18+a_i,1)+1e-10)
 
         !fuel_constraint(nc_i, r_i) = land_inputs(nc_i,11)
@@ -706,29 +706,34 @@ CONTAINS
 
     ENDDO   ! r (region) iteration
 
-    !dum1 = sum(weather_lstm_outputs_sum, dim=2)
-    !dum2 = sum(land_lstm_outputs_sum, dim=2)
-    !dum3 = sum(anthro_nn_outputs_sum, dim=2)
+    dum1 = sum(weather_lstm_outputs_sum, dim=2)
+    dum2 = sum(land_lstm_outputs_sum, dim=2)
+    dum3 = sum(anthro_nn_outputs_sum, dim=2)
     !dum4 = sum(fuel_constraint, dim=2)
+    dum4 = fuel
 
-    !where(gfed_region /= 5) dum1 = 0.
-    !where(gfed_region /= 5) dum2 = 0.
-    !where(gfed_region /= 5) dum3 = 0.
-    !where(gfed_region /= 5) fuel_constraint = 0.
+    where(gfed_region /= 4) dum1 = 0.
+    where(gfed_region /= 4) dum2 = 0.
+    where(gfed_region /= 4) dum3 = 0.
+    where(gfed_region /= 4) dum4 = 0.
 
-    !num1 = gfed_region
-    !num2 = gfed_region
-    !num3 = gfed_region
-    !num4 = gfed_region
+    num1 = gfed_region
+    num2 = gfed_region
+    num3 = gfed_region
+    num4 = gfed_region
 
-    !where(gfed_region /= 5) num1 = 0.
-    !where(gfed_region /= 5) num2 = 0.
-    !where(gfed_region /= 5) num3 = 0.
-    !where(gfed_region /= 5) num4 = 0.
-    !where(gfed_region == 5) num1 = 1.
-    !where(gfed_region == 5) num2 = 1.
-    !where(gfed_region == 5) num3 = 1.
-    !where(gfed_region == 5) num4 = 1.
+    where(gfed_region /= 4) num1 = 0.
+    where(gfed_region /= 4) num2 = 0.
+    where(gfed_region /= 4) num3 = 0.
+    where(gfed_region /= 4) num4 = 0.
+    where(gfed_region == 4) num1 = 1.
+    where(gfed_region == 4) num2 = 1.
+    where(gfed_region == 4) num3 = 1.
+    where(gfed_region == 4) num4 = 1.
+
+    !if (ISNAN(sum(dum4))) then
+    !  print*, fuel
+    !endif
 
     !print*, sum(dum1)/(sum(num1)+1e-7), sum(dum2)/(sum(num2)+1e-7), sum(dum3)/(sum(num3)+1e-7), sum(dum4)/(sum(num4)+1e-7)
     !if (sum(fuel_constraint) /= 0.) then
@@ -754,7 +759,7 @@ CONTAINS
     !q_rel_air_constraint(:) = (q_rel_air(:)-q_rel_clim_m(:)+q_rel_clim_o(:))/100.
     q_rel_air_constraint(:) = 1/(1+exp(-20*(q_rel_air_constraint(:)-0.5)))
     !where (q_rel_air > 50) q_rel_air_constraint = 1.
-    where (q_rel_air > 60) q_rel_air_constraint = 1.
+    !where (q_rel_air > 60) q_rel_air_constraint = 1.
     !where (q_rel_air > 70) q_rel_air_constraint = 1.
     burned_fract(:) = burned_fract(:)*(1-q_rel_air_constraint(:))
 

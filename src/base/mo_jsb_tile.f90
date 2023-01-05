@@ -77,7 +77,7 @@ CONTAINS
     USE mo_util,                ONLY: one_of
     USE mo_jsb_cqt_class,       ONLY: Get_number_of_types
     USE mo_jsb_lct_class,       ONLY: t_jsb_lct, LAND_TYPE, LAKE_TYPE
-    USE mo_jsb_process_class,   ONLY: SEB_, A2L_, L2A_
+    USE mo_jsb_process_class,   ONLY: SEB_, A2L_, L2A_, ANTHRO2L_     ! < Rackhun Son >
 
     CHARACTER(len=*),  INTENT(in)           :: name
     CHARACTER(len=*),  INTENT(in)           :: description
@@ -205,6 +205,8 @@ CONTAINS
           IF (iproc == A2L_) THEN
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE IF (iproc == L2A_) THEN
+            CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
+          ELSE IF (iproc == ANTHRO2L_) THEN     ! < Rackhun Son >
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE
             CALL return_ptr%Set_process_action(iproc, ON_LEAFS_, action_to_parents=AGGREGATE_)

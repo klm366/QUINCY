@@ -21,7 +21,8 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, &
+    &                   ANTHRO2L_   ! <Rackhun Son>
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
 
@@ -195,6 +196,7 @@ CONTAINS
     USE mo_carbon_init,         ONLY: carbon_init
     USE mo_tcq_init,            ONLY: tcq_init
     USE mo_disturb_init,        ONLY: disturb_init    ! <Rackhun Son>
+    USE mo_anthro2l_init,       ONLY: anthro2l_init   ! <Rackhun Son>
 
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
@@ -571,6 +573,12 @@ CONTAINS
       IF (tile%Is_process_active(A2L_)) THEN
         CALL atm2land_init(tile)
       END IF
+
+      !------- Anthropogenic forcning ------------------  < Rackhun Son >
+      IF (tile%Is_process_active(ANTHRO2L_)) THEN
+        CALL anthro2l_init(tile)
+      END IF
+      !--------------------------------------------------
       
       IF (tile%Is_process_active(ASSIMI_)) THEN
         CALL assimi_init(tile)

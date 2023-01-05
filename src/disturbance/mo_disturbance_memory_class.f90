@@ -79,24 +79,24 @@ MODULE mo_disturb_memory_class
   !REAL(wp), POINTER :: profile_curvature(:,:)         => NULL()   ! profile_curvature         (nproma,nblks) <Rackhun Son>
   !REAL(wp), POINTER :: tangential_curvature(:,:)      => NULL()   ! tangential_curvature      (nproma,nblks) <Rackhun Son>
 
-  REAL(wp), POINTER :: population_density(:,:)        => NULL()   ! population_density        (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: gdp(:,:)                       => NULL()   ! gdp                       (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: hdi(:,:)                       => NULL()   ! hdi                       (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: population_density(:,:)        => NULL()   ! population_density        (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: gdp(:,:)                       => NULL()   ! gdp                       (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: hdi(:,:)                       => NULL()   ! hdi                       (nproma,nblks) <Rackhun Son>
   REAL(wp), POINTER :: road_density(:,:)              => NULL()   ! road_density              (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_c3ann(:,:)      => NULL()   ! land_use_state_c3ann      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_c3nfx(:,:)      => NULL()   ! land_use_state_c3nfx      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_c3per(:,:)      => NULL()   ! land_use_state_c3per      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_c4ann(:,:)      => NULL()   ! land_use_state_c4ann      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_c4per(:,:)      => NULL()   ! land_use_state_c4per      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_pastr(:,:)      => NULL()   ! land_use_state_pastr      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_primf(:,:)      => NULL()   ! land_use_state_primf      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_primn(:,:)      => NULL()   ! land_use_state_primn      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_range(:,:)      => NULL()   ! land_use_state_range      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_secdf(:,:)      => NULL()   ! land_use_state_secdf      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_secdn(:,:)      => NULL()   ! land_use_state_secdn      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_secma(:,:)      => NULL()   ! land_use_state_secma      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_secmb(:,:)      => NULL()   ! land_use_state_secmb      (nproma,nblks) <Rackhun Son>
-  REAL(wp), POINTER :: land_use_state_urban(:,:)      => NULL()   ! land_use_state_urban      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_c3ann(:,:)      => NULL()   ! land_use_state_c3ann      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_c3nfx(:,:)      => NULL()   ! land_use_state_c3nfx      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_c3per(:,:)      => NULL()   ! land_use_state_c3per      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_c4ann(:,:)      => NULL()   ! land_use_state_c4ann      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_c4per(:,:)      => NULL()   ! land_use_state_c4per      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_pastr(:,:)      => NULL()   ! land_use_state_pastr      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_primf(:,:)      => NULL()   ! land_use_state_primf      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_primn(:,:)      => NULL()   ! land_use_state_primn      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_range(:,:)      => NULL()   ! land_use_state_range      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_secdf(:,:)      => NULL()   ! land_use_state_secdf      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_secdn(:,:)      => NULL()   ! land_use_state_secdn      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_secma(:,:)      => NULL()   ! land_use_state_secma      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_secmb(:,:)      => NULL()   ! land_use_state_secmb      (nproma,nblks) <Rackhun Son>
+  !REAL(wp), POINTER :: land_use_state_urban(:,:)      => NULL()   ! land_use_state_urban      (nproma,nblks) <Rackhun Son>
 
   REAL(wp), POINTER :: gfed_region(:,:)               => NULL()   ! GFED4 reference regions   (nproma,nblks) <Rackhun Son>
 
@@ -166,24 +166,24 @@ CONTAINS
     !ALLOCATE(mem%profile_curvature         (hgrid%nproma, hgrid%nblks))   ! profile curvature <Rackhun Son>
     !ALLOCATE(mem%tangential_curvature      (hgrid%nproma, hgrid%nblks))   ! tangential curvature <Rackhun Son>
 
-    ALLOCATE(mem%population_density        (hgrid%nproma, hgrid%nblks))   ! population density <Rackhun Son>
-    ALLOCATE(mem%gdp                       (hgrid%nproma, hgrid%nblks))   ! gdp <Rackhun Son>
-    ALLOCATE(mem%hdi                       (hgrid%nproma, hgrid%nblks))   ! hdi <Rackhun Son>
+    !ALLOCATE(mem%population_density        (hgrid%nproma, hgrid%nblks))   ! population density <Rackhun Son>
+    !ALLOCATE(mem%gdp                       (hgrid%nproma, hgrid%nblks))   ! gdp <Rackhun Son>
+    !ALLOCATE(mem%hdi                       (hgrid%nproma, hgrid%nblks))   ! hdi <Rackhun Son>
     ALLOCATE(mem%road_density              (hgrid%nproma, hgrid%nblks))   ! road_density <Rackhun Son>
-    ALLOCATE(mem%land_use_state_c3ann      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c3ann <Rackhun Son>
-    ALLOCATE(mem%land_use_state_c3nfx      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c3nfx <Rackhun Son>
-    ALLOCATE(mem%land_use_state_c3per      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c3per <Rackhun Son>
-    ALLOCATE(mem%land_use_state_c4ann      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c4ann <Rackhun Son>
-    ALLOCATE(mem%land_use_state_c4per      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c4per <Rackhun Son>
-    ALLOCATE(mem%land_use_state_pastr      (hgrid%nproma, hgrid%nblks))   ! land_use_state_pastr <Rackhun Son>
-    ALLOCATE(mem%land_use_state_primf      (hgrid%nproma, hgrid%nblks))   ! land_use_state_primf <Rackhun Son>
-    ALLOCATE(mem%land_use_state_primn      (hgrid%nproma, hgrid%nblks))   ! land_use_state_primn <Rackhun Son>
-    ALLOCATE(mem%land_use_state_range      (hgrid%nproma, hgrid%nblks))   ! land_use_state_range <Rackhun Son>
-    ALLOCATE(mem%land_use_state_secdf      (hgrid%nproma, hgrid%nblks))   ! land_use_state_secdf <Rackhun Son>
-    ALLOCATE(mem%land_use_state_secdn      (hgrid%nproma, hgrid%nblks))   ! land_use_state_secdn <Rackhun Son>
-    ALLOCATE(mem%land_use_state_secma      (hgrid%nproma, hgrid%nblks))   ! land_use_state_secma <Rackhun Son>
-    ALLOCATE(mem%land_use_state_secmb      (hgrid%nproma, hgrid%nblks))   ! land_use_state_secmb <Rackhun Son>
-    ALLOCATE(mem%land_use_state_urban      (hgrid%nproma, hgrid%nblks))   ! land_use_state_urban <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_c3ann      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c3ann <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_c3nfx      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c3nfx <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_c3per      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c3per <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_c4ann      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c4ann <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_c4per      (hgrid%nproma, hgrid%nblks))   ! land_use_state_c4per <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_pastr      (hgrid%nproma, hgrid%nblks))   ! land_use_state_pastr <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_primf      (hgrid%nproma, hgrid%nblks))   ! land_use_state_primf <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_primn      (hgrid%nproma, hgrid%nblks))   ! land_use_state_primn <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_range      (hgrid%nproma, hgrid%nblks))   ! land_use_state_range <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_secdf      (hgrid%nproma, hgrid%nblks))   ! land_use_state_secdf <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_secdn      (hgrid%nproma, hgrid%nblks))   ! land_use_state_secdn <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_secma      (hgrid%nproma, hgrid%nblks))   ! land_use_state_secma <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_secmb      (hgrid%nproma, hgrid%nblks))   ! land_use_state_secmb <Rackhun Son>
+    !ALLOCATE(mem%land_use_state_urban      (hgrid%nproma, hgrid%nblks))   ! land_use_state_urban <Rackhun Son>
 
     ALLOCATE(mem%gfed_region               (hgrid%nproma, hgrid%nblks))   ! GFED4 reference regions <Rackhun Son>
 
