@@ -41,10 +41,6 @@ CONTAINS
   !> Initialize flcc process
   !
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize flcc process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_flcc_config)
-  !!  
   SUBROUTINE Init_flcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -55,17 +51,17 @@ CONTAINS
     LOGICAL                       :: active
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     LOGICAL                       :: separate !< whether burned tiles should be treated separately or at once
-    ! -------------------------------------------------------------------------------------------------- !
 
     NAMELIST /jsb_flcc_nml/      &
-         active,                      &
-         ic_filename,                 &
-         bc_filename,                 &
+         active,                 &
+         ic_filename,            &
+         bc_filename,            &
          separate
 
     INTEGER :: nml_handler, nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_flcc_config'
+    ! -------------------------------------------------------------------------------------------------- !
 
     CALL message(TRIM(routine), 'Starting flcc configuration')
 

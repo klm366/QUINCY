@@ -159,15 +159,15 @@ MODULE mo_pheno_constants
       & leafAlloc_fract = 0.8_wp        ! [-] Fraction of NPP maximally allocated to leaves during growth
   END TYPE t_crop_param
 
-  !> Parameters only required in case of l_forestRegrowth = true -- TODO-JN discuss with KIM
+  !> Parameters only required in case of l_forestRegrowth = true
   TYPE t_forestRegrowth_param
     REAL(wp) :: &
-      & m2toha = 10000._wp,           & ! TODO-JN: this is a more general constant -> move to somewhere else?
-      & kgCtokg = 2._wp,              & ! TODO-JN: same
+      & m2toha = 10000._wp,           & ! JN-TODO: this is a more general constant -> move to somewhere else?
+      & kgCtokg = 2._wp,              & ! JN-TODO: same
       & min_c   = 1._wp,              & ! JN: minimum C in wood and veg biomass for the maxLAI calculation
-      & min_zero = 1.e-8_wp,          & ! TODO-JN: describe
-      & log_maxind = 9.5_wp,          & ! TODO-JN: describe
-      & min_maxLAI = 0.5_wp             ! TODO-JN: describe + why not "PhenoParam%all%laiSeed"?
+      & min_zero = 1.e-8_wp,          & ! JN-TODO: describe
+      & log_maxind = 9.5_wp,          & ! JN-TODO: describe
+      & min_maxLAI = 0.5_wp             ! JN-TODO: describe + why not "PhenoParam%all%laiSeed"?
   END TYPE t_forestRegrowth_param
 
   !> Collects all parameters in a single structure

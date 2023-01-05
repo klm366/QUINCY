@@ -126,15 +126,18 @@ CONTAINS
     REAL(wp), POINTER :: &
       & ptr_2D(:,  :),   &
       & ptr_3D(:,:,:)
+#ifdef __ICON__
+    LOGICAL,  POINTER   :: is_in_domain(:,:) ! T: cell in domain (not halo)
+#endif
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_w
-    LOGICAL,  POINTER          :: is_in_domain(:,:) ! T: cell in domain (not halo)
     TYPE(t_input_file) :: input_file
     INTEGER :: isoil, nproma, nblks, nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_read_init_vars'
+
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -147,7 +150,9 @@ CONTAINS
     nblks  = grid%Get_nblks()
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+#ifdef __ICON__
     is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+#endif
 
     ALLOCATE( &
       & hydro_init_vars%elevation       (nproma, nblks),       &
@@ -250,8 +255,14 @@ CONTAINS
       !       the soil hydrology routine. As matrix potential should be corrected in the bc data
       !       at some point in the future, we check here for negative or positive values and
       !       convert as necessary.
-      WHERE(.NOT. is_in_domain(:,:) .OR. ABS(ptr_2D(:,:)) > 1.0e+20_wp)
-        ! Exclude values outside of the domain and (standard) missing values
+#ifdef __ICON__
+      ! Exclude values outside of the domain (not available in the echam infrastructure)
+      WHERE(.NOT. is_in_domain(:,:))
+        ptr_2D(:,:) = 0._wp
+      ENDWHERE
+#endif
+      ! Exclude (standard) missing values
+      WHERE(ABS(ptr_2D(:,:)) > 1.0e+20_wp)
         ptr_2D(:,:) = 0._wp
       ENDWHERE
       IF (ALL(ptr_2D(:,:) < 1.0e-10_wp)) THEN

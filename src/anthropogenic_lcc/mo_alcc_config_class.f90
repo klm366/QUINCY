@@ -7,8 +7,8 @@
 !> Copyright (c) 2021 Julia Nabel
 !>
 !>#### Revision History
-!> First version   by Rainer Schneck (2018-11-28)
-!> condensed       by Julia Nabel    (2021-06-23)
+!> - First version   by Rainer Schneck (2018-11-28)
+!> - condensed       by Julia Nabel    (2021-06-23)
 !>
 !>#### License
 !>
@@ -47,10 +47,6 @@ CONTAINS
   !> Initialize alcc process
   !
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize alcc process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_alcc_config)
-  !!  
   SUBROUTINE Init_alcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml

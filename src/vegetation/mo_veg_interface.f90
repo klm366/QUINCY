@@ -20,10 +20,10 @@
 !! @brief Contains the interface for plant growth and turnover processes 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719)
 !!
 MODULE mo_veg_interface

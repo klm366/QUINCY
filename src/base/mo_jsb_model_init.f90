@@ -20,10 +20,11 @@ MODULE mo_jsb_model_init
 #ifndef __NO_JSBACH__
 
   dsl4jsb_Use_processes SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                   FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, A2L_, VEG_, SB_, SPQ_, &
-    &                   MIX_
+    &                   FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, FAGE_, A2L_, &
+    &                   VEG_, SB_, SPQ_, MIX_
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(FAGE_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -193,9 +194,11 @@ CONTAINS
     USE mo_veg_init,            ONLY: veg_init
     USE mo_sb_init,             ONLY: sb_init
     USE mo_carbon_init,         ONLY: carbon_init
+    USE mo_fage_init,           ONLY: fage_init
     USE mo_tcq_init,            ONLY: tcq_init
 
     USE mo_tlcc_init_lcc,       ONLY: tlcc_init_lcc
+    USE mo_fage_init_lcc,       ONLY: fage_init_lcc
     USE mo_alcc_init_lcc,       ONLY: alcc_init_lcc
     USE mo_spq_init,            ONLY: spq_init
     USE mo_flcc_init_lcc,       ONLY: flcc_init_lcc
@@ -219,6 +222,7 @@ CONTAINS
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
 
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(FAGE_)
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
@@ -234,6 +238,7 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(FAGE_)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -274,6 +279,11 @@ CONTAINS
         !***** Add LCC processes between pplcc_pre and pplcc_post *****
         ! order of tasks of course determines area available for change for the subsequent lcc tasks!
         ! suggestion: natural changes before anthropogenic changes; wind before fire (prev. order in disturb)
+
+        IF (model%processes(FAGE_)%p%config%active) THEN
+          CALL model%Queue_task(FAGE_, "fage")
+        END IF
+
         IF (model%processes(WLCC_)%p%config%active) THEN
           CALL model%Queue_task(WLCC_, "wlcc")
         END IF
@@ -296,6 +306,12 @@ CONTAINS
 
         ! Do postprocessing after all LCC tasks were executed
         CALL model%Queue_task(PPLCC_, "pplcc_post_lcc")
+      END IF
+
+      ! FLCC (which runs on the veg tile) changes the co2flux_fire_all_2_atm_ta variable on the leaves
+      ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
+      IF (model%processes(FLCC_)%p%config%active .AND. model%processes(CARBON_)%p%config%active) THEN
+        CALL model%Queue_task(CARBON_, "ta_vars_after_lcc")
       END IF
 
       ! ------------------------ tasks that do not change area
@@ -580,6 +596,10 @@ CONTAINS
         IF (tile%Is_process_active(CARBON_)) THEN
           CALL carbon_init(tile)
         END IF
+        IF (tile%Is_process_active(FAGE_)) THEN
+          CALL fage_init(tile)
+        END IF
+
       END SELECT
 
       ! VEG_ needs HYDRO_ to be initilized
@@ -753,6 +773,10 @@ CONTAINS
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(TLCC_)) THEN
           CALL tlcc_init_lcc(tile)
+        END IF
+
+        IF (tile%Is_process_active(FAGE_)) THEN
+          CALL fage_init_lcc(tile)
         END IF
 
         IF (tile%Is_process_active(ALCC_)) THEN

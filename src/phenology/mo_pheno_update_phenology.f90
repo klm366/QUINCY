@@ -2,10 +2,10 @@
 !! @brief module to determine the phenological state of a plant 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2016-04-11)
+!! First version by Soenke Zaehle (2016-04-11)
 !! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
 !!
 MODULE mo_pheno_update_phenology

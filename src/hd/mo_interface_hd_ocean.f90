@@ -15,7 +15,7 @@ MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: finish, warning
+  USE mo_exception,           ONLY: finish, message
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: Get_model
@@ -140,7 +140,7 @@ CONTAINS
     IF ( info > 1 .AND. info < 7 ) write_coupler_restart = .TRUE.
 
     IF ( write_coupler_restart ) THEN
-       CALL warning(TRIM(routine), 'YAC says it is put for restart')
+       CALL message(TRIM(routine), 'YAC says it is put for restart')
     ENDIF
 
     DEALLOCATE(buffer)

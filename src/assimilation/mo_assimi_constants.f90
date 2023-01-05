@@ -54,14 +54,14 @@ MODULE mo_assimi_constants
   ! Parameters describing the PS ~ An relationship (describing photosynthetic activity )
   REAL(wp), SAVE :: &      ! In Fortran 2003 and Fortran 2008, a maximum of 255 continuation lines are allowed
       ! Values from Niinemets 1997 (SC 01/16)
-      jmax2n        ,     &  !< electron-transport limited carboxylation rate per µmol CO2 / mmol N in ET
-      vcmax2n       ,     &  !< Rubisco limited carboxylation rate per µmol CO2 / mmol N in RUB
-      ! PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C, derived from k = 0.7 mol m-2 s-1 (Collatz et al. 1992)
+      jmax2n        ,     &  !< electron-transport limited carboxylation rate per micro-mol CO2 / mmol N in ET
+      vcmax2n       ,     &  !< Rubisco limited carboxylation rate per micro-mol CO2 / mmol N in RUB
+      ! PEP C limited carboxylation rate per micro-mol CO2 / mmol N in PEP C, derived from k = 0.7 mol m-2 s-1 (Collatz et al. 1992)
       ! assuming 157 mmol N / m-2 leaf N and 4.5 % of leaf N in PS 
-      pepc2n        ,     & !< PEP C limited carboxylation rate per µmol CO2 / mmol N in PEP C
+      pepc2n        ,     & !< PEP C limited carboxylation rate per micro-mol CO2 / mmol N in PEP C
       ! Value from Friend et al. 2009 
       ! values from Evans 1989, Oecologia, 78: 9-19 (Table 2)
-      chl2n         ,     & !< µmol Chloroplast per mmol N (light harvesting complex)
+      chl2n         ,     & !< micro-mol Chloroplast per mmol N (light harvesting complex)
       ! slope of the relationship of structural leaf N against leaf N in fraction/mmol (Friend 1997)
       k1_fn_struc           !< slope of the fraction of leaf N not associated with PS against leaf N (--/mmolN) 
 
@@ -85,10 +85,10 @@ MODULE mo_assimi_constants
       Tbase_pepc         !< Temperature sensitivity of PeP C4 photosynthesis
 
   REAL(wp), SAVE :: &
-      ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))) (µmol CO2 / mol quanta)
+      ! intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I))) (micro-mol CO2 / mol quanta)
       ! accounting for the absorptance of leaves (0.85), the maximum quantum yield of PS II (0.7)
       ! the fraction of total light that reaches PS II (0.5) and the NADPH limited RubGeneration (jointly leading to 0.066)
-      alpha_i     ,     & !< intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) (µmol CO2 / mol quanta)
+      alpha_i     ,     & !< intrinsic quantum yield (efficiency of the quanta absorption of PS II (or PS I)) (micro-mol CO2 / mol quanta)
 
       ! Partial Pressure of O2 in kPa
       pO2             ,     & !< Partial Pressure of O2 in kPa

@@ -20,10 +20,10 @@
 !! @brief module to calculate vegetation dynamics 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2016-04-14)
+!! First version by Soenke Zaehle (2016-04-14)
 !!
 MODULE mo_veg_dynamics
 #ifndef __NO_JSBACH__
@@ -419,8 +419,8 @@ CONTAINS
     INTEGER,                         INTENT(in)    :: nc                         !< dimensions
     INTEGER,                         INTENT(in)    :: lctlib_growthform          !< lctlib paramter
     CHARACTER(len=*),                INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population cohort
-    REAL(wp), DIMENSION(nc),         INTENT(in)    :: an_boc_tvegdyn_mavg    , & !< long-term net C balance at the bottom of the canopy (µmol / m2 / s)
-                                                      net_growth_tvegdyn_mavg, & !< long-term net growth of the plant (µmol / m2 / s) 
+    REAL(wp), DIMENSION(nc),         INTENT(in)    :: an_boc_tvegdyn_mavg    , & !< long-term net C balance at the bottom of the canopy (micro-mol / m2 / s)
+                                                      net_growth_tvegdyn_mavg, & !< long-term net growth of the plant (micro-mol / m2 / s) 
                                                       lai_tvegdyn_mavg,        & !< long-term LAI of the plant
                                                       fpc                        !< foliage projective cover
 #ifdef __QUINCY_STANDALONE__

@@ -24,14 +24,18 @@ MODULE mo_jsb_lcc_class
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p
   USE mo_jsb_varlist,         ONLY: VARNAME_LEN
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
-  USE mo_jsb_task_class,      ONLY: t_jsb_task_options
     
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_lcc_proc, t_jsb_lcc_var, t_jsb_lcc_var_p, &
+  PUBLIC :: min_cf_change, min_tolerated_fract_mismatch, min_tolerated_cf_mismatch,       &
+    & t_jsb_lcc_proc, t_jsb_lcc_proc_p, t_jsb_lcc_var, t_jsb_lcc_var_p,                   &
     & transfer_from_active_to_passive_var_onChunk, collect_matter_of_active_vars_onChunk, &
     & copy_from_active_to_passive_var_onChunk
+
+  REAL(wp), PARAMETER :: min_cf_change = 1.0E-16_wp
+  REAL(wp), PARAMETER :: min_tolerated_fract_mismatch = 1.0E-14_wp
+  REAL(wp), PARAMETER :: min_tolerated_cf_mismatch = 1.0E-11_wp
 
   !> Type used to enclose pointers and values for each conserved quantity with active or passive relocation 
   TYPE :: t_jsb_lcc_var
@@ -69,6 +73,11 @@ MODULE mo_jsb_lcc_class
         !< Collection of lcc var types that are passively relocated for the encompassing lcc process
   END TYPE t_jsb_lcc_proc
 
+  !> Type used to collect lcc process structures
+  TYPE t_jsb_lcc_proc_p
+    TYPE(t_jsb_lcc_proc), POINTER :: p
+  END TYPE t_jsb_lcc_proc_p
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_lcc_class'
 
 CONTAINS
@@ -78,7 +87,7 @@ CONTAINS
   !
   !> Relocates a certain fraction of the content of a specific given active to a specific given passive var
   !
-  SUBROUTINE transfer_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, &
+  SUBROUTINE transfer_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice,           &
       &                                                  active_var_name, passive_var_name, transfer_fract, &
       &                                                  conversion_fact)
 
@@ -88,7 +97,9 @@ CONTAINS
         !< lcc structure of the calling lcc process for distributing matter from an active to a passive var
     INTEGER,                    INTENT(in)    :: i_tile
         !< index of the tile in the lcc structure for which the relocation should be conducted
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< run-time parameters
+    INTEGER,                    INTENT(in)    :: iblk    !< Number of current block (chunk)
+    INTEGER,                    INTENT(in)    :: ics     !< Index of chunk start
+    INTEGER,                    INTENT(in)    :: ice     !< Index of chunk end
     CHARACTER(len=*), INTENT(in)    :: active_var_name   !< (active) source var
     CHARACTER(len=*), INTENT(in)    :: passive_var_name  !< (passive) sink var
     REAL(wp),  INTENT(in), OPTIONAL :: transfer_fract
@@ -99,10 +110,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':transfer_from_active_to_passive_var_onChunk'
 
     REAL(wp) :: this_transfer_fract, this_conversion_fact
-    INTEGER  :: i_active, i_passive, ics, ice, iblk
+    INTEGER  :: i_active, i_passive
     ! -------------------------------------------------------------------------------------------------- !
 
-    IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
 
     i_active = one_of( active_var_name , lcc_relocations%active_vars_names)
     i_passive = one_of( passive_var_name , lcc_relocations%passive_vars_names)
@@ -122,10 +133,6 @@ CONTAINS
       CALL finish(TRIM(routine), 'Violation of assertion: Passed passive var ' // TRIM(passive_var_name) &
         & // ' is not a passive var in lcc structure for ' // lcc_relocations%name )
     ENDIF
-
-    ics = options%ics
-    ice = options%ice
-    iblk = options%iblk
 
     IF (PRESENT(transfer_fract)) THEN
       this_transfer_fract = transfer_fract
@@ -160,15 +167,17 @@ CONTAINS
   !> Copies a fraction of the content of a given active to a given passive var -> for diagnostic vars!
   !
   !
-  SUBROUTINE copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, &
-    &                                   active_var_name, passive_var_name, copy_fract, conversion_fact)
+  SUBROUTINE copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
+      &                         active_var_name, passive_var_name, copy_fract, conversion_fact)
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations !< lcc structure of the calling lcc process
     INTEGER,                    INTENT(in)    :: i_tile
         !< index of the tile in the lcc structure for which the actoon should be conducted
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options !< run-time parameters
+    INTEGER,                    INTENT(in)    :: iblk    !< Number of current block (chunk)
+    INTEGER,                    INTENT(in)    :: ics     !< Index of chunk start
+    INTEGER,                    INTENT(in)    :: ice     !< Index of chunk end
     CHARACTER(len=*), INTENT(in)    :: active_var_name   !< (active) source var
     CHARACTER(len=*), INTENT(in)    :: passive_var_name  !< (passive) sink var
     REAL(wp),  INTENT(in), OPTIONAL :: copy_fract  
@@ -179,10 +188,10 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':copy_from_active_to_passive_var_onChunk'
 
     REAL(wp) :: this_copy_fract, this_conversion_fact
-    INTEGER  :: i_active, i_passive, ics, ice, iblk
+    INTEGER  :: i_active, i_passive
     ! -------------------------------------------------------------------------------------------------- !
 
-    IF (debug_on() .AND. options%iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'For '//TRIM(lcc_relocations%name)//' ...')
 
     i_active = one_of( active_var_name , lcc_relocations%active_vars_names)
     i_passive = one_of( passive_var_name , lcc_relocations%passive_vars_names)
@@ -202,10 +211,6 @@ CONTAINS
       CALL finish(TRIM(routine), 'Violation of assertion: Passed passive var ' // TRIM(passive_var_name) &
         & // ' is not a passive var in lcc structure for ' // lcc_relocations%name )
     ENDIF
-
-    ics = options%ics
-    ice = options%ice
-    iblk = options%iblk
 
     IF (PRESENT(copy_fract)) THEN
       this_copy_fract = copy_fract
@@ -227,7 +232,8 @@ CONTAINS
   END SUBROUTINE copy_from_active_to_passive_var_onChunk
 
 
-  SUBROUTINE collect_matter_of_active_vars_onChunk(collected_matter, lcc_relocations, i_tile, options, active_var_names)
+  SUBROUTINE collect_matter_of_active_vars_onChunk(collected_matter, lcc_relocations, &
+      &                                       i_tile, iblk, ics, ice, active_var_names)
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
@@ -236,17 +242,15 @@ CONTAINS
     TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
         !< lcc structure of the calling lcc process from which the matter is collected
     INTEGER,                    INTENT(IN)    :: i_tile  !< index of the tile in lcc structure
-    TYPE(t_jsb_task_options),   INTENT(IN)    :: options !< run-time parameters
+    INTEGER,                    INTENT(in)    :: iblk    !< Number of current block (chunk)
+    INTEGER,                    INTENT(in)    :: ics     !< Index of chunk start
+    INTEGER,                    INTENT(in)    :: ice     !< Index of chunk end
     CHARACTER(VARNAME_LEN),     INTENT(IN)    :: active_var_names(:) 
         !< active vars from which the matter shall be collected
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':collect_matter_of_active_vars_onChunk'
-    INTEGER :: i, i_active, ics, ice, iblk
+    INTEGER :: i, i_active
     ! -------------------------------------------------------------------------------------------------- !
-
-    ics = options%ics
-    ice = options%ice
-    iblk = options%iblk
 
     DO i = 1,SIZE(active_var_names)
       i_active = one_of( TRIM(active_var_names(i)) , lcc_relocations%active_vars_names)

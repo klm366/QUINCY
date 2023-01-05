@@ -1,5 +1,5 @@
 ! Program taken from the script collection of SW/TR (rewrite_lu_harvest.f90) to remap 
-! harvested biomass data which was previously aggregated from LUH2_v1 data from 0.25° to ires
+! harvested biomass data which was previously aggregated from LUH2_v1 data from 0.25 deg to ires
 !
 !-- JN 01.07.16: 
 !* changed the expected input grid
