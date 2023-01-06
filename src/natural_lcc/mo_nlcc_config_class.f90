@@ -32,6 +32,8 @@ MODULE mo_nlcc_config_class
     LOGICAL             :: &
       & init_running_means, &
       & init_nlcc
+    INTEGER            :: &
+      & init_running_mean_years
     REAL(wp)            :: &
       & accelerate_nlcc
 
@@ -53,12 +55,14 @@ CONTAINS
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
+    USE mo_jsb_time,           ONLY: is_time_experiment_start
 
     CLASS(t_nlcc_config), INTENT(inout) :: config
     TYPE(t_jsb_vgrid), POINTER  :: pft_layer
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: init_running_means
+    INTEGER                     :: init_running_mean_years
     LOGICAL                     :: init_nlcc
     REAL(wp)                    :: accelerate_nlcc
 
@@ -67,6 +71,7 @@ CONTAINS
       &  ic_filename,        &
       &  bc_filename,        &
       &  init_running_means, &
+      &  init_running_mean_years, &
       &  init_nlcc,          &
       &  accelerate_nlcc
 
@@ -84,6 +89,8 @@ CONTAINS
     init_nlcc           = .FALSE.
     accelerate_nlcc     = 1._wp
 
+    init_running_mean_years = 3
+
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
     nml_unit = position_nml('jsb_nlcc_nml', nml_handler, STATUS=istat)
@@ -99,10 +106,8 @@ CONTAINS
     config%init_nlcc         = init_nlcc
     IF (init_nlcc) CALL message(TRIM(routine), 'Initializing NLCC')
     config%accelerate_nlcc   = accelerate_nlcc
-    IF (accelerate_nlcc /= 1._wp) THEN
-      WRITE(message_text, *) 'NLCC calculations accelerated by factor ', accelerate_nlcc
-      CALL message(TRIM(routine), message_text)
-    END IF
+
+    config%init_running_mean_years  = init_running_mean_years
 
     ! Create vertical axis
     npft=11 ! TODO here we can not grab it from tile%no_of_children or mem%no_of_children

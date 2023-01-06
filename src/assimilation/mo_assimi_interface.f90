@@ -20,9 +20,9 @@ MODULE mo_assimi_interface
 
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
-  USE mo_jsb_time,        ONLY: is_time_experiment_start
+  USE mo_jsb_time,        ONLY: is_time_experiment_start, get_year_at_experiment_start, get_year
   USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message
+  USE mo_exception,       ONLY: message_text, message
 
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_model_class,    ONLY: t_jsb_model
@@ -1027,8 +1027,10 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER :: model
     INTEGER                    :: iblk, ics, ice !, nc
+    INTEGER                    :: iniyear, currentyear
     REAL(wp)                   :: dtime
     LOGICAL                    :: lstart, init_running_means, init_npp, new_year
+    INTEGER                    :: init_running_mean_years
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_npp_buffer'
 
@@ -1049,6 +1051,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: bclimit_min_temprange
     dsl4jsb_Real2D_onChunk :: bclimit_min_gdd
     dsl4jsb_Real2D_onChunk :: tau_c_woods
+
+    ! Inital and current year of the simulation
+    iniyear = get_year_at_experiment_start()
+    currentyear = get_year(options%current_datetime)
 
     ! Set local variables from options argument
     iblk    = options%iblk
@@ -1088,7 +1094,16 @@ CONTAINS
     lstart = is_time_experiment_start(options%current_datetime)
     new_year = is_newyear(options%current_datetime, dtime)
 
-    init_running_means = dsl4jsb_Config(ASSIMI_)%init_running_means
+    init_running_mean_years = dsl4jsb_Config(ASSIMI_)%init_running_mean_years
+    IF (init_running_mean_years > currentyear-iniyear) THEN
+      init_running_means = .TRUE.
+      IF (new_year) THEN
+        WRITE(message_text, *) 'ASSIMI initalized with running mean ', currentyear
+        CALL message(TRIM(routine), message_text)
+      END IF
+    ELSE
+      init_running_means = .FALSE.
+    ENDIF
     init_NPP = .TRUE.
     IF (MINVAL(NPP_mean_5year(:)) < -999._wp) init_NPP = .FALSE.
     CALL calc_NPPbuf(lstart, init_running_means, new_year, dtime, NPP_pot_rate_ca, &
