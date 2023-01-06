@@ -319,6 +319,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: previous_day_NPP_pot_rate_ca
     dsl4jsb_Real2D_onChunk :: veg_fract_correction
     dsl4jsb_Real2D_onChunk :: fract_fpc_max
+    ! use_alb_soil_npp <
+    dsl4jsb_Real2D_onChunk :: mean_dark_NPP
+    ! use_alb_soil_npp >
 
     ! JN 10.01.18 only required with l_forestRegrowth = true
     dsl4jsb_Real2D_onChunk :: c_green
@@ -433,6 +436,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    day_NPP_sum)            ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    previous_day_NPP_pot_rate_ca) ! out
     dsl4jsb_Get_var2D_onChunk(PHENO_,    lai_ta)                 ! out
+    ! use_alb_soil_npp <
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    mean_dark_NPP)                ! out
+    ! use_alb_soil_npp >
 
     ! ---------------------------
     ! Go
@@ -477,6 +483,13 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_pheno_day_npp_sum_expand_1 tile_name=tile%name
       day_NPP_sum(:) = 0._wp
     END IF
+
+    ! use_alb_soil_npp <
+    IF (l_newday) THEN
+      ! calculate NPP required to cover soil completely
+      mean_dark_NPP(:) = 4._wp/dsl4jsb_Lctlib_param(specificLeafArea_C)
+    END IF
+    ! use_alb_soil_npp >
 
     ! JN 10.01.18
     IF ((dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (dsl4jsb_Lctlib_param(ForestFlag))) THEN
@@ -790,6 +803,9 @@ CONTAINS
 
     dsl4jsb_Aggregate_onChunk(PHENO_, lai,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta,        weighted_by_fract)
+    ! use_alb_soil_npp <
+    dsl4jsb_Aggregate_onChunk(PHENO_, mean_dark_NPP, weighted_by_fract)
+    ! use_alb_soil_npp >
     dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
 
     IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN

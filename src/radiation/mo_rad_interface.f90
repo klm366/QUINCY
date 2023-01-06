@@ -701,8 +701,8 @@ CONTAINS
 
     ! Use declarations
     USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
-    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_vgrid
+    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid, t_jsb_grid
+    USE mo_jsb_grid,          ONLY: Get_vgrid, Get_grid
     USE mo_rad_process,       ONLY: &
       & get_surface_albedo_simple, calc_soil_albedo, calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, &
       & calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
@@ -717,8 +717,17 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_lctlib_element), POINTER :: lctlib       !< land-cover-type library - parameter across pft's
+    ! use_alb_soil_npp <
+    TYPE(t_jsb_grid),  POINTER      :: grid
+    ! use_alb_soil_npp >
     INTEGER                         :: iblk, nc , ics, ice, i
     LOGICAL, ALLOCATABLE            :: l_day(:)
+    ! use_alb_soil_npp <
+    REAL(wp),          POINTER      :: lat(:)
+    REAL(wp),          POINTER      :: lon(:)
+    REAL(wp),          PARAMETER    :: pi        = 4.0_wp * ATAN(1.0_wp)  !< the number PI
+    REAL(wp),          PARAMETER    :: deg2rad   = 180.0_wp/pi          !< conversion ofdegree to radiansm
+    ! use_alb_soil_npp >
 
     CHARACTER(len=*), PARAMETER     :: routine = modname//':update_albedo'
 
@@ -732,6 +741,10 @@ CONTAINS
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(CARBON_)
+    ! use_alb_soil_npp < Declare pointers for process configuration and memory of parent tile 
+    TYPE(t_pheno_memory), POINTER :: pheno_parent__mem
+    TYPE(t_carbon_memory), POINTER :: carbon_parent__mem
+    ! use_alb_soil_npp >
 
     ! Declare configuration variables
     CHARACTER(len=:), ALLOCATABLE :: use_alb_soil_organic_C
@@ -745,6 +758,9 @@ CONTAINS
     LOGICAL ::                     &
       & use_alb_veg_simple,        &
       & use_alb_soil_scheme,       &
+      ! use_alb_soil_npp <
+      & use_alb_soil_npp,          &
+      ! use_alb_soil_npp >
       & use_alb_soil_litter,       &
       & use_alb_mineralsoil_const
 
@@ -760,6 +776,10 @@ CONTAINS
       & alb_nir_can,           &
       & alb_vis_soil,          &
       & alb_nir_soil,          &
+      ! use_alb_soil_npp <
+      & alb_vis_soil_npp,      &
+      & alb_nir_soil_npp,      &
+      ! use_alb_soil_npp >
       & alb_vis_snow,          &
       & alb_nir_snow,          &
       & alb_background,        &
@@ -777,7 +797,10 @@ CONTAINS
       !CBAL & c_slow,           &
       & c_bg_sum,              &
       & swvis_srf_down,        &
-      & swnir_srf_down
+      & swnir_srf_down,        &
+      ! use_alb_soil_npp <
+      & ratio_NPP
+      ! use_alb_soil_npp >
     ! Lakes
     dsl4jsb_Real2D_onChunk ::  &
       & albedo_lwtr,           &
@@ -818,12 +841,22 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_vegetation) THEN
+      ! use_alb_soil_npp <
+      dsl4jsb_Get_memory(CARBON_)
+      ! use_alb_soil_npp >
       dsl4jsb_Get_memory(PHENO_)
+      ! use_alb_soil_npp <
+      SELECT TYPE (mm => tile%parent_tile%mem(pheno_)%p); TYPE IS (t_pheno_memory); pheno_parent__mem => mm ; END SELECT
+      SELECT TYPE (mm => tile%parent_tile%mem(carbon_)%p); TYPE IS (t_carbon_memory); carbon_parent__mem => mm ; END SELECT
+      ! use_alb_soil_npp >
     END IF
 
     ! Set pointers to variables in config
     use_alb_veg_simple        = dsl4jsb_Config(RAD_) %use_alb_veg_simple
     use_alb_soil_scheme       = dsl4jsb_Config(RAD_) %use_alb_soil_scheme
+    ! use_alb_soil_npp <
+    use_alb_soil_npp          = dsl4jsb_Config(RAD_) %use_alb_soil_npp
+    ! use_alb_soil_npp >
     use_alb_mineralsoil_const = dsl4jsb_Config(RAD_) %use_alb_mineralsoil_const
     use_alb_soil_litter       = dsl4jsb_Config(RAD_) %use_alb_soil_litter
     use_alb_soil_organic_C    = dsl4jsb_Config(RAD_) %use_alb_soil_organic_C
@@ -1019,6 +1052,10 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! in
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)         ! in
+      ! use_alb_soil_npp <
+      ratio_NPP => carbon_parent__mem%ratio_NPP%ptr(ics:ice,iblk)        ! in
+      ! use_alb_soil_npp >
+
       IF (use_alb_veg_simple) THEN 
         dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_forest)          ! in
       ENDIF
@@ -1030,7 +1067,16 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_can)           ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil)          ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil)          ! inout
+      ! use_alb_soil_npp <
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_vis_soil_npp)      ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_,      alb_nir_soil_npp)      ! inout
+      ! use_alb_soil_npp >
 
+      ! use_alb_soil_npp <
+      grid => Get_grid(model%grid_id)
+      lat  => grid%lat(ics:ice, iblk)
+      lon  => grid%lon(ics:ice, iblk)
+      ! use_alb_soil_npp >
 
       !> 5.1  simple calculation of alb_vis_lnd / alb_nir_lnd
       !!
@@ -1113,6 +1159,21 @@ CONTAINS
           & sky_view_fract_stem(:)          & ! inout
           & )
 
+        ! use_alb_soil_npp <
+        IF (use_alb_soil_npp) THEN
+            WHERE ( lat(:) > 10._wp  .AND.  lat(:) < 35._wp  .AND.  lon(:) > -20._wp  .AND.  lon(:) < 35._wp )
+              alb_vis_soil_npp(:) = alb_vis_soil(:) - (alb_vis_soil(:) - 0.13_wp) * (1-EXP(-MAX(ratio_NPP(:), 0._wp)))
+              alb_nir_soil_npp(:) = alb_nir_soil(:) - (alb_nir_soil(:) - 0.22_wp) * (1-EXP(-MAX(ratio_NPP(:), 0._wp)))
+            ELSEWHERE
+              alb_vis_soil_npp(:) = alb_vis_soil(:)
+              alb_nir_soil_npp(:) = alb_nir_soil(:)
+            END WHERE
+        ELSE
+          alb_vis_soil_npp(:) = alb_vis_soil(:)
+          alb_nir_soil_npp(:) = alb_nir_soil(:)
+        END IF
+        ! use_alb_soil_npp >
+
         !> 5.2.3 merge albedos of snow, soil and canopy into land
         !! 
         !$claw sca forward update savepoint=ser_jsb_rad_merge_albedos_of_vegtile_1 tile_name=tile%name
@@ -1126,8 +1187,10 @@ CONTAINS
           & fract_snow_can(:),                & ! in
           & alb_vis_snow(:),                  & ! in
           & alb_nir_snow(:),                  & ! in
-          & alb_vis_soil(:),                  & ! in
-          & alb_nir_soil(:),                  & ! in
+          ! use_alb_soil_npp <
+          & alb_vis_soil_npp(:),              & ! in
+          & alb_nir_soil_npp(:),              & ! in
+          ! use_alb_soil_npp >
           & alb_vis_can(:),                   & ! in
           & alb_nir_can(:),                   & ! in
           & alb_vis_lnd(:),                   & ! inout
@@ -1211,6 +1274,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,        weighted_by_fract)
+    ! use_alb_soil_npp <
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil_npp,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil_npp,    weighted_by_fract)
+    ! use_alb_soil_npp >
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_mineralsoil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)
