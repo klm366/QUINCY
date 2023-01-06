@@ -18,17 +18,21 @@ MODULE mo_hd_interface
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: finish, message, message_text
   USE mo_sync,             ONLY: SYNC_C, sync_patch_array, global_sum_array
+  USE mo_sync,             ONLY: global_max
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
-  USE mo_jsb_grid,           ONLY: Get_grid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_jsb_math_constants, ONLY: deg2rad
+  USE mo_jsb_parallel,       ONLY: Get_omp_thread
+
+  USE mo_model_domain,       ONLY: p_patch
 
   dsl4jsb_Use_processes HD_, HYDRO_
   dsl4jsb_Use_config(HD_)
@@ -41,7 +45,7 @@ MODULE mo_hd_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: update_hd, hd_lateral_flow, hd_check_water_budget
+  PUBLIC :: update_hd, hd_lateral_flow, lake_lateral_flow, hd_check_water_budget
 
   PUBLIC :: Register_hd_tasks
 
@@ -51,9 +55,19 @@ MODULE mo_hd_interface
     PROCEDURE, NOPASS :: Aggregate => aggregate_hd
   END TYPE tsk_hd_local_outflow
 
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_dynlake
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_dynlake
+    PROCEDURE, NOPASS :: Aggregate => aggregate_dynlake
+  END TYPE tsk_dynlake
+
   INTERFACE tsk_hd_local_outflow
     PROCEDURE Create_task_hd_local_outflow
   END INTERFACE tsk_hd_local_outflow
+
+  INTERFACE tsk_dynlake
+    PROCEDURE Create_task_dynlake
+  END INTERFACE tsk_dynlake
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_hd_interface'
 
@@ -65,6 +79,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_hd_local_outflow(model_id))
+    CALL this%Register_task(tsk_dynlake(model_id))
 
   END SUBROUTINE Register_hd_tasks
 
@@ -78,6 +93,17 @@ CONTAINS
 
   END FUNCTION Create_task_hd_local_outflow
 
+
+  FUNCTION Create_task_dynlake(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_dynlake::return_ptr)
+    CALL return_ptr%Construct(name='dynlake', process_id=HD_,owner_model_id=model_id)
+
+  END FUNCTION Create_task_dynlake
+
   !------------------------------------------------------------------------------------------------
   SUBROUTINE update_hd(tile, options)
   !------------------------------------------------------------------------------------------------
@@ -87,6 +113,7 @@ CONTAINS
   !------------------------------------------------------------------------------------------------
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), POINTER       :: box_tile, lake_tile, land_tile, veg_tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
@@ -97,10 +124,13 @@ CONTAINS
     dsl4jsb_Def_memory(HD_)
     dsl4jsb_Def_memory(HYDRO_)
 
+    TYPE(t_hydro_memory), POINTER :: lake_hydro__mem, land_hydro__mem
+
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: discharge
+    dsl4jsb_Real2D_onChunk :: outflow_outlet
     dsl4jsb_Real2D_onChunk :: outflow_runoff
     dsl4jsb_Real2D_onChunk :: outflow_drainage
     dsl4jsb_Real2D_onChunk :: outflow_rivers
@@ -110,6 +140,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: nres_baseflow
     dsl4jsb_Real2D_onChunk :: ret_riverflow
     dsl4jsb_Real2D_onChunk :: nres_riverflow
+    dsl4jsb_Real2D_onChunk :: basin_mask
+    dsl4jsb_Real2D_onChunk :: hd_mask
+    dsl4jsb_Real2D_onChunk :: runoff_lake
     dsl4jsb_Real3D_onChunk :: overlflow_res
     dsl4jsb_Real3D_onChunk :: baseflow_res
     dsl4jsb_Real3D_onChunk :: riverflow_res
@@ -118,6 +151,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: local_wbal_error
 
     REAL(wp), POINTER :: area(:)
+    REAL(wp), POINTER :: lake_runoff(:)
+    REAL(wp), POINTER :: land_runoff(:)
+    REAL(wp), POINTER :: lake_fract(:)
+    REAL(wp), POINTER :: land_fract(:)
+    REAL(wp), POINTER :: veg_fract(:)
 
     REAL(wp), DIMENSION(options%nc) :: &
       & tile_fract, &
@@ -157,11 +195,24 @@ CONTAINS
     ! Configuration parameters from the namelist
     routing_scheme    = dsl4jsb_Config(HD_)%routing_scheme
 
+    CALL model%Get_top_tile(box_tile)
+    lake_tile => box_tile%first_child_tile
+    land_tile => lake_tile%next_sibling_tile
+    veg_tile => land_tile%first_child_tile%next_sibling_tile
+
     ! Get reference to variables in memory
     !
     dsl4jsb_Get_memory(HD_)
     !dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
+    SELECT TYPE (mm => lake_tile%mem(hydro_)%p); TYPE IS (t_hydro_memory); lake_hydro__mem => mm; END SELECT
+    SELECT TYPE (mm => land_tile%mem(hydro_)%p); TYPE IS (t_hydro_memory); land_hydro__mem => mm; END SELECT
+
+    lake_runoff => lake_hydro__mem%runoff%ptr(ics:ice,iblk)
+    land_runoff => land_hydro__mem%runoff%ptr(ics:ice,iblk)
+    lake_fract => lake_tile%fract(ics:ice,iblk)
+    land_fract => land_tile%fract(ics:ice,iblk)
+    veg_fract => veg_tile%fract(ics:ice,iblk)
 
     area => grid %area (ics:ice, iblk)
 
@@ -171,12 +222,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)    ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, discharge)   ! in
 
+    dsl4jsb_Get_var2D_onChunk(HD_, outflow_outlet)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_overlflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_overlflow)   ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_baseflow)     ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_baseflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, ret_riverflow)    ! in
     dsl4jsb_Get_var2D_onChunk(HD_, nres_riverflow)   ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, hd_mask)          ! in
+    dsl4jsb_Get_var2D_onChunk(HD_, runoff_lake)      ! in
     dsl4jsb_Get_var3D_onChunk(HD_, overlflow_res)    ! inout
     dsl4jsb_Get_var3D_onChunk(HD_, baseflow_res)     ! inout
     dsl4jsb_Get_var3D_onChunk(HD_, riverflow_res)    ! inout
@@ -194,10 +249,23 @@ CONTAINS
       local_budget_old(:) = local_budget(:)
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
-      inflow(:) = runoff(:) * tile_fract(:) * area / rhoh2o
+      ! use_dynlake = .FALSE.:  basin_mask is set to zero
+      WHERE (basin_mask(:) > 0._wp)
+        runoff_lake(:) = lake_runoff(:) * lake_fract(:) * area / rhoh2o
+        inflow(:)      = land_runoff(:) * land_fract(:) * area / rhoh2o
+      ELSEWHERE
+        inflow(:)      = runoff(:) * tile_fract(:) * area / rhoh2o
+      END WHERE
+      inflow(:)  = inflow(:) + outflow_outlet(:)
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_overlflow(:), nres_overlflow(:), overlflow_res(:,:), outflow_runoff(:))
 
       inflow(:) = drainage(:) * tile_fract(:) * area / rhoh2o
+      WHERE (hd_mask(:) == 2._wp .AND.  basin_mask(:) > 0._wp)
+        ret_baseflow(:)= 7300._wp
+        inflow(:) = inflow(:) + discharge(:)
+        discharge(:) = 0._wp
+        ret_riverflow(:) = 0.2_wp
+      END WHERE
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_baseflow(:),  nres_baseflow(:),  baseflow_res(:,:),  outflow_drainage(:))
 
       inflow(:) = discharge(:)
@@ -216,6 +284,7 @@ CONTAINS
         local_fluxes(:) =  runoff(:)   * tile_fract(:) * area(:) / rhoh2o         &
           &              + drainage(:) * tile_fract(:) * area(:) / rhoh2o         &
           &              + discharge(:)                                           &
+          &              - lake_runoff(:) * lake_fract(:) * area / rhoh2o         &
           &              - outflow_runoff(:) - outflow_drainage(:) - outflow_rivers(:)
 
         ! Local water balance error [m3]
@@ -256,6 +325,252 @@ CONTAINS
     ! Nothing to do because the HD model only runs on the top tile
 
   END SUBROUTINE aggregate_hd
+
+  SUBROUTINE update_dynlake(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    CLASS(t_jsb_tile_abstract), POINTER       :: box_tile, lake_tile, land_tile, fract_tile
+
+    ! Local variables
+    !
+    TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_vgrid), POINTER :: dl_l
+
+    dsl4jsb_Def_config(HD_)
+    dsl4jsb_Def_memory(HD_)
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onChunk ::  &
+      & height_oro_min,     &
+      & basin_mask,         & 
+      & height_lake,        &
+      & area_lake,          &
+      & fract_lake,          &
+      & volume_lake,        &
+      & height_dyn
+
+    dsl4jsb_Real3D_onChunk ::  &
+      & heights_lake,       &
+      & areas_lake,         &
+      & volumes_lake
+
+    REAL(wp), POINTER :: fract_lake_old(:)
+    REAL(wp), POINTER :: fract_land_old(:)
+    REAL(wp), POINTER :: area(:)
+
+    LOGICAL, ALLOCATABLE  ::  &
+      & volume_mask_low(:,:), &        !> dummy field 
+      & volume_mask_high(:,:),&        !> dummy field 
+      & volume_mask(:)                 !> dummy field 
+
+    REAL, ALLOCATABLE  ::  &
+      & height_low(:),   &        !> dummy field 
+      & height_high(:),  &        !> dummy field 
+      & area_low(:),     &        !> dummy field 
+      & area_high(:),    &        !> dummy field 
+      & volume_low(:),   &        !> dummy field 
+      & volume_high(:)               !> dummy field 
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_dynlake'
+
+    CHARACTER(len=32) :: routing_scheme        ! river routing scheme
+
+    INTEGER  :: iblk, ics, ice, nc, nlev
+    INTEGER  :: no_omp_thread
+
+    REAL(wp) :: steplen
+
+    REAL(wp), DIMENSION(options%nc) :: fract_lake_changes
+
+    no_omp_thread = Get_omp_thread()
+
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    steplen = options%steplen
+
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
+
+    model => Get_model(tile%owner_model_id)
+
+    IF (.NOT. tile%Is_process_active(HD_)) RETURN
+
+    dsl4jsb_Get_config(HD_)
+
+    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting update')
+
+    grid => Get_grid(model%grid_id)
+    area => grid%area(ics:ice,iblk)
+
+    dl_l => Get_vgrid('dynamic_lake_level')
+    nlev    = dl_l%n_levels
+
+    ! Configuration parameters from the namelist
+    routing_scheme    = dsl4jsb_Config(HD_)%routing_scheme
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(HD_)
+
+    dsl4jsb_Get_var3D_onChunk(HD_, heights_lake)     ! IN
+    dsl4jsb_Get_var3D_onChunk(HD_, areas_lake)       ! IN
+    dsl4jsb_Get_var3D_onChunk(HD_, volumes_lake)     ! IN
+    dsl4jsb_Get_var2D_onChunk(HD_, height_oro_min)   ! IN
+    dsl4jsb_Get_var2D_onChunk(HD_, basin_mask)       ! IN
+    dsl4jsb_Get_var2D_onChunk(HD_, height_lake)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(HD_, area_lake)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HD_, fract_lake)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HD_, volume_lake)      ! OUT
+    dsl4jsb_Get_var2D_onChunk(HD_, height_dyn)       ! OUT
+
+    CALL model%Get_top_tile(box_tile)
+    lake_tile => box_tile%first_child_tile
+    land_tile => lake_tile%next_sibling_tile
+
+    fract_lake_old => lake_tile%fract(ics:ice,iblk)
+    fract_land_old => land_tile%fract(ics:ice,iblk)
+
+    ! Configuration parameters from the namelist
+    routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
+
+    SELECT CASE (TRIM(routing_scheme))
+    CASE ('full')
+
+      ALLOCATE (volume_mask_low(nc,nlev))
+      ALLOCATE (volume_mask_high(nc,nlev))
+      ALLOCATE (volume_mask(nc))
+      ALLOCATE (height_low(nc))
+      ALLOCATE (height_high(nc))
+      ALLOCATE (area_low(nc))
+      ALLOCATE (area_high(nc))
+      ALLOCATE (volume_low(nc))
+      ALLOCATE (volume_high(nc))
+
+      ! update grid cell lake height [m] and area [m3]
+      volume_mask_low (:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)>=volumes_lake(:,:)
+      volume_mask_high(:,:)=SPREAD(volume_lake(:), DIM=2, NCOPIES=100)<=volumes_lake(:,:)
+      volume_mask(:) = basin_mask(:) > 0._wp .AND. volume_lake(:)>=MINVAL(volumes_lake(:,:), DIM=2)
+
+      WHERE ( basin_mask(:) > 0._wp  .AND. volume_lake(:)<MINVAL(volumes_lake(:,:), DIM=2) .AND. volume_lake(:)>0._wp )
+         height_lake(:)= volume_lake(:) * heights_lake(:,1) / volumes_lake(:,1)
+         fract_lake  (:)= volume_lake(:) * areas_lake  (:,1) / volumes_lake(:,1)
+      ELSE WHERE (volume_mask(:) .AND. volume_lake(:)<MAXVAL(volumes_lake(:,:), DIM=2))
+        height_low (:)=MAXVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_low (:,:))
+        height_high(:)=MINVAL(heights_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
+        area_low   (:)=MAXVAL(areas_lake  (:,:), DIM=2, MASK=volume_mask_low (:,:))
+        area_high  (:)=MINVAL(areas_lake  (:,:), DIM=2, MASK=volume_mask_high(:,:))
+        volume_low (:)=MAXVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_low (:,:))
+        volume_high(:)=MINVAL(volumes_lake(:,:), DIM=2, MASK=volume_mask_high(:,:))
+        height_lake(:)= height_low(:) + (volume_lake(:)-volume_low(:)) * & 
+                       (height_high(:)-height_low(:)) / &
+                       (volume_high(:)-volume_low(:)) 
+        fract_lake (:)= area_low  (:) + (volume_lake(:)-volume_low(:)) * & 
+                       (area_high  (:)-area_low  (:)) / &
+                       (volume_high(:)-volume_low(:))
+      ELSE WHERE ( volume_mask(:) .AND. volume_lake(:)>=MAXVAL(volumes_lake(:,:), DIM=2) )
+        height_lake(:) = MAXVAL(heights_lake(:,:), DIM=2) + & 
+                         (volume_lake(:)-MAXVAL(volumes_lake(:,:), DIM=2)) / & 
+                         MAXVAL(areas_lake(:,:), DIM=2)
+        fract_lake(:)  = MAXVAL(areas_lake(:,:), DIM=2)
+      ELSE WHERE
+        height_lake(:) = 0._wp
+        fract_lake(:)   = 0._wp
+      END WHERE
+      height_dyn(:) = height_oro_min(:) + height_lake(:)
+      area_lake (:) = fract_lake(:) * area
+
+      ! update lake fraction [%]
+      WHERE (basin_mask(:) > 0._wp)
+        ! lake and land fraction changes [%]
+        fract_lake_changes(:) = MIN( MAX(fract_lake(:), 0._wp), 1._wp) - fract_lake_old(:)
+      ELSE WHERE
+        fract_lake_changes(:) = 0._wp
+      END WHERE
+
+      ! update fractions of lake tile, land tile and their children
+      CALL model%Get_top_tile(fract_tile)
+      IF (ASSOCIATED(fract_tile%parent)) CALL finish(routine, 'Should only run on box tile!')
+      IF (model%config%use_sizelakes) THEN
+      CALL do_stuff_on_tree(fract_tile, options, iblk, ics, ice, fract_lake_changes, fract_land_old(:))
+      END IF
+
+    CASE ('weighted_to_coast')
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    CASE ('zero')
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    CASE DEFAULT
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    END SELECT
+
+  END SUBROUTINE update_dynlake
+
+  SUBROUTINE aggregate_dynlake(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_dynlake' 
+ 
+    CALL message(routine, 'aggregate dynlake task')
+
+  END SUBROUTINE aggregate_dynlake
+
+
+  RECURSIVE SUBROUTINE do_stuff_on_tree(cur, options, iblk, ics, ice, fract_lake_changes, fract_land) 
+
+    CLASS(t_jsb_tile_abstract), POINTER :: cur      !< current tile
+    CLASS(t_jsb_tile_abstract), POINTER :: child    !< child of cur
+
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    INTEGER, INTENT(in) :: iblk, ics, ice
+    INTEGER :: i
+
+    REAL(wp),INTENT(in) :: fract_lake_changes(:)    !< lake fraction changes
+    REAL(wp),INTENT(in) :: fract_land(:)            !< lake fraction
+    REAL(wp)            :: fract(options%nc)        !< fraction of current tile
+
+    ! skipt box tile
+    IF (TRIM(cur%name) /= 'box') THEN
+
+      IF (iblk==1) CALL message('Dynlake at:', TRIM(cur%name))
+
+      ! adjust fraction for lake, land and all children
+      CALL cur%Get_fraction(ics, ice, iblk, fract=fract(:))
+      IF(cur%is_lake) THEN
+        fract(:) = fract(:) + fract_lake_changes(:)
+      ELSE IF(cur%is_land) THEN
+        fract(:) = fract(:) - fract_lake_changes(:)
+      ELSE
+        fract(:) = fract(:) - fract_lake_changes(:) * fract(:) / MAX(EPSILON(1._wp),fract_land(:))
+      ENDIF
+      CALL cur%Set_fraction(ics, ice, iblk, fract=fract(:))
+
+    END IF
+
+    IF (cur%Has_children()) THEN
+      child => cur%first_child_tile
+      DO i=1,cur%Get_no_of_children()
+        CALL do_stuff_on_tree(child, options, iblk, ics, ice, fract_lake_changes, fract_land)
+        child => child%next_sibling_tile
+      END DO
+    END IF
+
+  END SUBROUTINE do_stuff_on_tree
+
   !------------------------------------------------------------------------------------------------
   SUBROUTINE hd_lateral_flow(tile, options)
   !------------------------------------------------------------------------------------------------
@@ -285,6 +600,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onDomain :: &
       & hd_mask,               &
+      & basin_mask,            &
       & coast_ocean,           &
       & outflow_runoff,        &
       & outflow_drainage,      &
@@ -294,6 +610,12 @@ CONTAINS
       & discharge,             &
       & discharge_ocean,       &
       & internal_drain,        &
+      & discharge_lake,        &
+      & riverflow_lake,        &
+      & overlflow_lake,        &
+      & baseflow_lake,         &
+      & runoff_lake,           &
+      & volume_lake,           &
       & nsplit
 
     dsl4jsb_Real3D_onDomain :: &
@@ -304,8 +626,10 @@ CONTAINS
       & global_discharge,       &  ! global sum of discharge to the ocean
       & global_outflow,         &
       & global_internal_drain,  &
+      & global_discharge_lake,      &
       & global_discharge_ocean, &
-      & sum_weights
+      & sum_weights,            &
+      & steplen
 
     INTEGER  ::         &
       & nproma,         &
@@ -350,10 +674,18 @@ CONTAINS
 
     nproma =  grid%nproma
     nblks  =  grid%nblks
+    steplen = options%steplen
 
     dsl4jsb_Get_var2D_onDomain(HD_, hd_mask)          ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, discharge_lake)   ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, riverflow_lake)   ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, overlflow_lake)   ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, baseflow_lake)    ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, runoff_lake)      ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, bidx_upstream)    ! IN
@@ -395,10 +727,22 @@ CONTAINS
       discharge(:,:) = 0._wp
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
+      discharge_lake(:,:) = 0._wp
+      riverflow_lake(:,:) = 0._wp
+
       ! Enable the next line for debugging ... but this only works on one (!) processor, i.e. no halos
       ! outflow_count(:,:) = nsplit(:,:)
 
-      global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:))*in_domain(:,:))
+      global_outflow  = global_sum_array((outflow_runoff(:,:)    & 
+                                        + outflow_drainage(:,:)  & 
+                                        + outflow_rivers(:,:)    & 
+                                        + runoff_lake(:,:)) * in_domain(:,:))
+
+      WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
+        ! lake water drained into internal lake
+        riverflow_lake(:,:) = outflow_rivers(:,:)
+        outflow_rivers(:,:) = 0._wp
+      END WHERE
 
       IF (debug_hd) THEN
         ! Consistency check: There should not be outflow in pure ocean cells
@@ -500,17 +844,34 @@ CONTAINS
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
-      ELSE WHERE (hd_mask(:,:) == 2._wp)
+      ELSE WHERE (hd_mask(:,:) == 2._wp .AND. basin_mask(:,:) == 0._wp)
         ! internal drainage cells
         internal_drain(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         outflow_runoff(:,:) = 0._wp
         outflow_drainage(:,:) = 0._wp
         discharge(:,:) = 0._wp
+      ELSE WHERE (hd_mask(:,:) == 2._wp .AND.  basin_mask(:,:) > 0._wp)
+        ! lake water drained into internal lake
+        discharge(:,:) = discharge(:,:)
+        baseflow_lake(:,:) = outflow_drainage(:,:)
+        overlflow_lake(:,:) = outflow_runoff(:,:)
+        outflow_runoff(:,:) = 0._wp
+        outflow_drainage(:,:) = 0._wp
       END WHERE
+      ! inflow at lake sink points
+      discharge_lake(:,:) =  riverflow_lake(:,:) + overlflow_lake(:,:) + baseflow_lake(:,:) + runoff_lake(:,:)
+
+      ! lake water storage [m3]
+      volume_lake(:,:) = volume_lake(:,:) + ( & 
+              & + riverflow_lake(:,:)         &
+              & + overlflow_lake(:,:)         &
+              & + baseflow_lake(:,:)          &
+              & + runoff_lake(:,:)) * steplen
 
       ! global integrals
       global_discharge       = global_sum_array(discharge(:,:)*in_domain(:,:))
       global_internal_drain  = global_sum_array(internal_drain(:,:)*in_domain(:,:))
+      global_discharge_lake  = global_sum_array(discharge_lake(:,:)*in_domain(:,:))
       global_discharge_ocean = global_sum_array(discharge_ocean(:,:)*in_domain(:,:))
 
       IF (debug_hd) THEN
@@ -526,7 +887,8 @@ CONTAINS
         WRITE (message_text,*) 'internal drainage      : ', global_internal_drain, ' m3/s'
         CALL message (routine, message_text)
         WRITE (message_text,*) 'Water budget error     : ', &
-          & global_outflow - global_discharge - global_discharge_ocean - global_internal_drain, ' m3/s'
+          & global_outflow - global_discharge - global_discharge_ocean - global_internal_drain - &
+          & global_discharge_lake, ' m3/s'
         CALL message (routine, message_text)
       END IF
 
@@ -578,6 +940,333 @@ CONTAINS
 
   END SUBROUTINE hd_lateral_flow
 
+
+  !------------------------------------------------------------------------------------------------
+  SUBROUTINE lake_lateral_flow(tile, options)
+  !------------------------------------------------------------------------------------------------
+  ! The routine is called from jsbach_finish_timestep, after the loop over the
+  ! nproma blocks.
+  ! It is thus possible to synchronize the halos. And to use data from
+  ! surounding grid cells.
+  !------------------------------------------------------------------------------------------------
+
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in) :: options
+
+    ! Local variables
+    !
+    TYPE(t_jsb_grid),  POINTER :: grid
+    TYPE(t_jsb_model), POINTER :: model
+
+    dsl4jsb_Def_config(HD_)
+    dsl4jsb_Def_memory(HD_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':lake_lateral_flow'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: &
+      & volume_lake_max,       &
+      & basin_mask,            &
+      & outlets,               &
+      & volume_lake,           &
+      & outflow_outlet,        &
+      & height_lake,           &
+      & height_dyn,            &
+      & inflow_lake,           &
+      & outflow_lake,          &
+      & overflow_lake,         &
+      & inflow_outlet
+
+    dsl4jsb_Real3D_onDomain :: &
+      & outflow_min
+
+    REAL(wp) ::                &
+      & height_lake_diff,      &
+      & u_lake,                &
+      & k_lake,                &
+      & global_lake_volume,    &  ! water budget change within the time step
+      & global_lake_volume_error,  &  ! water budget change within the time step
+      & global_lateral_flow_error, &  ! water budget change within the time step
+      & global_lateral_flow_abs, &  ! water budget change within the time step
+      & outlets_maxs,          &
+      & neigh_dist,            &
+      & steplen
+
+    INTEGER  :: jc, jcs, jce       ! grid cells
+    INTEGER  :: blk, blks, blke    ! blocks
+    INTEGER  :: njc(3), nblk(3)    ! beighbor grid cell block and cell index
+    INTEGER  :: n, m, nm, nnm, nl, nnl, ncount ! count neighbors
+    INTEGER  :: nnjc(3), nnblk(3)
+    INTEGER  :: nproma, nblks
+
+    CHARACTER(len=32) :: &
+      & routing_scheme        ! river routing scheme
+
+    LOGICAL,  POINTER ::    &
+      & is_in_domain (:,:)      ! T: cell in domain (not halo)
+
+    REAL(wp),  POINTER ::    &
+      & lat (:,:),           & ! latitude in degree
+      & lon (:,:)              ! longitude in degree
+
+    LOGICAL, ALLOCATABLE  ::  &
+      & neigh_mask(:,:),       & ! mask for neighbor cells 
+      & nneigh_mask(:,:)         ! mask for neighbor's neighbor cells 
+
+    REAL(wp), ALLOCATABLE  ::  &
+      & in_domain       (:,:), &  ! 1: cell in domain, 0: halo cell
+      & volume_from_lake(:,:), &
+      & outflow_mins(:,:)
+
+    REAL(wp) :: outlets_max(p_patch(1)%nblks_c)
+
+    LOGICAL  :: debug_hd
+
+    IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask  (:,:)
+    lat  => grid%lat(:,:)
+    lon  => grid%lon(:,:)
+
+    nproma  = grid%nproma
+    nblks   = grid%nblks
+    steplen = options%steplen
+
+    dsl4jsb_Get_config(HD_)
+
+    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+    IF (ASSOCIATED(tile%parent)) &
+      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
+
+    ! Get reference to variables for current block
+    !
+    dsl4jsb_Get_memory(HD_)
+
+    dsl4jsb_Get_var2D_onDomain(HD_, volume_lake_max)  ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, basin_mask)       ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, outlets)          ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)      ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, outflow_outlet)   ! INOUT
+    dsl4jsb_Get_var2D_onDomain(HD_, height_lake)      ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, height_dyn)       ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, inflow_lake)      ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, outflow_lake)     ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, inflow_outlet)    ! OUT
+    dsl4jsb_Get_var2D_onDomain(HD_, overflow_lake)    ! OUT
+    dsl4jsb_Get_var3D_onDomain(HD_, outflow_min)      ! IN
+
+    ! Configuration parameters from the namelist
+    routing_scheme = dsl4jsb_Config(HD_)%routing_scheme
+    debug_hd       = dsl4jsb_Config(HD_)%debug_hd
+
+    ! Mask out all halo cells for the global sums (otherwise these cells are
+    ! counted twice)
+    ALLOCATE (in_domain(nproma, nblks))
+    WHERE (is_in_domain(:,:))
+      in_domain = 1._wp
+    ELSE WHERE
+      in_domain = 0._wp
+    END WHERE
+
+    SELECT CASE (TRIM(routing_scheme))
+    CASE ('full')
+
+      ! Synchronize halos
+      CALL sync_patch_array(sync_c, grid%patch, basin_mask(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, height_dyn(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, height_lake(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, volume_lake(:,:))
+      CALL sync_patch_array(sync_c, grid%patch, outflow_min(:,:,:))
+
+
+
+      ALLOCATE (neigh_mask(nproma, nblks))
+      ALLOCATE (nneigh_mask(nproma, nblks))
+      ALLOCATE (outflow_mins(nproma, nblks))
+
+      outflow_lake(:,:) = 0._wp
+      inflow_lake(:,:) = 0._wp
+
+      ! update dynamic lake water flow between lake grid cells
+
+      ! block index (blk)
+      blks = grid%get_blk_start()
+      blke = grid%get_blk_end()
+      DO blk = blks, blke
+
+        ! grid cell index (jc)
+        jcs = grid%get_col_start(blk)
+        jce = grid%get_col_end(blk)
+        DO jc = jcs, jce
+
+          ! 3 neighbors cells: block and cell index 
+          njc =  grid%patch%cells%neighbor_idx(jc,blk,:)
+          nblk = grid%patch%cells%neighbor_blk(jc,blk,:)
+          neigh_mask(:,:) = .FALSE.
+          ! mask neighbors grid cells of the current basin with .TRUE.
+          DO nm = 1, SIZE(njc)
+            IF (basin_mask(jc,blk)==basin_mask(njc(nm),nblk(nm))) THEN
+              neigh_mask(njc(nm),nblk(nm)) = .TRUE.
+            END IF
+          END DO          
+
+          DO n = 1, SIZE(njc)
+
+            IF(basin_mask(jc,blk) > 0._wp                       .AND. &    
+               basin_mask(jc,blk) == basin_mask(njc(n),nblk(n))) THEN
+          
+              ! neighbor's 3 neighbor cells: block and cell index 
+              nnjc =  grid%patch%cells%neighbor_idx(njc(n),nblk(n),:)
+              nnblk = grid%patch%cells%neighbor_blk(njc(n),nblk(n),:)
+              nneigh_mask(:,:) = .FALSE.
+              ! mask neighbor's neighbor grid cells of the current basin with .TRUE.
+              DO nnm = 1, SIZE(nnjc)
+                IF (basin_mask(jc,blk)==basin_mask(nnjc(nnm),nnblk(nnm))) THEN
+                  nneigh_mask(nnjc(nnm),nnblk(nnm)) = .TRUE.
+                END IF
+              END DO
+              ! neighbor cell minimum outflow height
+              outflow_mins(:,:) = 0._wp
+              DO nm = 1, SIZE(njc)
+                nl = FINDLOC(grid%patch%cells%neighbor_idx(njc(nm),nblk(nm),:), jc, DIM=1)
+                IF (outflow_min(njc(nm),nl,nblk(nm)) /= 0._wp) THEN
+                  outflow_mins(njc(nm),nblk(nm))= outflow_min(njc(nm),nl,nblk(nm))
+                END IF
+              END DO
+              ! neighbor's neighbor cells minimum outflow height
+              DO nnm = 1, SIZE(nnjc)
+                nnl =  FINDLOC(grid%patch%cells%neighbor_idx(nnjc(nnm),nnblk(nnm),:), njc(n), DIM=1)
+                IF (outflow_min(nnjc(nnm),nnl,nnblk(nnm)) /= 0._wp) THEN
+                 outflow_mins(nnjc(nnm),nnblk(nnm)) = outflow_min(nnjc(nnm),nnl,nnblk(nnm))
+                END IF
+              END DO
+
+              ! inflow 
+              IF(height_dyn(jc,blk) == MINVAL(PACK(height_dyn(:,:),nneigh_mask(:,:))) .AND. &
+                 height_dyn(jc,blk) < height_dyn(njc(n),nblk(n))                      .AND. &
+                 height_dyn(njc(n),nblk(n)) > outflow_mins(njc(n),nblk(n))            .AND. &
+                 volume_lake(njc(n),nblk(n)) > 0._wp)                                  THEN
+                height_lake_diff = MIN(height_lake(njc(n),nblk(n)), height_dyn(njc(n),nblk(n)) - height_dyn(jc,blk))
+                CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
+                u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
+                k_lake           = neigh_dist/MAX(u_lake, EPSILON(1._wp))
+                ncount = COUNT(height_dyn(jc,blk)   == PACK(height_dyn(:,:)  ,nneigh_mask(:,:)) .AND. &
+                               outflow_mins(jc,blk) >= PACK(outflow_mins(:,:),nneigh_mask(:,:)))
+                inflow_lake(jc,blk) = inflow_lake(jc,blk) + MIN( volume_lake(njc(n),nblk(n))/k_lake, &
+                                                                 volume_lake(njc(n),nblk(n))/steplen) / ncount
+              END IF
+                
+              ! outflow
+              IF ( height_dyn(njc(n),nblk(n)) == MINVAL(PACK(height_dyn(:,:),neigh_mask(:,:))) .AND. &
+                   height_dyn(njc(n),nblk(n)) < height_dyn(jc,blk)                             .AND. & 
+                   height_dyn(jc,blk) > outflow_mins(jc,blk)                                   .AND. &
+                   volume_lake(jc,blk)> 0._wp)                                                  THEN               
+                height_lake_diff = MIN(height_lake(jc,blk), height_dyn(jc,blk) - height_dyn(njc(n),nblk(n)))
+                CALL haversine_distance(lat(jc,blk),lon(jc,blk),lat(njc(n),nblk(n)),lon(njc(n),nblk(n)), neigh_dist)
+                u_lake           = 100._wp * (height_lake_diff/neigh_dist)**0.5_wp * (height_lake_diff)**(2._wp/3._wp)
+                k_lake           = neigh_dist/MAX(u_lake, EPSILON(1._wp))
+                ncount = COUNT(height_dyn(njc(n),nblk(n))   == PACK(height_dyn(:,:)  ,neigh_mask(:,:)) .AND. &
+                               outflow_mins(njc(n),nblk(n)) >= PACK(outflow_mins(:,:),neigh_mask(:,:)))
+                outflow_lake(jc,blk) = outflow_lake(jc,blk) - MIN(volume_lake(jc,blk)/k_lake, &
+                                                                  volume_lake(jc,blk)/steplen) / ncount
+              END IF
+
+            END IF
+          END DO
+        END DO
+      END DO
+
+      ! checkout water budget conservation: lateral flow only
+      volume_lake(:,:) = volume_lake(:,:) + (outflow_lake(:,:) + inflow_lake(:,:)) * steplen
+      global_lateral_flow_error = global_sum_array((outflow_lake(:,:)+inflow_lake(:,:))*in_domain(:,:))
+      global_lateral_flow_abs   = global_sum_array((ABS(outflow_lake(:,:))+ABS(inflow_lake(:,:)))*in_domain(:,:))
+      IF (ABS(global_lateral_flow_error)/MAX(EPSILON(1._wp),global_lateral_flow_abs) > 10._wp*EPSILON(1._wp)) THEN
+        WRITE (message_text,*) 'Lake water conservation problem: lateral flow imbalance: ', &
+             global_lateral_flow_error,' m3'
+        CALL finish (TRIM(routine), message_text)
+      END IF
+
+
+      ! outlet overflow to riverflow
+      ALLOCATE (volume_from_lake(nproma, nblks))
+
+      inflow_outlet(:,:)=0._wp
+      inflow_outlet(:,:)=outflow_outlet
+      overflow_lake(:,:)=0._wp
+
+      DO blk = 1, p_patch(1)%nblks_c ! block centers
+        outlets_max(blk) = MAXVAL(outlets(:,blk))
+      END DO
+      ! number of outlets
+      global_lake_volume = global_sum_array(volume_lake(:,:)*in_domain(:,:))
+      outlets_maxs = global_max(MAXVAL(outlets_max))  ! Get max over all PEs
+      DO n = 1, outlets_maxs
+        volume_from_lake(:,:) = 0._wp
+        WHERE (n==basin_mask(:,:).AND.volume_lake(:,:)>volume_lake_max(:,:))
+          volume_from_lake(:,:) = volume_lake(:,:) - volume_lake_max(:,:)
+          volume_lake(:,:)      = volume_lake(:,:) - volume_from_lake(:,:)
+          overflow_lake(:,:)    = (overflow_lake(:,:) - volume_from_lake(:,:)) / steplen
+        END WHERE
+        WHERE(n==outlets)
+          outflow_outlet(:,:)=global_sum_array(volume_from_lake(:,:)/steplen*in_domain(:,:))
+        END WHERE
+      END DO
+
+  
+
+      ! checkout water budget conservation: outlet overflow
+      global_lake_volume_error=global_lake_volume-global_sum_array((volume_lake(:,:)+outflow_outlet(:,:)*steplen)*in_domain(:,:))
+      IF (ABS(global_lake_volume_error)/MAX(global_lake_volume, EPSILON(1._wp)) > 10._wp*EPSILON(1._wp)) THEN
+        WRITE (message_text,*) 'Lake water conservation problem: outlet overflow imbalance: ', &
+             global_lake_volume_error,' m3'
+        CALL finish (TRIM(routine), message_text)
+      END IF
+ 
+    CASE ('weighted_to_coast')
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    CASE ('zero')
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    CASE DEFAULT
+      WRITE (message_text,*)  'no valid parameter for dynlake: ', TRIM(routing_scheme)
+      CALL finish(TRIM(routine), message_text)
+
+    END SELECT
+
+  END SUBROUTINE lake_lateral_flow
+
+
+  SUBROUTINE haversine_distance(clat, clon, nlat, nlon, dist)
+
+    REAL(wp), INTENT(in) :: &
+      & clat,               &
+      & clon,               &
+      & nlat,               &
+      & nlon
+
+    REAL(wp), INTENT(out) :: &
+      & dist
+
+    REAL(wp) :: r, a, delta_phi, delta_lambda
+
+    r = 6371220.0_wp ! Reference Earth's Radius (m)
+
+    delta_phi = (nlat - clat) * deg2rad
+    delta_lambda = (nlon - clon) * deg2rad
+    a = SIN(delta_phi / 2)**2 + COS(clat*deg2rad) * COS(nlat*deg2rad) * SIN(delta_lambda / 2)**2
+    dist = r * (2 * ATAN2(SQRT(a), SQRT(1 - a)))
+
+  END SUBROUTINE haversine_distance
+
   !------------------------------------------------------------------------------------------------
   SUBROUTINE hd_check_water_budget(tile, options)
   !------------------------------------------------------------------------------------------------
@@ -608,11 +1297,22 @@ CONTAINS
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onDomain :: &
-      & runoff          , &
-      & drainage        , &
-      & discharge       , &
-      & discharge_ocean , &
-      & water_budget    , &
+      & runoff               , &
+      & drainage             , &
+      & discharge            , &
+      & inflow_outlet        , &
+      & riverflow_lake       , &
+      & overlflow_lake       , &
+      & baseflow_lake        , &
+      & runoff_lake          , &
+      & outflow_lake         , &
+      & inflow_lake          , &
+      & overflow_lake        , &
+      & volume_lake          , &
+      & volume_lake_old      , &
+      & discharge_ocean      , &
+      & discharge_lake       , &
+      & water_budget         , &
       & water_budget_change
 
     dsl4jsb_Real3D_onDomain :: &
@@ -627,13 +1327,18 @@ CONTAINS
       & tile_fract       (:,:),   &
       & in_domain        (:,:),   &  ! 1: cell in domain, 0: halo cell
       & water_budget_old (:,:),   &  ! water budget of previous time step
+      & water_budget_lake(:,:),   &  ! lake water budget of current time step
+      & volume_changes_lake(:,:), &  ! lake volume changes of current time step
       & water_flux       (:,:)       ! water fluxes within the time step
 
     REAL(wp) ::                   &
       & steplen,                  &
       & global_water_budget,      &  ! water budget of current step
+      & global_water_budget_lake, &  ! lake water budget of current step
       & global_water_budget_old,  &  ! water budget of previous step
+      & global_volume_changes_lake,& ! lake volume changes of current step
       & global_water_error,       &  ! water budget change within the time step
+      & global_water_error_lake,  &  ! lake water budget error within the time step
       & global_water_flux            ! water fluxes changing the budget
 
     REAL(wp), POINTER :: water_error_gsum(:)
@@ -674,17 +1379,29 @@ CONTAINS
     area            => grid%area                                (:,:)
     is_in_domain    => grid%patch%cells%decomp_info%owner_mask  (:,:)
 
-    dsl4jsb_Get_var3D_onDomain(HD_, overlflow_res) ! IN
-    dsl4jsb_Get_var3D_onDomain(HD_, baseflow_res) ! IN
-    dsl4jsb_Get_var3D_onDomain(HD_, riverflow_res) ! IN
+    dsl4jsb_Get_var3D_onDomain(HD_, overlflow_res)   ! IN
+    dsl4jsb_Get_var3D_onDomain(HD_, baseflow_res)    ! IN
+    dsl4jsb_Get_var3D_onDomain(HD_, riverflow_res)   ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, inflow_outlet)   ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, riverflow_lake)  ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, overlflow_lake)  ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, baseflow_lake)   ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, runoff_lake)     ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, outflow_lake)    ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, inflow_lake)     ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, overflow_lake)   ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, volume_lake)     ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, volume_lake_old) ! INOUT
+
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, runoff)          ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, drainage)        ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
 
+    dsl4jsb_Get_var2D_onDomain(HD_, discharge_lake)     ! in
     dsl4jsb_Get_var2D_onDomain(HD_, water_budget)       ! out
-    dsl4jsb_Get_var2D_onDomain(HD_, water_budget_change)    ! out
+    dsl4jsb_Get_var2D_onDomain(HD_, water_budget_change)! out
 
     water_error_gsum => HD__mem%water_error_gsum%ptr(:) ! out
 
@@ -714,7 +1431,7 @@ CONTAINS
       &   SUM(overlflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in overland flow reservoirs
       & + SUM(baseflow_res (:,:,:), DIM=2) * in_domain(:,:) & !< water in baseflow reservoir
       & + SUM(riverflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in riverflow reservoirs
-      & + discharge(:,:) * in_domain(:,:) * steplen                              !< river discharge [m3/s -> m3]
+      & + discharge(:,:) * in_domain(:,:) * steplen           !< river discharge [m3/s -> m3]
     global_water_budget = global_sum_array(water_budget(:,:))
 
     IF (debug_hd) THEN
@@ -741,7 +1458,10 @@ CONTAINS
     water_flux(:,:) = &
       &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
       & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
-      & - discharge_ocean(:,:) * in_domain(:,:)                                     !< discharge to the ocean
+      & + inflow_outlet  (:,:) * in_domain(:,:)                                   & !< drainge from the lakes (outlet overflow)
+      & - discharge_ocean(:,:) * in_domain(:,:)                                   & !< discharge to the ocean
+      & - discharge_lake (:,:) * in_domain(:,:)                                     !< discharge to the lakes
+
     global_water_flux = global_sum_array(water_flux(:,:))
 
     IF (debug_hd) THEN
@@ -752,8 +1472,14 @@ CONTAINS
       WRITE(message_text,*) '-   drainage              : ', &
            global_sum_array(drainage/rhoh2o*area*tile_fract*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
+      WRITE(message_text,*) '-   outlet                : ', &
+           global_sum_array(inflow_outlet*in_domain*steplen), ' m3'
+      CALL message(routine, message_text)
       WRITE(message_text,*) '-   discharge_ocean (neg.): ', &
            global_sum_array(discharge_ocean*in_domain*steplen), ' m3'
+      CALL message(routine, message_text)
+      WRITE(message_text,*) '-   discharge_lake (neg.) : ', &
+           global_sum_array(discharge_lake*in_domain*steplen), ' m3'
       CALL message(routine, message_text)
       WRITE(message_text,*) '-->      sum of the fluxes: ', global_water_flux*steplen, ' m3'
       CALL message(routine, message_text)
@@ -763,6 +1489,78 @@ CONTAINS
       WRITE (message_text,*) '  global discharge to the ocean: ', global_sum_array(discharge_ocean*in_domain), ' m3/s'
       CALL message (TRIM(routine),message_text)
     END IF
+
+    !
+    ! Glocal lake water balance check
+    ALLOCATE (water_budget_lake(nproma, nblks))
+    ALLOCATE (volume_changes_lake(nproma, nblks))
+
+    water_budget_lake(:,:) = &
+           &   riverflow_lake(:,:) * steplen &   !< river discharge to lake  [m3/s -> m3]
+           & + overlflow_lake(:,:) * steplen &   !< overland flow to lake    [m3/s -> m3]
+           & + baseflow_lake(:,:)  * steplen &   !< base flow to lake        [m3/s -> m3]
+           & + runoff_lake(:,:)    * steplen &   !< P - E over lake          [m3/s -> m3]
+           & + inflow_lake(:,:)    * steplen &   !< lateral inflow to lake   [m3/s -> m3]
+           & + outflow_lake(:,:)   * steplen &   !< lateral outlow from lake [m3/s -> m3]
+           & + overflow_lake(:,:)  * steplen     !< outlet outflow from lake [m3/s -> m3]
+
+    volume_changes_lake(:,:) = &
+           &   volume_lake(:,:)     & !< current lake volume [m3]
+           & - volume_lake_old(:,:)   !< former  lake volume [m3]
+
+    global_water_budget_lake   = global_sum_array(water_budget_lake(:,:)   * in_domain(:,:))
+    global_volume_changes_lake = global_sum_array(volume_changes_lake(:,:) * in_domain(:,:))
+    global_water_error_lake    = global_water_budget_lake - global_volume_changes_lake
+
+    !WRITE (message_text,*) '-   volume_lake:                ', &
+    !        global_sum_array(volume_lake(:,:) * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '-   volume_lake_old:            ', &
+    !        global_sum_array(volume_lake_old(:,:) * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '--> global_volume_changes_lake: ', &
+    !        global_volume_changes_lake, ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '-   riverflow_lake:             ', &
+    !        global_sum_array(riverflow_lake(:,:) * steplen * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '-   overlflow_lake:             ', &
+    !        global_sum_array(overlflow_lake(:,:) * steplen * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '-   baseflow_lake:              ', &
+    !        global_sum_array(baseflow_lake(:,:) * steplen * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '-   runoff_lake:                ', &
+    !        global_sum_array(runoff_lake(:,:) * steplen * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '-   inflow_lake:                ', &
+    !        global_sum_array(inflow_lake(:,:) * steplen * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '-   outflow_lake:               ', &
+    !        global_sum_array(outflow_lake(:,:) * steplen * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '-   overflow_lake:              ', &
+    !        global_sum_array(overflow_lake(:,:) * steplen * in_domain(:,:)), ' m3'
+    !CALL message(routine, message_text)
+    !WRITE (message_text,*) '--> global_water_budget_lake:   ', &
+    !        global_water_budget_lake, ' m3'
+    !CALL message(routine, message_text)
+
+
+    IF (global_water_budget_lake /= 0._wp .AND. global_volume_changes_lake /= 0._wp) THEN        !vg: zero at the very first time step
+      IF (ABS(global_water_error_lake/global_sum_array(volume_lake(:,:) * in_domain(:,:))) > 10._wp*EPSILON(1._wp)) THEN
+        WRITE (message_text,*) 'Lake water conservation problem: lake budget imbalance: ', &
+             global_water_error_lake,' m3'
+        IF (dsl4jsb_Config(HD_)%enforce_water_budget) THEN
+          CALL finish (TRIM(routine), message_text)
+        ELSE
+          CALL message (TRIM(routine), message_text)
+        END IF
+      END IF
+    END IF
+
+    volume_lake_old(:,:) = volume_lake(:,:)
+
 
     IF (is_time_experiment_start(options%current_datetime)) RETURN
 
@@ -793,7 +1591,7 @@ CONTAINS
     IF (HD__mem%water_error_gsum%is_in_output) &
       & water_error_gsum = global_water_error
 
-    DEALLOCATE (in_domain, tile_fract, water_budget_old, water_flux)
+    DEALLOCATE (in_domain, tile_fract, water_budget_old, water_flux, water_budget_lake, volume_changes_lake)
 
   END SUBROUTINE hd_check_water_budget
 

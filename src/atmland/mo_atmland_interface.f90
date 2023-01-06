@@ -492,7 +492,7 @@ CONTAINS
     & t_lwtr, t_lice, qsat_lwtr, qsat_lice, s_lwtr, s_lice,                          &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
-    & ice_fract_lake,                                                                &
+    & fract_lake, ice_fract_lake,                                                    &
     & alb_vis_dir_wtr, alb_vis_dif_wtr, alb_nir_dir_wtr, alb_nir_dif_wtr,            &
     & albedo_lwtr, albedo_lice)
 
@@ -506,7 +506,7 @@ CONTAINS
       & t_lwtr(:), t_lice(:), qsat_lwtr(:), qsat_lice(:), s_lwtr(:), s_lice(:),      &
       & evapo_wtr(:), latent_hflx_wtr(:), sensible_hflx_wtr(:),                      &
       & evapo_ice(:), latent_hflx_ice(:), sensible_hflx_ice(:),                      &
-      & ice_fract_lake(:),                                                           &
+      & fract_lake(:), ice_fract_lake(:),                                            &
       & alb_vis_dir_wtr(:), alb_vis_dif_wtr(:), alb_nir_dir_wtr(:),                  &
       & alb_nir_dif_wtr(:), albedo_lwtr(:), albedo_lice(:),                          &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
@@ -606,6 +606,14 @@ CONTAINS
 
       !$acc data pcreate(fract_ptr) present(tile%lcts)
       fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)    ! Lake fraction
+      IF (PRESENT(fract_lake)) THEN
+        !$acc data present(fract_lake)
+        !$acc parallel loop
+        DO i=1,nc
+          fract_lake(i) = fract_ptr(i)
+        END DO
+        !$acc end data
+      END IF
 
       !$acc data present(fract_ptr)
       !$acc parallel loop

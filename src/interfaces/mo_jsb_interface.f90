@@ -102,7 +102,7 @@ CONTAINS
     & t_lice, qsat_lice, s_lice,                                        &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                    & !< out
     & albedo_lice,                                                      & !< out
-    & ice_fract_lake,                                                   & !< out
+    & fract_lake, ice_fract_lake,                                       & !< out
     ! For standalone jsbach
     & evapopot                                                          & !< out; optional
     & )
@@ -196,6 +196,7 @@ CONTAINS
       & latent_hflx_ice   (:), &
       & sensible_hflx_ice (:), &
       & albedo_lice       (:), &
+      & fract_lake        (:), &
       & ice_fract_lake    (:)
     ! For standalone jsbach:
     REAL(wp), INTENT(out), OPTIONAL :: evapopot(:)
@@ -327,6 +328,7 @@ CONTAINS
       & evapo_ice          = evapo_ice,          &
       & latent_hflx_ice    = latent_hflx_ice,    &
       & sensible_hflx_ice  = sensible_hflx_ice,  &
+      & fract_lake         = fract_lake,         &
       & ice_fract_lake     = ice_fract_lake,     &
       & albedo_lwtr        = albedo_lwtr,        &
       & albedo_lice        = albedo_lice         &
@@ -421,7 +423,7 @@ CONTAINS
     USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
-    USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
+    USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow, lake_lateral_flow
 #endif
 
     dsl4jsb_Use_processes SEB_
@@ -468,6 +470,7 @@ CONTAINS
 #ifndef __NO_JSBACH_HD__
     CALL model%Get_top_tile(tile)
     CALL hd_lateral_flow(tile, model%options(no_omp_thread))
+    CALL lake_lateral_flow(tile, model%options(no_omp_thread))
     CALL hd_check_water_budget(tile, model%options(no_omp_thread))
 
     CALL interface_hd_ocean(tile, model%options(no_omp_thread))

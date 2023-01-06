@@ -36,6 +36,8 @@ MODULE mo_jsb_config_class
     CHARACTER(len=20)              :: model_scheme_char   !< model_scheme from namelist (used in mo_jsb_lctlib_class)
     INTEGER                        :: model_scheme        !< model_scheme as integer
     LOGICAL                        :: use_lakes
+    LOGICAL                        :: use_dynlakes
+    LOGICAL                        :: use_sizelakes
     LOGICAL                        :: use_glacier
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
@@ -99,6 +101,8 @@ CONTAINS
 
     CHARACTER(len=20)             :: model_scheme     !< model_scheme: jsbach / jsbach_quincy / quincy
     LOGICAL                       :: use_lakes
+    LOGICAL                       :: use_dynlakes
+    LOGICAL                       :: use_sizelakes
     LOGICAL                       :: use_glacier
     CHARACTER(len=10)             :: quincy_model
     LOGICAL                       :: l_compat401
@@ -114,6 +118,8 @@ CONTAINS
     NAMELIST /jsb_model_nml/  &
       model_scheme, &
       use_lakes, &
+      use_dynlakes, &
+      use_sizelakes, &
       use_glacier, &
       quincy_model, &
       l_compat401, &
@@ -145,6 +151,8 @@ CONTAINS
     ! Set defaults
     model_scheme               = "jsbach"
     use_lakes                  = .TRUE.
+    use_dynlakes               = .FALSE.
+    use_sizelakes              = .TRUE.
     use_glacier                = .TRUE.
     quincy_model               = 'land'
     l_compat401                = .FALSE.
@@ -190,6 +198,8 @@ CONTAINS
     END SELECT
     ! set other namelist options
     model_config%use_lakes                  = use_lakes
+    model_config%use_dynlakes               = use_dynlakes
+    model_config%use_sizelakes              = use_sizelakes
     model_config%use_glacier                = use_glacier
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%l_compat401                = l_compat401

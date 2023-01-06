@@ -140,6 +140,7 @@ CONTAINS
       ALLOCATE(t_pheno_config::return_ptr%config)
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
+      return_ptr%l_changes_fractions = .TRUE.
       CALL Register_hd_tasks(return_ptr, model_id)
       ALLOCATE(t_hd_config::return_ptr%config)
 #endif

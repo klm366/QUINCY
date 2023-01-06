@@ -23,8 +23,8 @@ MODULE mo_hd_init
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
-  USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-  USE mo_jsb_grid,            ONLY: Get_grid
+  USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
   USE mo_decomposition_tools, ONLY: get_local_index
   USE mo_impl_constants,      ONLY: SEA_BOUNDARY
 
@@ -49,6 +49,8 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER       :: model
     TYPE(t_jsb_grid),  POINTER       :: grid
+    TYPE(t_jsb_vgrid),  POINTER      :: dl_l
+    TYPE(t_jsb_vgrid),  POINTER      :: dg_n
 
     dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
@@ -62,13 +64,17 @@ CONTAINS
     TYPE(t_input_file)  :: input_file
 
     INTEGER, ALLOCATABLE :: cells_up(:,:,:)
-    INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx
+    INTEGER :: n, blk, blks, blke, jc, jcs, jce, idx, nlev, nedge
     INTEGER :: nblks, nproma
 
     CHARACTER(len=*),  PARAMETER     :: routine = modname//':hd_init_bc'
 
     model => get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
+    dl_l => Get_vgrid('dynamic_lake_level')
+    dg_n => Get_vgrid('edge_neighbors')
+    nlev  = dl_l%n_levels
+    nedge = dg_n%n_levels
 
     ! Get hd config
     dsl4jsb_Get_config(HD_)
@@ -138,6 +144,28 @@ CONTAINS
         & start_extdim=1, end_extdim=nneigh_max,    &
         & extdim_name='nneigh')
 
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='ELEV_MIN',                     &
+        & fill_array = dsl4jsb_var_ptr(HD_,height_oro_min))
+
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='OUTLETS',                  &
+        & fill_array = dsl4jsb_var_ptr(HD_,outlets))
+
+      ! maximum grid cell lake height in meter
+      return_pointer => input_file%Read_2d(         &
+        & variable_name='VOLUME_MAX',                  &
+        & fill_array = dsl4jsb_var_ptr(HD_,volume_lake_max))
+
+      IF (model%config%use_dynlakes) THEN
+        ! maximum grid cell lake height in meter
+        return_pointer => input_file%Read_2d(         &
+          & variable_name='BASIN_MASK',                     &
+          & fill_array = dsl4jsb_var_ptr(HD_,basin_mask))
+      ENDIF
+
       IF (dsl4jsb_config(HD_)%use_bifurcated_rivers) THEN
         ! Number of channel river splits into 
         return_pointer => input_file%Read_2d(         &
@@ -190,6 +218,39 @@ CONTAINS
       END DO
 
       DEALLOCATE(cells_up)
+
+      DO n = 1,nlev
+
+        return_pointer3d => input_file%Read_2d_extdim(  &
+          & variable_name='VOLUMES',                   &
+          & start_extdim=n, end_extdim=n,    &
+          & extdim_name='lev')
+        dsl4jsb_var_ptr(HD_,volumes_lake)(:,n,:) = return_pointer3d(:,:,1)
+
+        return_pointer3d => input_file%Read_2d_extdim(  &
+          & variable_name='AREAS',                   &
+          & start_extdim=n, end_extdim=n,    &
+          & extdim_name='lev')
+        dsl4jsb_var_ptr(HD_,areas_lake)(:,n,:) = return_pointer3d(:,:,1)
+
+        return_pointer3d => input_file%Read_2d_extdim(  &
+          & variable_name='HEIGHTS',                   &
+          & start_extdim=n, end_extdim=n,    &
+          & extdim_name='lev')
+        dsl4jsb_var_ptr(HD_,heights_lake)(:,n,:) = return_pointer3d(:,:,1)
+
+      END DO
+
+
+      DO n = 1,nedge
+
+        return_pointer3d => input_file%Read_2d_extdim(  &
+          & variable_name='OUTFL_MIN',                   &
+          & start_extdim=n, end_extdim=n,    &
+          & extdim_name='nv')
+        dsl4jsb_var_ptr(HD_,outflow_min)(:,n,:) = return_pointer3d(:,:,1)
+
+      END DO
 
       CALL input_file%Close()
 

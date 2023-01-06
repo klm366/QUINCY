@@ -24,13 +24,14 @@ MODULE mo_seb_lake
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_control,        ONLY: debug_on
 
-  dsl4jsb_Use_processes SEB_, RAD_, HYDRO_, A2L_
+  dsl4jsb_Use_processes SEB_, RAD_, HYDRO_, A2L_, HD_
   dsl4jsb_Use_config(SEB_)
 
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(HD_)
 
   IMPLICIT NONE
   PRIVATE
@@ -53,6 +54,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(HD_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
@@ -77,6 +79,7 @@ CONTAINS
       & hflx_melt_snow,       &
       & fract_lice,           &
       & depth_lice,           &
+      & height_lake,          &
       & fract_snow_lice,      &
       & weq_snow_lice,        &
       & weq_snow,             &
@@ -85,6 +88,7 @@ CONTAINS
 
     ! Local variables
     REAL(wp) ::                     &
+      & ml_depth(options%nc),       & !< Depth of lake mixed layer
       & hcap_wtr(options%nc),       &
       & zero(options%nc),           &
       & lhflx_tmp(options%nc),      &
@@ -101,7 +105,6 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime
     REAL(wp) ::         &
-      & ml_depth,       & !< Depth of lake mixed layer
       & min_ice_depth,  & !< Minimum ice thickness to start ice formation
       & min_fract_lice, &
       & min_hcap_wtr
@@ -124,7 +127,6 @@ CONTAINS
 
     dsl4jsb_Get_config(SEB_)
 
-    ml_depth      = dsl4jsb_Config(SEB_)%lake_mixed_layer_depth
     min_ice_depth = dsl4jsb_Config(SEB_)%lake_min_ice_depth
     config_l_ice_on_lakes = dsl4jsb_Config(SEB_)%l_ice_on_lakes
 
@@ -134,6 +136,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(HD_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, t_unfilt)       ! out
@@ -148,6 +151,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr) ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! OUT
+    dsl4jsb_Get_var2D_onChunk(HD_, height_lake)        ! IN
 
     IF (config_l_ice_on_lakes) THEN
       dsl4jsb_Get_var2D_onChunk(A2L_, snow)              ! in
@@ -174,6 +178,12 @@ CONTAINS
       ALLOCATE(hflx_form_ice(nc))
       !$claw acc enter data create(hflx_form_ice)
     END IF
+
+    WHERE (height_lake(:) > EPSILON(1._wp))
+       ml_depth(:) = MAX(1._wp, height_lake(:))
+    ELSE WHERE
+       ml_depth(:) = dsl4jsb_Config(SEB_)%lake_mixed_layer_depth
+    END WHERE 
 
     !$claw acc data create(hcap_wtr,zero,l_ice, & 
     !$claw acc l_ice_formation,l_ice_melting,lhflx_tmp,hflx_tmp)
@@ -209,7 +219,7 @@ CONTAINS
       & l_ice_melting(:),                               & !< inout; Indicator for ice melting = .FALSE.
       & l_ice(:),                                       & !< in;    Indicator for ice cover
       & dtime,                                          & !< in;    Time step
-      & ml_depth,                                       & !< in;    Mixed-layer depth
+      & ml_depth(:),                                    & !< in;    Mixed-layer depth
       & min_ice_depth)                                    !< in;    Minimum ice thickness
 
     ! TODO How to put this on GPU? The following block is wrong!
@@ -261,7 +271,7 @@ CONTAINS
         & l_ice_melting(:),                               & !< in;    Indicator for ice melting = .TRUE.
         & l_ice(:),                                       & !< in;    Indicator for ice cover
         & dtime,                                          & !< in;    Time step
-        & ml_depth,                                       & !< in;    Mixed-layer depth
+        & ml_depth(:),                                    & !< in;    Mixed-layer depth
         & min_ice_depth)                                    !< in;    Minimum ice thickness
     
       ! Calculate new ice temperature and heat fluxes from melting of snow and ice

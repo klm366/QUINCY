@@ -48,7 +48,8 @@ CONTAINS
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
-    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
+    USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC
+    USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
 
     CLASS(t_hd_config),INTENT(inout) :: config
 
@@ -74,9 +75,11 @@ CONTAINS
       read_initial_reservoirs,     &
       use_bifurcated_rivers
 
-    INTEGER :: nml_handler, nml_unit, istat
+    INTEGER :: nml_handler, nml_unit, istat, nlev, nedge
 
-    TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r  ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: hd_o, hd_b, hd_r, dl_l, dg_n  ! Vertical grids
+    TYPE(t_input_file)         :: input_file
+    REAL(wp),          POINTER :: ptr_1D(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_hd_config'
 
@@ -114,6 +117,13 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
+    input_file = jsb_netcdf_open_input(bc_filename)
+
+    ptr_1D => input_file%Read_1d(variable_name='lev')    ! dynamic lake level
+    nlev = SIZE(ptr_1D)
+
+    nedge = SIZE((/1._wp,2._wp,3._wp/))
+
     hd_o  => new_vgrid('hd_nres_overlflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
     CALL Register_vgrid(hd_o)
 
@@ -122,6 +132,12 @@ CONTAINS
 
     hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._wp,2._wp,3._wp,4._wp,5._wp/), units='')
     CALL Register_vgrid(hd_r)
+
+    dl_l  => new_vgrid('dynamic_lake_level', ZAXIS_GENERIC, nlev, levels=ptr_1D(:), units='')
+    CALL Register_vgrid(dl_l)
+
+    dg_n  => new_vgrid('edge_neighbors', ZAXIS_GENERIC, nedge, levels=(/1._wp,2._wp,3._wp/), units='')
+    CALL Register_vgrid(dg_n)
 
   END SUBROUTINE Init_hd_config
 
