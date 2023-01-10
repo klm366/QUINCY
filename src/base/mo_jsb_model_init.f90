@@ -214,8 +214,8 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER          :: model
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
-    INTEGER                             :: ilct, jlct, i, no_children
-    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:)
+    INTEGER                             :: ilct, jlct, i, no_children, lct_start
+    REAL(wp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: l_fixed_fractions
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
@@ -632,7 +632,7 @@ CONTAINS
     !>
     !>     3.1 set initial tile fractions for aggregator(s)
     !>
-    !>     3.2 set LCT fractions 
+    !>     3.2 set LCT fractions of the specific tile
     !>
     ! It is important to only do this after all tile fractions have been set above
     !
@@ -643,16 +643,20 @@ CONTAINS
       & CALL finish(TRIM(routine), 'Top tile not set')
 
     ALLOCATE(fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
+    ALLOCATE(tile_lct_fract_tmp(SIZE(tile%lcts(1)%fract,1), SIZE(tile%lcts(1)%fract,2)))
 
+    ! Loop over the tiles, starting from the top tile (i.e. box)
     DO WHILE (ASSOCIATED(tile))
 
+      ! First only handle the leaves: skip the tile in case it has children.
       IF (.NOT. tile%visited(no_omp_thread) .AND. tile%Has_children()) THEN
         CALL model%Goto_next_tile(tile)
         CYCLE
       END IF
 
       ! Set initial tile fractions for 'weighted_by_fract' aggregator
-      IF (tile%Has_children()) THEN  ! tile has children and we're on the way up
+      IF (tile%Has_children()) THEN
+        ! Tile has children, the tile thus had been visited before and we're on the way up
         weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
         SELECT TYPE (weighted_by_fract)
         TYPE IS (t_jsb_aggregator_weighted_by_fract)
@@ -660,37 +664,58 @@ CONTAINS
         END SELECT
       END IF
 
-      ! tile is a leaf or it has children and we're on the way up
-      DO ilct=1,SIZE(tile%lcts)
-        IF (tile%Has_children()) THEN
-          tile%lcts(ilct)%fract(:,:) = 0._wp
-          no_children = tile%Get_no_of_children()
-          child => tile%Get_first_child_tile()
-          DO i=1,no_children
-            IF (Contains_lct(child%lcts, tile%lcts(ilct)%id)) THEN
-              DO jlct=1,SIZE(child%lcts)
-                IF (child%lcts(jlct)%id == tile%lcts(ilct)%id) THEN
-                  CALL child%Get_fraction(fract=fract_tmp(:,:))
-                  IF (jlct > 1) THEN
-                    fract_tmp(:,:) = fract_tmp(:,:) * child%lcts(jlct)%fract(:,:)
-                  END IF
-                  tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) + fract_tmp(:,:)
-                  EXIT
+      ! Set (relative) land cover type fractions of the current tile
+
+      ! The rel. fraction of the primary LCT is 1: The tile is fully covered by this LCT.
+      ! Todo: Are these arrays (i.e. fract_glac_glac, fract_veg_veg, ...) of any interest, or
+      ! should we remove the definition here and also remove the corresponding Add_var calls?
+      tile%lcts(1)%fract(:,:) = 1._wp
+
+      ! We start with second LCT, as the tile's primary LCT fraction has just been set.
+      lct_start=2
+      ! There is however an exception: The primary LCT of the box tile is the LCT of the first child.
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) lct_start=1
+      DO ilct=lct_start,SIZE(tile%lcts)
+
+        ! Leaf tiles should have only the primary LCT and should not enter this loop.
+        IF (.NOT. tile%Has_children()) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
+
+        ! Tile has children. The tile thus had been visited before (s.above) and we're on the way up.
+        ! Loop over the children and add their contributions to the specific LCT fraction.
+        tile_lct_fract_tmp(:,:) = 0._wp
+        no_children = tile%Get_no_of_children()
+        child => tile%Get_first_child_tile()
+        DO i=1,no_children
+          IF (Contains_lct(child%lcts, tile%lcts(ilct)%id)) THEN
+            ! The child contains the specific land cover type
+            DO jlct=1,SIZE(child%lcts)
+              IF (child%lcts(jlct)%id == tile%lcts(ilct)%id) THEN
+                ! Get the (absolute) child tile fraction
+                CALL child%Get_fraction(fract=fract_tmp(:,:))
+                ! In case the child has only one LTC, LCT fraction and tile fraction are
+                ! identical and we are done. If it has several LCTs, the fraction of the
+                ! current LCT still needs to be calculated:
+                IF (jlct > 1) THEN
+                  fract_tmp(:,:) = fract_tmp(:,:) * child%lcts(jlct)%fract(:,:)
                 END IF
-              END DO
-              CALL tile%Get_fraction(fract=fract_tmp(:,:))
-              WHERE (fract_tmp(:,:) > 0._wp)
-                tile%lcts(ilct)%fract(:,:) = tile%lcts(ilct)%fract(:,:) / fract_tmp(:,:)
-              ELSE WHERE
-                tile%lcts(ilct)%fract(:,:) = 0._wp
-              END WHERE
-            END IF
-            child => child%Get_next_sibling_tile()
-          END DO
-        ELSE
-          IF (ilct > 1) CALL finish(TRIM(routine), 'Leave tiles should only have one LCT')
-          tile%lcts(1)%fract(:,:) = 1._wp        ! Leaves have only one LCT
-        END IF
+                ! Sum up the children's contributions
+                tile_lct_fract_tmp(:,:) = tile_lct_fract_tmp(:,:) + fract_tmp(:,:)
+                EXIT
+              END IF
+            END DO
+            ! Get the (absolute) fraction of the current tile
+            CALL tile%Get_fraction(fract=fract_tmp(:,:))
+            ! Calculate the (relative) LCT fraction of the tile
+            WHERE (tile_lct_fract_tmp(:,:) == 0._wp)
+              tile%lcts(ilct)%fract(:,:) = 0._wp
+            ELSE WHERE (fract_tmp(:,:) > 0._wp)
+              tile%lcts(ilct)%fract(:,:) = tile_lct_fract_tmp(:,:) / fract_tmp(:,:)
+            ELSE WHERE
+              tile%lcts(ilct)%fract(:,:) = 1._wp
+            END WHERE
+          END IF
+          child => child%Get_next_sibling_tile()
+        END DO
         !$acc update device(tile%lcts(ilct)%fract)
       END DO
 
