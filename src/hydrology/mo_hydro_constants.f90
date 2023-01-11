@@ -22,12 +22,15 @@ MODULE mo_hydro_constants
 
   INTEGER, PARAMETER ::                    &
     ! Identifiers used for the soil hydrology model
-    & BooksCorey_      = 1,                &
+    & BrooksCorey_      = 1,               &
     & ClappHornberger_ = 2,                &
     & VanGenuchten_    = 3,                &
     ! Identifiers used for the interpolation scheme
     & Upstream_        = 1,                &
-    & Arithmetic_      = 2
+    & Arithmetic_      = 2,                &
+    ! Identifiers used for the runoff scheme
+    & Arno_            = 1,                &
+    & QArctic_         = 2
 
   REAL(wp), PARAMETER ::                   &
     ! Parameters used for snow cover fraction

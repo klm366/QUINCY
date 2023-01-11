@@ -1058,6 +1058,7 @@ CONTAINS
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
+      & dsl4jsb_Config(HYDRO_)%runoff_scheme,                   &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &

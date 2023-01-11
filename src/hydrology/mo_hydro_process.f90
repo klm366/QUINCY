@@ -421,7 +421,7 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, l_fract, lat, lon, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                 &
-    & l_infil_subzero, soilhydmodel, interpol_mean,                                      &
+    & l_infil_subzero, runoff_scheme, soilhydmodel, interpol_mean,                       &
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,    &
@@ -435,11 +435,12 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
+    USE mo_hydro_constants,        ONLY: Arno_, QArctic_
 
     INTEGER,  INTENT(in) :: &
       & nc, nsoil, nlat
     INTEGER, INTENT(in) :: &
-      & soilhydmodel, interpol_mean
+      & runoff_scheme, soilhydmodel, interpol_mean
     REAL(wp), INTENT(in) :: &
       & dtime, w_soil_wilt_fract
     LOGICAL, INTENT(in) :: ltpe_closed
@@ -473,13 +474,18 @@ CONTAINS
       & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
       & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
 
+    REAL(wp) ::                     &
+      & weq_wsat_sl(nc,nsoil),      & !< soil water (liquid + ice) content at saturation [m]
+      & weq_field_cap_sl(nc,nsoil), & !< soil water (liquid + ice) content at field capacity [m]
+      & weq_p_wilt_sl(nc,nsoil)       !< soil water (liquid + ice) content at wilting point [m] 
+
     REAL(wp) ::                 &
       & drain_lat_sl(nc,nsoil)
 
     REAL(wp) ::              &
       & hlp_2d(nc,nsoil)       ! helper array needed with openacc
 
-    INTEGER :: jl, i
+    INTEGER :: i
 
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
 
@@ -490,24 +496,19 @@ CONTAINS
     !$claw acc loop gang
     !
     !> Calculation of soil saturation, field capacity and wilting point
-    !
-    DO i = 1, nc
-      !$claw acc loop seq
-      DO jl = 1, nsoil
-        ! Note: here we are calculating soil saturation (this does not correspond to weq_rootzone_max, which was
-        !    calculated from field capacity)
-        wtr_wsat_sl     (i,jl) = MAX(vol_porosity_sl (i,jl) * soil_depth_sl(i,jl) - ice_soil_sl(i,jl), 0._wp)  ! -> diffusion
-        wtr_field_cap_sl(i,jl) = MAX(vol_field_cap_sl(i,jl) * soil_depth_sl(i,jl) - ice_soil_sl(i,jl), 0._wp)  ! -> percolation
-        ! @todo: to be discussed: Does it make sense, to reduce water content at wilting point relative to the ice fraction?
-        IF (vol_porosity_sl(i,jl) > 0._wp) THEN
-          wtr_p_wilt_sl(i,jl) = wtr_wsat_sl(i,jl) * vol_p_wilt_sl(i,jl) / vol_porosity_sl(i,jl)
-        ELSE
-          wtr_p_wilt_sl(i,jl) = 0._wp
-        END IF
-      END DO
-    END DO
-    !$claw acc end parallel
-    !$claw acc end data
+
+    weq_wsat_sl     (:,:) = MAX(vol_porosity_sl (:,:) * soil_depth_sl(:,:), 0._wp)
+    weq_field_cap_sl(:,:) = MAX(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), 0._wp)
+    weq_p_wilt_sl   (:,:) = MAX(vol_p_wilt_sl(:,:)    * soil_depth_sl(:,:), 0._wp)
+
+    wtr_wsat_sl     (:,:) = MAX(vol_porosity_sl (:,:) * soil_depth_sl(:,:) - ice_soil_sl(:,:), 0._wp)
+    wtr_field_cap_sl(:,:) = MAX(vol_field_cap_sl(:,:) * soil_depth_sl(:,:) - ice_soil_sl(:,:), 0._wp)
+    ! @todo why is the wilting point normalized to porosity?
+    WHERE (vol_porosity_sl(:,:) > 0._wp)
+      wtr_p_wilt_sl(:,:) = wtr_wsat_sl(:,:) * vol_p_wilt_sl(:,:) / vol_porosity_sl(:,:)
+    ELSEWHERE
+      wtr_p_wilt_sl(:,:) = 0._wp
+    ENDWHERE
 
     ! Note: weq_rootzone_max calculated here (based on field capacity) is different from wsat calculated
     !       below (based on saturation).
@@ -535,21 +536,30 @@ CONTAINS
     END DO
 
     !---------------------
-    !> 1. Infiltration
+    !> 1. Infiltration and Surface runoff
     !---------------------
-    !> Runoff is either set to zero for Terraplanet setup or is computed via the
-    !! ARNO Scheme (default)
+    !> Runoff is either set to zero for Terraplanet setup, is computed via the
+    !! ARNO Scheme (default) or uses a new infiltration scheme (Hydrotiles usecase only)
 
     IF (ltpe_closed) THEN
       ! Terra planet setup without runoff
       runoff(:) = 0._wp
       infilt(:) = water_to_soil(:)
 
-    ELSE
+    ELSE IF (runoff_scheme == Arno_) THEN
       CALL arno_scheme(nc, nlat, l_infil_subzero, t_soil_sl1,                     &
         &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),       &
         &              oro_stddev(:), weq_rootzone_max(:),                        &
         &              runoff(:), infilt(:))
+
+    ELSE IF (runoff_scheme == QArctic_) THEN
+      ! CALL infiltration_new(nc, nlat, dt_sat, dtime, max_slope, wtr_pond_max(:), i_infil,       &
+      !                     & soilhydmodel, oro_stddev(:), manning(:), soil_depth_sl(:,1),        &
+      !                     & pore_size_index_sl(:,1), bclapp_sl(:,1), weq_wsat_sl(:,1),          &
+      !                     & weq_field_cap_sl(:,1), weq_p_wilt_sl(:,1), hyd_cond_sat_sl(:,1),    &
+      !                     & wtr_soil_sl(:,1), ice_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1),     &
+      !                     & water_to_soil(:), wtr_pond(:),                                      &
+      !                     & runoff_horton(:))
 
     END IF
 
@@ -582,8 +592,8 @@ CONTAINS
 
     CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, soilhydmodel, interpol_mean,   &
       &     w_soil_wilt_fract, soil_depth_sl, wtr_field_cap_sl, wtr_wsat_sl,         &
-      &     hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,       &
-      &     bclapp_sl, matrix_pot_sl, pore_size_index_sl,                            &
+      &     weq_field_cap_sl, weq_wsat_sl, weq_p_wilt_sl,                            &
+      &     hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,           &
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
       &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
@@ -718,6 +728,204 @@ CONTAINS
 
   END SUBROUTINE arno_scheme
 
+  ! !------------------------------------------------------------------------------------------------
+  ! !! @brief   Calculation of vertical soil water movement for multiple soil layers
+  ! !!
+  ! !! @par Revision History
+  ! !!   Routine based on the soil hydrology proposed by Christian Reick (MPI-M) and written
+  ! !!   by Philipp de Vrese (MPI-M)
+  ! !!   Revised by Tobias Stacke (MPI-M) in September 2022
+
+  ! SUBROUTINE infiltration_new(nc,nlat, dt_sat, dtime, max_slope, wtr_pond_max, i_infil, i_shm,     &
+  !                           & oro_stddev, manning, dsoil,                                &
+  !                           & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat,    &
+  !                           & ws_soil, ice_soil, wtr_pot_scool, water_to_soil, wtr_pond, &
+  !                           & runoff, infilt, pdv_1d_out)
+
+  !   USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
+
+  !   INTEGER,  INTENT(in) :: &
+  !     & nc, nlat
+
+  !   REAL(wp), INTENT(in) :: dtime, &
+  !     & dt_sat,          &         !< Time it takes hydraulic conductivity to reach max [sec]
+  !     & max_slope
+
+  !   INTEGER,  INTENT(in) :: &
+  !     & i_infil, i_shm
+
+  !   REAL(wp), INTENT(in) ::      &
+  !     & wtr_pond_max(:),             &
+  !     & oro_stddev(:),           &
+  !     & pore_size_index(:),      &
+  !     & bclapp(:),               &
+  !     & ws_max(:),               &
+  !     & fc(:),                   &
+  !     & pwp(:),                  &
+  !     & hyd_cond_sat(:),         &
+  !     & dsoil(:),                &
+  !     & manning(:),              & 
+  !     & ws_soil(:),              &
+  !     & wtr_pot_scool(:),        &
+  !     & ice_soil(:),             &
+  !     & water_to_soil(:)
+
+  !   REAL(wp), INTENT(inout) ::      &
+  !     & wtr_pond(:)
+
+  !   REAL(wp), INTENT(out) ::     &
+  !     & runoff(:), infilt(:),    &
+  !     pdv_1d_out(:)
+  !   ! Local variables
+  !   INTEGER :: jl, i, varindex
+
+  !   REAL(wp) ::                       &
+  !     ! variables for infiltration calculation
+  !     & sigma_0,                      & !< minimum value
+  !     & sigma_max,                    & !< resolution-dependent maximum
+  !     & steepness,                    & !< sub-grid scale steepness of the orography
+  !     & zbws
+
+  !   REAL(wp) ::              &
+  !     & zeros(nc),       &
+  !     & wtr_scool(nc),       &
+  !     & ws_incl_ice(nc),     &
+  !     & ice_impede(nc),      &   ! Inhibition of infiltration due to teh presence of ice
+  !     & k_start(nc),         &   ! hydrualic conductivity at the beginning ...
+  !     & k_end(nc),           &   ! ... and the end of the timestep (assuming all water to infiltrate)
+  !     & delta_k(nc),         &   ! ... additional infiltration capacity 
+  !     & water_excess(nc),    &   ! Water that doesn infiltrte immediatly but ponds
+  !     & pond_pot(nc),        &   ! Ponding depth reached during saturation time
+  !     & slope(nc),           &   ! Slope of the contributing areas ... for now use b
+  !     & v_max(nc),           &   ! Avg. velocity of water; vertical crossection 
+  !     & sro_max(nc),         &   ! velocity relative to m2 gridcell area
+  !     & fract_infilt(nc),    &   ! fraction of ponding water that can infiltrate due to inicreasing k
+  !     & infilt_pot(nc)           ! Additional infitration flux due to increasing k
+
+  !   !--------------------------------------------------------------------------------------------------------------------------------------
+
+  !   zeros(:) = 0._wp
+  !   wtr_scool(:) = MIN(wtr_pot_scool(:), ws_soil(:))
+  !   ws_incl_ice(:) = ws_soil(:) + ice_soil(:)
+  !   !>
+  !   !> 1. Infiltration
+  !   !>
+  !   !
+  !   ! f(w) = 1 - (1 - w/w_max)**b
+  !   !
+  !   ! b: shape parameter, defining the sub-gid scale steepness of the orographie:
+  !   !
+  !   ! b = (sigma_z - sigma_0) / (sigma_z + sigma_max)
+  !   !
+  !   ! sigma_z: standard deviation of topographic height
+  !   ! sigma_0: minimum value (100 m); below b = 0.01
+  !   ! sigma_max: resolution dependent maximum
+
+  !   sigma_0   = oro_var_min
+  !   sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
+
+  !   !$claw acc parallel
+  !   !$claw acc loop gang vector
+  !   DO i=1,nc
+  !     steepness = MAX(0._wp, oro_stddev(i)-sigma_0) / (oro_stddev(i)+sigma_max)
+
+  !     ! todo: parameters should be defined as parameters
+  !     zbws   = MAX(MIN(steepness,0.5_wp), 0.01_wp)
+  !     !>  1.1 Surface runoff and infiltration
+  !     !   -----------------------------------
+
+  !     varindex      = 1
+  !     call get_conductivies_diffusivities(i_shm,varindex,            &
+  !                   & dsoil(i), ws_soil(i), ice_soil(i), wtr_scool(i),   &
+  !                   & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
+  !                   & zeros(i), bclapp(i), pore_size_index(i),       &
+  !                   & ice_impede(i))
+
+
+  !     varindex      = 2
+  !     call get_conductivies_diffusivities(i_shm,varindex,            &
+  !                   & dsoil(i), ws_soil(i), ice_soil(i), wtr_scool(i),   &
+  !                   & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
+  !                   & zeros(i), bclapp(i), pore_size_index(i),       &
+  !                   & k_start(i))
+
+
+  !     IF (water_to_soil(i) <= 0._wp) THEN
+  !       k_end(i)      = k_start(i)
+  !     ELSE
+  !       IF (i_infil == 1) THEN
+  !         !!---Assuming the wetting front moves with the speed of ksat
+  !         k_end(i)        = ice_impede(i) * hyd_cond_sat(i)
+  !       ELSE IF (i_infil == 2) THEN
+  !         !!---Assuming that by the end of the timestep k = precip*
+  !         k_end(i)        = MIN(ice_impede(i) * hyd_cond_sat(i), water_to_soil(i)/dtime)
+  !       ELSE IF (i_infil == 3) THEN
+  !         !Assuming that pondig water is euqally distributed throughout the soil layer 
+  !         varindex      = 2
+  !         call get_conductivies_diffusivities(i_shm,varindex,            &
+  !                   & dsoil(i), (ws_soil(i)+ water_to_soil(i)), ice_soil(i), wtr_scool(i),   &
+  !                   & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
+  !                   & zeros(i), bclapp(i), pore_size_index(i),       &
+  !                   & k_end(i))
+  !       ELSE IF (i_infil == 4) THEN
+  !         !!---Assuming the wetting front moves with the speed of ksat
+  !         !!---and in frozen soils water can enter until pore space of top layer is saturated
+  !         k_end(i)        = MIN(hyd_cond_sat(i),                                  &
+  !                               MAX(ice_impede(i) * hyd_cond_sat(i),              &
+! !                                   (ws_max(i) - ws_incl_ice(i))/dtime))
+  !                                  (fc(i) - ws_incl_ice(i))/dtime))
+  !       END IF
+  !     END IF
+
+  !     delta_k(i) = k_end(i) - k_start(i)
+  !     infilt(i)  = MIN(water_to_soil(i), k_start(i)* dtime)
+  !     water_excess(i) = MAX(0._wp, water_to_soil(i) - infilt(i) - wtr_pond_max(i))
+! !      water_excess(i) = water_to_soil(i) - infilt(i)
+  !     pond_pot(i) = water_excess(i) * dt_sat / dtime
+
+
+  !     IF (dtime < dt_sat .AND. (i_infil == 1 .OR. i_infil == 2 .OR. i_infil == 4 )) THEN
+  !       k_end(i)   = k_start(i) +  delta_k(i) * dtime / dt_sat
+  !       delta_k(i) = k_end(i) - k_start(i)
+  !     END IF
+
+  !     slope(i) = MIN(ABS(zbws), max_slope)
+  !     !IF (hydrotype == LOWLAND_) slope(i) = 0.01_wp
+
+  !     pdv_1d_out(i) = 1.0_wp
+  !         
+  !     IF (water_excess(i) > 0._wp) THEN
+  !     !!v_ini          = RH**(2/3)*slope**(1/2)*1./manning_n ! RH roughly equal to ponding depth
+  !       v_max(i)       = pond_pot(i)**(2._wp/3._wp)*slope(i)**(1._wp/2._wp)*1._wp / manning(i)
+  !       sro_max(i)     = pond_pot(i) * v_max(i)  ! get from outflux through crossection (side) to flux per grid-box area
+
+  !       fract_infilt(i) = MAX(0._wp, MIN(1._wp, delta_k(i) / (delta_k(i) + sro_max(i))))
+  !       infilt_pot(i)   = water_excess(i) * fract_infilt(i)
+  !           
+  !       IF (water_excess(i) > (delta_k(i) + sro_max(i)) * dtime) THEN
+  !         infilt(i) = infilt(i) + delta_k(i) * dtime
+  !       ELSE
+  !         infilt(i) = infilt(i) + infilt_pot(i)
+  !       END IF
+
+  !     END IF
+
+  !     pdv_1d_out(i) = wtr_pond_max(i)
+
+  !     wtr_pond(i) = MIN(wtr_pond_max(i), water_to_soil(i) - infilt(i))
+  !     runoff(i)   = MAX(0._wp,    water_to_soil(i) - infilt(i)  - wtr_pond(i))
+
+
+  !     !!! Unbedingt noch dahingehend korrigieren, das unter gepondeten Bereichen ziemlich sicher mit ksat infiltriert
+  !     IF (infilt(i) < ice_impede(i) * hyd_cond_sat(i) * dtime .AND. wtr_pond(i) > 0._wp) THEN
+  !       infilt(i)   = MIN(ice_impede(i) * hyd_cond_sat(i) * dtime, infilt(i) + wtr_pond(i))
+  !       wtr_pond(i) = water_to_soil(i) - infilt(i) - runoff(i)
+  !     END IF
+
+  !   END DO
+
+  ! END SUBROUTINE infiltration_new
+
   !------------------------------------------------------------------------------------------------
   !! @brief   Calculation of vertical soil water movement for multiple soil layers
   !!
@@ -726,16 +934,16 @@ CONTAINS
   !!   by Philipp de Vrese (MPI-M)
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
-  SUBROUTINE soilhyd(nc, l_fract, lat, lon, nsoil, dtime,          &
-    & soilhydmodel, interpol_mean,                                 &
-    & w_soil_wilt_fract, dsoil,                                    &
-    & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,              &
-    & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,            &
-    & bclapp_sl, matrix_pot_sl, pore_size_index_sl,                &
-    & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
-    & transpiration_in_m, evapo_soil_in_m, root_depth_sl,          &
-    & infilt, infilt_over, drain_rock, drain_lat,                  &
-    & tpe_overflow, wtr_soilhyd_res,                               &
+  SUBROUTINE soilhyd(nc, l_fract, lat, lon, nsoil, dtime,           &
+    & soilhydmodel, interpol_mean,                                  &
+    & w_soil_wilt_fract, dsoil,                                     &
+    & wtr_field_cap_sl, wtr_wsat_sl, weq_field_cap_sl, weq_wsat_sl, &
+    & weq_p_wilt_sl, hyd_cond_sat_sl,                               &
+    & bclapp_sl, matrix_pot_sl, pore_size_index_sl,                 &
+    & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,              &
+    & transpiration_in_m, evapo_soil_in_m, root_depth_sl,           &
+    & infilt, infilt_over, drain_rock, drain_lat,                   &
+    & tpe_overflow, wtr_soilhyd_res,                                &
     & ltpe_closed, ltpe_open)
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
@@ -750,10 +958,10 @@ CONTAINS
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      ! field capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           ! saturation capacity of the soil layer (reduced by ice) [m]
+    REAL(wp), INTENT(IN)            :: weq_field_cap_sl(:,:)      ! field capacity of the soil layer (liquid + ice) [m]
+    REAL(wp), INTENT(IN)            :: weq_wsat_sl(:,:)           ! saturation capacity of the soil layer (liquid + ice) [m]
+    REAL(wp), INTENT(IN)            :: weq_p_wilt_sl(:,:)         ! wilting point of the soil layer (liquid + ice) [m]
     REAL(wp), INTENT(IN)            :: hyd_cond_sat_sl(:,:)       ! hydraulic conductivity of saturated soil [m/s]
-    REAL(wp), INTENT(IN)            :: vol_porosity_sl(:,:)       ! Soil porosity                      - ice not considered [m/m]
-    REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      ! Volumetric field capacity          - ice not considered [m/m]
-    REAL(wp), INTENT(IN)            :: vol_p_wilt_sl(:,:)         ! Volumetric permanent wilting point - ice not considered [m/m]
     REAL(wp), INTENT(IN)            :: bclapp_sl(:,:)             ! exponent B in Clapp and Hornberger
     REAL(wp), INTENT(IN)            :: matrix_pot_sl(:,:)         ! matrix potential [m]
     REAL(wp), INTENT(IN)            :: pore_size_index_sl(:,:)    ! soil pore size distribution index used in Van Genuchten
@@ -792,16 +1000,13 @@ CONTAINS
     REAL(wp) :: remoist(nc)                  ! for TPE
     REAL(wp) :: zmvg_sl(nc,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
     REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
-    REAL(wp) :: weq_wsat_sl(nc,nsoil)        ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
-    REAL(wp) :: weq_field_cap_sl(nc,nsoil)   ! field capacity of the soil layer (not reduced by ice) [m]
-    REAL(wp) :: weq_p_wilt_sl(nc,nsoil)      ! wilting point - not reduced relative to soil ice fraction [m]
     REAL(wp) :: wtr_transp_residual(nc)      ! numerical error caused by the vertical transport scheme [m]
     REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
     REAL(wp) :: wtr_exinfcap(nc)             ! surface runoff due to exceeding the soil infiltration capacity [m]
     REAL(wp) :: wtr_exwsat(nc)               ! surface runoff due to exceeding the soil moisture saturation [m]
 
     !$claw acc data &
-    !$claw acc present(dsoil, wtr_field_cap_sl, hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, matrix_pot_sl, &
+    !$claw acc present(dsoil, wtr_field_cap_sl, hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, &
     !$claw acc         pore_size_index_sl, wtr_soil_sl, tpe_overflow, ice_soil_sl)          &
     !$claw acc pcreate(diffus_sl, ws_tmp, drain_sl, soil_above, wtr_rsdl_sl,      &
     !$claw acc         remoist, zmvg_sl, wtr_transp_residual, wtr_transp_corr, wtr_exinfcap, wtr_exwsat)
@@ -816,12 +1021,6 @@ CONTAINS
         CALL finish ('soilhyd', message_text)
       END IF
     END DO
-
-    !> Calculation of soil saturation, field capacity and wilting point taking into account soil ice
-    !
-    weq_wsat_sl     (:,:) = vol_porosity_sl (:,:) * dsoil(:,:)
-    weq_field_cap_sl(:,:) = vol_field_cap_sl(:,:) * dsoil(:,:)
-    weq_p_wilt_sl   (:,:) = vol_p_wilt_sl(:,:)    * dsoil(:,:)
 
     !> Initialize surface runoff components
     wtr_exinfcap(:) = infilt(:)
@@ -1713,7 +1912,7 @@ CONTAINS
             & ice_impedance, K, D, K_inter, D_inter &
             )
 
-    USE mo_hydro_constants,    ONLY: BooksCorey_, ClappHornberger_, VanGenuchten_, &
+    USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
       &                              Upstream_, Arithmetic_
 
     INTEGER,  INTENT(in)            :: soilhydmodel       !> Approaches to determine conductivites & diffusivities (KD)
@@ -1795,7 +1994,7 @@ CONTAINS
     IF (soilhydmodel == ClappHornberger_) THEN
       ws_free_vol(:,:)=MAX(0._wp,ws_vol(:,:)-scool_vol(:,:))
       ws_range_vol(:,:)  = wsat_vol(:,:)
-    ELSE  ! Books & Corey; Van Genuchten
+    ELSE  ! Brooks & Corey; Van Genuchten
       ws_free_vol(:,:)=MAX(0._wp,ws_vol(:,:)-MAX(scool_vol(:,:),pwp_vol(:,:)))
       ws_range_vol(:,:)  = fc_vol(:,:) - pwp_vol(:,:)
     END IF
@@ -1806,14 +2005,14 @@ CONTAINS
     ! This is especially important when infiltration is added to the first layer
     IF (soilhydmodel == VanGenuchten_) THEN
       ws_rel_vol(:,:) = MIN(0.9999_wp, ws_rel_vol(:,:)) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
-    ELSE  ! Books & Corey; Van Genuchten
+    ELSE  ! Brooks & Corey; Van Genuchten
       ws_rel_vol(:,:) = MIN(1._wp, MAX(0._wp, ws_rel_vol(:,:)))
     END IF
 
     ! Compute hydrological conductivity (K) for every layer
     IF (PRESENT(K)) THEN
 
-      IF (soilhydmodel == BooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+      IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
         K(:,:) =  k_sat(:,:)                                                   &
                & * ws_rel_vol(:,:)**(2._wp * bclapp(:,:) + 3._wp)
       ELSE IF (soilhydmodel == VanGenuchten_) THEN
@@ -1836,7 +2035,7 @@ CONTAINS
     ! Compute hydrological diffusivity (D) for every layer
     IF (PRESENT(D)) THEN
 
-      IF (soilhydmodel == BooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+      IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
         WHERE(ws_range_vol(:,:) > 0._wp)
           D(:,:) = -k_sat(:,:) * mpot_sat(:,:) * bclapp(:,:) / ws_range_vol(:,:) &
                  & * ws_rel_vol(:,:)**(1._wp * bclapp(:,:) + 2._wp)

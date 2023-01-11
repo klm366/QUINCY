@@ -48,6 +48,7 @@ MODULE mo_hydro_config_class
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero        !< Allow infiltration at soil temperatures below 0degC
     INTEGER               :: &
+      & runoff_scheme,       & !< Choice of runoff and infiltration scheme: 'ARNO' (default), 'QArctic' (only with hydrotiles)
       & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
       & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean 
 
@@ -66,8 +67,8 @@ CONTAINS
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_hydro_constants,    ONLY: BooksCorey_, ClappHornberger_, VanGenuchten_, &
-      &                              Upstream_, Arithmetic_
+    USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
+      &                              Upstream_, Arithmetic_, Arno_, QArctic_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
 
@@ -75,7 +76,7 @@ CONTAINS
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
-    CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
+    CHARACTER(len=15)           :: scheme_stom_cond, runoff_scheme, soilhydmodel, interpol_mean
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
 
     NAMELIST /jsb_hydro_nml/        &
@@ -93,6 +94,7 @@ CONTAINS
       & l_socmap,                   &
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
+      & runoff_scheme,              &
       & soilhydmodel,               &
       & interpol_mean
 
@@ -123,6 +125,7 @@ CONTAINS
     l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
+    runoff_scheme     = "Arno"
     soilhydmodel      = "BrooksCorey"
     interpol_mean     = "upstream"
 
@@ -171,9 +174,20 @@ CONTAINS
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
+    SELECT CASE(TRIM(tolower(runoff_scheme)))
+    CASE("arno")
+      config%runoff_scheme = Arno_
+      CALL message(TRIM(routine), 'Soil hydrology uses ARNO scheme for infiltration and surface runoff compuation')
+    CASE("qarctic")
+      config%runoff_scheme = QArctic_
+      CALL message(TRIM(routine), 'Soil hydrology uses QArctic scheme for infiltration and surface runoff compuation')
+    CASE default
+      CALL finish(TRIM(routine), 'Runoff scheme '//TRIM(runoff_scheme)//' not implemented')
+    END SELECT
+
     SELECT CASE(TRIM(tolower(soilhydmodel)))
     CASE("brookscorey")
-      config%soilhydmodel = BooksCorey_
+      config%soilhydmodel = BrooksCorey_
       CALL message(TRIM(routine), 'Soil hydrology uses the Brooks & Corey model')
     CASE("clapphornberger")
       config%soilhydmodel = ClappHornberger_
