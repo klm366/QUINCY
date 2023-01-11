@@ -27,7 +27,7 @@ MODULE mo_top_init
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,             ONLY: missval
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
-  USE mo_util,               ONLY: int2string
+  USE mo_util,               ONLY: int2string, logical2string
 
   dsl4jsb_Use_processes TOP_, SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(TOP_)
@@ -39,7 +39,14 @@ MODULE mo_top_init
   PUBLIC :: topmodel_init !, init_soil_properties
 
   TYPE t_top_init_vars
-!    REAL(wp), POINTER ::     &
+    REAL(wp), POINTER ::                &
+      & cti_mean     (:,:)   => NULL(), &
+      & cti_mu       (:,:)   => NULL(), &
+      & cti_phi      (:,:)   => NULL(), &
+      & cti_chi      (:,:)   => NULL(), &
+      & cti_basin    (:,:)   => NULL(), &
+      & cti_openwater(:,:)   => NULL(), &
+      & inun_mon     (:,:,:) => NULL()
   END TYPE t_top_init_vars
 
   TYPE(t_top_init_vars) :: top_init_vars
@@ -57,7 +64,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':topmodel_init'
-    
+
     model => Get_model(tile%owner_model_id)
 
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
@@ -75,14 +82,19 @@ CONTAINS
 
   SUBROUTINE topmodel_finalize_init_vars
 
-!    DEALLOCATE(                     &
-!      & sse_init_vars%fao,          &
-!      & )
+    DEALLOCATE(                          &
+      & top_init_vars%cti_basin,         &
+      & top_init_vars%cti_openwater,     &
+      & top_init_vars%cti_mean,          &
+      & top_init_vars%cti_mu,            &
+      & top_init_vars%cti_phi,           &
+      & top_init_vars%cti_chi            &
+      & )
 
-!   IF (ASSOCIATED(sse_init_vars%ifs_tskin)) DEALLOCATE(sse_init_vars%ifs_tskin)
+    IF (ASSOCIATED(top_init_vars%inun_mon)) DEALLOCATE(top_init_vars%inun_mon)
 
   END SUBROUTINE topmodel_finalize_init_vars
-      
+
   SUBROUTINE topmodel_read_init_vars(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -105,31 +117,50 @@ CONTAINS
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
 
-!    ALLOCATE(                                          &
-!      & sse_init_vars%fao         (nproma, nblks    ), &
-!      & )
-
-!    sse_init_vars%fao         (:,:)   = missval
-
-    ! Get soil config
+    ! Get topmodel config
     dsl4jsb_Get_config(TOP_)
+
+    ALLOCATE(                                           &
+      & top_init_vars%cti_basin    (nproma, nblks    ), &
+      & top_init_vars%cti_openwater(nproma, nblks    ), &
+      & top_init_vars%cti_mean     (nproma, nblks    ), &
+      & top_init_vars%cti_mu       (nproma, nblks    ), &
+      & top_init_vars%cti_phi      (nproma, nblks    ), &
+      & top_init_vars%cti_chi      (nproma, nblks    )  &
+      & )
+    IF (dsl4jsb_Config(TOP_)%inun_prescribed) ALLOCATE(top_init_vars%inun_mon(nproma, nblks, 12))
+
+    top_init_vars%cti_mean      (:,:) = missval
+    top_init_vars%cti_mu        (:,:) = missval
+    top_init_vars%cti_phi       (:,:) = missval
+    top_init_vars%cti_chi       (:,:) = missval
+    top_init_vars%cti_basin     (:,:) = missval
+    top_init_vars%cti_openwater (:,:) = missval
+    IF (dsl4jsb_Config(TOP_)%inun_prescribed) top_init_vars%inun_mon(:,:,:) = missval
 
     IF (.NOT. tile%Is_process_active(TOP_)) RETURN
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Reading soil energy boundary conditions for tile '//TRIM(tile%name))
+    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_topmodel) &
+      CALL message(TRIM(routine), 'Reading topmodel boundary conditions for tile '//TRIM(tile%name))
 
-    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TOP_)%bc_filename), model%grid_id)
+    input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TOP_)%ic_filename), model%grid_id)
 
-    ! Thermal diffusivity of soil
-!    ptr_2D => input_file%Read_2d(                    &
-!      & variable_name='fao')
-!    ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+    ptr_2D => input_file%Read_2d(variable_name='cti_mean'     , fill_array=top_init_vars%cti_mean)
+    ptr_2D => input_file%Read_2d(variable_name='cti_mu'       , fill_array=top_init_vars%cti_mu)
+    ptr_2D => input_file%Read_2d(variable_name='cti_phi'      , fill_array=top_init_vars%cti_phi)
+    ptr_2D => input_file%Read_2d(variable_name='cti_chi'      , fill_array=top_init_vars%cti_chi)
+    ptr_2D => input_file%Read_2d(variable_name='cti_basin'    , fill_array=top_init_vars%cti_basin)
+    ptr_2D => input_file%Read_2d(variable_name='cti_openwater', fill_array=top_init_vars%cti_openwater)
 
     CALL input_file%Close()
 
-    input_file = jsb_netcdf_open_input(dsl4jsb_Config(TOP_)%ic_filename, model%grid_id)
+    IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
+      input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TOP_)%bc_filename), model%grid_id)
 
-    CALL input_file%Close()
+      ptr_3D => input_file%Read_2d_time(variable_name='inundation', fill_array=top_init_vars%inun_mon)
+
+      CALL input_file%Close()
+    ENDIF
 
   END SUBROUTINE topmodel_read_init_vars
 
@@ -153,37 +184,30 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(TOP_)) RETURN
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Setting top-model boundary conditions for tile '//TRIM(tile%name))
+    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_topmodel) &
+      CALL message(TRIM(routine), 'Setting top-model boundary conditions for tile '//TRIM(tile%name))
 
-    ! Get soil memory of the tile
-    dsl4jsb_Get_memory(TOP_)
+    IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
 
-    ! Volumetric heat capacity of dry soil [J/(m^3*K)]
-!    IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
-!      dsl4jsb_var_ptr(SSE_, vol_heat_cap) = sse_init_vars%vol_heat_cap
-!    ELSE
-!      DO iblk=1,SIZE(sse_init_vars%fao,2)
-!        dsl4jsb_var_ptr(SSE_,vol_heat_cap)(:,iblk) = fao_vol_hcap(NINT(sse_init_vars%fao(:,iblk)))
-!      END DO
-!    END IF
+      ! Get soil memory of the tile
+      dsl4jsb_Get_memory(TOP_)
 
-    !$acc data present(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity), &
-    !$acc dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap), &
-    !$acc update device(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity), &
-    !$acc dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap), &
-    !$acc end data
+      !
+      dsl4jsb_memory(TOP_)%inun_mon(:,:,:) = top_init_vars%inun_mon(:,:,:)
+
+      !$acc data present(dsl4jsb_var3D_onDomain(TOP_,inun_mon))
+      !$acc update device(dsl4jsb_var3D_onDomain(TOP_,inun_mon))
+      !$acc end data
+
+    ENDIF
 
   END SUBROUTINE topmodel_init_bc
 
   SUBROUTINE topmodel_init_ic(tile)
 
-!    USE mo_sse_process, ONLY: init_soil_temperature
-!    USE mo_util,        ONLY: ifs2soil
-
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_vgrid), POINTER :: soil_e
 
     dsl4jsb_Def_config(TOP_)
     dsl4jsb_Def_memory(TOP_)
@@ -202,36 +226,31 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(TOP_)) RETURN
 
-    IF (debug_on()) CALL message(TRIM(routine), 'Initializing top-model  memory for tile '//TRIM(tile%name))
+    IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_topmodel) &
+      CALL message(TRIM(routine), 'Initializing top-model memory for tile '//TRIM(tile%name))
 
-    ! Soil and surface temperatures
-    !
-!    IF (model%config%init_from_ifs) THEN
-!
-!      CALL ifs2soil(sse_init_vars%ifs_tsoil(:,:,:), ifs_soil_depth(:), dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,:), soil_e%ubounds(:))
-!
-!    ELSE
-!      DO iblk=1,SIZE(sse_init_vars%t_srf_mon, DIM=2)
-!        CALL init_soil_temperature(                   &
-!          & soil_e%levels(:),                         &
-!          & sse_init_vars%t_srf_mon(:,iblk,1:12),     &
-!          & dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,:,iblk))
-!      END DO
-!    END IF
+call message(routine,logical2string(associated(dsl4jsb_memory(TOP_)%cti_mean)))
 
-    !$acc data present(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
-    !$acc update device(dsl4jsb_var3D_onDomain(SSE_,t_soil_sl))
+      dsl4jsb_memory(TOP_)%cti_mean     (:,:) = top_init_vars%cti_mean(:,:)
+      dsl4jsb_memory(TOP_)%cti_mu       (:,:) = top_init_vars%cti_mu(:,:)
+      dsl4jsb_memory(TOP_)%cti_phi      (:,:) = top_init_vars%cti_phi(:,:)
+      dsl4jsb_memory(TOP_)%cti_chi      (:,:) = top_init_vars%cti_chi(:,:)
+      dsl4jsb_memory(TOP_)%cti_basin    (:,:) = top_init_vars%cti_basin(:,:)
+      dsl4jsb_memory(TOP_)%cti_openwater(:,:) = top_init_vars%cti_openwater(:,:)
+
+    !$acc data present(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_openwater), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_mu), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_phi), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_chi))
+    !$acc update device(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_openwater), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_mu), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_phi), &
+    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_chi))
     !$acc end data
-
-!    IF (TRIM(tile%name) == 'land') THEN
-!      dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
-
-      !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
-      !$acc              dsl4jsb_var2D_onDomain(SEB_,t))
-      !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
-      !$acc               dsl4jsb_var2D_onDomain(SEB_,t))
-      !$acc end data
-!    END IF
 
   END SUBROUTINE topmodel_init_ic
 

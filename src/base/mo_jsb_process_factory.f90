@@ -38,4 +38,3 @@ CONTAINS
     !$ACC ENTER DATA CREATE(return_ptr)
     !$ACC ENTER DATA CREATE(return_ptr%vars)
 
-  END FUNCTION Create_process_memory

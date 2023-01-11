@@ -387,7 +387,7 @@ CONTAINS
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
-      CALL model%Queue_task(TOP_,    "innundated_area") ! StW: No clue if this is a sensible place in the list
+      CALL model%Queue_task(TOP_,    "inundated_area") ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       IF (.NOT. model%config%use_tmx) THEN
         CALL model%Queue_task(TURB_,   "surface_roughness")
