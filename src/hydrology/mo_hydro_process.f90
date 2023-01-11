@@ -420,9 +420,9 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
-    & nc, l_fract, lat, lon, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                &
-    & l_infil_subzero, soilhydmodel, interpol_mean, w_soil_wilt_fract,                   &
-    & soil_depth_sl, root_depth_sl,                                                      &
+    & nc, l_fract, lat, lon, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                 &
+    & l_infil_subzero, soilhydmodel, interpol_mean,                                      &
+    & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,    &
     & water_to_soil, evapotrans_soil, transpiration,                                     &
@@ -433,8 +433,7 @@ CONTAINS
     & infilt, runoff, infilt_over, drainage, drain_rock, latdrain_sl, drain_lat          &
     & )
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o
-    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: &
@@ -466,20 +465,11 @@ CONTAINS
 
     ! Local variables
     REAL(wp) ::                       &
-      ! variables for infiltration calculation
-      & sigma_0,                      & !< minimum value
-      & sigma_max,                    & !< resolution-dependent maximum
-      & steepness,                    & !< sub-grid scale steepness of the orography
-      & zbws, zb1, zbm, zconw1, zvol, &
-      ! Other variables
       & evapo_soil_in_m(nc),          & !< evaporation from the soil (without transpiration) [m]
-      & transpiration_in_m(nc),       & !< transpiration within time step [m]
-      & ws_rel(nc)                      !< relative soil moisture (0: wilting point, 1: field capacity)
+      & transpiration_in_m(nc)          !< transpiration within time step [m]
 
     REAL(wp) ::              &
-      & ws_max(nc),          & ! water holding capacity of the soil [m]
-      & ws_min_drain(nc),    & ! minimum soil moisture for drainage
-      & ws_incl_ice(nc),     & ! soil moisture including ice [m]
+      & weq_rootzone_max(nc),& ! maximum water holding capacity of the rootzone (liquid water + ice) [m]
       & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
       & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
 
@@ -493,13 +483,13 @@ CONTAINS
 
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
 
-    !$claw acc data pcreate(evapo_soil_in_m,transpiration_in_m,infilt,ws_max,ws_min_drain,ws_incl_ice,ice_rootzone)
+    !$claw acc data pcreate(evapo_soil_in_m,transpiration_in_m,infilt,weq_rootzone_max,ws_min_drain,ws_incl_ice,ice_rootzone)
     !$claw acc data present(transpiration_in_m,transpiration,wtr_wsat_sl,wtr_vol_porosity_sl,soil_depth_sl,ice_soil_sl, &
     !$claw acc              wtr_field_cap_sl,vol_field_cap_sl,wtr_p_wilt_sl,vol_p_wilt_sl)
     !$claw acc parallel
     !$claw acc loop gang
     !
-    !> Calculation of soil saturation, field capacity and wilting point taking into account soil ice
+    !> Calculation of soil saturation, field capacity and wilting point
     !
     DO i = 1, nc
       !$claw acc loop seq
@@ -519,15 +509,14 @@ CONTAINS
     !$claw acc end parallel
     !$claw acc end data
 
-    ! Note: ws_max calculated here (based on field capacity) is different from wsat calculated
-    !       below (based on saturation). ws_max does not account for ice.
+    ! Note: weq_rootzone_max calculated here (based on field capacity) is different from wsat calculated
+    !       below (based on saturation).
     hlp_2d(:,:) = vol_field_cap_sl(:,:) * soil_depth_sl(:,:)
-    CALL get_amount_in_rootzone(hlp_2d(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ws_max(:))
-
+    CALL get_amount_in_rootzone(hlp_2d(:,:),      soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
     CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
-    !$claw acc present(ws_min_drain,ws_max,oro_stddev,runoff,infilt)    &
+    !$claw acc present(ws_min_drain,weq_rootzone_max,oro_stddev,runoff,infilt)    &
     !$claw acc end parallel
 
     ! Initialize diagnostic runoff and drainage variables
@@ -548,72 +537,21 @@ CONTAINS
     !---------------------
     !> 1. Infiltration
     !---------------------
-    !>
-    !
-    ! f(w) = 1 - (1 - w/w_max)**b
-    !
-    ! b: shape parameter, defining the sub-gid scale steepness of the orographie:
-    !
-    ! b = (sigma_z - sigma_0) / (sigma_z + sigma_max)
-    !
-    ! sigma_z: standard deviation of topographic height
-    ! sigma_0: minimum value (100 m); below b = 0.01
-    ! sigma_max: resolution dependent maximum
+    !> Runoff is either set to zero for Terraplanet setup or is computed via the
+    !! ARNO Scheme (default)
 
-    sigma_0   = oro_var_min
-    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
+    IF (ltpe_closed) THEN
+      ! Terra planet setup without runoff
+      runoff(:) = 0._wp
+      infilt(:) = water_to_soil(:)
 
-    !$claw acc parallel
-    !$claw acc loop gang vector
-    DO i=1,nc
-      steepness = MAX(0._wp, oro_stddev(i)-sigma_0) / (oro_stddev(i)+sigma_max)
+    ELSE
+      CALL arno_scheme(nc, nlat, l_infil_subzero, t_soil_sl1,                     &
+        &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),       &
+        &              oro_stddev(:), weq_rootzone_max(:),                        &
+        &              runoff(:), infilt(:))
 
-      ! todo: parameters should be defined as parameters
-      zbws   = MAX(MIN(steepness,0.5_wp), 0.01_wp)
-      zb1    = 1._wp+zbws
-      zbm    = 1._wp/zb1
-      zconw1 = ws_max(i)*zb1
-
-      !>  1.1 Surface runoff and infiltration
-      !   -----------------------------------
-      ! @todo: The amount of runoff and infiltration is calculated regarding the complete root zone,
-      !    rather than the uppermost soil layer (or the soil until bedrock, as this has nothing to
-      !    do with plants).
-      !    Using the uppermost soil layer only might need sub-time-steps...
-
-      ! No drainage is possible below a certain minimum amount of water (zwdmin). This corresponds
-      ! to the layered bucket scheme, and has nothing to do with field capacity or wilting point.
-      ws_min_drain(i) = zwdmin * ws_max(i)    ! minimum amount of root zone soil water for drainage
-
-      IF (ltpe_closed) THEN
-        ! Terra planet setup without runoff
-        runoff(i) = 0._wp
-        infilt(i) = water_to_soil(i)
-      ELSE
-        ! Temperature dependence of infiltration should not be included when using the 5-layer snow scheme because:
-        !     when tsurf == 0.C and T_soil < 0.C --> all snow melt is going to surface runoff
-        IF (.NOT. l_infil_subzero .AND. (t_soil_sl1(i) < tmelt)) THEN
-          runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
-          infilt(i) = 0._wp
-        ELSE
-          ws_incl_ice(i) = wtr_rootzone(i) + ice_rootzone(i)                        ! soil water including ice
-          IF (water_to_soil(i) > 0._wp .AND. ws_incl_ice(i) > ws_min_drain(i)) THEN ! soilwater content above limit for drainage
-            ! compare jsbach3 documentation section 2.3.2.2
-            ws_rel(i) = MIN(1._wp, ws_incl_ice(i) / ws_max(i))                      ! relative soil moisture
-            zvol   = (1._wp - ws_rel(i))**zbm - water_to_soil(i)/zconw1             ! factor taking account subgrid scale
-                                                                                    ! inhomogeneity and steepness
-
-            runoff(i) = water_to_soil(i) - (ws_max(i)-ws_incl_ice(i))               ! > 0: amount of water exceeding soil capacity
-            IF (zvol > 0._wp) runoff(i) = runoff(i) + ws_max(i)*zvol**zb1
-            runoff(i) = MAX(MIN(runoff(i), water_to_soil(i)), 0._wp)                ! no runoff < 0, limited by available water
-            infilt(i) = water_to_soil(i) - runoff(i)                                ! water not going into runoff is infiltrated
-          ELSE
-            runoff(i) = 0._wp                                                       ! no runoff as soil is too dry
-            infilt(i) = water_to_soil(i)                                            ! all water infiltrated
-          END IF
-        END IF
-      END IF
-    END DO
+    END IF
 
     !
     !$claw acc data present(evapo_soil_in_m,evapotrans_soil,transpiration_in_m,transpiration)
@@ -673,7 +611,112 @@ CONTAINS
     END DO
     !$claw acc end data
     !$claw acc end data
+
   END SUBROUTINE calc_soil_hydrology
+
+
+  !------------------------------------------------------------------------------------------------
+  !! @brief   Calculation of surface runoff based on the ARNO Scheme 
+  !! (E. Todini, The ARNO rainfall-runoff model, doi:10.1016/S0022-1694(96)80016-3.)
+  !!
+  !! @par Revision History
+  !!   Revised by Tobias Stacke (MPI-M) in January 2023
+
+  SUBROUTINE arno_scheme(nc, nlat, l_infil_subzero, t_soil_sl1, water_to_soil, weq_rootzone, &
+    &                    oro_stddev, weq_rootzone_max,                                       &
+    &                    runoff, infilt)
+
+    USE mo_jsb_physical_constants, ONLY: tmelt
+    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
+
+    INTEGER,  INTENT(in) :: &
+      & nc, nlat
+
+    LOGICAL, INTENT(in) :: l_infil_subzero
+
+    REAL(wp), INTENT(in) ::           &
+      & t_soil_sl1(:),                & !< temperature of uppermost soil layer               [K]
+      & water_to_soil(:),             & !< amount of water going into the soil               [m]
+      & weq_rootzone(:),              & !< liquid water + ice within the root zone           [m]
+      & oro_stddev(:),                & !< standard deviation of orography                   [m]
+      & weq_rootzone_max(:)             !< maximum water holding capacity (liquid + ice) of the root zone [m]
+
+    REAL(wp), INTENT(out) ::          &
+      & runoff(:),                    & !< surface runoff                                    [m]
+      & infilt(:)                       !< infiltration of water into the soil               [m]
+
+    ! Local variables
+    INTEGER  ::                       &
+      & i                               !< grid cell index
+
+    REAL(wp) ::                       &
+      & sigma_0,                      & !< minimum value
+      & sigma_max,                    & !< resolution-dependent maximum
+      & steepness,                    & !< sub-grid scale steepness of the orography
+      & ws_min_drain,                 & !< minimum amount of root zone soil water for drainage
+      & ws_rel,                       & !< relative rootzone soil moisture (water + ice)
+      & zbws, zb1, zbm, zconw1, zvol
+    ! 
+    !
+    ! f(w) = 1 - (1 - w/w_max)**b
+    !
+    ! b: shape parameter, defining the sub-gid scale steepness of the orographie:
+    !
+    ! b = (sigma_z - sigma_0) / (sigma_z + sigma_max)
+    !
+    ! sigma_z: standard deviation of topographic height
+    ! sigma_0: minimum value (100 m); below b = 0.01
+    ! sigma_max: resolution dependent maximum
+
+    sigma_0   = oro_var_min
+    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
+
+    !$claw acc parallel
+    !$claw acc loop gang vector
+    DO i = 1, nc
+      steepness = MAX(0._wp, oro_stddev(i)-sigma_0) / (oro_stddev(i)+sigma_max)
+
+      ! todo: parameters should be defined as parameters
+      zbws   = MAX(MIN(steepness, 0.5_wp), 0.01_wp)
+      zb1    = 1._wp + zbws
+      zbm    = 1._wp / zb1
+      zconw1 = weq_rootzone_max(i) * zb1
+
+      !>  Surface runoff and infiltration
+      !   -----------------------------------
+
+      ! No drainage is possible below a certain minimum amount of water (zwdmin). This corresponds
+      ! to the layered bucket scheme, and has nothing to do with field capacity or wilting point.
+      ws_min_drain = zwdmin * weq_rootzone_max(i)
+
+      ! Temperature dependence of infiltration should not be included when using the 5-layer snow scheme because:
+      !     when tsurf == 0.C and T_soil < 0.C --> all snow melt is going to surface runoff
+      IF (.NOT. l_infil_subzero .AND. (t_soil_sl1(i) < tmelt)) THEN
+        runoff(i) = water_to_soil(i)       !  no infiltration as uppermost soil layer is frozen -> runoff
+        infilt(i) = 0._wp
+
+      ELSE
+        IF (water_to_soil(i) > 0._wp .AND. weq_rootzone(i) > ws_min_drain) THEN   ! soilwater content above limit for drainage
+          ! compare jsbach3 documentation section 2.3.2.2
+          ws_rel = MIN(1._wp, weq_rootzone(i) / weq_rootzone_max(i))              ! relative rootzone soil moisture
+          zvol   = (1._wp - ws_rel)**zbm - water_to_soil(i) / zconw1              ! factor taking account subgrid scale
+                                                                                  ! inhomogeneity and steepness
+
+          runoff(i) = water_to_soil(i) - (weq_rootzone_max(i) - weq_rootzone(i))  ! > 0: amount of water exceeding soil capacity
+          IF (zvol > 0._wp) runoff(i) = runoff(i) + weq_rootzone_max(i) * zvol**zb1
+          runoff(i) = MAX(MIN(runoff(i), water_to_soil(i)), 0._wp)                ! no runoff < 0, limited by available water
+          infilt(i) = water_to_soil(i) - runoff(i)                                ! water not going into runoff is infiltrated
+
+        ELSE
+          runoff(i) = 0._wp                                                       ! no runoff as soil is too dry
+          infilt(i) = water_to_soil(i)                                            ! all water infiltrated
+
+        END IF
+      END IF
+
+    END DO
+
+  END SUBROUTINE arno_scheme
 
   !------------------------------------------------------------------------------------------------
   !! @brief   Calculation of vertical soil water movement for multiple soil layers
@@ -1145,8 +1188,6 @@ CONTAINS
     REAL(wp) :: rootfract(nc)             ! fraction of the soil layer within the root zone [/]
     REAL(wp) :: fixed(nc)                 ! amount of water below the wilting point, not available for plants [m]
     REAL(wp) :: root_depth(nc)            ! Total depth of rootzone [m]
-
-    INTEGER :: max2d(2)
 
     !----------------------------------------------------------------------------------------------
     !  diagnose evaporation and transpiration fluxes
