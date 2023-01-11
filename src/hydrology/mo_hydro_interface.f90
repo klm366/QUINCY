@@ -403,6 +403,13 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_wet
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
+    dsl4jsb_Real2D_onChunk :: fract_pond
+    dsl4jsb_Real2D_onChunk :: weq_pond
+    dsl4jsb_Real2D_onChunk :: weq_pond_max
+    dsl4jsb_Real2D_onChunk :: wtr_pond
+    dsl4jsb_Real2D_onChunk :: ice_pond
+    dsl4jsb_Real2D_onChunk :: pond_freeze
+    dsl4jsb_Real2D_onChunk :: pond_melt
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
     dsl4jsb_Real2D_onChunk :: fract_snow
@@ -417,6 +424,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: transpiration
     dsl4jsb_Real2D_onChunk :: evapopot
     dsl4jsb_Real2D_onChunk :: evapo_snow
+    dsl4jsb_Real2D_onChunk :: evapo_pond
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: infilt
     dsl4jsb_Real2D_onChunk :: runoff
@@ -532,6 +540,14 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration)  ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)            ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)  ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_pond_max)   ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   fract_pond)     ! inout
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_pond)       ! inout
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   wtr_pond)       ! inout
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   ice_pond)       ! inout
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_pond)     ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_freeze)    ! out
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   pond_melt)      ! out
       END IF
     END IF
 
@@ -611,6 +627,7 @@ CONTAINS
         & t_air(:),                       & !< in
         & skinres_canopy_max(:),          & !< in
         & skinres_max(:),                 & !< in
+        & weq_pond_max(:),                & !< in
         & fract_snow(:),                  & !< in
         & fract_wet(:),                   & !< in
         & hcap_grnd(:),                   & !< in
@@ -623,12 +640,19 @@ CONTAINS
         & weq_snow_soil(:),               & !< inout
         & weq_snow_can(:),                & !< inout
         & snow_soil_dens(:),              & !< inout
+        & fract_pond(:),                  & !< inout
+        & weq_pond(:),                    & !< inout
+        & wtr_pond(:),                    & !< inout
+        & ice_pond(:),                    & !< inout
         & q_snocpymlt(:),                 & !< out
         & snow_accum(:),                  & !< out
         & snowmelt(:),                    & !< out
+        & pond_freeze(:),                 & !< out
+        & pond_melt(:),                   & !< out
         & evapotrans_soil(:),             & !< out
         & evapo_skin(:),                  & !< out
         & evapo_snow(:),                  & !< out
+        & evapo_pond(:),                  & !< out
         & water_to_soil(:),               & !< out
         & evapo_deficit(:)                & !< out
         & )
@@ -698,11 +722,19 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapotrans_soil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_pond,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_pond,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond_max,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ice_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pond_freeze,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pond_melt,       weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1088,10 +1120,10 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, latdrain_sl       ),     &  ! Temporary, as lateral drainage should no longer be computed by calc_soil_hydrology
+      & dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl      ),     &  ! Temporary, as lateral drainage should no longer be computed by calc_soil_hydrology
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         )      &
       & )
 
@@ -1142,7 +1174,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt_over,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff_dunne,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)

@@ -236,7 +236,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wtr_latflow
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
-    dsl4jsb_Real3D_onChunk :: latdrain_sl
+    dsl4jsb_Real3D_onChunk :: drain_lat_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_fc_sl
     dsl4jsb_Real2D_onChunk :: wtr_latflow_sibl_tile
@@ -273,7 +273,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(MIX_,   wtr_latflow)      ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)         ! inout
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, latdrain_sl)      ! inout
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl)     ! inout
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl) ! inout
@@ -335,7 +335,7 @@ CONTAINS
                 & source_fract(:),               & !< in
                 & target_fract(:),               & !< in
                 & wtr_soil_fc_sl_sibl_tile(:,i), & !< in
-                & latdrain_sl(:,i),              & !< inout
+                & drain_lat_sl(:,i),             & !< inout
                 & drainage(:),                   & !< inout
                 & wtr_latflow(:),                & !< inout
                 & wtr_latflow_sibl_tile(:),      & !< inout
@@ -430,7 +430,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(MIX_,   wtr_latflow,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, latdrain_sl,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,  weighted_by_fract)
 
