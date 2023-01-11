@@ -730,13 +730,14 @@ CONTAINS
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
 
+    ! Local variables
     INTEGER  :: i, j                         ! looping index (cells index and soil layer))
     INTEGER  :: nsoil_act(nc)                ! deepest soil layer index (above the bedrock boundary)
 
     REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice)
     REAL(wp) :: ws_inter_sl(nc,nsoil)        ! soil moisture with infiltration added to first layer
     REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil mositure
-    REAL(wp) :: ice_impede_sl(nc,nsoil)      ! ice impedance factor on all soil layers
+    REAL(wp) :: ice_impeda_sl(nc,nsoil)      ! ice impedance factor on all soil layers
     REAL(wp) :: hyd_cond_sl(nc,nsoil)        ! hydraulic conductivity of a layer [m/s]
     REAL(wp) :: diffus_sl(nc,nsoil)          ! diffusivity at mid-depth of the layer[m2/s]
     REAL(wp) :: hyd_cond_li(nc,nsoil)        ! hydraulic conductivity at upper layer interface
@@ -802,7 +803,7 @@ CONTAINS
     ! Determining hydraulic conductivity and diffusivity on layers and at layer interfaces
     !   Note that the indexing uses the upper interface -> interface Ii = I(i,i-1)
     !   For numerical reasons, soil loops always cover all soil layers, even if they are not active (bedrock)
-    CALL get_conductivies_diffusivities(                                    &
+    CALL get_soilhyd_cond_properties(                                       &
           & soilhydmodel, interpol_mean,                                    &
           & dtime,                                                          &
           & nc,nsoil,                                                       &
@@ -811,7 +812,7 @@ CONTAINS
           & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &
           & hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),                       &
           & bclapp_sl(:,:), zmvg_sl(:,:),                                   &
-          & ice_impede_sl(:,:),                                             &
+          & ice_impeda_sl(:,:),                                             &
           & hyd_cond_sl(:,:), diffus_sl(:,:),                               &
           & hyd_cond_li(:,:), diffus_li(:,:)                                &
           )
@@ -1661,64 +1662,60 @@ CONTAINS
 
   END FUNCTION calc_vertical_transport
 
-  SUBROUTINE get_conductivies_diffusivities(     &
-            & soilhydmodel, interpol_mean,       &
-            & dt,                                &
-            & nc, nsoil, nsoil_act, dsoil,       &
-            & ws, is, wscools,                   &
-            & wsat, fc, pwp,                     &
-            & k_sat, mpot_sat, bclapp, mvgn,     &
-            & ice_impede, K, D, K_inter, D_inter &
+  SUBROUTINE get_soilhyd_cond_properties(           &
+            & soilhydmodel, interpol_mean,          &
+            & dt,                                   &
+            & nc, nsoil, nsoil_act, dsoil,          &
+            & ws, is, wscools,                      &
+            & wsat, fc, pwp,                        &
+            & k_sat, mpot_sat, bclapp, mvgn,        &
+            & ice_impedance, K, D, K_inter, D_inter &
             )
 
     USE mo_hydro_constants,    ONLY: BooksCorey_, ClappHornberger_, VanGenuchten_, &
       &                              Upstream_, Arithmetic_
 
-    ! arguments
-
-    INTEGER,  INTENT(in)     :: soilhydmodel, &         !> Approaches to determine conductivites & diffusivities (KD)
-      &                         interpol_mean           !! and how to derive values at layer interface (AVG scheme)
-    REAL(wp), INTENT(in)     :: dt                      !> time step length
-    INTEGER,  INTENT(in)     :: nc                      !> vector length
-    INTEGER,  INTENT(in)     :: nsoil                   !> number of below ground layers
-    INTEGER,  INTENT(in)     :: nsoil_act(:)            !> index of deepest soil layers (above bedrock)
-    REAL(wp), INTENT(in)     :: dsoil(:,:)              !> soil depth (until bedrock) per layer
-    REAL(wp), INTENT(in)     :: ws(:,:)                 !> water content
-    REAL(wp), INTENT(in)     :: is(:,:)                 !> ice content
-    REAL(wp), INTENT(in)     :: wscools(:,:)            !> supercooled water
-    REAL(wp), INTENT(in)     :: wsat(:,:)               !> soil depth (until bedrock) per layer
-    REAL(wp), INTENT(in)     :: fc(:,:)                 !> field capacity [m]
-    REAL(wp), INTENT(in)     :: pwp(:,:)                !> residual water (until bedrock) per layer
-    REAL(wp), INTENT(in)     :: k_sat(:,:)              !> hydraaulic conductivity
-    REAL(wp), INTENT(in)     :: mpot_sat(:,:)           !> matric potential
-    REAL(wp), INTENT(in)     :: bclapp(:,:)             !> clapp & Hornberger exponent
-    REAL(wp), INTENT(in)     :: mvgn(:,:)               !> Van Genuchten m
-    REAL(wp), INTENT(out)    :: ice_impede(:,:)         !> Impedence factor to account for ice blocking flowpaths
-    REAL(wp), INTENT(out)    :: K(nc,nsoil)             !> hydraulic condctivity of the soil layer [m]
-    REAL(wp), INTENT(out)    :: D(nc,nsoil)             !> diffusivity of the soil layer [m]
-    REAL(wp), INTENT(out)    :: K_inter(nc,nsoil)       !> hydraulic condctivity at (upper) layer interface [m]
-    REAL(wp), INTENT(out)    :: D_inter(nc,nsoil)       !> diffusivity at (upper) layer interface [m]
+    INTEGER,  INTENT(in)            :: soilhydmodel       !> Approaches to determine conductivites & diffusivities (KD)
+    INTEGER,  INTENT(in)            :: interpol_mean      !> and how to derive values at layer interface (AVG scheme)
+    REAL(wp), INTENT(in)            :: dt                 !> time step length
+    INTEGER,  INTENT(in)            :: nc                 !> vector length
+    INTEGER,  INTENT(in)            :: nsoil              !> number of below ground layers
+    INTEGER,  INTENT(in)            :: nsoil_act(:)       !> index of deepest soil layers (above bedrock)
+    REAL(wp), INTENT(in)            :: dsoil(:,:)         !> soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in)            :: ws(:,:)            !> water content
+    REAL(wp), INTENT(in)            :: is(:,:)            !> ice content
+    REAL(wp), INTENT(in)            :: wscools(:,:)       !> supercooled water
+    REAL(wp), INTENT(in)            :: wsat(:,:)          !> soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in)            :: fc(:,:)            !> field capacity [m]
+    REAL(wp), INTENT(in)            :: pwp(:,:)           !> residual water (until bedrock) per layer
+    REAL(wp), INTENT(in)            :: k_sat(:,:)         !> hydraaulic conductivity
+    REAL(wp), INTENT(in)            :: mpot_sat(:,:)      !> matric potential
+    REAL(wp), INTENT(in)            :: bclapp(:,:)        !> clapp & Hornberger exponent
+    REAL(wp), INTENT(in)            :: mvgn(:,:)          !> Van Genuchten m
+    REAL(wp), INTENT(out), OPTIONAL :: ice_impedance(:,:) !> Impedance factor to account for ice blocking flowpaths
+    REAL(wp), INTENT(out), OPTIONAL :: K(:,:)             !> hydraulic condctivity of the soil layer [m]
+    REAL(wp), INTENT(out), OPTIONAL :: D(:,:)             !> diffusivity of the soil layer [m]
+    REAL(wp), INTENT(out), OPTIONAL :: K_inter(:,:)       !> hydraulic condctivity at (upper) layer interface [m]
+    REAL(wp), INTENT(out), OPTIONAL :: D_inter(:,:)       !> diffusivity at (upper) layer interface [m]
 
     ! local variables
-
     INTEGER  :: i,j ! cell index and soil layer index
     REAL(wp) :: ws_vol(nc,nsoil), ice_vol(nc,nsoil), scool_vol(nc,nsoil), &
              &  ws_rel_vol(nc,nsoil),  ws_range_vol(nc,nsoil),  &
              &  wsat_vol(nc,nsoil), fc_vol(nc,nsoil), pwp_vol(nc,nsoil), &
-             &  ws_free_vol(nc,nsoil)
+             &  ws_free_vol(nc,nsoil), ice_imp(nc,nsoil)
 
 
-    !i_shm  1 = Brooks & Corey, 2 = Clapp & Horberger (Campbell), 3 = Van Genuchten
-    !i_interpol 1 = upstream, 2 = Arithmetic mean
-
+    ! Set defaults
     ws_rel_vol(:,:) = 0._wp
-    ice_impede(:,:) = 1._wp
-    K(:,:)          = 0._wp
-    D(:,:)          = 0._wp
-    K_inter(:,:)    = 0._wp
-    D_inter(:,:)    = 0._wp
+    ice_imp(:,:)    = 1._wp
 
-    ! switching to volumetric quantities
+    IF (PRESENT(K))             K(:,:)             = 0._wp
+    IF (PRESENT(D))             D(:,:)             = 0._wp
+    IF (PRESENT(K_inter))       K_inter(:,:)       = 0._wp
+    IF (PRESENT(D_inter))       D_inter(:,:)       = 0._wp
+
+    ! Convert to volumetric quantities
     WHERE(dsoil(:,:)> 0._wp)
       ws_vol(:,:)   =  ws(:,:)      / dsoil(:,:)
       ice_vol(:,:)  =  is(:,:)      / dsoil(:,:)
@@ -1735,72 +1732,94 @@ CONTAINS
       pwp_vol(:,:)  =  0._wp
     END WHERE
 
+    ! Compute impedance factor due to soil ice
+    DO i = 1, nc
+      DO j = 1, nsoil
+        IF (j <= nsoil_act(i)) THEN
+          IF (fc_vol(i,j) + ice_vol(i,j) > 1.0e-10_wp) THEN
+            ice_imp(i,j)  = 10._wp**(-6._wp * (ice_vol(i,j) + scool_vol(i,j) ) &
+              & / (fc_vol(i,j) + ice_vol(i,j)))
+          ELSE
+            ice_imp(i,j) = 1._wp
+          END IF
+        END IF
+      END DO
+    END DO
 
+    IF (PRESENT(ice_impedance)) THEN
+      ice_impedance(:,:) = ice_imp(:,:)
+    END IF
+
+    ! Compute relative soil moisture depending on soil hydrological model
     IF (soilhydmodel == ClappHornberger_) THEN
       ws_free_vol(:,:)=MAX(0._wp,ws_vol(:,:)-scool_vol(:,:))
       ws_range_vol(:,:)  = wsat_vol(:,:)
-    ELSE  ! Brooks & Corey; Van Genuchten
+    ELSE  ! Books & Corey; Van Genuchten
       ws_free_vol(:,:)=MAX(0._wp,ws_vol(:,:)-MAX(scool_vol(:,:),pwp_vol(:,:)))
       ws_range_vol(:,:)  = fc_vol(:,:) - pwp_vol(:,:)
     END IF
     WHERE (ws_range_vol(:,:) > 0._wp)
       ws_rel_vol(:,:)  = ws_free_vol(:,:) / ws_range_vol(:,:)
     END WHERE
-
-    ! Making sure ws_rel is in the pyhsical range
+    ! Making sure ws_rel is in the physical range
     ! This is especially important when infiltration is added to the first layer
-    ws_rel_vol(:,:) = MIN(1._wp, MAX(0._wp, ws_rel_vol(:,:)))
-
-    ! Determining K and D on layer
-    IF (soilhydmodel == BooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
-      K(:,:) =  k_sat(:,:)                                                   &
-             & * ws_rel_vol(:,:)**(2._wp * bclapp(:,:) + 3._wp)
-      WHERE(ws_range_vol(:,:) > 0._wp)
-        D(:,:) = -k_sat(:,:) * mpot_sat(:,:) * bclapp(:,:) / ws_range_vol(:,:) &
-               & * ws_rel_vol(:,:)**(1._wp * bclapp(:,:) + 2._wp)
-      ELSEWHERE
-        D(:,:) = 0._wp
-      END WHERE
-
-    ELSE IF (soilhydmodel == VanGenuchten_) THEN
+    IF (soilhydmodel == VanGenuchten_) THEN
       ws_rel_vol(:,:) = MIN(0.9999_wp, ws_rel_vol(:,:)) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
-
-      WHERE(mvgn(:,:) > 0._wp)
-        K(:,:) = k_sat(:,:) * ws_rel_vol(:,:)**(0.5_wp) &
-               & *(1._wp-(1._wp-ws_rel_vol(:,:)**(1._wp/mvgn(:,:)))**mvgn(:,:))**2._wp
-      ELSEWHERE
-        K(:,:) = 0._wp
-      ENDWHERE
-
-      WHERE(ws_range_vol(:,:) > 0._wp)
-        D(:,:) = -K(:,:)* mpot_sat(:,:) * bclapp(:,:) / ws_range_vol(:,:) &
-               & * ws_rel_vol(:,:)**(1._wp/mvgn(:,:)) * (1._wp-ws_rel_vol(:,:)**(1._wp/mvgn(:,:)))**(-mvgn(:,:))
-      ELSEWHERE
-        D(:,:) = 0._wp
-      END WHERE
+    ELSE  ! Books & Corey; Van Genuchten
+      ws_rel_vol(:,:) = MIN(1._wp, MAX(0._wp, ws_rel_vol(:,:)))
     END IF
 
-    ! Reduce percolation velocity in presence of ice
-    ! But what about diffusivity .... ice seems to attract water ?
-    DO i = 1, nc
-      DO j = 1, nsoil
-        IF (j <= nsoil_act(i)) THEN
-          IF (fc_vol(i,j) + ice_vol(i,j) > 1.0e-10_wp) THEN
-            ice_impede(i,j)  = 10._wp**(-6._wp * (ice_vol(i,j) + scool_vol(i,j) ) &
-                           & / (fc_vol(i,j) + ice_vol(i,j)))
-          ELSE
-            ice_impede(i,j) = 1._wp
-          END IF
-          K(i,j) = K(i,j) * ice_impede(i,j)
-          D(i,j) = D(i,j) * ice_impede(i,j)
+    ! Compute hydrological conductivity (K) for every layer
+    IF (PRESENT(K)) THEN
+
+      IF (soilhydmodel == BooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+        K(:,:) =  k_sat(:,:)                                                   &
+               & * ws_rel_vol(:,:)**(2._wp * bclapp(:,:) + 3._wp)
+      ELSE IF (soilhydmodel == VanGenuchten_) THEN
+        WHERE(mvgn(:,:) > 0._wp)
+          K(:,:) = k_sat(:,:) * ws_rel_vol(:,:)**(0.5_wp) &
+                 & *(1._wp-(1._wp-ws_rel_vol(:,:)**(1._wp/mvgn(:,:)))**mvgn(:,:))**2._wp
+        ELSEWHERE
+          K(:,:) = 0._wp
+        ENDWHERE
+      END IF
+
+      ! Reduce transport velocity in presence of ice
+      K(i,j) = K(i,j) * ice_imp(i,j)
+
+      ! Make sure percolation from top layer is limited to water content !!!
+      K(:,1) = MIN(K(:,1), MAX(0._wp,(ws(:,1)-pwp(:,1)) / dt))
+
+    END IF
+
+    ! Compute hydrological diffusivity (D) for every layer
+    IF (PRESENT(D)) THEN
+
+      IF (soilhydmodel == BooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+        WHERE(ws_range_vol(:,:) > 0._wp)
+          D(:,:) = -k_sat(:,:) * mpot_sat(:,:) * bclapp(:,:) / ws_range_vol(:,:) &
+                 & * ws_rel_vol(:,:)**(1._wp * bclapp(:,:) + 2._wp)
+        ELSEWHERE
+          D(:,:) = 0._wp
+        END WHERE
+      ELSE IF (soilhydmodel == VanGenuchten_) THEN
+        IF (.NOT. PRESENT(K)) THEN
+          WRITE (message_text,*) 'VanGenuchten diffusivity computation requires hydrological conductivity'
+          CALL finish ('get_soilhyd_cond_properties', message_text)
         END IF
-      END DO
-    END DO
+        WHERE(ws_range_vol(:,:) > 0._wp)
+          D(:,:) = -K(:,:)* mpot_sat(:,:) * bclapp(:,:) / ws_range_vol(:,:) &
+                 & * ws_rel_vol(:,:)**(1._wp/mvgn(:,:)) * (1._wp-ws_rel_vol(:,:)**(1._wp/mvgn(:,:)))**(-mvgn(:,:))
+        ELSEWHERE
+          D(:,:) = 0._wp
+        END WHERE
+      END IF
 
+      ! Reduce transport velocity in presence of ice
+      ! However, ice seems to attract water --> is this the right approach for diffusivity?
+      D(i,j) = D(i,j) * ice_imp(i,j)
 
-    !!! making sure percolation from top layer is limited to water content !!!
-
-    K(:,1) = MIN(K(:,1), MAX(0._wp,(ws(:,1)-pwp(:,1)) / dt))
+    END IF
 
     ! Determining K & D on layer interface
     ! Possibility
@@ -1808,26 +1827,53 @@ CONTAINS
     ! 2) Adjusted arithmetic mean A (of k, D)
     ! Note that in the vertical transport scheme the notation refers to the upper interface of a level.
     ! Hence the loop goes from nsoil_act to 2
-    DO i = 1, nc
-      DO j = nsoil, 2, -1
-        IF (j <= nsoil_act(i)) THEN
-          IF (interpol_mean == Upstream_) THEN
-            K_inter(i,j)  =   K(i,j-1)
-            D_inter(i,j)  =   MAX(D(i,j),D(i,j-1))
-!            D_inter(i,j)  =   MIN(D(i,j),D(i,j-1))
-          ELSE IF (interpol_mean == Arithmetic_) THEN
-            IF (K(i,j-1) > K(i,j)) THEN ! MOVEMENT OF WETTING FRONTS LIMITED BY SATURATION OF SUBJACENT LAYER. ELSE ... 
-              K_inter(i,j)  =   (K(i,j)*dsoil(i,j)+K(i,j-1)*dsoil(i,j-1))/(dsoil(i,j)+dsoil(i,j-1))
-            ELSE ! ... PREVENT FLUX FROM COMPLETLY DRYING OUT UPPER LAYER
-              K_inter(i,j)  = K(i,j-1)
-            END IF
-            D_inter(i,j)  =   (D(i,j)*dsoil(i,j)+D(i,j-1)*dsoil(i,j-1))/(dsoil(i,j)+dsoil(i,j-1))
-          END IF
-        END IF
-      END DO
-    END DO
 
-  END SUBROUTINE get_conductivies_diffusivities
+    IF (PRESENT(K_inter)) THEN
+
+      IF (.NOT. PRESENT(K)) THEN
+        WRITE (message_text,*) 'K at layer interface cannot be computed without computing K on layers'
+        CALL finish ('get_soilhyd_cond_properties', message_text)
+      END IF
+
+      DO i = 1, nc
+        DO j = nsoil, 2, -1
+          IF (j <= nsoil_act(i)) THEN
+            IF (interpol_mean == Upstream_) THEN
+              K_inter(i,j)  =   K(i,j-1)
+            ELSE IF (interpol_mean == Arithmetic_) THEN
+              IF (K(i,j-1) > K(i,j)) THEN ! MOVEMENT OF WETTING FRONTS LIMITED BY SATURATION OF SUBJACENT LAYER. ELSE ...
+                K_inter(i,j)  =   (K(i,j)*dsoil(i,j)+K(i,j-1)*dsoil(i,j-1))/(dsoil(i,j)+dsoil(i,j-1))
+              ELSE ! ... PREVENT FLUX FROM COMPLETLY DRYING OUT UPPER LAYER
+                K_inter(i,j)  = K(i,j-1)
+              END IF
+            END IF
+          END IF
+        END DO
+      END DO
+
+    END IF
+
+    IF (PRESENT(D_inter)) THEN
+
+      IF (.NOT. PRESENT(D)) THEN
+        WRITE (message_text,*) 'D at layer interface cannot be computed without computing D on layers'
+        CALL finish ('get_soilhyd_cond_properties', message_text)
+      END IF
+      DO i = 1, nc
+        DO j = nsoil, 2, -1
+          IF (j <= nsoil_act(i)) THEN
+            IF (interpol_mean == Upstream_) THEN
+              D_inter(i,j)  = MAX(D(i,j),D(i,j-1))
+            ELSE IF (interpol_mean == Arithmetic_) THEN
+              D_inter(i,j)  = (D(i,j)*dsoil(i,j)+D(i,j-1)*dsoil(i,j-1))/(dsoil(i,j)+dsoil(i,j-1))
+            END IF
+          END IF
+        END DO
+      END DO
+
+    END IF
+
+  END SUBROUTINE get_soilhyd_cond_properties
 
 #endif
 END MODULE mo_hydro_process
