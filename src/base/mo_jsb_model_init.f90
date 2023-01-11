@@ -2,7 +2,7 @@
 !>
 !>### Initialize JSBACH instance with grid, task queue, tile structure, initial/boundary conditions etc.
 !>
-!> Copyright (c) 2013-2021 Reiner Schnur  
+!> Copyright (c) 2013-2021 Reiner Schnur
 !> Copyright (c) 2016 Julia Nabel
 !>#### Revision History
 !> First version and many ongoing changes               by Reiner Schnur (2013-04-04 - present)
@@ -12,7 +12,7 @@
 !>#### License
 !>
 !> This code is subject to the MPI-M-ICON - License - Agreement in it's most recent form.
-!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.  
+!> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
 !> Where software is supplied by third parties, it is indicated in the headers of the routines.
 !>
 MODULE mo_jsb_model_init
@@ -70,7 +70,7 @@ CONTAINS
 #endif
 
     ! -------------------------------------------------------------------------------------------------- !
-    INTEGER, INTENT(in)                    :: nproca !< Number of processors in 1st dimension 
+    INTEGER, INTENT(in)                    :: nproca !< Number of processors in 1st dimension
                                                      !< of 2-d decomposition
     INTEGER, INTENT(in)                    :: nprocb
         !< Number of processors in 2nd dimension of 2-d decomposition
@@ -251,7 +251,7 @@ CONTAINS
       ! - processes potentially changing the area of a tile are conducted first in the timestep.
       ! - the task npp_buffer is performed even before to provide already updated multi annual average
       !   NPP to the NLCC process at the beginning of a year
-  
+
       IF (model%processes(NLCC_)%p%config%active) THEN
         CALL model%Queue_task(ASSIMI_, "npp_buffer")
       END IF
@@ -317,7 +317,7 @@ CONTAINS
       IF (model%processes(ASSIMI_)%p%config%active) THEN
         CALL model%Queue_task(RAD_,    "radiation_par")
       END IF
-      CALL model%Queue_task(HYDRO_,  "surface_hydrology") 
+      CALL model%Queue_task(HYDRO_,  "surface_hydrology")
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(SSE_,    "soil_and_snow_properties")
       CALL model%Queue_task(SSE_,    "soil_and_snow_temperature")
@@ -346,7 +346,7 @@ CONTAINS
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
-      CALL model%Queue_task(TOP_,    "innundated_area") ! StW: No clue if this is a sensible place in the list
+      CALL model%Queue_task(TOP_,    "inundated_area") ! StW: No clue if this is a sensible place in the list
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
       CALL model%Queue_task(RAD_,    "albedo")
@@ -359,7 +359,7 @@ CONTAINS
           ! the SEB remains consistent within this time step.
       CALL model%Queue_task(HYDRO_,  "water_balance")
       CALL model%Queue_task(SEB_,    "asselin_filter")      ! Should always be the last task
-    
+
       ! Fuel is calculated last in a timestep to be right available in the next timestep
       IF (model%processes(FUEL_)%p%config%active) THEN
         CALL model%Queue_task(FUEL_, "fuel")
@@ -399,7 +399,7 @@ CONTAINS
     !   CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
     !   CALL model%Queue_task(TURB_,   "humidity_scaling")
     !   CALL model%Queue_task(TURB_,   "surface_roughness")
-    !   CALL model%Queue_task(RAD_,    "albedo")                      ! albedo is updated at the end of the time step, 
+    !   CALL model%Queue_task(RAD_,    "albedo")                      ! albedo is updated at the end of the time step,
     !                                                                 ! one time step before the radiation is updated in the atmosphere
     !   CALL model%Queue_task(HYDRO_,  "water_balance")
     !   CALL model%Queue_task(SEB_,    "asselin_filter")              ! Should always be the last task
@@ -426,7 +426,7 @@ CONTAINS
     !   CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")          !! quincy
     !   CALL model%Queue_task(VEG_,    "tavrg_vegetation")            !! quincy
     !   CALL model%Queue_task(SB_,     "tavrg_soilbiogeochemistry")   !! quincy
-      
+
     ! ----------------------------------------------------------------------------------------------------- !
     !
     ! quincy - using the SPQ_ process for soil physics
@@ -435,32 +435,32 @@ CONTAINS
     !
     CASE (MODEL_QUINCY)
       ! set flux variables to zero
-      CALL model%Queue_task(ASSIMI_,  "reset_assimi_fluxes")        ! 
-      CALL model%Queue_task(VEG_,     "reset_veg_fluxes")           ! 
-      CALL model%Queue_task(SB_,      "reset_sb_fluxes")            ! 
-      CALL model%Queue_task(SPQ_,     "reset_spq_fluxes")           ! 
+      CALL model%Queue_task(ASSIMI_,  "reset_assimi_fluxes")        !
+      CALL model%Queue_task(VEG_,     "reset_veg_fluxes")           !
+      CALL model%Queue_task(SB_,      "reset_sb_fluxes")            !
+      CALL model%Queue_task(SPQ_,     "reset_spq_fluxes")           !
       ! science
-      CALL model%Queue_task(SB_,      "sb_rate_modifier")           ! 
-      CALL model%Queue_task(SPQ_,     "soil_turbulence")            ! 
-      CALL model%Queue_task(RAD_,     "radiation_q_")               ! 
-      CALL model%Queue_task(PHENO_,   "phenology_q_")               ! 
-      CALL model%Queue_task(ASSIMI_,  "canopy_fluxes")              ! 
-      CALL model%Queue_task(SPQ_,     "spq_physics")                ! 
-      CALL model%Queue_task(VEG_,     "veg_turnover")               ! 
-      CALL model%Queue_task(VEG_,     "veg_dynamics")               ! 
-      CALL model%Queue_task(SB_,      "sb_simple_model")            ! 
-      CALL model%Queue_task(VEG_,     "veg_growth")                 ! 
-      CALL model%Queue_task(VEG_,     "veg_pools")                  ! 
-      CALL model%Queue_task(SB_,      "sb_pools")                   ! 
+      CALL model%Queue_task(SB_,      "sb_rate_modifier")           !
+      CALL model%Queue_task(SPQ_,     "soil_turbulence")            !
+      CALL model%Queue_task(RAD_,     "radiation_q_")               !
+      CALL model%Queue_task(PHENO_,   "phenology_q_")               !
+      CALL model%Queue_task(ASSIMI_,  "canopy_fluxes")              !
+      CALL model%Queue_task(SPQ_,     "spq_physics")                !
+      CALL model%Queue_task(VEG_,     "veg_turnover")               !
+      CALL model%Queue_task(VEG_,     "veg_dynamics")               !
+      CALL model%Queue_task(SB_,      "sb_simple_model")            !
+      CALL model%Queue_task(VEG_,     "veg_growth")                 !
+      CALL model%Queue_task(VEG_,     "veg_pools")                  !
+      CALL model%Queue_task(SB_,      "sb_pools")                   !
       ! averaging variables in time
-      CALL model%Queue_task(RAD_,    "tavrg_radiation")             ! 
-      CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")          ! 
-      CALL model%Queue_task(VEG_,    "tavrg_vegetation")            ! 
-      CALL model%Queue_task(SB_,     "tavrg_soilbiogeochemistry")   ! 
+      CALL model%Queue_task(RAD_,    "tavrg_radiation")             !
+      CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")          !
+      CALL model%Queue_task(VEG_,    "tavrg_vegetation")            !
+      CALL model%Queue_task(SB_,     "tavrg_soilbiogeochemistry")   !
     END SELECT
     ! Task Queue created
-    !--------------------------------------------------------------------------------------------------- !    
-    
+    !--------------------------------------------------------------------------------------------------- !
+
     ! Debug message after creating task queue
     IF (debug_on()) THEN
       CALL print_model(model)
@@ -553,7 +553,7 @@ CONTAINS
       CASE (MODEL_QUINCY)
         IF (tile%Is_process_active(SPQ_)) THEN
           CALL spq_init(tile)
-        END IF        
+        END IF
       END SELECT
 
       ! Initialize SSE_ & HYDRO_ before SB_
@@ -567,7 +567,7 @@ CONTAINS
       IF (tile%Is_process_active(A2L_)) THEN
         CALL atm2land_init(tile)
       END IF
-      
+
       IF (tile%Is_process_active(ASSIMI_)) THEN
         CALL assimi_init(tile)
         ! CALL assimi_init_bc(tile)
@@ -617,7 +617,7 @@ CONTAINS
     !>
     !>     3.1 set initial tile fractions for aggregator(s)
     !>
-    !>     3.2 set LCT fractions 
+    !>     3.2 set LCT fractions
     !>
     ! It is important to only do this after all tile fractions have been set above
     !
