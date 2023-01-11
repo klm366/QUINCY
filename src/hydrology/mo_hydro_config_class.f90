@@ -38,8 +38,14 @@ MODULE mo_hydro_config_class
                              !  i.e. at which water stress starts to be above zero
       & w_soil_wilt_fract, & !< Fraction of field capacity at which soil is at wilting point,
                              !  i.e. when no transpiration occurs anymore
-      & snow_depth_max       !< Limit for snow depth [m water equivalent] to avoid grid cells with
+      & snow_depth_max,    & !< Limit for snow depth [m water equivalent] to avoid grid cells with
                              !  infinitely growing snow depth; -1. for no limitation
+      & manning_n,         & ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture,
+                             ! 0.05 -> floodplains - light brush, 0.075 -> floodplains - heavy brush, 0.15 -> floodplains - trees
+      & dt_sat,            & !< Time required for hydraulic conductivity to reach max [sec]
+      & max_slope,         & !< maximum slope considered for infiltration/runoff estimation
+      & max_pond_depth       !< prescribed maximum surface pond depth --> should later be computed dynamically
+
     CHARACTER(len=10)     :: &
       & scheme_stom_cond       !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
@@ -74,6 +80,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
+    REAL(wp)                    :: manning_n, dt_sat, max_slope, max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
     LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
@@ -88,6 +95,10 @@ CONTAINS
       & w_soil_crit_fract,          &
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
+      & manning_n,                  &
+      & dt_sat,                     &
+      & max_slope,                  &
+      & max_pond_depth,             &
       & scheme_stom_cond,           &
       & l_organic,                  &
       & l_socmap,                   &
@@ -118,6 +129,10 @@ CONTAINS
     w_soil_crit_fract = 0.75_wp
     w_soil_wilt_fract = 0.35_wp
     snow_depth_max    = -1.0_wp             ! -1: no limitation
+    manning_n         = 0.075_wp
+    dt_sat            = 600._wp             ! [sec]
+    max_slope         = 0.45_wp             ! [m/m]
+    max_pond_depth    = 0.1_wp              ! [m]
     scheme_stom_cond  = 'echam5'
     l_organic         = .TRUE.
     l_socmap          = .TRUE.
@@ -152,6 +167,19 @@ CONTAINS
     IF (snow_depth_max >= 0._wp) THEN
       CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
     END IF
+
+    config%manning_n      = manning_n
+    CALL message(TRIM(routine), 'Manning coefficient for lateral flow: '//TRIM(real2string(manning_n)))
+
+    config%dt_sat         = dt_sat
+    CALL message(TRIM(routine), 'Time required for hydraulic conductivity to reach max [sec]: '//TRIM(real2string(dt_sat)))
+
+    config%max_slope      = max_slope
+    CALL message(TRIM(routine), 'Maximum slope considered in runoff and infiltration computation [sec]: '&
+      & //TRIM(real2string(max_slope)))
+
+    config%max_pond_depth = max_pond_depth
+    CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(max_pond_depth)))
 
     config%scheme_stom_cond    = scheme_stom_cond
 
