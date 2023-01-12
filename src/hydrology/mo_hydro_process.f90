@@ -2075,7 +2075,7 @@ CONTAINS
       END IF
 
       ! Reduce transport velocity in presence of ice
-      K(i,j) = K(i,j) * ice_imp(i,j)
+      K(:,:) = K(:,:) * ice_imp(:,:)
 
       ! Make sure percolation from top layer is limited to water content !!!
       K(:,1) = MIN(K(:,1), MAX(0._wp,(ws(:,1)-pwp(:,1)) / dt))
@@ -2107,7 +2107,7 @@ CONTAINS
 
       ! Reduce transport velocity in presence of ice
       ! However, ice seems to attract water --> is this the right approach for diffusivity?
-      D(i,j) = D(i,j) * ice_imp(i,j)
+      D(:,:) = D(:,:) * ice_imp(:,:)
 
     END IF
 
