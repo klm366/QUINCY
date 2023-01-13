@@ -80,6 +80,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
       & oro_stddev,           & !< Standard deviation of orography
+      & steepness,            & !< parameter defining the subgrid slope distribution [/]
       & macro_slope,          & !< Standard deviation of orography
       & micro_slope             !< Standard deviation of orography
 
@@ -727,6 +728,14 @@ CONTAINS
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                         &
         & initval_r=0.0_wp )
+
+      CALL mem%Add_var( 'steepness', mem%steepness,                                 &
+        & hgrid, surface,                                                           &
+        & t_cf('steepness', '/', 'subgrid slope distribution shape parameter'),     &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
+        & prefix, suffix,                                                           &
+        & lrestart=.FALSE.,                                                         &
+        & initval_r=0.0_wp)
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,211, grib_bits)

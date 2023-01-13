@@ -23,7 +23,7 @@ MODULE mo_hydro_process
 
   PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_soil_hydrology, &
     & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare,         &
-    & get_canopy_conductance, get_water_stress_factor
+    & get_canopy_conductance, get_water_stress_factor, calc_orographic_features
 
   INTERFACE get_canopy_conductance
     MODULE PROCEDURE get_canopy_cond_unstressed_simple
@@ -442,7 +442,6 @@ CONTAINS
   !
   ! @param [in]      nc                  Vector lenth
   ! @param [in]      nsoil               Number of soil layers
-  ! @param [in]      nlat                (Effective) number of latitudes
   ! @param [in]      dtime               Time step [s]
   ! @param [in]      l_infil_subzero     Allow infiltration at soil temperatures below 0degC
   ! @param [in]      soil_depth_sl       Thicknesses of soil layers until bedrocj [m]
@@ -470,11 +469,11 @@ CONTAINS
   !
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
-    & nc, l_fract, lat, lon, nsoil, nlat, dtime, ltpe_closed, ltpe_open,                 &
+    & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
     & l_infil_subzero, runoff_scheme, soilhydmodel, interpol_mean,                       &
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, oro_stddev, t_soil_sl1,    &
+    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, steepness, t_soil_sl1,     &
     & water_to_soil, evapotrans_soil, transpiration,                                     &
     ! inout
     & wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,                           &
@@ -488,7 +487,7 @@ CONTAINS
     USE mo_hydro_constants,        ONLY: Arno_, QArctic_
 
     INTEGER,  INTENT(in) :: &
-      & nc, nsoil, nlat
+      & nc, nsoil
     INTEGER, INTENT(in) :: &
       & runoff_scheme, soilhydmodel, interpol_mean
     REAL(wp), INTENT(in) :: &
@@ -502,7 +501,7 @@ CONTAINS
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       & lat, lon,                              &
-      & oro_stddev, t_soil_sl1, water_to_soil, &
+      & steepness, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & tpe_overflow
@@ -567,7 +566,7 @@ CONTAINS
     CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
-    !$claw acc present(ws_min_drain,weq_rootzone_max,oro_stddev,runoff,infilt)    &
+    !$claw acc present(ws_min_drain,weq_rootzone_max,steepness,runoff,infilt)    &
     !$claw acc end parallel
 
     ! Initialize diagnostic runoff and drainage variables
@@ -597,14 +596,14 @@ CONTAINS
       infilt(:) = water_to_soil(:)
 
     ELSE IF (runoff_scheme == Arno_) THEN
-      CALL arno_scheme(nc, nlat, l_infil_subzero, t_soil_sl1,                     &
-        &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),       &
-        &              oro_stddev(:), weq_rootzone_max(:),                        &
+      CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,                          &
+        &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),      &
+        &              steepness(:), weq_rootzone_max(:),                        &
         &              runoff(:), infilt(:))
 
     ELSE IF (runoff_scheme == QArctic_) THEN
-      ! CALL infiltration_new(nc, nlat, dt_sat, dtime, max_slope, wtr_pond_max(:), i_infil,       &
-      !                     & soilhydmodel, oro_stddev(:), manning(:), soil_depth_sl(:,1),        &
+      ! CALL infiltration_new(nc, dt_sat, dtime, max_slope, wtr_pond_max(:), i_infil,       &
+      !                     & soilhydmodel, steepness(:), manning(:), soil_depth_sl(:,1),        &
       !                     & pore_size_index_sl(:,1), bclapp_sl(:,1), weq_wsat_sl(:,1),          &
       !                     & weq_field_cap_sl(:,1), weq_p_wilt_sl(:,1), hyd_cond_sat_sl(:,1),    &
       !                     & wtr_soil_sl(:,1), ice_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1),     &
@@ -676,29 +675,62 @@ CONTAINS
 
 
   !------------------------------------------------------------------------------------------------
-  !! @brief   Calculation of surface runoff based on the ARNO Scheme 
-  !! (E. Todini, The ARNO rainfall-runoff model, doi:10.1016/S0022-1694(96)80016-3.)
+  !! @brief   Calculation of subgrid orographic features
   !!
   !! @par Revision History
-  !!   Revised by Tobias Stacke (MPI-M) in January 2023
+  !!   Written by Tobias Stacke (MPI-M) in January 2023 based on the
+  !!   ARNO Scheme infiltration routine
 
-  SUBROUTINE arno_scheme(nc, nlat, l_infil_subzero, t_soil_sl1, water_to_soil, weq_rootzone, &
-    &                    oro_stddev, weq_rootzone_max,                                       &
-    &                    runoff, infilt)
+  SUBROUTINE calc_orographic_features(nc, nlat, oro_stddev, steepness)
 
-    USE mo_jsb_physical_constants, ONLY: tmelt
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
 
     INTEGER,  INTENT(in) :: &
       & nc, nlat
 
-    LOGICAL, INTENT(in) :: l_infil_subzero
+    REAL(wp), INTENT(in)  :: oro_stddev(:)  !< standard deviation of orography                   [m]
+    REAL(wp), INTENT(out) :: steepness(:)   !< parameter defining the subgrid slope distribution [/]
+
+    REAL(wp) ::                       &
+      & sigma_0,                      & !< minimum value (100 m); below b = 0.01
+      & sigma_max                       !< resolution-dependent maximum
+    !
+    ! steepness b: shape parameter, defining the sub-gid scale steepness of the orographie:
+    !
+    ! b = (oro_stddev - sigma_0) / (oro_stddev + sigma_max)
+    !
+    sigma_0   = oro_var_min
+    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
+
+    ! Compute steepness parameter
+    steepness(:) = MAX(0._wp, oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max)
+    ! Limit parameter to realistic bounds
+    steepness(:) = MAX(MIN(steepness(:), 0.5_wp), 0.01_wp)
+
+  END SUBROUTINE calc_orographic_features
+
+  !------------------------------------------------------------------------------------------------
+  !! @brief   Calculation of surface runoff based on the ARNO Scheme
+  !! (E. Todini, The ARNO rainfall-runoff model, doi:10.1016/S0022-1694(96)80016-3.)
+  !!
+  !! @par Revision History
+  !!   Revised by Tobias Stacke (MPI-M) in January 2023
+
+  SUBROUTINE arno_scheme(nc, l_infil_subzero, t_soil_sl1, water_to_soil, weq_rootzone, &
+    &                    steepness, weq_rootzone_max,                                  &
+    &                    runoff, infilt)
+
+    USE mo_jsb_physical_constants, ONLY: tmelt
+
+    INTEGER,  INTENT(in) :: nc
+
+    LOGICAL, INTENT(in)  :: l_infil_subzero
 
     REAL(wp), INTENT(in) ::           &
       & t_soil_sl1(:),                & !< temperature of uppermost soil layer               [K]
       & water_to_soil(:),             & !< amount of water going into the soil               [m]
       & weq_rootzone(:),              & !< liquid water + ice within the root zone           [m]
-      & oro_stddev(:),                & !< standard deviation of orography                   [m]
+      & steepness(:),                 & !< parameter defining the subgrid slope distribution [/]
       & weq_rootzone_max(:)             !< maximum water holding capacity (liquid + ice) of the root zone [m]
 
     REAL(wp), INTENT(out) ::          &
@@ -710,40 +742,22 @@ CONTAINS
       & i                               !< grid cell index
 
     REAL(wp) ::                       &
-      & sigma_0,                      & !< minimum value
-      & sigma_max,                    & !< resolution-dependent maximum
-      & steepness,                    & !< sub-grid scale steepness of the orography
       & ws_min_drain,                 & !< minimum amount of root zone soil water for drainage
       & ws_rel,                       & !< relative rootzone soil moisture (water + ice)
-      & zbws, zb1, zbm, zconw1, zvol
-    ! 
-    !
-    ! f(w) = 1 - (1 - w/w_max)**b
-    !
-    ! b: shape parameter, defining the sub-gid scale steepness of the orographie:
-    !
-    ! b = (sigma_z - sigma_0) / (sigma_z + sigma_max)
-    !
-    ! sigma_z: standard deviation of topographic height
-    ! sigma_0: minimum value (100 m); below b = 0.01
-    ! sigma_max: resolution dependent maximum
-
-    sigma_0   = oro_var_min
-    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
+      & zb1, zbm, zconw1, zvol
 
     !$claw acc parallel
     !$claw acc loop gang vector
     DO i = 1, nc
-      steepness = MAX(0._wp, oro_stddev(i)-sigma_0) / (oro_stddev(i)+sigma_max)
 
       ! todo: parameters should be defined as parameters
-      zbws   = MAX(MIN(steepness, 0.5_wp), 0.01_wp)
-      zb1    = 1._wp + zbws
+      zb1    = 1._wp + steepness(i)
       zbm    = 1._wp / zb1
       zconw1 = weq_rootzone_max(i) * zb1
 
       !>  Surface runoff and infiltration
       !   -----------------------------------
+      !   f(w) = 1 - (1 - w/w_max)**b
 
       ! No drainage is possible below a certain minimum amount of water (zwdmin). This corresponds
       ! to the layered bucket scheme, and has nothing to do with field capacity or wilting point.
@@ -778,15 +792,13 @@ CONTAINS
 
   END SUBROUTINE arno_scheme
 
-  ! !------------------------------------------------------------------------------------------------
-  ! !! @brief   Calculation of vertical soil water movement for multiple soil layers
-  ! !!
-  ! !! @par Revision History
-  ! !!   Routine based on the soil hydrology proposed by Christian Reick (MPI-M) and written
-  ! !!   by Philipp de Vrese (MPI-M)
-  ! !!   Revised by Tobias Stacke (MPI-M) in September 2022
+  !------------------------------------------------------------------------------------------------
+  !! @brief   New infiltration and runoff scheme for HydroTile approach
+  !!
+  !! @par Revision History
+  !!   Developed by Philipp de Vrese (MPI-M) in September 2022
 
-  ! SUBROUTINE infiltration_new(nc,nlat, dt_sat, dtime, max_slope, wtr_pond_max, i_infil, i_shm,     &
+  ! SUBROUTINE infiltration_new(nc, dt_sat, dtime, max_slope, wtr_pond_max, i_infil, i_shm,     &
   !                           & oro_stddev, manning, dsoil,                                &
   !                           & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat,    &
   !                           & ws_soil, ice_soil, wtr_pot_scool, water_to_soil, wtr_pond, &
@@ -794,8 +806,7 @@ CONTAINS
 
   !   USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
 
-  !   INTEGER,  INTENT(in) :: &
-  !     & nc, nlat
+  !   INTEGER,  INTENT(in) :: nc
 
   !   REAL(wp), INTENT(in) :: dtime, &
   !     & dt_sat,          &         !< Time it takes hydraulic conductivity to reach max [sec]
