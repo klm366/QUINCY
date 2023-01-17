@@ -46,6 +46,8 @@ MODULE mo_jsb_impl_constants
   INTEGER,  PARAMETER :: ifs_nsoil         = 4                                  !< Number of soil levels in IFS initial file
   REAL(wp), PARAMETER :: ifs_soil_depth(4) = (/ 0.07_wp,0.28_wp,1._wp,2.89_wp/) !< Soil layer depths in IFS initial file [m]
 
+  REAL(wp), PARAMETER :: def_parameters = -9999.0_wp  !< the default value of model parameters (not constants) prior to their init
+
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_jsb_impl_constants'
 
 ! CONTAINS

@@ -46,7 +46,7 @@ CONTAINS
     USE mo_assimi_constants,    ONLY: init_assimi_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
-    USE mo_pheno_constants,     ONLY: init_pheno_constants
+    USE mo_pheno_parameters,    ONLY: init_pheno_parameters_quincy, init_pheno_parameters_jsbach
     USE mo_spq_constants,       ONLY: init_spq_constants
 
     dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
@@ -276,8 +276,10 @@ CONTAINS
       CALL init_veg_constants    
       CALL init_spq_constants
       CALL init_sb_constants
-      CALL init_pheno_constants    
+      CALL init_pheno_parameters_quincy
       CALL init_atmland_constants  
+    CASE (MODEL_JSBACH)
+      CALL init_pheno_parameters_jsbach
     END SELECT
 
     CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')

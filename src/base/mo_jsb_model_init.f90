@@ -457,7 +457,7 @@ CONTAINS
       CALL model%Queue_task(SB_,      "sb_rate_modifier")           ! 
       CALL model%Queue_task(SPQ_,     "soil_turbulence")            ! 
       CALL model%Queue_task(RAD_,     "radiation_q_")               ! 
-      CALL model%Queue_task(PHENO_,   "phenology_q_")               ! 
+      CALL model%Queue_task(PHENO_,   "phenology")                  ! 
       CALL model%Queue_task(ASSIMI_,  "canopy_fluxes")              ! 
       CALL model%Queue_task(SPQ_,     "spq_physics")                ! 
       CALL model%Queue_task(VEG_,     "veg_turnover")               ! 
@@ -764,9 +764,9 @@ CONTAINS
 
       IF (tile%Is_process_calculated(PHENO_)) THEN
         dsl4jsb_Get_config(PHENO_)
-        IF (        tile%is_vegetation                                   &
-            & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology' &
-            & .AND. tile%lcts(1)%lib_id == 0)                            &
+        IF (        tile%is_vegetation                                          &
+            & .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) /= 'climatology' &
+            & .AND. tile%lcts(1)%lib_id == 0)                                   &
           & CALL finish(TRIM(routine), &
           &             'Must use phenology climatology on general, non-PFT VEG tile '//TRIM(tile%name))
       END IF
