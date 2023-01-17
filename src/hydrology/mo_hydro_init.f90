@@ -463,6 +463,14 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
       END IF
 
+      ! Set maximum pond depth from namelist value
+      IF (tile%contains_ridge) THEN
+        ! This can only be true for usecases with HydroTiles
+        dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0._wp
+      ELSE
+        dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = dsl4jsb_Config(HYDRO_)%max_pond_depth
+      END IF
+
       !$acc update device(dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_, wtr_soil_pwp_sl), &
       !$acc dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl), &
@@ -474,6 +482,7 @@ CONTAINS
       !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
       !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
       !$acc dsl4jsb_var_ptr(HYDRO_, fract_org_sl), &
+      !$acc dsl4jsb_var_ptr(HYDRO_, weq_pond_max), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
       !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), &
       !$acc dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) )

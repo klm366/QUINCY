@@ -471,15 +471,17 @@ CONTAINS
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
     & l_infil_subzero, runoff_scheme, soilhydmodel, interpol_mean,                       &
+    & manning_n, dt_sat,                                                                 &
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, steepness, t_soil_sl1,     &
-    & water_to_soil, evapotrans_soil, transpiration,                                     &
+    & wtr_pond_max, water_to_soil, evapotrans_soil, transpiration,                       &
     ! inout
-    & wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,                           &
+    & wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow, wtr_soilhyd_res,                 &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl,                                      &
-    & infilt, runoff, infilt_over, drainage, drain_rock, latdrain_sl, drain_lat          &
+    & infilt, runoff, runoff_horton, runoff_dunne, drainage, drain_rock, latdrain_sl,    &
+    & drain_lat                                                                          &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -490,8 +492,8 @@ CONTAINS
       & nc, nsoil
     INTEGER, INTENT(in) :: &
       & runoff_scheme, soilhydmodel, interpol_mean
-    REAL(wp), INTENT(in) :: &
-      & dtime, w_soil_wilt_fract
+    REAL(wp), INTENT(in) ::                             &
+      & dtime, w_soil_wilt_fract, manning_n, dt_sat
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in) :: l_infil_subzero
@@ -500,16 +502,17 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & lat, lon,                              &
-      & steepness, t_soil_sl1, water_to_soil, &
+      & lat, lon, steepness,                            &
+      & wtr_pond_max, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow
+      & wtr_pond, tpe_overflow
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & infilt, runoff, infilt_over, drainage, &
-      & drain_rock, drain_lat, wtr_soilhyd_res
+      & infilt, runoff, runoff_dunne, runoff_horton, &
+      & drainage, drain_rock, drain_lat, &
+      & wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & latdrain_sl, wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
 
@@ -521,7 +524,8 @@ CONTAINS
     REAL(wp) ::              &
       & weq_rootzone_max(nc),& ! maximum water holding capacity of the rootzone (liquid water + ice) [m]
       & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
-      & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
+      & ice_rootzone(nc),    & ! amount of ice in the rootzone [m]
+      & manning(nc)            ! Manning roughness coefficient (0.15 for flowplain with trees)
 
     REAL(wp) ::                     &
       & weq_wsat_sl(nc,nsoil),      & !< soil water (liquid + ice) content at saturation [m]
@@ -534,7 +538,7 @@ CONTAINS
     REAL(wp) ::              &
       & hlp_2d(nc,nsoil)       ! helper array needed with openacc
 
-    INTEGER :: i
+    INTEGER :: i, i_infil
 
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
 
@@ -570,7 +574,8 @@ CONTAINS
     !$claw acc end parallel
 
     ! Initialize diagnostic runoff and drainage variables
-    infilt_over(:)    = 0._wp
+    runoff_dunne(:)   = 0._wp
+    runoff_horton(:)  = 0._wp
     drain_rock(:)     = 0._wp
     drain_lat_sl(:,:) = 0._wp
 
@@ -599,16 +604,18 @@ CONTAINS
       CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,                          &
         &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),      &
         &              steepness(:), weq_rootzone_max(:),                        &
-        &              runoff(:), infilt(:))
+        &              runoff_horton(:), infilt(:))
 
     ELSE IF (runoff_scheme == QArctic_) THEN
-      ! CALL infiltration_new(nc, dt_sat, dtime, max_slope, wtr_pond_max(:), i_infil,       &
-      !                     & soilhydmodel, steepness(:), manning(:), soil_depth_sl(:,1),        &
-      !                     & pore_size_index_sl(:,1), bclapp_sl(:,1), weq_wsat_sl(:,1),          &
-      !                     & weq_field_cap_sl(:,1), weq_p_wilt_sl(:,1), hyd_cond_sat_sl(:,1),    &
-      !                     & wtr_soil_sl(:,1), ice_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1),     &
-      !                     & water_to_soil(:), wtr_pond(:),                                      &
-      !                     & runoff_horton(:))
+      i_infil    = 1
+      manning(:) = manning_n
+      CALL infiltration_new(nc, dt_sat, dtime, wtr_pond_max(:), i_infil, soilhydmodel,          &
+                          & steepness(:), manning(:), soil_depth_sl(:,1),                       &
+                          & pore_size_index_sl(:,1), bclapp_sl(:,1), weq_wsat_sl(:,1),          &
+                          & weq_field_cap_sl(:,1), weq_p_wilt_sl(:,1), hyd_cond_sat_sl(:,1),    &
+                          & wtr_soil_sl(:,1), ice_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1),     &
+                          & water_to_soil(:), wtr_pond(:),                                      &
+                          & runoff_horton(:), infilt(:))
 
     END IF
 
@@ -645,13 +652,13 @@ CONTAINS
       &     hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,           &
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
-      &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
+      &     infilt, runoff_dunne, drain_rock, drain_lat_sl,                          &
       &     tpe_overflow, wtr_soilhyd_res, ltpe_closed, ltpe_open)
 
     ! Aggregate the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
     drainage(:)  = drainage(:) + drain_rock(:) + drain_lat(:)
-    runoff(:)    = runoff(:) + infilt_over(:)
+    runoff(:)    = runoff_horton(:) + runoff_dunne(:)
 
 
     ! recalculate soil moisture from the soil moisture of the individual levels
@@ -660,12 +667,13 @@ CONTAINS
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector
     DO i = 1, nc
-      infilt(i)      = infilt     (i) * rhoh2o / dtime
-      runoff(i)      = runoff     (i) * rhoh2o / dtime
-      infilt_over(i) = infilt_over(i) * rhoh2o / dtime
-      drainage(i)    = drainage   (i) * rhoh2o / dtime
-      drain_rock(i)  = drain_rock (i) * rhoh2o / dtime
-      drain_lat(i)   = drain_lat  (i) * rhoh2o / dtime
+      infilt(i)        = infilt     (i) * rhoh2o / dtime
+      runoff(i)        = runoff     (i) * rhoh2o / dtime
+      runoff_horton(i) = runoff_horton(i) * rhoh2o / dtime
+      runoff_dunne(i)  = runoff_dunne(i) * rhoh2o / dtime
+      drainage(i)      = drainage   (i) * rhoh2o / dtime
+      drain_rock(i)    = drain_rock (i) * rhoh2o / dtime
+      drain_lat(i)     = drain_lat  (i) * rhoh2o / dtime
       latdrain_sl(i,:) = drain_lat_sl(i,:) * rhoh2o / dtime  ! Only temporary!
     END DO
     !$claw acc end data
@@ -679,21 +687,28 @@ CONTAINS
   !!
   !! @par Revision History
   !!   Written by Tobias Stacke (MPI-M) in January 2023 based on the
-  !!   ARNO Scheme infiltration routine
+  !!   ARNO Scheme infiltration routine and extented for HydroTiles usecase
 
-  SUBROUTINE calc_orographic_features(nc, nlat, oro_stddev, steepness)
+  SUBROUTINE calc_orographic_features(nlat, l_hydrotiles, l_upland, &
+    & oro_stddev, max_slope, steepness, micro_slope, macro_slope )
 
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
 
-    INTEGER,  INTENT(in) :: &
-      & nc, nlat
+    INTEGER,  INTENT(in)  :: nlat                  !< (Effective) number of latitudes for steepness parameter
+    LOGICAL,  INTENT(in)  :: l_hydrotiles          !< use HydroTiles setup
+    LOGICAL,  INTENT(in)  :: l_upland              !< Tile belongs to upland fraction
 
-    REAL(wp), INTENT(in)  :: oro_stddev(:)  !< standard deviation of orography                   [m]
-    REAL(wp), INTENT(out) :: steepness(:)   !< parameter defining the subgrid slope distribution [/]
+    REAL(wp), INTENT(in)  :: oro_stddev(:)         !< standard deviation of orography                   [m]
+    REAL(wp), INTENT(in)  :: max_slope             !< Maximum slope threshold
+    REAL(wp), INTENT(out) :: steepness(:)          !< parameter defining the subgrid slope distribution [/]
+    REAL(wp), INTENT(out) :: micro_slope(:)        !< slope on microtopography tiles
+    REAL(wp), INTENT(out) :: macro_slope(:)        !< slope on macrotopography tiles
 
+
+    ! Local variables
     REAL(wp) ::                       &
-      & sigma_0,                      & !< minimum value (100 m); below b = 0.01
-      & sigma_max                       !< resolution-dependent maximum
+      & sigma_0,                      &            !< minimum value (100 m); below b = 0.01
+      & sigma_max                                  !< resolution-dependent maximum
     !
     ! steepness b: shape parameter, defining the sub-gid scale steepness of the orographie:
     !
@@ -702,10 +717,28 @@ CONTAINS
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
-    ! Compute steepness parameter
-    steepness(:) = MAX(0._wp, oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max)
-    ! Limit parameter to realistic bounds
-    steepness(:) = MAX(MIN(steepness(:), 0.5_wp), 0.01_wp)
+    IF (.NOT. l_hydrotiles) THEN
+      ! Compute steepness parameter for standard setup
+      steepness(:)   = MAX(0._wp, oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max)
+      ! Limit parameter to realistic bounds
+      steepness(:)   = MAX(MIN(steepness(:), 0.5_wp), 0.01_wp)
+      micro_slope(:) = 0._wp
+      macro_slope(:) = 0._wp
+
+    ELSE
+      ! Compute tile specific steepness for HydroTiles setup
+      micro_slope(:) = 0._wp
+      IF (l_upland) THEN
+        macro_slope(:) = MIN(max_slope, MAX(0.01_wp, &
+          & (oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max) ))
+      ELSE
+        macro_slope(:) = 0.01_wp
+      END IF
+
+      ! Add micro and macro slopes
+      steepness(:) = MIN(0.5_wp, macro_slope(:) + micro_slope(:))
+
+    END IF
 
   END SUBROUTINE calc_orographic_features
 
@@ -798,194 +831,172 @@ CONTAINS
   !! @par Revision History
   !!   Developed by Philipp de Vrese (MPI-M) in September 2022
 
-  ! SUBROUTINE infiltration_new(nc, dt_sat, dtime, max_slope, wtr_pond_max, i_infil, i_shm,     &
-  !                           & oro_stddev, manning, dsoil,                                &
-  !                           & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat,    &
-  !                           & ws_soil, ice_soil, wtr_pot_scool, water_to_soil, wtr_pond, &
-  !                           & runoff, infilt, pdv_1d_out)
+  SUBROUTINE infiltration_new(nc, dt_sat, dtime, wtr_pond_max, i_infil,                  &
+                            & soilhydmodel, slope, manning, dsoil,                       &
+                            & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat,    &
+                            & ws_soil, ice_soil, wtr_pot_scool, water_to_soil, wtr_pond, &
+                            & runoff, infilt)
 
-  !   USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
+    INTEGER,  INTENT(in) :: nc
 
-  !   INTEGER,  INTENT(in) :: nc
+    REAL(wp), INTENT(in) :: &
+      &  dtime,             &
+      &  dt_sat               !< Time it takes hydraulic conductivity to reach max [sec]
 
-  !   REAL(wp), INTENT(in) :: dtime, &
-  !     & dt_sat,          &         !< Time it takes hydraulic conductivity to reach max [sec]
-  !     & max_slope
+    INTEGER,  INTENT(in) :: &
+      & i_infil,            &
+      & soilhydmodel         !< Soil hydrology model for computation of K
 
-  !   INTEGER,  INTENT(in) :: &
-  !     & i_infil, i_shm
+    REAL(wp), INTENT(in) :: &
+      & wtr_pond_max(:),    &
+      & slope(nc),          &   ! Slope of the contributing areas ... for now use b
+      & pore_size_index(:), &
+      & bclapp(:),          &
+      & ws_max(:),          &
+      & fc(:),              &
+      & pwp(:),             &
+      & hyd_cond_sat(:),    &
+      & dsoil(:),           &
+      & manning(:),         &
+      & ws_soil(:),         &
+      & wtr_pot_scool(:),   &
+      & ice_soil(:),        &
+      & water_to_soil(:)
 
-  !   REAL(wp), INTENT(in) ::      &
-  !     & wtr_pond_max(:),             &
-  !     & oro_stddev(:),           &
-  !     & pore_size_index(:),      &
-  !     & bclapp(:),               &
-  !     & ws_max(:),               &
-  !     & fc(:),                   &
-  !     & pwp(:),                  &
-  !     & hyd_cond_sat(:),         &
-  !     & dsoil(:),                &
-  !     & manning(:),              & 
-  !     & ws_soil(:),              &
-  !     & wtr_pot_scool(:),        &
-  !     & ice_soil(:),             &
-  !     & water_to_soil(:)
+    REAL(wp), INTENT(inout) ::   &
+      & wtr_pond(:)
 
-  !   REAL(wp), INTENT(inout) ::      &
-  !     & wtr_pond(:)
+    REAL(wp), INTENT(out) ::     &
+      & runoff(:),               &
+      & infilt(:)
 
-  !   REAL(wp), INTENT(out) ::     &
-  !     & runoff(:), infilt(:),    &
-  !     pdv_1d_out(:)
-  !   ! Local variables
-  !   INTEGER :: jl, i, varindex
+    ! Local variables
+    INTEGER :: nlay
 
-  !   REAL(wp) ::                       &
-  !     ! variables for infiltration calculation
-  !     & sigma_0,                      & !< minimum value
-  !     & sigma_max,                    & !< resolution-dependent maximum
-  !     & steepness,                    & !< sub-grid scale steepness of the orography
-  !     & zbws
+    REAL(wp) ::              &
+      & zeros(nc),           &
+      & wtr_scool(nc),       &
+      & ws_incl_ice(nc),     &
+      & ice_impede(nc),      &   ! Inhibition of infiltration due to teh presence of ice
+      & k_start(nc),         &   ! hydrualic conductivity at the beginning ...
+      & k_end(nc),           &   ! ... and the end of the timestep (assuming all water to infiltrate)
+      & delta_k(nc),         &   ! ... additional infiltration capacity 
+      & water_excess(nc),    &   ! Water that doesn infiltrte immediatly but ponds
+      & pond_pot(nc),        &   ! Ponding depth reached during saturation time
+      & v_max(nc),           &   ! Avg. velocity of water; vertical crossection 
+      & sro_max(nc),         &   ! velocity relative to m2 gridcell area
+      & fract_infilt(nc),    &   ! fraction of ponding water that can infiltrate due to inicreasing k
+      & infilt_pot(nc),      &   ! Additional infitration flux due to increasing k
+      & zmvg(nc)                 ! vanGenuchten parameter
 
-  !   REAL(wp) ::              &
-  !     & zeros(nc),       &
-  !     & wtr_scool(nc),       &
-  !     & ws_incl_ice(nc),     &
-  !     & ice_impede(nc),      &   ! Inhibition of infiltration due to teh presence of ice
-  !     & k_start(nc),         &   ! hydrualic conductivity at the beginning ...
-  !     & k_end(nc),           &   ! ... and the end of the timestep (assuming all water to infiltrate)
-  !     & delta_k(nc),         &   ! ... additional infiltration capacity 
-  !     & water_excess(nc),    &   ! Water that doesn infiltrte immediatly but ponds
-  !     & pond_pot(nc),        &   ! Ponding depth reached during saturation time
-  !     & slope(nc),           &   ! Slope of the contributing areas ... for now use b
-  !     & v_max(nc),           &   ! Avg. velocity of water; vertical crossection 
-  !     & sro_max(nc),         &   ! velocity relative to m2 gridcell area
-  !     & fract_infilt(nc),    &   ! fraction of ponding water that can infiltrate due to inicreasing k
-  !     & infilt_pot(nc)           ! Additional infitration flux due to increasing k
+    REAL(wp) ::              &
+      & ice_impeda_s1(nc,1), &  ! layered ice impedance on a singled layer
+      & hyd_cond_s1(nc,1)       ! layered hydrologic conductivity on a single layer
 
-  !   !--------------------------------------------------------------------------------------------------------------------------------------
+    !--------------------------------------------------------------------------------------------------------------------------------------
 
-  !   zeros(:) = 0._wp
-  !   wtr_scool(:) = MIN(wtr_pot_scool(:), ws_soil(:))
-  !   ws_incl_ice(:) = ws_soil(:) + ice_soil(:)
-  !   !>
-  !   !> 1. Infiltration
-  !   !>
-  !   !
-  !   ! f(w) = 1 - (1 - w/w_max)**b
-  !   !
-  !   ! b: shape parameter, defining the sub-gid scale steepness of the orographie:
-  !   !
-  !   ! b = (sigma_z - sigma_0) / (sigma_z + sigma_max)
-  !   !
-  !   ! sigma_z: standard deviation of topographic height
-  !   ! sigma_0: minimum value (100 m); below b = 0.01
-  !   ! sigma_max: resolution dependent maximum
+    nlay           = 1 ! Number of soil layers set to 1 because only top soil layer is used
+    zeros(:)       = 0._wp
+    wtr_scool(:)   = MIN(wtr_pot_scool(:), ws_soil(:))
+    ws_incl_ice(:) = ws_soil(:) + ice_soil(:)
+    zmvg(:)        = pore_size_index(:) / (pore_size_index(:) + 1._wp)
 
-  !   sigma_0   = oro_var_min
-  !   sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
+    !> Get ice impedance and hydraulic conductivity for the uppermost soil layer based
+    !!   on the state prior to infiltration
+    !    The interpolation scheme is set to 1 as it is not used in this case
+    !    All soil fields are spread onto 2D variables with only one index (top layer soil)
+    CALL get_soilhyd_cond_properties(                 &
+      & soilhydmodel, 1, dtime, nc, nlay,             & ! nlay == nsoil and is now set to 1 (top soil layer)
+      & SPREAD(1,               DIM=1, ncopies=nc),   & ! active soil layer set to one
+      & SPREAD(dsoil(:),        DIM=2, ncopies=nlay), & ! soil depth of top layer
+      & SPREAD(ws_soil(:),      DIM=2, ncopies=nlay), &
+      & SPREAD(ice_soil(:),     DIM=2, ncopies=nlay), &
+      & SPREAD(wtr_scool(:),    DIM=2, ncopies=nlay), &
+      & SPREAD(ws_max(:),       DIM=2, ncopies=nlay), &
+      & SPREAD(fc(:),           DIM=2, ncopies=nlay), &
+      & SPREAD(pwp(:),          DIM=2, ncopies=nlay), &
+      & SPREAD(hyd_cond_sat(:), DIM=2, ncopies=nlay), &
+      & SPREAD(zeros(:),        DIM=2, ncopies=nlay), &
+      & SPREAD(bclapp(:),       DIM=2, ncopies=nlay), &
+      & SPREAD(zmvg(:),         DIM=2, ncopies=nlay), &
+      & ice_impeda_s1(:,:),                           &
+      & hyd_cond_s1(:,:)                              &
+      & )
+    ice_impede(:) = ice_impeda_s1(:,1)
+    k_start(:)    = hyd_cond_s1(:,1)
 
-  !   !$claw acc parallel
-  !   !$claw acc loop gang vector
-  !   DO i=1,nc
-  !     steepness = MAX(0._wp, oro_stddev(i)-sigma_0) / (oro_stddev(i)+sigma_max)
+    IF (i_infil == 1) THEN
+      !!---Assuming the wetting front moves with the speed of ksat
+      k_end(:) = ice_impede(:) * hyd_cond_sat(:)
+    ELSE IF (i_infil == 2) THEN
+      !!---Assuming that by the end of the timestep k = precip*
+      k_end(:) = MIN(ice_impede(:) * hyd_cond_sat(:), water_to_soil(:) / dtime)
+    ELSE IF (i_infil == 3) THEN
+      !!---Assuming that pondig water is euqally distributed throughout the soil layer 
+      CALL get_soilhyd_cond_properties(                               &
+        & soilhydmodel, 1, dtime, nc, nlay,                           & ! nlay == nsoil and is now set to 1 (top soil layer)
+        & SPREAD(1,                             DIM=1, ncopies=nc),   & ! active soil layer set to one
+        & SPREAD(dsoil(:),                      DIM=2, ncopies=nlay), & ! soil depth of top layer
+        & SPREAD(ws_soil(:) + water_to_soil(:), DIM=2, ncopies=nlay), &
+        & SPREAD(ice_soil(:),                   DIM=2, ncopies=nlay), &
+        & SPREAD(wtr_scool(:),                  DIM=2, ncopies=nlay), &
+        & SPREAD(ws_max(:),                     DIM=2, ncopies=nlay), &
+        & SPREAD(fc(:),                         DIM=2, ncopies=nlay), &
+        & SPREAD(pwp(:),                        DIM=2, ncopies=nlay), &
+        & SPREAD(hyd_cond_sat(:),               DIM=2, ncopies=nlay), &
+        & SPREAD(zeros(:),                      DIM=2, ncopies=nlay), &
+        & SPREAD(bclapp(:),                     DIM=2, ncopies=nlay), &
+        & SPREAD(zmvg(:),                       DIM=2, ncopies=nlay), &
+        & hyd_cond_s1(:,:)                                            &
+        & )
+      k_end(:) = hyd_cond_s1(:,1)
+    ELSE IF (i_infil == 4) THEN
+      !!---Assuming the wetting front moves with the speed of ksat
+      !!     and in frozen soils water can enter until pore space of top layer is saturated
+      k_end(:) = MIN(hyd_cond_sat(:),                                  &
+                     MAX(ice_impede(:) * hyd_cond_sat(:),              &
+                         (fc(:) - ws_incl_ice(:)) / dtime))
+    END IF
 
-  !     ! todo: parameters should be defined as parameters
-  !     zbws   = MAX(MIN(steepness,0.5_wp), 0.01_wp)
-  !     !>  1.1 Surface runoff and infiltration
-  !     !   -----------------------------------
+    WHERE (water_to_soil(:) <= 0._wp)
+      k_end(:) = k_start(:)
+    END WHERE
 
-  !     varindex      = 1
-  !     call get_conductivies_diffusivities(i_shm,varindex,            &
-  !                   & dsoil(i), ws_soil(i), ice_soil(i), wtr_scool(i),   &
-  !                   & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
-  !                   & zeros(i), bclapp(i), pore_size_index(i),       &
-  !                   & ice_impede(i))
+    ! Rescale final conductivity in case of short time steps
+    delta_k(:)      = k_end(:) - k_start(:)
+    IF (dtime < dt_sat .AND. (i_infil == 1 .OR. i_infil == 2 .OR. i_infil == 4 )) THEN
+      k_end(:)   = k_start(:) +  delta_k(:) * dtime / dt_sat
+      delta_k(:) = k_end(:) - k_start(:)
+    END IF
 
+    ! @todo why is pond water and water_to_soil separated? Shouldn't pond water be added to water_to_soil?
+    infilt(:)       = MIN(water_to_soil(:), k_start(:) * dtime)
+    water_excess(:) = MAX(0._wp, water_to_soil(:) - infilt(:) - wtr_pond_max(:))
+    pond_pot(:)     = water_excess(:) * dt_sat / dtime  ! Does this means ponds are filled by runoff?
 
-  !     varindex      = 2
-  !     call get_conductivies_diffusivities(i_shm,varindex,            &
-  !                   & dsoil(i), ws_soil(i), ice_soil(i), wtr_scool(i),   &
-  !                   & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
-  !                   & zeros(i), bclapp(i), pore_size_index(i),       &
-  !                   & k_start(i))
+    ! Compute lateral flow velocity for runoff
+    v_max(:)       = pond_pot(:)**(2._wp/3._wp)*slope(:)**(1._wp/2._wp)*1._wp / manning(:)
+    sro_max(:)     = pond_pot(:) * v_max(:)  ! get from outflux through crossection (side) to flux per grid-box area
 
+    fract_infilt(:) = MAX(0._wp, MIN(1._wp, delta_k(:) / (delta_k(:) + sro_max(:))))
+    infilt_pot(:)   = water_excess(:) * fract_infilt(:)
 
-  !     IF (water_to_soil(i) <= 0._wp) THEN
-  !       k_end(i)      = k_start(i)
-  !     ELSE
-  !       IF (i_infil == 1) THEN
-  !         !!---Assuming the wetting front moves with the speed of ksat
-  !         k_end(i)        = ice_impede(i) * hyd_cond_sat(i)
-  !       ELSE IF (i_infil == 2) THEN
-  !         !!---Assuming that by the end of the timestep k = precip*
-  !         k_end(i)        = MIN(ice_impede(i) * hyd_cond_sat(i), water_to_soil(i)/dtime)
-  !       ELSE IF (i_infil == 3) THEN
-  !         !Assuming that pondig water is euqally distributed throughout the soil layer 
-  !         varindex      = 2
-  !         call get_conductivies_diffusivities(i_shm,varindex,            &
-  !                   & dsoil(i), (ws_soil(i)+ water_to_soil(i)), ice_soil(i), wtr_scool(i),   &
-  !                   & ws_max(i), fc(i), pwp(i), hyd_cond_sat(i),     &
-  !                   & zeros(i), bclapp(i), pore_size_index(i),       &
-  !                   & k_end(i))
-  !       ELSE IF (i_infil == 4) THEN
-  !         !!---Assuming the wetting front moves with the speed of ksat
-  !         !!---and in frozen soils water can enter until pore space of top layer is saturated
-  !         k_end(i)        = MIN(hyd_cond_sat(i),                                  &
-  !                               MAX(ice_impede(i) * hyd_cond_sat(i),              &
-! !                                   (ws_max(i) - ws_incl_ice(i))/dtime))
-  !                                  (fc(i) - ws_incl_ice(i))/dtime))
-  !       END IF
-  !     END IF
+    WHERE (water_excess(:) > (delta_k(:) + sro_max(:)) * dtime)
+      infilt(:) = infilt(:) + delta_k(:) * dtime
+    ELSE WHERE
+      infilt(:) = infilt(:) + infilt_pot(:)
+    END WHERE
 
-  !     delta_k(i) = k_end(i) - k_start(i)
-  !     infilt(i)  = MIN(water_to_soil(i), k_start(i)* dtime)
-  !     water_excess(i) = MAX(0._wp, water_to_soil(i) - infilt(i) - wtr_pond_max(i))
-! !      water_excess(i) = water_to_soil(i) - infilt(i)
-  !     pond_pot(i) = water_excess(i) * dt_sat / dtime
+    wtr_pond(:) = MIN(wtr_pond_max(:), water_to_soil(:) - infilt(:))
+    runoff(:)   = MAX(0._wp,    water_to_soil(:) - infilt(:)  - wtr_pond(:))
 
+    !!! Unbedingt noch dahingehend korrigieren, das unter gepondeten Bereichen ziemlich sicher mit ksat infiltriert
+    WHERE (infilt(:) < ice_impede(:) * hyd_cond_sat(:) * dtime .AND. wtr_pond(:) > 0._wp)
+      infilt(:)   = MIN(ice_impede(:) * hyd_cond_sat(:) * dtime, infilt(:) + wtr_pond(:))
+      wtr_pond(:) = water_to_soil(:) - infilt(:) - runoff(:)
+  END WHERE
 
-  !     IF (dtime < dt_sat .AND. (i_infil == 1 .OR. i_infil == 2 .OR. i_infil == 4 )) THEN
-  !       k_end(i)   = k_start(i) +  delta_k(i) * dtime / dt_sat
-  !       delta_k(i) = k_end(i) - k_start(i)
-  !     END IF
-
-  !     slope(i) = MIN(ABS(zbws), max_slope)
-  !     !IF (hydrotype == LOWLAND_) slope(i) = 0.01_wp
-
-  !     pdv_1d_out(i) = 1.0_wp
-  !         
-  !     IF (water_excess(i) > 0._wp) THEN
-  !     !!v_ini          = RH**(2/3)*slope**(1/2)*1./manning_n ! RH roughly equal to ponding depth
-  !       v_max(i)       = pond_pot(i)**(2._wp/3._wp)*slope(i)**(1._wp/2._wp)*1._wp / manning(i)
-  !       sro_max(i)     = pond_pot(i) * v_max(i)  ! get from outflux through crossection (side) to flux per grid-box area
-
-  !       fract_infilt(i) = MAX(0._wp, MIN(1._wp, delta_k(i) / (delta_k(i) + sro_max(i))))
-  !       infilt_pot(i)   = water_excess(i) * fract_infilt(i)
-  !           
-  !       IF (water_excess(i) > (delta_k(i) + sro_max(i)) * dtime) THEN
-  !         infilt(i) = infilt(i) + delta_k(i) * dtime
-  !       ELSE
-  !         infilt(i) = infilt(i) + infilt_pot(i)
-  !       END IF
-
-  !     END IF
-
-  !     pdv_1d_out(i) = wtr_pond_max(i)
-
-  !     wtr_pond(i) = MIN(wtr_pond_max(i), water_to_soil(i) - infilt(i))
-  !     runoff(i)   = MAX(0._wp,    water_to_soil(i) - infilt(i)  - wtr_pond(i))
-
-
-  !     !!! Unbedingt noch dahingehend korrigieren, das unter gepondeten Bereichen ziemlich sicher mit ksat infiltriert
-  !     IF (infilt(i) < ice_impede(i) * hyd_cond_sat(i) * dtime .AND. wtr_pond(i) > 0._wp) THEN
-  !       infilt(i)   = MIN(ice_impede(i) * hyd_cond_sat(i) * dtime, infilt(i) + wtr_pond(i))
-  !       wtr_pond(i) = water_to_soil(i) - infilt(i) - runoff(i)
-  !     END IF
-
-  !   END DO
-
-  ! END SUBROUTINE infiltration_new
+  END SUBROUTINE infiltration_new
 
   !------------------------------------------------------------------------------------------------
   !! @brief   Calculation of vertical soil water movement for multiple soil layers
@@ -1091,7 +1102,7 @@ CONTAINS
       nsoil_act(i) = 0
       DO j = 1, nsoil
         IF (dsoil(i,j) > 0._wp) nsoil_act(i) = nsoil_act(i) + 1
-        zmvg_sl(i,j) = pore_size_index_sl(i,j) / (pore_size_index_sl(i,j)+1._wp)
+        zmvg_sl(i,j) = pore_size_index_sl(i,j) / (pore_size_index_sl(i,j) + 1._wp)
         ! supercooled water in the soil should not be able to move vertically
         ! @todo at some point p_wilt has to be renamed to something more appropriate, as it
         !       basically describes immobile adhesion water which is not really the same
@@ -1109,7 +1120,7 @@ CONTAINS
     CALL get_soilhyd_cond_properties(                                       &
           & soilhydmodel, interpol_mean,                                    &
           & dtime,                                                          &
-          & nc,nsoil,                                                       &
+          & nc, nsoil,                                                      &
           & nsoil_act(:), dsoil(:,:),                                       &
           & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
           & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &

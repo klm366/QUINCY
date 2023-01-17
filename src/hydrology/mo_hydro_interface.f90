@@ -1010,6 +1010,7 @@ CONTAINS
     ! Pointers to variables in memory
 
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real2D_onChunk :: wtr_pond_max
 
     ! Locally allocated vectors
 
@@ -1071,19 +1072,31 @@ CONTAINS
     ! @todo Check whether this routine can be moved into the init part?
     CALL calc_orographic_features( &
       ! in
-      & nc, &
-      & grid%nlat_g,                                 & !< (Effective) number of latitudes for steepness parameter
-      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev ), &
+      & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
+      & TRIM(model%config%usecase) == 'jsbach_qarctic', & !< HydroTiles setup is active
+      & tile%contains_upland,                           & !< Upland HydroTile?
+      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev ),    &
+      & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold
       ! out
-      & dsl4jsb_var2D_onChunk (HYDRO_, steepness  )  &
+      & dsl4jsb_var2D_onChunk (HYDRO_, steepness  ),    &
+      & dsl4jsb_var2D_onChunk(HYDRO_,  micro_slope),    & !< slope on microtopography tiles
+      & dsl4jsb_var2D_onChunk(HYDRO_,  macro_slope)     & !< slope on macrotopography tiles
       & )
 
     ! @todo Temporary implementation of a surface pond reservoir to be used as target
     !   for lateral flows from upland areas. Needs to be revised as soon as real ponding
-    !   is implemented in the model
+    !   is implemented in the model and moved to surface hydrology
     dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) = dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) &
       & + dsl4jsb_var2D_onChunk (HYDRO_, weq_pond)
     dsl4jsb_var2D_onChunk (HYDRO_, weq_pond) = 0._wp
+    ALLOCATE(wtr_pond_max(nc))
+    IF (tile%contains_ridge) THEN
+      ! Only true for HydroTiles usecases
+      wtr_pond_max(:) = 0.0_wp
+    ELSE
+      wtr_pond_max(:) = MAX(0._wp, dsl4jsb_var2D_onChunk (HYDRO_,weq_pond_max) &
+        &             - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
+    END IF
 
     !$claw acc data create(tile, tile%fract, tile_fract)
     !$claw acc parallel loop gang vector
@@ -1103,6 +1116,8 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%runoff_scheme,                   &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
+      & dsl4jsb_Config(HYDRO_)%manning_n,                       &
+      & dsl4jsb_Config(HYDRO_)%dt_sat,                          &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
@@ -1116,12 +1131,14 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
       &                                t_soil_sl     (:,1),     &
+      &                                wtr_pond_max    (:),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
       ! out
@@ -1130,6 +1147,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_horton     ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
@@ -2201,7 +2219,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
-    IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+    IF (tile%is_process_active(MIX_)) THEN
       ! MIX_ Process currently only exists for qarctic usecase
       dsl4jsb_Get_memory(MIX_)
     END IF
@@ -2210,7 +2228,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,      snow)                ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    drainage)            ! in
-    IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+    IF (tile%is_process_active(MIX_)) THEN
       dsl4jsb_Get_var2D_onChunk(MIX_,      wtr_latflow)       ! in
     ELSE
       !$claw acc enter data create(wtr_latflow)
@@ -2260,7 +2278,7 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
     weq_land(:) = weq_land_new(:)
 
-    IF (TRIM(model%config%usecase) /= 'jsbach_qarctic') THEN
+    IF (.NOT. tile%is_process_active(MIX_)) THEN
       !$claw acc exit data delete(wtr_latflow)
       DEALLOCATE(wtr_latflow)
     END IF

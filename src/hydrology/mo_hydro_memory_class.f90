@@ -512,6 +512,22 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+    CALL mem%Add_var( 'micro_slope', mem%micro_slope,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('micro_slope', '/', 'Slope within micro-topography tiles'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'macro_slope', mem%macro_slope,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('macro_slope', '/', 'Slope within macro-topography tiles'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp )
+
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
