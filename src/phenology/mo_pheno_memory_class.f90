@@ -126,7 +126,6 @@ MODULE mo_pheno_memory_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_memory_class'
 
-
 CONTAINS
 
   ! ======================================================================================================= !
@@ -164,13 +163,12 @@ CONTAINS
     !! !$acc enter data pcreate(mem)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    ! variables used with jsbach4
-    !
+    ! create memory at tiles of LAND_TYPE or VEG_TYPE
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology') THEN   ! TODO
+      ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'climatology') THEN   ! TODO
         ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
         ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
         !$ACC ENTER DATA CREATE(mem%lai_mon, mem%fract_fpc_mon)
@@ -226,7 +224,7 @@ CONTAINS
 
       ! --------------------------------------------------------------------------------------------------- !
       ! logrop
-      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
+      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'logrop') THEN
 
         CALL mem%Add_var('growth_phase_sg', mem%growth_phase_SG,               &
           & hgrid, surface,                                                    &
@@ -369,7 +367,30 @@ CONTAINS
 
         END IF ! l_forestRegrowth
       END IF ! logrop
-
+      
+      ! grib setting for: lai differentiation box tile and other tiles
+      ! this is done because ... TODO
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(2,0,28, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
+    
+      CALL mem%Add_var( 'lai', mem%lai,                                        &
+        & hgrid, surface,                                                      &
+        & t_cf('leaf_area_index', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp )
+        
+      CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
+        & hgrid, canopy_layer,                                               &
+        & t_cf('LAI for each canopy layer', '', ''),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+        
 #ifdef __ICON__
       ! --------------------------------------------------------------------------------------------------- !
       ! Diagnostic global carbon sums for experiment monitoring
@@ -394,7 +415,6 @@ CONTAINS
 #endif
     END IF !  VEG / LAND
 
-  END SUBROUTINE Init_pheno_memory
 
 #endif
 END MODULE mo_pheno_memory_class

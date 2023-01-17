@@ -173,7 +173,7 @@ CONTAINS
 
   END SUBROUTINE pheno_read_init_vars
 
-  SUBROUTINE pheno_init_bc(tile)
+  SUBROUTINE pheno_init_bc_jsbach(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -182,7 +182,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_jsbach'
 
     model => get_model(tile%owner_model_id)
 
@@ -239,9 +239,9 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction)) ASYNC(1)
     END IF
 
-  END SUBROUTINE pheno_init_bc
+  END SUBROUTINE pheno_init_bc_jsbach
 
-  SUBROUTINE pheno_init_ic(tile)
+  SUBROUTINE pheno_init_ic_jsbach(tile)
 
     USE mo_pheno_process, ONLY: get_foliage_projected_cover
     USE mo_jsb_time,      ONLY: get_time_interpolation_weights
@@ -267,7 +267,7 @@ CONTAINS
 
     REAL(wp) :: ClumpinessFactor_param, MaxLai_param
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic_jsbach'
 
     model => get_model(tile%owner_model_id)
 
@@ -356,19 +356,18 @@ CONTAINS
 
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
 
-  END SUBROUTINE pheno_init_ic
+  END SUBROUTINE pheno_init_ic_jsbach
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize pheno variables for boundary conditions (bc)
   !! 
   !! quincy
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE pheno_init_q_(tile)
+  SUBROUTINE pheno_init_bc_quincy(tile)
 
     ! see also the USE statements in the module header
     USE mo_pheno_constants,       ONLY: ievergreen
     USE mo_jsb_impl_constants,    ONLY: false, true
-    USE mo_pheno_process,         ONLY: get_foliage_projected_cover
     
     ! ---------------------------
     ! 0.1 InOut
@@ -377,7 +376,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),       POINTER  :: model
        
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_q_'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_quincy'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -428,7 +427,7 @@ CONTAINS
       growing_season(:,:) = false
     ENDIF
 
-  END SUBROUTINE pheno_init_q_
+  END SUBROUTINE pheno_init_bc_quincy
 
 #endif
 END MODULE mo_pheno_init
