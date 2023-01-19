@@ -963,7 +963,7 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_hydro_process,          ONLY: calc_orographic_features, calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1034,6 +1034,17 @@ CONTAINS
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
 
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_orographic_features_land_1 tile_name=tile%name
+    ! @todo Check whether this routine can be moved into the init part?
+    CALL calc_orographic_features( &
+      ! in
+      & nc, &
+      & grid%nlat_g,                                 & !< (Effective) number of latitudes for steepness parameter
+      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev ), &
+      ! out
+      & dsl4jsb_var2D_onChunk (HYDRO_, steepness  )  &
+      & )
+
     !$claw acc data create(tile, tile%fract, tile_fract)
     !$claw acc parallel loop gang vector
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
@@ -1046,7 +1057,6 @@ CONTAINS
       & lat(:), &
       & lon(:), &
       & nsoil, &
-      & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
@@ -1063,7 +1073,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev        ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
       &                                t_soil_sl     (:,1),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
