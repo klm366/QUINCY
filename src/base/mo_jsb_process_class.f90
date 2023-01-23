@@ -55,7 +55,7 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ENUMERATOR :: A2L_=1, L2A_, ANTHRO2L_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
+    ENUMERATOR :: A2L_=1, ANTHRO2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
       &           FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
   END ENUM
 

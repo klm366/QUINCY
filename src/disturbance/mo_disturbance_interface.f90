@@ -685,6 +685,10 @@ CONTAINS
           CASE (4) !! Read burned_fract
           CASE (5) !! DL based new fire algoritm   <Rackhun Son>
 
+            !if (ISNAN(sum(fuel))) Then
+            !  print*, fuel
+            !endif
+
             CALL burned_fract_dl(                                         &
               !& t_air(:),                                                &
               & t_air_ave(:),                                             &
