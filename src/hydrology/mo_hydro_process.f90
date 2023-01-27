@@ -469,9 +469,6 @@ CONTAINS
   ! @param [in]      vol_porosity_sl     Soil porosity                      - ice not considered [m/m]
   ! @param [in]      vol_field_cap_sl    Volumetric field capacity          - ice not considered [m/m]
   ! @param [in]      vol_p_wilt_sl       Volumetric permanent wilting point - ice not considered [m/m]
-  ! @param [in]      oro_stddev          Sub-grid standard deviation of orography [m]
-  ! @param [in]      t_soil_sl1          Temperature of the upper soil layer [K]
-  ! @param [in]      water_to_soil       Amount of water going into the soil [m]
   ! @param [in]      evapotrans_soil     Evapotranspiration from the soil (w/o snow or canopy) [kg m-2 s-1]
   ! @param [in]      transpiration       Evapotranspiration [kg m-2 s-1]
   ! @param [in]      wtr_soil_pot_scool_sl Amount of potentially supercooled water [m]
@@ -486,11 +483,11 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
-    & l_infil_subzero, soilhydmodel, interpol_mean,                                      &
+    & soilhydmodel, interpol_mean,                                      &
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, steepness, t_soil_sl1,     &
-    & water_to_soil, evapotrans_soil, transpiration,                                     &
+    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,     &
+    & evapotrans_soil, transpiration,                                     &
     ! inout
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,           &
     ! out
@@ -509,14 +506,12 @@ CONTAINS
       & dtime, w_soil_wilt_fract
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
-    LOGICAL, INTENT(in) :: l_infil_subzero
     LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! Tile fraction > 0
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       & lat, lon,                              &
-      & steepness, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & tpe_overflow, infilt, runoff
@@ -591,10 +586,10 @@ CONTAINS
 
     ! Check for unrealistic water to soil fluxes
     DO i = 1, nc
-      IF (water_to_soil(i) > 1.0e+3_wp .AND. l_fract(i)) THEN
-        WRITE (message_text,*) 'Water to soil flux is far outside of realistic bounds at ', &
+      IF (infilt(i) > 1.0e+3_wp .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'Infiltration flux is far outside of realistic bounds at ', &
           & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
-          & 'Water to soil: ', water_to_soil(i)
+          & 'Infiltration: ', infilt(i)
         CALL finish ('calc_soil_hydrology', message_text)
       END IF
     END DO

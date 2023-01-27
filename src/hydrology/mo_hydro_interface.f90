@@ -376,7 +376,7 @@ CONTAINS
   SUBROUTINE update_surface_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_orographic_features, calc_surface_hydrology_land, &
-      &                                  calc_surface_hydrology_glacier
+      &                                  calc_surface_runoff, calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -424,7 +424,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_glac
     dsl4jsb_Real2D_onChunk :: water_to_soil
     dsl4jsb_Real2D_onChunk :: weq_glac
-
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     ! Locally allocated vectors
     !
@@ -434,6 +434,7 @@ CONTAINS
       & trans_tmp
 
     LOGICAL  :: lstart
+    LOGICAL  :: ltpe_closed
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, w_skin_max_config
 
@@ -464,6 +465,9 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
+
+    ltpe_closed = .FALSE.
+    IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     IF (tile%is_lake) THEN
       ! compute runoff (P-E) for lakes here and exit
@@ -652,6 +656,28 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_10 tile_name=tile%name
         snow_soil_dens(:) = 330._wp
       END IF
+
+      dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
+      !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_runoff_1 tile_name=tile%name
+      ! @todo: surface runoff as part of the surface hydrology is computed before the snow and soil temperatures
+      !        are updated. This about whether this order is correct!
+      CALL calc_surface_runoff( &
+        ! in
+        & nc, &
+        & ltpe_closed,                                            &
+        & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
+        & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
+        &                                t_soil_sl     (:,1),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
+        & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
+        ! out
+        & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
+        & dsl4jsb_var2D_onChunk (HYDRO_, runoff            )      &
+        )
 
     END IF
 
@@ -979,7 +1005,7 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_surface_runoff, calc_soil_hydrology
+    USE mo_hydro_process,          ONLY: calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -987,12 +1013,7 @@ CONTAINS
     ! Local variables
     !
     dsl4jsb_Def_config(HYDRO_)
-    dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(HYDRO_)
-
-    ! Pointers to variables in memory
-
-    dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     ! Locally allocated vectors
 
@@ -1046,28 +1067,6 @@ CONTAINS
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
-    dsl4jsb_Get_memory(SSE_)
-
-    dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
-
-    !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_runoff_1 tile_name=tile%name
-    CALL calc_surface_runoff( &
-      ! in
-      & nc, &
-      & ltpe_closed,                                            &
-      & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
-      & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
-      &                                t_soil_sl     (:,1),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
-      ! out
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            )      &
-      )
 
     !$claw acc data create(tile, tile%fract, tile_fract)
     !$claw acc parallel loop gang vector
@@ -1083,7 +1082,6 @@ CONTAINS
       & nsoil, &
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
-      & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
@@ -1097,9 +1095,6 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
-      &                                t_soil_sl     (:,1),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
