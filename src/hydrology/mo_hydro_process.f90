@@ -21,8 +21,8 @@ MODULE mo_hydro_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_soil_hydrology, &
-    & calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare,         &
+  PUBLIC :: calc_surface_hydrology_land, calc_surface_hydrology_glacier, calc_surface_runoff, &
+    & calc_soil_hydrology, calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare, &
     & get_canopy_conductance, get_water_stress_factor, calc_orographic_features
 
   INTERFACE get_canopy_conductance
@@ -387,8 +387,74 @@ CONTAINS
 
   END SUBROUTINE calc_surface_hydrology_glacier
 
-  !
-  ! @brief      Calculates runoff, drainage and soil moisture
+  ! ===============================================================================================================================
+  !>
+  !! @brief   Calculates surface runoff
+  
+  SUBROUTINE calc_surface_runoff(                       &
+    ! in
+    & nc, ltpe_closed, l_infil_subzero,                 &
+    & steepness, t_soil_sl1, water_to_soil,             &
+    & soil_depth_sl, root_depth_sl, vol_field_cap_sl,   &
+    & wtr_soil_sl, ice_soil_sl,                         &
+    & infilt, runoff                                    &
+    & )
+
+    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
+
+    INTEGER,  INTENT(in) :: nc
+    LOGICAL, INTENT(in)  :: ltpe_closed
+    LOGICAL, INTENT(in)  :: l_infil_subzero
+
+    REAL(wp), INTENT(in), DIMENSION(:) ::               &
+      & steepness,           & !> Shape parameter describing orography    [/]
+      & t_soil_sl1,          & !> Temperature of the uppermost soil layer [K]
+      & water_to_soil          !> Amount of water at the soil surface     [m]
+
+    REAL(wp), INTENT(in), DIMENSION(:,:) ::             &
+      & soil_depth_sl, root_depth_sl, vol_field_cap_sl, &
+      & wtr_soil_sl, ice_soil_sl
+
+    REAL(wp), INTENT(out), DIMENSION(:) ::              &
+      & infilt,              & !> Infiltration flux into the soil         [m]
+      & runoff                 !> Surface runoff                          [m]
+
+    ! Local variables
+    REAL(wp) ::              &
+      & weq_rootzone_max(nc),& ! maximum water holding capacity of the rootzone (liquid water + ice) [m]
+      & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
+      & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
+
+    !---------------------
+    !> Infiltration and surface runoff
+    !---------------------
+    !> Runoff is either set to zero for Terraplanet setup or is computed via the
+    !! ARNO Scheme (default). Note that both, infiltration and runoff, are further
+    !! modified in the soil hydrology routine.
+
+    IF (ltpe_closed) THEN
+      ! Terra planet setup without runoff
+      runoff(:) = 0._wp
+      infilt(:) = water_to_soil(:)
+
+    ELSE
+      CALL get_amount_in_rootzone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
+        &                         soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
+      CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
+      CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
+
+      CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,                          &
+        &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),      &
+        &              steepness(:), weq_rootzone_max(:),                        &
+        &              runoff(:), infilt(:))
+
+    END IF
+
+  END SUBROUTINE calc_surface_runoff
+
+  ! ===============================================================================================================================
+  !>
+  !! @brief   Calculates vertical water movement through the soil column
   !
   ! @param [in]      nc                  Vector lenth
   ! @param [in]      nsoil               Number of soil layers
@@ -426,10 +492,10 @@ CONTAINS
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl, steepness, t_soil_sl1,     &
     & water_to_soil, evapotrans_soil, transpiration,                                     &
     ! inout
-    & wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,                           &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,           &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl,                                      &
-    & infilt, runoff, infilt_over, drainage, drain_rock, drain_lat                       &
+    & infilt_over, drainage, drain_rock, drain_lat                                       &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -453,11 +519,11 @@ CONTAINS
       & steepness, t_soil_sl1, water_to_soil, &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow
+      & tpe_overflow, infilt, runoff
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & infilt, runoff, infilt_over, drainage, &
+      & infilt_over, drainage,             &
       & drain_rock, drain_lat, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
@@ -532,25 +598,6 @@ CONTAINS
         CALL finish ('calc_soil_hydrology', message_text)
       END IF
     END DO
-
-    !---------------------
-    !> 1. Infiltration
-    !---------------------
-    !> Runoff is either set to zero for Terraplanet setup or is computed via the
-    !! ARNO Scheme (default)
-
-    IF (ltpe_closed) THEN
-      ! Terra planet setup without runoff
-      runoff(:) = 0._wp
-      infilt(:) = water_to_soil(:)
-
-    ELSE
-      CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,                          &
-        &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),      &
-        &              steepness(:), weq_rootzone_max(:),                        &
-        &              runoff(:), infilt(:))
-
-    END IF
 
     !
     !$claw acc data present(evapo_soil_in_m,evapotrans_soil,transpiration_in_m,transpiration)

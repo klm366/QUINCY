@@ -414,6 +414,15 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+    CALL mem%Add_var( 'steepness', mem%steepness,                                    &
+      & hgrid, surface,                                                              &
+      & t_cf('steepness', '/', 'subgrid slope distribution shape parameter'),        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp)
+
+
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
       &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
@@ -630,14 +639,6 @@ CONTAINS
         & prefix, suffix,                                                           &
         & lrestart=.FALSE.,                                                         &
         & initval_r=0.0_wp )
-
-      CALL mem%Add_var( 'steepness', mem%steepness,                                 &
-        & hgrid, surface,                                                           &
-        & t_cf('steepness', '/', 'subgrid slope distribution shape parameter'),     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & lrestart=.FALSE.,                                                         &
-        & initval_r=0.0_wp)
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,211, grib_bits)

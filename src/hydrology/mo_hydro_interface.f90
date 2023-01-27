@@ -375,7 +375,8 @@ CONTAINS
   !!
   SUBROUTINE update_surface_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
+    USE mo_hydro_process,          ONLY: calc_orographic_features, calc_surface_hydrology_land, &
+      &                                  calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -433,16 +434,18 @@ CONTAINS
       & trans_tmp
 
     LOGICAL  :: lstart
-    INTEGER  :: iblk, ics, ice
+    INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: dtime, w_skin_max_config
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
 
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
@@ -450,6 +453,8 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    grid => Get_grid(model%grid_id)
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -485,6 +490,17 @@ CONTAINS
 
       RETURN
     END IF
+
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_orographic_features_land_1 tile_name=tile%name
+    ! @todo Check whether this routine can be moved into the initialization part?
+    CALL calc_orographic_features( &
+      ! in
+      & nc, &
+      & grid%nlat_g,                                 & !< (Effective) number of latitudes for steepness parameter
+      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev ), &
+      ! out
+      & dsl4jsb_var2D_onChunk (HYDRO_, steepness  )  &
+      & )
 
     !$claw acc data pcreate(skinres_max, skinres_canopy_max, trans_tmp)
 
@@ -963,7 +979,7 @@ CONTAINS
   !!
   SUBROUTINE update_soil_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_orographic_features, calc_soil_hydrology
+    USE mo_hydro_process,          ONLY: calc_surface_runoff, calc_soil_hydrology
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1034,16 +1050,24 @@ CONTAINS
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
 
-    !$claw sca forward update savepoint=ser_jsb_hydro_calc_orographic_features_land_1 tile_name=tile%name
-    ! @todo Check whether this routine can be moved into the init part?
-    CALL calc_orographic_features( &
+    !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_runoff_1 tile_name=tile%name
+    CALL calc_surface_runoff( &
       ! in
       & nc, &
-      & grid%nlat_g,                                 & !< (Effective) number of latitudes for steepness parameter
-      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev ), &
+      & ltpe_closed,                                            &
+      & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
+      & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
+      &                                t_soil_sl     (:,1),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       ! out
-      & dsl4jsb_var2D_onChunk (HYDRO_, steepness  )  &
-      & )
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            )      &
+      )
 
     !$claw acc data create(tile, tile%fract, tile_fract)
     !$claw acc parallel loop gang vector
@@ -1079,6 +1103,8 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
@@ -1087,8 +1113,6 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
