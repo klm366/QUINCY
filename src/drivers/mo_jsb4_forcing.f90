@@ -265,13 +265,14 @@ CONTAINS
     & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down,           &
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
     & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                   &
-    & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &
-    & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                        &
-    & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice                         &
-    & a_temperature, a_rel_humidity, fba, fba_smooth)
+    & a_temperature, a_rel_humidity, fba, fba_smooth,                                      &   ! < Rackhun Son >
     !, population, gdp, hdi, &
     !& land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn, land_use_secdn, &
     !& land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx, land_use_c3per, land_use_secmb)   ! < Rackhun Son >
+    & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &
+    & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                        &
+    & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice)
+    
 
     INTEGER,  INTENT(IN)  :: model_id, ics, ice, icz, nblks
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
@@ -307,7 +308,6 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: q_bcoef(:,:)
     REAL(wp), INTENT(OUT) :: pch(:,:)
 
-<<<<<<< HEAD
     REAL(wp), INTENT(OUT) :: a_temperature(:,:)      ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: a_rel_humidity(:,:)     ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: fba(:,:)                ! < Rackhun Son >
@@ -329,7 +329,7 @@ CONTAINS
     !REAL(wp), INTENT(OUT) :: land_use_c3nfx(:,:)     ! < Rackhun Son >
     !REAL(wp), INTENT(OUT) :: land_use_c3per(:,:)     ! < Rackhun Son >
     !REAL(wp), INTENT(OUT) :: land_use_secmb(:,:)     ! < Rackhun Son >
-=======
+    
     ! Optional input for lakes
     REAL(wp), OPTIONAL, INTENT(IN)  :: t_srf_lake(:,:)
     REAL(wp), OPTIONAL, INTENT(IN)  :: fact_q_air_lake(:,:)
@@ -347,7 +347,6 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(OUT) :: t_bcoef_ice(:,:)
     REAL(wp), OPTIONAL, INTENT(OUT) :: q_acoef_ice(:,:)
     REAL(wp), OPTIONAL, INTENT(OUT) :: q_bcoef_ice(:,:)
->>>>>>> dev
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_interface_variables_from_external_forcing'
 

@@ -921,28 +921,11 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
           & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
           & dsl4jsb_var2D_onDomain(A2L_, pch),                                         &
-          ! Input for lakes (optional)
-          & t_lake_tile(:,:),                                                          &
-          & fact_q_air_lake_tile(:,:),                                                 &
-          & fact_qsat_srf_lake_tile(:,:),                                              &
-          & rough_h_lake_tile(:,:),                                                    &
-          & rough_m_lake_tile(:,:),                                                    &
-          ! Output for lakes (optional)
-          & dsl4jsb_var2D_onDomain(A2L_, drag_wtr),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_wtr),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, drag_ice),                                    &
-          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_ice),                                 &
-          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_ice),                                 &
           ! anthropogenic
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_temperature),                          &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_rel_humidity),                         &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba),                                    &
-          & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba_smooth))
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba_smooth),                             &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &
@@ -960,6 +943,24 @@ CONTAINS
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3nfx),                         &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3per),                         &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secmb)) )
+          ! Input for lakes (optional)
+          & t_lake_tile(:,:),                                                          &
+          & fact_q_air_lake_tile(:,:),                                                 &
+          & fact_qsat_srf_lake_tile(:,:),                                              &
+          & rough_h_lake_tile(:,:),                                                    &
+          & rough_m_lake_tile(:,:),                                                    &
+          ! Output for lakes (optional)
+          & dsl4jsb_var2D_onDomain(A2L_, drag_wtr),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, drag_ice),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_ice))
+          
       ELSE
         CALL get_interface_variables_from_external_forcing( &
           ! in

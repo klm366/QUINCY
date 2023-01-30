@@ -17,8 +17,7 @@ MODULE mo_jsb_process_factory
 
   USE mo_jsb_process_class,     ONLY: t_jsb_process, Get_process_name
   USE mo_jsb_memory_class,      ONLY: t_jsb_memory
-  !
-<<<<<<< HEAD
+  
   USE mo_a2l_memory_class,      ONLY: t_a2l_memory
   USE mo_l2a_memory_class,      ONLY: t_l2a_memory
   USE mo_seb_memory_class,      ONLY: t_seb_memory
@@ -33,6 +32,7 @@ MODULE mo_jsb_process_factory
   USE mo_fuel_memory_class,     ONLY: t_fuel_memory
   USE mo_pplcc_memory_class,    ONLY: t_pplcc_memory
   USE mo_tcq_memory_class,      ONLY: t_tcq_memory
+  USE mo_fage_memory_class,     ONLY: t_fage_memory
   USE mo_alcc_memory_class,     ONLY: t_alcc_memory
   USE mo_nlcc_memory_class,     ONLY: t_nlcc_memory
   USE mo_veg_memory_class,      ONLY: t_veg_memory
@@ -40,28 +40,6 @@ MODULE mo_jsb_process_factory
   USE mo_spq_memory_class,      ONLY: t_spq_memory
   USE mo_anthro2l_memory_class, ONLY: t_anthro2l_memory     ! < Rackhun Son >
   
-=======
-  USE mo_a2l_memory_class,     ONLY: t_a2l_memory
-  USE mo_l2a_memory_class,     ONLY: t_l2a_memory
-  USE mo_seb_memory_class,     ONLY: t_seb_memory
-  USE mo_turb_memory_class,    ONLY: t_turb_memory
-  USE mo_sse_memory_class,     ONLY: t_sse_memory
-  USE mo_hydro_memory_class,   ONLY: t_hydro_memory
-  USE mo_assimi_memory_class,  ONLY: t_assimi_memory
-  USE mo_pheno_memory_class,   ONLY: t_pheno_memory
-  USE mo_rad_memory_class,     ONLY: t_rad_memory
-  USE mo_carbon_memory_class,  ONLY: t_carbon_memory
-  USE mo_disturb_memory_class, ONLY: t_disturb_memory
-  USE mo_fuel_memory_class,    ONLY: t_fuel_memory
-  USE mo_pplcc_memory_class,   ONLY: t_pplcc_memory
-  USE mo_tcq_memory_class,     ONLY: t_tcq_memory
-  USE mo_fage_memory_class,    ONLY: t_fage_memory
-  USE mo_alcc_memory_class,    ONLY: t_alcc_memory
-  USE mo_nlcc_memory_class,    ONLY: t_nlcc_memory
-  USE mo_veg_memory_class,     ONLY: t_veg_memory
-  USE mo_sb_memory_class,      ONLY: t_sb_memory
-  USE mo_spq_memory_class,     ONLY: t_spq_memory
->>>>>>> dev
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
@@ -114,11 +92,7 @@ MODULE mo_jsb_process_factory
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-<<<<<<< HEAD
-    & PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, ANTHRO2L_     ! < Rackhun Son >
-=======
-    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
->>>>>>> dev
+    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, ANTHRO2L_     ! < Rackhun Son >
 
   IMPLICIT NONE
   PRIVATE
