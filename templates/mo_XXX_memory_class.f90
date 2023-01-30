@@ -74,7 +74,6 @@ CONTAINS
 
   SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: t_jsb_varlist
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
@@ -88,7 +87,9 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+
     INTEGER :: table
+    TYPE(t_grib2) :: grib2_desc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_<PROCESS_NAME_LOWER_CASE>_memory'
 
@@ -99,8 +100,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
     !X add your common variables here e.g:
+    !X  CALL mem%Add_var( 'sfc_temp', mem%sfc_temp,                                      &
     !X    & hgrid, surface,                                                              &
     !X    & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
     !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
@@ -114,11 +115,9 @@ CONTAINS
     !X    & prefix, suffix,                                                              &
     !X    & initval_r=280.0_wp )
 
-    END IF
-
     ! Additional variables for LAND lct
     !X add your LAND-lct variables here e.g:
-    !X IF (One_of(LAND_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%s_star%ptr)) THEN
+    !X IF (One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
 
     !X  CALL mem%Add_var( 's_sfc', mem%s_star,                                                 &
     !X    & hgrid, surface,                                                                    &
@@ -138,7 +137,7 @@ CONTAINS
 
     ! Additional variables for lakes
     !X add your LAKE-lct variables here e.g:
-    !XIF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_wtr%ptr)) THEN
+    !XIF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
 
     !X  CALL mem%Add_var( 't_wtr', mem%t_wtr,                                            &
     !X    & hgrid, surface,                                                              &

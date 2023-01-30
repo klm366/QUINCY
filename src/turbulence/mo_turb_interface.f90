@@ -254,8 +254,8 @@ CONTAINS
         !      if a multi-layer snow model is implemented.
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_4 tile_name=tile%name
         rough_bare_star(:) = (1._wp - fract_snow_soil(:)) * rough_bare_star(:) + fract_snow_soil(:) * rough_snow_star(:)
-        ! Modify roughness length heat for vegetation by snow cover if not forest or if standalone
-        IF (.NOT. dsl4jsb_Lctlib_param(ForestFlag) .OR. jsbach_runs_standalone()) THEN
+        ! Reduce roughness length of non-forest vegetation in case of snow
+        IF (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) THEN
           !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_5 tile_name=tile%name
           rough_veg_star(:) = (1._wp - fract_snow_soil(:)) * rough_veg_star(:) + fract_snow_soil(:) * rough_snow_star(:)
         END IF
@@ -413,19 +413,19 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: &
-      & fract_fpc,            &
-      & fract_snow,           &
-      & fract_wet,            &
-      & weq_rootzone_max,     &
-      & wtr_rootzone,         &
-      & fact_q_air,           &
-      & fact_qsat_srf,        &
-      & fact_qsat_trans_srf,  &
-      & qsat_star,            &
-      & canopy_cond_limited,  &
-      & pch,                  &
-      & wind_air,             &
+    dsl4jsb_Real2D_onChunk ::   &
+      & fract_fpc,              &
+      & fract_snow,             &
+      & fract_wet,              &
+      & wtr_rootzone_avail_max, &
+      & wtr_rootzone_avail,     &
+      & fact_q_air,             &
+      & fact_qsat_srf,          &
+      & fact_qsat_trans_srf,    &
+      & qsat_star,              &
+      & canopy_cond_limited,    &
+      & pch,                    &
+      & wind_air,               &
       & q_air
 
     dsl4jsb_Real3D_onChunk :: &
@@ -457,7 +457,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
 
-    IF (.NOT. tile%Is_process_calculated(TURB_) .OR. tile%contains_lake) RETURN
+    IF (.NOT. tile%Is_process_calculated(TURB_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -489,13 +489,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)       ! OUT
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_trans_srf) ! OUT
     IF (tile%contains_soil) THEN
-      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)           ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)           ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  weq_rootzone_max)    ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone)        ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)         ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)      ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)     ! in
+      dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)              ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)              ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
     END IF
 
     ! ---------------------------
@@ -515,7 +515,7 @@ CONTAINS
       ELSE
         w_soil_wilt_fract_tmp = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
         !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_1 tile_name=tile%name
-        mask(:) = wtr_rootzone(:) > w_soil_wilt_fract_tmp * weq_rootzone_max(:)
+        mask(:) = wtr_rootzone_avail(:) > w_soil_wilt_fract_tmp * wtr_rootzone_avail_max(:)
       END IF
 
       !$claw acc data present(fract_snow,fract_wet,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)
@@ -570,7 +570,7 @@ CONTAINS
       END DO
       !$claw acc end data
 
-    ELSE IF (tile%contains_glacier) THEN
+    ELSE IF (tile%contains_glacier .OR. tile%is_lake) THEN
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_5 tile_name=tile%name
       fact_qsat_soil(:) = 1._wp
       fact_qair_soil(:) = 1._wp

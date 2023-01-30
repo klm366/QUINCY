@@ -19,7 +19,7 @@ MODULE mo_sse_init
   USE mo_exception,          ONLY: message
   USE mo_jsb_control,        ONLY: debug_on
 
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
@@ -148,7 +148,7 @@ CONTAINS
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading soil energy boundary conditions for tile '//TRIM(tile%name))
 
@@ -219,7 +219,7 @@ CONTAINS
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Setting soil energy boundary conditions for tile '//TRIM(tile%name))
 
@@ -256,14 +256,6 @@ CONTAINS
     !$acc dsl4jsb_var2D_onDomain(SSE_,heat_cond))
     !$acc end data
 
-    ! quincy
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! soil texture - currently simply using default values, no ic/bc from input files
-      dsl4jsb_var3D_onDomain(SSE_, sand_sl) = dsl4jsb_Config(SSE_)%soil_sand
-      dsl4jsb_var3D_onDomain(SSE_, silt_sl) = dsl4jsb_Config(SSE_)%soil_silt
-      dsl4jsb_var3D_onDomain(SSE_, clay_sl) = dsl4jsb_Config(SSE_)%soil_clay
-    END IF
-
   END SUBROUTINE sse_init_bc
 
   SUBROUTINE sse_init_ic(tile)
@@ -294,7 +286,7 @@ CONTAINS
     ! Get soil config
     dsl4jsb_Get_config(SSE_)
 
-    IF (.NOT. tile%Is_process_calculated(SSE_)) RETURN
+    IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Initializing soil energy memory for tile '//TRIM(tile%name))
 
@@ -344,10 +336,11 @@ CONTAINS
 
     USE mo_jsb_physical_constants, ONLY: ci, dens_snow_min, tmelt, alf, rhoh2o
     USE mo_sse_constants,          ONLY: vol_hcap_ice, vol_hcap_snow, &   ! vol_hcap_snow_min,
+      &                                  vol_hcap_org_top, vol_hcap_org_below, &
       &                                  hcond_ice, hcond_snow, &         !, hcond_snow_min, hcond_org
-      &                                  soil_heat_cap, soil_therm_cond
+      &                                  hcond_org_top, hcond_dry_org_top, hcond_org_below, hcond_dry_org_below
+    USE mo_hydro_constants,        ONLY: vol_porosity_org_top, vol_porosity_org_below
     USE mo_sse_process,            ONLY: calc_vol_heat_capacity, calc_thermal_conductivity, Get_liquid_max
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     ! Local variables
@@ -376,14 +369,6 @@ CONTAINS
       & heat_cond_sl, &
       & vol_porosity_sl, &
       & vol_field_cap_sl
-    ! SSE_ 2D
-    dsl4jsb_Real2D_onDomain :: t_srf_old
-    ! SSE_ 3D
-    dsl4jsb_Real3D_onDomain :: bulk_dens_sl
-    ! dsl4jsb_Real3D_onDomain :: heat_capa_sl
-    ! dsl4jsb_Real3D_onDomain :: therm_cond_sl
-    dsl4jsb_Real3D_onDomain :: volume_min_sl
-    ! dsl4jsb_Real3D_onDomain :: t_soil_sl
 
     ! Locally allocated vectors
     ! 
@@ -395,7 +380,11 @@ CONTAINS
       & fract_ice,             &
       & soil_e_dz_tmp,         & 
       & vol_heat_cap_tmp,      &
-      & heat_cond_tmp
+      & vol_heat_cap_org_tmp,  &
+      & heat_cond_tmp,         &
+      & vol_porosity_org_tmp,  & 
+      & hcond_org_tmp,         & 
+      & hcond_dry_org_tmp
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
@@ -516,44 +505,12 @@ CONTAINS
       !   & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, w_soil_fc_sl))
       ! !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))
 
-      DO b=1,nblks
-          CALL get_amount_in_rootzone(                       &
-          & dsl4jsb_var_ptr(HYDRO_, wtr_soil_sl)   (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, soil_depth_sl) (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, root_depth_sl) (:,:,b),  &
-          & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)  (:,  b)   )
-      END DO
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
-      END WHERE
-
-      WHERE (dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) > 0._wp)
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = &
-          & dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) / dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
-      ELSE WHERE
-        dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
-      END WHERE
-
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel),    &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone))
-
     END IF
 
     dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_field_cap_sl)
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
     nproma = SIZE(heat_cond,1)
     nblks  = SIZE(heat_cond,2)
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! SSE_ 2D
-      dsl4jsb_Get_var2D_onDomain(SSE_, t_srf_old)      ! out
-      ! SSE_ 3D
-      dsl4jsb_Get_var3D_onDomain(SSE_, bulk_dens_sl)   ! out
-      ! dsl4jsb_Get_var3D_onDomain(SSE_, heat_capa_sl)   ! out
-      ! dsl4jsb_Get_var3D_onDomain(SSE_, therm_cond_sl)  ! out
-      dsl4jsb_Get_var3D_onDomain(SSE_, volume_min_sl)  ! out
-      dsl4jsb_Get_var3D_onDomain(SSE_, t_soil_sl)      ! out
-    END IF
     
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
@@ -572,10 +529,10 @@ CONTAINS
     !$claw acc update device(soil_e_dz_tmp,vol_heat_cap_tmp,heat_cond_tmp)
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
-      ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
-      !$claw acc enter data pcreate(fract_water,fract_ice)
+      ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks), vol_heat_cap_org_tmp(nproma, nsoil, nblks))
+      !$claw acc enter data pcreate(fract_water,fract_ice,vol_heat_cap_org_tmp)
 
-      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,wtr_soil_sl,ice_soil_sl)
+      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,wtr_soil_sl,ice_soil_sl,vol_heat_cap_org_tmp)
       !$claw acc update device(soil_depth_sl,wtr_soil_sl,ice_soil_sl)
       !$claw acc parallel loop gang vector collapse(3)
       DO i = 1, nproma
@@ -591,6 +548,10 @@ CONTAINS
           END DO
         END DO
       END DO
+      vol_heat_cap_org_tmp(:,1,:) = vol_hcap_org_top
+      DO j = 2, nsoil
+        vol_heat_cap_org_tmp(:,j,:) = vol_hcap_org_below
+      END DO
       !$claw acc update host(fract_water,fract_ice)
       !$claw acc end data
       
@@ -598,6 +559,7 @@ CONTAINS
       vol_heat_cap_sl (:,:,:) = calc_vol_heat_capacity( &
         !&                         SPREAD( vol_heat_cap     (:,:),   DIM=2, ncopies=nsoil)                        , &
         &                                 vol_heat_cap_tmp (:,:,:)                                               , &
+        &                                 vol_heat_cap_org_tmp(:,:,:)                                            , &
         &                                 vol_porosity_sl  (:,:,:)                                               , &
         &                                 fract_org_sl     (:,:,:)                                               , &
         &                                 fract_water      (:,:,:)                                               , &
@@ -607,8 +569,8 @@ CONTAINS
         !&                   SPREAD(SPREAD(soil_e%dz        (:),     DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
         & )
 
-      !$claw acc exit data delete(fract_water, fract_ice)
-      DEALLOCATE(fract_water, fract_ice)
+      !$claw acc exit data delete(fract_water, fract_ice, vol_heat_cap_org_tmp)
+      DEALLOCATE(fract_water, fract_ice, vol_heat_cap_org_tmp)
     ELSE
 
       !$claw acc data present(vol_heat_cap_sl,vol_heat_cap)
@@ -626,6 +588,20 @@ CONTAINS
     !$claw acc update host(vol_heat_cap_sl)
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
+      ALLOCATE( &
+        & vol_porosity_org_tmp(nproma,nsoil,nblks), &
+        & hcond_org_tmp(nproma,nsoil,nblks),        &
+        & hcond_dry_org_tmp(nproma,nsoil,nblks))
+
+      vol_porosity_org_tmp(:,1,:)   = vol_porosity_org_top
+      hcond_org_tmp(:,1,:)          = hcond_org_top
+      hcond_dry_org_tmp(:,1,:)      = hcond_dry_org_top
+      DO j = 2, nsoil
+        vol_porosity_org_tmp(:,j,:) = vol_porosity_org_below
+        hcond_org_tmp(:,j,:)        = hcond_org_below
+        hcond_dry_org_tmp(:,j,:)    = hcond_dry_org_below
+      END DO
+
       !$claw expand parallel update savepoint=ser_jsb_sse_init_calc_thermal_conductivity_1 tile_name=tile%name
       heat_cond_sl (:,:,:) = calc_thermal_conductivity( &
         !&                              SPREAD( heat_cond(:,:),                    DIM=2, ncopies=nsoil)               , &
@@ -635,11 +611,15 @@ CONTAINS
         &                                      vol_porosity_sl(:,:,:)                                                 , &
         &                                      vol_field_cap_sl(:,:,:)                                                , &
         &                                      fract_org_sl(:,:,:)                                                    , &
+        &                                      vol_porosity_org_tmp(:,:,:)                                            , &
+        &                                      hcond_org_tmp(:,:,:)                                                   , &
+        &                                      hcond_dry_org_tmp(:,:,:)                                               , &
         &                                      soil_depth_sl(:,:,:)                                                   , &
         &                                      soil_e_dz_tmp(:,:,:)                                                     &
         !&                   SPREAD(SPREAD(soil_e%dz        (:),     DIM=1, ncopies=nproma), DIM=3, ncopies=nblks)  &
         & )
       !$claw acc update host(heat_cond_sl)
+      DEALLOCATE(vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp)
     ELSE
       !$claw acc data present(heat_cond_sl,heat_cond)
       !$claw acc update device(heat_cond)
@@ -688,24 +668,6 @@ CONTAINS
       !$claw acc update host(vol_heat_cap_snow, heat_cond_snow)
     ! ELSE
     !   vol_heat_cap_snow and heat_cond_snow are fixed in calc_soiltemp_old
-    END IF
-
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY) THEN
-      ! init soil-property variables
-      ! one site-specific value for all soil layers
-      bulk_dens_sl(:,:,:)   = dsl4jsb_Config(SSE_)%bulk_density 
-      ! not used here in jsb4 right now
-      ! moreover, see jsb4 implementation (diff units than in quincy) for these two input values
-      ! heat_capa_sl(:,:,:)   = soil_heat_cap
-      ! therm_cond_sl(:,:,:)  = soil_therm_cond
-      
-      ! this is done in the HYDRO_ init to resolve process_init dependency problem
-      ! sand_sl(:,:,:)        = dsl4jsb_Config(SSE_)%soil_sand
-      ! silt_sl(:,:,:)        = dsl4jsb_Config(SSE_)%soil_silt
-      ! clay_sl(:,:,:)        = dsl4jsb_Config(SSE_)%soil_clay
-      t_srf_old(:,:)        = 273.15_wp
-      volume_min_sl(:,:,:)  = 1._wp
-      t_soil_sl(:,:,:)      = 273.15_wp
     END IF
 
     !$acc exit data delete(soil_e_dz_tmp,vol_heat_cap_tmp,heat_cond_tmp)

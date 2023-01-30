@@ -19,7 +19,7 @@ MODULE mo_atmland_interface
   USE mo_kind,            ONLY: wp
 
   USE mo_jsb_control,        ONLY: jsbach_runs_standalone
-  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_QUINCY
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_lct_class,      ONLY: LAKE_TYPE
@@ -226,7 +226,7 @@ CONTAINS
     IF (PRESENT(CO2_air)) THEN
       CO2_air_ptr           => dsl4jsb_var2D_onChunk(A2L_, CO2_air)
       CO2_air_mol_ptr       => dsl4jsb_var2D_onChunk(A2L_, CO2_air_mol)
-      IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+      IF (model%config%model_scheme == MODEL_QUINCY) THEN
         CO2_mixing_ratio_ptr  => dsl4jsb_var2D_onChunk(A2L_, CO2_mixing_ratio)
       END IF
     END IF
@@ -261,7 +261,7 @@ CONTAINS
       q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
     END IF
 
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
       prev_one_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
       prev_two_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
     END IF
@@ -396,7 +396,7 @@ CONTAINS
         ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
         CO2_air_mol_ptr(i) = CO2_air(i) * molarMassDryAir / molarMassCO2
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
-        IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+        IF (model%config%model_scheme == MODEL_QUINCY) THEN
           CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
         END IF
       END DO
@@ -468,7 +468,7 @@ CONTAINS
     END IF
     !$acc end parallel
 
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
       IF (.NOT. PRESENT(cos_zenith_angle)) THEN
         CALL finish(TRIM(routine), 'cos_zenith_angle not present but needed for QUINCY model')
       END IF
@@ -520,8 +520,10 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     TYPE(t_jsb_model), POINTER :: model
+    CLASS(t_jsb_tile_abstract), POINTER :: land_tile
+    dsl4jsb_Def_memory_tile(TURB_, land_tile)
 
-    INTEGER ::  iblk, ics, ice, nc, i, j
+    INTEGER ::  iblk, ics, ice, nc, i, j, it, nt
     REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
@@ -532,7 +534,9 @@ CONTAINS
       & qsat_star_ptr, &
       & s_star_ptr, &
       & fact_q_air_ptr, &
+      & fact_q_air_land_tile, &
       & fact_qsat_srf_ptr, &
+      & fact_qsat_srf_land_tile, &
       & evapopot_ptr, &
       & evapotrans_lnd_ptr, &
       & latent_hflx_lnd_ptr, &
@@ -641,6 +645,20 @@ CONTAINS
     ! Exchange fields on the land tile
     ! --------------------------------
 
+    ! For some variables the atmosphere expects values for the land tile (excluding lakes).
+    ! Thus we define a pointer to the land tile.
+    nt = tile%Get_no_of_children()
+    DO it=1,nt
+      IF (it == 1) THEN
+        land_tile => tile%Get_first_child_tile()
+      ELSE
+        land_tile => land_tile%Get_next_sibling_tile()
+      END IF
+      ! Exit if the land tile was found
+      IF (TRIM(land_tile%name) == 'land') EXIT
+    END DO
+    dsl4jsb_Get_memory_tile(TURB_, land_tile)
+
     IF (PRESENT(t_srf)) THEN
       t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t_filt)
       !$acc data present(t_srf, t_filt_ptr)
@@ -678,20 +696,20 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(fact_q_air)) THEN
-      fact_q_air_ptr => dsl4jsb_var2D_onChunk(TURB_,  fact_q_air)
-      !$acc data present(fact_q_air, fact_q_air_ptr)
+      dsl4jsb_Get_var2d_onChunk_tile_name(TURB_, fact_q_air, land_tile)
+      !$acc data present(fact_q_air, fact_q_air_land_tile)
       !$acc parallel loop
       DO i=1,nc
-        fact_q_air(i) = fact_q_air_ptr(i)
+        fact_q_air(i) = fact_q_air_land_tile(i)
       END DO
       !$acc end data
     END IF
     IF (PRESENT(fact_qsat_srf)) THEN
-      fact_qsat_srf_ptr => dsl4jsb_var2D_onChunk(TURB_,  fact_qsat_srf)
-      !$acc data present(fact_qsat_srf, fact_qsat_srf_ptr)
+      dsl4jsb_Get_var2d_onChunk_tile_name(TURB_, fact_qsat_srf, land_tile)
+      !$acc data present(fact_qsat_srf, fact_qsat_srf_land_tile)
       !$acc parallel loop
       DO i=1,nc
-        fact_qsat_srf(i) = fact_qsat_srf_ptr(i)
+        fact_qsat_srf(i) = fact_qsat_srf_land_tile(i)
       END DO
       !$acc end data
     END IF

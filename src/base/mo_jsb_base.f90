@@ -33,7 +33,7 @@ CONTAINS
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
       &                               jsbach_runs_standalone, jsbach_is_restarted
     USE mo_jsb_parallel,        ONLY: init_parallel_iface, Get_omp_no_of_threads
-    USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,     ONLY: t_jsb_model, new_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_subset,          ONLY: jsbach_subsets
     USE mo_jsb_config_class,    ONLY: new_model_config
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
@@ -45,13 +45,11 @@ CONTAINS
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_assimi_constants,    ONLY: init_assimi_constants
     USE mo_veg_constants,       ONLY: init_veg_constants
-    USE mo_sse_constants,       ONLY: init_sse_constants
-    USE mo_hydro_constants,     ONLY: init_hydro_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
-    USE mo_pheno_constants,     ONLY: init_pheno_constants
+    USE mo_pheno_parameters,    ONLY: init_pheno_parameters_quincy, init_pheno_parameters_jsbach
     USE mo_spq_constants,       ONLY: init_spq_constants
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -59,6 +57,7 @@ CONTAINS
     dsl4jsb_Use_config(CARBON_)
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
+    dsl4jsb_Use_config(FAGE_)
     dsl4jsb_Use_config(FLCC_)
     dsl4jsb_Use_config(WLCC_)
     dsl4jsb_Use_config(PPLCC_)
@@ -71,6 +70,7 @@ CONTAINS
     dsl4jsb_Def_config(CARBON_)
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
+    dsl4jsb_Def_config(FAGE_)
     dsl4jsb_Def_config(FLCC_)
     dsl4jsb_Def_config(WLCC_)
     dsl4jsb_Def_config(PPLCC_)
@@ -149,12 +149,13 @@ CONTAINS
 
       dsl4jsb_Get_config(RAD_)
       SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH, MODEL_JSBACH_QUINCY)
+      CASE (MODEL_JSBACH)
         dsl4jsb_Get_config(SSE_)
         dsl4jsb_Get_config(HYDRO_)
         dsl4jsb_Get_config(CARBON_)
         dsl4jsb_Get_config(FUEL_)
         dsl4jsb_Get_config(DISTURB_)
+        dsl4jsb_Get_config(FAGE_)
         dsl4jsb_Get_config(WLCC_)
         dsl4jsb_Get_config(FLCC_)
         dsl4jsb_Get_config(PPLCC_)
@@ -176,7 +177,7 @@ CONTAINS
       END IF
 
       SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_JSBACH, MODEL_JSBACH_QUINCY)
+      CASE (MODEL_JSBACH)
 
         IF (model%config%l_compat401) THEN
           CALL message(TRIM(routine), 'Using settings compatible to jsbach4.01:')
@@ -226,22 +227,40 @@ CONTAINS
           CALL message(TRIM(routine), 'Using canopy albedo from lctlib file')
         END IF
 
-        IF (model%Is_process_active(FLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+        IF (model%Is_process_enabled(FLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
           dsl4jsb_Config(DISTURB_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on disturbance process since fire lcc process is active')
         END IF
-        IF (model%Is_process_active(WLCC_) .AND. .NOT. model%Is_process_active(DISTURB_)) THEN
+        IF (model%Is_process_enabled(WLCC_) .AND. .NOT. model%Is_process_enabled(DISTURB_)) THEN
           dsl4jsb_Config(DISTURB_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on disturbance process since wind lcc process is active')
         END IF
-        IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(FUEL_)) THEN
+        IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(FUEL_)) THEN
           dsl4jsb_Config(FUEL_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on fuel process since disturbance process is active')
         END IF
-        IF (model%Is_process_active(DISTURB_) .AND. .NOT. model%Is_process_active(CARBON_)) THEN
+        IF (model%Is_process_enabled(DISTURB_) .AND. .NOT. model%Is_process_enabled(CARBON_)) THEN
           dsl4jsb_Config(CARBON_)%active = .TRUE.
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
+
+        IF(model%Is_process_enabled(FAGE_) & 
+            & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
+          CALL finish(routine, &
+            & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
+        ENDIF
+
+        IF (model%Is_process_enabled(FAGE_) .AND. model%Is_process_enabled(DISTURB_) &
+            & .AND. .NOT. model%Is_process_enabled(FLCC_)) THEN
+          CALL finish(routine, &
+            & 'When FAGE is enabled and disturbances are active, flcc should be active, too! Please check!')
+        END IF
+        IF (model%Is_process_enabled(FAGE_) .AND. model%Is_process_enabled(DISTURB_) &
+            & .AND. .NOT. model%Is_process_enabled(WLCC_)) THEN
+          CALL finish(routine, &
+            & 'When FAGE is enabled and disturbances are active, wlcc should be active, too! Please check!')
+        END IF
+
       END SELECT
 
     END DO
@@ -250,24 +269,17 @@ CONTAINS
     !>
     ! assuming the shared/constants/ modules are available here already (impl, math, physical)
     SELECT CASE (model_scheme)
-    CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
+    CASE (MODEL_QUINCY)
       CALL message(TRIM(routine), 'starting init of QUINCY process constants')
       CALL init_rad_constants      
       CALL init_assimi_constants   
       CALL init_veg_constants    
-      ! either SPQ_ or SSE_
-      IF (model_scheme == MODEL_QUINCY) THEN
-        CALL init_spq_constants
-      ELSE ! MODEL_JSBACH_QUINCY
-        CALL init_sse_constants
-      END IF
+      CALL init_spq_constants
       CALL init_sb_constants
-      CALL init_pheno_constants    
+      CALL init_pheno_parameters_quincy
       CALL init_atmland_constants  
-    END SELECT
-    SELECT CASE (model_scheme)
-    CASE (MODEL_JSBACH_QUINCY)
-      CALL init_hydro_constants
+    CASE (MODEL_JSBACH)
+      CALL init_pheno_parameters_jsbach
     END SELECT
 
     CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')
@@ -276,7 +288,7 @@ CONTAINS
 
   SUBROUTINE jsbach_setup_tiles(model_id)
 
-    USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,    ONLY: t_jsb_model
     USE mo_jsb_class,          ONLY: Get_model
     USE mo_jsb_model_usecases, ONLY: init_usecase
     USE mo_jsb_lctlib_class,   ONLY: Read_lctlib
@@ -290,6 +302,7 @@ CONTAINS
     model => Get_model(model_id)
 
     ! select lctlib file depending on the usecase
+    ! @TODO should always link to the same lctlib filename and do the rest by scripting environment
     SELECT CASE (TRIM(model%config%usecase))
     ! quincy model (8 PFT tiles)
     CASE ('quincy_eight_pfts')

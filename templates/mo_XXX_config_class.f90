@@ -54,8 +54,6 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
 CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Initialize <PROCESS_NAME_LOWER_CASE> process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_<PROCESS_NAME_LOWER_CASE>_config)
   !!  
   SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_config(config)
 

@@ -2,10 +2,10 @@
 !! @brief Contains the routines for the Task update_canopy_fluxes (photosynthesis related processes)
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_assimi_update_canopy_fluxes.f90
 !!
 MODULE mo_assimi_update_canopy_fluxes
@@ -431,8 +431,8 @@ CONTAINS
   REAL(wp),                 INTENT(IN) :: press_srf               !< air pressure (Pa)
   REAL(wp),                 INTENT(IN) :: ga                      !< aerodynamic conductance (m s-1)
   REAL(wp),                 INTENT(IN) :: temp_acclim             !< veg\%t_air_tacclim_mavg  average temperature for respiration acclimation
-  REAL(wp),                 INTENT(IN) :: ppfd_sunlit_cl          !< PAR of sunlit foliage par per canopy layer (µmol m-2 s-1)
-  REAL(wp),                 INTENT(IN) :: ppfd_shaded_cl          !< PAR of shaded foliage par per canopy layer (µmol m-2 s-1)
+  REAL(wp),                 INTENT(IN) :: ppfd_sunlit_cl          !< PAR of sunlit foliage par per canopy layer (micro-mol m-2 s-1)
+  REAL(wp),                 INTENT(IN) :: ppfd_shaded_cl          !< PAR of shaded foliage par per canopy layer (micro-mol m-2 s-1)
   REAL(wp),                 INTENT(IN) :: fleaf_sunlit_cl         !< fraction of canopy layer that is sunlit
   REAL(wp),                 INTENT(IN) :: co2_mixing_ratio        !< CO2 concentration of the free air (ppm)
   REAL(wp),                 INTENT(IN) :: beta_air                !< scaling factor to account for air humidity effects on conductance
@@ -447,9 +447,9 @@ CONTAINS
   REAL(wp),                 INTENT(IN) :: lai_cl                  !< lai of the particular canopy layer
   REAL(wp),                 INTENT(IN) :: leaf_nitrogen_cl        !< total foliar N content
   REAL(wp),                 INTENT(IN) :: t_jmax_opt              !< temperature optimum of electron transport
-  REAL(wp),                 INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (µmol CO2 / m2 /s)
-  REAL(wp),                 INTENT(OUT) :: an_cl                  !< net photsynthesis of layer (µmol CO2 / m2 /s)
-  REAL(wp),                 INTENT(OUT) :: maint_resp_cl          !< net canopy layer respiration (µmol CO2 / m2 /s)
+  REAL(wp),                 INTENT(OUT) :: ag_cl                  !< gross photsynthesis of layer (micro-mol CO2 / m2 /s)
+  REAL(wp),                 INTENT(OUT) :: an_cl                  !< net photsynthesis of layer (micro-mol CO2 / m2 /s)
+  REAL(wp),                 INTENT(OUT) :: maint_resp_cl          !< net canopy layer respiration (micro-mol CO2 / m2 /s)
   REAL(wp),                 INTENT(OUT) :: gs_cl                  !< canopy conductance of layer (m / s)
   REAL(wp),                 INTENT(OUT) :: ci_cl                  !< leaf internal CO2 concentration of layer (ppm)
   REAL(wp),                 INTENT(OUT) :: m_rub                  !< CO2 limitation of Rubisco factor for calculating optimal N fraction
@@ -459,13 +459,13 @@ CONTAINS
   ! 0.2 Local
   REAL(wp) :: kc, ko, km              ! Michaelis-Menten Kinetic parameters for Rubisco (Pa)
   REAL(wp) :: pcp                     ! Photosynthetic compensation point (Pa)
-  REAL(wp) :: f_resp                  ! N-specific layer respiration rate (µmol CO2 / mmol N /s)
+  REAL(wp) :: f_resp                  ! N-specific layer respiration rate (micro-mol CO2 / mmol N /s)
   REAL(wp) :: nsat,nlim               ! foliar N that is light saturated / limited (mmol N)
   REAL(wp) :: n1,n2,n3                ! N specific rates of electron-transport/Rubisco/PEPc limited PS
   REAL(wp) :: m1,m2,m3                ! ci sensitivity of electron-transport/Rubisco/PEPc limited PS
   REAL(wp) :: msat                    ! N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
   REAL(wp) :: nco                     ! co-limitation factor
-  REAL(wp) :: agsh,agsl               ! gross photosynthesis on sunlit/shaded leaves (µmol / m2 / s)
+  REAL(wp) :: agsh,agsl               ! gross photosynthesis on sunlit/shaded leaves (micro-mol / m2 / s)
   REAL(wp) :: fabs,fabsb              ! fractional light absorption on chloroplast
   REAL(wp) :: ppm2Pa                  ! factor to convert gas concentrations from ppm to Pa
   REAL(wp) :: rtck                    ! dry static energy
@@ -757,7 +757,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>Calculate spring recovery period for evergreen conifers
   !> 
-  !>  Based on Mäkelä et al. (2004) https://doi.org/10.1093/treephys/24.4.369
+  !>  Based on Maekelae et al. (2004) https://doi.org/10.1093/treephys/24.4.369
   !>  returns beta_soa with a value [0.01,1.0]
   !>
   PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)

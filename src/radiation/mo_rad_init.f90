@@ -19,7 +19,7 @@ MODULE mo_rad_init
   USE mo_exception,         ONLY: message
   USE mo_jsb_control,       ONLY: debug_on
 
-  USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+  USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid
   USE mo_jsb_grid,          ONLY: Get_grid
   USE mo_jsb_class,         ONLY: Get_model
@@ -66,7 +66,7 @@ CONTAINS
 
     ! init differs between model_scheme
     SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH, MODEL_JSBACH_QUINCY)
+    CASE (MODEL_JSBACH)
       IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
         CALL rad_read_init_vars(tile)
       END IF
@@ -77,10 +77,7 @@ CONTAINS
       IF (tile%Is_last_process_tile(RAD_)) THEN
         CALL rad_finalize_init_vars()
       END IF
-    END SELECT
-
-    SELECT CASE (model%config%model_scheme)
-    CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
+    CASE (MODEL_QUINCY)
       IF (tile%contains_vegetation) THEN
         CALL rad_init_ic_q_(tile)
       ENDIF
@@ -137,7 +134,7 @@ CONTAINS
 
     dsl4jsb_Get_config(RAD_)
 
-    IF (.NOT. model%Is_process_active(RAD_)) RETURN
+    IF (.NOT. model%Is_process_enabled(RAD_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting radiation init vars')
 
@@ -201,7 +198,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
 
-    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
     ! model => get_model(tile%owner_model_id)
 
@@ -229,7 +226,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
 
-    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
     model => get_model(tile%owner_model_id)
 
@@ -336,7 +333,7 @@ CONTAINS
     dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tfrac_mavg_cl
     dsl4jsb_Real3D_onDomain      :: ppfd_shaded_tcnl_mavg_cl
 
-    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
+    IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
     IF (debug_on()) CALL message(routine, 'Setting initial conditions of radiation memory (quincy) for tile '// &
       &                                   TRIM(tile%name))

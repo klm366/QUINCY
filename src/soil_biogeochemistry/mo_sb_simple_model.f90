@@ -20,11 +20,11 @@
 !! @brief Contains the routines for the Task sb_simple_model 
 !!
 !! @author
-!!  Silvia Caldararu, Sönke Zaehle 
+!!  Silvia Caldararu, Soenke Zaehle 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
-!! Second version by Sönke Zaehle (20170331): added a 4 pool model 
+!! First version by Soenke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
+!! Second version by Soenke Zaehle (20170331): added a 4 pool model 
 !! 3rd version: Jan Engel (20170627): split calc_sb_fluxes_simple() into multiple calc_ routines and rename to update_sb_simple_model()
 !!
 MODULE mo_sb_simple_model
@@ -795,7 +795,7 @@ CONTAINS
 
     !>3.3 update n15 for inorganic fluxes 
     !> here the function is called for the simple_1d soil-model: flux rates in [mol/m3/timestep]
-    !> (JSM is using the same function but uses flux rates in [µmol/m3/s]; unit conversion is applied within the routine)
+    !> (JSM is using the same function but uses flux rates in [micro-mol/m3/s]; unit conversion is applied within the routine)
     !>
     CALL calc_sb_inorganic_n15_fluxes(nc, nsoil_sb, &                               ! in
                                       TRIM(dsl4jsb_Config(SB_)%sb_model_scheme), &
@@ -944,8 +944,8 @@ CONTAINS
                                   emission_n2_n15(:))
     ENDIF
 
-    !>7.0 convert rates to [µmol/ m3 / s]
-    !>  and covert surface fluxes to [µmol / m2 / s]
+    !>7.0 convert rates to [micro-mol/ m3 / s]
+    !>  and covert surface fluxes to [micro-mol / m2 / s]
     !>
     het_respiration(:,:)     = het_respiration(:,:) / dtime * 1000000._wp
     het_respiration_c13(:,:) = het_respiration_c13(:,:) / dtime * 1000000._wp
@@ -1152,7 +1152,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ! ---------------------------
     INTEGER,                                     INTENT(in)  :: nc, &                        !< dimensions
                                                                 nsoil_sb
-    REAL(wp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [µmol m-2 s-1]
+    REAL(wp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [micro-mol m-2 s-1]
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
                                                                 bulk_dens_sl, &              !< bulk density of a layer [kg m-3] 
@@ -1313,8 +1313,8 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out) :: plant_uptake_nh4_sl        !< potential plant uptake of NH4 [mol / m3 / timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out) :: plant_uptake_no3_sl        !< potential plant uptake of NO3 [mol / m3 / timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(out) :: plant_uptake_po4_sl        !< potential plant uptake of PO4 [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc),                     INTENT(out) :: unit_uptake_n_pot          !< potential N uptake by fine roots per unit mass [µmol / mol / s]
-    REAL(wp), DIMENSION(nc),                     INTENT(out) :: unit_uptake_p_pot          !< potential P uptake by fine roots per unit mass [µmol / mol / s]
+    REAL(wp), DIMENSION(nc),                     INTENT(out) :: unit_uptake_n_pot          !< potential N uptake by fine roots per unit mass [micro-mol / mol / s]
+    REAL(wp), DIMENSION(nc),                     INTENT(out) :: unit_uptake_p_pot          !< potential P uptake by fine roots per unit mass [micro-mol / mol / s]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                                 :: ic                      ! loop over nc
     INTEGER                                 :: isoil                   ! loop over nsoil_sb
@@ -1356,7 +1356,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     DO ic = 1,nc
       DO isoil = 1,nsoil_sb
         ! N
-        ! potential N uptake rate (µmol N / mol C fine-root / s), weighted by root distribution
+        ! potential N uptake rate (micro-mol N / mol C fine-root / s), weighted by root distribution
         hlp1(ic,isoil) = root_fraction_act_sl(ic,isoil) * rtm_plant_uptake_act(ic,isoil) * rmm_plant_uptake_act(ic,isoil) * &
           &             (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(ic) * &
           &             nh4_solute(ic,isoil) * ( km1_uptake_nh4_act(ic,isoil) + & 
@@ -1376,7 +1376,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
         END IF                                       
   
         ! P
-        ! potential P uptake rate (µmol P / mol C fine-root / s), weighted by root distribution
+        ! potential P uptake rate (micro-mol P / mol C fine-root / s), weighted by root distribution
         IF ((km2_uptake_po4_act(ic,isoil) + po4_solute(ic,isoil)) > eps8) THEN
           hlp1(ic,isoil) = root_fraction_act_sl(ic,isoil)  * rtm_plant_uptake_act(ic,isoil) * rmm_plant_uptake_act(ic,isoil) * &
             &             (1.0_wp - myc_root_coverage_act(ic)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(ic) * &
@@ -1768,10 +1768,10 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        rmm_decomposition_act    !< moisture response of decomposition 
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration, &        !< heterotrophic respiration [mol C / m3 / timestep]
                                                                        het_respiration_c13, &    !< heterotrophic respiration [mol 13C / m3 / timestep]
-                                                                       het_respiration_c14, &    !< heterotrophic respiration [µmol 14C / m3 / timestep]
+                                                                       het_respiration_c14, &    !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                                        myc_respiration, &        !< mycorrhizae respiration [mol C / m3 / timestep]
                                                                        myc_respiration_c13, &    !< mycorrhizae respiration [mol 13C / m3 / timestep]
-                                                                       myc_respiration_c14       !< mycorrhizae respiration [µmol 14C / m3 / timestep]
+                                                                       myc_respiration_c14       !< mycorrhizae respiration [micro-mol 14C / m3 / timestep]
 #ifdef __QUINCY_STANDALONE__
     TYPE(t_sb_pool_a),                                INTENT(in)    :: sb_pool                  !< soil organic matter and litter pools [mol / m3]
     TYPE(t_sb_pool_a),                                INTENT(inout) :: sb_loss                  !< soil organic matter and litter loss [mol / m3]
@@ -2355,7 +2355,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
   !> 
   !>    simple soil model: [mol/m3/timestep]
   !>
-  !>    JSM:               [µmol/m3/s] (unit conversion is applied within the routine)
+  !>    JSM:               [micro-mol/m3/s] (unit conversion is applied within the routine)
   !>
   SUBROUTINE calc_sb_inorganic_n15_fluxes(nc, & 
                                           nsoil_sb, &
@@ -2447,7 +2447,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 
 
     !> 0.9 'INTENT(in)' flux rates unit conversion when this routines is called from JSM
-    !!  unit conversion: [µmol/m3/s] -> [mol/m3/timestep]
+    !!  unit conversion: [micro-mol/m3/s] -> [mol/m3/timestep]
     IF(sb_model_scheme == 'jsm') THEN
       plant_uptake_nh4_local_sl(:,:)      = plant_uptake_nh4_sl(:,:)      * dtime / 1.e6_wp
       plant_uptake_no3_local_sl(:,:)      = plant_uptake_no3_sl(:,:)      * dtime / 1.e6_wp
@@ -2589,7 +2589,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ENDWHERE
 
     !> 3.0 'INTENT(out)' variables unit conversion when this routines is called from JSM
-    !!  unit conversion: [mol/m3/timestep] -> [µmol/m3/s]
+    !!  unit conversion: [mol/m3/timestep] -> [micro-mol/m3/s]
     IF(sb_model_scheme == 'jsm') THEN
       plant_uptake_nh4_n15_sl(:,:)      = plant_uptake_nh4_n15_sl(:,:)      / dtime * 1.e6_wp
       plant_uptake_no3_n15_sl(:,:)      = plant_uptake_no3_n15_sl(:,:)      / dtime * 1.e6_wp
@@ -2660,7 +2660,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
                                                                        microbial_uptake_po4_sl          !< microbial PO4 uptake [mol / m3 / timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
                                                                        het_respiration_c13, &        !< heterotrophic respiration [mol 13C / m3 / timestep]
-                                                                       het_respiration_c14, &        !< heterotrophic respiration [µmol 14C / m3 / timestep]
+                                                                       het_respiration_c14, &        !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                                        net_mineralisation_nh4, &     !< net mineralisation of NH4 [mol / m3 / timestep]
                                                                        net_mineralisation_no3, &     !< net mineralisation of NO3 [mol / m3 / timestep]
                                                                        net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
@@ -2843,7 +2843,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
 #endif
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
                                                                        het_respiration_c13, &        !< heterotrophic respiration [mol 13C / m3 / timestep]
-                                                                       het_respiration_c14, &        !< heterotrophic respiration [µmol 14C / m3 / timestep]
+                                                                       het_respiration_c14, &        !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                                        net_mineralisation_nh4, &     !< net mineralisation of NH4 [mol / m3 / timestep]
                                                                        net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
                                                                        net_mineralisation_nh4_n15    !< net mineralisation of 15NH4 [mol / m3 / timestep]
@@ -3472,7 +3472,7 @@ dsl4slm_passback_vegpool_var(pool,fine_root,carbon)
     ENDDO 
     hlp1_2d(:,:) = SPREAD(hlp1,2,nsoil_sb)
 
-    !> 1.1 calculate mean N fixation rate (µmol / m3 / s)
+    !> 1.1 calculate mean N fixation rate (micro-mol / m3 / s)
     !!     to all soil layers
     !!
     SELECT CASE(TRIM(sb_bnf_scheme))

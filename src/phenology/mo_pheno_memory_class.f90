@@ -8,6 +8,8 @@
 !! First version by Rainer Schneck (2015-09-09)
 !! Julia Nabel (2018-01-09): added memory for optional functionality: forest regrowth
 !!                          (derive maxLAI from biomass via allometric relationships)
+!! Jan Engel (2022): add QUINCY variables
+!! Jan Engel (2023-01-05): improve model encapsulation
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
@@ -38,11 +40,32 @@ MODULE mo_pheno_memory_class
   ! ======================================================================================================= !
   !>Type definition for pheno memory
   !>
+  !> include all variables use by different models
+  !> but init only the variables needed for the particular model
+  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_pheno_memory
+
+    !------------------------------------------------------------------------------------------------------ !
+    !> 1.0 common variables used by all models
+    !>
+    TYPE(t_jsb_var_real2d) :: &
+      & lai                               !< actual leaf area index [m2 m-2]
+
+    TYPE(t_jsb_var_real3d) :: &
+      & lai_cl                            !< leaf area index per canopy layer [m2 m-2]
     
     !------------------------------------------------------------------------------------------------------ !
-    !>1.0 jsbach4
+    !> 2.0 variables used only by JSBACH
     !>
+    ! variables NOT added to varlist
+    REAL(wp), POINTER :: lai_mon(:,:,:)       => NULL()   !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14> !
+    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL()   !< Monthly fpc (per year or climatology) <nproma x nblks x 14> !
+
+    ! Diagnostic land mean phenology e.g. for monitoring (only available with ICON)
+    TYPE(t_jsb_var_real1d) ::           &
+      & lai_ta_gmean,                   & !< Global Land mean LAI (box tile)
+      & fract_fpc_gmean                   !< Global Land mean foliage cover (box tile)
+
     TYPE(t_jsb_var_real2d)           :: &
       & lai_ta,                         & !< Leaf area index relative to the tile area
       & fract_fpc,                      & !< Foliage projected cover of the pft
@@ -105,44 +128,21 @@ MODULE mo_pheno_memory_class
                                           ! Gives the fraction of canopy area from the tile area. Between 0 and 1.
                                           ! canopy area = veg_fract_correction * tile area.
                                           ! var (tile area) = veg_fract_correction * var(canopy area).
-                                          ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wüste" und Vegetation
+                                          ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wueste" und Vegetation
                                           !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                           ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
 
-    ! Diagnostic land mean phenology e.g. for monitoring (only available with ICON)
-    TYPE(t_jsb_var_real1d) ::           &
-      & lai_ta_gmean,                   & !< Global Land mean LAI (box tile)
-      & fract_fpc_gmean                   !< Global Land mean foliage cover (box tile)
-
-    REAL(wp), POINTER :: lai_mon(:,:,:)       => NULL()   !< Monthly leaf area index (per year or climatology) <nproma x nblks x 14> !
-    REAL(wp), POINTER :: fract_fpc_mon(:,:,:) => NULL()   !< Monthly fpc (per year or climatology) <nproma x nblks x 14> !
-
     !------------------------------------------------------------------------------------------------------ !
-    !>2.0 jsbach4 & quincy
-    !>  note: for each of these variables two 'mem%Add_var()' calls exist (one for each jsbach4 & quincy)
-    !>        allowing different settings
-    !>        this may be a temporary solution only @TODO
+    !> 3.0 variables used only by QUINCY
     !>
-    TYPE(t_jsb_var_real2d)          :: &
-      & lai                                 !< actual leaf area index [m2 m-2]
-      
-    TYPE(t_jsb_var_real3d)          :: &
-      & lai_cl                              !< leaf area index per canopy layer [m2 m-2]
+    TYPE(t_jsb_var_real2d) :: &
+      & growing_season, &           !< logical: growing season for the plant [0 = FALSE / 1 = TRUE]
+      & gdd, &                      !< growing degree days above 5degC [K day]
+      & nd_dormance, &              !< number of days since last growing season [# days]
+      & lai_max                     !< maximum lai - from site specific lai data [m2 m-2]
 
-    !------------------------------------------------------------------------------------------------------ !
-    !>3.0 quincy
-    !>
-    TYPE(t_jsb_var_real2d)          :: &
-                                    growing_season          !< logical to identify whether the plant is in the growing season or not
-                                                            !< used as logical: 0 = FALSE / 1 = TRUE
-
-    TYPE(t_jsb_var_real2d)          :: &
-                                    gdd                 , & !< growing degree days above 5°C [K day]
-                                    nd_dormance         , & !< number of days since last growing season [# days]
-                                    lai_max                 !< maximum lai - from site specific lai data [m2 m-2]
-
-    TYPE(t_jsb_var_real3d)          :: &
-                                    cumm_lai_cl             !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
+    TYPE(t_jsb_var_real3d) :: &
+      & cumm_lai_cl                 !< cummulative leaf area above the mid-point of the canopy layer [m2 m-2]
 
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory
@@ -150,20 +150,16 @@ MODULE mo_pheno_memory_class
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_memory_class'
 
-
 CONTAINS
 
-
   ! ======================================================================================================= !
-  !>initialize memory (variables) for the process: phenology
+  !> initialize memory (variables) for the process: phenology
+  !>
+  !>   init only the variables needed for the particular model 
+  !>   (i.e. allocate memory, add to varlist, set metadata)
   !>
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
-
-    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
-    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_pheno_memory), INTENT(inout), TARGET :: mem
@@ -172,37 +168,67 @@ CONTAINS
     INTEGER,               INTENT(in)            :: lct_ids(:)
     INTEGER,               INTENT(in)            :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
-    dsl4jsb_Def_config(PHENO_)
     TYPE(t_jsb_model),  POINTER :: model
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
+    ! ----------------------------------------------------------------------------------------------------- !
+    model        => Get_model(model_id)
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>1.0 mem init for JSBACH model
+    !>
+    IF (model%config%model_scheme == MODEL_JSBACH) THEN
+      CALL Init_pheno_memory_jsbach(mem, prefix, suffix, lct_ids, model_id)
+    END IF
+
+    !------------------------------------------------------------------------------------------------------ !
+    !>2.0 mem init for QUINCY model
+    !>
+    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+      CALL Init_pheno_memory_quincy(mem, prefix, suffix, lct_ids, model_id)
+    END IF
+  END SUBROUTINE Init_pheno_memory
+
+  ! ======================================================================================================= !
+  !>initialize memory (variables) for the process phenology of the JSBACH model
+  !>
+  SUBROUTINE Init_pheno_memory_jsbach(mem, prefix, suffix, lct_ids, model_id)
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_class,         ONLY: Get_model
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_pheno_memory), INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),      INTENT(in)            :: prefix
+    CHARACTER(len=*),      INTENT(in)            :: suffix
+    INTEGER,               INTENT(in)            :: lct_ids(:)
+    INTEGER,               INTENT(in)            :: model_id
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),  POINTER :: model
+    dsl4jsb_Def_config(PHENO_)
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface, canopy_layer        ! Vertical grid
-    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
-    INTEGER                     :: table
-    TYPE(t_grib2)               :: grib2_desc
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory'
+    INTEGER                     :: table                        ! ...
+    TYPE(t_grib2)               :: grib2_desc                   ! used for lai settings
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory_jsbach'
     ! ----------------------------------------------------------------------------------------------------- !
     model        => Get_model(model_id)
     dsl4jsb_Get_config(PHENO_)
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-#ifdef __QUINCY_STANDALONE__
-    vgrid_canopy => Get_vgrid('canopy_layer')
-#else
     canopy_layer => Get_vgrid('canopy_layer')
-    vgrid_canopy => Get_vgrid('canopy_layer_q_')  !! quincy
-#endif
 
     !! !$acc enter data pcreate(mem)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    ! default jsbach4 memory
-    !
+    ! create memory at tiles of LAND_TYPE or VEG_TYPE
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology') THEN   ! TODO
+      ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'climatology') THEN   ! TODO
         ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
         ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
         !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
@@ -258,7 +284,7 @@ CONTAINS
 
       ! --------------------------------------------------------------------------------------------------- !
       ! logrop
-      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'logrop') THEN
+      IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'logrop') THEN
 
         CALL mem%Add_var('growth_phase_sg', mem%growth_phase_SG,               &
           & hgrid, surface,                                                    &
@@ -401,7 +427,30 @@ CONTAINS
 
         END IF ! l_forestRegrowth
       END IF ! logrop
-
+      
+      ! grib setting for: lai differentiation box tile and other tiles
+      ! this is done because ... TODO
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(2,0,28, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
+      END IF
+    
+      CALL mem%Add_var( 'lai', mem%lai,                                        &
+        & hgrid, surface,                                                      &
+        & t_cf('leaf_area_index', '', ''),                                     &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp )
+        
+      CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
+        & hgrid, canopy_layer,                                               &
+        & t_cf('LAI for each canopy layer', '', ''),                         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix,                                                    &
+        & lrestart=.FALSE., initval_r=0.0_wp )
+        
 #ifdef __ICON__
       ! --------------------------------------------------------------------------------------------------- !
       ! Diagnostic global carbon sums for experiment monitoring
@@ -424,130 +473,132 @@ CONTAINS
 
       END IF
 #endif
-      
-      ! --------------------------------------------------------------------------------------------------- !
-      ! variables used with jsbach4 & quincy
-      ! jsbach4 init
-      IF (model%config%model_scheme == MODEL_JSBACH) THEN
-        ! setting for: lai
-        IF (TRIM(mem%owner_tile_name) == 'box') THEN
-          grib2_desc = t_grib2(2,0,28, grib_bits)
-        ELSE
-          grib2_desc = t_grib2(255, 255, 255, grib_bits)
-        END IF
-      
-        CALL mem%Add_var( 'lai', mem%lai,                                        &
-          & hgrid, surface,                                                      &
-          & t_cf('leaf_area_index', '', ''),                                     &
-          & t_grib1(table, 255, grib_bits), grib2_desc,                          &
-          & prefix, suffix,                                                      &
-          & loutput=.TRUE., output_level=BASIC,                                  &
-          & initval_r=0.0_wp )
-          
-        CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
-          & hgrid, canopy_layer,                                               &
-          & t_cf('LAI for each canopy layer', '', ''),                         &
-          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix,                                                    &
-          & lrestart=.FALSE., initval_r=0.0_wp )
-
-      END IF !  IF(model%config%model_scheme == MODEL_JSBACH)
     END IF !  VEG / LAND
-    
+  END SUBROUTINE Init_pheno_memory_jsbach
+
+  ! ======================================================================================================= !
+  !>initialize memory (variables) for the process phenology of the QUINCY model
+  !>
+  SUBROUTINE Init_pheno_memory_quincy(mem, prefix, suffix, lct_ids, model_id)
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_pheno_memory), INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),      INTENT(in)            :: prefix
+    CHARACTER(len=*),      INTENT(in)            :: suffix
+    INTEGER,               INTENT(in)            :: lct_ids(:)
+    INTEGER,               INTENT(in)            :: model_id
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
+    INTEGER                     :: table                        ! ...
+    TYPE(t_grib2)               :: grib2_desc                   ! used for lai settings
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory_quincy'
+    ! ----------------------------------------------------------------------------------------------------- !
+    table        = tables(1)
+    hgrid        => Get_grid(mem%grid_id)
+    surface      => Get_vgrid('surface')
+#ifdef __QUINCY_STANDALONE__
+    vgrid_canopy => Get_vgrid('canopy_layer')
+#else
+    vgrid_canopy => Get_vgrid('canopy_layer_q_')
+#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
-    ! quincy
-    IF (model%config%model_scheme == MODEL_JSBACH_QUINCY .OR. model%config%model_scheme == MODEL_QUINCY) THEN
-      IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
-         & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
-
-        ! ------------------------------------------------------------------------------------------------- !
-        ! variables used with jsbach4 & quincy
-        ! quincy init
-        
-        ! setting for: lai
-        IF (TRIM(mem%owner_tile_name) == 'box') THEN
-          grib2_desc = t_grib2(2,0,28, grib_bits)
-        ELSE
-          grib2_desc = t_grib2(255, 255, 255, grib_bits)
-        END IF
-        
-        CALL mem%Add_var('lai', mem%lai, &
-          & hgrid, surface, &
-          & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
-          & t_grib1(table, 255, grib_bits), &
-          & grib2_desc, &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('lai_cl', mem%lai_cl, &
-          & hgrid, vgrid_canopy, &
-          & t_cf('lai_cl', 'm2 m-2', 'leaf area index per canopy layer'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-          
-        ! ------------------------------------------------------------------------------------------------- !
-        ! variables used only with quincy      
-        CALL mem%Add_var('growing_season', mem%growing_season, &
-          & hgrid, surface, &
-          & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-  
-        CALL mem%Add_var('gdd', mem%gdd, &
-          & hgrid, surface, &
-          & t_cf('gdd', 'K days', 'growing degree days above 5 degC'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-    
-        CALL mem%Add_var('nd_dormance', mem%nd_dormance, &
-          & hgrid, surface, &
-          & t_cf('nd_dormance', '# days', 'number of days since last growing season'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-  
-        CALL mem%Add_var('lai_max', mem%lai_max, &
-          & hgrid, surface, &
-          & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
-        CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
-          & hgrid, vgrid_canopy, &
-          & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
-          & t_grib1(table, 255, grib_bits), &
-          & t_grib2(255, 255, 255, grib_bits), &
-          & prefix, suffix, &
-          & loutput = .TRUE., &
-          & lrestart = .TRUE., &
-          & initval_r = 0.0_wp)
-
+    ! create memory at tiles of LAND_TYPE or VEG_TYPE
+    IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
+      & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
+       
+      ! grib setting for: lai differentiation box tile and other tiles
+      ! this is done because ... TODO
+      IF (TRIM(mem%owner_tile_name) == 'box') THEN
+        grib2_desc = t_grib2(2,0,28, grib_bits)
+      ELSE
+        grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
+        
+      CALL mem%Add_var('lai', mem%lai, &
+        & hgrid, surface, &
+        & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
+        & t_grib1(table, 255, grib_bits), &
+        & grib2_desc, &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+        
+      CALL mem%Add_var('lai_cl', mem%lai_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('lai_cl', 'm2 m-2', 'leaf area index per canopy layer'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+        
+      CALL mem%Add_var('growing_season', mem%growing_season, &
+        & hgrid, surface, &
+        & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+        
+      CALL mem%Add_var('gdd', mem%gdd, &
+        & hgrid, surface, &
+        & t_cf('gdd', 'K days', 'growing degree days above 5 degC'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+        
+      CALL mem%Add_var('nd_dormance', mem%nd_dormance, &
+        & hgrid, surface, &
+        & t_cf('nd_dormance', '# days', 'number of days since last growing season'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+        
+      CALL mem%Add_var('lai_max', mem%lai_max, &
+        & hgrid, surface, &
+        & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+        
+      CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
+        & hgrid, vgrid_canopy, &
+        & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
     END IF
+  END SUBROUTINE Init_pheno_memory_quincy
 
-  END SUBROUTINE Init_pheno_memory
 
 #endif
 END MODULE mo_pheno_memory_class

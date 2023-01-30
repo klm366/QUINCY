@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the shortwave surface radiation budget (fapar & albedo) 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !!
 !! 18-08-2016: update to include VIS And NIR albedo calculation for the canopy
 !! 24-08-2016: update to include two-stream approximation and soil albedo 
@@ -152,7 +152,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! run only at PFT tiles (i.e. leafs of vegetation tile) because this routine is tailored towards vegetation only
     !  in the "usecase_pfts" RAD_ is defined to run at leafs, which includes also other tiles than PFT
-    !  hence, the jsbach4 task "surface_radiation" needs to run at leafs other than PFT if model_scheme == MODEL_JSBACH_QUINCY or MODEL_QUINCY
     IF (tile%lcts(1)%lib_id == 0) THEN
       IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Run only at PFT tiles. '//TRIM(tile%name)//' is not a PFT. ')
       RETURN

@@ -314,7 +314,7 @@ CONTAINS
   ! @param[in]     model_id  Model id
   SUBROUTINE Register_assimi_tasks(this, model_id)
 
-    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
 
     ! in/out
@@ -334,7 +334,7 @@ CONTAINS
       CALL this%Register_task(tsk_canopy_cond_stressed(model_id))
       CALL this%Register_task(tsk_assimilation(model_id))
       CALL this%Register_task(tsk_npp_buffer(model_id))
-    CASE (MODEL_JSBACH_QUINCY, MODEL_QUINCY)
+    CASE (MODEL_QUINCY)
       CALL this%Register_task(tsk_reset_assimi_fluxes(model_id))
       CALL this%Register_task(tsk_update_canopy_fluxes(model_id))
       CALL this%Register_task(tsk_time_average_assimilation(model_id))
@@ -356,25 +356,9 @@ CONTAINS
   ! Note that this routine should only be applied to special vegetation classes
   SUBROUTINE update_assimilation_scaling_factors(tile, options)
 
-    ! Use declarations
-    !USE mo_orbit,                 ONLY: inquire_declination
-     ! R: Returns declination calculated in last orbit call.
-     !    Problem: FATAL ERROR in inquire_declination: Not Initialized
-     !    This is because ICON did not call the calculation of orbital parameters in SUBROUTINE orbit_vsop87 or
-     !    alternatively in SUBROUTINE orbit_kepler. Therefore this seems to be a problem solved with the development of ICON...
-     !    Note: problem still exists in the 26.10.2015 version of icon-les-dev !
-     !    However taken from mo_psrad_orbit works... perhaps precompiler command necessary here...
-#ifdef __ICON__
-#ifdef __NO_RTE_RRTMGP__
-    USE mo_psrad_orbit,       ONLY: inquire_declination
-#else
-    USE mo_radiation_orbit,   ONLY: inquire_declination
-#endif
-#else
-    USE mo_orbit,             ONLY: inquire_declination
-#endif
-    USE mo_jsb_grid,          ONLY: Get_grid
-    USE mo_assimi_process,    ONLY: calc_assimilation_scaling_factors
+    USE mo_orbit_solar,    ONLY: inquire_declination
+    USE mo_jsb_grid,       ONLY: Get_grid
+    USE mo_assimi_process, ONLY: calc_assimilation_scaling_factors
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -907,7 +891,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder für assimilation noch wo anderst
+    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder fuer assimilation noch wo anderst
     !    verwendet wird. Wird nur ausgegeben. Braucht man wahrscheinlich nicht mehr, auch nicht im Output.
     ! bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) = bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) + &
     !                                                             CO2_conc_leaf_cl * dtime
