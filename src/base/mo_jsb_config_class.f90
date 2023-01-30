@@ -188,6 +188,12 @@ CONTAINS
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Selected model_scheme '//TRIM(model_scheme)//' not available.')
     END SELECT
+    ! currently, no absolute fraction files are available, therefore, assert accidental use of flag:
+    IF(.NOT. relative_fractions_in_file) THEN
+      CALL finish(TRIM(routine), 'relative_fractions_in_file was set to true, however, currently' &
+      & // ' no absolute fraction files are available, please check.')
+    ENDIF
+    model_config%relative_fractions_in_file = relative_fractions_in_file
     ! set other namelist options
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
@@ -197,7 +203,6 @@ CONTAINS
     model_config%tpe_scheme                 = tpe_scheme
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
-    model_config%relative_fractions_in_file = relative_fractions_in_file
     ! quincy - temporary solution @TODO
     model_config%dtime                        = 1800.0_wp   ! length of one time step in seconds
     model_config%flag_stand_harvest           = .FALSE.

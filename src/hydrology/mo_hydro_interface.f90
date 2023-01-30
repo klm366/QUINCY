@@ -1020,7 +1020,7 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
-    REAL(wp), POINTER :: area(:)
+    REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
@@ -1048,6 +1048,8 @@ CONTAINS
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
     area => grid%area(ics:ice, iblk)
+    lat => grid%lat(ics:ice, iblk)
+    lon => grid%lon(ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -1061,10 +1063,17 @@ CONTAINS
 
     dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
 
+    !$claw acc data create(tile, tile%fract, tile_fract)
+    !$claw acc parallel loop gang vector
+    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
+
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
+      & tile_fract(:) > 0._wp, &
+      & lat(:), &
+      & lon(:), &
       & nsoil, &
       & grid%nlat_g, & !< (Effective) number of latitudes for steepness parameter in infiltration computation<
       & dtime, &
@@ -1106,9 +1115,6 @@ CONTAINS
       & )
 
     ! Convert soil hydrology balance error to volume
-    !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
-    !$claw acc parallel loop gang vector
-    CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
     dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_res) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_res) &
       & * tile_fract(:) * area(:)
 

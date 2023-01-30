@@ -26,10 +26,21 @@ MODULE mo_pheno_config_class
 
   PUBLIC :: t_pheno_config
 
+  ! ======================================================================================================= !
+  !> PHENO_ configuration parameters
+  !>
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
-    LOGICAL :: l_forestRegrowth ! If TRUE, the maxLAI is derived from biomass via allometric relationships
-    CHARACTER(len=15) :: scheme   !< Phenology scheme to use ('logrop', 'climatology')
-     !LOGICAL :: first_call_phenology_this_day  ! TRUE marks if a new day has just started and update_phenology is called for the top tile
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> MODEL_JSBACH
+    !> 
+    LOGICAL             :: l_forestRegrowth           !< If TRUE, the maxLAI is derived from biomass via allometric relationships
+    CHARACTER(len=15)   :: scheme_jsbach              !< Phenology scheme to use ('logrop', 'climatology')
+    !LOGICAL :: first_call_phenology_this_day         !< TRUE marks if a new day has just started and 
+    !                                                 !< update_phenology is called for the top tile
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> MODEL_QUINCY
+    !> 
+    ! ...
     CONTAINS
       PROCEDURE :: Init => Init_pheno_config
   END type t_pheno_config
@@ -38,29 +49,29 @@ MODULE mo_pheno_config_class
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !> read PHENO_ namelist and init configuration parameters
+  !>
   SUBROUTINE Init_pheno_config(config)
-
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-
+    USE mo_jsb_namelist_iface,    ONLY: open_nml, POSITIONED, position_nml, close_nml
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_pheno_config), INTENT(inout) :: config
-
-    LOGICAL :: active, l_forestRegrowth
-    CHARACTER(len=15) :: scheme
+    ! ----------------------------------------------------------------------------------------------------- !
+    LOGICAL                     :: active
+    LOGICAL                     :: l_forestRegrowth
+    CHARACTER(len=15)           :: scheme             ! scheme_jsbach
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-
     NAMELIST /jsb_pheno_nml/  &
       & active,               &
       & l_forestRegrowth,     &
       & scheme,               &
       & ic_filename,          &
       & bc_filename
-
     INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_config'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CALL message(TRIM(routine), 'Starting phenology configuration')
-
+    ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active              = .TRUE.
     l_forestRegrowth    = .FALSE.
@@ -68,21 +79,23 @@ CONTAINS
     bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
     !first_call_phenology_this_day = .FALSE.
-
+    ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-
     nml_unit = position_nml('jsb_pheno_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_pheno_nml)
-
-    ! Write resulting values in config memory
-    config%active              = active
-    config%l_forestRegrowth    = l_forestRegrowth
-    config%scheme              = TRIM(scheme)
-    config%ic_filename         = ic_filename
-    config%bc_filename         = bc_filename
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Write namelist values into config
+    config%active                     = active
+    config%l_forestRegrowth           = l_forestRegrowth
+    config%scheme_jsbach              = TRIM(scheme)
+    config%ic_filename                = ic_filename
+    config%bc_filename                = bc_filename
     CALL close_nml(nml_handler)
+
+    !> model-specific routines
+    !>
+    ! ...
 
   END SUBROUTINE Init_pheno_config
 

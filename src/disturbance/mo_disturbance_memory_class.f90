@@ -17,8 +17,12 @@ MODULE mo_disturb_memory_class
 
   USE mo_kind, ONLY: wp
 
+  USE mo_jsb_model_class,        ONLY: t_jsb_model
+  USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d    ! <Rackhun Son>
+
+  dsl4jsb_Use_processes WLCC_, FLCC_
 
   IMPLICIT NONE
   PRIVATE
@@ -94,9 +98,10 @@ CONTAINS
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
     INTEGER,             INTENT(in)    :: model_id
-
-    TYPE(t_jsb_grid),  POINTER :: hgrid             ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface           ! Vertical grids
+    
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: hgrid           ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface         ! Vertical grids
     TYPE(t_jsb_vgrid), POINTER :: daily             ! daily time grids <Rackhun Son>
     !TYPE(t_jsb_vgrid), POINTER :: d_lstm            ! LSTM hidden grids <Rackhun Son>
     INTEGER :: table
@@ -106,6 +111,7 @@ CONTAINS
     IF (lct_ids(1) > 0)  CONTINUE ! avoid compiler warning about dummy argument not being used
     IF (model_id > 0)    CONTINUE ! avoid compiler warning about dummy argument not being used
 
+    model => Get_model(model_id)
     table = tables(1)
 
     hgrid   => Get_grid(mem%grid_id)
@@ -127,7 +133,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       & prefix, suffix,                                                                 &
       & output_level=BASIC,                                                             &
-      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'damaged_fract', mem%damaged_fract,                                &
       & hgrid, surface,                                                                  &
@@ -135,7 +141,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
       & prefix, suffix,                                                                  &
       & output_level=BASIC,                                                              &
-      & lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
+      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'q_air_clim', mem%q_rel_air_climbuf,                                            &
       & hgrid, surface,                                                                               &
@@ -174,21 +180,25 @@ CONTAINS
       & prefix, suffix,                                                     &
       & lrestart=.TRUE., initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'cconservation_wind', mem%cconservation_wind,         &
-      & hgrid, surface,                                                     &
-      & t_cf('cconservation_wind', 'mol(C) m-2(canopy)',                    &
-      &   'Test for c conservation on relocation for wind damaged area.'),  &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
-      & prefix, suffix,                                                     &
-      & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+    IF (.NOT. model%processes(WLCC_)%p%config%active) THEN
+      CALL mem%Add_var( 'cconservation_wind', mem%cconservation_wind,         &
+        & hgrid, surface,                                                     &
+        & t_cf('cconservation_wind', 'mol(C) m-2(canopy)',                    &
+        &   'Test for c conservation on relocation for wind damaged area.'),  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+        & prefix, suffix,                                                     &
+        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp )
+    ENDIF
 
-    CALL mem%Add_var( 'cconservation_fire', mem%cconservation_fire,         &
-      & hgrid, surface,                                                     &
-      & t_cf('cconservation_fire', 'mol(C) m-2(canopy)',                    &
-      &  'Test for c conservation on relocation for burned area.'),         &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
-      & prefix, suffix,                                                     &
-      & loutput = .TRUE.,lrestart=.FALSE., initval_r=0.0_wp )
+    IF (.NOT. model%processes(FLCC_)%p%config%active) THEN
+      CALL mem%Add_var( 'cconservation_fire', mem%cconservation_fire,         &
+        & hgrid, surface,                                                     &
+        & t_cf('cconservation_fire', 'mol(C) m-2(canopy)',                    &
+        &  'Test for c conservation on relocation for burned area.'),         &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+        & prefix, suffix,                                                     &
+        & loutput = .TRUE., lrestart=.FALSE., initval_r=0.0_wp )
+    ENDIF
 
     ! additional variable for fire <Rackhun Son>
     CALL mem%Add_var('t_air_ave', mem%t_air_ave,                            &

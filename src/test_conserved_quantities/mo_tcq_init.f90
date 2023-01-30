@@ -18,8 +18,6 @@ MODULE mo_tcq_init
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
-
-  USE mo_jsb_model_class,   ONLY: t_jsb_model
   USE mo_jsb_tile_class,    ONLY: t_jsb_tile_abstract
 
   dsl4jsb_Use_processes TCQ_

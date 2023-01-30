@@ -21,7 +21,6 @@ MODULE mo_jsb_process_class
 
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_process_task_p
   USE mo_jsb_config_class,    ONLY: t_jsb_config
-  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc
   USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
 
   IMPLICIT NONE
@@ -29,7 +28,7 @@ MODULE mo_jsb_process_class
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    &       PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
+    &       PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, &
     &       ANTHRO2L_     !  < Rackhun Son >
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
@@ -41,7 +40,6 @@ MODULE mo_jsb_process_class
     INTEGER                       :: owner_model_id
     LOGICAL                       :: l_changes_fractions = .FALSE.  !< Does this process change tile fractions?
     LOGICAL                       :: has_memory = .TRUE.  !< Does this process has an own memory module
-    TYPE(t_jsb_lcc_proc)          :: lcc_relocations ! pointers required for relocations
   CONTAINS
     PROCEDURE :: Configure => Configure_process
     PROCEDURE :: Register_task
@@ -56,7 +54,7 @@ MODULE mo_jsb_process_class
 
   ENUM, BIND(C)
     ENUMERATOR :: A2L_=1, ANTHRO2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
-      &           FUEL_, PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
+      &           FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
   END ENUM
 
   ! Process actions
@@ -111,6 +109,8 @@ CONTAINS
       return_value = 'tlcc'
     CASE (TCQ_)
       return_value = 'tcq'
+    CASE (FAGE_)
+      return_value = 'fage'
     CASE (ALCC_)
       return_value = 'alcc'
     CASE (FLCC_)
@@ -173,6 +173,8 @@ CONTAINS
       return_value = TLCC_
     CASE ('tcq')
       return_value = TCQ_
+    CASE ('fage')
+      return_value = FAGE_
     CASE ('alcc')
       return_value = ALCC_
     CASE ('flcc')

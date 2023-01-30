@@ -2,10 +2,10 @@
 !! @brief module to determine the phenological state of a plant 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2016-04-11)
+!! First version by Soenke Zaehle (2016-04-11)
 !! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
 !!
 MODULE mo_pheno_update_phenology
@@ -88,7 +88,8 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN  ! run task only if the process "is calculated" at this tile
+    IF (tile%lcts(1)%lib_id == 0)                 RETURN  ! run task only if the present tile is a pft
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
@@ -179,8 +180,8 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: dtime, one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
-                                          gdd_t_air_threshold
+    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_pheno_parameters,        ONLY: gdd_t_air_threshold
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,      INTENT(in)    :: phenology_type                   !< lctlib parameter
     REAL(wp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter

@@ -1,16 +1,17 @@
 !>
-!! @brief Contains abstract tile class that contains the surface structure and memory state
-!!
-!! @author
-!!  Reiner Schnur, MPI-M Hamburg
-!!
-!! @par Revision History
-!! First version by Reiner Schnur (2013-04-04)
-!!
-!! @par Copyright
-!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
-!!
+!> @brief Contains abstract tile class that contains the surface structure (tiles)
+!> and memory state that is owned by each tile.
+!>
+!> @author
+!>  Reiner Schnur, MPI-M Hamburg
+!>
+!> @par Revision History
+!> First version by Reiner Schnur (2013-04-04)
+!>
+!> @par Copyright
+!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>
 
 MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
@@ -27,6 +28,7 @@ MODULE mo_jsb_tile_class
     &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
   USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
+  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
 
 #ifdef _OPENACC
   USE openacc
@@ -70,8 +72,9 @@ MODULE mo_jsb_tile_class
   !
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
     TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:)              !< List of land cover types for tile
-                                                                   !! The first entry is always the primary LCT for this tile;
-                                                                   !! the remaining lcts are those inherited for aggregation
+                                                                   !< The first entry is always the primary LCT for this tile;
+                                                                   !< the remaining lcts are those inherited for aggregation
+    ! Convinience settings to easily check primary LCT types and those of the child tiles
     LOGICAL                                :: is_vegetation = .FALSE.         !< whether primary lct is VEG_TYPE
     LOGICAL                                :: is_bare = .FALSE.               !< whether primary lct is BARE_TYPE
     LOGICAL                                :: is_land = .FALSE.               !< whether primary lct is LAND_TYPE
@@ -83,33 +86,34 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: contains_glacier = .FALSE.      !< whether any lct of tile is GLACIER_TYPE
     LOGICAL                                :: contains_lake = .FALSE.         !< whether any lct of tile is LAKE_TYPE
     LOGICAL                                :: contains_soil = .FALSE.         !< whether any lct of tile is one that has soil
+    !
     INTEGER,                ALLOCATABLE    :: process_action(:)
-    ! REAL(wp), PRIVATE,          POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
     REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
-    REAL(wp),                   POINTER    :: fract_max (:,:)      !< Maximum potential fraction for this tile (rel. to grid box)
-    ! REAL(wp), PRIVATE,          POINTER    :: fract_old     (:,:)  !< Old fract
-    REAL(wp),                   POINTER    :: fract_old     (:,:)  !< Old fract
-    REAL(wp),                   POINTER    :: fract_max_old (:,:)  !< Old fract_max
+    REAL(wp),                   POINTER    :: fract_old (:,:)      !< Old fract
     CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
-                                                                   !! must be either "fract[_max]_"//tile%name, or specified by
-                                                                   !! fract_varname.
+                                                                   !< must be either "fract[_max]_"//tile%name, or specified by
+                                                                   !< fract_varname (in the use case).
     CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
-    LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:)
+    LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
-    INTEGER                                :: nr_of_cqts = 0          ! number of conserved quantity types in use on the tile 
-    TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) ! list of conserved quantities sort by type
+
+    INTEGER                                :: nr_of_cqts = 0          !< number of conserved quantity types in use on the tile 
+    TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) !< list of conserved quantities sort by type
+    TYPE(t_jsb_lcc_proc_p), ALLOCATABLE    :: lcc_processes(:)        !< list of lcc structures indexed by proc id
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
-    TYPE(t_jsb_memory_p),       POINTER    :: mem(:)
+    TYPE(t_jsb_memory_p),       POINTER    :: mem(:)                  !< Memory for all processes on the tile
+    CLASS(t_jsb_tile_abstract), POINTER    :: self_tile => NULL()     !< pointer to the tile to enable assigning it as target
+
     ! The next three pointers basically repeat what's already in the base type, but they save time-consuming "SELECT TYPE"s
-    CLASS(t_jsb_tile_abstract), POINTER    :: parent_tile => NULL()
-    CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()
-    CLASS(t_jsb_tile_abstract), POINTER    :: next_sibling_tile => NULL()
+    CLASS(t_jsb_tile_abstract), POINTER    :: parent_tile => NULL()        !< pointer to navigate through the tile tree to the parent file
+    CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()   !< pointer to navigate through the tile tree to the first child tile
+    CLASS(t_jsb_tile_abstract), POINTER    :: next_sibling_tile => NULL()  !< pointer to navigate through the tile tree to the next sibling tile
     !
-    TYPE(real_2d_p), POINTER :: ptrs2d_cache(:,:,:) => NULL()
-    TYPE(real_3d_p), POINTER :: ptrs3d_cache(:,:,:) => NULL()
+    TYPE(real_2d_p), POINTER :: ptrs2d_cache(:,:,:) => NULL()  !< used for GPU porting
+    TYPE(real_3d_p), POINTER :: ptrs3d_cache(:,:,:) => NULL()  !< used for GPU porting
     !
-    INTEGER                                :: grid_id = -1
-    INTEGER                                :: owner_model_id = 0
+    INTEGER                                :: grid_id = -1       !< ID of the grid used for the tile
+    INTEGER                                :: owner_model_id = 0 !< ID of the jsbach model instance (needed e.g. for nesting)
   CONTAINS
     PROCEDURE                              :: Add_lct
     PROCEDURE                              :: Add_lct_to_parents
@@ -127,11 +131,9 @@ MODULE mo_jsb_tile_class
     GENERIC                                :: Get_fraction => Get_fraction_1d, Get_fraction_2d
     PROCEDURE                              :: Set_fract_ptr
     PROCEDURE                              :: Set_fract_old_ptr
-    PROCEDURE                              :: Set_fract_max_ptr
-    PROCEDURE                              :: Set_fract_max_old_ptr
-    !PROCEDURE                              :: Get_fractions_max
     PROCEDURE                              :: Get_first_child_tile
     PROCEDURE                              :: Get_next_sibling_tile
+    PROCEDURE                              :: Get_prev_sibling_tile
     PROCEDURE                              :: Get_children_names
     PROCEDURE                              :: Has_conserved_quantities
     !
@@ -149,6 +151,9 @@ MODULE mo_jsb_tile_class
     PROCEDURE(Check_on_process),         DEFERRED :: Has_process_memory
     PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
+
+  !< Deferred subroutine interfaces (must be provided as part of t_jsb_tile_abstract).
+  !< The subroutines themselves are located in the jsb_tile module.
 
   ABSTRACT INTERFACE
     SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, grid_id, in_var_groups)
@@ -185,7 +190,7 @@ MODULE mo_jsb_tile_class
     LOGICAL FUNCTION Check_on_process(this, iproc)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(in) :: this
-      INTEGER, INTENT(in) :: iproc 
+      INTEGER, INTENT(in) :: iproc
     END FUNCTION Check_on_process
   END INTERFACE
 
@@ -405,15 +410,14 @@ CONTAINS
 
   END SUBROUTINE Add_lct_to_parents
 
-  SUBROUTINE Set_fraction_1d(this, ics, ice, iblk, fract, fract_max, fract_old, fract_max_old)
+  SUBROUTINE Set_fraction_1d(this, ics, ice, iblk, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     INTEGER,                    INTENT(in)    :: ics, ice, iblk
     REAL(wp), OPTIONAL,         INTENT(in)    :: &
       & fract(:),        &
-      & fract_max(:),    &
-      & fract_old(:),    &
-      & fract_max_old(:)
+      & fract_old(:)
+      
 
     INTEGER :: ilct
 
@@ -448,15 +452,6 @@ CONTAINS
       END IF
     END IF
 
-    IF (PRESENT(fract_max)) THEN
-      IF (SIZE(fract_max) /= ice-ics+1) &
-       & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-      this%fract_max_old(ics:ice, iblk) = this%fract_max(ics:ice, iblk)
-      this%fract_max    (ics:ice, iblk) = fract_max(:)
-      !$acc update device(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk))
-    END IF
-
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old) /= ice-ics+1) &
        & CALL finish(TRIM(routine), 'Dimension mismatch')
@@ -465,24 +460,14 @@ CONTAINS
       !$acc update device(this%fract_old(ics:ice,iblk))
     END IF
 
-    IF (PRESENT(fract_max_old)) THEN
-      IF (SIZE(fract_max_old) /= ice-ics+1) &
-       & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-      this%fract_max_old(ics:ice, iblk) = fract_max_old(:)
-      !$acc update device(this%fract_max_old(ics:ice,iblk))
-    END IF
-
   END SUBROUTINE Set_fraction_1d
 
-  SUBROUTINE Set_fraction_2d(this, fract, fract_max, fract_old, fract_max_old)
+  SUBROUTINE Set_fraction_2d(this, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     REAL(wp), OPTIONAL,         INTENT(in)    :: &
       & fract(:,:),        &
-      & fract_max(:,:),    &
-      & fract_old(:,:),    &
-      & fract_max_old(:,:)
+      & fract_old(:,:)
 
     INTEGER :: ilct
 
@@ -520,18 +505,6 @@ CONTAINS
       END IF
     END IF
 
-    IF (PRESENT(fract_max)) THEN
-      IF (SIZE(fract_max,1) /= SIZE(this%fract_max,1) .OR. SIZE(fract_max,2) /= SIZE(this%fract_max,2)) &
-        & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-      IF (ANY(fract_max(:,:) /= this%fract_max(:,:))) THEN
-        this%fract_max_old(:,:) = this%fract_max(:,:)
-        this%fract_max    (:,:) = fract_max(:,:)
-        !$acc update device(this%fract_max, this%fract_max_old)
-      END IF
-
-    END IF
-
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old,1) /= SIZE(this%fract_old,1) .OR. SIZE(fract_old,2) /= SIZE(this%fract_old,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
@@ -543,28 +516,15 @@ CONTAINS
 
     END IF
 
-    IF (PRESENT(fract_max_old)) THEN
-      IF (SIZE(fract_max_old,1) /= SIZE(this%fract_max_old,1) .OR. SIZE(fract_max_old,2) /= SIZE(this%fract_max_old,2)) &
-        & CALL finish(TRIM(routine), 'Dimension mismatch')
-
-      IF (ANY(fract_max_old(:,:) /= this%fract_max_old(:,:))) THEN
-        this%fract_max_old(:,:) = fract_max_old(:,:)
-        !$acc update device(this%fract_max_old)
-      END IF
-
-    END IF
-
   END SUBROUTINE Set_fraction_2d
 
-  SUBROUTINE Get_fraction_1d(this, ics, ice, iblk, fract, fract_max, fract_old, fract_max_old)
+  SUBROUTINE Get_fraction_1d(this, ics, ice, iblk, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: this
     INTEGER,                    INTENT(in)    :: ics, ice, iblk
     REAL(wp), OPTIONAL,         INTENT(inout) :: &
       & fract(:),        &
-      & fract_max(:),    &
-      & fract_old(:),    &
-      & fract_max_old(:)
+      & fract_old(:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fraction_1d'
 
@@ -573,31 +533,19 @@ CONTAINS
       fract(:) = this%fract(ics:ice, iblk)
     END IF
 
-    IF (PRESENT(fract_max)) THEN
-      IF (SIZE(fract_max) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_max(:) = this%fract_max(ics:ice, iblk)
-    END IF
-
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
       fract_old(:) = this%fract_old(ics:ice, iblk)
     END IF
 
-    IF (PRESENT(fract_max_old)) THEN
-      IF (SIZE(fract_max_old) /= ice-ics+1) CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_max_old(:) = this%fract_max_old(ics:ice, iblk)
-    END IF
-
   END SUBROUTINE Get_fraction_1d
 
-  SUBROUTINE Get_fraction_2d(this, fract, fract_max, fract_old, fract_max_old)
+  SUBROUTINE Get_fraction_2d(this, fract, fract_old)
 
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: this
     REAL(wp), OPTIONAL,         INTENT(inout) :: &
       & fract(:,:),        &
-      & fract_max(:,:),    &
-      & fract_old(:,:),    &
-      & fract_max_old(:,:)
+      & fract_old(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_fraction_2d'
 
@@ -607,31 +555,25 @@ CONTAINS
       fract(:,:) = this%fract(:,:)
     END IF
 
-    IF (PRESENT(fract_max)) THEN
-      IF (SIZE(fract_max,1) /= SIZE(this%fract_max,1) .OR. SIZE(fract_max,2) /= SIZE(this%fract_max,2)) &
-        & CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_max(:,:) = this%fract_max(:,:)
-    END IF
-
     IF (PRESENT(fract_old)) THEN
       IF (SIZE(fract_old,1) /= SIZE(this%fract_old,1) .OR. SIZE(fract_old,2) /= SIZE(this%fract_old,2)) &
         & CALL finish(TRIM(routine), 'Dimension mismatch')
       fract_old(:,:) = this%fract_old(:,:)
     END IF
 
-    IF (PRESENT(fract_max_old)) THEN
-      IF (SIZE(fract_max_old,1) /= SIZE(this%fract_max_old,1) .OR. SIZE(fract_max_old,2) /= SIZE(this%fract_max_old,2)) &
-        & CALL finish(TRIM(routine), 'Dimension mismatch')
-      fract_max_old(:,:) = this%fract_max_old(:,:)
-    END IF
-
   END SUBROUTINE Get_fraction_2d
 
+  ! ======================================================================================================= !
+  !> 
+  !> Sets the pointer on the tile to the passed pointer AND also updates the GPU pointer address
+  !>
+  ! this is an example why the encapsulation within the setter is important: not only the fract 
+  ! on the tile needs to be set but also the GPU pointer
   SUBROUTINE Set_fract_ptr(this, ptr)
-
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     REAL(wp), POINTER                         :: ptr(:,:)
-
+    ! -------------------------------------------------------------------------------------------------- !
     this%fract => ptr
     __acc_attach(this%fract)
 
@@ -646,26 +588,6 @@ CONTAINS
     __acc_attach(this%fract_old)
 
   END SUBROUTINE Set_fract_old_ptr
-
-  SUBROUTINE Set_fract_max_ptr(this, ptr)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
-
-    this%fract_max => ptr
-    __acc_attach(this%fract_max)
-
-  END SUBROUTINE Set_fract_max_ptr
-
-  SUBROUTINE Set_fract_max_old_ptr(this, ptr)
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
-    REAL(wp), POINTER                         :: ptr(:,:)
-
-    this%fract_max_old => ptr
-    __acc_attach(this%fract_max_old)
-
-  END SUBROUTINE Set_fract_max_old_ptr
 
   SUBROUTINE Register_aggregator(this, aggregator)
 
@@ -917,7 +839,7 @@ CONTAINS
           !$acc loop gang vector
           DO j = ics, ice
             this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-              & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
+              & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
           icount = icount + 1
@@ -931,7 +853,7 @@ CONTAINS
           ichild = i
         END IF
       END DO
-      
+
       ! print*,'AAA ',ics,ice,MINVAL(this%data_sum(ics:ice)), MAXVAL(this%data_sum(ics:ice)),&
         ! & MINVAL(this%fract_sum(ics:ice)), MAXVAL(this%fract_sum(ics:ice))
 
@@ -1190,15 +1112,53 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
+  !> Returns the previous sibling of this tile, if it has a previous sibling 
+  !
+  FUNCTION Get_prev_sibling_tile(this) RESULT(return_ptr)
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(in)  :: this
+    CLASS(t_jsb_tile_abstract), POINTER :: return_ptr
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_State), POINTER :: prev
+
+    CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_prev_sibling_tile'
+    ! -------------------------------------------------------------------------------------------------- !
+
+    prev => this%prev_sibling
+    IF (.NOT. ASSOCIATED(prev)) THEN
+      return_ptr => NULL()
+      RETURN
+    END IF
+
+    SELECT TYPE (prev)
+    CLASS IS (t_jsb_tile_abstract)
+      return_ptr => prev
+    CLASS IS (t_State)
+      CALL finish(TRIM(routine), 'current tile is of type t_State, should be t_jsb_tile_abstract')
+    CLASS DEFAULT
+      CALL finish(TRIM(routine), 'Unkown type for tile')
+    END SELECT
+
+    NULLIFY(prev)
+
+    IF (.NOT. ASSOCIATED(return_ptr)) &
+      & CALL finish(TRIM(routine), 'Could not find previous sibling tile')
+
+  END FUNCTION Get_prev_sibling_tile
+
+  ! ====================================================================================================== !
+  !
   !> Collect the names of the children of this tile 
   !
   SUBROUTINE Get_children_names(this, children_names)
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)  :: this
     CHARACTER(len=SHORT_NAME_LEN), INTENT(inout) :: children_names(:)
-
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: i_tile, nr_of_children
     CLASS(t_jsb_tile_abstract),  POINTER :: current_tile
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_tile_class:Get_children_names'
+    ! -------------------------------------------------------------------------------------------------- !
 
     nr_of_children = this%Get_no_of_children()
 
@@ -1213,7 +1173,7 @@ CONTAINS
       current_tile => current_tile%Get_next_sibling_tile()
     ENDDO
 
-  END SUBROUTINE Get_children_names  
+  END SUBROUTINE Get_children_names
 
 
   ! If conserved quantities were collected for this tile
@@ -1224,7 +1184,7 @@ CONTAINS
 
     return_value = this%nr_of_cqts /= 0
 
-  END FUNCTION Has_conserved_quantities  
+  END FUNCTION Has_conserved_quantities
 
   LOGICAL FUNCTION Is_last_process_tile(this, process_id)
 
@@ -1319,7 +1279,6 @@ CONTAINS
     END DO
 
   END SUBROUTINE Cache_GPU_pointers
-    
 
 #endif
 END MODULE mo_jsb_tile_class

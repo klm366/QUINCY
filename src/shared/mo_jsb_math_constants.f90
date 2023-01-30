@@ -21,7 +21,7 @@
 !!  Contains mathematical constants
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
 !!  First version by Jan Engel copying parameter from mo_base_constants (20190114)

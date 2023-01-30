@@ -222,13 +222,18 @@ CONTAINS
 
   END SUBROUTINE Configure_model_processes
 
+  ! ======================================================================================================= !
+  !> 
+  !> Checks if there is an active process that changes fractions on this tile
+  !>
   FUNCTION Any_process_changes_fractions(this) RESULT(l_fractions_change)
-
-    CLASS(t_jsb_model), INTENT(inout) :: this
-    LOGICAL                           :: l_fractions_change
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_model), INTENT(inout) :: this                 !< tile to check
+    LOGICAL                           :: l_fractions_change   
+      !< true if there is any active land cover change (lcc) process
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: iproc
-
+    ! -------------------------------------------------------------------------------------------------- !
     l_fractions_change = .FALSE.
     DO iproc=1,SIZE(this%processes)
       IF (ASSOCIATED(this%processes(iproc)%p)) THEN

@@ -20,10 +20,10 @@
 !! @brief Contains functions and subroutines to calculate isotope discrimination 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2016-05-27)
+!! First version by Soenke Zaehle (2016-05-27)
 !! 2nd version: rename mo_shared_isotope to mo_isotope_util by Jan Engel (20190114)
 !!
 MODULE mo_isotope_util
@@ -117,7 +117,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: element             !< base element (including the isotope) (mol)
-    REAL(wp), INTENT(in) :: isotope             !< isotope of element (µmol)
+    REAL(wp), INTENT(in) :: isotope             !< isotope of element (micro-mol)
     REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux (per mill)
     REAL(wp)             :: Delta               !< C14 isotope ratio against standard, corrected for delta C13 (per mill)
     ! ---------------------------
