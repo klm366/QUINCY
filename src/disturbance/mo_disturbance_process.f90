@@ -75,676 +75,494 @@ CONTAINS
 
   !!! DL based Fire model  <Rackhun Son>
   SUBROUTINE burned_fract_dl( &
-    & t_air,       t_clim_o,      t_clim_m,       & ! in
-    & q_rel_air,   q_rel_clim_o,  q_rel_clim_m,   & ! in
-    !& q_rel_air_climbuf, fire_rel_hum_threshold,  & ! in
-    & q_air,       q_clim_o,      q_clim_m,       & ! in
-    & wind_10m,                                   & ! in
-    & rain,                                       & ! in
-    & swl1,        swl1_clim_o,   swl1_clim_m,    & ! in
-    & swl2,        swl2_clim_o,   swl2_clim_m,    & ! in
-    & swl3,        swl3_clim_o,   swl3_clim_m,    & ! in
-    & swl4,        swl4_clim_o,   swl4_clim_m,    & ! in
-    & lai,         lai_clim_o,    lai_clim_m,     & ! in
-    !& t_air,        t_clim,                       & ! in
-    !& q_rel_air,    q_rel_clim,                   & ! in
-    !& q_air,        q_clim,                       & ! in
-    !& wind_10m,                                   & ! in
-    !& rain,                                       & ! in
-    !& swl1,        swl1_clim,                     & ! in
-    !& swl2,        swl2_clim,                     & ! in
-    !& swl3,        swl3_clim,                     & ! in
-    !& swl4,        swl4_clim,                     & ! in
-    !& lai,         lai_clim,                      & ! in
-    & modified_pfts_fract,                        & ! in
-    & fuel,                                       & ! in
-    !& fire_litter_threshold,                     & ! in
-    !& population_density,                        & ! in
-    & lightning_climatology,                      & ! in
-    & elevation,                                  & ! in
-    & slope,                                      & ! in
-    & roughness,                                  & ! in
+    & t_air,       t_clim_m,                & ! in
+    & q_rel_air,   q_rel_clim_m,            & ! in
+    & q_air,       q_clim_m,                & ! in
+    & wind_10m,                             & ! in
+    & rain,                                 & ! in
+    & swl1,        swl1_clim_m,             & ! in
+    & swl2,        swl2_clim_m,             & ! in
+    & swl3,        swl3_clim_m,             & ! in
+    & swl4,        swl4_clim_m,             & ! in
+    & lai,         lai_clim_m,              & ! in
+    !& modified_pfts_fract,                  & ! in
+    & pfts_fract,                           & ! in
+    & fuel,                                 & ! in
+    & lightning_climatology,                & ! in
+    & elevation,                            & ! in
+    !& slope,                                & ! in
+    !& roughness,                            & ! in
 
-    & population,                                 & ! in
-    & gdp,                                        & ! in
-    & hdi,                                        & ! in
-    & road_density,                               & ! in
-    & land_use_c3ann,                             & ! in
-    & land_use_c3nfx,                             & ! in
-    & land_use_c3per,                             & ! in
-    & land_use_c4ann,                             & ! in
-    & land_use_c4per,                             & ! in
-    & land_use_pastr,                             & ! in
-    & land_use_primf,                             & ! in
-    & land_use_primn,                             & ! in
-    & land_use_range,                             & ! in
-    & land_use_secdf,                             & ! in
-    & land_use_secdn,                             & ! in
-    & land_use_secma,                             & ! in
-    & land_use_secmb,                             & ! in
-    & land_use_urban,                             & ! in
+    !& population,                           & ! in
+    !& gdp,                                  & ! in
+    !& hdi,                                  & ! in
+    !& road_density,                         & ! in
+    !& land_use_c3ann,                       & ! in
+    !& land_use_c3nfx,                       & ! in
+    !& land_use_c3per,                       & ! in
+    !& land_use_c4ann,                       & ! in
+    !& land_use_c4per,                       & ! in
+    !& land_use_pastr,                       & ! in
+    !& land_use_primf,                       & ! in
+    !& land_use_primn,                       & ! in
+    !& land_use_range,                       & ! in
+    !& land_use_secdf,                       & ! in
+    !& land_use_secdn,                       & ! in
+    !& land_use_secma,                       & ! in
+    !& land_use_secmb,                       & ! in
+    !& land_use_urban,                       & ! in
 
-    & nc,                                         & ! in
-    & tilename,                                   & ! in
+    & fba_smooth,                           & ! in
 
-    & d_weather_input,     d_weather_hidden,      & ! in
-    & d_land_input,        d_land_hidden,         & ! in
-    & d_land_input_n_pft,                         & ! in
-    !& d_lnt_input,         d_lnt_hidden,         & ! in
-    & d_anthro_input,      d_anthro_hidden,       & ! in
-    & d_output,            d_region,              & ! in
-    !& d_emb_input,         d_emb_hidden,          & ! in
-    !& d_emb_output,                               & ! in
+    & nc,                                   & ! in
+    & tilename,                             & ! in
 
-    & weather_i2i_weight, weather_i2i_bias,       & ! in
-    & weather_h2i_weight, weather_h2i_bias,       & ! in
-    & weather_i2f_weight, weather_i2f_bias,       & ! in
-    & weather_h2f_weight, weather_h2f_bias,       & ! in
-    & weather_i2g_weight, weather_i2g_bias,       & ! in
-    & weather_h2g_weight, weather_h2g_bias,       & ! in
-    & weather_i2o_weight, weather_i2o_bias,       & ! in
-    & weather_h2o_weight, weather_h2o_bias,       & ! in
-    & weather_out_weight, weather_out_bias,       & ! in
+    & d_input,     d_hidden,                & ! in
+    & d_output,    d_region,                & ! in
 
-    & land_i2i_weight,    land_i2i_bias,          & ! in
-    & land_h2i_weight,    land_h2i_bias,          & ! in
-    & land_i2f_weight,    land_i2f_bias,          & ! in
-    & land_h2f_weight,    land_h2f_bias,          & ! in
-    & land_i2g_weight,    land_i2g_bias,          & ! in
-    & land_h2g_weight,    land_h2g_bias,          & ! in
-    & land_i2o_weight,    land_i2o_bias,          & ! in
-    & land_h2o_weight,    land_h2o_bias,          & ! in
-    & land_out_weight,    land_out_bias,          & ! in
+    & layer1_weight, layer1_bias,            & ! in
+    & layer2_weight, layer2_bias,            & ! in
+    & layer3_weight, layer3_bias,            & ! in
+    & layer4_weight, layer4_bias,            & ! in
+    & layer5_weight, layer5_bias,            & ! in
+    & layer6_weight, layer6_bias,            & ! in
 
-    & anthropogenic_l1_weight, anthropogenic_l1_bias,  & ! in
-    & anthropogenic_l2_weight, anthropogenic_l2_bias,  & ! in
+    & mW1,           mb1,                    & ! in
+    & mW2,           mb2,                    & ! in
+    & mW3,           mb3,                    & ! in
+    & mW4,           mb4,                    & ! in
+    & mW5,           mb5,                    & ! in
+    & mW6,           mb6,                    & ! in
 
-    !& lig_topo_layer1_weight,  lig_topo_layer1_bias,  & ! in
-    !& lig_topo_layer2_weight,  lig_topo_layer2_bias,  & ! in
+    & vW1,           vb1,                    & ! in
+    & vW2,           vb2,                    & ! in
+    & vW3,           vb3,                    & ! in
+    & vW4,           vb4,                    & ! in
+    & vW5,           vb5,                    & ! in
+    & vW6,           vb6,                    & ! in
 
-    !& climate_emb_layer1_weight,    climate_emb_layer1_bias,      & ! in
-    !& climate_emb_layer2_weight,    climate_emb_layer2_bias,      & ! in
-    !& vegetation_emb_layer1_weight, vegetation_emb_layer1_bias,   & ! in
-    !& vegetation_emb_layer2_weight, vegetation_emb_layer2_bias,   & ! in
- 
-    & w_minmax,                                   & ! in 
-    & l_minmax,                                   & ! in
-    & a_minmax,                                   & ! in
-    !& embedding_min_max,                         & ! in
-    !& lig_topo_min_max,                          & ! in
+    & iteration,                             & ! in
+    & is_training,                           & ! in
 
-    & gfed_region,                                & ! in
+    !& i2i_weight,    i2i_bias,              & ! in
+    !& h2i_weight,    h2i_bias,              & ! in
+    !& i2f_weight,    i2f_bias,              & ! in
+    !& h2f_weight,    h2f_bias,              & ! in
+    !& i2g_weight,    i2g_bias,              & ! in
+    !& h2g_weight,    h2g_bias,              & ! in
+    !& i2o_weight,    i2o_bias,              & ! in
+    !& h2o_weight,    h2o_bias,              & ! in
+    !& out_weight,    out_bias,              & ! in
 
-    & weather_lstm_hidden,                        & ! inout
-    & weather_lstm_cell,                          & ! inout
-    & land_lstm_hidden,                           & ! inout
-    & land_lstm_cell,                             & ! inout
-    & burned_fract                                & ! inout
+    & minmax,                               & ! in 
+    & gfed_region,                          & ! in
+
+    !& lstm_hidden,                          & ! inout
+    !& lstm_cell,                            & ! inout
+    & burned_fract                          & ! inout
     & )
 
     ! Input Arguments
-    REAL(wp), INTENT(in) ::                             &
-      & t_air(:),     t_clim_o(:),     t_clim_m(:),     &
-      & q_rel_air(:), q_rel_clim_o(:), q_rel_clim_m(:), &
-      !& q_rel_air_climbuf(:), fire_rel_hum_threshold,   &
-      & q_air(:),     q_clim_o(:),     q_clim_m(:),     &
-      & wind_10m(:),                                    &
-      & rain(:),                                        &
-      & swl1(:),      swl1_clim_o(:),  swl1_clim_m(:),  &
-      & swl2(:),      swl2_clim_o(:),  swl2_clim_m(:),  &
-      & swl3(:),      swl3_clim_o(:),  swl3_clim_m(:),  &
-      & swl4(:),      swl4_clim_o(:),  swl4_clim_m(:),  &
-      & lai(:),       lai_clim_o(:),   lai_clim_m(:),   &
-      !& t_air(:),     t_clim(:),                       &
-      !& q_rel_air(:), q_rel_clim(:),                   &
-      !& q_air(:),     q_clim(:),                       &
-      !& wind_10m(:),                                   &
-      !& rain(:),                                       &
-      !& swl1(:),      swl1_clim(:),                    &
-      !& swl2(:),      swl2_clim(:),                    &
-      !& swl3(:),      swl3_clim(:),                    &
-      !& swl4(:),      swl4_clim(:),                    &
-      !& lai(:),       lai_clim(:),                     &
-      & modified_pfts_fract(:,:),                       &
-      !& fuel(:),       fuel_yearly(:),                 &
-      & fuel(:),                                        &
-      !& fire_litter_threshold,                         &
-      & lightning_climatology(:),                       &
-      & elevation(:),                                   &
-      & slope(:),                                       &
-      & roughness(:),                                   &
+    REAL(wp), INTENT(in) ::                         &
+      & t_air(:),          t_clim_m(:),             &
+      & q_rel_air(:),  q_rel_clim_m(:),             &
+      & q_air(:),          q_clim_m(:),             &
+      & wind_10m(:),                                &
+      & rain(:),                                    &
+      & swl1(:),        swl1_clim_m(:),             &
+      & swl2(:),        swl2_clim_m(:),             &
+      & swl3(:),        swl3_clim_m(:),             &
+      & swl4(:),        swl4_clim_m(:),             &
+      & lai(:),         lai_clim_m(:),              &
 
-      & population(:),                                  &
-      & gdp(:),                                         &
-      & hdi(:),                                         &
-      & road_density(:),                                &
-      & land_use_c3ann(:),                              &
-      & land_use_c3nfx(:),                              &
-      & land_use_c3per(:),                              &
-      & land_use_c4ann(:),                              &
-      & land_use_c4per(:),                              &
-      & land_use_pastr(:),                              &
-      & land_use_primf(:),                              &
-      & land_use_primn(:),                              &
-      & land_use_range(:),                              &
-      & land_use_secdf(:),                              &
-      & land_use_secdn(:),                              &
-      & land_use_secma(:),                              &
-      & land_use_secmb(:),                              &
-      & land_use_urban(:),                              &
+      !& modified_pfts_fract(:,:),                   &
+      & pfts_fract(:,:),                            &
+      & fuel(:),                                    &
+      & lightning_climatology(:),                   &
+      & elevation(:),                               &
+      !& slope(:),                                   &
+      !& roughness(:),                               &
 
-      & weather_i2i_weight(:,:),    weather_i2i_bias(:),      &
-      & weather_h2i_weight(:,:),    weather_h2i_bias(:),      &
-      & weather_i2f_weight(:,:),    weather_i2f_bias(:),      &
-      & weather_h2f_weight(:,:),    weather_h2f_bias(:),      &
-      & weather_i2g_weight(:,:),    weather_i2g_bias(:),      &
-      & weather_h2g_weight(:,:),    weather_h2g_bias(:),      &
-      & weather_i2o_weight(:,:),    weather_i2o_bias(:),      &
-      & weather_h2o_weight(:,:),    weather_h2o_bias(:),      &
-      & weather_out_weight(:,:),    weather_out_bias(:),      &
+      !& population(:),                              &
+      !& gdp(:),                                     &
+      !& hdi(:),                                     &
+      !& road_density(:),                            &
+      !& land_use_c3ann(:),                          &
+      !& land_use_c3nfx(:),                          &
+      !& land_use_c3per(:),                          &
+      !& land_use_c4ann(:),                          &
+      !& land_use_c4per(:),                          &
+      !& land_use_pastr(:),                          &
+      !& land_use_primf(:),                          &
+      !& land_use_primn(:),                          &
+      !& land_use_range(:),                          &
+      !& land_use_secdf(:),                          &
+      !& land_use_secdn(:),                          &
+      !& land_use_secma(:),                          &
+      !& land_use_secmb(:),                          &
+      !& land_use_urban(:),                          &
+
+      & fba_smooth(:),                              &
+
+      !& layer1_weight(:,:),    layer1_bias(:),      &
+      !& layer2_weight(:,:),    layer2_bias(:),      &
+      !& layer3_weight(:,:),    layer3_bias(:),      &
+      !& layer4_weight(:,:),    layer4_bias(:),      &
+      !& layer5_weight(:,:),    layer5_bias(:),      &
+      !& layer6_weight(:,:),    layer6_bias(:),      &
       
-      & land_i2i_weight(:,:),       land_i2i_bias(:),         &
-      & land_h2i_weight(:,:),       land_h2i_bias(:),         &
-      & land_i2f_weight(:,:),       land_i2f_bias(:),         &
-      & land_h2f_weight(:,:),       land_h2f_bias(:),         &
-      & land_i2g_weight(:,:),       land_i2g_bias(:),         &
-      & land_h2g_weight(:,:),       land_h2g_bias(:),         &
-      & land_i2o_weight(:,:),       land_i2o_bias(:),         &
-      & land_h2o_weight(:,:),       land_h2o_bias(:),         &
-      & land_out_weight(:,:),       land_out_bias(:),         &
+      !& i2i_weight(:,:),       i2i_bias(:),         &
+      !& h2i_weight(:,:),       h2i_bias(:),         &
+      !& i2f_weight(:,:),       i2f_bias(:),         &
+      !& h2f_weight(:,:),       h2f_bias(:),         &
+      !& i2g_weight(:,:),       i2g_bias(:),         &
+      !& h2g_weight(:,:),       h2g_bias(:),         &
+      !& i2o_weight(:,:),       i2o_bias(:),         &
+      !& h2o_weight(:,:),       h2o_bias(:),         &
+      !& out_weight(:,:),       out_bias(:),         &
 
-      & anthropogenic_l1_weight(:,:),                         &
-      & anthropogenic_l1_bias(:),                             &
-      & anthropogenic_l2_weight(:,:),                         &
-      & anthropogenic_l2_bias(:),                             &
-
-      !& lig_topo_layer1_weight(:,:),              &
-      !& lig_topo_layer1_bias(:),                  &
-      !& lig_topo_layer2_weight(:,:),              &
-      !& lig_topo_layer2_bias(:),                  &
-
-      !& climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:),       &
-      !& climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:),       &
-
-      !& vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:), &
-      !& vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:), &
-
-      & w_minmax(:,:),                                       &
-      & l_minmax(:,:),                                       &
-      & a_minmax(:,:),                                       &
-      !& embedding_min_max(:,:),            &
-      !& lig_topo_min_max(:,:),             &
+      & minmax(:,:),                                &
       & gfed_region(:)
       
 
     INTEGER, INTENT(in) ::                          &
       & nc,                                         & ! in
-      & d_weather_input,     d_weather_hidden,      & ! in
-      & d_land_input,        d_land_hidden,         & ! in
-      & d_land_input_n_pft,                         & ! in
-      & d_anthro_input,      d_anthro_hidden,       & ! in
-      & d_output,            d_region                 ! in
-      !& d_lnt_input,         d_lnt_hidden,         & ! in
-      !& d_emb_input,         d_emb_hidden,         & ! in
-      !& d_emb_output                                 ! in
+      & d_input,             d_hidden,              & ! in
+      & d_output,            d_region,              & ! in
+      & iteration,           is_training
 
     CHARACTER(len=*), INTENT(in)::                  &
       & tilename                                      ! in
 
     ! Output Arguments
     REAL(wp), INTENT(inout) ::                      &
-      & weather_lstm_hidden(:,:),                   & ! inout
-      & weather_lstm_cell(:,:),                     & ! inout
-      & land_lstm_hidden(:,:),                      & ! inout
-      & land_lstm_cell(:,:),                        & ! inout
+      !& lstm_hidden(:,:),                           & ! inout
+      !& lstm_cell(:,:),                             & ! inout
+      & layer1_weight(:,:),    layer1_bias(:),      &  ! inout (training)
+      & layer2_weight(:,:),    layer2_bias(:),      &  ! inout (training)
+      & layer3_weight(:,:),    layer3_bias(:),      &  ! inout (training)
+      & layer4_weight(:,:),    layer4_bias(:),      &  ! inout (training)
+      & layer5_weight(:,:),    layer5_bias(:),      &  ! inout (training)
+      & layer6_weight(:,:),    layer6_bias(:),      &  ! inout (training)
+
+      & mW1(:,:),              mb1(:),              &  ! inout (training)
+      & mW2(:,:),              mb2(:),              &  ! inout (training)
+      & mW3(:,:),              mb3(:),              &  ! inout (training)
+      & mW4(:,:),              mb4(:),              &  ! inout (training)
+      & mW5(:,:),              mb5(:),              &  ! inout (training)
+      & mW6(:,:),              mb6(:),              &  ! inout (training)
+
+      & vW1(:,:),              vb1(:),              &  ! inout (training)
+      & vW2(:,:),              vb2(:),              &  ! inout (training)
+      & vW3(:,:),              vb3(:),              &  ! inout (training)
+      & vW4(:,:),              vb4(:),              &  ! inout (training)
+      & vW5(:,:),              vb5(:),              &  ! inout (training)
+      & vW6(:,:),              vb6(:),              &  ! inout (training)
+
       & burned_fract(:)                               ! inout
 
     ! Locals
-    REAL(wp) ::                                          &
-      weather_inputs(nc, d_weather_input),               &
-      weather_lstm_i(nc, d_weather_hidden),              &
-      weather_lstm_f(nc, d_weather_hidden),              &
-      weather_lstm_g(nc, d_weather_hidden),              &
-      weather_lstm_o(nc, d_weather_hidden),              &
-      weather_lstm_outputs(nc, d_output),                &
-      weather_lstm_outputs_sum(nc, d_output),            &
-      !weather_lstm_output_(nc, d_output),               &
-      !climate_score(nc, d_emb_output),                  &
+    REAL(wp) ::                                                   &
+      & nn_inputs    (nc, d_input),                               &
+      & nn_layer1_out(nc, d_hidden), nn_layer1_act(nc, d_hidden), &
+      & nn_layer2_out(nc, d_hidden), nn_layer2_act(nc, d_hidden), &
+      & nn_layer3_out(nc, d_hidden), nn_layer3_act(nc, d_hidden), &
+      & nn_layer4_out(nc, d_hidden), nn_layer4_act(nc, d_hidden), &
+      & nn_layer5_out(nc, d_hidden), nn_layer5_act(nc, d_hidden), &
+      & nn_layer6_out(nc, d_output), nn_layer6_act(nc, d_output), &
 
-      !& regional_w_i2i_w(d_weather_input, d_weather_hidden), &
-      !& regional_w_i2i_b(d_weather_hidden),                  &
-      !& regional_w_h2i_w(d_weather_hidden,d_weather_hidden), &
-      !& regional_w_h2i_b(d_weather_hidden),                  &
-      !& regional_w_i2f_w(d_weather_input, d_weather_hidden), &
-      !& regional_w_i2f_b(d_weather_hidden),                  &
-      !& regional_w_h2f_w(d_weather_hidden,d_weather_hidden), &
-      !& regional_w_h2f_b(d_weather_hidden),                  &
-      !& regional_w_i2g_w(d_weather_input, d_weather_hidden), &
-      !& regional_w_i2g_b(d_weather_hidden),                  &
-      !& regional_w_h2g_w(d_weather_hidden,d_weather_hidden), &
-      !& regional_w_h2g_b(d_weather_hidden),                  &
-      !& regional_w_i2o_w(d_weather_input, d_weather_hidden), &
-      !& regional_w_i2o_b(d_weather_hidden),                  &
-      !& regional_w_h2o_w(d_weather_hidden,d_weather_hidden), &
-      !& regional_w_h2o_b(d_weather_hidden),                  &
-      !& regional_w_out_w(d_weather_hidden, d_output),        &
-      !& regional_w_out_b(d_output),                          &
+      & nn_layer1_mask(nc, d_hidden),                             &  ! dropout
+      & nn_layer2_mask(nc, d_hidden),                             &
+      & nn_layer3_mask(nc, d_hidden),                             &
+      & nn_layer4_mask(nc, d_hidden),                             &
+      & nn_layer5_mask(nc, d_hidden),                             &
+      & nn_layer6_mask(nc, d_output),                             &
 
-      land_inputs(nc, d_land_input_n_pft),               &
-      land_lstm_i(nc, d_land_hidden),                    &
-      land_lstm_f(nc, d_land_hidden),                    &
-      land_lstm_g(nc, d_land_hidden),                    &
-      land_lstm_o(nc, d_land_hidden),                    &
-      land_lstm_outputs(nc, d_output),                   &
-      land_lstm_outputs_sum(nc, d_output),               &
-      !vegetation_lstm_output_(nc, d_output),            &
-      !vegetation_score(nc, d_emb_output),               &
+      & dW1(d_input,  d_hidden),     db1(d_hidden),               &  ! derivatives
+      & dW2(d_hidden, d_hidden),     db2(d_hidden),               &
+      & dW3(d_hidden, d_hidden),     db3(d_hidden),               &
+      & dW4(d_hidden, d_hidden),     db4(d_hidden),               &
+      & dW5(d_hidden, d_hidden),     db5(d_hidden),               &
+      & dW6(d_hidden, d_output),     db6(d_output),               &
 
-      !& regional_l_i2i_w(d_land_input, d_land_hidden),   &
-      !& regional_l_i2i_b(d_land_hidden),                 &
-      !& regional_l_h2i_w(d_land_hidden,d_land_hidden),   &
-      !& regional_l_h2i_b(d_land_hidden),                 &
-      !& regional_l_i2f_w(d_land_input, d_land_hidden),   &
-      !& regional_l_i2f_b(d_land_hidden),                 &
-      !& regional_l_h2f_w(d_land_hidden,d_land_hidden),   &
-      !& regional_l_h2f_b(d_land_hidden),                 &
-      !& regional_l_i2g_w(d_land_input, d_land_hidden),   &
-      !& regional_l_i2g_b(d_land_hidden),                 &
-      !& regional_l_h2g_w(d_land_hidden,d_land_hidden),   &
-      !& regional_l_h2g_b(d_land_hidden),                 &
-      !& regional_l_i2o_w(d_land_input, d_land_hidden),   &
-      !& regional_l_i2o_b(d_land_hidden),                 &
-      !& regional_l_h2o_w(d_land_hidden,d_land_hidden),   &
-      !& regional_l_h2o_b(d_land_hidden),                 &
-      !& regional_l_out_w(d_land_hidden, d_output),       &
-      !& regional_l_out_b(d_output),                      &
+      & nn_outputs          (nc, d_output)           
 
-      anthro_inputs(nc, d_anthro_input),                 &
-      anthro_nn(nc, d_anthro_hidden),                    &
-      anthro_nn_act(nc, d_anthro_hidden),                &
-      anthro_nn_outputs(nc, d_output),                   &
-      anthro_nn_outputs_sum(nc, d_output),               &
-
-      & regional_a_l1_w(d_anthro_input, d_anthro_hidden), &
-      & regional_a_l1_b(d_anthro_hidden),                 &
-      & reginoal_a_l2_w(d_anthro_hidden, d_output),       &
-      & regional_a_l2_b(d_output),                        &
-
-      !lig_topo_variables(nc, d_lnt_input),               &
-      !lig_topo_network(nc, d_lnt_hidden),                &
-      !lig_topo_network_act(nc, d_lnt_hidden),            &
-      !lig_topo_network_output(nc, d_output),             &
-
-      !emb_variables(nc, d_emb_input),                    &
-      !emb_network(nc, d_emb_hidden),                     &
-      !emb_network_act(nc, d_emb_hidden),                 &
-      !climate_emb_output(nc, d_emb_output),              &
-      !vegetation_emb_output(nc, d_emb_output),           &
-
-      !no_fire(nc),                                       &
-      dum1(nc), dum2(nc), dum3(nc), dum4(nc), &
-      num1(nc), num2(nc), num3(nc), num4(nc), &
-      !fuel_constraint(nc, d_region),                      &
-      fuel_constraint(nc),                      &
-      q_rel_air_constraint(nc)
-
-
-    REAL(wp) ::  scale
-    INTEGER  ::  pft_idx, r_i, w_i, l_i, a_i, nc_i
-    INTEGER  ::  is, ie, hs, he, os, oe
-
-
-    !climate_variables(:,1) = t_air - t_clim_m + t_clim_o
-    !climate_variables(:,2) = t_air - t_clim_m
-    !climate_variables(:,3) = q_rel_air - q_rel_clim_m + q_rel_clim_o
-    !climate_variables(:,4) = q_rel_air - q_rel_clim_m
-    !climate_variables(:,5) = q_air - q_clim_m + q_clim_o
-    !climate_variables(:,6) = q_air - q_clim_m
-    !climate_variables(:,7) = wind_10m 
-    !climate_variables(:,8) = rain*86400
-
-    !vegetation_variables(:,1) = lai  - lai_clim_m  + lai_clim_o
-    !vegetation_variables(:,2) = lai  - lai_clim_m
-    !vegetation_variables(:,3) = swl1 - swl1_clim_m + swl1_clim_o
-    !vegetation_variables(:,4) = swl1 - swl1_clim_m
-    !vegetation_variables(:,5) = swl2 - swl2_clim_m + swl2_clim_o
-    !vegetation_variables(:,6) = swl2 - swl2_clim_m
-    !vegetation_variables(:,7) = swl3 - swl3_clim_m + swl3_clim_o
-    !vegetation_variables(:,8) = swl3 - swl3_clim_m
-    !vegetation_variables(:,9) = swl4 - swl4_clim_m + swl4_clim_o
-    !vegetation_variables(:,10)= swl4 - swl4_clim_m
-
-    !emb_variables(:,1) = t_clim_o
-    !emb_variables(:,2) = q_rel_clim_o
-    !emb_variables(:,3) = q_clim_o
-    !emb_variables(:,4) = swl1_clim_o
-    !emb_variables(:,5) = swl2_clim_o
-    !emb_variables(:,6) = swl3_clim_o 
-    !emb_variables(:,7) = swl4_clim_o
-    !emb_variables(:,8) = lai_clim_o
-    !emb_variables(:,1) = t_clim_m
-    !emb_variables(:,2) = q_rel_clim_m
-    !emb_variables(:,3) = q_clim_m
-    !emb_variables(:,4) = swl1_clim_m
-    !emb_variables(:,5) = swl2_clim_m
-    !emb_variables(:,6) = swl3_clim_m 
-    !emb_variables(:,7) = swl4_clim_m
-    !emb_variables(:,8) = lai_clim_m
-    !emb_variables(:,9) = fuel
-    !emb_variables(:,10)= lightning_climatology
-    !emb_variables(:,11)= elevation
-    !emb_variables(:,12)= slope
-    !emb_variables(:,13)= roughness
-    !emb_variables(:,14)= modified_pfts_fract(:,1)
-    !emb_variables(:,15)= modified_pfts_fract(:,2)
-    !emb_variables(:,16)= modified_pfts_fract(:,3)
-    !emb_variables(:,17)= modified_pfts_fract(:,4)
-    !emb_variables(:,18)= modified_pfts_fract(:,5)
-    !emb_variables(:,19)= modified_pfts_fract(:,6)
-    !emb_variables(:,20)= modified_pfts_fract(:,7)
-    !emb_variables(:,21)= modified_pfts_fract(:,8)
-    !emb_variables(:,22)= modified_pfts_fract(:,9)
-
-    !anthro_variables(:,1) = population_density
-    !anthro_variables(:,2) = gdp
-    !anthro_variables(:,3) = hdi
-    !anthro_variables(:,4) = road_density
-    !anthro_variables(:,5) = land_use_state_c3ann
-    !anthro_variables(:,6) = land_use_state_c3nfx
-    !anthro_variables(:,7) = land_use_state_c3per
-    !anthro_variables(:,8) = land_use_state_c4ann
-    !anthro_variables(:,9) = land_use_state_c4per
-    !anthro_variables(:,10)= land_use_state_pastr
-    !anthro_variables(:,11)= land_use_state_primf
-    !anthro_variables(:,12)= land_use_state_primn
-    !anthro_variables(:,13)= land_use_state_range
-    !anthro_variables(:,14)= land_use_state_secdf
-    !anthro_variables(:,15)= land_use_state_secdn
-    !anthro_variables(:,16)= land_use_state_secma
-    !anthro_variables(:,17)= land_use_state_secmb
-    !anthro_variables(:,18)= land_use_state_urban
+      !inputs(nc, d_land_input_n_pft),                   &
+      !lstm_i(nc, d_land_hidden),                        &
+      !lstm_f(nc, d_land_hidden),                        &
+      !lstm_g(nc, d_land_hidden),                        &
+      !lstm_o(nc, d_land_hidden),                        &
+      !lstm_outputs(nc, d_output),                       &
+      !lstm_outputs_sum(nc, d_output),                   &
+    INTEGER  :: i
+    real(wp) :: lr_rate, keep_prob
 
     ! initialize
-    weather_lstm_outputs_sum(:,:) = 0.
-    land_lstm_outputs_sum(:,:)    = 0.
-    anthro_nn_outputs_sum(:,:)    = 0.
-    !fuel_constraint(:)          = 0.
-    fuel_constraint(:)            = 0.
+    nn_inputs(:,1) = (t_air(:)                     - minmax(1,1))       &
+                   / (minmax(1,2)                  - minmax(1,1)+1e-8)
+    nn_inputs(:,2) = (t_air(:)-t_clim_m(:)         - minmax(2,1))       &
+                   / (minmax(2,2)                  - minmax(2,1)+1e-8)
+    nn_inputs(:,3) = (q_rel_air(:)                 - minmax(3,1))       &
+                   / (minmax(3,2)                  - minmax(3,1)+1e-8)
+    nn_inputs(:,4) = (q_rel_air(:)-q_rel_clim_m(:) - minmax(4,1))       &
+                   / (minmax(4,2)                  - minmax(4,1)+1e-8)
+    nn_inputs(:,5) = (q_air(:)                     - minmax(5,1))       &
+                   / (minmax(5,2)                  - minmax(5,1)+1e-8)
+    nn_inputs(:,6) = (q_air(:)-q_clim_m(:)         - minmax(6,1))       &
+                   / (minmax(6,2)                  - minmax(6,1)+1e-8)
+    nn_inputs(:,7) = (wind_10m(:)                  - minmax(7,1))       &
+                   / (minmax(7,2)                  - minmax(7,1)+1e-8)
+    nn_inputs(:,8) = (rain(:)                      - minmax(8,1))       &
+                   / (minmax(8,2)                  - minmax(8,1)+1e-8)
+    nn_inputs(:,9) = (swl1(:)                      - minmax(9,1))       &
+                   / (minmax(9,2)                  - minmax(9,1)+1e-8)
+    nn_inputs(:,10)= (swl1(:)-swl1_clim_m(:)       - minmax(10,1))      &
+                   / (minmax(10,2)                 - minmax(10,1)+1e-8)
+    nn_inputs(:,11)= (swl2(:)                      - minmax(11,1))      &
+                   / (minmax(11,2)                 - minmax(11,1)+1e-8)
+    nn_inputs(:,12)= (swl2(:)-swl2_clim_m(:)       - minmax(12,1))      &
+                   / (minmax(12,2)                 - minmax(12,1)+1e-8)
+    nn_inputs(:,13)= (swl3(:)                      - minmax(13,1))      &
+                   / (minmax(13,2)                 - minmax(13,1)+1e-8)
+    nn_inputs(:,14)= (swl3(:)-swl3_clim_m(:)       - minmax(14,1))      &
+                   / (minmax(14,2)                 - minmax(14,1)+1e-8)
+    nn_inputs(:,15)= (swl4(:)                      - minmax(15,1))      &
+                   / (minmax(15,2)                 - minmax(15,1)+1e-8)
+    nn_inputs(:,16)= (swl4(:)-swl4_clim_m(:)       - minmax(16,1))      &
+                   / (minmax(16,2)                 - minmax(16,1)+1e-8) 
+    nn_inputs(:,17)= (lai(:)                       - minmax(17,1))      &
+                   / (minmax(17,2)                 - minmax(17,1)+1e-8)
+    nn_inputs(:,18)= (lai(:)-lai_clim_m(:)         - minmax(18,1))      &
+                   / (minmax(18,2)                 - minmax(18,1)+1e-8)
+    nn_inputs(:,19)= (fuel(:)                      - minmax(19,1))      &
+                   / (minmax(19,2)                 - minmax(19,1)+1e-8)
+    nn_inputs(:,20)= (lightning_climatology(:)     - minmax(20,1))      &
+                   / (minmax(20,2)                 - minmax(20,1)+1e-8)
+    nn_inputs(:,21)= (pfts_fract(:,1)              - minmax(21,1))      &
+                   / (minmax(21,2)                 - minmax(21,1)+1e-8)
+    nn_inputs(:,22)= (pfts_fract(:,2)              - minmax(22,1))      &
+                   / (minmax(22,2)                 - minmax(22,1)+1e-8)
+    nn_inputs(:,23)= (pfts_fract(:,3)              - minmax(23,1))      &
+                   / (minmax(23,2)                 - minmax(23,1)+1e-8)
+    nn_inputs(:,24)= (pfts_fract(:,4)              - minmax(24,1))      &
+                   / (minmax(24,2)                 - minmax(24,1)+1e-8)
+    nn_inputs(:,25)= (pfts_fract(:,5)              - minmax(25,1))      &
+                   / (minmax(25,2)                 - minmax(25,1)+1e-8)
+    nn_inputs(:,26)= (pfts_fract(:,6)              - minmax(26,1))      &
+                   / (minmax(26,2)                 - minmax(26,1)+1e-8)
+    nn_inputs(:,27)= (pfts_fract(:,7)              - minmax(27,1))      &
+                   / (minmax(27,2)                 - minmax(27,1)+1e-8)
+    nn_inputs(:,28)= (pfts_fract(:,8)              - minmax(28,1))      &
+                   / (minmax(28,2)                 - minmax(28,1)+1e-8)
+    nn_inputs(:,29)= (pfts_fract(:,9)              - minmax(29,1))      &
+                   / (minmax(29,2)                 - minmax(29,1)+1e-8)
+    nn_inputs(:,30)= (elevation(:)                 - minmax(30,1))      &
+                   / (minmax(30,2)                 - minmax(30,1)+1e-8)  
 
-    DO r_i=1,d_region
-      w_i = (r_i-1)*d_weather_input
-      l_i = (r_i-1)*d_land_input
-      a_i = (r_i-1)*d_anthro_input
-
-      weather_inputs(:,:) = 0.
-      land_inputs(:,:)    = 0.
-      anthro_inputs(:,:)  = 0.
-
-    DO nc_i=1,nc
-      ! reginally normalized input
-      !print*, gfed_region(nc_i), int(gfed_region(nc_i))
-
-      IF (r_i .eq. int(gfed_region(nc_i))) THEN
-        weather_inputs(nc_i,1) = (t_air(nc_i)                   - w_minmax(1+w_i,1)) &
-                               / (w_minmax(1+w_i,2)             - w_minmax(1+w_i,1)+1e-8)
-        weather_inputs(nc_i,2) = (t_air(nc_i)-t_clim_m(nc_i)    - w_minmax(2+w_i,1)) &
-                               / (w_minmax(2+w_i,2)             - w_minmax(2+w_i,1)+1e-8)
-        weather_inputs(nc_i,3) = (q_rel_air(nc_i)               - w_minmax(3+w_i,1)) &
-                               / (w_minmax(3+w_i,2)             - w_minmax(3+w_i,1)+1e-8)
-        weather_inputs(nc_i,4) = (q_rel_air(nc_i)-q_rel_clim_m(nc_i) - w_minmax(4+w_i,1)) &
-                               / (w_minmax(4+w_i,2)                  - w_minmax(4+w_i,1)+1e-8)
-        weather_inputs(nc_i,5) = (q_air(nc_i)                   - w_minmax(5+w_i,1)) &
-                               / (w_minmax(5+w_i,2)             - w_minmax(5+w_i,1)+1e-8)
-        weather_inputs(nc_i,6) = (q_air(nc_i)-q_clim_m(nc_i)    - w_minmax(6+w_i,1)) &
-                               / (w_minmax(6+w_i,2)             - w_minmax(6+w_i,1)+1e-8)
-        weather_inputs(nc_i,7) = (wind_10m(nc_i)              - w_minmax(7+w_i,1)) &
-                               / (w_minmax(7+w_i,2)           - w_minmax(7+w_i,1)+1e-8)
-        weather_inputs(nc_i,8) = (rain(nc_i)*86400            - w_minmax(8+w_i,1)) &
-                               / (w_minmax(8+w_i,2)           - w_minmax(8+w_i,1)+1e-8)
-        weather_inputs(nc_i,9) = (lightning_climatology(nc_i) - w_minmax(9+w_i,1)) &
-                               / (w_minmax(9+w_i,2)           - w_minmax(9+w_i,1)+1e-8)
-
-        land_inputs(nc_i,1) = (lai(nc_i)                    - l_minmax(1+l_i,1))  &
-                            / (l_minmax(1+l_i,2)            - l_minmax(1+l_i,1)+1e-8)
-        land_inputs(nc_i,2) = (lai(nc_i)-lai_clim_m(nc_i)   - l_minmax(2+l_i,1))  &
-                            / (l_minmax(2+l_i,2)            - l_minmax(2+l_i,1)+1e-8)
-        land_inputs(nc_i,3) = (swl1(nc_i)                   - l_minmax(3+l_i,1))  &
-                            / (l_minmax(3+l_i,2)            - l_minmax(3+l_i,1)+1e-8)
-        land_inputs(nc_i,4) = (swl1(nc_i)-swl1_clim_m(nc_i) - l_minmax(4+l_i,1))  &
-                            / (l_minmax(4+l_i,2)            - l_minmax(4+l_i,1)+1e-8)
-        land_inputs(nc_i,5) = (swl2(nc_i)                   - l_minmax(5+l_i,1))  &
-                            / (l_minmax(5+l_i,2)            - l_minmax(5+l_i,1)+1e-8)
-        land_inputs(nc_i,6) = (swl2(nc_i)-swl2_clim_m(nc_i) - l_minmax(6+l_i,1))  &
-                            / (l_minmax(6+l_i,2)            - l_minmax(6+l_i,1)+1e-8)
-        land_inputs(nc_i,7) = (swl3(nc_i)                   - l_minmax(7+l_i,1))  &
-                            / (l_minmax(7+l_i,2)            - l_minmax(7+l_i,1)+1e-8)
-        land_inputs(nc_i,8) = (swl3(nc_i)-swl3_clim_m(nc_i) - l_minmax(8+l_i,1))  &
-                            / (l_minmax(8+l_i,2)            - l_minmax(8+l_i,1)+1e-8)
-        land_inputs(nc_i,9) = (swl4(nc_i)                   - l_minmax(9+l_i,1))  &
-                            / (l_minmax(9+l_i,2)            - l_minmax(9+l_i,1)+1e-8)
-        land_inputs(nc_i,10)= (swl4(nc_i)-swl4_clim_m(nc_i) - l_minmax(10+l_i,1)) &
-                            / (l_minmax(10+l_i,2)           - l_minmax(10+l_i,1)+1e-8) 
-        land_inputs(nc_i,11)= (fuel(nc_i)                 - l_minmax(11+l_i,1)) &
-                            / (l_minmax(11+l_i,2)         - l_minmax(11+l_i,1)+1e-8)
-        land_inputs(nc_i,12)= (elevation(nc_i)            - l_minmax(12+l_i,1)) &
-                            / (l_minmax(12+l_i,2)         - l_minmax(12+l_i,1)+1e-8)
-        land_inputs(nc_i,13)= (slope(nc_i)                - l_minmax(13+l_i,1)) &
-                            / (l_minmax(13+l_i,2)         - l_minmax(13+l_i,1)+1e-8)
-        land_inputs(nc_i,14)= (roughness(nc_i)            - l_minmax(14+l_i,1)) &
-                            / (l_minmax(14+l_i,2)         - l_minmax(14+l_i,1)+1e-8)
-        
-        land_inputs(nc_i,15)= modified_pfts_fract(nc_i,1)
-        land_inputs(nc_i,16)= modified_pfts_fract(nc_i,2)
-        land_inputs(nc_i,17)= modified_pfts_fract(nc_i,3)
-        land_inputs(nc_i,18)= modified_pfts_fract(nc_i,4)
-        land_inputs(nc_i,19)= modified_pfts_fract(nc_i,5)
-        land_inputs(nc_i,20)= modified_pfts_fract(nc_i,6)
-        land_inputs(nc_i,21)= modified_pfts_fract(nc_i,7)
-        land_inputs(nc_i,22)= modified_pfts_fract(nc_i,8)
-        land_inputs(nc_i,23)= modified_pfts_fract(nc_i,9)
-
-        anthro_inputs(nc_i,1) = (LOG(population(nc_i)+1)    - a_minmax(1+a_i,1))  &
-                              / (a_minmax(1+a_i,2)          - a_minmax(1+a_i,1)+1e-8)
-        anthro_inputs(nc_i,2) = (gdp(nc_i)                  - a_minmax(2+a_i,1))  &
-                              / (a_minmax(2+a_i,2)          - a_minmax(2+a_i,1)+1e-8)
-        anthro_inputs(nc_i,3) = (hdi(nc_i)                  - a_minmax(3+a_i,1))  &
-                              / (a_minmax(3+a_i,2)          - a_minmax(3+a_i,1)+1e-8)
-        anthro_inputs(nc_i,4) = (LOG(road_density(nc_i)+1)  - a_minmax(4+a_i,1))  &
-                              / (a_minmax(4+a_i,2)          - a_minmax(4+a_i,1)+1e-8)
-        anthro_inputs(nc_i,5) = (land_use_c3ann(nc_i)       - a_minmax(5+a_i,1))  &
-                              / (a_minmax(5+a_i,2)          - a_minmax(5+a_i,1)+1e-8)
-        anthro_inputs(nc_i,6) = (land_use_c3nfx(nc_i)       - a_minmax(6+a_i,1))  &
-                              / (a_minmax(6+a_i,2)          - a_minmax(6+a_i,1)+1e-8)
-        anthro_inputs(nc_i,7) = (land_use_c3per(nc_i)       - a_minmax(7+a_i,1))  &
-                              / (a_minmax(7+a_i,2)          - a_minmax(7+a_i,1)+1e-8)
-        anthro_inputs(nc_i,8) = (land_use_c4ann(nc_i)       - a_minmax(8+a_i,1))  &
-                              / (a_minmax(8+a_i,2)          - a_minmax(8+a_i,1)+1e-8)
-        anthro_inputs(nc_i,9) = (land_use_c4per(nc_i)       - a_minmax(9+a_i,1))  &
-                              / (a_minmax(9+a_i,2)          - a_minmax(9+a_i,1)+1e-8)
-        anthro_inputs(nc_i,10)= (land_use_pastr(nc_i)       - a_minmax(10+a_i,1)) &
-                              / (a_minmax(10+a_i,2)         - a_minmax(10+a_i,1)+1e-8)
-        anthro_inputs(nc_i,11)= (land_use_primf(nc_i)       - a_minmax(11+a_i,1)) &
-                              / (a_minmax(11+a_i,2)         - a_minmax(11+a_i,1)+1e-8)
-        anthro_inputs(nc_i,12)= (land_use_primn(nc_i)       - a_minmax(12+a_i,1)) &
-                              / (a_minmax(12+a_i,2)         - a_minmax(12+a_i,1)+1e-8)
-        anthro_inputs(nc_i,13)= (land_use_range(nc_i)       - a_minmax(13+a_i,1)) &
-                              / (a_minmax(13+a_i,2)         - a_minmax(13+a_i,1)+1e-8)
-        anthro_inputs(nc_i,14)= (land_use_secdf(nc_i)       - a_minmax(14+a_i,1)) &
-                              / (a_minmax(14+a_i,2)         - a_minmax(14+a_i,1)+1e-8)
-        anthro_inputs(nc_i,15)= (land_use_secdn(nc_i)       - a_minmax(15+a_i,1)) &
-                              / (a_minmax(15+a_i,2)         - a_minmax(15+a_i,1)+1e-8)
-        anthro_inputs(nc_i,16)= (land_use_secma(nc_i)       - a_minmax(16+a_i,1)) &
-                              / (a_minmax(16+a_i,2)         - a_minmax(16+a_i,1)+1e-8)
-        anthro_inputs(nc_i,17)= (land_use_secmb(nc_i)       - a_minmax(17+a_i,1)) &
-                              / (a_minmax(17+a_i,2)         - a_minmax(17+a_i,1)+1e-8)
-        anthro_inputs(nc_i,18)= (land_use_urban(nc_i)       - a_minmax(18+a_i,1)) &
-                              / (a_minmax(18+a_i,2)         - a_minmax(18+a_i,1)+1e-8)
-
-        !fuel_constraint(nc_i, r_i) = land_inputs(nc_i,11)
-        fuel_constraint(nc_i) = land_inputs(nc_i,11)
-        
-        !if (isnan(land_inputs(nc_i,11))) then
-        !  print*, r_i
-        !endif
-
-        where (isnan(anthro_inputs)) anthro_inputs = 0.
-
-      ENDIF
-    ENDDO   ! nc iteration
-
-      os=1+(r_i-1)*d_output
-      oe=r_i*d_output
-
-      ! weather-LSTM model
-      hs=1+(r_i-1)*d_weather_hidden
-      he=r_i*d_weather_hidden
-      
-      weather_lstm_i = matmul(weather_inputs, weather_i2i_weight(:,hs:he)) + spread(weather_i2i_bias(hs:he),1,nc) &
-       + matmul(weather_lstm_hidden(:,hs:he), weather_h2i_weight(:,hs:he)) + spread(weather_h2i_bias(hs:he),1,nc)
-      weather_lstm_f = matmul(weather_inputs, weather_i2f_weight(:,hs:he)) + spread(weather_i2f_bias(hs:he),1,nc) &
-       + matmul(weather_lstm_hidden(:,hs:he), weather_h2f_weight(:,hs:he)) + spread(weather_h2f_bias(hs:he),1,nc)
-      weather_lstm_g = matmul(weather_inputs, weather_i2g_weight(:,hs:he)) + spread(weather_i2g_bias(hs:he),1,nc) &
-       + matmul(weather_lstm_hidden(:,hs:he), weather_h2g_weight(:,hs:he)) + spread(weather_h2g_bias(hs:he),1,nc)
-      weather_lstm_o = matmul(weather_inputs, weather_i2o_weight(:,hs:he)) + spread(weather_i2o_bias(hs:he),1,nc) &
-       + matmul(weather_lstm_hidden(:,hs:he), weather_h2o_weight(:,hs:he)) + spread(weather_h2o_bias(hs:he),1,nc)
-
-      weather_lstm_i = 1/(1+exp(-weather_lstm_i))
-      weather_lstm_f = 1/(1+exp(-weather_lstm_f))
-      weather_lstm_g = tanh(weather_lstm_g)
-      weather_lstm_o = 1/(1+exp(-weather_lstm_o))
-
-      weather_lstm_cell(:,hs:he)   = weather_lstm_f * weather_lstm_cell(:,hs:he) &
-                                   + weather_lstm_i * weather_lstm_g
-      weather_lstm_hidden(:,hs:he) = weather_lstm_o * tanh(weather_lstm_cell(:,hs:he))
-
-      weather_lstm_outputs = matmul(weather_lstm_hidden(:,hs:he), weather_out_weight(:,os:oe)) &
-                           + spread(weather_out_bias(os:oe),1,nc)
-
-      ! make 0 for other regions
-      where (spread(gfed_region, 2, d_output) /= float(r_i)) weather_lstm_outputs = 0.
-      weather_lstm_outputs_sum(:,:) = weather_lstm_outputs_sum(:,:) + weather_lstm_outputs(:,:)
+    ! generate dropout mask
+    keep_prob = 0.9
+    CALL generate_dropout_mask(nn_layer1_mask, keep_prob, nc, d_hidden)
+    CALL generate_dropout_mask(nn_layer2_mask, keep_prob, nc, d_hidden)
+    CALL generate_dropout_mask(nn_layer3_mask, keep_prob, nc, d_hidden)
+    CALL generate_dropout_mask(nn_layer4_mask, keep_prob, nc, d_hidden)
+    CALL generate_dropout_mask(nn_layer5_mask, keep_prob, nc, d_hidden)
+    nn_layer6_mask(:,:) = 1.
 
 
-      ! land-LSTM model
-      hs=1+(r_i-1)*d_land_hidden
-      he=r_i*d_land_hidden
-      
-      land_lstm_i =    matmul(land_inputs, land_i2i_weight(:,hs:he)) + spread(land_i2i_bias(hs:he),1,nc) &
-       + matmul(land_lstm_hidden(:,hs:he), land_h2i_weight(:,hs:he)) + spread(land_h2i_bias(hs:he),1,nc)
-      land_lstm_f =    matmul(land_inputs, land_i2f_weight(:,hs:he)) + spread(land_i2f_bias(hs:he),1,nc) &
-       + matmul(land_lstm_hidden(:,hs:he), land_h2f_weight(:,hs:he)) + spread(land_h2f_bias(hs:he),1,nc)
-      land_lstm_g =    matmul(land_inputs, land_i2g_weight(:,hs:he)) + spread(land_i2g_bias(hs:he),1,nc) &
-       + matmul(land_lstm_hidden(:,hs:he), land_h2g_weight(:,hs:he)) + spread(land_h2g_bias(hs:he),1,nc)
-      land_lstm_o =    matmul(land_inputs, land_i2o_weight(:,hs:he)) + spread(land_i2o_bias(hs:he),1,nc) &
-       + matmul(land_lstm_hidden(:,hs:he), land_h2o_weight(:,hs:he)) + spread(land_h2o_bias(hs:he),1,nc)
+    ! Forward propagation
+    !call forward(                                                        &
+    !  nn_inputs,     nn_outputs,                                         & 
+    !  layer1_weight, layer1_bias,  'relu', nn_layer1_out, nn_layer1_act, &
+    !  layer2_weight, layer2_bias,  'relu', nn_layer2_out, nn_layer2_act, &
+    !  layer3_weight, layer3_bias,  'relu', nn_layer3_out, nn_layer3_act, &
+    !  layer4_weight, layer4_bias,  'relu', nn_layer4_out, nn_layer4_act, &
+    !  layer5_weight, layer5_bias,  'relu', nn_layer5_out, nn_layer5_act, &
+    !  layer6_weight, layer6_bias,'linear', nn_layer6_out, nn_layer6_act, &
+    !  nc, d_input, d_hidden, d_output)
+
+    CALL forward(                                    &
+      nn_inputs,     nn_outputs,                     & 
+      layer1_weight, layer1_bias, 'leaky_relu',      & 
+      nn_layer1_out, nn_layer1_act, nn_layer1_mask,  &
+      layer2_weight, layer2_bias, 'leaky_relu',      &
+      nn_layer2_out, nn_layer2_act, nn_layer2_mask,  &
+      layer3_weight, layer3_bias, 'leaky_relu',      &
+      nn_layer3_out, nn_layer3_act, nn_layer3_mask,  &
+      layer4_weight, layer4_bias, 'leaky_relu',      &
+      nn_layer4_out, nn_layer4_act, nn_layer4_mask,  &
+      layer5_weight, layer5_bias, 'leaky_relu',      &
+      nn_layer5_out, nn_layer5_act, nn_layer5_mask,  &
+      layer6_weight, layer6_bias, 'linear',          &
+      nn_layer6_out, nn_layer6_act, nn_layer6_mask,  &
+      nc, d_input, d_hidden, d_output, keep_prob)
+
+    ! 1st layer
+    !nn_layer1_out(:,1:128) = matmul(nn_inputs, layer1_weight(:,1:128)) + spread(layer1_bias(1:128),1,nc)
+    !nn_layer1_act(:,:) = nn_layer1_out(:,:) 
+    !where (nn_layer1_out < 0.) nn_layer1_act = 0.01*nn_layer1_act
+    ! 2nd layer
+    !nn_layer2_out(:,1:128) = matmul(nn_layer1_act(:,1:128), layer2_weight(1:128,1:128)) + spread(layer2_bias(1:128),1,nc)
+    !nn_layer2_act(:,:) = nn_layer2_out(:,:)
+    !where (nn_layer2_out < 0.) nn_layer2_act = 0.01*nn_layer2_act
+    ! 3rd layer
+    !nn_layer3_out(:,1:128) = matmul(nn_layer2_act(:,1:128), layer3_weight(1:128,1:128)) + spread(layer3_bias(1:128),1,nc)
+    !nn_layer3_act(:,:) = nn_layer3_out(:,:)
+    !where (nn_layer3_out > 0) nn_layer3_act = 0.01*nn_layer3_act
+    ! 4th layer
+    !nn_layer4_out(:,1:128) = matmul(nn_layer3_act(:,1:128), layer4_weight(1:128,1:128)) + spread(layer4_bias(1:128),1,nc)
+    !nn_layer4_act(:,:) = nn_layer4_out(:,:)
+    !where (nn_layer4_out > 0) nn_layer4_act = 0.01*nn_layer4_act
+    ! 5th layer
+    !nn_layer5_out(:,1:128) = matmul(nn_layer4_act(:,1:128), layer5_weight(1:128,1:128)) + spread(layer5_bias(1:128),1,nc)
+    !nn_layer5_act(:,:) = nn_layer5_out(:,:)
+    !where (nn_layer5_out > 0) nn_layer5_act = 0.01*nn_layer5_act
+    ! 6th layer
+    !call LoopMatrixMultiply(nn_layer5_act, layer6_weight, nn_layer6_out)
+    !nn_layer6_out = nn_layer6_out + spread(layer6_bias,1,nc)
+    !nn_layer6_out(:,1:128) = matmul(nn_layer5_act(:,1:128), layer6_weight(1:128,1:128)) + spread(layer6_bias(1:128),1,nc)
+    !nn_layer6_act(:,:) = nn_layer6_out(:,:) 
+
+    ! clear gradients
+    dW1(:,:) = 0.;  db1(:) = 0.
+    dW2(:,:) = 0.;  db2(:) = 0.
+    dW3(:,:) = 0.;  db3(:) = 0.
+    dW4(:,:) = 0.;  db4(:) = 0.
+    dW5(:,:) = 0.;  db5(:) = 0.
+    dW6(:,:) = 0.;  db6(:) = 0.
+
+    ! Backward propagation
+    !call backward(                                         &
+    !  nn_inputs, nn_outputs, fba_smooth,                   &
+    !  layer1_weight, 'relu', nn_layer1_out, nn_layer1_act, &
+    !  layer2_weight, 'relu', nn_layer2_out, nn_layer2_act, &
+    !  layer3_weight, 'relu', nn_layer3_out, nn_layer3_act, &
+    !  layer4_weight, 'relu', nn_layer4_out, nn_layer4_act, &
+    !  layer5_weight, 'relu', nn_layer5_out, nn_layer5_act, &
+    !  layer6_weight, 'none', nn_layer6_out, nn_layer6_act, &
+    !  dW1, dW2, dW3, dW4, dW5, dW6,                        &
+    !  db1, db2, db3, db4, db5, db6,                        &
+    !  nc, d_input, d_hidden, d_output)
+
+    !IF (is_training .eq. 1) then
+    !  call backward(                                               &
+    !    nn_inputs, nn_outputs, fba_smooth,                         &
+    !    layer1_weight(:,1:128), 'leaky_relu', nn_layer1_out(:,1:128), nn_layer1_act(:,1:128), &
+    !    layer2_weight(1:128,1:128), 'leaky_relu', nn_layer2_out(:,1:128), nn_layer2_act(:,1:128), &
+    !    layer3_weight(1:128,1:128), 'leaky_relu', nn_layer3_out(:,1:128), nn_layer3_act(:,1:128), &
+    !    layer4_weight(1:128,1:128), 'leaky_relu', nn_layer4_out(:,1:128), nn_layer4_act(:,1:128), &
+    !    layer5_weight(1:128,1:128), 'leaky_relu', nn_layer5_out(:,1:128), nn_layer5_act(:,1:128), &
+    !    layer6_weight(1:128,1:128), 'linear',     nn_layer6_out, nn_layer6_act, &
+    !    dW1(:,1:128), dW2(1:128,1:128), dW3(1:128,1:128), dW4(1:128,1:128), dW5(1:128,1:128), dW6(1:128,:), &
+    !    db1(1:128), db2(1:128), db3(1:128), db4(1:128), db5(1:128), db6, &
+    !    !nc, d_input, d_hidden, d_output)
+    !    nc, d_input, 128, d_output)
+
+    !  lr_rate = 1e-4
+    !  call update(                                     &
+    !    dW1(:,1:128), dW2(1:128,1:128), dW3(1:128,1:128), dW4(1:128,1:128), dW5(1:128,1:128), dW6(1:128,:), &
+    !    db1(1:128), db2(1:128), db3(1:128), db4(1:128), db5(1:128), db6,                  &
+    !    mW1(:,1:128), mW2(1:128,1:128), mW3(1:128,1:128), mW4(1:128,1:128), mW5(1:128,1:128), mW6(1:128,:), &
+    !    mb1(1:128), mb2(1:128), mb3(1:128), mb4(1:128), mb5(1:128), mb6,                  &
+    !    vW1(:,1:128), vW2(1:128,1:128), vW3(1:128,1:128), vW4(1:128,1:128), vW5(1:128,1:128), vW6(1:128,:), &
+    !    vb1(1:128), vb2(1:128), vb3(1:128), vb4(1:128), vb5(1:128), vb6,                  &
+    !    layer1_weight(:,1:128),  layer2_weight(1:128,1:128),  layer3_weight(1:128,1:128), &
+    !    layer4_weight(1:128,1:128),  layer5_weight(1:128,1:128),  layer6_weight(1:128,:), &
+    !    layer1_bias(1:128),    layer2_bias(1:128),    layer3_bias(1:128),   &
+    !    layer4_bias(1:128),    layer5_bias(1:128),    layer6_bias,   &
+        !lr_rate, iteration, d_input, d_hidden, d_output)
+    !    lr_rate, iteration, d_input, 128, d_output)
+    !ENDIF
+
+    IF (is_training .eq. 1) then
+      CALL backward(                                                               &
+        nn_inputs, nn_outputs, fba_smooth,                                         &
+        layer1_weight, 'leaky_relu', nn_layer1_out, nn_layer1_act, nn_layer1_mask, &
+        layer2_weight, 'leaky_relu', nn_layer2_out, nn_layer2_act, nn_layer2_mask, &
+        layer3_weight, 'leaky_relu', nn_layer3_out, nn_layer3_act, nn_layer3_mask, &
+        layer4_weight, 'leaky_relu', nn_layer4_out, nn_layer4_act, nn_layer4_mask, &
+        layer5_weight, 'leaky_relu', nn_layer5_out, nn_layer5_act, nn_layer5_mask, &
+        layer6_weight, 'linear',     nn_layer6_out, nn_layer6_act, nn_layer6_mask, &
+        dW1, dW2, dW3, dW4, dW5, dW6,                                              &
+        db1, db2, db3, db4, db5, db6,                                              &
+        nc, d_input, d_hidden, d_output, keep_prob)
+
+      lr_rate = 1e-12
+      CALL update(                                     &
+        dW1, dW2, dW3, dW4, dW5, dW6,                  &
+        db1, db2, db3, db4, db5, db6,                  &
+        mW1, mW2, mW3, mW4, mW5, mW6,                  &
+        mb1, mb2, mb3, mb4, mb5, mb6,                  &
+        vW1, vW2, vW3, vW4, vW5, vW6,                  &
+        vb1, vb2, vb3, vb4, vb5, vb6,                  &
+        layer1_weight,  layer2_weight,  layer3_weight, &
+        layer4_weight,  layer5_weight,  layer6_weight, &
+        layer1_bias,    layer2_bias,    layer3_bias,   &
+        layer4_bias,    layer5_bias,    layer6_bias,   &
+        lr_rate, iteration, d_input, d_hidden, d_output)
+    ENDIF
 
 
-      land_lstm_i = 1/(1+exp(-land_lstm_i))
-      land_lstm_f = 1/(1+exp(-land_lstm_f))
-      land_lstm_g = tanh(land_lstm_g)
-      land_lstm_o = 1/(1+exp(-land_lstm_o))
-
-      land_lstm_cell(:,hs:he)   = land_lstm_f * land_lstm_cell(:,hs:he) &
-                                + land_lstm_i * land_lstm_g
-      land_lstm_hidden(:,hs:he) = land_lstm_o * tanh(land_lstm_cell(:,hs:he))
-
-      land_lstm_outputs = matmul(land_lstm_hidden(:,hs:he), land_out_weight(:,os:oe)) &
-                        + spread(land_out_bias(os:oe),1,nc)
-
-      ! make 0 for other regions
-      where (spread(gfed_region, 2, d_output) /= float(r_i)) land_lstm_outputs = 0.
-      land_lstm_outputs_sum(:,:) = land_lstm_outputs_sum(:,:) + land_lstm_outputs(:,:)
-
-
-      ! anthropogenic NN model
-      hs=1+(r_i-1)*d_anthro_hidden
-      he=r_i*d_anthro_hidden
-
-      anthro_nn = matmul(anthro_inputs, anthropogenic_l1_weight(:,hs:he)) &
-                + spread(anthropogenic_l1_bias(hs:he),1,nc)
-      anthro_nn_act = log(1+exp(anthro_nn))
-      where (anthro_nn > 20) anthro_nn_act = anthro_nn
-      anthro_nn_outputs = matmul(anthro_nn_act, anthropogenic_l2_weight(:,os:oe)) &
-                        + spread(anthropogenic_l2_bias(os:oe),1,nc)
-
-      ! make 0 for other regions
-      where (spread(gfed_region, 2, d_output) /= float(r_i)) anthro_nn_outputs = 0.
-      anthro_nn_outputs_sum(:,:) = anthro_nn_outputs_sum(:,:) + anthro_nn_outputs(:,:)
-
-    ENDDO   ! r (region) iteration
-
-    !dum1 = sum(weather_lstm_outputs_sum, dim=2)
-    !dum2 = sum(land_lstm_outputs_sum, dim=2)
-    !dum3 = sum(anthro_nn_outputs_sum, dim=2)
-    !dum4 = sum(fuel_constraint, dim=2)
-    !dum4 = fuel_constraint
-
-    !where(gfed_region /= 4) dum1 = 0.
-    !where(gfed_region /= 4) dum2 = 0.
-    !where(gfed_region /= 4) dum3 = 0.
-    !where(gfed_region /= 4) dum4 = 0.
-
-    !num1 = gfed_region
-    !num2 = gfed_region
-    !num3 = gfed_region
-    !num4 = gfed_region
-
-    !where(gfed_region /= 4) num1 = 0.
-    !where(gfed_region /= 4) num2 = 0.
-    !where(gfed_region /= 4) num3 = 0.
-    !where(gfed_region /= 4) num4 = 0.
-    !where(gfed_region == 4) num1 = 1.
-    !where(gfed_region == 4) num2 = 1.
-    !where(gfed_region == 4) num3 = 1.
-    !where(gfed_region == 4) num4 = 1.
-
-    !if (ISNAN(sum(dum4))) then
-    !  print*, fuel
+    !if (sum(dW6) .gt. 0) then
+    !  print*, sum(dW6), sum(dW3), sum(dW1)
     !endif
 
-    !if (sum(num4) .ne. 0) then
-    !  print*, sum(dum1)/(sum(num1)+1e-7), sum(dum2)/(sum(num2)+1e-7), sum(dum3)/(sum(num3)+1e-7), sum(dum4)/(sum(num4)+1e-7)
-    !endif
-    !if (sum(fuel_constraint) /= 0.) then
-    !  print*, sum(fuel_constraint)/(sum(num4)+1e-7)
+    !if (sum(fba_smooth) .gt. 0) then
+    !  print*, sum(nn_outputs), sum(fba_smooth)
     !endif
 
-    burned_fract = sum(weather_lstm_outputs_sum     &
-                     * land_lstm_outputs_sum        &
-                     * anthro_nn_outputs_sum        &
-                     * modified_pfts_fract(:,1:8), dim=2)
+    ! 1st layer
+    !nn_layer1_out = matmul(nn_inputs, layer1_weight) + spread(layer1_bias,1,nc)
+    !nn_layer1_act(:,:) = 0.
+    !where (nn_layer1_out > 0) nn_layer1_act = nn_layer1_out
+    ! 2nd layer
+    !nn_layer2_out = matmul(nn_layer1_act, layer2_weight) + spread(layer2_bias,1,nc)
+    !nn_layer2_act(:,:) = 0.
+    !where (nn_layer2_out > 0) nn_layer2_act = nn_layer2_out
+    ! 3rd layer
+    !nn_layer3_out = matmul(nn_layer2_act, layer3_weight) + spread(layer3_bias,1,nc)
+    !nn_layer3_act(:,:) = 0.
+    !where (nn_layer3_out > 0) nn_layer3_act = nn_layer3_out
+    ! 4th layer
+    !nn_layer4_out = matmul(nn_layer3_act, layer4_weight) + spread(layer4_bias,1,nc)
+    !nn_layer4_act(:,:) = 0.
+    !where (nn_layer4_out > 0) nn_layer4_act = nn_layer4_out
+    ! 5th layer
+    !nn_layer5_out = matmul(nn_layer4_act, layer5_weight) + spread(layer5_bias,1,nc)
+    !nn_layer5_act(:,:) = 0.
+    !where (nn_layer5_out > 0) nn_layer5_act = nn_layer5_out
+    ! 6th layer
+    !nn_layer6_out = matmul(nn_layer5_act, layer6_weight) + spread(layer6_bias,1,nc)
+    !nn_layer6_act = nn_layer6_out 
 
-    burned_fract(:) = burned_fract(:)/100.
-    burned_fract(:) = burned_fract(:)*(1.-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
 
-    !burned_fract(:) = burned_fract(:)*sum(fuel_constraint, dim=2)
-    burned_fract(:) = burned_fract(:)*fuel_constraint
+    ! LSTM model
+    !lstm_i = matmul(inputs, i2i_weight) + spread(i2i_bias,1,nc) &
+    !  + matmul(lstm_hidden, h2i_weight) + spread(h2i_bias,1,nc)
+    !lstm_f = matmul(inputs, i2f_weight) + spread(i2f_bias,1,nc) &
+    !  + matmul(lstm_hidden, h2f_weight) + spread(h2f_bias,1,nc)
+    !lstm_g = matmul(inputs, i2g_weight) + spread(i2g_bias,1,nc) &
+    !  + matmul(lstm_hidden, h2g_weight) + spread(h2g_bias,1,nc)
+    !lstm_o = matmul(inputs, i2o_weight) + spread(i2o_bias,1,nc) &
+    !  + matmul(lstm_hidden, h2o_weight) + spread(h2o_bias,1,nc)
 
-    !if (maxval(fuel_constraint) .gt. 0.1) then
-    !  print*, minval(fuel_constraint), maxval(fuel_constraint), maxval(fuel)
+    !lstm_i = 1/(1+exp(-lstm_i))
+    !lstm_f = 1/(1+exp(-lstm_f))
+    !lstm_g = tanh(lstm_g)
+    !lstm_o = 1/(1+exp(-lstm_o))
+
+    !lstm_cell = lstm_f * lstm_cell &
+    !          + lstm_i * lstm_g
+    !lstm_hidden = lstm_o * tanh(lstm_cell)
+    !lstm_outputs = matmul(lstm_hidden, out_weight) &
+    !             + spread(out_bias,1,nc)
+
+    !if (maxval(nn_outputs(:,1)) .gt. 0) then
+    !  print*, maxval(nn_outputs(:,1))
     !endif
+    burned_fract = nn_outputs(:,1)/100.
 
-    q_rel_air_constraint(:) = q_rel_air(:)/100.
-    where (q_rel_air_constraint < 0) q_rel_air_constraint = 0.
-    where (q_rel_air_constraint > 1) q_rel_air_constraint = 1.
-
-    !q_rel_air_constraint(:) = (q_rel_air(:)-q_rel_clim_m(:)+q_rel_clim_o(:))/100.
-    q_rel_air_constraint(:) = 1/(1+exp(-20*(q_rel_air_constraint(:)-0.5)))
-    !where (q_rel_air > 50) q_rel_air_constraint = 1.
-    where (q_rel_air > 60) q_rel_air_constraint = 1.
-    !where (q_rel_air > 70) q_rel_air_constraint = 1.
-    burned_fract(:) = burned_fract(:)*(1-q_rel_air_constraint(:))
-
-    !dum1 = burned_fract
-    !where(gfed_region /= 4) dum1 = 0.
-    !if (sum(num1) .ne. 0) then
-    !  print*, sum(dum1)/(sum(num1)+1e-8) *100*365
-    !endif
-
-    where (burned_fract < 0.) burned_fract = 0.
-    where (burned_fract > 1.) burned_fract = 1.
-
-
+    WHERE (burned_fract < 0.) burned_fract = 0.
+    WHERE (burned_fract > 1.) burned_fract = 1.
     
   END SUBROUTINE burned_fract_dl
 
@@ -879,6 +697,505 @@ CONTAINS
     END WHERE
 
   END SUBROUTINE sat_specific_humidity
+
+  ! NN-training
+  SUBROUTINE generate_dropout_mask(x, keep_prob, d1, d2)
+      IMPLICIT NONE
+      REAL(wp), INTENT(IN)    :: keep_prob
+      INTEGER,  INTENT(IN)    :: d1, d2
+      REAL(wp), INTENT(INOUT) :: x(d1,d2)
+
+      CALL RANDOM_NUMBER(x)
+      WHERE (x < keep_prob)
+        x = 1.
+      ELSE WHERE
+        x = 0.
+      END WHERE
+      END SUBROUTINE generate_dropout_mask
+
+
+  SUBROUTINE ReLU(x, y, d1, d2)
+    IMPLICIT NONE
+    INTEGER,  INTENT(IN)    :: d1, d2
+    REAL(wp), INTENT(IN)    :: x(d1,d2)
+    REAL(wp), INTENT(inout) :: y(d1,d2)
+
+    y(:,:) = 0.
+    WHERE(x > 0.) y = x
+    END SUBROUTINE ReLU
+
+
+  SUBROUTINE leaky_ReLU(x, y, d1, d2)
+    IMPLICIT NONE
+    INTEGER,  INTENT(IN)    :: d1, d2
+    REAL(wp), INTENT(IN)    :: x(d1,d2)
+    REAL(wp), INTENT(INOUT) :: y(d1,d2)
+
+    y(:,:) = x(:,:)
+    WHERE(x < 0.) y = 0.01*x
+    END SUBROUTINE leaky_ReLU
+
+
+  SUBROUTINE single_forward_propagation(    &
+    & input, weight, bias, activation_func, &
+    & batch_size, d_in, d_out, keep_prob,   &
+    & Z, output, mask)
+
+    IMPLICIT NONE
+    INTEGER,  INTENT(IN) :: batch_size, d_in, d_out
+    REAL(wp), INTENT(IN) :: keep_prob
+    REAL(wp), INTENT(IN) :: input(batch_size,d_in)
+    REAL(wp), INTENT(IN) :: weight(d_in,d_out), bias(d_out)
+    CHARACTER(len=*), INTENT(IN) :: activation_func
+    REAL(wp), INTENT(IN)    :: mask  (batch_size,d_out)
+    REAL(wp), INTENT(INOUT) :: Z     (batch_size,d_out)
+    REAL(wp), INTENT(INOUT) :: output(batch_size,d_out)
+
+    !real(wp) ::  ALPHA, BETA
+    !ALPHA = 1.0
+    !BETA = 0.0
+
+    Z = matmul(input, weight) + spread(bias,1,batch_size)
+
+    ! LAPACK routine for matrix multiplication:
+    !  ! C := alpha*op(A)*op(B) + beta*C  -----  (1)
+    !  call DGEMM( 'N',                & !'N' or 'n': op(A)=A, 'T' or 't': op(A)=A**T, 'C' or 'c': op(A)=A**T
+    !    &         'N',                & !'N' or 'n': op(B)=B, 'T' or 't': op(B)=B**T, 'C' or 'c': op(B)=B**T
+    !    &         batch_size,         & ! the number of rows of the matrix op(A)
+    !    &         d_out,              & ! the number of columns of the matrix op(B)
+    !    &         d_in,               & ! the number of columns of the matrix op(A) and the number of rows of the matrix op(B)
+    !    &         ALPHA,              & ! the scalar alpha at equation (1)
+    !    &         input,              & ! A array at equation (1)
+    !    &         batch_size,         & ! the first dimension of A
+    !    &         weight,             & ! B array at equation (1)
+    !    &         d_in,               & ! the first dimension of B
+    !    &         BETA,               & ! the scalar beta at equation (1)
+    !    &         Z,                  & ! C array (output) at equation (1)
+    !    &         batch_size          ) ! the first dimension of C
+    !Z = Z + spread(bias,1,batch_size)
+
+    IF (activation_func .eq. 'relu') THEN
+      CALL ReLU(Z, output, batch_size, d_out)
+    ELSE if (activation_func .eq. 'leaky_relu') THEN
+      CALL leaky_ReLU(Z, output, batch_size, d_out)
+    ELSE
+      output = Z
+    ENDIF
+
+    output = output*mask/keep_prob
+
+    END SUBROUTINE single_forward_propagation
+
+
+    SUBROUTINE forward(                                   &
+      input, output,                                      &
+      W1, b1, act1, layer1_out, layer1_act, layer1_mask,  &
+      W2, b2, act2, layer2_out, layer2_act, layer2_mask,  &
+      W3, b3, act3, layer3_out, layer3_act, layer3_mask,  &
+      W4, b4, act4, layer4_out, layer4_act, layer4_mask,  &
+      W5, b5, act5, layer5_out, layer5_act, layer5_mask,  &
+      W6, b6, act6, layer6_out, layer6_act, layer6_mask,  &
+      batch_size, d_in, d_hid, d_out, keep_prob           )
+
+    IMPLICIT NONE
+    INTEGER,  INTENT(IN) :: batch_size, d_in, d_hid, d_out
+    REAL(wp), INTENT(IN) :: keep_prob
+    REAL(wp), INTENT(IN) :: input(batch_size,d_in)
+
+    REAL(wp), INTENT(IN) :: W1(d_in, d_hid), b1(d_hid)
+    REAL(wp), INTENT(IN) :: W2(d_hid,d_hid), b2(d_hid)
+    REAL(wp), INTENT(IN) :: W3(d_hid,d_hid), b3(d_hid)
+    REAL(wp), INTENT(IN) :: W4(d_hid,d_hid), b4(d_hid)
+    REAL(wp), INTENT(IN) :: W5(d_hid,d_hid), b5(d_hid)
+    REAL(wp), INTENT(IN) :: W6(d_hid,d_out), b6(d_out)
+
+    CHARACTER(len=*),  INTENT(IN) :: act1, act2, act3
+    CHARACTER(len=*),  INTENT(IN) :: act4, act5, act6
+
+    REAL(wp), INTENT(IN) :: layer1_mask(batch_size, d_hid)
+    REAL(wp), INTENT(IN) :: layer2_mask(batch_size, d_hid)
+    REAL(wp), INTENT(IN) :: layer3_mask(batch_size, d_hid)
+    REAL(wp), INTENT(IN) :: layer4_mask(batch_size, d_hid)
+    REAL(wp), INTENT(IN) :: layer5_mask(batch_size, d_hid)
+    REAL(wp), INTENT(IN) :: layer6_mask(batch_size, d_out)
+
+    REAL(wp), INTENT(INOUT) :: layer1_out(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer1_act(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer2_out(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer2_act(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer3_out(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer3_act(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer4_out(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer4_act(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer5_out(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer5_act(batch_size, d_hid)
+    REAL(wp), INTENT(INOUT) :: layer6_out(batch_size, d_out)
+    REAL(wp), INTENT(INOUT) :: layer6_act(batch_size, d_out)
+    REAL(wp), INTENT(INOUT) :: output(batch_size,d_out)
+
+    CALL single_forward_propagation(input,      W1, b1, act1, &
+      & batch_size, d_in,  d_hid,  keep_prob,                 &
+      & layer1_out, layer1_act, layer1_mask                   )
+    CALL single_forward_propagation(layer1_act, W2, b2, act2, &
+      & batch_size, d_hid, d_hid,  keep_prob,                 &
+      & layer2_out, layer2_act, layer2_mask                   )
+    CALL single_forward_propagation(layer2_act, W3, b3, act3, &
+      & batch_size, d_hid, d_hid,  keep_prob,                 &
+      & layer3_out, layer3_act, layer3_mask                   )
+    CALL single_forward_propagation(layer3_act, W4, b4, act4, &
+      & batch_size, d_hid, d_hid,  keep_prob,                 &
+      & layer4_out, layer4_act, layer4_mask                   )
+    CALL single_forward_propagation(layer4_act, W5, b5, act5, &
+      & batch_size, d_hid, d_hid,  keep_prob,                 &
+      & layer5_out, layer5_act, layer5_mask                   )
+    CALL single_forward_propagation(layer5_act, W6, b6, act6, &
+      & batch_size, d_hid, d_out,  1._wp,                     &
+      & layer6_out, layer6_act, layer6_mask                   )
+
+    output(:,:) = layer6_act(:,:)
+
+    END SUBROUTINE forward
+
+
+    SUBROUTINE dReLU(dy, z, dz, d1, d2)
+      IMPLICIT NONE
+      INTEGER,  INTENT(IN)    :: d1, d2
+      REAL(wp), INTENT(IN)    :: dy(d1,d2)
+      REAL(wp), INTENT(IN)    :: z (d1,d2)
+      REAL(wp), INTENT(INOUT) :: dz(d1,d2)
+
+      dz(:,:) = 0.
+      WHERE(z > 0.) dz = dy
+      END SUBROUTINE dReLU
+
+
+    SUBROUTINE dleaky_ReLU(dy, z, dz, d1, d2)
+      IMPLICIT NONE
+      INTEGER,  INTENT(IN)    :: d1, d2
+      REAL(wp), INTENT(IN)    :: dy(d1,d2)
+      REAL(wp), INTENT(IN)    ::  z(d1,d2)
+      REAL(wp), INTENT(INOUT) :: dz(d1,d2)
+
+      dz(:,:) = dy(:,:)
+      WHERE(z < 0.) dz = 0.01*dy
+      END SUBROUTINE dleaky_ReLU
+
+
+    SUBROUTINE single_backward_propagation(        &
+        & derivative_Y, mask, Z, X,                &
+        & weight, activation_func,                 &
+        & batch_size, d_in, d_out, keep_prob,      &
+        & derivative_X, derivative_W, derivative_b )
+
+      IMPLICIT NONE
+      INTEGER,  INTENT(in) :: batch_size, d_in, d_out
+      REAL(wp), INTENT(in) :: keep_prob
+      REAL(wp), INTENT(in) :: derivative_Y(batch_size,d_out)
+      REAL(wp), INTENT(in) :: mask        (batch_size,d_out)
+      REAL(wp), INTENT(in) :: Z           (batch_size,d_out)
+      REAL(wp), INTENT(in) :: X           (batch_size,d_in)
+      REAL(wp), INTENT(in) :: weight      (d_in,d_out)
+      CHARACTER(len=*),  INTENT(in) :: activation_func
+
+      REAL(wp), INTENT(inout) :: derivative_X(batch_size,d_in)
+      REAL(wp), INTENT(inout) :: derivative_W(d_in,d_out)
+      REAL(wp), INTENT(inout) :: derivative_b(d_out)
+
+      ! local
+      REAL(wp) :: derivative_Y_(batch_size,d_out)
+      REAL(wp) :: derivative_X_(batch_size,d_in)
+      REAL(wp) :: derivative_W_(d_in,d_out)
+      REAL(wp) :: derivative_b_(d_out)
+      REAL(wp) :: derivative_Z_(batch_size,d_out)
+
+      !REAL(wp) ::  ALPHA, BETA
+      !ALPHA = 1.0
+      !BETA = 0.0
+
+      derivative_Y_ = derivative_Y*mask/keep_prob   ! dropout backprop
+
+      IF (activation_func .eq. 'relu') THEN
+        CALL dReLU(derivative_Y_, Z, derivative_Z_, batch_size, d_out)
+      ELSE IF (activation_func .eq. 'leaky_relu') THEN
+        CALL dleaky_ReLU(derivative_Y_, Z, derivative_Z_, batch_size, d_out)
+      ELSE
+        derivative_Z_ = derivative_Y_
+      ENDIF  
+
+      derivative_W_      = matmul(transpose(X), derivative_Z_)
+
+      ! LAPACK routine for matrix multiplication:
+      ! C := alpha*op(A)*op(B) + beta*C  -----  (1)
+      !call DGEMM( 'N',                & !'N' or 'n': op(A)=A, 'T' or 't': op(A)=A**T, 'C' or 'c': op(A)=A**T
+      !  &         'N',                & !'N' or 'n': op(B)=B, 'T' or 't': op(B)=B**T, 'C' or 'c': op(B)=B**T
+      !  &         d_in,               & ! the number of rows of the matrix op(A)
+      !  &         d_out,              & ! the number of columns of the matrix op(B)
+      !  &         batch_size,         & ! the number of columns of the matrix op(A) and the number of rows of the matrix op(B)
+      !  &         ALPHA,              & ! the scalar alpha at equation (1)
+      !  &         transpose(X),       & ! A array at equation (1)
+      !  &         d_in,               & ! the first dimension of A
+      !  &         derivative_Z_,      & ! B array at equation (1)
+      !  &         batch_size,         & ! the first dimension of B
+      !  &         BETA,               & ! the scalar beta at equation (1)
+      !  &         derivative_W_,      & ! C array (output) at equation (1)
+      !  &         d_in                ) ! the first dimension of C
+
+      derivative_W_(:,:) = derivative_W_(:,:)/float(batch_size)
+      derivative_W (:,:) = derivative_W(:,:)+derivative_W_(:,:)
+      WHERE(derivative_W >  1e-12) derivative_W =  1e-12
+      WHERE(derivative_W < -1e-12) derivative_W = -1e-12
+
+      derivative_b_    = SUM(derivative_Z_, dim=1)
+      derivative_b_(:) = derivative_b_(:)/float(batch_size)
+      derivative_b (:) = derivative_b(:)+derivative_b_(:)
+      WHERE(derivative_b >  1e-12) derivative_b =  1e-12
+      WHERE(derivative_b < -1e-12) derivative_b = -1e-12
+
+      derivative_X_ = matmul(derivative_Z_, transpose(weight))
+
+      ! LAPACK routine for matrix multiplication:
+      ! C := alpha*op(A)*op(B) + beta*C  -----  (1)
+      !call DGEMM( 'N',                & !'N' or 'n': op(A)=A, 'T' or 't': op(A)=A**T, 'C' or 'c': op(A)=A**T
+      !  &         'N',                & !'N' or 'n': op(B)=B, 'T' or 't': op(B)=B**T, 'C' or 'c': op(B)=B**T
+      !  &         batch_size,         & ! the number of rows of the matrix op(A)
+      !  &         d_in,               & ! the number of columns of the matrix op(B)
+      !  &         d_out,              & ! the number of columns of the matrix op(A) and the number of rows of the matrix op(B)
+      !  &         ALPHA,              & ! the scalar alpha at equation (1)
+      !  &         derivative_Z_,      & ! A array at equation (1)
+      !  &         batch_size,         & ! the first dimension of A
+      !  &         transpose(weight),  & ! B array at equation (1)
+      !  &         d_out,              & ! the first dimension of B
+      !  &         BETA,               & ! the scalar beta at equation (1)
+      !  &         derivative_X_,      & ! C array (output) at equation (1)
+      !  &         batch_size          ) ! the first dimension of C
+
+      derivative_X(:,:) = derivative_X_(:,:)
+
+      END SUBROUTINE single_backward_propagation
+
+
+    SUBROUTINE backward(                                  &
+          input, output, target_y,                        &
+          W1, act1, layer1_out, layer1_act, layer1_mask,  &
+          W2, act2, layer2_out, layer2_act, layer2_mask,  &
+          W3, act3, layer3_out, layer3_act, layer3_mask,  &
+          W4, act4, layer4_out, layer4_act, layer4_mask,  &
+          W5, act5, layer5_out, layer5_act, layer5_mask,  &
+          W6, act6, layer6_out, layer6_act, layer6_mask,  &
+          dW1, dW2, dW3, dW4, dW5, dW6,                   &
+          db1, db2, db3, db4, db5, db6,                   &
+          batch_size, d_in, d_hid, d_out, keep_prob       )
+
+      IMPLICIT NONE
+      INTEGER,  INTENT(IN) :: batch_size, d_in, d_hid, d_out
+      REAL(wp), INTENT(IN) :: keep_prob
+      REAL(wp), INTENT(IN) :: input   (batch_size,d_in)
+      REAL(wp), INTENT(IN) :: output  (batch_size,d_out)
+      REAL(wp), INTENT(IN) :: target_y(batch_size)
+
+      REAL(wp), INTENT(IN) :: W1(d_in, d_hid)
+      REAL(wp), INTENT(IN) :: W2(d_hid,d_hid)
+      REAL(wp), INTENT(IN) :: W3(d_hid,d_hid)
+      REAL(wp), INTENT(IN) :: W4(d_hid,d_hid)
+      REAL(wp), INTENT(IN) :: W5(d_hid,d_hid)
+      REAL(wp), INTENT(IN) :: W6(d_hid,d_out)
+      character(len=*),  INTENT(IN) :: act1, act2, act3
+      character(len=*),  INTENT(IN) :: act4, act5, act6
+
+      REAL(wp), INTENT(IN) :: layer1_out(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer1_act(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer2_out(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer2_act(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer3_out(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer3_act(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer4_out(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer4_act(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer5_out(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer5_act(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer6_out(batch_size, d_out)
+      REAL(wp), INTENT(IN) :: layer6_act(batch_size, d_out)
+
+      REAL(wp), INTENT(IN) :: layer1_mask(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer2_mask(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer3_mask(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer4_mask(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer5_mask(batch_size, d_hid)
+      REAL(wp), INTENT(IN) :: layer6_mask(batch_size, d_out)
+
+      REAL(wp), INTENT(INOUT) :: dW1(d_in, d_hid), db1(d_hid)
+      REAL(wp), INTENT(INOUT) :: dW2(d_hid,d_hid), db2(d_hid)
+      REAL(wp), INTENT(INOUT) :: dW3(d_hid,d_hid), db3(d_hid)
+      REAL(wp), INTENT(INOUT) :: dW4(d_hid,d_hid), db4(d_hid)
+      REAL(wp), INTENT(INOUT) :: dW5(d_hid,d_hid), db5(d_hid)
+      REAL(wp), INTENT(INOUT) :: dW6(d_hid,d_out), db6(d_out)
+
+      ! local
+      REAL(wp) :: dlayer1_act_(batch_size, d_hid)
+      REAL(wp) :: dlayer2_act_(batch_size, d_hid)
+      REAL(wp) :: dlayer3_act_(batch_size, d_hid)
+      REAL(wp) :: dlayer4_act_(batch_size, d_hid)
+      REAL(wp) :: dlayer5_act_(batch_size, d_hid)
+      REAL(wp) :: dlayer6_act_(batch_size, d_out)
+      REAL(wp) :: dinput_     (batch_size, d_in )
+
+      dlayer6_act_(:,1) = 2.*(output(:,1)-target_y(:)*100)    ! MSE
+
+      CALL single_backward_propagation(                      &
+        & dlayer6_act_, layer6_mask, layer6_out, layer5_act, &
+        & W5, act6, batch_size, d_hid, d_out, 1._wp,         &
+        & dlayer5_act_, dW6, db6                             )
+      CALL single_backward_propagation(                      &
+        & dlayer5_act_, layer5_mask, layer5_out, layer4_act, &
+        & W5, act5, batch_size, d_hid, d_hid, keep_prob,     &
+        & dlayer4_act_, dW5, db5                             )
+      CALL single_backward_propagation(                      &
+        & dlayer4_act_, layer4_mask, layer4_out, layer3_act, &
+        & W4, act4, batch_size, d_hid, d_hid, keep_prob,     &
+        & dlayer3_act_, dW4, db4                             )
+      CALL single_backward_propagation(                      &
+        & dlayer3_act_, layer3_mask, layer3_out, layer2_act, &
+        & W3, act3, batch_size, d_hid, d_hid, keep_prob,     &
+        & dlayer2_act_, dW3, db3                             )
+      CALL single_backward_propagation(                      &
+        & dlayer2_act_, layer2_mask, layer2_out, layer1_act, &
+        & W2, act2, batch_size, d_hid, d_hid, keep_prob,     &
+        & dlayer1_act_, dW2, db2                             )
+      CALL single_backward_propagation(                      &
+        & dlayer1_act_, layer1_mask, layer1_out, input,      &
+        & W1, act1, batch_size, d_in,  d_hid, keep_prob,     &
+        & dinput_     , dW1, db1                             )
+
+      END SUBROUTINE backward
+
+
+    SUBROUTINE Adam_optimizer_1d(                    &
+          weights, gradients, momentum1, momentum2,  &
+          learning_rate, n_iter, d1                  )
+
+      IMPLICIT NONE
+      INTEGER,  INTENT(IN) :: n_iter, d1
+      REAL(wp), INTENT(IN)    :: learning_rate
+      REAL(wp), INTENT(IN)    :: gradients(d1)
+      REAL(wp), INTENT(INOUT) :: momentum1(d1)
+      REAL(wp), INTENT(INOUT) :: momentum2(d1)
+      REAL(wp), INTENT(INOUT) :: weights  (d1)
+
+      ! hyper-parameters
+      REAL(wp) :: beta1, beta2
+      beta1 = 0.9
+      beta2 = 0.999
+
+      momentum1(:)=beta1*momentum1(:)+(1-beta1)*gradients(:)
+      momentum2(:)=beta2*momentum2(:)+(1-beta2)*(gradients(:)**2)
+
+      !weights(:) = weights(:)-learning_rate                     &
+      !           * (momentum1(:)  /(1-beta1**n_iter))           &
+      !           / (((momentum2(:)/(1-beta2**n_iter))**0.5)+1e-7)
+      weights(:) = weights(:)-learning_rate                            &
+                 * (momentum1(:)  /((1-beta1**n_iter)+1e-8))           &
+                 / (((momentum2(:)/((1-beta2**n_iter)+1e-8))**0.5)+1e-8)
+
+
+      END SUBROUTINE Adam_optimizer_1d
+
+
+    SUBROUTINE Adam_optimizer_2d(                    &
+          weights, gradients, momentum1, momentum2,  &
+          learning_rate, n_iter, d1, d2              )
+
+      IMPLICIT NONE
+      INTEGER,  INTENT(IN) :: n_iter, d1, d2
+      REAL(wp), INTENT(IN)    :: learning_rate
+      REAL(wp), INTENT(IN)    :: gradients(d1,d2)
+      REAL(wp), INTENT(INOUT) :: momentum1(d1,d2)
+      REAL(wp), INTENT(INOUT) :: momentum2(d1,d2)
+      REAL(wp), INTENT(INOUT) :: weights  (d1,d2)
+
+      ! hyper-parameters
+      REAL(wp) :: beta1, beta2
+      beta1 = 0.9
+      beta2 = 0.999
+
+      momentum1(:,:)=beta1*momentum1(:,:)+(1-beta1)*gradients(:,:)
+      momentum2(:,:)=beta2*momentum2(:,:)+(1-beta2)*(gradients(:,:)**2)
+
+      weights(:,:) = weights(:,:)-learning_rate                       &
+                   * (momentum1(:,:)  /((1-beta1**n_iter)+1e-8))      &
+                   / (((momentum2(:,:)/((1-beta2**n_iter)+1e-8))**0.5 &
+                      )+1e-8)
+
+      END SUBROUTINE Adam_optimizer_2d
+
+
+    SUBROUTINE update(                       &
+          dW1, dW2, dW3, dW4, dW5, dW6,      &
+          db1, db2, db3, db4, db5, db6,      &
+          mW1, mW2, mW3, mW4, mW5, mW6,      &
+          mb1, mb2, mb3, mb4, mb5, mb6,      &
+          vW1, vW2, vW3, vW4, vW5, vW6,      &
+          vb1, vb2, vb3, vb4, vb5, vb6,      &
+          W1,  W2,  W3,  W4,  W5,  W6,       &
+          b1,  b2,  b3,  b4,  b5,  b6,       &
+          learning_rate, iteration, d_in, d_hid, d_out)
+
+      REAL(wp), INTENT(IN) :: learning_rate
+      INTEGER,  INTENT(IN) :: iteration, d_in, d_hid, d_out
+
+      REAL(wp), INTENT(IN) :: dW1(d_in, d_hid), db1(d_hid)
+      REAL(wp), INTENT(IN) :: dW2(d_hid,d_hid), db2(d_hid)
+      REAL(wp), INTENT(IN) :: dW3(d_hid,d_hid), db3(d_hid)
+      REAL(wp), INTENT(IN) :: dW4(d_hid,d_hid), db4(d_hid)
+      REAL(wp), INTENT(IN) :: dW5(d_hid,d_hid), db5(d_hid)
+      REAL(wp), INTENT(IN) :: dW6(d_hid,d_out), db6(d_out)
+
+      REAL(wp), INTENT(INOUT) :: mW1(d_in, d_hid), mb1(d_hid)
+      REAL(wp), INTENT(INOUT) :: mW2(d_hid,d_hid), mb2(d_hid)
+      REAL(wp), INTENT(INOUT) :: mW3(d_hid,d_hid), mb3(d_hid)
+      REAL(wp), INTENT(INOUT) :: mW4(d_hid,d_hid), mb4(d_hid)
+      REAL(wp), INTENT(INOUT) :: mW5(d_hid,d_hid), mb5(d_hid)
+      REAL(wp), INTENT(INOUT) :: mW6(d_hid,d_out), mb6(d_out)
+
+      REAL(wp), INTENT(INOUT) :: vW1(d_in, d_hid), vb1(d_hid)
+      REAL(wp), INTENT(INOUT) :: vW2(d_hid,d_hid), vb2(d_hid)
+      REAL(wp), INTENT(INOUT) :: vW3(d_hid,d_hid), vb3(d_hid)
+      REAL(wp), INTENT(INOUT) :: vW4(d_hid,d_hid), vb4(d_hid)
+      REAL(wp), INTENT(INOUT) :: vW5(d_hid,d_hid), vb5(d_hid)
+      REAL(wp), INTENT(INOUT) :: vW6(d_hid,d_out), vb6(d_out)
+
+      REAL(wp), INTENT(INOUT) :: W1(d_in, d_hid), b1(d_hid)
+      REAL(wp), INTENT(INOUT) :: W2(d_hid,d_hid), b2(d_hid)
+      REAL(wp), INTENT(INOUT) :: W3(d_hid,d_hid), b3(d_hid)
+      REAL(wp), INTENT(INOUT) :: W4(d_hid,d_hid), b4(d_hid)
+      REAL(wp), INTENT(INOUT) :: W5(d_hid,d_hid), b5(d_hid)
+      REAL(wp), INTENT(INOUT) :: W6(d_hid,d_out), b6(d_out)
+
+      CALL Adam_optimizer_2d(W1, dW1, mW1, vW1,  &
+        & learning_rate, iteration, d_in,  d_hid )
+      CALL Adam_optimizer_2d(W2, dW2, mW2, vW2,  &
+        & learning_rate, iteration, d_hid, d_hid )
+      CALL Adam_optimizer_2d(W3, dW3, mW3, vW3,  &
+        & learning_rate, iteration, d_hid, d_hid )
+      CALL Adam_optimizer_2d(W4, dW4, mW4, vW4,  &
+        & learning_rate, iteration, d_hid, d_hid )
+      CALL Adam_optimizer_2d(W5, dW5, mW5, vW5,  &
+        & learning_rate, iteration, d_hid, d_hid )
+      CALL Adam_optimizer_2d(W6, dW6, mW6, vW6,  &
+        & learning_rate, iteration, d_hid, d_out )
+
+      CALL Adam_optimizer_1d(b1, db1, mb1, vb1,  &
+        & learning_rate, iteration, d_hid        )
+      CALL Adam_optimizer_1d(b2, db2, mb2, vb2,  &
+        & learning_rate, iteration, d_hid        )
+      CALL Adam_optimizer_1d(b3, db3, mb3, vb3,  &
+        & learning_rate, iteration, d_hid        )
+      CALL Adam_optimizer_1d(b4, db4, mb4, vb4,  &
+        & learning_rate, iteration, d_hid        )
+      CALL Adam_optimizer_1d(b5, db5, mb5, vb5,  &
+        & learning_rate, iteration, d_hid        )
+      CALL Adam_optimizer_1d(b6, db6, mb6, vb6,  &
+        & learning_rate, iteration, d_out        )
+
+      END SUBROUTINE update
 
 #endif
 END MODULE mo_disturb_process

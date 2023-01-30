@@ -42,41 +42,8 @@ MODULE mo_disturb_init
       & lightning_climatology(:,:,:),   &
       & slope(:,:),                     &
       & roughness(:,:),                 &
-      !& topographic_position_idx(:,:),  &
-      !& terrain_ruggedness_idx(:,:),    &
-      !& vector_ruggedness_measure(:,:), &
-      !& profile_curvature(:,:),         &
-      !& tangential_curvature(:,:),      &
-
-      !& population_density(:,:),        &
-      !& gdp(:,:),                       &
-      !& hdi(:,:),                       &
       & road_density(:,:),              &
-      !& land_use_state_c3ann(:,:),      &
-      !& land_use_state_c3nfx(:,:),      &
-      !& land_use_state_c3per(:,:),      &
-      !& land_use_state_c4ann(:,:),      &
-      !& land_use_state_c4per(:,:),      &
-      !& land_use_state_pastr(:,:),      &
-      !& land_use_state_primf(:,:),      &
-      !& land_use_state_primn(:,:),      &
-      !& land_use_state_range(:,:),      &
-      !& land_use_state_secdf(:,:),      &
-      !& land_use_state_secdn(:,:),      &
-      !& land_use_state_secma(:,:),      &
-      !& land_use_state_secmb(:,:),      &
-      !& land_use_state_urban(:,:),      &
       & gfed_region(:,:)
-
-      !& t_air_local_clim(:,:,:),        &
-      !& q_rel_local_clim(:,:,:),        &
-      !& q_local_clim(:,:,:),            &
-      !& ws10_local_clim(:,:,:),         &
-      !& swvl1_local_clim(:,:,:),        &
-      !& swvl2_local_clim(:,:,:),        &
-      !& swvl3_local_clim(:,:,:),        &
-      !& swvl4_local_clim(:,:,:),        &
-      !& lai_local_clim(:,:,:)
 
   END TYPE t_disturb_init_vars
 
@@ -121,42 +88,8 @@ CONTAINS
       & disturb_init_vars%lightning_climatology,       &
       & disturb_init_vars%slope,                       &
       & disturb_init_vars%roughness,                   &
-      !& disturb_init_vars%topographic_position_idx,    &
-      !& disturb_init_vars%terrain_ruggedness_idx,      &
-      !& disturb_init_vars%vector_ruggedness_measure,   &
-      !& disturb_init_vars%profile_curvature,           &
-      !& disturb_init_vars%tangential_curvature,        &
-
-      !& disturb_init_vars%population_density,          &
-      !& disturb_init_vars%gdp,                         &
-      !& disturb_init_vars%hdi,                         &
       & disturb_init_vars%road_density,                &
-      !& disturb_init_vars%land_use_state_c3ann,        &
-      !& disturb_init_vars%land_use_state_c3nfx,        &
-      !& disturb_init_vars%land_use_state_c3per,        &
-      !& disturb_init_vars%land_use_state_c4ann,        &
-      !& disturb_init_vars%land_use_state_c4per,        &
-      !& disturb_init_vars%land_use_state_pastr,        &
-      !& disturb_init_vars%land_use_state_primf,        &
-      !& disturb_init_vars%land_use_state_primn,        &
-      !& disturb_init_vars%land_use_state_range,        &
-      !& disturb_init_vars%land_use_state_secdf,        &
-      !& disturb_init_vars%land_use_state_secdn,        &
-      !& disturb_init_vars%land_use_state_secma,        &
-      !& disturb_init_vars%land_use_state_secmb,        &
-      !& disturb_init_vars%land_use_state_urban,        &
-
       & disturb_init_vars%gfed_region                  &
-
-      !& disturb_init_vars%t_air_local_clim,            &
-      !& disturb_init_vars%q_rel_local_clim,            &
-      !& disturb_init_vars%q_local_clim,                &
-      !& disturb_init_vars%ws10_local_clim,             &
-      !& disturb_init_vars%swvl1_local_clim,            &
-      !& disturb_init_vars%swvl2_local_clim,            &
-      !& disturb_init_vars%swvl3_local_clim,            &
-      !& disturb_init_vars%swvl4_local_clim,            &
-      !& disturb_init_vars%lai_local_clim               &
       & )
 
   END SUBROUTINE disturb_finalize_init_vars
@@ -188,91 +121,15 @@ CONTAINS
       & disturb_init_vars%lightning_climatology(nproma, nblks, 1:366),               &
       & disturb_init_vars%slope(nproma, nblks),                                      &
       & disturb_init_vars%roughness(nproma, nblks),                                  &
-      !& disturb_init_vars%topographic_position_idx(nproma, nblks),                   &
-      !& disturb_init_vars%terrain_ruggedness_idx(nproma, nblks),                     &
-      !& disturb_init_vars%vector_ruggedness_measure(nproma, nblks),                  &
-      !& disturb_init_vars%profile_curvature(nproma, nblks),                          &
-      !& disturb_init_vars%tangential_curvature(nproma, nblks),                       &
-
-      !& disturb_init_vars%population_density(nproma, nblks),                         &
-      !& disturb_init_vars%gdp(nproma, nblks),                                        &
-      !& disturb_init_vars%hdi(nproma, nblks),                                        &
       & disturb_init_vars%road_density(nproma, nblks),                               &
-      !& disturb_init_vars%land_use_state_c3ann(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_c3nfx(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_c3per(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_c4ann(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_c4per(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_pastr(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_primf(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_primn(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_range(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_secdf(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_secdn(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_secma(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_secmb(nproma, nblks),                       &
-      !& disturb_init_vars%land_use_state_urban(nproma, nblks),                       &
-
-      !& disturb_init_vars%t_air_local_clim (nproma, nblks, 1:366),                   &
-      !& disturb_init_vars%q_rel_local_clim (nproma, nblks, 1:366),                   &
-      !& disturb_init_vars%q_local_clim     (nproma, nblks, 1:366),                   &
-      !& disturb_init_vars%ws10_local_clim  (nproma, nblks, 1:366),                   &
-      !& disturb_init_vars%swvl1_local_clim (nproma, nblks, 1:366),                   &
-      !& disturb_init_vars%swvl2_local_clim (nproma, nblks, 1:366),                   &
-      !& disturb_init_vars%swvl3_local_clim (nproma, nblks, 1:366),                   &
-      !& disturb_init_vars%swvl4_local_clim (nproma, nblks, 1:366),                   &
-      !& disturb_init_vars%lai_local_clim   (nproma, nblks, 1:366)                    &
-      !& disturb_init_vars%t_air_local_clim (nproma, nblks, 1:12),                   &
-      !& disturb_init_vars%q_rel_local_clim (nproma, nblks, 1:12),                   &
-      !& disturb_init_vars%q_local_clim     (nproma, nblks, 1:12),                   &
-      !& disturb_init_vars%ws10_local_clim  (nproma, nblks, 1:12),                   &
-      !& disturb_init_vars%swvl1_local_clim (nproma, nblks, 1:12),                   &
-      !& disturb_init_vars%swvl2_local_clim (nproma, nblks, 1:12),                   &
-      !& disturb_init_vars%swvl3_local_clim (nproma, nblks, 1:12),                   &
-      !& disturb_init_vars%swvl4_local_clim (nproma, nblks, 1:12),                   &
-      !& disturb_init_vars%lai_local_clim   (nproma, nblks, 1:12)                    &
-      & disturb_init_vars%gfed_region(nproma, nblks)                                   &
+      & disturb_init_vars%gfed_region(nproma, nblks)                                 &
       & )
 
     disturb_init_vars%lightning_climatology  (:,:,:) = missval
     disturb_init_vars%slope                    (:,:) = missval
     disturb_init_vars%roughness                (:,:) = missval
-    !disturb_init_vars%topographic_position_idx (:,:) = missval
-    !disturb_init_vars%terrain_ruggedness_idx   (:,:) = missval
-    !disturb_init_vars%vector_ruggedness_measure(:,:) = missval
-    !disturb_init_vars%profile_curvature        (:,:) = missval
-    !disturb_init_vars%tangential_curvature     (:,:) = missval
-
-    !disturb_init_vars%population_density       (:,:) = missval
-    !disturb_init_vars%gdp                      (:,:) = missval
-    !disturb_init_vars%hdi                      (:,:) = missval
     disturb_init_vars%road_density             (:,:) = missval
-    !disturb_init_vars%land_use_state_c3ann     (:,:) = missval
-    !disturb_init_vars%land_use_state_c3nfx     (:,:) = missval
-    !disturb_init_vars%land_use_state_c3per     (:,:) = missval
-    !disturb_init_vars%land_use_state_c4ann     (:,:) = missval
-    !disturb_init_vars%land_use_state_c4per     (:,:) = missval
-    !disturb_init_vars%land_use_state_pastr     (:,:) = missval
-    !disturb_init_vars%land_use_state_primf     (:,:) = missval
-    !disturb_init_vars%land_use_state_primn     (:,:) = missval
-    !disturb_init_vars%land_use_state_range     (:,:) = missval
-    !disturb_init_vars%land_use_state_secdf     (:,:) = missval
-    !disturb_init_vars%land_use_state_secdn     (:,:) = missval
-    !disturb_init_vars%land_use_state_secma     (:,:) = missval
-    !disturb_init_vars%land_use_state_secmb     (:,:) = missval
-    !disturb_init_vars%land_use_state_urban     (:,:) = missval
-
     disturb_init_vars%gfed_region              (:,:) = missval
-
-    !disturb_init_vars%t_air_local_clim (:,:,:) = missval
-    !disturb_init_vars%q_rel_local_clim (:,:,:) = missval
-    !disturb_init_vars%q_local_clim     (:,:,:) = missval
-    !disturb_init_vars%ws10_local_clim  (:,:,:) = missval
-    !disturb_init_vars%swvl1_local_clim (:,:,:) = missval
-    !disturb_init_vars%swvl2_local_clim (:,:,:) = missval
-    !disturb_init_vars%swvl3_local_clim (:,:,:) = missval
-    !disturb_init_vars%swvl4_local_clim (:,:,:) = missval
-    !disturb_init_vars%lai_local_clim   (:,:,:) = missval
 
     dsl4jsb_Get_config(DISTURB_)
 
@@ -307,31 +164,6 @@ CONTAINS
     disturb_init_vars%roughness(:,:) = ptr_2D(:,:)
     DEALLOCATE(ptr_2D)
 
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='tpi')
-    !disturb_init_vars%topographic_position_idx(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='tri')
-    !disturb_init_vars%terrain_ruggedness_idx(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='vrm')
-    !disturb_init_vars%vector_ruggedness_measure(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='pcurv')
-    !disturb_init_vars%profile_curvature(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='tcurv')
-    !disturb_init_vars%tangential_curvature(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
     CALL input_file%Close()
 
     !  anthropogenic factors
@@ -341,95 +173,11 @@ CONTAINS
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%bc_anthropogenic_filename), model%grid_id)
 
     IF (debug_on()) CALL message(TRIM(routine), 'reading anthropogenic variables ...')
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='population_density')
-    !disturb_init_vars%population_density(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='gdp')
-    !disturb_init_vars%gdp(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='hdi')
-    !disturb_init_vars%hdi(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
 
     ptr_2D => input_file%Read_2d(    &
       & variable_name='road_density')
     disturb_init_vars%road_density(:,:) = ptr_2D(:,:)
     DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_c3ann')
-    !disturb_init_vars%land_use_state_c3ann(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_c3nfx')
-    !disturb_init_vars%land_use_state_c3nfx(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_c3per')
-    !disturb_init_vars%land_use_state_c3per(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_c4ann')
-    !disturb_init_vars%land_use_state_c4ann(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_c4per')
-    !disturb_init_vars%land_use_state_c4per(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_pastr')
-    !disturb_init_vars%land_use_state_pastr(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_primf')
-    !disturb_init_vars%land_use_state_primf(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_primn')
-    !disturb_init_vars%land_use_state_primn(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_range')
-    !disturb_init_vars%land_use_state_range(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_secdf')
-    !disturb_init_vars%land_use_state_secdf(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_secdn')
-    !disturb_init_vars%land_use_state_secdn(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_secma')
-    !disturb_init_vars%land_use_state_secma(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_secmb')
-    !disturb_init_vars%land_use_state_secmb(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
-
-    !ptr_2D => input_file%Read_2d(    &
-    !  & variable_name='LUS_urban')
-    !disturb_init_vars%land_use_state_urban(:,:) = ptr_2D(:,:)
-    !DEALLOCATE(ptr_2D)
 
     CALL input_file%Close()
 
@@ -446,152 +194,6 @@ CONTAINS
     DEALLOCATE(ptr_2D)
 
     CALL input_file%Close()
-
-
-    ! population density
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (population density) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%bc_population_filename))
-    !
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%bc_population_filename), model%grid_id)
-    !
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading population density ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='population_density')
-    !disturb_init_vars%population_density(:,:,1:366) = ptr_3D(:,:,1:366)
-    !DEALLOCATE(ptr_3D)
-
-    ! temperature (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (temperature local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_t_air_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_t_air_filename), model%grid_id)
-
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading local mean of temperature ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='t2m')
-    !disturb_init_vars%t_air_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%t_air_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    !CALL input_file%Close()
-
-    ! relative humidity (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (relative humidity local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_rH_cf_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_rH_cf_filename), model%grid_id)
-
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading local mean relative humidity ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='rH_cf')
-    !disturb_init_vars%q_rel_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%q_rel_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    !CALL input_file%Close()
-
-    ! specific humidity (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (specific humidity local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_q_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_q_filename), model%grid_id)
-
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading local mean specific humidity ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='q')
-    !disturb_init_vars%q_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%q_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    !CALL input_file%Close()
-
-    ! wind speed (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (wind speed local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_ws10_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_ws10_filename), model%grid_id)
-
-    !!IF (debug_on()) CALL message(TRIM(routine), 'reading local mean wind speed ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='ws10')
-    !disturb_init_vars%ws10_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%ws10_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    !CALL input_file%Close()
-
-    ! soil water content level1 (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (soil water level1 local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl1_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl1_filename), model%grid_id)
-
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading local mean soil water content level1 ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='swvl1')
-    !disturb_init_vars%swvl1_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%swvl1_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    !CALL input_file%Close()
-
-    ! soil water content level2 (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (soil water level2 local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl2_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl2_filename), model%grid_id)
-
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading local mean soil water content level2 ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='swvl2')
-    !disturb_init_vars%swvl2_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%swvl2_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    ! soil water content level3 (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (soil water level3 local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl3_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl3_filename), model%grid_id)
-
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading local mean soil water content level3 ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='swvl3')
-    !disturb_init_vars%swvl3_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%swvl3_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    !CALL input_file%Close()
-
-    ! soil water content level4 (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (soil water level4 local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl4_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_swvl4_filename), model%grid_id)
-
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading local mean soil water content level4 ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='swvl4')
-    !disturb_init_vars%swvl4_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%swvl4_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    !CALL input_file%Close()
-
-    ! LAI (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'Reading/setting disturbance (lai local mean) init from ' &
-    !  &                          //TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_lai_filename))
-
-    !input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(DISTURB_)%dl_local_clim_lai_filename), model%grid_id)
-
-    !IF (debug_on()) CALL message(TRIM(routine), 'reading local mean lai ...')
-    !ptr_3D => input_file%Read_2d_time(    &
-    !  & variable_name='Lai')
-    !disturb_init_vars%lai_local_clim(:,:,1:366) = ptr_3D(:,:,1:366)
-    !disturb_init_vars%lai_local_clim(:,:,1:12) = ptr_3D(:,:,1:12)
-    !DEALLOCATE(ptr_3D)
-
-    !CALL input_file%Close()
 
   END SUBROUTINE disturb_read_init_vars
 
@@ -624,89 +226,14 @@ CONTAINS
 
     dsl4jsb_memory(DISTURB_)%slope(:,:)                     = disturb_init_vars%slope(:,:)
     dsl4jsb_memory(DISTURB_)%roughness(:,:)                 = disturb_init_vars%roughness(:,:)
-    !dsl4jsb_memory(DISTURB_)%topographic_position_idx(:,:)  = disturb_init_vars%topographic_position_idx(:,:)
-    !sl4jsb_memory(DISTURB_)%terrain_ruggedness_idx(:,:)    = disturb_init_vars%terrain_ruggedness_idx(:,:)
-    !dsl4jsb_memory(DISTURB_)%vector_ruggedness_measure(:,:) = disturb_init_vars%vector_ruggedness_measure(:,:)
-    !dsl4jsb_memory(DISTURB_)%profile_curvature(:,:)         = disturb_init_vars%profile_curvature(:,:)
-    !dsl4jsb_memory(DISTURB_)%tangential_curvature(:,:)      = disturb_init_vars%tangential_curvature(:,:)
 
     ! Anthropogenic factors
     IF (debug_on()) CALL message(TRIM(routine), 'setting anthropogenic factors ...')
-
-    !dsl4jsb_memory(DISTURB_)%population_density(:,:)        = disturb_init_vars%population_density(:,:)
-    !dsl4jsb_memory(DISTURB_)%gdp(:,:)                       = disturb_init_vars%gdp(:,:)
-    !dsl4jsb_memory(DISTURB_)%hdi(:,:)                       = disturb_init_vars%hdi(:,:)
     dsl4jsb_memory(DISTURB_)%road_density(:,:)              = disturb_init_vars%road_density(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_c3ann(:,:)      = disturb_init_vars%land_use_state_c3ann(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_c3nfx(:,:)      = disturb_init_vars%land_use_state_c3nfx(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_c3per(:,:)      = disturb_init_vars%land_use_state_c3per(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_c4ann(:,:)      = disturb_init_vars%land_use_state_c4ann(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_c4per(:,:)      = disturb_init_vars%land_use_state_c4per(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_pastr(:,:)      = disturb_init_vars%land_use_state_pastr(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_primf(:,:)      = disturb_init_vars%land_use_state_primf(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_primn(:,:)      = disturb_init_vars%land_use_state_primn(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_range(:,:)      = disturb_init_vars%land_use_state_range(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_secdf(:,:)      = disturb_init_vars%land_use_state_secdf(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_secdn(:,:)      = disturb_init_vars%land_use_state_secdn(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_secma(:,:)      = disturb_init_vars%land_use_state_secma(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_secmb(:,:)      = disturb_init_vars%land_use_state_secmb(:,:)
-    !dsl4jsb_memory(DISTURB_)%land_use_state_urban(:,:)      = disturb_init_vars%land_use_state_urban(:,:)
 
     ! GFED4 reference regions
     IF (debug_on()) CALL message(TRIM(routine), 'setting GFED4 reference regions ...')
     dsl4jsb_memory(DISTURB_)%gfed_region(:,:)               = disturb_init_vars%gfed_region(:,:)
-
-
-    ! population density
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting population density ...')
-    !dsl4jsb_memory(DISTURB_)%population_density(:,:,:) = disturb_init_vars%population_density(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%population_density)
-
-    ! temperature (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting temperature local mean ...')
-    !dsl4jsb_memory(DISTURB_)%t_air_local_clim(:,:,:) = disturb_init_vars%t_air_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%t_air_local_clim)
-
-    ! relative humidity (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting relative humidity local mean ...')
-    !dsl4jsb_memory(DISTURB_)%q_rel_local_clim(:,:,:) = disturb_init_vars%q_rel_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%q_rel_local_clim)
-
-    ! speficif humidity (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting specific humidity local mean ...')
-    !dsl4jsb_memory(DISTURB_)%q_local_clim(:,:,:) = disturb_init_vars%q_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%q_local_clim)
-
-    ! wind speed (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting wind speed local mean ...')
-    !dsl4jsb_memory(DISTURB_)%ws10_local_clim(:,:,:) = disturb_init_vars%ws10_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%ws10_local_clim)
-
-    ! soil water content level1 (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting soil water content level1 local mean ...')
-    !dsl4jsb_memory(DISTURB_)%swvl1_local_clim(:,:,:) = disturb_init_vars%swvl1_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%swvl1_local_clim)
-
-    ! soil water content level2 (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting soil water content level2 local mean ...')
-    !dsl4jsb_memory(DISTURB_)%swvl2_local_clim(:,:,:) = disturb_init_vars%swvl2_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%swvl2_local_clim)
-
-    ! soil water content level3 (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting soil water content level3 local mean ...')
-    !dsl4jsb_memory(DISTURB_)%swvl3_local_clim(:,:,:) = disturb_init_vars%swvl3_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%swvl3_local_clim)
-
-    ! soil water content level4 (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting soil water content level4 local mean ...')
-    !dsl4jsb_memory(DISTURB_)%swvl4_local_clim(:,:,:) = disturb_init_vars%swvl4_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%swvl4_local_clim)
-
-    ! lai (local mean)
-    !IF (debug_on()) CALL message(TRIM(routine), 'setting lai local mean ...')
-    !dsl4jsb_memory(DISTURB_)%lai_local_clim(:,:,:) = disturb_init_vars%lai_local_clim(:,:,:)
-    !$acc update device(dsl4jsb_memory(DISTURB_)%lai_local_clim)
-
 
   END SUBROUTINE disturb_init_bc
 

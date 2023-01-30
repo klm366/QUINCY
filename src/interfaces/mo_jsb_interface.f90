@@ -110,23 +110,25 @@ CONTAINS
     ! For anthropogenic forcing     < Rackhun Son >
     & a_temperature,                                                    &
     & a_rel_humidity,                                                   &
-    & population,                                                       &
-    & gdp,                                                              &
-    & hdi,                                                              &
-    & land_use_primf,                                                   &
-    & land_use_c4per,                                                   &
-    & land_use_urban,                                                   &
-    & land_use_secdf,                                                   &
-    & land_use_secma,                                                   &
-    & land_use_primn,                                                   &
-    & land_use_secdn,                                                   &
-    & land_use_c4ann,                                                   &
-    & land_use_pastr,                                                   &
-    & land_use_range,                                                   &
-    & land_use_c3ann,                                                   &
-    & land_use_c3nfx,                                                   &
-    & land_use_c3per,                                                   &
-    & land_use_secmb)
+    & fba,                                                              &
+    & fba_smooth)
+    !& population,                                                       &
+    !& gdp,                                                              &
+    !& hdi,                                                              &
+    !& land_use_primf,                                                   &
+    !& land_use_c4per,                                                   &
+    !& land_use_urban,                                                   &
+    !& land_use_secdf,                                                   &
+    !& land_use_secma,                                                   &
+    !& land_use_primn,                                                   &
+    !& land_use_secdn,                                                   &
+    !& land_use_c4ann,                                                   &
+    !& land_use_pastr,                                                   &
+    !& land_use_range,                                                   &
+    !& land_use_c3ann,                                                   &
+    !& land_use_c3nfx,                                                   &
+    !& land_use_c3per,                                                   &
+    !& land_use_secmb)
 
 #ifndef __ICON__
     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
@@ -225,23 +227,25 @@ CONTAINS
     REAL(wp), INTENT(in), OPTIONAL ::    &
       & a_temperature(:),                &
       & a_rel_humidity(:),               &
-      & population(:),                   &
-      & gdp(:),                          &
-      & hdi(:),                          &
-      & land_use_primf(:),               &
-      & land_use_c4per(:),               &
-      & land_use_urban(:),               &
-      & land_use_secdf(:),               &
-      & land_use_secma(:),               &
-      & land_use_primn(:),               &
-      & land_use_secdn(:),               &
-      & land_use_c4ann(:),               &
-      & land_use_pastr(:),               &
-      & land_use_range(:),               &
-      & land_use_c3ann(:),               &
-      & land_use_c3nfx(:),               &
-      & land_use_c3per(:),               &
-      & land_use_secmb(:)
+      & fba(:),                          &
+      & fba_smooth(:)
+      !& population(:),                   &
+      !& gdp(:),                          &
+      !& hdi(:),                          &
+      !& land_use_primf(:),               &
+      !& land_use_c4per(:),               &
+      !& land_use_urban(:),               &
+      !& land_use_secdf(:),               &
+      !& land_use_secma(:),               &
+      !& land_use_primn(:),               &
+      !& land_use_secdn(:),               &
+      !& land_use_c4ann(:),               &
+      !& land_use_pastr(:),               &
+      !& land_use_range(:),               &
+      !& land_use_c3ann(:),               &
+      !& land_use_c3nfx(:),               &
+      !& land_use_c3per(:),               &
+      !& land_use_secmb(:)
     
 
     ! Local variables
@@ -336,23 +340,25 @@ CONTAINS
       & model%options(no_omp_thread),               &
       & a_temperature      = a_temperature(:),      &
       & a_rel_humidity     = a_rel_humidity(:),     &
-      & population         = population(:),         &
-      & gdp                = gdp(:),                &
-      & hdi                = hdi(:),                &
-      & land_use_primf     = land_use_primf(:),     &
-      & land_use_c4per     = land_use_c4per(:),     &
-      & land_use_urban     = land_use_urban(:),     &
-      & land_use_secdf     = land_use_secdf(:),     &
-      & land_use_secma     = land_use_secma(:),     &
-      & land_use_primn     = land_use_primn(:),     &
-      & land_use_secdn     = land_use_secdn(:),     &
-      & land_use_c4ann     = land_use_c4ann(:),     &
-      & land_use_pastr     = land_use_pastr(:),     &
-      & land_use_range     = land_use_range(:),     &
-      & land_use_c3ann     = land_use_c3ann(:),     &
-      & land_use_c3nfx     = land_use_c3nfx(:),     &
-      & land_use_c3per     = land_use_c3per(:),     &
-      & land_use_secmb     = land_use_secmb(:),     &
+      & fba                = fba(:),                &
+      & fba_smooth         = fba_smooth(:),         &
+      !& population         = population(:),         &
+      !& gdp                = gdp(:),                &
+      !& hdi                = hdi(:),                &
+      !& land_use_primf     = land_use_primf(:),     &
+      !& land_use_c4per     = land_use_c4per(:),     &
+      !& land_use_urban     = land_use_urban(:),     &
+      !& land_use_secdf     = land_use_secdf(:),     &
+      !& land_use_secma     = land_use_secma(:),     &
+      !& land_use_primn     = land_use_primn(:),     &
+      !& land_use_secdn     = land_use_secdn(:),     &
+      !& land_use_c4ann     = land_use_c4ann(:),     &
+      !& land_use_pastr     = land_use_pastr(:),     &
+      !& land_use_range     = land_use_range(:),     &
+      !& land_use_c3ann     = land_use_c3ann(:),     &
+      !& land_use_c3nfx     = land_use_c3nfx(:),     &
+      !& land_use_c3per     = land_use_c3per(:),     &
+      !& land_use_secmb     = land_use_secmb(:),     &
       & DEBUG_VAR          = DEBUG_VAR              &
       & )
     NULLIFY(tile)
