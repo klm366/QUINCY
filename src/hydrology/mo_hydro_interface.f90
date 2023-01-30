@@ -621,35 +621,39 @@ CONTAINS
       END IF
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_hydrology_land_1 tile_name=tile%name
       CALL calc_surface_hydrology_land(   &
-        & lstart,                         & !< in
-        & dtime,                          & !< in
-        & dsl4jsb_Config(SSE_)%l_dynsnow, & !< in
-        & dsl4jsb_Config(HYDRO_)%snow_depth_max, & !< in
-        & t_unfilt(:),                    & !< in
-        & wind_10m(:),                    & !< in
-        & t_air(:),                       & !< in
-        & skinres_canopy_max(:),          & !< in
-        & skinres_max(:),                 & !< in
-        & fract_snow(:),                  & !< in
-        & fract_wet(:),                   & !< in
-        & hcap_grnd(:),                   & !< in
-        & evapotrans(:),                  & !< in
-        & evapopot(:),                    & !< in
-        & trans_tmp(:),                   & !< in
-        & rain(:),                        & !< in
-        & snow(:),                        & !< in
-        & wtr_skin(:),                    & !< inout
-        & weq_snow_soil(:),               & !< inout
-        & weq_snow_can(:),                & !< inout
-        & snow_soil_dens(:),              & !< inout
-        & q_snocpymlt(:),                 & !< out
-        & snow_accum(:),                  & !< out
-        & snowmelt(:),                    & !< out
-        & evapotrans_soil(:),             & !< out
-        & evapo_skin(:),                  & !< out
-        & evapo_snow(:),                  & !< out
-        & water_to_soil(:),               & !< out
-        & evapo_deficit(:)                & !< out
+        ! in
+        & nc,                             & !< Number of grid cells
+        & lstart,                         & !< T: Start of experiment
+        & dtime,                          & !< time step length [s]
+        & dsl4jsb_Config(SSE_)%l_dynsnow, & !< T: Compute density of snow dynamically
+        & dsl4jsb_Config(HYDRO_)%snow_depth_max, & !< Snow depth limit [m water equivalent]; -1. for no limit
+        & t_unfilt(:),                    & !< Surface tempemperature [K] (unfiltered)
+        & wind_10m(:),                    & !< wind speed at 10m height [m/s]
+        & t_air(:),                       & !< lowest layer atmosphere temperature [K]
+        & skinres_canopy_max(:),          & !< Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
+        & skinres_max(:),                 & !< Total capacity of the skin reservoirs, i.e. soil and canopy [m]
+        & fract_snow(:),                  & !< surface snow fraction []
+        & fract_wet(:),                   & !< skin reservoir fraction []
+        & hcap_grnd(:),                   & !< heat capacity of the uppermost soil layer [J m-2 K-1]
+        & evapotrans(:),                  & !< evapotranspiration (including sublimation) [kg m-2 s-1]
+        & evapopot(:),                    & !< potential evaporation (if there was enough water/ice) [kg m-2 s-1]
+        & trans_tmp(:),                   & !< transpiration [kg m-2 s-1]
+        & rain(:),                        & !< liquid precipitation [kg m-2 s-1]
+        & snow(:),                        & !< solid precipitation [kg m-2 s-1]
+        ! inout
+        & wtr_skin(:),                    & !< water content of the skin reservoir (vegetation and bare soil) [m]
+        & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]
+        & weq_snow_can(:),                & !< snow depth on the canopy [m water equivalent]
+        & snow_soil_dens(:),              & !< snow density on soil at non-glacier points [m water equivalent]
+        ! out
+        & q_snocpymlt(:),                 & !< Heating due to snow melt on canopy [W m-2]
+        & snow_accum(:),                  & !< snow budget change within time step [m water equivalent]
+        & snowmelt(:),                    & !< snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
+        & evapotrans_soil(:),             & !< evapotranspiration from soil w/o skin and snow reservoirs [kg m-2 s-1]
+        & evapo_skin(:),                  & !< evaporation from skin reservoir [kg m-2 s-1]
+        & evapo_snow(:),                  & !< evaporation from snow [kg m-2 s-1]
+        & water_to_soil(:),               & !< Water available for infiltration into the soil [m water equivalent]
+        & evapo_deficit(:)                & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
         & )
 
       IF (model%config%l_compat401) THEN
@@ -660,7 +664,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_runoff_1 tile_name=tile%name
       ! @todo: surface runoff as part of the surface hydrology is computed before the snow and soil temperatures
-      !        are updated. This about whether this order is correct!
+      !        are updated. Think about whether this order is correct!
       CALL calc_surface_runoff( &
         ! in
         & nc, &

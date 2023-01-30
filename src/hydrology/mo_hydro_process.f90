@@ -75,8 +75,8 @@ CONTAINS
   !! @param [out]    water_to_soil         Water available for infiltration into the soil [m water equivalent]
   !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
   !
-  PURE ELEMENTAL SUBROUTINE calc_surface_hydrology_land (           &
-    & lstart, dtime, l_dynsnow, snow_depth_max,                     &
+  SUBROUTINE calc_surface_hydrology_land (                          &
+    & nc, lstart, dtime, l_dynsnow, snow_depth_max,                 &
     & t_unfilt, wind_10m, t_air,                                    &
     & skinres_canopy_max, skinres_max, fract_snow, fract_wet,       &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
@@ -88,45 +88,46 @@ CONTAINS
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
     USE mo_sse_constants,          ONLY: snow_depth_min
 
+    INTEGER,  INTENT(in) :: nc
     LOGICAL,  INTENT(in) :: lstart, l_dynsnow
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     !$claw model-data
-    REAL(wp), INTENT(in) ::                                                         &
-      & t_unfilt, wind_10m, t_air, skinres_canopy_max, skinres_max,                 &
-      & fract_snow, fract_wet, hcap_grnd, evapotrans, evapopot, transpiration, rain, snow
+    REAL(wp), INTENT(in) ::                                                                        &
+      & t_unfilt(:), wind_10m(:), t_air(:), skinres_canopy_max(:), skinres_max(:), fract_snow(:),  &
+      & fract_wet(:), hcap_grnd(:), evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:)
     REAL(wp), INTENT(inout) :: &
-      & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens
-    REAL(wp), INTENT(out)   ::                   &
-      & q_snocpymlt, snow_accum, snowmelt_soil,  &
-      & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil, evapo_deficit
+      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:)
+    REAL(wp), INTENT(out)   ::                                               &
+      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), evapotrans_soil(:), &
+      & evapo_skin(:), evapo_snow(:), water_to_soil(:), evapo_deficit(:)
     !$claw end model-data
     !
     !  local variables
     !
-    REAL(wp) ::               &
-      & rain_in_m,            & !< amount of rainfall within time step [m]
-      & new_snow,             & !< amount of snowfall within time step [m]
-      & weq_snow_soil_old,    & !< amount of snow prior to update [m]
-      & evapotrans_in_m,      & !< amount of evapotranspiration within time step [m]
-      & evapotrans_soil_in_m, & !< amount of evapotranspiration from soil (w/o snow and skin) within time step [m]
-      & evapo_soil_in_m,      & !< amount of ground evaporation within time step [m]
-      & evapo_skin_in_m,      & !< amount of evaporation from skin reservoir within time step [m]
-      & transpiration_in_m,   & !< amount of transpiration within time step [m]
-      & evapo_snow_in_m,      & !< amount of sublimation from snow within time step [m]
-      & snowmelt_can,         & !< snow melt from canopy [m]
-      & snowmelt_pot_in_m,    & !< potential amount of snow melt [m]
-      & new_snow_can,         & !< amount of snowfall on canopy within time step [m]
-      & new_snow_soil,        & !< amount of snowfall to soil within time step [m]
-      & exp_t, exp_w,         & !< exponents needed for unloading of snow due to temperature / wind
-      & snow_blown,           & !< amount of snow blown from canopy to the ground
-      & canopy_pre_snow,      & !< snow depth on the canopy prior to its update
-      & evapotrans_no_snow,   & !< evapotranspiration without snow evaporation [m]
-      & evapo_snow_pot_in_m,  & !< potential snow evaporation
-      & evapo_skin_pot_in_m,  & !< potential evaporation from wet surface (skin reservoir)
-      & rain_to_skinres,      & !< amount of rain going into the skin reservoir
-      & wtr_skin_pre_rain       !< amount of water in the skin reservoir prior to the update [m]
+    REAL(wp) ::                   &
+      & rain_in_m(nc),            & !< amount of rainfall within time step [m]
+      & new_snow(nc),             & !< amount of snowfall within time step [m]
+      & weq_snow_soil_old(nc),    & !< amount of snow prior to update [m]
+      & evapotrans_in_m(nc),      & !< amount of evapotranspiration within time step [m]
+      & evapotrans_soil_in_m(nc), & !< amount of evapotranspiration from soil (w/o snow and skin) within time step [m]
+      & evapo_soil_in_m(nc),      & !< amount of ground evaporation within time step [m]
+      & evapo_skin_in_m(nc),      & !< amount of evaporation from skin reservoir within time step [m]
+      & transpiration_in_m(nc),   & !< amount of transpiration within time step [m]
+      & evapo_snow_in_m(nc),      & !< amount of sublimation from snow within time step [m]
+      & snowmelt_can(nc),         & !< snow melt from canopy [m]
+      & snowmelt_pot_in_m(nc),    & !< potential amount of snow melt [m]
+      & new_snow_can(nc),         & !< amount of snowfall on canopy within time step [m]
+      & new_snow_soil(nc),        & !< amount of snowfall to soil within time step [m]
+      & exp_t(nc), exp_w(nc),     & !< exponents needed for unloading of snow due to temperature / wind
+      & snow_blown(nc),           & !< amount of snow blown from canopy to the ground
+      & canopy_pre_snow(nc),      & !< snow depth on the canopy prior to its update
+      & evapotrans_no_snow(nc),   & !< evapotranspiration without snow evaporation [m]
+      & evapo_snow_pot_in_m(nc),  & !< potential snow evaporation
+      & evapo_skin_pot_in_m(nc),  & !< potential evaporation from wet surface (skin reservoir)
+      & rain_to_skinres(nc),      & !< amount of rain going into the skin reservoir
+      & wtr_skin_pre_rain(nc)       !< amount of water in the skin reservoir prior to the update [m]
 
-
+    INTEGER :: i
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
     !
@@ -136,145 +137,145 @@ CONTAINS
 
     !$claw sca
 
-    snow_accum = 0._wp
-    weq_snow_soil_old = weq_snow_soil
-    snowmelt_soil = 0._wp
-    evapotrans_soil = 0._wp
-    evapo_skin = 0._wp
-    evapo_snow = 0._wp
-    water_to_soil = 0._wp
-    evapo_deficit = 0._wp
+    snow_accum(:)        = 0._wp
+    weq_snow_soil_old(:) = weq_snow_soil(:)
+    snowmelt_soil(:)     = 0._wp
+    evapotrans_soil(:)   = 0._wp
+    evapo_skin(:)        = 0._wp
+    evapo_snow(:)        = 0._wp
+    water_to_soil(:)     = 0._wp
+    evapo_deficit(:)     = 0._wp
 
     !-----------------------------------------------------------------
     ! Convert water fluxes to m water equivalent within the time step
     !-----------------------------------------------------------------
 
-    rain_in_m           = rain          * dtime/rhoh2o
-    new_snow            = snow          * dtime/rhoh2o   !in_m       ! snow_fall
-    evapotrans_in_m     = evapotrans    * dtime/rhoh2o
-    transpiration_in_m  = transpiration * dtime/rhoh2o
-    evapo_snow_pot_in_m = fract_snow    * evapopot * dtime/rhoh2o
-    evapotrans_no_snow  = evapotrans_in_m - evapo_snow_pot_in_m
-    evapo_skin_pot_in_m = (1._wp - fract_snow) * fract_wet * evapopot * dtime/rhoh2o
+    rain_in_m(:)           = rain(:)          * dtime/rhoh2o
+    new_snow(:)            = snow(:)          * dtime/rhoh2o   !in_m       ! snow_fall
+    evapotrans_in_m(:)     = evapotrans(:)    * dtime/rhoh2o
+    transpiration_in_m(:)  = transpiration(:) * dtime/rhoh2o
+    evapo_snow_pot_in_m(:) = fract_snow(:)    * evapopot(:) * dtime/rhoh2o
+    evapotrans_no_snow(:)  = evapotrans_in_m(:) - evapo_snow_pot_in_m(:)
+    evapo_skin_pot_in_m(:) = (1._wp - fract_snow(:)) * fract_wet(:) * evapopot(:) * dtime/rhoh2o
 
     !---------------------------------------------
     !  Budgets of snow (canopy, ground)
     !---------------------------------------------
 
     ! amount of snow remaining on the canopy
-    new_snow_can = MIN(new_snow * InterceptionEfficiency, MAX(skinres_canopy_max - weq_snow_can, 0._wp))
+    new_snow_can(:) = MIN(new_snow(:) * InterceptionEfficiency, MAX(skinres_canopy_max(:) - weq_snow_can(:), 0._wp))
 
     ! remaining snow falls on the ground
-    new_snow_soil = new_snow - new_snow_can
+    new_snow_soil(:) = new_snow(:) - new_snow_can(:)
 
     ! update snow on the canopy
     ! Note: evaporation happens from canopy, as long as there is enough snow
-    canopy_pre_snow = weq_snow_can
-    weq_snow_can = MIN(MAX(0._wp, canopy_pre_snow + new_snow_can + evapo_snow_pot_in_m), skinres_canopy_max)
-    evapo_snow_in_m = evapo_snow_pot_in_m - (weq_snow_can - canopy_pre_snow - new_snow_can)
+    canopy_pre_snow(:) = weq_snow_can(:)
+    weq_snow_can(:)    = MIN(MAX(0._wp, canopy_pre_snow(:) + new_snow_can(:) + evapo_snow_pot_in_m(:)), skinres_canopy_max(:))
+    evapo_snow_in_m(:) = evapo_snow_pot_in_m(:) - (weq_snow_can(:) - canopy_pre_snow(:) - new_snow_can(:))
     ! unloading of snow from the canopy due to melting
-    exp_t = MAX(0._wp, t_air-zc1)/zc2 * dtime
-    snowmelt_can = weq_snow_can * (1._wp-EXP(-exp_t))
-    weq_snow_can = weq_snow_can - snowmelt_can
+    exp_t(:)        = MAX(0._wp, t_air(:) - zc1) / zc2 * dtime
+    snowmelt_can(:) = weq_snow_can(:) * (1._wp-EXP(-exp_t(:)))
+    weq_snow_can(:) = weq_snow_can(:) - snowmelt_can(:)
 
     ! unloading of snow from the canopy due to wind
-    exp_w = wind_10m/zc3 * dtime
-    snow_blown = weq_snow_can * (1._wp-EXP(-exp_w))
-    weq_snow_can  = weq_snow_can  - snow_blown
-    new_snow_soil = new_snow_soil + snow_blown
+    exp_w(:)         = wind_10m(:) / zc3 * dtime
+    snow_blown(:)    = weq_snow_can(:) * (1._wp-EXP(-exp_w(:)))
+    weq_snow_can(:)  = weq_snow_can(:)  - snow_blown(:)
+    new_snow_soil(:) = new_snow_soil(:) + snow_blown(:)
 
     ! Heating due to snow melt on canopy
     ! @Todo Why is heating only computed for canopy?
-    q_snocpymlt = snowmelt_can * rhoh2o * alf / dtime
+    q_snocpymlt(:) = snowmelt_can(:) * rhoh2o * alf / dtime
 
     !  Snowfall and sublimation
     !-----------------------------------------------
-    weq_snow_soil = weq_snow_soil + new_snow_soil + evapo_snow_in_m
+    weq_snow_soil(:) = weq_snow_soil(:) + new_snow_soil(:) + evapo_snow_in_m(:)
 
     ! Correction if there was too much snow evaporation
-    IF (weq_snow_soil < 0._wp) THEN
-      evapotrans_no_snow = evapotrans_no_snow + weq_snow_soil
-      evapo_deficit = weq_snow_soil
-      weq_snow_soil = 0._wp
-    ELSE
-      evapo_deficit = 0._wp
-    END IF
+    WHERE (weq_snow_soil(:) < 0._wp)
+      evapotrans_no_snow(:) = evapotrans_no_snow(:) + weq_snow_soil(:)
+      evapo_deficit(:) = weq_snow_soil(:)
+      weq_snow_soil(:) = 0._wp
+    ELSEWHERE
+      evapo_deficit(:) = 0._wp
+    END WHERE
 
     !  Snow melt
     !------------------------
 
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
-      IF (t_unfilt > tmelt) THEN
-        snowmelt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o)     !  potential snow and ice melt [m]
-        IF (weq_snow_soil > 0._wp) THEN
-          snowmelt_soil = MAX(MIN(snowmelt_pot_in_m, weq_snow_soil), 0._wp)   ! snow melt limited by actual snow depth [m]
-          weq_snow_soil = weq_snow_soil - snowmelt_soil                       ! reduce snow depth according to melting
-        ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
-        END IF
-      END IF
+      WHERE (t_unfilt(:) > tmelt .AND. weq_snow_soil(:) > 0._wp)
+        snowmelt_pot_in_m(:) = hcap_grnd(:) * (t_unfilt(:)-tmelt)/(alf*rhoh2o)      ! potential snow and ice melt [m]
+        snowmelt_soil(:) = MAX(MIN(snowmelt_pot_in_m(:), weq_snow_soil(:)), 0._wp)  ! snow melt limited by actual snow depth [m]
+        weq_snow_soil(:) = weq_snow_soil(:) - snowmelt_soil(:)                      ! reduce snow depth according to melting
+      ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
+      END WHERE
     END IF
 
     !  Snow budget and meltwater
     !-----------------------------------------------------
-    wtr_skin = wtr_skin + snowmelt_can                                    ! Add melt water from canopy to skin reservoir
-    water_to_soil = snowmelt_soil + MAX(0._wp, wtr_skin-skinres_max)      ! Excess water enters the soil, and
-    wtr_skin = MIN(skinres_max, wtr_skin)                                 ! skin reservoir is limited to the maximum
-    snow_accum = new_snow + evapo_snow_pot_in_m - snowmelt_soil - snowmelt_can
+    wtr_skin(:) = wtr_skin(:) + snowmelt_can(:)                                     ! Add melt water from canopy to skin reservoir
+    water_to_soil(:) = snowmelt_soil(:) + MAX(0._wp, wtr_skin(:) - skinres_max(:))  ! Excess water enters the soil, and
+    wtr_skin(:) = MIN(skinres_max(:), wtr_skin(:))                                  ! skin reservoir is limited to the maximum
+    snow_accum(:) = new_snow(:) + evapo_snow_pot_in_m(:) - snowmelt_soil(:) - snowmelt_can(:)
 
     IF (snow_depth_max >= 0._wp) THEN
       ! Limit snow depth to avoid grid cells with infinitely growing snow depths in cooler climates
-      water_to_soil = water_to_soil + MAX(0._wp, weq_snow_soil-snow_depth_max)
-      weq_snow_soil = MIN(snow_depth_max, weq_snow_soil)
+      water_to_soil(:) = water_to_soil(:) + MAX(0._wp, weq_snow_soil(:) - snow_depth_max)
+      weq_snow_soil(:) = MIN(snow_depth_max, weq_snow_soil(:))
     END IF
 
     !-----------------------------------------------------------
     !  Budget of water in skin reservoir (canopy and ground)
     !-----------------------------------------------------------
-    ! Interception of rain
-    rain_to_skinres = MIN(rain_in_m * InterceptionEfficiency, MAX(skinres_max - wtr_skin, 0._wp)) ! Part of rain goes to skin
-                                                                                                  ! reservoir
+    ! Interception of rain (part of rain goes into skin reservoir)
+    rain_to_skinres(:) = MIN(rain_in_m(:) * InterceptionEfficiency, MAX(skinres_max(:) - wtr_skin(:), 0._wp))
+    ! Rest of rain goes to soil
     ! Note: the MAX in following line is only to account for apparent precision error (small negative values)
-    water_to_soil = water_to_soil + MAX(rain_in_m - rain_to_skinres, 0._wp)        ! Rest of rain goes to soil
-    wtr_skin_pre_rain = wtr_skin
-    wtr_skin = MIN(MAX(0._wp, wtr_skin_pre_rain + rain_to_skinres + evapo_skin_pot_in_m), skinres_max)
+    water_to_soil(:)     = water_to_soil(:) + MAX(rain_in_m(:) - rain_to_skinres(:), 0._wp)
+    wtr_skin_pre_rain(:) = wtr_skin(:)
+    wtr_skin(:)          = MIN(skinres_max(:), MAX(0._wp, &
+      & wtr_skin_pre_rain(:) + rain_to_skinres(:) + evapo_skin_pot_in_m(:)))
 
     ! Note: at this point ignoring the amount of dew that exceeds the skin reservoir
     !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
-    evapo_skin_in_m = wtr_skin - (wtr_skin_pre_rain + rain_to_skinres)
-    evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m
-    IF (evapo_skin_pot_in_m < 0._wp) THEN
-      evapo_deficit = evapo_deficit + evapo_skin_pot_in_m - evapo_skin_in_m
-    END IF
-    evapo_soil_in_m = evapotrans_soil_in_m - transpiration_in_m  ! Evaporation from ground
+    evapo_skin_in_m(:) = wtr_skin(:) - (wtr_skin_pre_rain(:) + rain_to_skinres(:))
+    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:)
+    WHERE (evapo_skin_pot_in_m(:) < 0._wp)
+      evapo_deficit(:) = evapo_deficit(:) + evapo_skin_pot_in_m(:) - evapo_skin_in_m(:)
+    END WHERE
+    evapo_soil_in_m(:) = evapotrans_soil_in_m(:) - transpiration_in_m(:)  ! Evaporation from ground
 
     ! positive values of evaporation and transpiration (dew) are added to water_to_soil
     ! negative fluxes change soil moisture later in calc_soil_hydrology
-    IF (evapo_soil_in_m > 0._wp) water_to_soil = water_to_soil + evapo_soil_in_m
-    IF (transpiration_in_m > 0._wp) water_to_soil = water_to_soil + transpiration_in_m
+    WHERE (evapo_soil_in_m(:) > 0._wp) water_to_soil(:) = water_to_soil(:) + evapo_soil_in_m(:)
+    WHERE (transpiration_in_m(:) > 0._wp) water_to_soil(:) = water_to_soil(:) + transpiration_in_m(:)
 
     ! Compute snow density
     IF (l_dynsnow) THEN
-      IF (weq_snow_soil_old * rhoh2o / snow_soil_dens > snow_depth_min) THEN
+      WHERE (weq_snow_soil_old(:) * rhoh2o / snow_soil_dens(:) > snow_depth_min)
         ! Update density of old snow following eq. 31 of Verseghy, 1991
-        snow_soil_dens = dens_snow_max - (dens_snow_max - snow_soil_dens) * EXP(-0.01_wp * dtime/3600._wp)
-        ! Calculate weighted mean density from old and fresh snow
-        IF (weq_snow_soil > weq_snow_soil_old) THEN
-          snow_soil_dens =  (snow_soil_dens * weq_snow_soil_old + dens_snow_min * (weq_snow_soil - weq_snow_soil_old))  &
-            &              / weq_snow_soil
-        END IF
-      ELSE
-        snow_soil_dens = dens_snow_min  ! fresh snow
-      END IF
+        snow_soil_dens(:) = dens_snow_max - (dens_snow_max - snow_soil_dens(:)) * EXP(-0.01_wp * dtime/3600._wp)
+      ELSEWHERE
+        snow_soil_dens(:) = dens_snow_min  ! fresh snow
+      END WHERE
+      ! Calculate weighted mean density from old and fresh snow if any compaction happened already
+      WHERE (weq_snow_soil(:) > weq_snow_soil_old(:) .AND. snow_soil_dens(:) > dens_snow_min)
+      snow_soil_dens(:) = (snow_soil_dens(:) * weq_snow_soil_old(:)                              &
+        &                 + dens_snow_min * (weq_snow_soil(:) - weq_snow_soil_old(:))) &
+        &               / weq_snow_soil(:)
+      END WHERE
     ELSE
-      snow_soil_dens = dens_snow
+      snow_soil_dens(:) = dens_snow
     END IF
 
     ! Transform fluxes in output from [m] to [kg m-2 s-1]
-    snowmelt_soil = snowmelt_soil * rhoh2o / dtime
+    snowmelt_soil(:)   = snowmelt_soil(:) * rhoh2o / dtime
 
-    evapotrans_soil = evapotrans_soil_in_m * rhoh2o / dtime
-    evapo_skin = evapo_skin_in_m  * rhoh2o / dtime
-    evapo_snow = fract_snow * evapopot
+    evapotrans_soil(:) = evapotrans_soil_in_m(:) * rhoh2o / dtime
+    evapo_skin(:)      = evapo_skin_in_m(:)  * rhoh2o / dtime
+    evapo_snow(:)      = fract_snow(:) * evapopot(:)
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -390,7 +391,7 @@ CONTAINS
   ! ===============================================================================================================================
   !>
   !! @brief   Calculates surface runoff
-  
+
   SUBROUTINE calc_surface_runoff(                       &
     ! in
     & nc, ltpe_closed, l_infil_subzero,                 &
