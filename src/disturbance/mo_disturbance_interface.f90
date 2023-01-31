@@ -703,44 +703,44 @@ CONTAINS
               & )
 
               ! save training results
-              if (iyr .eq. 2015) then 
+              if (iyr == 2015) then 
                 open(1001,file='/work/mj0143/b301058/saved_parameters/W1.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_input*dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_input*dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(1002,file='/work/mj0143/b301058/saved_parameters/W2.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(1003,file='/work/mj0143/b301058/saved_parameters/W3.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(1004,file='/work/mj0143/b301058/saved_parameters/W4.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(1005,file='/work/mj0143/b301058/saved_parameters/W5.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(1006,file='/work/mj0143/b301058/saved_parameters/W6.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output*8)
 
                 open(2001,file='/work/mj0143/b301058/saved_parameters/b1.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(2002,file='/work/mj0143/b301058/saved_parameters/b2.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(2003,file='/work/mj0143/b301058/saved_parameters/b3.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(2004,file='/work/mj0143/b301058/saved_parameters/b4.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(2005,file='/work/mj0143/b301058/saved_parameters/b5.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*8)
                 open(2006,file='/work/mj0143/b301058/saved_parameters/b6.bin', &
                   access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_output*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_output*8)
 
                 write(1001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_weight
                 write(1002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_weight
