@@ -375,8 +375,7 @@ CONTAINS
   !!
   SUBROUTINE update_surface_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_runoff, &
-      &                                  calc_surface_hydrology_glacier
+    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -403,6 +402,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_wet
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
+    dsl4jsb_Real2D_onChunk :: steepness
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
     dsl4jsb_Real2D_onChunk :: fract_snow
@@ -506,6 +506,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! in
 
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! inout
@@ -525,6 +526,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_glac)        ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_glac)     ! inout
     ELSE
+      dsl4jsb_Get_var3D_onChunk(SSE_,      t_soil_sl)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil)   ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)        ! inout
@@ -532,6 +534,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_soil) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_skin)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)   ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    infilt)          ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)          ! out
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_snow_can)   ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration)  ! in
@@ -611,8 +615,12 @@ CONTAINS
         & nc,                             & !< Number of grid cells
         & lstart,                         & !< T: Start of experiment
         & dtime,                          & !< time step length [s]
+        & ltpe_closed,                    & !< T: terra planet setup without runoff
         & dsl4jsb_Config(SSE_)%l_dynsnow, & !< T: Compute density of snow dynamically
-        & dsl4jsb_Config(HYDRO_)%snow_depth_max, & !< Snow depth limit [m water equivalent]; -1. for no limit
+        & dsl4jsb_Config(HYDRO_)%l_infil_subzero, & !< T: Allow infiltration at soil temperatures below 0degC
+        & dsl4jsb_Config(HYDRO_)%snow_depth_max,  & !< Snow depth limit [m water equivalent]; -1. for no limit
+        & steepness,                      & !< Shape parameter describing orography    [/]
+        & t_soil_sl(:,1),                 & !< Temperature of the uppermost soil layer [K]
         & t_unfilt(:),                    & !< Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & !< wind speed at 10m height [m/s]
         & t_air(:),                       & !< lowest layer atmosphere temperature [K]
@@ -626,6 +634,11 @@ CONTAINS
         & trans_tmp(:),                   & !< transpiration [kg m-2 s-1]
         & rain(:),                        & !< liquid precipitation [kg m-2 s-1]
         & snow(:),                        & !< solid precipitation [kg m-2 s-1]
+        & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl    ), & !< Soil layer thickness [m]
+        & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl    ), & !< Root zone layer thickness [m]
+        & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl ), & !< Volumetric field capacity [m]
+        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl      ), & !< liquid water in soil layer [m]
+        & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl      ), & !< ice in soil layer [m]
         ! inout
         & wtr_skin(:),                    & !< water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]
@@ -639,35 +652,15 @@ CONTAINS
         & evapo_skin(:),                  & !< evaporation from skin reservoir [kg m-2 s-1]
         & evapo_snow(:),                  & !< evaporation from snow [kg m-2 s-1]
         & water_to_soil(:),               & !< Water available for infiltration into the soil [m water equivalent]
-        & evapo_deficit(:)                & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
+        & evapo_deficit(:),               & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
+        & infilt(:),                      & !< Infiltration flux into the soil [m water equivalent]
+        & runoff(:)                       & !< Surface runoff [m water equivalent]
         & )
 
       IF (model%config%l_compat401) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_10 tile_name=tile%name
         snow_soil_dens(:) = 330._wp
       END IF
-
-      dsl4jsb_Get_var3D_onChunk(SSE_,    t_soil_sl)       ! in
-      !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_runoff_1 tile_name=tile%name
-      ! @todo: surface runoff as part of the surface hydrology is computed before the snow and soil temperatures
-      !        are updated. Think about whether this order is correct!
-      CALL calc_surface_runoff( &
-        ! in
-        & nc, &
-        & ltpe_closed,                                            &
-        & dsl4jsb_Config(HYDRO_)%l_infil_subzero,                 &
-        & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
-        &                                t_soil_sl     (:,1),     &
-        & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
-        & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
-        & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
-        & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
-        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
-        & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
-        ! out
-        & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
-        & dsl4jsb_var2D_onChunk (HYDRO_, runoff            )      &
-        )
 
     END IF
 
