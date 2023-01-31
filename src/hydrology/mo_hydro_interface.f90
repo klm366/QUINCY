@@ -375,8 +375,8 @@ CONTAINS
   !!
   SUBROUTINE update_surface_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_orographic_features, calc_surface_hydrology_land, &
-      &                                  calc_surface_runoff, calc_surface_hydrology_glacier
+    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_runoff, &
+      &                                  calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -439,7 +439,6 @@ CONTAINS
     REAL(wp) :: dtime, w_skin_max_config
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
 
@@ -454,8 +453,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-
-    grid => Get_grid(model%grid_id)
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -494,17 +491,6 @@ CONTAINS
 
       RETURN
     END IF
-
-    !$claw sca forward update savepoint=ser_jsb_hydro_calc_orographic_features_land_1 tile_name=tile%name
-    ! @todo Check whether this routine can be moved into the initialization part?
-    CALL calc_orographic_features( &
-      ! in
-      & nc, &
-      & grid%nlat_g,                                 & !< (Effective) number of latitudes for steepness parameter
-      & dsl4jsb_var2D_onChunk (HYDRO_, oro_stddev ), &
-      ! out
-      & dsl4jsb_var2D_onChunk (HYDRO_, steepness  )  &
-      & )
 
     !$claw acc data pcreate(skinres_max, skinres_canopy_max, trans_tmp)
 
