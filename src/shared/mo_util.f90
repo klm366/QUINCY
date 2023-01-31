@@ -173,7 +173,8 @@ CONTAINS
                              ((fraction_silt + fraction_silt_deep)         &
                              * 0.5_wp * parameter_silt) +                  &
                              ((fraction_clay + fraction_clay_deep)         &
-                             * 0.5_wp * parameter_clay), parameter_sand)   &
+                             * 0.5_wp * parameter_clay),                   &
+                             MIN(parameter_sand,parameter_silt,parameter_clay)) &
                              + ((fraction_oc + fraction_oc_deep)           &
                              * 0.5_wp) * parameter_oc
 

@@ -64,23 +64,23 @@ MODULE mo_hydro_init
   REAL(wp), PARAMETER ::  wilt_clay = 0.257_wp
   REAL(wp), PARAMETER ::  wilt_oc = 0.265_wp
 
+  ! pore size index
+  REAL(wp), PARAMETER :: pore_size_index_sand = 0.35_wp
+  REAL(wp), PARAMETER :: pore_size_index_silt = 0.2_wp
+  REAL(wp), PARAMETER :: pore_size_index_clay = 0.13_wp
+  REAL(wp), PARAMETER :: pore_size_index_oc = 0.65_wp
+
   ! Clapp & Hornberger (s. Beringer et al 2001)
-  REAL(wp), PARAMETER ::  bclapp_sand = 3.39_wp (type 1 in Beringer)
-  REAL(wp), PARAMETER ::  bclapp_silt = 4.98_wp (type 5 in Beringer)
-  REAL(wp), PARAMETER ::  bclapp_clay = 10.38_wp (type 10 in Beringer)
-  REAL(wp), PARAMETER ::  bclapp_oc = 4._wp (type 12 in Beringer)
+  REAL(wp), PARAMETER ::  bclapp_sand = 3.39_wp   ! (type 1 in Beringer)
+  REAL(wp), PARAMETER ::  bclapp_silt = 4.98_wp   ! (type 5 in Beringer)
+  REAL(wp), PARAMETER ::  bclapp_clay = 10.38_wp  ! (type 10 in Beringer)
+  REAL(wp), PARAMETER ::  bclapp_oc = 4._wp       ! (type 12 in Beringer)
 
   ! matrix potential (s. Beringer et al 2001)
-  REAL(wp), PARAMETER ::  matrix_pot_sand = 0.04729_wp (type 1 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_silt = 0.45425_wp (type 5 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_clay = 0.633_wp (type 10 in Beringer)
-  REAL(wp), PARAMETER ::  matrix_pot_oc = 0.12_wp (type 12 in Beringer)
-
-  ! pore size index
-  REAL(wp), PARAMETER ::  psi_sand = 0.35_wp
-  REAL(wp), PARAMETER ::  psi_silt = 0.2_wp
-  REAL(wp), PARAMETER ::  psi_clay = 0.13_wp
-  REAL(wp), PARAMETER ::  psi_oc = 0.65_wp
+  REAL(wp), PARAMETER ::  matrix_pot_sand = 0.04729_wp ! (type 1 in Beringer)
+  REAL(wp), PARAMETER ::  matrix_pot_silt = 0.45425_wp ! (type 5 in Beringer)
+  REAL(wp), PARAMETER ::  matrix_pot_clay = 0.633_wp   ! (type 10 in Beringer)
+  REAL(wp), PARAMETER ::  matrix_pot_oc = 0.12_wp      ! (type 12 in Beringer)
 
   ! factor to compensate profile of hyd_cond_sat with depth in TERRA
   REAL(wp), PARAMETER ::  hyd_cond_sat_profile = 0.432332_wp
@@ -455,23 +455,23 @@ CONTAINS
            hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%matrix_pot(:,:))
 
-        ! calculate exponent b in Clapp & Hornberger incl. organic fraction
+        ! calculate pore_size_index incl. organic fraction
         !$claw sca forward update savepoint=ser_jsb_soil_init_from_texture_5 tile_name=tile%name
+        CALL soil_init_from_texture( &
+           pore_size_index_sand, pore_size_index_silt, pore_size_index_clay, pore_size_index_oc,                    &
+           hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
+           hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
+           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
+           hydro_init_vars%pore_size_index(:,:))
+
+        ! calculate exponent b in Clapp & Hornberger incl. organic fraction
+        !$claw sca forward update savepoint=ser_jsb_soil_init_from_texture_6 tile_name=tile%name
         CALL soil_init_from_texture( &
            bclapp_sand, bclapp_silt, bclapp_clay, bclapp_oc,                                                        &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
            hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%bclapp(:,:))
-
-        ! calculate pore size index incl. organic fraction
-        !$claw sca forward update savepoint=ser_jsb_soil_init_from_texture_6 tile_name=tile%name
-        CALL soil_init_from_texture( &
-           psi_sand, psi_silt, psi_clay, psi_oc,                                                                    &
-           hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
-           hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
-           hydro_init_vars%pore_size_index(:,:))
 
         ! crosscheck max_moist <= vol_field_cap x soil_depth
         hydro_init_vars%max_moist(:,:) = MIN(hydro_init_vars%vol_field_cap(:,:) * hydro_init_vars%soil_depth(:,:), &
