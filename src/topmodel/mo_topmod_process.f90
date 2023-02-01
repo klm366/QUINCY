@@ -23,6 +23,7 @@ MODULE mo_top_process
 
   PUBLIC :: update_topmodel_runmean, update_peat_runmean
   PUBLIC :: update_water_table, update_water_balance_peatland, update_inun_frac, update_aet
+  PUBLIC :: get_climatological_inun
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_top_process'
 
@@ -517,6 +518,30 @@ CONTAINS
     aet_sum_day    = aet_sum_day + aet
 
   END SUBROUTINE update_peat_runmean
+
+  !!
+  ! @brief      Updates inundated fraction and it's watertable from climatology
+  !
+  !!
+  !!
+  PURE ELEMENTAL SUBROUTINE get_climatological_inun( &
+    & frac_inun_clim,                                & ! Input
+    & frac_inun, wt_inun                             & ! Output
+  )
+
+    ! Interface parameters
+    REAL(wp), INTENT(in)  :: frac_inun_clim            ! Climatological frac_inun
+    REAL(wp), INTENT(out) :: frac_inun                 ! Actual frac_inun
+    REAL(wp), INTENT(out) :: wt_inun                   ! Actual wt_inun
+
+    frac_inun = frac_inun_clim
+    IF (frac_inun_clim > 0._wp) THEN
+      wt_inun = 0.25_wp
+    ELSE
+      wt_inun = 0.00_wp
+    ENDIF
+
+  END SUBROUTINE get_climatological_inun
 
 #endif
 END MODULE mo_top_process

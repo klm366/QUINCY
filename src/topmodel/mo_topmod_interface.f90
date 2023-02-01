@@ -107,7 +107,7 @@ CONTAINS
     USE mo_jsb_time,    ONLY: is_time_experiment_start, is_newyear, is_newmonth, is_newday, timesteps_per_day, &
       &                       get_date_components, get_year_length, get_month_length
     USE mo_top_process, ONLY: update_topmodel_runmean, update_peat_runmean, update_water_table, update_inun_frac, &
-      &                       update_aet, update_water_balance_peatland
+      &                       update_aet, update_water_balance_peatland, get_climatological_inun
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -167,6 +167,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: peat_water_table
     dsl4jsb_Real2D_onChunk :: peat_water_volume
     dsl4jsb_Real2D_onChunk :: peat_water_flux
+    dsl4jsb_Real3D_onChunk :: frac_inun_clim
 
     ! Pointers to non-variables
     !
@@ -245,6 +246,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
     ! TOP_ variables
+    dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun)
     dsl4jsb_Get_var2D_onChunk(TOP_, wt_inun)
     dsl4jsb_Get_var2D_onChunk(TOP_, aet)
     dsl4jsb_Get_var2D_onChunk(TOP_, frac_liquid_top)
@@ -281,12 +283,16 @@ CONTAINS
     ENDIF
 
     IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
+      IF (is_newmonth(options%current_datetime,dtime)) THEN
+        CALL get_date_components(options%current_datetime,MONTH=month)
+        frac_inun_clim => dsl4jsb_memory(TOP_)%frac_inun_clim(ics:ice,iblk,:)
+        CALL get_climatological_inun(frac_inun_clim(:,month),frac_inun(:),wt_inun(:))
+      ENDIF
     ELSE
 
       ! Variables only available if not inun_prescribed
       dsl4jsb_Get_var2D_onChunk(TOP_, water_table)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_liquid_top_uncorr)
-      dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_uncorr)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_sum_month)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_mean_month)
