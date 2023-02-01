@@ -43,7 +43,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: tmelt                  ! Melting point of water [K]
     REAL(wp), INTENT(in)  :: temp_air               ! Air temperature [K]
     REAL(wp), INTENT(in)  :: net_radiation          ! Net surface radiation [W m-2]
-    REAL(wp), INTENT(out) :: aet                    ! Equilibrium evapotranspiration flux [mm/s]
+    REAL(wp), INTENT(out) :: aet                    ! Equilibrium evapotranspiration flux [kg m-2 s-1]
 
     ! Locals
     REAL(wp) :: ctemp, gamma, lambda, s
@@ -87,13 +87,13 @@ CONTAINS
     REAL(wp), INTENT(in)    :: frac_snow               ! Fraction of tile covered with snow
     REAL(wp), INTENT(in)    :: melt                    ! Flux of melting snow [kg m-2 s-1]
     REAL(wp), INTENT(in)    :: aet                     !
-    REAL(wp), INTENT(inout) :: peat_water_volume       ! Volume of water in peat [m?]
+    REAL(wp), INTENT(inout) :: peat_water_volume       ! Volume of water in peat [m]
     REAL(wp), INTENT(inout) :: peat_water_table        ! Height of water table [m]
-    REAL(wp), INTENT(inout) :: peat_water_balance      ! Rate change of peat water [mm/s] TODO: Consider "flux" name
+    REAL(wp), INTENT(inout) :: peat_water_balance      ! Rate change of peat water [kg m-2 s-1]
 
     ! Parameters
     REAL(wp), PARAMETER :: acro_por = 0.9_wp - 0.08_wp     ! acrotelm_por - Fgas
-    REAL(wp), PARAMETER :: minvtot = 0.25_wp               ! minimum water content at surface [mm³/mm³]
+    REAL(wp), PARAMETER :: minvtot = 0.25_wp               ! minimum water content at surface [mm3 mm-3]
     REAL(wp), PARAMETER :: max_h_acro = 0.3_wp             ! Wania's z1
     REAL(wp), PARAMETER :: zmin = 0.1_wp
     REAL(wp), PARAMETER :: max_wt_height = 0.02_wp         ! Wania's maxh (previously 0.1_wp)
@@ -145,11 +145,11 @@ CONTAINS
     &  t_soil_sl,                         &
     &  wtr_soil_sl, ice_soil_sl,          &
     &  water_table,                       &
-    &  frac_liquid_top, frac_liquid_sl    &
+    &  frac_liquid_top                    &
   )
 
     ! Parameters
-    LOGICAL,  INTENT(in)    :: with_permafrost      ! Soil may contain ice?
+    LOGICAL,  INTENT(in)    :: with_permafrost      ! Soil may contain frozen water?
     REAL(wp), INTENT(in)    :: tmelt                ! Melting point of water [K]
     REAL(wp), INTENT(in)    :: soil_depth           ! Total depth of soil [m]
     REAL(wp), INTENT(in)    :: soil_depth_min       ! Minimum total depth of soil for point to be considered [m]
@@ -163,14 +163,14 @@ CONTAINS
     REAL(wp), INTENT(in)    :: ice_soil_sl(:)       ! Column of frozen water in each soil layer [m]
     ! Output variables
     REAL(wp), INTENT(out)   :: water_table          ! Height of water table [m]
-    REAL(wp), INTENT(out)   :: frac_liquid_top      ! fraction of saturation in top 0.5m []
-    REAL(wp), INTENT(out)   :: frac_liquid_sl(:)    ! fraction of saturation in each soil layer []
+    REAL(wp), INTENT(out)   :: frac_liquid_top      ! fraction of liquid water in top <=0.5m (full layers) []
 
     ! Local variables
     REAL(wp) :: h2o
     REAL(wp) :: saturation
     REAL(wp) :: dz                          ! Thickness of current layer
     REAL(wp) :: local_depth
+    REAL(wp) :: frac_liquid
     LOGICAL :: layer_below_saturated, layer_below_unfrozen
     INTEGER :: nsoil, isoil
 
@@ -178,14 +178,11 @@ CONTAINS
     layer_below_saturated =  .TRUE.
     layer_below_unfrozen  = .FALSE.
     local_depth = 0._wp
-    IF (lower_bound_sl(nsoil) < soil_depth) THEN
-      water_table = -lower_bound_sl(nsoil)
-    ELSE
-      water_table = -soil_depth
-    ENDIF
-    frac_liquid_sl(:) = 0._wp
+    water_table = -MIN(lower_bound_sl(nsoil),soil_depth)
+    frac_liquid_top    = 0._wp
     DO isoil = nsoil,1,-1
       ! StW: Cmp with JSB3 version: glaciers and lakes should not appear on this tile so we can just start calc.
+
       IF (lower_bound_sl(MAX(1,isoil-1)) > soil_depth) CYCLE ! No soil in this layer
 
       ! Thickness of soil in current layer
@@ -193,24 +190,25 @@ CONTAINS
       IF (lower_bound_sl(isoil) > soil_depth) dz = soil_depth - lower_bound_sl(MAX(1,isoil-1))
 
       ! Absolute and relative water content (liquid and frozen) in layer isoil
+      frac_liquid = 1._wp
       h2o = wtr_soil_sl(isoil)
       IF (with_permafrost) h2o = h2o + ice_soil_sl(isoil)
       IF (h2o > 0._wp) THEN
         IF (with_permafrost) THEN
-          frac_liquid_sl(isoil) = wtr_soil_sl(isoil) / h2o
+          frac_liquid = wtr_soil_sl(isoil) / h2o
         ELSE
           ! Piecewise linear function, 0 for T < ~0.5 degC, increasing to 1 between ~-0.5 degC and 5 degC and 1 afterwards
-          frac_liquid_sl(isoil) = MAX(0._wp, MIN(1._wp, (t_soil_sl(isoil) - (tmelt-0.5_wp))))
+          frac_liquid = MAX(0._wp, MIN(1._wp, (t_soil_sl(isoil) - (tmelt-0.5_wp))))
         ENDIF
       ENDIF
 
       ! Sum for avg. liquid frac in upper 0.5 m
       IF (lower_bound_sl(isoil) <= 0.5_wp) THEN
-        frac_liquid_top = frac_liquid_top + frac_liquid_sl(isoil) * dz
+        frac_liquid_top = frac_liquid_top + frac_liquid * dz
         local_depth = local_depth + dz
       ENDIF
 
-      ! Water table for grids with suffiend soil_depth
+      ! Water table for grids with sufficient soil_depth
       IF (soil_depth > soil_depth_min) THEN
         saturation = MAX(0._wp, MIN(1._wp, h2o / dz / field_capacity))
         IF (layer_below_saturated) THEN
@@ -228,7 +226,8 @@ CONTAINS
         ENDIF
       ENDIF
 
-    ENDDO
+    ENDDO ! isoil
+
     IF (local_depth > 0) THEN
       frac_liquid_top = frac_liquid_top / local_depth
     ELSE
@@ -475,13 +474,13 @@ CONTAINS
     INTEGER,  INTENT(in)    :: ylen                            ! Length of year of previous timestep [days] (by lyear only)
     INTEGER,  INTENT(in)    :: tspd                            ! Time steps per day
     REAL(wp), INTENT(in)    :: nyear_lt                        ! efolding time for long term averages [years]
-    REAL(wp), INTENT(in)    :: rain, snow                      ! Rain and snow (from A2L_)
-    REAL(wp), INTENT(inout) :: precip_sum_day, precip_mean_day ! Daily sum/mean of total precipitation
-    REAL(wp), INTENT(in)    :: aet                             ! Potential evapotranspiration [m/s?]
-    REAL(wp), INTENT(inout) :: aet_sum_day,  aet_mean_day      ! Daily sum/mean of potential evapotranspiration
-    REAL(wp), INTENT(inout) :: poaet_mean_day                  ! Daily mean of precip/potential evapotranspiration
-    REAL(wp), INTENT(inout) :: poaet_sum_year, poaet_mean_year ! Yearly sum/mean of daily mean precip/pot evapotranspiration
-    REAL(wp), INTENT(inout) :: poaet_lt                        ! Long term mean of year mean of poaet
+    REAL(wp), INTENT(in)    :: rain, snow                      ! Rain and snow [kg m-2 s-1] (from A2L_)
+    REAL(wp), INTENT(inout) :: precip_sum_day, precip_mean_day ! Daily sum/mean of total precipitation [kg m-2 s-1]
+    REAL(wp), INTENT(in)    :: aet                             ! Potential evapotranspiration [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: aet_sum_day,  aet_mean_day      ! Daily sum/mean of potential evapotranspiration [kg m-2 s-1]
+    REAL(wp), INTENT(inout) :: poaet_mean_day                  ! Daily mean of precip/potential evapotranspiration []
+    REAL(wp), INTENT(inout) :: poaet_sum_year, poaet_mean_year ! Yearly sum/mean of daily mean precip/pot evapotranspiration []
+    REAL(wp), INTENT(inout) :: poaet_lt                        ! Long term mean of year mean of poaet []
 
     IF (lday) THEN
       precip_mean_day = precip_sum_day / tspd
@@ -491,7 +490,7 @@ CONTAINS
       aet_sum_day  = 0._wp
 
       ! Set threshold: minimum aet_mean allowed is 0.01 -> to fix problems at very cold temperatures
-      poaet_mean_day = precip_mean_day / MAX(aet_mean_day,0.01_wp)
+      poaet_mean_day = precip_mean_day / MAX(aet_mean_day,1.e-8_wp)
 
       poaet_sum_year = poaet_sum_year + poaet_mean_day
 

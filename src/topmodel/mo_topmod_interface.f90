@@ -31,6 +31,7 @@ use mo_util, only: real2string, int2string, logical2string
 
   dsl4jsb_Use_processes TOP_
   dsl4jsb_Use_config(TOP_)
+  dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_memory(TOP_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(RAD_)
@@ -107,7 +108,6 @@ CONTAINS
       &                       get_date_components, get_year_length, get_month_length
     USE mo_top_process, ONLY: update_topmodel_runmean, update_peat_runmean, update_water_table, update_inun_frac, &
       &                       update_aet, update_water_balance_peatland
-    USE mo_jsb_physical_constants, ONLY: stbo
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -116,6 +116,7 @@ CONTAINS
     !
     TYPE(t_jsb_model), POINTER :: model
     dsl4jsb_Def_config(TOP_)
+    dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(TOP_)
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(RAD_)
@@ -140,7 +141,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: water_table
     dsl4jsb_Real2D_onChunk :: frac_liquid_top
     dsl4jsb_Real2D_onChunk :: frac_liquid_top_uncorr
-    dsl4jsb_Real3D_onChunk :: frac_liquid_sl
     dsl4jsb_Real2D_onChunk :: precip_sum_day
     dsl4jsb_Real2D_onChunk :: precip_mean_day
     dsl4jsb_Real2D_onChunk :: frac_inun
@@ -166,7 +166,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: poaet_lt
     dsl4jsb_Real2D_onChunk :: peat_water_table
     dsl4jsb_Real2D_onChunk :: peat_water_volume
-    dsl4jsb_Real2D_onChunk :: peat_water_balance
+    dsl4jsb_Real2D_onChunk :: peat_water_flux
 
     ! Pointers to non-variables
     !
@@ -178,22 +178,16 @@ CONTAINS
     REAL(wp), POINTER :: cti_chi(:)
     REAL(wp), POINTER :: cti_mu(:)
 
-    ! Locally allocated vectors
-    !
-!    REAL(wp), DIMENSION(options%nc) :: &
-!      & cover_fract, cover_fract_sum
-
     CLASS(t_jsb_tile_abstract), POINTER :: ptr_tile
     TYPE(t_jsb_grid), POINTER :: grid
     TYPE(t_jsb_vgrid), POINTER :: soil_e, soil_w
-    REAL(wp), ALLOCATABLE :: t_soil(:), wtr_soil(:), ice_soil(:), frac_liquid_t_sl(:)
+    REAL(wp), ALLOCATABLE :: t_soil(:), wtr_soil(:), ice_soil(:)
     REAL(wp) :: water_table_t, frac_liquid_top_t
     LOGICAL  :: lstart, lnew_year, lnew_month, lnew_day, lstop
     INTEGER  :: tspd, iblk, ics, ice, nc, nsoil, i
     INTEGER  :: year, month, summer_state, ylen, mlen
-    REAL(wp) :: dtime
+    REAL(wp) :: dtime, sw, si, swmx, simx, wtmx
     INTEGER, SAVE :: n = 0
-integer :: loc(1)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_topmodel'
 
@@ -218,14 +212,14 @@ integer :: loc(1)
     IF (.NOT. lStop) lStop = ANY(ABS(soil_e%dz - soil_w%dz) > eps8)
     IF (lStop) CALL finish(routine,'Sorry, present implementation of topmodel requires water and energy soil levels to coincide')
 
-    dsl4jsb_Get_config(TOP_)
+    dsl4jsb_Get_Config(TOP_)
+    dsl4jsb_Get_Config(SSE_)
 
     ! Allocate local work arrays
     !
     ALLOCATE(t_soil          (nsoil))
     ALLOCATE(wtr_soil        (nsoil))
     ALLOCATE(ice_soil        (nsoil))
-    ALLOCATE(frac_liquid_t_sl(nsoil))
 
     ! Get reference to variables for current block
     !
@@ -270,9 +264,9 @@ integer :: loc(1)
       dsl4jsb_Get_var2D_onChunk(TOP_, poaet_lt)
       dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_table)
       dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_volume)
-      dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_balance)
+      dsl4jsb_Get_var2D_onChunk(TOP_, peat_water_flux)
 
-      CALL update_aet(tmelt,t_air,rad_srf_net-stbo*t_air**4._wp,aet) ! StW: Radiation likely wrong
+      CALL update_aet(tmelt,t_air,rad_srf_net,aet)
 
 ! StW: Access to frac_liquid_top is questionable if inun_prescribed - likely seg-fault
       CALL update_water_balance_peatland(tspd, dtime,      & ! Time parameters
@@ -282,7 +276,7 @@ integer :: loc(1)
         & fract_snow(:), snowmelt(:),                      &
         & aet(:),                                          &
         & peat_water_volume(:), peat_water_table(:),       & ! In/out variables
-        & peat_water_balance(:)                            &
+        & peat_water_flux(:)                               &
       )
     ENDIF
 
@@ -292,7 +286,6 @@ integer :: loc(1)
       ! Variables only available if not inun_prescribed
       dsl4jsb_Get_var2D_onChunk(TOP_, water_table)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_liquid_top_uncorr)
-      dsl4jsb_Get_var3D_onChunk(TOP_, frac_liquid_sl)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_uncorr)
       dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_sum_month)
@@ -321,7 +314,6 @@ integer :: loc(1)
       DO i = 1, nc
         water_table      (i  ) = 0._wp
         frac_liquid_top  (i  ) = 0._wp
-        frac_liquid_sl   (i,:) = 0._wp
       ENDDO
       DO i = 1, nc
         ! Secure calculations are done on contiguous data - may be faster
@@ -329,17 +321,20 @@ integer :: loc(1)
         wtr_soil(:) = wtr_soil_sl(i,:)
         ice_soil(:) = ice_soil_sl(i,:)
 
-        CALL update_water_table(.TRUE.,tmelt,soil_depth(i),dsl4jsb_Config(TOP_)%soil_depth_min, &
-          &  soil_e%dz(:),soil_e%lbounds(:),dsl4jsb_Config(TOP_)%saturation_threshold,          &
+! StW: Very misleading that ubounds/lbounds referes to the indicies and not to the physical direction
+        CALL update_water_table(dsl4jsb_Config(SSE_)%l_freeze,tmelt,                            &
+          &  soil_depth(i),dsl4jsb_Config(TOP_)%soil_depth_min,                                 &
+          &  soil_e%dz(:),soil_e%ubounds(:),dsl4jsb_Config(TOP_)%saturation_threshold,          &
           &  vol_field_cap(i),                                                                  &
           &  t_soil(:),wtr_soil(:),ice_soil(:),                                                 &
-          &  water_table_t, frac_liquid_top_t, frac_liquid_t_sl(:)                              &
+          &  water_table_t, frac_liquid_top_t                                                   &
           &  )
 
         water_table    (i  ) = water_table_t
         frac_liquid_top(i  ) = frac_liquid_top_t
-        frac_liquid_sl (i,:) = frac_liquid_t_sl(:)
+!        frac_liquid_sl (i,:) = frac_liquid_t_sl(:)
       ENDDO
+
       DO i=1, nc
         frac_liquid_top_uncorr(i) =            frac_liquid_top(i)
         frac_liquid_top       (i) = MAX(0.1_wp,frac_liquid_top(i))
@@ -366,20 +361,6 @@ integer :: loc(1)
         & frac_inun(:),frac_inun_uncorr(:),          & ! Outputs
         & wt_inun(:) &
       )
-!call message(routine,'Blk, inun_max: '//int2string(iblk)//' '//real2string(maxval(frac_inun)))
-
-if (any(frac_inun > 1._wp)) then
-  loc = maxloc(frac_inun)
-  call message(routine,'Large inun, blk: '//int2string(iblk))
-  call message('A:',real2string(cti_mean(loc(1))))
-  call message('B:',real2string(cti_basin(loc(1))))
-  call message('C:',real2string(cti_openwater(loc(1))))
-  call message('D:',real2string(cti_phi(loc(1))))
-  call message('E:',real2string(cti_chi(loc(1))))
-  call message('F:',real2string(cti_mu(loc(1))))
-  call message('G:',real2string(water_table(loc(1))))
-  call message('H:',real2string(frac_liquid_top(loc(1))))
-endif
 
     ENDIF
 
@@ -442,123 +423,13 @@ endif
         )
       ENDIF
 
-      ! debug
-      IF (lnew_month) then
-        call message(routine,'ndom: '//int2string(mlen))
-      endif
-      IF (lnew_year)  then
-        call message(routine,'ndoy: '//int2string(ylen))
-      endif
     ENDIF
 
-
-    if (n<24) then
-            call message(routine,'blck: '//int2string(iblk)//' '//int2string(ics)//' '//int2string(ice)//' '//int2string(nc))
-            write(message_text,*) shape(rain)
-            call message(routine,trim(message_text))
-            call message(routine,'test: '//int2string(n)//' '//logical2string(lnew_day)//' '// &
-            real2string(maxval(rain+snow))//' '//real2string(maxval(precip_sum_day))//' '//real2string(maxval(precip_mean_day)))
-    endif
-    n = n + 1
-    !$claw acc enter data create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
-
-    ! Save old ground heat flux and heat capacity before updating
-    ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
-    ! given back to the atmosphere so that the surface energy balance can be computed there
-    !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_0 tile_name=tile%name
-!    grnd_hflx_old(:) = grnd_hflx(:)
-    !$claw end expand
-
-    ! Correction of surface temperature for snow and ice melt
-!    IF (lstart) THEN
-!      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_1 tile_name=tile%name
-!      t_unfilt_corrected(:) = t_unfilt(:)
-!    ELSE
-!      !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_2 tile_name=tile%name
-!      t_unfilt_corrected(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd(:)
-!    END IF
-
-!    IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
-!      ldglac(:) = SPREAD(tile%is_glacier, DIM=1, ncopies=nc)
-!      !$claw acc update device(ldglac)
-
-!      CALL calc_soiltemp_old(                          &
-!        & nc,                                          &
-!        & nsoil,                                       &
-!        & soil_e%dz(:),                                &
-!        & soil_e%levels(:),                            &
-!        & dtime,                                       &
-!        & lstart,                                      &
-!        & t_unfilt_corrected(:)                     ,  &
-!        & weq_snow_soil(:)                          ,  &
-!        & heat_cond(:)                              ,  &
-!        & vol_heat_cap(:)                           ,  &
-!        & t_soil_acoef                          (:,:), &
-!        & t_soil_bcoef                          (:,:), &
-!        & t_soil_sl                             (:,:), &
-!        & hcap_grnd                             (:),   &
-!        & grnd_hflx                             (:),   &
-!        & ldglac                                (:)    &
-!        !& SPREAD(tile%is_glacier, DIM=1, ncopies=nc)   &
-!        & )
-
-
-      !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
-!      RETURN
-
-!    END IF
-
-!      IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
-        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_3 tile_name=tile%name
-!        snow_depth(:) = weq_snow_soil(:) * rhoh2o / snow_soil_dens(:)
-!      ELSE
-        !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_4 tile_name=tile%name
-!        snow_depth(:) = weq_snow_soil(:) * rhoh2o / dens_snow
-!      END IF
-
-      ! Calculate top snow layer for previous time step
-      !$claw acc data present(itop_old,snow_depth_sl)
-      !$claw acc parallel loop gang vector
-!      DO i = 1,nc
-!        itop_old(i) = nsnow + 1 - COUNT(snow_depth_sl(i,:) > 0._wp)
-!      END DO
-      !$claw acc end data
-
-      !$claw acc data present(snow_depth,snow_depth_sl)
-      !$claw acc parallel
-      !$claw acc loop seq
-!      DO isnow=nsnow,1,-1
-        !$claw acc loop gang vector
-!        DO i = 1, size(snow_depth, dim=1)
-!          IF (snow_depth(i) > 0._wp) THEN
-!            snow_depth_sl(i,isnow) = MIN(snow_depth(i), snow_e%dz(isnow))
-!          END IF
-!        END DO
-!      END DO
-      !$claw acc end parallel
-      !$claw acc end data
-
-      ! Calculate top snow layer for current time step
-
-!      CALL calc_snow_temperature( &
-        ! in
-!        & nc,                     &
-!        & nsnow,                  &
-!        & soil_e%dz(1:2),         &
-!        & dtime,                  &
-!        & lstart,                 &
-!        & snow_depth_sl    (:,:), &
-!        & )
-
-      !$claw acc parallel loop default(none) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
-!      DO i = 1, nc
-!        IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
-!          t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
-!        ELSE                                ! No snow
-!          t_soil_top(i) = t_unfilt_corrected(i)
-!        END IF
-!      END DO
-      !$claw end expand
+    ! Deallocate local work arrays
+    !
+    DEALLOCATE(t_soil)
+    DEALLOCATE(wtr_soil)
+    DEALLOCATE(ice_soil)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -596,19 +467,16 @@ endif
     dsl4jsb_Aggregate_onChunk(TOP_,  water_table           , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TOP_,  frac_liquid_top       , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TOP_,  frac_liquid_top_uncorr, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TOP_,  frac_liquid_sl        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TOP_,  frac_inun             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TOP_,  frac_inun_uncorr      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(TOP_,  wt_inun               , weighted_by_fract)
     IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
       dsl4jsb_Aggregate_onChunk(TOP_,  frac_inun_min_year,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(TOP_,  frac_inun_summ_year,    weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(TOP_,  frac_inun_sum_month,    weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(TOP_,  frac_inun_mean_month,   weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(TOP_,  frac_inun_min_lt,       weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(TOP_,  frac_inun_summ_lt,      weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(TOP_,  wt_inun_min_year,       weighted_by_fract)
-      dsl4jsb_Aggregate_onChunk(TOP_,  wt_inun_sum_month,      weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(TOP_,  wt_inun_mean_month,     weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(TOP_,  wt_inun_min_lt,         weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(TOP_,  frac_permanent_wetland, weighted_by_fract)
@@ -616,15 +484,12 @@ endif
     IF (dsl4jsb_Config(TOP_)%lpeat) THEN
       dsl4jsb_Aggregate_onChunk(TOP_,  aet,                    weighted_by_fract)
       IF (dsl4jsb_Config(TOP_)%ltime_means) THEN
-        dsl4jsb_Aggregate_onChunk(TOP_,  precip_sum_day,         weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  precip_mean_day,        weighted_by_fract)
-        dsl4jsb_Aggregate_onChunk(TOP_,  aet_sum_day,            weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  aet_mean_day,           weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  poaet_mean_day,         weighted_by_fract)
-        dsl4jsb_Aggregate_onChunk(TOP_,  poaet_sum_year,         weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  poaet_mean_year,        weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  poaet_lt,               weighted_by_fract)
-        dsl4jsb_Aggregate_onChunk(TOP_,  peat_water_balance,     weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(TOP_,  peat_water_flux,        weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  peat_water_volume,      weighted_by_fract)
         dsl4jsb_Aggregate_onChunk(TOP_,  peat_water_table,       weighted_by_fract)
       ENDIF
