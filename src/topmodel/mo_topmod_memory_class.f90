@@ -69,14 +69,14 @@ MODULE mo_top_memory_class
       & peat_water_table,     &                ! peatland water table height [m]
       & frac_permanent_wetland                 ! fraction of tile with permanent wetland []
 
-    REAL(wp), POINTER ::                &
-      & cti_mean     (:,:)   => NULL(), &
-      & cti_mu       (:,:)   => NULL(), &
-      & cti_phi      (:,:)   => NULL(), &
-      & cti_chi      (:,:)   => NULL(), &
-      & cti_basin    (:,:)   => NULL(), &
-      & cti_openwater(:,:)   => NULL(), &
-      & inun_mon     (:,:,:) => NULL()
+    REAL(wp), POINTER ::                 &
+      & cti_mean      (:,:)   => NULL(), &
+      & cti_mu        (:,:)   => NULL(), &
+      & cti_phi       (:,:)   => NULL(), &
+      & cti_chi       (:,:)   => NULL(), &
+      & cti_basin     (:,:)   => NULL(), &
+      & cti_openwater (:,:)   => NULL(), &
+      & frac_inun_clim(:,:,:) => NULL()
 
   CONTAINS
     PROCEDURE :: Init => Init_topmodel_memory
@@ -136,6 +136,10 @@ CONTAINS
       ALLOCATE(mem%cti_chi      (hgrid%nproma, hgrid%nblks))
       !$acc enter data pcreate(mem%cti_mean,mem%cti_basin,mem%cti_openwater,mem%cti_mu,mem%cti_phi,mem%cti_chi)
       !$acc enter data attach(mem%cti_mean,mem%cti_basin,mem%cti_openwater,mem%cti_mu,mem%cti_phi,mem%cti_chi)
+    ELSE
+      ALLOCATE(mem%frac_inun_clim(hgrid%nproma, hgrid%nblks, 12))
+      !$acc enter data pcreate(mem%frac_inun_clim)
+      !$acc enter data attach(mem%frac_inun_clim)
     ENDIF
 
     CALL mem%Add_var( 'water_table', mem%water_table,                        &

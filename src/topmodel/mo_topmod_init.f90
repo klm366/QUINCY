@@ -39,14 +39,14 @@ MODULE mo_top_init
   PUBLIC :: topmodel_init !, init_soil_properties
 
   TYPE t_top_init_vars
-    REAL(wp), POINTER ::                &
-      & cti_mean     (:,:)   => NULL(), &
-      & cti_mu       (:,:)   => NULL(), &
-      & cti_phi      (:,:)   => NULL(), &
-      & cti_chi      (:,:)   => NULL(), &
-      & cti_basin    (:,:)   => NULL(), &
-      & cti_openwater(:,:)   => NULL(), &
-      & inun_mon     (:,:,:) => NULL()
+    REAL(wp), POINTER ::                 &
+      & cti_mean      (:,:)   => NULL(), &
+      & cti_mu        (:,:)   => NULL(), &
+      & cti_phi       (:,:)   => NULL(), &
+      & cti_chi       (:,:)   => NULL(), &
+      & cti_basin     (:,:)   => NULL(), &
+      & cti_openwater (:,:)   => NULL(), &
+      & frac_inun_clim(:,:,:) => NULL()
   END TYPE t_top_init_vars
 
   TYPE(t_top_init_vars) :: top_init_vars
@@ -91,7 +91,7 @@ CONTAINS
       & top_init_vars%cti_chi            &
       & )
 
-    IF (ASSOCIATED(top_init_vars%inun_mon)) DEALLOCATE(top_init_vars%inun_mon)
+    IF (ASSOCIATED(top_init_vars%frac_inun_clim)) DEALLOCATE(top_init_vars%frac_inun_clim)
 
   END SUBROUTINE topmodel_finalize_init_vars
 
@@ -128,7 +128,7 @@ CONTAINS
       & top_init_vars%cti_phi      (nproma, nblks    ), &
       & top_init_vars%cti_chi      (nproma, nblks    )  &
       & )
-    IF (dsl4jsb_Config(TOP_)%inun_prescribed) ALLOCATE(top_init_vars%inun_mon(nproma, nblks, 12))
+    IF (dsl4jsb_Config(TOP_)%inun_prescribed) ALLOCATE(top_init_vars%frac_inun_clim(nproma, nblks, 12))
 
     top_init_vars%cti_mean      (:,:) = missval
     top_init_vars%cti_mu        (:,:) = missval
@@ -136,7 +136,7 @@ CONTAINS
     top_init_vars%cti_chi       (:,:) = missval
     top_init_vars%cti_basin     (:,:) = missval
     top_init_vars%cti_openwater (:,:) = missval
-    IF (dsl4jsb_Config(TOP_)%inun_prescribed) top_init_vars%inun_mon(:,:,:) = missval
+    IF (dsl4jsb_Config(TOP_)%inun_prescribed) top_init_vars%frac_inun_clim(:,:,:) = missval
 
     IF (.NOT. tile%Is_process_active(TOP_)) RETURN
 
@@ -157,7 +157,7 @@ CONTAINS
     IF (dsl4jsb_Config(TOP_)%inun_prescribed) THEN
       input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(TOP_)%bc_filename), model%grid_id)
 
-      ptr_3D => input_file%Read_2d_time(variable_name='inundation', fill_array=top_init_vars%inun_mon)
+      ptr_3D => input_file%Read_2d_time(variable_name='frac_inun', fill_array=top_init_vars%frac_inun_clim)
 
       CALL input_file%Close()
     ENDIF
@@ -193,10 +193,10 @@ CONTAINS
       dsl4jsb_Get_memory(TOP_)
 
       !
-      dsl4jsb_memory(TOP_)%inun_mon(:,:,:) = top_init_vars%inun_mon(:,:,:)
+      dsl4jsb_memory(TOP_)%frac_inun_clim(:,:,:) = top_init_vars%frac_inun_clim(:,:,:) ! StW: Should dims 2 and 3 be swapped?
 
-      !$acc data present(dsl4jsb_var3D_onDomain(TOP_,inun_mon))
-      !$acc update device(dsl4jsb_var3D_onDomain(TOP_,inun_mon))
+      !$acc data present(dsl4jsb_var3D_onDomain(TOP_,frac_inun_clim))
+      !$acc update device(dsl4jsb_var3D_onDomain(TOP_,frac_inun_clim))
       !$acc end data
 
     ENDIF
@@ -229,8 +229,7 @@ CONTAINS
     IF (debug_on() .OR. dsl4jsb_Config(TOP_)%dbg_topmodel) &
       CALL message(TRIM(routine), 'Initializing top-model memory for tile '//TRIM(tile%name))
 
-call message(routine,logical2string(associated(dsl4jsb_memory(TOP_)%cti_mean)))
-
+    IF (.NOT. dsl4jsb_Config(TOP_)%inun_prescribed) THEN
       dsl4jsb_memory(TOP_)%cti_mean     (:,:) = top_init_vars%cti_mean(:,:)
       dsl4jsb_memory(TOP_)%cti_mu       (:,:) = top_init_vars%cti_mu(:,:)
       dsl4jsb_memory(TOP_)%cti_phi      (:,:) = top_init_vars%cti_phi(:,:)
@@ -238,19 +237,20 @@ call message(routine,logical2string(associated(dsl4jsb_memory(TOP_)%cti_mean)))
       dsl4jsb_memory(TOP_)%cti_basin    (:,:) = top_init_vars%cti_basin(:,:)
       dsl4jsb_memory(TOP_)%cti_openwater(:,:) = top_init_vars%cti_openwater(:,:)
 
-    !$acc data present(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_openwater), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_mu), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_phi), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_chi))
-    !$acc update device(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_openwater), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_mu), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_phi), &
-    !$acc dsl4jsb_var2D_onDomain(TOP_,cti_chi))
-    !$acc end data
+      !$acc data present(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_openwater), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_mu), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_phi), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_chi))
+      !$acc update device(dsl4jsb_var2D_onDomain(TOP_,cti_mean), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_basin), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_openwater), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_mu), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_phi), &
+      !$acc dsl4jsb_var2D_onDomain(TOP_,cti_chi))
+      !$acc end data
+    ENDIF
 
   END SUBROUTINE topmodel_init_ic
 
