@@ -92,7 +92,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_old
     dsl4jsb_Real2D_onChunk :: t_unfilt
     dsl4jsb_Real2D_onChunk :: t_unfilt_old
-    dsl4jsb_Real2D_onChunk :: t_eff
+    dsl4jsb_Real2D_onChunk :: t_eff4
     dsl4jsb_Real2D_onChunk :: qsat_star
     dsl4jsb_Real2D_onChunk :: s_star
     dsl4jsb_Real2D_onChunk :: heat_cap
@@ -101,7 +101,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: fact_qsat_srf
     dsl4jsb_Real2D_onChunk :: fact_q_air
-    dsl4jsb_Real2D_onChunk :: drag_srf
+    dsl4jsb_Real2D_onChunk :: drag_srf      ! old turb
+    dsl4jsb_Real2D_onChunk :: ch            ! new turb
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
@@ -186,7 +187,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef)        ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)      ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)          ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)       ! IN
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   previous_day_temp_mean) ! IN
     dsl4jsb_Get_var2D_onChunk(SEB_,   day_temp_sum)           ! INOUT
@@ -203,7 +203,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_old)          ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt_old)   ! OUT
-    dsl4jsb_Get_var2D_onChunk(SEB_,   t_eff)          ! OUT
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_eff4)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   qsat_star)      ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)         ! OUT
     dsl4jsb_Get_var2D_onChunk(SEB_,   heat_cap)       ! OUT
@@ -214,15 +214,23 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)      ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)       ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)  ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)      ! in
+    IF (.NOT. tile%is_glacier) THEN
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)   ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)   ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)       ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)        ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)       ! in
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
+
+    IF (model%config%use_new_turb) THEN
+      dsl4jsb_Get_var2D_onChunk(TURB_,  ch)           ! in
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN
+    END IF
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
     !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,is_ocean,is_lake, & 
@@ -230,25 +238,37 @@ CONTAINS
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     !$claw acc data present(is_glacier)
-    IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
-      DO ilct=1,SIZE(tile%lcts)
-        IF (tile%lcts(ilct)%id == GLACIER_TYPE) THEN
-          is_glacier(:) = tile%lcts(ilct)%fract(ics:ice,iblk) > 0._wp
-          EXIT
-        END IF
-      END DO
+    IF (model%config%use_new_turb) THEN
+      is_glacier(:) = tile%is_glacier
     ELSE
-      is_glacier(:) = .FALSE.
+      IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
+        DO ilct=1,SIZE(tile%lcts)
+          IF (tile%lcts(ilct)%id == GLACIER_TYPE) THEN
+            is_glacier(:) = tile%lcts(ilct)%fract(ics:ice,iblk) > 0._wp
+            EXIT
+          END IF
+        END DO
+      ELSE
+        is_glacier(:) = .FALSE.
+      END IF
     END IF
     !$claw acc update device(is_glacier) ! 
     !$claw acc end data
 
-    !$claw acc data present(is_ocean, is_lake)
-    CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
-    is_ocean(:) = fract(:) <= 0._wp
-    is_lake(:)  = tile%fract(ics:ice,iblk) <= 0._wp
-    !$claw acc update device(is_ocean, is_lake)
-    !$claw acc end data
+    IF (model%config%use_new_turb) THEN
+      !$claw acc data present(is_ocean, is_lake)
+      is_ocean(:) = .FALSE.
+      is_lake (:) = .FALSE.
+      !$claw acc update device(is_ocean, is_lake)
+      !$claw acc end data
+    ELSE
+      !$claw acc data present(is_ocean, is_lake)
+      CALL tile%parent_tile%Get_fraction(ics, ice, iblk, fract=fract(:))
+      is_ocean(:) = fract(:) <= 0._wp
+      is_lake(:)  = tile%fract(ics:ice,iblk) <= 0._wp
+      !$claw acc update device(is_ocean, is_lake)
+      !$claw acc end data
+    END IF
 
     IF (is_time_experiment_start(options%current_datetime)) THEN            ! Start of experiment
       lstart = .TRUE.
@@ -256,8 +276,10 @@ CONTAINS
       lstart = .FALSE.
     END IF
 
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0_0 tile_name=tile%name
-    soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
+    IF (.NOT. tile%is_glacier) THEN
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0_0 tile_name=tile%name
+      soil_depth_sl_vol_porosity_sl_tmp(:) = soil_depth_sl(:,1) * vol_porosity_sl(:,1)
+    END IF
 
     ! In the moment, the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
     ! necessary for the phenology process
@@ -326,7 +348,12 @@ CONTAINS
       & t_old(:), &
       & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
 
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    ! Transfer coefficient
+    IF (model%config%use_new_turb) THEN
+      heat_tcoef(:) = ch(:)
+    ELSE
+      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    END IF
     !$claw end expand
 
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2_1 tile_name=tile%name
@@ -361,8 +388,13 @@ CONTAINS
     !$claw acc end data
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
-    t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
+    IF (model%config%use_new_turb) THEN
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
+      t_unfilt(:) = s_star(:) / t2s_conv(:)
+    ELSE
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
+      t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
+    END IF
 
     ! Correct new dry static energy for melting of snow on the surface and (if l_freeze=.TRUE.) melting/freezing of
     ! ice/water in the top soil layer that will happen during this time step
@@ -390,7 +422,7 @@ CONTAINS
     END DO
     !$claw acc end data
 
-    IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+    IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. tile%is_glacier) THEN
 
       IF (dsl4jsb_Config(SSE_)%l_supercool) THEN
         !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_6_1 tile_name=tile%name
@@ -440,11 +472,12 @@ CONTAINS
        i = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
        WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',     &
             & '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t_star: ', t_star(i), 'K,  t_old: ' , t_old(i), 'K'
-       CALL finish(TRIM(routine), message_text)
+       !CALL finish(TRIM(routine), message_text)
+       CALL message(TRIM(routine), message_text)
     END IF
 #endif
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_10 tile_name=tile%name
-    t_eff(:) = (t_old(:)**3 * (4._wp * t_star(:) - 3._wp * t_old(:))) ** 0.25_wp
+    t_eff4(:) = (t_old(:)**3 * (4._wp * t_star(:) - 3._wp * t_old(:)))
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -529,6 +562,7 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
       & t,           &
+      & t_rad4,      &
       & t_filt,      &
       & t_old,       &
       & t_unfilt,    &
@@ -539,7 +573,7 @@ CONTAINS
     INTEGER :: iblk, ics, ice
     REAL(wp) :: eps
 
-    !TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin_land'
 
@@ -549,7 +583,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !model => Get_model(tile%owner_model_id)
+    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -557,6 +591,9 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! out
+    IF (model%config%use_new_turb) THEN
+      dsl4jsb_Get_var2D_onChunk(SEB_,    t_rad4)         ! out
+    END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,      t_filt)         ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,      t_old)          ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)       ! in
@@ -573,6 +610,10 @@ CONTAINS
     END IF
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_2 tile_name=tile%name
     t(:) = t_filt(:)
+    IF (model%config%use_new_turb) THEN
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_3 tile_name=tile%name
+      t_rad4(:) = t(:)**4
+    END IF
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -589,6 +630,7 @@ CONTAINS
     ! Local variables
     !
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
 
@@ -597,6 +639,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: t_acoef
     dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: drag_srf
+    dsl4jsb_Real2D_onChunk :: ch
     dsl4jsb_Real2D_onChunk :: latent_hflx
     dsl4jsb_Real2D_onChunk :: sensible_hflx
     dsl4jsb_Real2D_onChunk :: latent_hflx_lnd
@@ -617,7 +660,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: steplen
 
-    !TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes_land'
 
@@ -631,7 +674,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    !model => Get_model(tile%owner_model_id)
+    model => Get_model(tile%owner_model_id)
 
     ! Get reference to variables for current block
     !
@@ -641,7 +684,6 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)             ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)             ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)            ! in
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_star)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)  ! in
@@ -653,6 +695,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx_lnd)   ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   latent_hflx_lnd)     ! out
 
+    IF (model%config%use_new_turb) THEN
+      dsl4jsb_Get_memory(TURB_)
+      dsl4jsb_Get_var2D_onChunk(TURB_, ch)                 ! in
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)            ! in
+    END IF
+
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
     !$cla$w acc data create(s_air, heat_tcoef)
@@ -663,7 +712,11 @@ CONTAINS
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
     ! Transfer coefficient
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    IF (model%config%use_new_turb) THEN
+      heat_tcoef(:) = ch(:)
+    ELSE
+      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    END IF
 
     ! Compute sensible heat flux
     !

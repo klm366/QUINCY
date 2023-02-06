@@ -33,6 +33,9 @@ MODULE mo_turb_memory_class
     !
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
+      & kh,                   & !< Surface exchange coefficient (heat)
+      & km,                   & !< Surface exchange coefficient (momentum)
+      & ch,                   & !< Surface transfer coefficient (heat)
       & rough_m,              & !< Surface roughness length for momentum
       & rough_h,              & !< Surface roughness length for heat
       ! The following two variables are transformations of the corresponding roughness length variables
@@ -83,6 +86,33 @@ CONTAINS
     surface => Get_vgrid('surface')
 
     !! !$acc enter data pcreate(mem)
+
+    CALL mem%Add_var( 'kh', mem%kh,                                                      &
+      & hgrid, surface,                                                                  &
+      & t_cf('exchange coeffient heat', '', 'surface exchange coefficient for heat'),    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.FALSE.,                                                                &
+      & output_level=BASIC,                                                              &
+      & initval_r=5.0_wp )
+
+    CALL mem%Add_var( 'km', mem%km,                                                      &
+      & hgrid, surface,                                                                  &
+      & t_cf('exchange coeffient mom', '', 'surface exchange coefficient for momentum'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.FALSE.,                                                                &
+      & output_level=BASIC,                                                              &
+      & initval_r=5.0_wp )
+
+    CALL mem%Add_var( 'ch', mem%ch,                                                      &
+      & hgrid, surface,                                                                  &
+      & t_cf('transfer coeffient heat', '', 'surface transfer coefficient for heat'),    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),               &
+      & prefix, suffix,                                                                  &
+      & lrestart=.FALSE.,                                                                &
+      & output_level=BASIC,                                                              &
+      & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'rough_m', mem%rough_m,                                            &
       & hgrid, surface,                                                                  &

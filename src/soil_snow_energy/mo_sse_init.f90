@@ -309,7 +309,7 @@ CONTAINS
     !$acc end data
 
     ! IF (TRIM(tile%name) /= 'box') THEN
-    IF (TRIM(tile%name) == 'land') THEN
+    IF (model%config%use_new_turb .AND. .NOT. tile%Has_children() .OR. TRIM(tile%name) == 'land') THEN
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 

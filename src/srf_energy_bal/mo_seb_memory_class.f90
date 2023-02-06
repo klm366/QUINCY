@@ -22,7 +22,7 @@ MODULE mo_seb_memory_class
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE
+  USE mo_jsb_lct_class,          ONLY: LAND_TYPE, LAKE_TYPE, GLACIER_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real1d, t_jsb_var_real2d
   USE mo_jsb_physical_constants, ONLY: tmelt
 
@@ -44,6 +44,13 @@ MODULE mo_seb_memory_class
       & t,                      & !< Surface temperature                                             [K]
       & t_old,                  & !< Surface temperature at previous timestep                        [K]
       & t_unfilt,               & !< Surface temperature, unfiltered (before Asselin)                [K]
+      & t_rad4,                 & !< Surface radiative temperature **4                               [K**4]
+      & t_eff4,                 & !< Effective surface temperature **4                               [K**4]
+                                  !! This is the surface temperature used in the atmospheric
+                                  !! radiative heating
+      & qsat_star,              & !< Saturation specific humidity at surface (qsat^star, see manual) [kg kg-1]
+                                  !! This is the qsat_srf that is used in the vertical diffusion
+                                  !! scheme in the atmosphere
       & heat_cap,               & !< Heat capacity of surface layer                                  [J m-2 K-1]
       & heat_cap_old,           & !< Heat capacity of surface layer at previous timestep             [J m-2 K-1]
       & latent_hflx,            & !< Latent heat flux                                                [W m-2]
@@ -57,15 +64,9 @@ MODULE mo_seb_memory_class
       & s_star,                 & !< Surface dry static energy (s^star, see manual)                  [m2 s-2]
                                   !! This is the s that is used in the vertical diffusion
                                   !! scheme in the atmosphere
-      & qsat_star,              & !< Saturation specific humidity at surface (qsat^star, see manual) [kg kg-1]
-                                  !! This is the qsat_srf that is used in the vertical diffusion
-                                  !! scheme in the atmosphere
       & t_unfilt_old,           & !< Surface temperature at previous timestep, unfiltered            [K]
                                   !! (before Asselin)
       & t_filt,                 & !< Surface temperature, filtered (after Asselin)                   [K]
-      & t_eff,                  & !< Effective surface temperature (see manual)                      [K]
-                                  !! This is the surface temperature used in the atmospheric
-                                  !! radiative heating
       & latent_hflx_lnd,        & !< Latent heat flux                                                [W m-2]
       & sensible_hflx_lnd,      & !< Sensible heat flux                                              [W m-2]
       & previous_day_temp_mean, & ! mean day air-temperature [Celsius] of previous day,
@@ -162,6 +163,16 @@ CONTAINS
       & output_level=BASIC, &
       & initval_r=280.0_wp )
 
+    IF (model%config%use_new_turb) THEN
+      CALL mem%Add_var( 't_rad**4', mem%t_rad4,                                        &
+        & hgrid, surface,                                                              &
+        & t_cf('sfc_temp_rad**4', 'K', 'surface radiative temperature **4'),           &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=BASIC, &
+        & initval_r=280.0_wp**4 )
+    END IF
+
     CALL mem%Add_var( 't_old', mem%t_old,                                            &
       & hgrid, surface,                                                              &
       & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
@@ -176,6 +187,15 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=280.0_wp )
+
+    CALL mem%Add_var( 'qsat_star', mem%qsat_star,                                          &
+      & hgrid, surface,                                                                    &
+      & t_cf('sfc_qsat', 'm2 s-2', 'surface specific humidity at saturation'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+      & prefix, suffix,                                                                    &
+      & lrestart=.FALSE.,                                                                  &
+      & output_level=BASIC, &
+      & initval_r=0.0075_wp )
 
     CALL mem%Add_var( 'heat_cap', mem%heat_cap,                                      &
       & hgrid, surface,                                                              &
@@ -221,8 +241,18 @@ CONTAINS
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    IF (model%config%use_new_turb .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
+      CALL mem%Add_var( 't_eff**4', mem%t_eff4,                                              &
+        & hgrid, surface,                                                                    &
+        & t_cf('surface_temperature_eff**4', 'K', 'effective surface temperature**4'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
+        & prefix, suffix,                                                                    &
+        & lrestart=.FALSE.,                                                                  &
+        & initval_r=280.0_wp**4 )
+    END IF
+
     ! Additional variables for LAND lct
-    IF (One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
+    IF ( model%config%use_new_turb .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
@@ -232,15 +262,6 @@ CONTAINS
         & lrestart=.FALSE.,                                                                  &
         & output_level=BASIC, &
         & initval_r=2.9E5_wp )
-
-      CALL mem%Add_var( 'qsat_star', mem%qsat_star,                                          &
-        & hgrid, surface,                                                                    &
-        & t_cf('sfc_qsat', 'm2 s-2', 'surface specific humidity at saturation'),             &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & lrestart=.FALSE.,                                                                  &
-        & output_level=BASIC, &
-        & initval_r=0.0075_wp )
 
       CALL mem%Add_var( 't_unfilt_old', mem%t_unfilt_old,                                    &
         & hgrid, surface,                                                                    &
@@ -253,14 +274,6 @@ CONTAINS
       CALL mem%Add_var( 't_filt', mem%t_filt,                                                &
         & hgrid, surface,                                                                    &
         & t_cf('sfc_temp_filt', 'K', 'filtered surface temperature'),                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-        & prefix, suffix,                                                                    &
-        & lrestart=.FALSE.,                                                                  &
-        & initval_r=280.0_wp )
-
-      CALL mem%Add_var( 't_eff', mem%t_eff,                                                  &
-        & hgrid, surface,                                                                    &
-        & t_cf('surface_temperature_eff', 'K', 'effective surface temperature'),             &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
         & prefix, suffix,                                                                    &
         & lrestart=.FALSE.,                                                                  &

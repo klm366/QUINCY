@@ -16,17 +16,116 @@ MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
+  USE mo_aes_thermo, ONLY: potential_temperature
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, &
-    thermal_radiation, lwnet_from_lwdown
+    & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
+    & register_exchange_coefficients_procedure, exchange_coefficients
+
+  ABSTRACT INTERFACE
+    PURE SUBROUTINE i_exchange_coefficients_procedure(           &
+      & dz,                                                 &
+      & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
+      & km, kh                                              &
+      & )
+      IMPORT :: wp
+
+      REAL(wp), INTENT(in) :: &
+        dz,        &
+        thetam1,   &
+        pqm1 ,     &
+        mwind,     &
+        rough_m,   &
+        theta_sfc, &
+        qsat_sfc
+        !
+      REAL(wp), INTENT(out) :: &
+        kh,      &
+        km
+
+    END SUBROUTINE
+  END INTERFACE
+
+  PROCEDURE(i_exchange_coefficients_procedure), POINTER :: registered_exchange_coefficients_procedure => NULL()
+  ! PROCEDURE(i_exchange_coefficients_procedure), POINTER :: exchange_coefficients => NULL()
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes'
 
 CONTAINS
 
+  SUBROUTINE register_exchange_coefficients_procedure(exchange_coefficients_procedure)
+
+    PROCEDURE(i_exchange_coefficients_procedure) :: exchange_coefficients_procedure
+
+    registered_exchange_coefficients_procedure => exchange_coefficients_procedure
+    ! exchange_coefficients => exchange_coefficients_procedure
+
+  END SUBROUTINE register_exchange_coefficients_procedure
+
+! #ifndef _OPENACC
+!   ELEMENTAL &
+! #endif
+!   SUBROUTINE exchange_coefficients(                         &
+!     & dz,                                                 &
+!     & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
+!     & km, kh                                              &
+!     & )
+
+!     REAL(wp), INTENT(in) :: &
+!       dz,        &
+!       thetam1,   &
+!       pqm1 ,     &
+!       mwind,     &
+!       rough_m,   &
+!       theta_sfc, &
+!       qsat_sfc
+!       !
+!     REAL(wp), INTENT(out) :: &
+!       kh,      &
+!       km
+
+!     CALL registered_exchange_coefficients_procedure(          &
+!       & dz,                                                 &
+!       & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
+!       & km, kh                                              &
+!       & )
+
+!   END SUBROUTINE exchange_coefficients
+  SUBROUTINE exchange_coefficients(                         &
+    & dz,                                                 &
+    & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
+    & km, kh                                              &
+    & )
+
+    REAL(wp), DIMENSION(:), INTENT(in) :: &
+      dz,        &
+      thetam1,   &
+      pqm1 ,     &
+      mwind,     &
+      rough_m,   &
+      theta_sfc, &
+      qsat_sfc
+      !
+    REAL(wp), DIMENSION(:), INTENT(out) :: &
+      kh,      &
+      km
+
+    INTEGER :: ic
+
+    DO ic=1,SIZE(dz)
+      CALL registered_exchange_coefficients_procedure(          &
+        & dz(ic),                                                 &
+        & pqm1(ic), thetam1(ic), mwind(ic), rough_m(ic), theta_sfc(ic), qsat_sfc(ic), &
+        & km(ic), kh(ic)                                              &
+        & )
+    END DO
+    ! print*,'AAA thetam1 ',MINVAL(thetam1),MAXVAL(thetam1)
+    ! print*,'BBB theta_sfc ',MINVAL(theta_sfc),MAXVAL(theta_sfc)
+
+  END SUBROUTINE exchange_coefficients
   !>
   ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
   ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure

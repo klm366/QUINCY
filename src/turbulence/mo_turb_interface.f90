@@ -56,6 +56,18 @@ MODULE mo_turb_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_turb_interface'
 
+  !> Type definition for exchange_coefficients
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_exchange_coefficients
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_exchange_coefficients    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_exchange_coefficients !< Aggregates computed task variables
+  END TYPE tsk_exchange_coefficients
+
+  !> Constructor interface for exchange_coefficients task
+  INTERFACE tsk_exchange_coefficients
+    PROCEDURE Create_task_exchange_coefficients                        !< Constructor function for task
+  END INTERFACE tsk_exchange_coefficients
+
   !> Type definition for surface_roughness task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_roughness
   CONTAINS
@@ -84,6 +96,22 @@ CONTAINS
 
   ! ================================================================================================================================
   !! Constructors for tasks
+
+  ! -------------------------------------------------------------------------------------------------------
+  !> Constructor for exchange_coefficients task
+  !!
+  !! @param[in]     model_id     Model id
+  !! @return        return_ptr   Instance of process task "tsk_exchange_coefficients"
+  !!
+  FUNCTION Create_task_exchange_coefficients(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_exchange_coefficients::return_ptr)
+    CALL return_ptr%Construct(name='exchange_coefficients', process_id=TURB_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_exchange_coefficients
 
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for surface_roughness task
@@ -128,10 +156,156 @@ CONTAINS
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in)    :: model_id
 
+    CALL this%Register_task(tsk_exchange_coefficients(model_id))
     CALL this%Register_task(tsk_surface_roughness(model_id))
     CALL this%Register_task(tsk_humidity_scaling(model_id))
 
-  END SUBROUTINE Register_Turb_Tasks
+  END SUBROUTINE Register_turb_Tasks
+
+  ! ================================================================================================================================
+  !>
+  !! @brief Implementation of "update" for task "surface_roughness"
+  !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE update_exchange_coefficients(tile, options)
+
+    USE mo_aes_thermo,             ONLY: potential_temperature ! Todo: use from mo_util_jsbach
+    USE mo_phy_schemes,            ONLY: qsat, exchange_coefficients
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(TURB_)
+    dsl4jsb_Def_config(SEB_)
+
+    ! Declare process memories
+    dsl4jsb_Def_memory(TURB_)
+    dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(PHENO_)
+    dsl4jsb_Def_memory(SEB_)
+
+    ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: t
+    dsl4jsb_Real2D_onChunk :: dz_srf
+    dsl4jsb_Real2D_onChunk :: press_srf
+    dsl4jsb_Real2D_onChunk :: rho_srf
+    dsl4jsb_Real2D_onChunk :: t_air
+    dsl4jsb_Real2D_onChunk :: q_air
+    dsl4jsb_Real2D_onChunk :: press_air
+    dsl4jsb_Real2D_onChunk :: wind_air
+    dsl4jsb_Real2D_onChunk :: rough_m
+    dsl4jsb_Real2D_onChunk :: qsat_star
+    dsl4jsb_Real2D_onChunk :: kh
+    dsl4jsb_Real2D_onChunk :: km
+    dsl4jsb_Real2D_onChunk :: ch
+
+    ! Local variables
+    TYPE(t_jsb_model), POINTER :: model
+
+    INTEGER  :: iblk, ics, ice
+    REAL(wp), DIMENSION(options%nc) :: &
+      & pot_temperature_srf, pot_temperature_air, qsat_srf
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_exchange_coefficients'
+
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_active(TURB_)) RETURN
+
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(TURB_)
+    dsl4jsb_Get_config(SEB_)
+
+    !$claw acc data create(rough_veg_star, rough_bare_star, rough_snow_star)
+
+    ! Get process memories
+    dsl4jsb_Get_memory(TURB_)
+    dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SEB_)
+
+    ! Get process variables
+    dsl4jsb_Get_var2D_onChunk(A2L_,   dz_srf)          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   press_srf)       ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   rho_srf)         ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   t_air)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   press_air)       ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)        ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t)               ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   qsat_star)       ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! in
+    dsl4jsb_Get_var2D_onChunk(TURB_,  kh)              ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  km)              ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
+
+    pot_temperature_srf(:) = potential_temperature(t(:), press_srf(:))
+    pot_temperature_air(:) = potential_temperature(t_air(:), press_air(:))
+    qsat_srf(:) = qsat(t(:), press_srf(:))
+    CALL exchange_coefficients( &
+      & dz_srf(:),                                                 &
+      & q_air(:), pot_temperature_air(:), wind_air(:), rough_m(:), pot_temperature_srf(:), qsat_srf(:), &
+      & km(:), kh(:)                                              &
+      &)
+    ch(:) = wind_air(:) * rho_srf(:) * kh(:)
+
+  END SUBROUTINE update_exchange_coefficients
+  ! -------------------------------------------------------------------------------------------------------
+  !>
+  !! Implementation of "aggregate" for task "exchange_coefficients"
+  !!
+  !! @param[in,out] tile    Tile for which routine is executed.
+  !! @param[in]     options Additional run-time parameters.
+  !!
+  SUBROUTINE aggregate_exchange_coefficients(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_config(TURB_)
+    dsl4jsb_Def_memory(TURB_)
+
+    dsl4jsb_Real2D_onChunk :: rough_m
+    dsl4jsb_Real2D_onChunk :: rough_h
+    dsl4jsb_Real2D_onChunk :: rough_m_star
+    dsl4jsb_Real2D_onChunk :: rough_h_star
+
+    REAL(wp) :: config_blending_height, config_roughness_momentum_to_heat
+
+    TYPE(t_jsb_model),       POINTER :: model
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_exchange_coefficients'
+
+    ! Local variables
+    INTEGER  :: iblk, ics, ice
+
+    ! Get local variables from options argument
+    iblk = options%iblk
+    ics  = options%ics
+    ice  = options%ice
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Get_memory(TURB_)
+
+    dsl4jsb_Aggregate_onChunk(TURB_, kh,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, km,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, ch,   weighted_by_fract)
+
+  END SUBROUTINE aggregate_exchange_coefficients
 
   ! ================================================================================================================================
   !>
@@ -425,6 +599,7 @@ CONTAINS
       & qsat_star,            &
       & canopy_cond_limited,  &
       & pch,                  &
+      & kh,                   &
       & wind_air,             &
       & q_air
 
@@ -442,7 +617,8 @@ CONTAINS
       fact_qair_soil(options%nc),  &
       rel_hum(options%nc),         & ! relative humidity of uppermost soil layer as compared to its field capacity
       zfract_fpc(options%nc),      &
-      w_soil_wilt_fract_tmp
+      w_soil_wilt_fract_tmp,       &
+      ch_tmp(options%nc)
     LOGICAL :: &
       mask(options%nc)
 
@@ -481,7 +657,13 @@ CONTAINS
     END IF
 
     ! Set pointers to variables in memory
-    dsl4jsb_Get_var2D_onChunk(A2L_,   pch)                 ! in
+    IF (model%config%use_new_turb) THEN
+      dsl4jsb_Get_var2D_onChunk(TURB_, kh)                 ! in
+      ch_tmp(:) = kh(:)
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   pch)               ! in
+      ch_tmp(:) = pch(:)
+    END IF
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)               ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)          ! in
@@ -518,16 +700,16 @@ CONTAINS
         mask(:) = w_soil_column(:) > w_soil_wilt_fract_tmp * max_moist(:)
       END IF
 
-      !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)
+      !$claw acc data present(fract_snow,fract_water,ch_tmp,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)
       !$claw acc parallel loop gang vector
       DO i = 1, size(mask, dim=1)
         IF (mask(i)) THEN
           fact_qsat_veg(i) = fract_snow(i) + (1._wp - fract_snow(i)) *   &
             & (fract_water(i) + ( 1._wp - fract_water(i)) /                &
-            & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i))))
+            & (1._wp + ch_tmp(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i))))
           fact_qsat_trans(i) = (1._wp - fract_snow(i)) * &
             & (1._wp - fract_water(i)) /                  &
-            & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i)))
+            & (1._wp + ch_tmp(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i)))
         ELSE 
           fact_qsat_veg(i)   = fract_snow(i) + (1._wp - fract_snow(i)) * fract_water(i)
           fact_qsat_trans(i) = 0._wp

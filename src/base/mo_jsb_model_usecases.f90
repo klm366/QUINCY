@@ -50,7 +50,11 @@ CONTAINS
     SELECT CASE (TRIM(model%config%usecase))
 
     CASE ('jsbach_lite')
-      CALL init_usecase_lite(model)
+      IF (model%config%use_new_turb) THEN
+        CALL init_usecase_lite_new(model)
+      ELSE
+        CALL init_usecase_lite(model)
+      END IF
 
     CASE ('jsbach_pfts')
       CALL init_usecase_pfts(model)
@@ -117,6 +121,67 @@ CONTAINS
     NULLIFY(box_tile, lake_tile, glacier_tile, land_tile, veg_tile)
 
   END SUBROUTINE init_usecase_lite
+
+  SUBROUTINE init_usecase_lite_new(model)
+
+    TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
+
+    CLASS(t_jsb_tile), POINTER :: box_tile, lake_tile, land_tile, glacier_tile, veg_tile
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase_lite_new'
+
+    ! Create root of the tile structure representing the whole grid box
+    box_tile => t_jsb_tile('box', 'Top tile', &
+      ! & processes      =(/A2L_,     L2A_,     RAD_,      HYDRO_,    TURB_    /), &
+      ! & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & processes      =(/A2L_,     L2A_,     SEB_,      RAD_,      HYDRO_,    TURB_    /), &
+      & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &
+      & model_id=model%id, fract_varname='notsea')
+    model%top => box_tile
+
+#ifndef __NO_JSBACH_HD__
+    IF (model%processes(HD_)%p%config%active) THEN
+      CALL box_tile%Set_process_action(HD_, ON_TILE_)
+    END IF
+#endif
+
+      ! Create sub-tiles
+      IF (model%config%use_lakes) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          ! & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile, fract_varname='fract_lake')
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          ! & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+      ELSE
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          ! & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & processes=(/SSE_/), process_actions=(/ON_LEAFS_/), &
+          & lct=t_jsb_lct(LAND_TYPE), &
+          & parent=box_tile, &
+          & fract_varname='equal')   ! Fraction = 1.
+      END IF
+
+        IF (model%config%use_glacier) THEN
+          glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
+            & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
+            & fract_varname='fract_glac')
+        END IF
+
+          veg_tile => t_jsb_tile('veg', 'Veg tile', &
+            & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
+            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & fract_varname='fract_veg')
+
+    ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
+    IF (ASSOCIATED(glacier_tile)) CONTINUE
+    IF (ASSOCIATED(lake_tile)) CONTINUE
+    IF (ASSOCIATED(veg_Tile)) CONTINUE
+
+    NULLIFY(box_tile, lake_tile, glacier_tile, land_tile, veg_tile)
+
+  END SUBROUTINE init_usecase_lite_new
 
   SUBROUTINE init_usecase_pfts(model)
 

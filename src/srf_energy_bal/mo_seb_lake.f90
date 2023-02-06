@@ -24,11 +24,12 @@ MODULE mo_seb_lake
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_control,        ONLY: debug_on
 
-  dsl4jsb_Use_processes SEB_, RAD_, HYDRO_, A2L_
+  dsl4jsb_Use_processes SEB_, TURB_, RAD_, HYDRO_, A2L_
   dsl4jsb_Use_config(SEB_)
 
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(TURB_)
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(HYDRO_)
 
@@ -57,11 +58,14 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
       & t,                    &
+      & t_rad4,               &
+      & t_eff4,               &
       & t_unfilt,             &
       & t_lwtr,               &
       & t_lice,               &
       & qsat_lwtr,            &
       & qsat_lice,            &
+      & qsat_star,            &
       & s_lwtr,               &
       & s_lice,               &
       & heat_cap,             &
@@ -136,11 +140,16 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! out
+    IF (model%config%use_new_turb) THEN
+      dsl4jsb_Get_var2D_onChunk(SEB_, t_rad4)       ! out
+      dsl4jsb_Get_var2D_onChunk(SEB_, t_eff4)       ! out
+    END IF
     dsl4jsb_Get_var2D_onChunk(SEB_, t_unfilt)       ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr)   ! in
     dsl4jsb_Get_var2D_onChunk(SEB_, t_lwtr)         ! inout
     dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lwtr)      ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, s_lwtr)         ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, qsat_star)      ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, heat_cap)       ! out
 
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)         ! in
@@ -296,7 +305,12 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_5
       qsat_lice(:) = qsat(t_lice(:), press_srf(:))
       s_lice(:)    = surface_dry_static_energy(t_lice(:), qsat_lice(:))
-      t(:) = (1._wp - fract_lice(:)) * t_lwtr   (:) + fract_lice(:) * t_lice   (:)
+      t(:)     = (1._wp - fract_lice(:)) * t_lwtr   (:) + fract_lice(:) * t_lice   (:)
+      IF (model%config%use_new_turb) THEN
+        t_rad4(:) = (1._wp - fract_lice(:)) * t_lwtr   (:)**4 + fract_lice(:) * t_lice   (:)**4
+        t_eff4(:) = t_rad4(:)
+      END IF
+      qsat_star(:) = (1._wp - fract_lice(:)) * qsat_lwtr   (:) + fract_lice(:) * qsat_lice   (:)
       heat_cap(:) = (1._wp - fract_lice(:)) * hcap_wtr(:) + fract_lice(:) * hcap_ice(:)
       w_snow(:) = fract_lice(:) * w_snow_lice(:)
       t_unfilt(:) = t(:)
@@ -307,6 +321,11 @@ CONTAINS
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_6
       t(:) = t_lwtr(:)
+      IF (model%config%use_new_turb) THEN
+        t_rad4(:) = t_lwtr(:)**4
+        t_eff4(:) = t_rad4(:)
+      END IF
+      qsat_star(:) = qsat_lwtr(:)
       heat_cap(:) = hcap_wtr(:)
       w_snow(:) = 0._wp
       t_unfilt(:) = t(:)
@@ -548,6 +567,7 @@ CONTAINS
     ! Local variables
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
 
@@ -569,6 +589,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sensible_hflx_ice
     dsl4jsb_Real2D_onChunk :: evapo_ice
     dsl4jsb_Real2D_onChunk :: fract_lice
+    dsl4jsb_Real2D_onChunk :: ch                 ! for new turb
 
     ! Locally allocated vectors
     !
@@ -608,8 +629,15 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_wtr)       ! IN
     dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   drag_wtr)          ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   drag_ice)          ! IN
+    IF (model%config%use_new_turb) THEN
+      dsl4jsb_Get_memory(TURB_)
+      dsl4jsb_Get_var2D_onChunk(TURB_, ch)               ! in
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   drag_wtr)        ! in
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   drag_ice)      ! in
+      END IF
+    END IF
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_lwtr)            ! in
     dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx)     ! out
@@ -644,7 +672,11 @@ CONTAINS
     s_air(:) = t_acoef_wtr(:) * s_lwtr  (:) + t_bcoef_wtr(:)
 
     ! Transfer coefficient
-    heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
+    IF (model%config%use_new_turb) THEN
+      heat_tcoef(:) = ch(:)  ! TODO: distinguish between wtr and ice?
+    ELSE
+      heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
+    END IF
 
     ! Compute sensible heat flux
     !
@@ -666,7 +698,11 @@ CONTAINS
       s_air(:) = t_acoef_ice(:) * s_lice  (:) + t_bcoef_ice(:)
 
       ! Transfer coefficient
-      heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
+      IF (model%config%use_new_turb) THEN
+        heat_tcoef(:) = ch(:)
+      ELSE
+        heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
+      END IF
 
       ! Compute sensible heat flux
       !

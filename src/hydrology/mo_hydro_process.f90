@@ -1448,12 +1448,11 @@ CONTAINS
 
   ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
     & dtime,                                     & ! in
-    & steplen,                                   & ! in
     & wsr_max,                                   & ! in
     & oro_stddev,                                & ! in
     & t_srf_old,                                 & ! in
     & press_srf,                                 & ! in
-    & drag_srf,                                  & ! in
+    & heat_tcoef,                                & ! in
     & q_air,                                     & ! in
     & w_skin,                                    & ! in
     & w_snow_soil,                               & ! in
@@ -1463,19 +1462,18 @@ CONTAINS
     & fract_snow_soil                            & ! out
     & )
 
-    USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
+    USE mo_phy_schemes,            ONLY: qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
       & oro_stddev,         &
       & t_srf_old,          &
       & press_srf,          &
-      & drag_srf,           &
+      & heat_tcoef,         &
       & q_air,              &
       & wsr_max,            &
       & w_skin,             &
@@ -1513,7 +1511,7 @@ CONTAINS
 
     ! Potential evaporation using old values of air and surface humidity
     qsat_srf_old = qsat(t_srf_old, press_srf)
-    evapo_pot =  -1._wp * heat_transfer_coef(drag_srf, steplen) * (q_air - qsat_srf_old)  ! Positive upwards
+    evapo_pot =  -1._wp * heat_tcoef * (q_air - qsat_srf_old)  ! Positive upwards
 
     ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy; same for skin reservoir
@@ -1533,12 +1531,11 @@ CONTAINS
 
   ELEMENTAL SUBROUTINE calc_wskin_fractions_bare( &
     & dtime,                                      & ! in
-    & steplen,                                    & ! in
     & wsr_max,                                    & ! in
     & oro_stddev,                                 & ! in
     & t_srf,                                      & ! in
     & press_srf,                                  & ! in
-    & drag_srf,                                   & ! in
+    & heat_tcoef,                                 & ! in
     & q_air,                                      & ! in
     & w_skin,                                     & ! in
     & w_snow_soil,                                & ! in
@@ -1546,19 +1543,18 @@ CONTAINS
     & fract_snow_soil                             & ! out
     & )
 
-    USE mo_phy_schemes,            ONLY: heat_transfer_coef, qsat
+    USE mo_phy_schemes,            ONLY: qsat
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in) :: &
-      & dtime,              &
-      & steplen
+      & dtime
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
       & oro_stddev,         &
       & t_srf,              &
       & press_srf,          &
-      & drag_srf,           &
+      & heat_tcoef,         &
       & q_air,              &
       & wsr_max,            &
       & w_skin,             &
@@ -1589,7 +1585,7 @@ CONTAINS
     ! Potential evaporation using old values of air and surface humidity
     t_srf_old = t_srf
     qsat_srf_old = qsat(t_srf_old, press_srf)
-    evapo_pot =  heat_transfer_coef(drag_srf, steplen) * (qsat_srf_old - q_air) ! Positive upwards
+    evapo_pot =  heat_tcoef * (qsat_srf_old - q_air) ! Positive upwards
 
     ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy together

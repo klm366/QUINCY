@@ -194,13 +194,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
-    ELSE IF (tile%is_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_new_turb) THEN
+      CALL update_surface_energy_land(tile, options)
+    ELSE IF (model%config%use_new_turb) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type '//TRIM(tile%lcts(1)%name)//' on tile '//TRIM(tile%name))
@@ -243,7 +249,7 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(SEB_, t_unfilt,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_eff,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SEB_, t_eff4,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, qsat_star,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, s_star,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, forc_hflx,     weighted_by_fract)
@@ -450,13 +456,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_new_turb) THEN
+      CALL update_asselin_land(tile, options)
+    ELSE IF (model%config%use_new_turb) THEN
       CALL update_asselin_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
@@ -482,6 +494,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_asselin'
 
     INTEGER :: iblk , ics, ice
+    TYPE(t_jsb_model), POINTER :: model
 
     iblk = options%iblk
     ics  = options%ics
@@ -489,12 +502,17 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(SEB_, t,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, t_filt, weighted_by_fract)
+    IF (model%config%use_new_turb) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_rad4, weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -515,13 +533,19 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    TYPE(t_jsb_model), POINTER :: model
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
     IF (.NOT. tile%Is_process_active(SEB_)) RETURN
 
+    model => Get_model(tile%owner_model_id)
+
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
-    ELSE IF (tile%contains_land) THEN
+    ELSE IF (tile%is_land .AND. .NOT. model%config%use_new_turb) THEN
+      CALL update_surface_fluxes_land(tile, options)
+    ELSE IF (model%config%use_new_turb) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')

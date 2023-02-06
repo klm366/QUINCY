@@ -40,7 +40,8 @@ MODULE mo_jsb_interface
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
-    ! MODULE PROCEDURE interface_inquire
+    MODULE PROCEDURE interface_new_trb
+      ! MODULE PROCEDURE interface_inquire
   END INTERFACE jsbach_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_interface'
@@ -296,26 +297,26 @@ CONTAINS
     CALL update_land2atm(                        &
       & tile,                                    &
       & model%options(no_omp_thread),            &
-      & t_srf              = t_srf(:),           &
-      & t_eff_srf          = t_eff_srf(:),       &
-      & qsat_srf           = qsat_srf(:),        &
-      & s_srf              = s_srf(:),           &
-      & fact_q_air         = fact_q_air(:),      &
-      & fact_qsat_srf      = fact_qsat_srf(:),   &
+      & t_srf              = t_srf,              &
+      & t_eff_srf          = t_eff_srf,          &
+      & qsat_srf           = qsat_srf,           &
+      & s_srf              = s_srf,              &
+      & fact_q_air         = fact_q_air,         &
+      & fact_qsat_srf      = fact_qsat_srf,      &
       & evapopot           = evapopot,           &
-      & evapotrans         = evapotrans(:),      &
-      & latent_hflx        = latent_hflx(:),     &
-      & sensible_hflx      = sensible_hflx(:),   &
-      & grnd_hflx          = grnd_hflx(:),       &
+      & evapotrans         = evapotrans,         &
+      & latent_hflx        = latent_hflx,        &
+      & sensible_hflx      = sensible_hflx,      &
+      & grnd_hflx          = grnd_hflx,          &
       & grnd_hcap          = grnd_hcap,          &
-      & rough_h_srf        = rough_h_srf(:),     &
-      & rough_m_srf        = rough_m_srf(:),     &
-      & q_snocpymlt        = q_snocpymlt(:),     &
-      & alb_vis_dir        = alb_vis_dir(:),     &
-      & alb_nir_dir        = alb_nir_dir(:),     &
-      & alb_vis_dif        = alb_vis_dif(:),     &
-      & alb_nir_dif        = alb_nir_dif(:),     &
-      & CO2_flux           = CO2_flux(:),        &
+      & rough_h_srf        = rough_h_srf,        &
+      & rough_m_srf        = rough_m_srf,        &
+      & q_snocpymlt        = q_snocpymlt,        &
+      & alb_vis_dir        = alb_vis_dir,        &
+      & alb_nir_dir        = alb_nir_dir,        &
+      & alb_vis_dif        = alb_vis_dif,        &
+      & alb_nir_dif        = alb_nir_dif,        &
+      & CO2_flux           = CO2_flux,           &
       & t_lwtr             = t_lwtr,             &
       & qsat_lwtr          = qsat_lwtr,          &
       & s_lwtr             = s_lwtr,             &
@@ -344,6 +345,193 @@ CONTAINS
     IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
 
   END SUBROUTINE interface_full
+
+  SUBROUTINE interface_new_trb( &
+    & model_id,         &
+    & iblk, ics, ice,   &
+    & current_datetime, &
+    & dtime, steplen,   &
+    & t_air,            &
+    & q_air,            &
+    & press_air,        &
+    & rain,             &
+    & snow,             &
+    & wind_air,         &
+    & wind_10m,         &
+    & lw_srf_down,      &
+    & swvis_srf_down,   &
+    & swnir_srf_down,   &
+    & swpar_srf_down,   &
+    & fract_par_diffuse, &
+    & dz_srf,           &
+    & press_srf,        &
+    & rho_srf,          &
+    & t_acoef,          &
+    & t_bcoef,          &
+    & q_acoef,          &
+    & q_bcoef,          &
+    & cos_zenith_angle, &
+    & CO2_air,          &
+    & t_srf,            &
+    & t_srf_rad,        &
+    & t_srf_eff,        &
+    & q_snocpymlt,      &
+    & alb_vis_dir,      &
+    & alb_nir_dir,      &
+    & alb_vis_dif,      &
+    & alb_nir_dif,      &
+    & kh,               &
+    & km                &
+    ! & qsat_srf,         &
+    ! & s_srf,            &
+    & )
+
+#ifndef __ICON__
+    USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
+#endif
+
+    ! INTEGER :: p_pe
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':interface_new_trb'
+
+    ! Arguments
+    INTEGER, INTENT(in) :: &
+      & model_id,          &
+      & iblk,              &
+      & ics,               &
+      & ice
+    TYPE(t_datetime), POINTER, INTENT(in) :: &
+      & current_datetime
+    REAL(wp), INTENT(in) :: &
+      & dtime,              &
+      & steplen
+    REAL(wp), INTENT(in) ::    &
+      & t_air             (:), &
+      & q_air             (:), &
+      & press_air         (:), &
+      & rain              (:), &
+      & snow              (:), &
+      & wind_air          (:), &
+      & wind_10m          (:), &
+      & lw_srf_down       (:), &
+      & swvis_srf_down    (:), &
+      & swnir_srf_down    (:), &
+      & swpar_srf_down    (:), &
+      & fract_par_diffuse  (:), &
+      & dz_srf            (:), &
+      & press_srf         (:), &
+      & rho_srf           (:), &
+      ! & drag_srf          (:), &
+      & t_acoef           (:), &
+      & t_bcoef           (:), &
+      & q_acoef           (:), &
+      & q_bcoef           (:), &
+      ! & pch               (:), &
+      & cos_zenith_angle  (:), &
+      & CO2_air           (:)
+    REAL(wp), INTENT(out) ::   &
+      & t_srf             (:), &
+      & t_srf_rad         (:), &
+      & t_srf_eff         (:), &
+      & q_snocpymlt       (:), &
+      & alb_vis_dir       (:), &
+      & alb_nir_dir       (:), &
+      & alb_vis_dif       (:), &
+      & alb_nir_dif       (:), &
+      & kh                (:), &
+      & km                (:)
+      ! & qsat_srf          (:), &
+      ! & s_srf             (:), &
+
+    ! Local variables
+    CLASS(t_jsb_model),          POINTER :: model
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+
+    INTEGER :: nc
+    INTEGER :: no_omp_thread
+
+    ! ---------------------------
+    ! Go
+
+    IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
+
+    no_omp_thread = Get_omp_thread()
+
+    nc = ice - ics + 1
+
+    model => Get_model(model_id)
+
+    IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
+
+    ! Update options
+    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
+    CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+
+    CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
+
+    ! Put atmospheric forcing into the a2l memory.
+
+    CALL model%Get_top_tile(tile)
+
+    CALL update_atm2land(                           &
+      & tile,                                       &
+      & model%options(no_omp_thread),               &
+      & t_air              = t_air(:),              &
+      & q_air              = q_air(:),              &
+      & press_air          = press_air(:),          &
+      & rain               = rain(:),               &
+      & snow               = snow(:),               &
+      & wind_air           = wind_air(:),           &
+      & wind_10m           = wind_10m(:),           &
+      & lw_srf_down        = lw_srf_down(:),        &
+      & swvis_srf_down     = swvis_srf_down(:),     &
+      & swnir_srf_down     = swnir_srf_down(:),     &
+      & swpar_srf_down     = swpar_srf_down(:),     &
+      & fract_par_diffuse  = fract_par_diffuse(:),  &
+      & dz_srf             = dz_srf(:),             &
+      & press_srf          = press_srf(:),          &
+      & rho_srf            = rho_srf(:),            &
+      ! & drag_srf           = drag_srf(:),           &
+      & t_acoef            = t_acoef(:),            &
+      & t_bcoef            = t_bcoef(:),            &
+      & q_acoef            = q_acoef(:),            &
+      & q_bcoef            = q_bcoef(:),            &
+      ! & pch                = pch(:),                &
+      & cos_zenith_angle   = cos_zenith_angle(:),   &
+      & CO2_air            = CO2_air(:)             &
+      & )
+    NULLIFY(tile)
+
+    ! Run tasks in queue
+    CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
+
+    ! Finally, give the required variables back to the atmosphere
+    CALL model%Get_top_tile(tile)
+
+    CALL update_land2atm(                        &
+      & tile,                                    &
+      & model%options(no_omp_thread),            &
+      & t_srf              = t_srf,              &
+      & t_srf_rad          = t_srf_rad,          &
+      & t_eff_srf          = t_srf_eff,          &
+      & q_snocpymlt        = q_snocpymlt,        &
+      & alb_vis_dir        = alb_vis_dir,        &
+      & alb_nir_dir        = alb_nir_dir,        &
+      & alb_vis_dif        = alb_vis_dif,        &
+      & alb_nir_dif        = alb_nir_dif,        &
+      & kh                 = kh,                 &
+      & km                 = km                  &
+      ! & qsat_srf           = qsat_srf,           &
+      ! & s_srf              = s_srf               &
+      & )
+    NULLIFY(tile)
+
+    IF (debug_on('basic') .AND. iblk == 1) &
+      & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
+
+    IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model_id))
+
+  END SUBROUTINE interface_new_trb
 
   !
   ! Not used currently

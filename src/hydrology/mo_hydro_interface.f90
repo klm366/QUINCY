@@ -473,12 +473,14 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)             ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)         ! out
+      IF (model%config%use_new_turb) dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)        ! out
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_0 tile_name=tile%name
       runoff  (:) = rain(:) + snow(:) + evapotrans(:)
       drainage(:) = 0._wp
       w_snow(:) = 0._wp
       evapo_snow(:) = evapopot(:)
+      IF (model%config%use_new_turb) q_snocpymlt(:) = 0._wp
       !$claw end expand
 
       RETURN
@@ -1492,6 +1494,7 @@ CONTAINS
       & drag_srf, &
       & drag_wtr, &
       & drag_ice, &
+      & ch, &
       & qsat_star, &
       & qsat_lwtr, &
       & qsat_lice, &
@@ -1561,24 +1564,42 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(A2L_,     drag_wtr)      ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,     qsat_lwtr)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)     ! out
+      IF (model%config%use_new_turb) THEN
+        dsl4jsb_Get_var2D_onChunk(TURB_, ch)
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_wtr)          ! in
+        IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+          dsl4jsb_Get_var2D_onChunk(A2L_,  drag_ice)        ! in
+        END IF
+      END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_1 tile_name=tile%name
       q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
-      heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)  ! Transfer coefficient
+
+      ! Transfer coefficient
+      IF (model%config%use_new_turb) THEN
+        heat_tcoef(:) = ch(:)  ! TODO: distinguish between wtr and ice?
+      ELSE
+        heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
+      END IF
       evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_lwtr(:)) ! Potential evaporation
       !$claw end expand
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef_ice)       ! in
         dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef_ice)       ! in
-        dsl4jsb_Get_var2D_onChunk(A2L_,   drag_ice)          ! in
         dsl4jsb_Get_var2D_onChunk(SEB_,   qsat_lice)         ! in
         dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! out
 
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_2 tile_name=tile%name
         q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:) ! New moisture at lowest atmospheric level by back-substitution
-        heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)  ! Transfer coefficient
+      ! Transfer coefficient
+        IF (model%config%use_new_turb) THEN
+          heat_tcoef(:) = ch(:)  ! TODO: distinguish between wtr and ice?
+        ELSE
+          heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
+        END IF
         evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:)) ! Potential evaporation
         evapopot  (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
         !$claw end expand
@@ -1593,11 +1614,16 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)             ! in
       dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)             ! in
-      dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)            ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,  qsat_star)           ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_q_air)          ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)       ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_trans_srf) ! in
+
+      IF (model%config%use_new_turb) THEN
+        dsl4jsb_Get_var2D_onChunk(TURB_, ch)
+      ELSE
+        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
+      END IF
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_lnd)           ! out
       IF (tile%contains_vegetation) THEN
@@ -1606,8 +1632,14 @@ CONTAINS
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
       q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
-      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)  ! Transfer coefficient
 
+      ! Transfer coefficient
+      IF (model%config%use_new_turb) THEN
+        heat_tcoef(:) = ch(:)
+      ELSE
+        heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+      END IF
+  
       ! Compute effective air moisture and surface saturation humidity
       q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
                               & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
@@ -1751,6 +1783,7 @@ CONTAINS
     ! Use declarations
     USE mo_hydro_process,          ONLY: calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare
     ! sollte jetzt in dieses File hier kommen: USE mo_hydro_process,  ONLY: calc_hydro_snow_and_skin_fraction
+    USE mo_phy_schemes,            ONLY: heat_transfer_coef
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1766,6 +1799,8 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, i
     REAL(wp) :: dtime, steplen, config_w_skin_max
+    REAL(wp) :: heat_tcoef(options%nc)
+
     !$claw verbatim INTEGER, SAVE :: task_counter = 1
 
     ! Declare pointers for process configuration and memory
@@ -1773,6 +1808,7 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(PHENO_)
 
@@ -1790,6 +1826,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: w_skin
     dsl4jsb_Real2D_onChunk :: oro_stddev
     dsl4jsb_Real2D_onChunk :: drag_srf
+    dsl4jsb_Real2D_onChunk :: ch
     dsl4jsb_Real2D_onChunk :: t
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: q_air
@@ -1845,7 +1882,12 @@ CONTAINS
     END IF
 
     ! Set pointers
-    dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)         ! in
+    IF (model%config%use_new_turb) THEN
+      dsl4jsb_Get_memory(TURB_)
+      dsl4jsb_Get_var2D_onChunk(TURB_, ch)            ! in
+    ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_, drag_srf)       ! in
+    END IF
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)        ! in
 
@@ -1878,6 +1920,7 @@ CONTAINS
       END IF
       WRITE (message_text,*) 'Temperature out of bounds on tile ', tile%name, ' at ', '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t: ', t(i)
       CALL finish(TRIM(routine), message_text)
+      ! CALL message(TRIM(routine), message_text)
     END IF
 #endif
 
@@ -1904,17 +1947,23 @@ CONTAINS
       !$claw end expand
     END IF
 
+    ! Transfer coefficient
+    IF (model%config%use_new_turb) THEN
+      heat_tcoef(:) = ch(:)  ! TODO: distinguish between wtr and ice?
+    ELSE
+      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    END IF
+
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    w_snow_can)       ! in
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_veg_1 tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
-        & steplen,                   & ! in
         & w_skin_max(:),             & ! in
         & oro_stddev(:),             & ! in
         & t(:),                      & ! in, from the previous time step as long as this is called before the asselin filter
         & press_srf(:),              & ! in
-        & drag_srf(:),               & ! in
+        & heat_tcoef(:),             & ! in
         & q_air(:),                  & ! in
         & w_skin(:),                 & ! in
         & w_snow_soil(:),            & ! in
@@ -1932,12 +1981,11 @@ CONTAINS
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_bare_1 tile_name=tile%name dtime=dtime steplen=steplen  task_counter=task_counter
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in
-        & steplen,                    & ! in
         & w_skin_max,                 & ! in
         & oro_stddev(:),              & ! in
         & t(:),                       & ! in
         & press_srf(:),               & ! in
-        & drag_srf(:),                & ! in
+        & heat_tcoef(:),              & ! in
         & q_air(:),                   & ! in
         & w_skin(:),                  & ! in
         & w_snow_soil(:),             & ! in

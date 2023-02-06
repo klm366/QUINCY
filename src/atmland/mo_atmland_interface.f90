@@ -50,6 +50,7 @@ CONTAINS
     & tile, options,          &
     & t_air,                  &
     & q_air,                  &
+    & press_air,              &
     & rain,                   &
     & snow,                   &
     & wind_air,               &
@@ -59,7 +60,9 @@ CONTAINS
     & swnir_srf_down,         &
     & swpar_srf_down,         &
     & fract_par_diffuse,      &
+    & dz_srf,                 &
     & press_srf,              &
+    & rho_srf,                &
     & drag_srf,               &
     & t_acoef,                &
     & t_bcoef,                &
@@ -89,8 +92,8 @@ CONTAINS
     ! TODO This line doesn't work with intel on mistral and standalone JSBACH with ECHAM infrastructure ... why?
     ! REAL(wp), OPTIONAL, DIMENSION(options%nc), INTENT(in) ::                                                       &
     REAL(wp), OPTIONAL, DIMENSION(:), INTENT(in) ::                                                                &
-      & t_air, q_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
-      & fract_par_diffuse, press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle,         &
+      & t_air, q_air, press_air, rain, snow, wind_air, wind_10m, lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, &
+      & fract_par_diffuse, dz_srf, press_srf, rho_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch, cos_zenith_angle, &
       & CO2_air, DEBUG_VAR, drag_wtr, drag_ice,                                                                    &
       & t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                                                        &
       & t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice
@@ -107,6 +110,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  &
       & t_air_ptr,             &
       & q_air_ptr,             &
+      & press_air_ptr,         &
       & rain_ptr,              &
       & snow_ptr,              &
       & wind_air_ptr,          &
@@ -116,7 +120,9 @@ CONTAINS
       & swnir_srf_down_ptr,    &
       & swpar_srf_down_ptr,    &
       & fract_par_diffuse_ptr, &
+      & dz_srf_ptr,            &
       & press_srf_ptr,         &
+      & rho_srf_ptr,           &
       & drag_srf_ptr,          &
       & t_acoef_ptr,           &
       & t_bcoef_ptr,           &
@@ -165,6 +171,9 @@ CONTAINS
     IF (PRESENT(q_air)) THEN
       q_air_ptr             => dsl4jsb_var2D_onChunk(A2L_, q_air)
     END IF
+    IF (PRESENT(press_air)) THEN
+      press_air_ptr         => dsl4jsb_var2D_onChunk(A2L_, press_air)
+    END IF
     IF(PRESENT(rain)) THEN
       rain_ptr              => dsl4jsb_var2D_onChunk(A2L_, rain)
     END IF
@@ -192,8 +201,14 @@ CONTAINS
     IF (PRESENT(fract_par_diffuse)) THEN
       fract_par_diffuse_ptr => dsl4jsb_var2D_onChunk(A2L_, fract_par_diffuse)
     END IF
+    IF (PRESENT(dz_srf)) THEN
+      dz_srf_ptr            => dsl4jsb_var2D_onChunk(A2L_, dz_srf)
+    END IF
     IF (PRESENT(press_srf)) THEN
       press_srf_ptr         => dsl4jsb_var2D_onChunk(A2L_, press_srf)
+    END IF
+    IF (PRESENT(rho_srf)) THEN
+      rho_srf_ptr           => dsl4jsb_var2D_onChunk(A2L_, rho_srf)
     END IF
     IF(PRESENT(drag_srf)) THEN
       drag_srf_ptr          => dsl4jsb_var2D_onChunk(A2L_, drag_srf)
@@ -273,6 +288,12 @@ CONTAINS
         q_air_ptr(i) = q_air(i)
       END DO
     END IF
+    IF (PRESENT(press_air)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        press_air_ptr(i) = press_air(i)
+      END DO
+    END IF
     IF (PRESENT(rain)) THEN
       !$acc loop gang vector
       DO i=1,nc
@@ -327,6 +348,12 @@ CONTAINS
         fract_par_diffuse_ptr(i)  = fract_par_diffuse(i)
       END DO
     END IF
+    IF (PRESENT(dz_srf)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        dz_srf_ptr(i) = dz_srf(i)
+      END DO
+    END IF
     IF (PRESENT(press_srf)) THEN
       !$acc loop gang vector
       DO i=1,nc
@@ -337,6 +364,12 @@ CONTAINS
       !$acc loop gang vector
       DO i=1,nc
         drag_srf_ptr(i) = drag_srf(i)
+      END DO
+    END IF
+    IF (PRESENT(rho_srf)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        rho_srf_ptr(i) = rho_srf(i)
       END DO
     END IF
     IF (PRESENT(t_acoef)) THEN
@@ -455,12 +488,12 @@ CONTAINS
   END SUBROUTINE update_atm2land
 
   SUBROUTINE update_land2atm(tile, options,                                          &
-    & t_srf, t_eff_srf, qsat_srf, s_srf,                                             &
+    & t_srf, t_srf_rad, t_eff_srf, qsat_srf, s_srf,                                  &
     & fact_q_air, fact_qsat_srf, evapopot,                                           &
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,                  &
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
-    & CO2_flux,                                                                      &
+    & kh, km, CO2_flux,                                                              &
     & t_lwtr, t_lice, qsat_lwtr, qsat_lice, s_lwtr, s_lice,                          &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
@@ -471,7 +504,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     REAL(wp), OPTIONAL, INTENT(out) ::                                               &
-      & t_srf(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                               &
+      & t_srf(:), t_srf_rad(:), t_eff_srf(:), qsat_srf(:), s_srf(:),                 &
       & fact_q_air(:), fact_qsat_srf(:), evapopot(:),                                &
       & evapotrans(:), latent_hflx(:), sensible_hflx(:), grnd_hflx(:), grnd_hcap(:), &
       & rough_h_srf(:), rough_m_srf(:), q_snocpymlt(:),                              &
@@ -482,7 +515,7 @@ CONTAINS
       & alb_vis_dir_wtr(:), alb_vis_dif_wtr(:), alb_nir_dir_wtr(:),                  &
       & alb_nir_dif_wtr(:), albedo_lwtr(:), albedo_lice(:),                          &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
-      & CO2_flux(:)
+      & CO2_flux(:), kh(:), km(:)
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
@@ -516,6 +549,8 @@ CONTAINS
       & q_snocpymlt_ptr, &
       & alb_vis_lnd_ptr, &
       & alb_nir_lnd_ptr, &
+      & kh_ptr, &
+      & km_ptr, &
       & cflux_npp_2_atm_ta_ptr, &
       & cflux_soilresp_2_atm_ta_ptr, &
       & cflux_herb_2_atm_ta_ptr, &
@@ -563,7 +598,7 @@ CONTAINS
     END IF
 
     !$acc data pcreate(fact_land, fact_lake)
-    IF (tile%contains_lake .AND. .NOT. jsbach_runs_standalone()) THEN
+    IF (tile%contains_lake .AND. .NOT. model%config%use_new_turb .AND. .NOT. jsbach_runs_standalone()) THEN
 
       ! With lakes, re-scale _lnd, _lice and _lwtr fluxes given back to the atmosphere so that they are relative to the
       ! jsbach grid box, not/only including lakes (JSBACH grid boxes do not include ocean fractions.). Re-scaling is
@@ -612,21 +647,42 @@ CONTAINS
     ! Exchange fields on the land tile
     ! --------------------------------
 
-    IF (PRESENT(t_srf)) THEN
-      t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t_filt)
-      !$acc data present(t_srf, t_filt_ptr)
-      !$acc parallel loop
-      DO i=1,nc
-        t_srf(i) = t_filt_ptr(i)
-      END DO
-      !$acc end data
+    IF (model%config%use_new_turb) THEN
+      IF (PRESENT(t_srf)) THEN
+        t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t)
+        !$acc data present(t_srf, t_filt_ptr)
+        !$acc parallel loop
+        DO i=1,nc
+          t_srf(i) = t_filt_ptr(i)
+        END DO
+        !$acc end data
+      END IF
+      IF (PRESENT(t_srf_rad)) THEN
+        t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t_rad4)
+        !$acc data present(t_srf_rad, t_filt_ptr)
+        !$acc parallel loop
+        DO i=1,nc
+          t_srf_rad(i) = t_filt_ptr(i)**0.25_wp
+        END DO
+        !$acc end data
+      END IF
+    ELSE
+      IF (PRESENT(t_srf)) THEN
+        t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t_filt)
+        !$acc data present(t_srf, t_filt_ptr)
+        !$acc parallel loop
+        DO i=1,nc
+          t_srf(i) = t_filt_ptr(i)
+        END DO
+        !$acc end data
+      END IF
     END IF
     IF (PRESENT(t_eff_srf)) THEN
-      t_eff_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_eff)
+      t_eff_ptr => dsl4jsb_var2D_onChunk(SEB_,   t_eff4)
       !$acc data present(t_eff_srf, t_eff_ptr)
       !$acc parallel loop
       DO i=1,nc
-        t_eff_srf(i) = t_eff_ptr(i)
+        t_eff_srf(i) = t_eff_ptr(i)**0.25_wp
       END DO
       !$acc end data
     END IF
@@ -676,7 +732,11 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(evapotrans)) THEN
-      evapotrans_lnd_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
+      IF (model%config%use_new_turb) THEN
+        evapotrans_lnd_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans)
+      ELSE
+        evapotrans_lnd_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
+      END IF
       !$acc data present(evapotrans, fact_land, evapotrans_lnd_ptr)
       !$acc parallel loop
       DO i=1,nc
@@ -685,7 +745,11 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(latent_hflx)) THEN
-      latent_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
+      IF (model%config%use_new_turb) THEN
+        latent_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx)
+      ELSE
+        latent_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
+      END IF
       !$acc data present(latent_hflx, fact_land, latent_hflx_lnd_ptr)
       !$acc parallel loop
       DO i=1,nc
@@ -694,7 +758,11 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(sensible_hflx)) THEN
-      sensible_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
+      IF (model%config%use_new_turb) THEN
+        sensible_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx)
+      ELSE
+        sensible_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
+      END IF
       !$acc data present(sensible_hflx, fact_land, sensible_hflx_lnd_ptr)
       !$acc parallel loop
       DO i=1,nc
@@ -748,7 +816,11 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(alb_vis_dir)) THEN
-      alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis_lnd)  ! TODO
+      IF (model%config%use_new_turb) THEN
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis_lnd)  ! TODO
+      ELSE
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis)  ! TODO
+      END IF
       !$acc data present(alb_vis_lnd_ptr, alb_vis_dir)
       !$acc parallel loop
       DO i=1,nc
@@ -757,7 +829,11 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(alb_vis_dif)) THEN
-      alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
+      IF (model%config%use_new_turb) THEN
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
+      ELSE
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_vis)  ! TODO
+      END IF
       !$acc data present(alb_vis_dif, alb_vis_lnd_ptr)
       !$acc parallel loop
       DO i=1,nc
@@ -766,7 +842,11 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(alb_nir_dir)) THEN
-      alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+      IF (model%config%use_new_turb) THEN
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+      ELSE
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir)  ! TODO
+      END IF
       !$acc data present(alb_nir_dir, alb_nir_lnd_ptr)
       !$acc parallel loop
       DO i=1,nc
@@ -775,7 +855,11 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(alb_nir_dif)) THEN
-      alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)
+      IF (model%config%use_new_turb) THEN
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)
+      ELSE
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir)
+      END IF
       !$acc data present(alb_nir_dif, alb_nir_lnd_ptr)
       !$acc parallel loop
       DO i=1,nc
@@ -803,6 +887,24 @@ CONTAINS
         CO2_flux(:) = 0._wp
         !$acc end kernels
       END IF
+    END IF
+    IF (PRESENT(kh)) THEN
+      kh_ptr => dsl4jsb_var2D_onChunk(TURB_, kh)
+      !$acc data present(kh, kh_ptr)
+      !$acc parallel loop
+      DO i=1,nc
+        kh(i) = kh_ptr(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(kh)) THEN
+      km_ptr => dsl4jsb_var2D_onChunk(TURB_, km)
+      !$acc data present(km, km_ptr)
+      !$acc parallel loop
+      DO i=1,nc
+        km(i) = km_ptr(i)
+      END DO
+      !$acc end data
     END IF
 
     ! Exchange fields on lake water fractions
