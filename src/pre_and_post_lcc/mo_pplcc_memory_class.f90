@@ -96,56 +96,56 @@ CONTAINS
       & t_cf('tree_fract', '1', 'Tree fraction relative to the grid cell area'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & loutput=.TRUE., output_level=BASIC, initval_r=0.0_wp)
+      & loutput=.FALSE., output_level=BASIC, initval_r=0.0_wp)
 
     CALL mem%Add_var('shrub_fract', mem%shrub_fract,                                      &
       & hgrid, surface,                                                                   &
       & t_cf('shrub_fract', '1', 'Shrub fraction relative to the grid cell area'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & loutput=.TRUE., output_level=BASIC, initval_r=0.0_wp)
+      & loutput=.FALSE., output_level=BASIC, initval_r=0.0_wp)
 
     CALL mem%Add_var('grass_fract', mem%grass_fract,                                      &
       & hgrid, surface,                                                                   &
       & t_cf('grass_fract', '1', 'Grass fraction relative to the grid cell area'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & loutput=.TRUE., output_level=BASIC, initval_r=0.0_wp)
+      & loutput=.FALSE., output_level=BASIC, initval_r=0.0_wp)
 
     CALL mem%Add_var('crop_fract', mem%crop_fract,                                        &
       & hgrid, surface,                                                                   &
       & t_cf('crop_fract', '1', 'Crop fraction relative to the grid cell area'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & loutput=.TRUE., output_level=BASIC, initval_r=0.0_wp)
+      & loutput=.FALSE., output_level=BASIC, initval_r=0.0_wp)
 
     CALL mem%Add_var('pasture_fract', mem%pasture_fract,                                  &
       & hgrid, surface,                                                                   &
       & t_cf('pasture_fract', '1', 'Pasture fraction relative to the grid cell area'),    &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & loutput=.TRUE., output_level=BASIC, initval_r=0.0_wp)
+      & loutput=.FALSE., output_level=BASIC, initval_r=0.0_wp)
 
     CALL mem%Add_var('C3pft_fract', mem%C3pft_fract,                                      &
       & hgrid, surface,                                                                   &
       & t_cf('C3pft_fract', '1', 'Fraction of C3-PFTs relative to the grid cell area'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & loutput=.TRUE., output_level=BASIC, initval_r=0.0_wp)
+      & loutput=.FALSE., output_level=BASIC, initval_r=0.0_wp)
 
     CALL mem%Add_var('C4pft_fract', mem%C4pft_fract,                                      &
       & hgrid, surface,                                                                   &
       & t_cf('C4pft_fract', '1', 'Fraction of C4-PFTs relative to the grid cell area'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & loutput=.TRUE., output_level=BASIC, initval_r=0.0_wp)
+      & loutput=.FALSE., output_level=BASIC, initval_r=0.0_wp)
 
     CALL mem%Add_var('baresoil_fract', mem%baresoil_fract,                                &
       & hgrid, surface,                                                                   &
       & t_cf('baresoil_fract', '1', 'Bare soil fraction relative to the grid cell area'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
-      & loutput=.TRUE., output_level=BASIC, initval_r=0.0_wp)
+      & loutput=.FALSE., output_level=BASIC, initval_r=0.0_wp)
 
 #ifdef __ICON__
     ! Diagnostic global areas for experiment monitoring

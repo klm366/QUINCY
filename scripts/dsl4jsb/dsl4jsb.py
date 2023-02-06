@@ -73,7 +73,7 @@ macros = {
         r'\1__conf'],
     'get_lcc_relocations': [re.compile(
         r'dsl4jsb_Get_lcc_relocations *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
-        r'\2 => model%processes(\1_)%p%lcc_relocations'],
+        r'\2 => tile%lcc_processes(\1_)%p'],
     'lctlib': [re.compile(
         r'dsl4jsb_Lctlib', re.IGNORECASE),
         r'model%lctlib(tile%lcts(1)%lib_id)'],
