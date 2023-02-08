@@ -59,7 +59,9 @@ MODULE mo_hydro_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & infilt,               & !< infiltration
+      & infilt2,               & !< infiltration
       & runoff,               & !< surface runoff
+      & runoff2,               & !< surface runoff
       & infilt_over,          & !< overflow of top soil layer
       & drainage,             & !< total drainage
       & drain_rock,           & !< bottom drainage
@@ -109,6 +111,8 @@ MODULE mo_hydro_memory_class
       & water_to_soil,        & !< Water available for infiltration into the soil                           [m water equivalent]
       & wtr_soilhyd_res,      & !< Residual of vertical soil water transport scheme                         [m]
       & tpe_overflow,         & !< Water content of reservoir for soil water overflow (terraplanet)         [m]
+      & weq_rootzone,         & !< Total root zone water content                                            [m]
+      & weq_rootzone2,        & !< Total root zone water content                                            [m]
       & wtr_rootzone,         & !< Liquid water content in the rootzone                                     [m]
       & wtr_rootzone_rel        !< Water content of the rootzone relative to the maximum possible amout     [1]
 
@@ -309,9 +313,26 @@ CONTAINS
       & lrestart=.FALSE., output_level=BASIC,                                        &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    CALL mem%Add_var( 'infilt2', mem%infilt2,                                          &
+      & hgrid, surface,                                                              &
+      & t_cf('infilt2', 'kg m-2 s-1', 'Soil infiltration'),                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE., output_level=BASIC,                                        &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
     CALL mem%Add_var( 'runoff', mem%runoff,                                          &
       & hgrid, surface,                                                              &
       & t_cf('runoff', 'kg m-2 s-1', 'Total surface runoff'),                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'runoff2', mem%runoff2,                                          &
+      & hgrid, surface,                                                              &
+      & t_cf('runoff2', 'kg m-2 s-1', 'Total surface runoff'),                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
@@ -725,6 +746,22 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
+
+      CALL mem%Add_var( 'weq_rootzone', mem%weq_rootzone,                      &
+        & hgrid, surface,                                                      &
+        & t_cf('weq_rootzone', 'm', 'Total water content of the root zone'),   &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'weq_rootzone2', mem%weq_rootzone2,                      &
+        & hgrid, surface,                                                      &
+        & t_cf('weq_rootzone2', 'm', 'Total water content of the root zone'),   &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                          &
+        & prefix, suffix,                                                      &
+        & loutput=.TRUE., output_level=BASIC,                                  &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'wtr_rootzone', mem%wtr_rootzone,                      &
         & hgrid, surface,                                                      &

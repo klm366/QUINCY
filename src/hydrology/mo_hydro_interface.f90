@@ -22,7 +22,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message, finish
+  USE mo_exception,          ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -614,6 +614,8 @@ CONTAINS
         &  dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl) * dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl),    &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone_max)
+      dsl4jsb_var2D_onChunk (HYDRO_, weq_rootzone) = weq_rootzone
+
       IF (tile%is_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
         trans_tmp(:) = transpiration(:)
@@ -733,6 +735,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_rootzone,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
@@ -998,6 +1001,7 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1022,6 +1026,8 @@ CONTAINS
 
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
+    REAL(wp), DIMENSION(options%nc) :: &
+      & weq_rootzone, weq_rootzone_max
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1060,6 +1066,16 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
 
+    CALL get_amount_in_rootzone( &
+      &  dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl) + dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl),       &
+      &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl    ), &
+      &  weq_rootzone)
+    CALL get_amount_in_rootzone( &
+      &  dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl) * dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl),    &
+      &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
+      &  weq_rootzone_max)
+      dsl4jsb_var2D_onChunk (HYDRO_, weq_rootzone2) = weq_rootzone
+
     !$claw acc data create(tile, tile%fract, tile_fract)
     !$claw acc parallel loop gang vector
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
@@ -1077,6 +1093,9 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
+      & weq_rootzone,                                           &      ! in
+      & weq_rootzone_max,                                       &      ! in
+      & dsl4jsb_var2D_onChunk (HYDRO_, steepness),              &      ! in
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
@@ -1089,9 +1108,12 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil     ),     &
       ! inout
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt2           ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff2           ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
@@ -1149,8 +1171,11 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_fc_sl,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_pwp_sl, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_rootzone2,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, infilt2,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff2,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt_over,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
