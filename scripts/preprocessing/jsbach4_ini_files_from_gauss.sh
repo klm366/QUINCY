@@ -617,6 +617,15 @@ function generate_output_files {
 
   outfile="${grid_name}_bc_land_soil_${year}.nc"
   echo "Generating output file ${outfile} ..."
+
+  # Initial files on the Gaussian grid should not contain missing values. Variable
+  # fract_org_sl is adapted here (after extrapolation), as the icon grid initial
+  # files should not be affected.
+  if [[ $(echo ${grid_name} | cut -c1) == T ]]; then   # Gausian grid
+    cdo setmisstoc,0 ${grid_name}_fract_org_sl_remap.nc  ${grid_name}_fract_org_sl_remap.tmp
+    mv ${grid_name}_fract_org_sl_remap.tmp ${grid_name}_fract_org_sl_remap.nc
+  fi
+
   ${cdo} merge \
       ${grid_name}_soil_depth_remap.nc \
       ${grid_name}_root_depth_remap.nc \
