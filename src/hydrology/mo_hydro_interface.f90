@@ -377,6 +377,7 @@ CONTAINS
 
     USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
     USE mo_jsb_physical_constants, ONLY: dens_snow
+    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -431,6 +432,8 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: &
       & skinres_max,        &
       & skinres_canopy_max, &
+      & weq_rootzone,       &
+      & weq_rootzone_max,   &
       & trans_tmp
 
     LOGICAL  :: lstart
@@ -602,6 +605,15 @@ CONTAINS
         snow_soil_dens(:) = dens_snow
       END IF
     ELSE
+      ! Compute actual and maximum total rootzone moisture (liquid + ice)
+      CALL get_amount_in_rootzone( &
+        &  dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl) + dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl),    &
+        &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
+        &  weq_rootzone)
+      CALL get_amount_in_rootzone( &
+        &  dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl) * dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl),    &
+        &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
+        &  weq_rootzone_max)
       IF (tile%is_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
         trans_tmp(:) = transpiration(:)
@@ -634,11 +646,8 @@ CONTAINS
         & trans_tmp(:),                   & !< transpiration [kg m-2 s-1]
         & rain(:),                        & !< liquid precipitation [kg m-2 s-1]
         & snow(:),                        & !< solid precipitation [kg m-2 s-1]
-        & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl    ), & !< Soil layer thickness [m]
-        & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl    ), & !< Root zone layer thickness [m]
-        & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl ), & !< Volumetric field capacity [m]
-        & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl      ), & !< liquid water in soil layer [m]
-        & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl      ), & !< ice in soil layer [m]
+        & weq_rootzone(:),                & !< total rootzone water content [m]
+        & weq_rootzone_max(:),            & !< maximum total rootzone water content [m]
         ! inout
         & wtr_skin(:),                    & !< water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]
@@ -1135,7 +1144,6 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_rootzone,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, ice_soil_sl,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sat_sl, weighted_by_fract)

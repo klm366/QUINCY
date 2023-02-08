@@ -80,8 +80,7 @@ CONTAINS
     & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
     & t_air, skinres_canopy_max, skinres_max, fract_snow, fract_wet,&
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & soil_depth_sl, root_depth_sl, vol_field_cap_sl,               &
-    & wtr_soil_sl, ice_soil_sl,                                     &
+    & weq_rootzone, weq_rootzone_max,                               &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & q_snocpymlt, snow_accum, snowmelt_soil,                       &
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil,       &
@@ -99,10 +98,8 @@ CONTAINS
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
       & skinres_canopy_max(:), skinres_max(:), fract_snow(:), fract_wet(:), &
-      & hcap_grnd(:), evapotrans(:), evapopot(:), transpiration(:), rain(:), snow(:)
-    REAL(wp), INTENT(in) ::                                                                        &
-      & soil_depth_sl(:,:), root_depth_sl(:,:), vol_field_cap_sl(:,:),   &
-      & wtr_soil_sl(:,:), ice_soil_sl(:,:)
+      & hcap_grnd(:), evapotrans(:), evapopot(:), transpiration(:),         &
+      & rain(:), snow(:), weq_rootzone(:), weq_rootzone_max(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:)
     REAL(wp), INTENT(out)   ::                                               &
@@ -134,10 +131,7 @@ CONTAINS
       & evapo_snow_pot_in_m(nc),  & !< potential snow evaporation
       & evapo_skin_pot_in_m(nc),  & !< potential evaporation from wet surface (skin reservoir)
       & rain_to_skinres(nc),      & !< amount of rain going into the skin reservoir
-      & wtr_skin_pre_rain(nc),    & !< amount of water in the skin reservoir prior to the update [m]
-      & weq_rootzone_max(nc),     & !< maximum water holding capacity of the rootzone (liquid water + ice) [m]
-      & wtr_rootzone(nc),         & !< amount of liquid water in the rootzone [m]
-      & ice_rootzone(nc)            !< amount of ice in the rootzone [m]
+      & wtr_skin_pre_rain(nc)       !< amount of water in the skin reservoir prior to the update [m]
 
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
@@ -294,14 +288,9 @@ CONTAINS
       infilt(:) = water_to_soil(:)
 
     ELSE
-      CALL get_amount_in_rootzone(vol_field_cap_sl(:,:) * soil_depth_sl(:,:), &
-        &                         soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
-      CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
-
-      CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,                          &
-        &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),      &
-        &              steepness(:), weq_rootzone_max(:),                        &
+      CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,        &
+        &              water_to_soil(:), weq_rootzone(:),      &
+        &              steepness(:), weq_rootzone_max(:),      &
         &              runoff(:), infilt(:))
 
     END IF
