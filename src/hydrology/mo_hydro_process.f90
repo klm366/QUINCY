@@ -885,16 +885,20 @@ CONTAINS
         DO j = nsoil_act(i), 1, -1
           IF (wtr_soil_sl(i,j) < 0._wp) THEN
             WRITE (message_text,*) 'Soil moisture correction needed at ', &
-              &  lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
-              & 'Soil moisture:   ', wtr_soil_sl(i,:), NEW_LINE('a'), &
-              & 'Bottom drainage: ', drain_rock(i)
+              &  lat(i),'N and ',lon(i),'E:'
+            CALL message('soilhyd', message_text, all_print=.TRUE.)
+            WRITE (message_text,*) '>  Soil moisture:   ', wtr_soil_sl(i,:)
+            CALL message('soilhyd', message_text, all_print=.TRUE.)
+            WRITE (message_text,*) '>  Bottom drainage: ', drain_rock(i)
             CALL message('soilhyd', message_text, all_print=.TRUE.)
             drain_rock(i) = MAX((drain_rock(i) + wtr_soil_sl(i,j)), 0._wp)
             wtr_soil_sl(i,j) = 0._wp
             WRITE (message_text,*) 'After correction: wtr_soil_sl(i,:): ', &
-              & lat(i),'N and ',lon(i), 'E: ', NEW_LINE('a'), &
-              & 'Soil moisture:   ', wtr_soil_sl(i,:), NEW_LINE('a'), &
-              & 'Bottom drainage: ', drain_rock(i)
+              & lat(i),'N and ',lon(i), 'E:'
+            CALL message('soilhyd', message_text, all_print=.TRUE.)
+            WRITE (message_text,*) '>  Soil moisture:   ', wtr_soil_sl(i,:)
+            CALL message('soilhyd', message_text, all_print=.TRUE.)
+            WRITE (message_text,*) '>  Bottom drainage: ', drain_rock(i)
             CALL message('soilhyd', message_text, all_print=.TRUE.)
           END IF
         END DO
