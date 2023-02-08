@@ -445,12 +445,12 @@ CONTAINS
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
     & soilhydmodel, interpol_mean,                                      &
-    & w_soil_wilt_fract, weq_rootzone, weq_rootzone_max, steepness, soil_depth_sl, root_depth_sl,           &
+    & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,     &
-    & evapotrans_soil, transpiration, water_to_soil,                                    &
+    & evapotrans_soil, transpiration,                                     &
     ! inout
-    & infilt_new, runoff_new, infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,           &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,           &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl,                                      &
     & infilt_over, drainage, drain_rock, drain_lat                                       &
@@ -472,10 +472,10 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & lat, lon, weq_rootzone, weq_rootzone_max,           &
-      & evapotrans_soil, transpiration, steepness, water_to_soil
+      & lat, lon,                              &
+      & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt_new, runoff_new, infilt, runoff
+      & tpe_overflow, infilt, runoff
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -490,6 +490,7 @@ CONTAINS
       & transpiration_in_m(nc)          !< transpiration within time step [m]
 
     REAL(wp) ::              &
+      & weq_rootzone_max(nc),& ! maximum water holding capacity of the rootzone (liquid water + ice) [m]
       & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
       & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
 
@@ -531,22 +532,13 @@ CONTAINS
 
     ! Note: weq_rootzone_max calculated here (based on field capacity) is different from wsat calculated
     !       below (based on saturation).
+    hlp_2d(:,:) = vol_field_cap_sl(:,:) * soil_depth_sl(:,:)
+    CALL get_amount_in_rootzone(hlp_2d(:,:),      soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
     CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
     !$claw acc present(ws_min_drain,weq_rootzone_max,steepness,runoff,infilt)    &
     !$claw acc end parallel
-
-    infilt(:) = 0._wp
-    runoff(:) = 0._wp
-    CALL arno_scheme(nc, .TRUE., hlp_2d(:,1),                                  &
-      &              water_to_soil(:), weq_rootzone(:),                        &
-      &              steepness(:), weq_rootzone_max(:),                        &
-      &              runoff(:), infilt(:))
-
-    ! Set infiltration runoff to runoff from surface_hydrology
-    runoff(:) = runoff_new(:)
-    infilt(:) = infilt_new(:)
 
     ! Initialize diagnostic runoff and drainage variables
     infilt_over(:)    = 0._wp
@@ -602,7 +594,6 @@ CONTAINS
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
     drainage(:)  = drainage(:) + drain_rock(:) + drain_lat(:)
     runoff(:)    = runoff(:) + infilt_over(:)
-    runoff_new(:)    = runoff_new(:) + infilt_over(:)
 
 
     ! recalculate soil moisture from the soil moisture of the individual levels
@@ -613,8 +604,6 @@ CONTAINS
     DO i = 1, nc
       infilt(i)      = infilt     (i) * rhoh2o / dtime
       runoff(i)      = runoff     (i) * rhoh2o / dtime
-      infilt_new(i)      = infilt_new     (i) * rhoh2o / dtime
-      runoff_new(i)      = runoff_new     (i) * rhoh2o / dtime
       infilt_over(i) = infilt_over(i) * rhoh2o / dtime
       drainage(i)    = drainage   (i) * rhoh2o / dtime
       drain_rock(i)  = drain_rock (i) * rhoh2o / dtime
