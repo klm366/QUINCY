@@ -2622,4 +2622,3 @@ CONTAINS
     !$ACC END DATA
 
   END SUBROUTINE get_soilhyd_properties
-
