@@ -1200,7 +1200,6 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & cflux_c_greenwood_2_litter)
 
     USE mo_carbon_process_shared, ONLY: get_per_tile
-    !USE mo_carbon_constants,  ONLY: molarMassCO2_kg
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
@@ -1633,6 +1632,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     USE mo_carbon_constants,      ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
       &                                 nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
     USE mo_carbon_process_shared, ONLY: add_litter_to_yasso_pool
+    USE mo_jsb_varlist,           ONLY: VARNAME_LEN
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
