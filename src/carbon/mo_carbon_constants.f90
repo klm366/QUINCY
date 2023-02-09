@@ -22,24 +22,31 @@ MODULE mo_carbon_constants
   PUBLIC
 
   ! Yasso requires tile dependant lctlib constants for carbon relocation, accessed via indices
-  INTEGER, PARAMETER  :: i_lctlib_acid           = 1 !< Index of constants for acid yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_water          = 2 !< Index of constants for water yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_ethanol        = 3 !< Index of constants for ethanol yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_nonsoluble     = 4 !< Index of constants for nonsoluble yasso pools in the lctlib
-  INTEGER, PARAMETER  :: i_lctlib_humus          = 5 !< Index of constants for humus yasso pools in the lctlib
+  ENUM, BIND(C)
+    ENUMERATOR :: i_lctlib_acid=1, i_lctlib_water, i_lctlib_ethanol, i_lctlib_nonsoluble, i_lctlib_humus
+  END ENUM
+
+  ! Indices of the yasso transfer array
+  ENUM, BIND(C)
+    ENUMERATOR :: i_pool_acid_ag=1, i_pool_water_ag, i_pool_ethanol_ag, i_pool_nonsoluble_ag,             &
+                & i_pool_acid_bg, i_pool_water_bg, i_pool_ethanol_bg, i_pool_nonsoluble_bg, i_pool_humus, &
+                & i_flux_resp_total, i_flux_2_humus_ag, i_flux_2_humus_bg, i_flux_from_humus_diag,        &
+                & i_flux_resp_litter_ag, i_flux_resp_litter_bg, i_rel_flux_AWEN, i_flux_from_humus,       &
+                & i_flux_litter_2_humus
+  END ENUM
 
   ! Further constants
   REAL(wp), PARAMETER :: molarMassC_kg           = 12.01_wp * 1.e-3_wp  !< 12.01e-3_wp   -  Mass of 1 mol C   in kg
   REAL(wp), PARAMETER :: molarMassCO2_kg         = amco2 * 1.e-3_wp     !< 44.0095e-3_wp -  Mass of 1 mol CO2 in kg
 
-  REAL(wp), PARAMETER :: FireFracWood2Atmos      =  0.2_wp              !< Fraction of wood carbon emitted to the atm by fire.
+  REAL(wp), PARAMETER :: FireFracWood2Atmos      =     0.2_wp           !< Fraction of wood carbon emitted to the atm by fire.
                                                                         !< In JS3 called def_fire_fract_wood_2_atmos.
-  REAL(wp), PARAMETER :: fract_wood_aboveGround  = 0.7_wp               !< Fraction of C above ground in wood pool (for separation
+  REAL(wp), PARAMETER :: fract_wood_aboveGround  =     0.7_wp           !< Fraction of C above ground in wood pool (for separation
                                                                         !  of woody litter into above and below ground litter pools)
-  REAL(wp), PARAMETER :: fract_green_aboveGround = 0.5_wp               !< Fraction of C above ground in green pool (for separation
+  REAL(wp), PARAMETER :: fract_green_aboveGround =     0.5_wp           !< Fraction of C above ground in green pool (for separation
                                                                         !  of green litter into above and below ground litter pools)
   REAL(wp), PARAMETER :: sec_per_day             = 86400._wp            !< seconds per day
-  REAL(wp), PARAMETER :: days_per_year           = 365.25_wp
+  REAL(wp), PARAMETER :: days_per_year           =   365.25_wp
   REAL(wp), PARAMETER :: sec_per_year            = days_per_year * sec_per_day
 
   ! Definitions for lcc

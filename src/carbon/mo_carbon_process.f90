@@ -18,13 +18,13 @@ MODULE mo_carbon_process
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
                                & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
-                               & i_lctlib_nonsoluble, i_lctlib_humus, molarMassCO2_kg
+                               & i_lctlib_nonsoluble, i_lctlib_humus
+  USE mo_carbon_process_shared, ONLY: yasso
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage, &
-          & yasso, add_litter_to_yasso_pool, get_per_tile
+  PUBLIC :: calc_Cpools, relocate_carbon_fire, relocate_carbon_damage
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_carbon_process'
 

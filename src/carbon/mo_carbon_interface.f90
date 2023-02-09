@@ -1192,7 +1192,8 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       & cflux_dist_green_2_soil, cflux_dist_woods_2_soil, co2flux_fire_all_2_atm,           &
       & cflux_c_greenwood_2_litter)
 
-    USE mo_carbon_process,    ONLY: get_per_tile
+    USE mo_carbon_process_shared, ONLY: get_per_tile
+    !USE mo_carbon_constants,  ONLY: molarMassCO2_kg
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout), TARGET :: tile
@@ -1656,13 +1657,12 @@ END SUBROUTINE recalc_carbon_per_tile_vars
   !
   SUBROUTINE carbon_transfer_from_active_to_passive_vars_onChunk(lcc_relocations, tile, i_tile, options)
 
-    USE mo_util,                ONLY: one_of
-    USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc, collect_matter_of_active_vars_onChunk
-    USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_carbon_constants,    ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
-      &                               nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
-    USE mo_carbon_process,      ONLY: add_litter_to_yasso_pool
-    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+    USE mo_util,                  ONLY: one_of
+    USE mo_jsb_lcc_class,         ONLY: t_jsb_lcc_proc, collect_matter_of_active_vars_onChunk
+    USE mo_jsb_task_class,        ONLY: t_jsb_task_options
+    USE mo_carbon_constants,      ONLY: fract_green_aboveGround, fract_wood_aboveGround,           &
+      &                                 nr_of_yasso_pools, carbon_required_passive_vars, coefficient_ind_of_passive_vars
+    USE mo_carbon_process_shared, ONLY: add_litter_to_yasso_pool
 
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
