@@ -32,7 +32,7 @@ MODULE mo_carbon_process_shared
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: yasso, add_litter_to_yasso_pool, get_per_tile
+  PUBLIC :: yasso, distribute_yasso_litter, add_litter_to_yasso_pool, get_per_tile
 
 CONTAINS
 

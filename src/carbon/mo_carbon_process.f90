@@ -18,8 +18,9 @@ MODULE mo_carbon_process
   USE mo_carbon_constants, ONLY: fract_green_aboveGround, fract_wood_aboveGround, &
                                & days_per_year, sec_per_year, sec_per_day,        &
                                & i_lctlib_acid, i_lctlib_water, i_lctlib_ethanol, &
-                               & i_lctlib_nonsoluble, i_lctlib_humus
-  USE mo_carbon_process_shared, ONLY: yasso
+                               & i_lctlib_nonsoluble, i_lctlib_humus,             &
+                               & molarMassCO2_kg
+  USE mo_carbon_process_shared, ONLY: yasso, distribute_yasso_litter
 
   IMPLICIT NONE
   PRIVATE
