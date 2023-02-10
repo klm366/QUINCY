@@ -78,12 +78,12 @@ CONTAINS
   SUBROUTINE calc_surface_hydrology_land (                          &
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
     & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
-    & t_air, skinres_canopy_max, skinres_max, weq_pond_max, fract_snow, fract_wet, &
-    & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
-    & weq_rootzone, weq_rootzone_max,                               &
+    & t_air, skinres_canopy_max, skinres_max, weq_pond_max,         &
+    & fract_snow, fract_wet, hcap_grnd, evapotrans, evapopot,       &
+    & transpiration, rain, snow, weq_rootzone, weq_rootzone_max,    &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
-    & fract_pond, weq_pond, wtr_pond, ice_pond,                     &
-    & q_snocpymlt, snow_accum, snowmelt_soil, pond_freeze, pond_melt, &
+    & fract_pond, weq_pond, wtr_pond, ice_pond, q_snocpymlt,        &
+    & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil,       &
     & evapo_pond, evapo_deficit, infilt, runoff)
 
@@ -98,15 +98,17 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
-      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_snow(:), fract_wet(:), &
-      & hcap_grnd(:), evapotrans(:), evapopot(:), transpiration(:),         &
-      & rain(:), snow(:), weq_rootzone(:), weq_rootzone_max(:)
+      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
+      & fract_snow(:), fract_wet(:), hcap_grnd(:), evapotrans(:),           &
+      & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
+      & weq_rootzone_max(:)
     REAL(wp), INTENT(inout) :: &
-      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:), &
+      & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & fract_pond(:), weq_pond(:), wtr_pond(:), ice_pond(:)
-    REAL(wp), INTENT(out)   ::                                               &
-      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:), pond_melt(:), evapotrans_soil(:), &
-      & evapo_skin(:), evapo_snow(:), evapo_pond(:), water_to_soil(:), evapo_deficit(:),    &
+    REAL(wp), INTENT(out)   ::                                              &
+      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
+      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
+      & evapo_pond(:), water_to_soil(:), evapo_deficit(:),                  &
       & infilt(:), runoff(:)
     !$claw end model-data
     !
@@ -137,7 +139,7 @@ CONTAINS
       & rain_to_skinres(nc),      & !< amount of rain going into the skin reservoir
       & wtr_skin_pre_rain(nc),    & !< amount of water in the skin reservoir prior to the update [m]
       & t_pond(nc),               & !< surface pond water temperature [K]
-      & pond_change_pot             !< ??
+      & pond_change_pot(nc)         !< ??
 
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
@@ -243,18 +245,18 @@ CONTAINS
     !  Freezing and melting of surface pond reservoir
     !------------------------
     ! 1.) Potential melting:
-    t_pond = t_unfilt - snowmelt_soil / hcap_grnd * (alf*rhoh2o)
-    IF (t_pond > tmelt .AND. ice_pond > 0._wp) THEN
-      pond_change_pot = hcap_grnd * (t_pond-tmelt)/(alf*rhoh2o)
-      pond_melt       = MAX(MIN(pond_change_pot, ice_pond), 0._wp)
-      ice_pond        = ice_pond - pond_melt
-      wtr_pond        = wtr_pond + pond_melt
-    ELSE IF (t_pond < tmelt .AND. wtr_pond > 0._wp) THEN
-      pond_change_pot = hcap_grnd * (tmelt-t_pond)/(alf*rhoh2o)
-      pond_freeze     = MAX(MIN(pond_change_pot, wtr_pond), 0._wp)
-      wtr_pond        = wtr_pond - pond_freeze
-      ice_pond        = ice_pond + pond_freeze
-    END IF
+    t_pond(:) = t_unfilt(:) - snowmelt_soil(:) / hcap_grnd(:) * (alf*rhoh2o)
+    WHERE (t_pond(:) > tmelt .AND. ice_pond(:) > 0._wp)
+      pond_change_pot(:) = hcap_grnd(:) * (t_pond(:)-tmelt)/(alf*rhoh2o)
+      pond_melt(:)       = MAX(MIN(pond_change_pot(:), ice_pond(:)), 0._wp)
+      ice_pond(:)        = ice_pond(:) - pond_melt(:)
+      wtr_pond(:)        = wtr_pond(:) + pond_melt(:)
+    ELSE WHERE (t_pond(:) < tmelt .AND. wtr_pond(:) > 0._wp)
+      pond_change_pot(:) = hcap_grnd(:) * (tmelt-t_pond(:))/(alf*rhoh2o)
+      pond_freeze(:)     = MAX(MIN(pond_change_pot(:), wtr_pond(:)), 0._wp)
+      wtr_pond(:)        = wtr_pond(:) - pond_freeze(:)
+      ice_pond(:)        = ice_pond(:) + pond_freeze(:)
+    END WHERE
 
     !-----------------------------------------------------------
     !  Budget of water in skin and pond reservoir (canopy and ground)
@@ -272,24 +274,24 @@ CONTAINS
     !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
     evapo_skin_in_m(:) = wtr_skin(:) - (wtr_skin_pre_rain(:) + rain_to_skinres(:))
 
-    evapo_pond_in_m = MAX(-(wtr_pond + ice_pond), evapo_pond_pot_in_m)
+    evapo_pond_in_m(:) = MAX(-(wtr_pond(:) + ice_pond(:)), evapo_pond_pot_in_m(:))
 
-    evapo_pond_in_m = MAX(evapo_pond_in_m,          &
-                    & MIN(0._wp, evapotrans_no_snow - evapo_skin_in_m - transpiration_in_m))
+    evapo_pond_in_m(:) = MAX(evapo_pond_in_m(:),          &
+                    & MIN(0._wp, evapotrans_no_snow(:) - evapo_skin_in_m(:) - transpiration_in_m(:)))
 
     ! @todo why doesn't it rain into ponds?
-    IF (-evapo_pond_in_m > ice_pond ) THEN
-      wtr_pond = wtr_pond + ice_pond + evapo_pond_in_m
-      ice_pond = 0._wp
-    ELSE
-      ice_pond = ice_pond + evapo_pond_in_m
-    END IF
-    weq_pond   = ice_pond + wtr_pond
-    IF (weq_pond_max > 1.E-20_wp .AND. weq_pond > 1.E-20_wp) THEN
-      fract_pond = MIN(1._wp, (weq_pond / weq_pond_max)**0.5_wp)
-    ELSE
-      fract_pond = 0._wp
-    END IF
+    WHERE (-evapo_pond_in_m(:) > ice_pond(:) )
+      wtr_pond(:) = wtr_pond(:) + ice_pond(:) + evapo_pond_in_m(:)
+      ice_pond(:) = 0._wp
+    ELSE WHERE
+      ice_pond(:) = ice_pond(:) + evapo_pond_in_m(:)
+    END WHERE
+    weq_pond(:)   = ice_pond(:) + wtr_pond(:)
+    WHERE (weq_pond_max(:) > 1.E-20_wp .AND. weq_pond(:) > 1.E-20_wp)
+      fract_pond(:) = MIN(1._wp, (weq_pond(:) / weq_pond_max(:))**0.5_wp)
+    ELSE WHERE
+      fract_pond(:) = 0._wp
+    END WHERE
 
     evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:)
     WHERE (evapo_skin_pot_in_m(:) < 0._wp)
