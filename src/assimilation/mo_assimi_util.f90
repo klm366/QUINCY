@@ -50,18 +50,6 @@ CONTAINS
 
     dsl4jsb_Def_memory(ASSIMI_) 
 
-    ! ASSIMI_ 2D
-    dsl4jsb_Real2D_onChunk      :: gross_assimilation
-    dsl4jsb_Real2D_onChunk      :: gross_assimilation_C13
-    dsl4jsb_Real2D_onChunk      :: gross_assimilation_C14
-    dsl4jsb_Real2D_onChunk      :: net_assimilation
-    dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
-    dsl4jsb_Real2D_onChunk      :: maint_respiration_leaf
-    ! ASSIMI_ 3D
-    dsl4jsb_Real3D_onChunk      :: gross_assimilation_cl
-    dsl4jsb_Real3D_onChunk      :: net_assimilation_cl
-    dsl4jsb_Real3D_onChunk      :: maint_respiration_leaf_cl
-
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -77,35 +65,22 @@ CONTAINS
 
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation)              ! out 
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_C13)          ! out 
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  gross_assimilation_C14)          ! out 
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  net_assimilation)                ! out 
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  net_assimilation_boc)            ! out 
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_,  maint_respiration_leaf)          ! out 
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  gross_assimilation_cl)           ! out 
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  net_assimilation_cl)             ! out 
-    dsl4jsb_Get_var3D_onChunk(ASSIMI_,  maint_respiration_leaf_cl)       ! out 
-
-
-
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
 
     ! set zero all flux variables of the assimilation process
-    gross_assimilation(:)           = zero
-    gross_assimilation_C13(:)       = zero
-    gross_assimilation_C14(:)       = zero
-    net_assimilation(:)             = zero
-    net_assimilation_boc(:)         = zero
-    maint_respiration_leaf(:)       = zero
+    dsl4jsb_var2D_onChunk(ASSIMI_, gross_assimilation)           = zero
+    dsl4jsb_var2D_onChunk(ASSIMI_, gross_assimilation_C13)       = zero
+    dsl4jsb_var2D_onChunk(ASSIMI_, gross_assimilation_C14)       = zero
+    dsl4jsb_var2D_onChunk(ASSIMI_, net_assimilation)             = zero
+    dsl4jsb_var2D_onChunk(ASSIMI_, net_assimilation_boc)         = zero
+    dsl4jsb_var2D_onChunk(ASSIMI_, maint_respiration_leaf)       = zero
 
-    gross_assimilation_cl(:,:)      = zero
-    net_assimilation_cl(:,:)        = zero
-    maint_respiration_leaf_cl(:,:)  = zero
+    dsl4jsb_var3D_onChunk(ASSIMI_, gross_assimilation_cl)      = zero
+    dsl4jsb_var3D_onChunk(ASSIMI_, net_assimilation_cl)        = zero
+    dsl4jsb_var3D_onChunk(ASSIMI_, maint_respiration_leaf_cl)  = zero
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
