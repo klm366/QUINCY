@@ -100,6 +100,8 @@ CONTAINS
     !$claw acc data present(ws, dz, dz_root, ws_root) create(bottom, bottom_m1, root_depth)
     !$claw acc parallel default(present)
     !$claw acc loop gang vector
+    ws_root(:) = 0._wp
+
     DO j = 1, SIZE(ws, 1)
       bottom (j)    = SUM(dz (j,:))
       root_depth(j) = SUM(dz_root(j,:))

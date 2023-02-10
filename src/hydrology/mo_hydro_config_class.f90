@@ -67,7 +67,7 @@ CONTAINS
     USE mo_jsb_grid,           ONLY: Register_vgrid
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
-    USE mo_hydro_constants,    ONLY: BooksCorey_, ClappHornberger_, VanGenuchten_, &
+    USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
       &                              Upstream_, Arithmetic_
 
     CLASS(t_hydro_config), INTENT(inout) :: config
@@ -180,7 +180,7 @@ CONTAINS
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))
     CASE("brookscorey")
-      config%soilhydmodel = BooksCorey_
+      config%soilhydmodel = BrooksCorey_
       CALL message(TRIM(routine), 'Soil hydrology uses the Brooks & Corey model')
     CASE("clapphornberger")
       config%soilhydmodel = ClappHornberger_

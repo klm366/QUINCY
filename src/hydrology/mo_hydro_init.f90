@@ -568,7 +568,8 @@ CONTAINS
 
   SUBROUTINE hydro_init_bc(tile)
 
-    USE mo_util,    ONLY: soil_depth_to_layers_2d
+    USE mo_util,                  ONLY: soil_depth_to_layers_2d
+    USE mo_hydro_process,         ONLY: calc_orographic_features
 
     ! quincy_jsbach: will be removed and re-implemented
     !USE mo_hydro_constants,       ONLY: kdiff_sat_max
@@ -584,6 +585,7 @@ CONTAINS
     ! quincy_jsbach<<<
 
     TYPE(t_jsb_model), POINTER        :: model
+    TYPE(t_jsb_grid),  POINTER        :: grid
     TYPE(t_jsb_vgrid), POINTER        :: soil_w
     INTEGER                           :: i, nsoil
 
@@ -606,6 +608,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
+    grid   => Get_grid(model%grid_id)
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
 
@@ -642,6 +645,18 @@ CONTAINS
 
     !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_,elevation), &
     !$acc dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
+
+    ! Compute steepness parameter for surface runoff
+    DO i = 1, grid%Get_nblks()
+      CALL calc_orographic_features(                    &
+        ! in
+        & grid%Get_nproma(),                            &
+        & grid%nlat_g,                                  & !< (Effective) number of latitudes for steepness parameter
+        & dsl4jsb_var_ptr(HYDRO_, oro_stddev ) (:,i),   &
+        ! out
+        & dsl4jsb_var_ptr(HYDRO_, steepness  ) (:,i)    &
+        & )
+    END DO
 
     IF (tile%contains_soil) THEN
 
