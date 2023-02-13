@@ -343,13 +343,13 @@ CONTAINS
     END IF
 
     ! Transform fluxes in output from [m] to [kg m-2 s-1]
-    snowmelt_soil(:)   = snowmelt_soil(:) * rhoh2o / dtime
+    snowmelt_soil(:) = snowmelt_soil(:) * rhoh2o / dtime
     pond_freeze(:)   = pond_freeze(:)     * rhoh2o / dtime
     pond_melt(:)     = pond_melt(:)       * rhoh2o / dtime
 
     evapotrans_soil(:) = evapotrans_soil_in_m(:) * rhoh2o / dtime
-    evapo_skin(:)      = evapo_skin_in_m(:)  * rhoh2o / dtime
-    evapo_pond(:)      = evapo_pond_in_m(:)  * rhoh2o / dtime
+    evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
+    evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
     evapo_snow(:)      = fract_snow(:) * evapopot(:)
 
   END SUBROUTINE calc_surface_hydrology_land
