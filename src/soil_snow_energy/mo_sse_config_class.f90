@@ -157,11 +157,7 @@ CONTAINS
     config%l_heat_cond_map = l_heat_cond_map
     config%l_soil_texture  = l_soil_texture
     IF (l_soil_texture) THEN
-      IF (l_heat_cap_map .AND. l_heat_cond_map) THEN
-        CALL message(TRIM(routine), 'Using soil texture to derive heat capacity and heat conductivity')
-      ELSE
-        CALL finish(TRIM(routine), 'Use of soil texture requires l_heat_cap_map=true and l_heat_cond_map=true')
-      END IF
+      CALL message(TRIM(routine), 'Using soil texture to derive heat capacity and heat conductivity')
     END IF
     config%l_freeze        = l_freeze
     config%l_supercool     = l_supercool
