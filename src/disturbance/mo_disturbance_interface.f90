@@ -791,10 +791,8 @@ CONTAINS
               & burned_fract(:)                                           & ! inout
               & )
 
-
               ! save training results
-              !if (iyr == 2015) then
-              if (iyr == 2003) then 
+              if (iyr == 2015) then
 
                 open(1001,file='/work/mj0143/b301058/saved_parameters/W1.bin', &
                   access='direct', form='unformatted', &

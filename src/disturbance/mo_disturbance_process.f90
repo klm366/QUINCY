@@ -581,7 +581,7 @@ CONTAINS
         bs, d_input, d_hidden, d_output, keep_prob,                                &
         tr_q_rel_air_constraint)
 
-      lr_rate = 1e-4
+      lr_rate = 1e-3
       CALL update(                                     &
         dW1, dW2, dW3, dW4, dW5, dW6,                  &
         db1, db2, db3, db4, db5, db6,                  &
@@ -597,8 +597,6 @@ CONTAINS
 
         !loss = sum((tr_outputs(:,1) - tr_target)**2)/float(bs)
     ENDIF
-
-
 
 
     ! generate dropout mask
