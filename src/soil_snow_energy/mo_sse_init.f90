@@ -238,7 +238,7 @@ CONTAINS
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
-      !$claw sca forward update savepoint=ser_jsb_soil_init_from_texture_0 tile_name=tile%name
+      !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_0 tile_name=tile%name
       CALL soil_init_from_texture( &
          heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc,                                          &
          sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
@@ -247,7 +247,7 @@ CONTAINS
          sse_init_vars%vol_heat_cap(:,:))
 
       ! calculate soil heat conductivity incl. organic fraction
-      !$claw sca forward update savepoint=ser_jsb_soil_init_from_texture_1 tile_name=tile%name
+      !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_1 tile_name=tile%name
       CALL soil_init_from_texture( &
          heat_cond_sand, heat_cond_silt, heat_cond_clay, heat_cond_oc,                                      &
          sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
