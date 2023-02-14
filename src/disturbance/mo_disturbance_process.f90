@@ -1374,14 +1374,14 @@ CONTAINS
       beta2 = 0.999_wp   !0.999
 
       momentum1(:)=beta1*momentum1(:)+(1._wp-beta1)*gradients(:)
-      momentum2(:)=beta2*momentum2(:)+(1._wp-beta2)*(gradients(:)**2._wp)
+      momentum2(:)=beta2*momentum2(:)+(1._wp-beta2)*(gradients(:)**2)
 
       !weights(:) = weights(:)-learning_rate                     &
       !           * (momentum1(:)  /(1-beta1**n_iter))           &
       !           / (((momentum2(:)/(1-beta2**n_iter))**0.5)+1e-7)
       weights(:) = weights(:)-learning_rate                                   &
                  * (momentum1(:)  /((1._wp-beta1**n_iter)+1e-8))              &
-                 / (((momentum2(:)/((1._wp-beta2**n_iter)+1e-8))**0.5_wp)+1e-8)
+                 / (((momentum2(:)/((1._wp-beta2**n_iter)+1e-8))**0.5)+1e-8)
 
 
       END SUBROUTINE Adam_optimizer_1d
@@ -1405,11 +1405,11 @@ CONTAINS
       beta2 = 0.999_wp   !0.999
 
       momentum1(:,:)=beta1*momentum1(:,:)+(1._wp-beta1)*gradients(:,:)
-      momentum2(:,:)=beta2*momentum2(:,:)+(1._wp-beta2)*(gradients(:,:)**2._wp)
+      momentum2(:,:)=beta2*momentum2(:,:)+(1._wp-beta2)*(gradients(:,:)**2)
 
       weights(:,:) = weights(:,:)-learning_rate                              &
                    * (momentum1(:,:)  /((1._wp-beta1**n_iter)+1e-8))         &
-                   / (((momentum2(:,:)/((1._wp-beta2**n_iter)+1e-8))**0.5_wp &
+                   / (((momentum2(:,:)/((1._wp-beta2**n_iter)+1e-8))**0.5    &
                       )+1e-8)
 
       END SUBROUTINE Adam_optimizer_2d
