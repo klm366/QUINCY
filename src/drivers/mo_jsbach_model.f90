@@ -926,9 +926,9 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_rel_humidity),                         &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba),                                    &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba_smooth),                             &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primf),                         &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4per),                         &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_urban),                         &
@@ -996,10 +996,10 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_temperature),                          &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_rel_humidity),                         &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba),                                    &
-          & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba_smooth))
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba_smooth),                             &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi))
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primf),                         &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4per),                         &
           !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_urban),                         &

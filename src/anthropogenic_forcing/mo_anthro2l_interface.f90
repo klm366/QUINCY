@@ -50,9 +50,9 @@ CONTAINS
     & a_rel_humidity,                   &
     & fba,                              &
     & fba_smooth,                       &
-    !& population,                       &
-    !& gdp,                              &
-    !& hdi,                              &
+    & population,                       &
+    & gdp,                              &
+    & hdi,                              &
     !& land_use_primf,                   &
     !& land_use_c4per,                   &
     !& land_use_urban,                   &
@@ -78,10 +78,10 @@ CONTAINS
       & a_temperature,                               &
       & a_rel_humidity,                              &
       & fba,                                         &
-      & fba_smooth
-      !& population,                                  &
-      !& gdp,                                         &
-      !& hdi,                                         &
+      & fba_smooth,                                  &
+      & population,                                  &
+      & gdp,                                         &
+      & hdi
       !& land_use_primf,                              &
       !& land_use_c4per,                              &
       !& land_use_urban,                              &
@@ -109,10 +109,10 @@ CONTAINS
       & a_temperature_ptr,     &
       & a_rel_humidity_ptr,    &
       & fba_ptr,               &
-      & fba_smooth_ptr
-      !& population_ptr,        &
-      !& gdp_ptr,               &
-      !& hdi_ptr,               &
+      & fba_smooth_ptr,        &
+      & population_ptr,        &
+      & gdp_ptr,               &
+      & hdi_ptr
       !& land_use_primf_ptr,    &
       !& land_use_c4per_ptr,    &
       !& land_use_urban_ptr,    &
@@ -154,15 +154,15 @@ CONTAINS
     IF (PRESENT(fba_smooth)) THEN
       fba_smooth_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, fba_smooth)
     END IF
-    !IF (PRESENT(population)) THEN
-    !  population_ptr          => dsl4jsb_var2D_onChunk(ANTHRO2L_, population)
-    !END IF
-    !IF (PRESENT(gdp)) THEN
-    !  gdp_ptr                 => dsl4jsb_var2D_onChunk(ANTHRO2L_, gdp)
-    !END IF
-    !IF (PRESENT(hdi)) THEN
-    !  hdi_ptr                 => dsl4jsb_var2D_onChunk(ANTHRO2L_, hdi)
-    !END IF
+    IF (PRESENT(population)) THEN
+      population_ptr          => dsl4jsb_var2D_onChunk(ANTHRO2L_, population)
+    END IF
+    IF (PRESENT(gdp)) THEN
+      gdp_ptr                 => dsl4jsb_var2D_onChunk(ANTHRO2L_, gdp)
+    END IF
+    IF (PRESENT(hdi)) THEN
+      hdi_ptr                 => dsl4jsb_var2D_onChunk(ANTHRO2L_, hdi)
+    END IF
     !IF (PRESENT(land_use_primf)) THEN
     !  land_use_primf_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_primf)
     !END IF
@@ -244,26 +244,26 @@ CONTAINS
       END DO
     END IF
 
-    !IF (PRESENT(population)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    population_ptr(i) = population(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(population)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        population_ptr(i) = population(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(gdp)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    gdp_ptr(i) = gdp(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(gdp)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        gdp_ptr(i) = gdp(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(hdi)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    hdi_ptr(i) = hdi(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(hdi)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        hdi_ptr(i) = hdi(i)
+      END DO
+    END IF
 
     !IF (PRESENT(land_use_primf)) THEN
     !  !$acc loop gang vector

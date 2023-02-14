@@ -82,6 +82,7 @@ MODULE mo_disturb_config_class
     !REAL(wp), ALLOCATABLE :: out_weight(:,:), out_bias(:) ! dl fire model parameters <Rackhun Son>
 
     REAL(wp), ALLOCATABLE :: min_max(:,:)                  ! dl fire model parameters <Rackhun Son>
+    !REAL(wp)              :: training_memory(35,1000000)   ! dl fire model memory     <Rackhun Son>
 
   CHARACTER(len=filename_max) :: bc_lightning_filename          ! lightning frequency (daily) for fire <Rackhun Son>
   CHARACTER(len=filename_max) :: bc_topography_filename         ! topographical complexity for fire    <Rackhun Son>
@@ -193,8 +194,10 @@ CONTAINS
     !REAL(wp), ALLOCATABLE :: out_weight(:,:), out_bias(:) ! <Rackhun Son>
 
     REAL(wp), ALLOCATABLE :: min_max(:,:)                 ! <Rackhun Son>
+    !REAL(wp)              :: training_memory(35,1000000)  ! <Rackhun Son>
     
     TYPE(t_jsb_vgrid), POINTER :: daily            ! New axis for the day of year <Rackhun Son>
+    TYPE(t_jsb_vgrid), POINTER :: memory           ! New axis for the day of year <Rackhun Son>
     !TYPE(t_jsb_vgrid), POINTER :: d_lstm          ! New axis for weather LSTM    <Rackhun Son>
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_config'
@@ -424,6 +427,8 @@ CONTAINS
     ptr_1D => input_file%Read_1d(variable_name='min_max')
     min_max = RESHAPE(ptr_1D, (/d_input, 2/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
+
+    !training_memory(:,:) = 0.
     
     ! Write resulting values in config memory
     config%active                 = active
@@ -516,6 +521,9 @@ CONTAINS
     ! New axis for the day of year <Rackhun Son>
     daily => new_vgrid('daily', ZAXIS_GENERIC, 366, units='day')
     CALL Register_vgrid(daily)
+
+    memory => new_vgrid('memory', ZAXIS_GENERIC, 730, units='day')
+    CALL Register_vgrid(memory)
 
     ! New axis for LSTM <Rackhun Son>
     !d_lstm => new_vgrid('d__lstm', ZAXIS_GENERIC, d_hidden, units='')

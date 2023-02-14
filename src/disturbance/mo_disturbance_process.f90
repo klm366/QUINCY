@@ -93,9 +93,9 @@ CONTAINS
     !& slope,                                & ! in
     !& roughness,                            & ! in
 
-    !& population,                           & ! in
-    !& gdp,                                  & ! in
-    !& hdi,                                  & ! in
+    & population,                           & ! in
+    & gdp,                                  & ! in
+    & hdi,                                  & ! in
     !& road_density,                         & ! in
     !& land_use_c3ann,                       & ! in
     !& land_use_c3nfx,                       & ! in
@@ -143,6 +143,21 @@ CONTAINS
 
     & iteration,                             & ! in
     & is_training,                           & ! in
+    & is_saving,                             & ! in
+    & memory_idx,                            & ! in
+
+    & V1_memory,  V2_memory,  V3_memory,     & ! inout
+    & V4_memory,  V5_memory,  V6_memory,     & ! inout
+    & V7_memory,  V8_memory,  V9_memory,     & ! inout
+    & V10_memory, V11_memory, V12_memory,    & ! inout
+    & V13_memory, V14_memory, V15_memory,    & ! inout
+    & V16_memory, V17_memory, V18_memory,    & ! inout
+    & V19_memory, V20_memory, V21_memory,    & ! inout
+    & V22_memory, V23_memory, V24_memory,    & ! inout
+    & V25_memory, V26_memory, V27_memory,    & ! inout
+    & V28_memory, V29_memory, V30_memory,    & ! inout
+    & V31_memory, V32_memory, V33_memory,    & ! inout
+    & RHC_memory, Y_memory,                  & ! inout
 
     !& i2i_weight,    i2i_bias,              & ! in
     !& h2i_weight,    h2i_bias,              & ! in
@@ -183,9 +198,9 @@ CONTAINS
       !& slope(:),                                   &
       !& roughness(:),                               &
 
-      !& population(:),                              &
-      !& gdp(:),                                     &
-      !& hdi(:),                                     &
+      & population(:),                              &
+      & gdp(:),                                     &
+      & hdi(:),                                     &
       !& road_density(:),                            &
       !& land_use_c3ann(:),                          &
       !& land_use_c3nfx(:),                          &
@@ -229,7 +244,8 @@ CONTAINS
       & nc,                                         & ! in
       & d_input,             d_hidden,              & ! in
       & d_output,            d_region,              & ! in
-      & iteration,           is_training
+      & iteration,           is_training,           & ! in
+      & is_saving,           memory_idx
 
     CHARACTER(len=*), INTENT(in)::                  &
       & tilename                                      ! in
@@ -259,9 +275,23 @@ CONTAINS
       & vW5(:,:),              vb5(:),              &  ! inout (training)
       & vW6(:,:),              vb6(:),              &  ! inout (training)
 
+      & V1_memory(:,:),  V2_memory(:,:),  V3_memory(:,:),     & ! inout (training)
+      & V4_memory(:,:),  V5_memory(:,:),  V6_memory(:,:),     & ! inout (training)
+      & V7_memory(:,:),  V8_memory(:,:),  V9_memory(:,:),     & ! inout (training)
+      & V10_memory(:,:), V11_memory(:,:), V12_memory(:,:),    & ! inout (training)
+      & V13_memory(:,:), V14_memory(:,:), V15_memory(:,:),    & ! inout (training)
+      & V16_memory(:,:), V17_memory(:,:), V18_memory(:,:),    & ! inout (training)
+      & V19_memory(:,:), V20_memory(:,:), V21_memory(:,:),    & ! inout (training)
+      & V22_memory(:,:), V23_memory(:,:), V24_memory(:,:),    & ! inout (training)
+      & V25_memory(:,:), V26_memory(:,:), V27_memory(:,:),    & ! inout (training)
+      & V28_memory(:,:), V29_memory(:,:), V30_memory(:,:),    & ! inout (training)
+      & V31_memory(:,:), V32_memory(:,:), V33_memory(:,:),    & ! inout (training)
+      & RHC_memory(:,:), Y_memory(:,:),                       & ! inout (training)
+
       & burned_fract(:)                               ! inout
 
     ! Locals
+    INTEGER, PARAMETER :: bs = 1024
     REAL(wp) ::                                                   &
       & nn_inputs    (nc, d_input),                               &
       & nn_layer1_out(nc, d_hidden), nn_layer1_act(nc, d_hidden), &
@@ -270,6 +300,7 @@ CONTAINS
       & nn_layer4_out(nc, d_hidden), nn_layer4_act(nc, d_hidden), &
       & nn_layer5_out(nc, d_hidden), nn_layer5_act(nc, d_hidden), &
       & nn_layer6_out(nc, d_output), nn_layer6_act(nc, d_output), &
+      & nn_outputs   (nc, d_output),                              &
 
       & nn_layer1_mask(nc, d_hidden),                             &  ! dropout
       & nn_layer2_mask(nc, d_hidden),                             &
@@ -278,14 +309,29 @@ CONTAINS
       & nn_layer5_mask(nc, d_hidden),                             &
       & nn_layer6_mask(nc, d_output),                             &
 
+      & tr_inputs    (bs, d_input),                               &  ! <training>
+      & tr_layer1_out(bs, d_hidden), tr_layer1_act(bs, d_hidden), &
+      & tr_layer2_out(bs, d_hidden), tr_layer2_act(bs, d_hidden), &
+      & tr_layer3_out(bs, d_hidden), tr_layer3_act(bs, d_hidden), &
+      & tr_layer4_out(bs, d_hidden), tr_layer4_act(bs, d_hidden), &
+      & tr_layer5_out(bs, d_hidden), tr_layer5_act(bs, d_hidden), &
+      & tr_layer6_out(bs, d_output), tr_layer6_act(bs, d_output), &
+      & tr_outputs   (bs, d_output),                              &
+
+      & tr_layer1_mask(bs, d_hidden),                             &  ! <training> dropout
+      & tr_layer2_mask(bs, d_hidden),                             &
+      & tr_layer3_mask(bs, d_hidden),                             &
+      & tr_layer4_mask(bs, d_hidden),                             &
+      & tr_layer5_mask(bs, d_hidden),                             &
+      & tr_layer6_mask(bs, d_output),                             &
+
       & dW1(d_input,  d_hidden),     db1(d_hidden),               &  ! derivatives
       & dW2(d_hidden, d_hidden),     db2(d_hidden),               &
       & dW3(d_hidden, d_hidden),     db3(d_hidden),               &
       & dW4(d_hidden, d_hidden),     db4(d_hidden),               &
       & dW5(d_hidden, d_hidden),     db5(d_hidden),               &
-      & dW6(d_hidden, d_output),     db6(d_output),               &
-
-      & nn_outputs          (nc, d_output)           
+      & dW6(d_hidden, d_output),     db6(d_output)
+                 
 
       !inputs(nc, d_land_input_n_pft),                   &
       !lstm_i(nc, d_land_hidden),                        &
@@ -294,8 +340,10 @@ CONTAINS
       !lstm_o(nc, d_land_hidden),                        &
       !lstm_outputs(nc, d_output),                       &
       !lstm_outputs_sum(nc, d_output),                   &
-    INTEGER  :: i
-    real(wp) :: lr_rate, keep_prob
+    INTEGER  :: i, j, k, idx
+    real(wp) :: lr_rate, keep_prob, loss, u
+    real(wp) :: q_rel_air_constraint(nc)
+    real(wp) :: tr_q_rel_air_constraint(bs), tr_target(bs)
 
     ! initialize
     nn_inputs(:,1) = (t_air(:)                     - minmax(1,1))       &
@@ -338,47 +386,37 @@ CONTAINS
                    / (minmax(19,2)                 - minmax(19,1)+1e-8)
     nn_inputs(:,20)= (lightning_climatology(:)     - minmax(20,1))      &
                    / (minmax(20,2)                 - minmax(20,1)+1e-8)
-    nn_inputs(:,21)= (pfts_fract(:,1)              - minmax(21,1))      &
+    nn_inputs(:,21)= (LOG(gdp(:)+1._wp)            - minmax(21,1))      &
                    / (minmax(21,2)                 - minmax(21,1)+1e-8)
-    nn_inputs(:,22)= (pfts_fract(:,2)              - minmax(22,1))      &
+    nn_inputs(:,22)= (hdi(:)                       - minmax(22,1))      &
                    / (minmax(22,2)                 - minmax(22,1)+1e-8)
-    nn_inputs(:,23)= (pfts_fract(:,3)              - minmax(23,1))      &
+    nn_inputs(:,23)= (LOG(population(:)+1._wp)     - minmax(23,1))      &
                    / (minmax(23,2)                 - minmax(23,1)+1e-8)
-    nn_inputs(:,24)= (pfts_fract(:,4)              - minmax(24,1))      &
-                   / (minmax(24,2)                 - minmax(24,1)+1e-8)
-    nn_inputs(:,25)= (pfts_fract(:,5)              - minmax(25,1))      &
-                   / (minmax(25,2)                 - minmax(25,1)+1e-8)
-    nn_inputs(:,26)= (pfts_fract(:,6)              - minmax(26,1))      &
-                   / (minmax(26,2)                 - minmax(26,1)+1e-8)
-    nn_inputs(:,27)= (pfts_fract(:,7)              - minmax(27,1))      &
-                   / (minmax(27,2)                 - minmax(27,1)+1e-8)
-    nn_inputs(:,28)= (pfts_fract(:,8)              - minmax(28,1))      &
-                   / (minmax(28,2)                 - minmax(28,1)+1e-8)
-    nn_inputs(:,29)= (pfts_fract(:,9)              - minmax(29,1))      &
-                   / (minmax(29,2)                 - minmax(29,1)+1e-8)
-    nn_inputs(:,30)= (elevation(:)                 - minmax(30,1))      &
-                   / (minmax(30,2)                 - minmax(30,1)+1e-8)  
+    nn_inputs(:,24)= (elevation(:)                 - minmax(24,1))      &
+                   / (minmax(24,2)                 - minmax(24,1)+1e-8) 
 
-    ! generate dropout mask
-    keep_prob = 0.9
-    CALL generate_dropout_mask(nn_layer1_mask, keep_prob, nc, d_hidden)
-    CALL generate_dropout_mask(nn_layer2_mask, keep_prob, nc, d_hidden)
-    CALL generate_dropout_mask(nn_layer3_mask, keep_prob, nc, d_hidden)
-    CALL generate_dropout_mask(nn_layer4_mask, keep_prob, nc, d_hidden)
-    CALL generate_dropout_mask(nn_layer5_mask, keep_prob, nc, d_hidden)
+    nn_inputs(:,25)= pfts_fract(:,1)
+    nn_inputs(:,26)= pfts_fract(:,2)
+    nn_inputs(:,27)= pfts_fract(:,3)
+    nn_inputs(:,28)= pfts_fract(:,4)
+    nn_inputs(:,29)= pfts_fract(:,5)
+    nn_inputs(:,30)= pfts_fract(:,6)
+    nn_inputs(:,31)= pfts_fract(:,7)
+    nn_inputs(:,32)= pfts_fract(:,8)
+    nn_inputs(:,33)= pfts_fract(:,9)
+     
+    ! calculate FBA
+    keep_prob = 1.
+    nn_layer1_mask(:,:) = 1.
+    nn_layer2_mask(:,:) = 1.
+    nn_layer3_mask(:,:) = 1.
+    nn_layer4_mask(:,:) = 1.
+    nn_layer5_mask(:,:) = 1.
     nn_layer6_mask(:,:) = 1.
 
-
-    ! Forward propagation
-    !call forward(                                                        &
-    !  nn_inputs,     nn_outputs,                                         & 
-    !  layer1_weight, layer1_bias,  'relu', nn_layer1_out, nn_layer1_act, &
-    !  layer2_weight, layer2_bias,  'relu', nn_layer2_out, nn_layer2_act, &
-    !  layer3_weight, layer3_bias,  'relu', nn_layer3_out, nn_layer3_act, &
-    !  layer4_weight, layer4_bias,  'relu', nn_layer4_out, nn_layer4_act, &
-    !  layer5_weight, layer5_bias,  'relu', nn_layer5_out, nn_layer5_act, &
-    !  layer6_weight, layer6_bias,'linear', nn_layer6_out, nn_layer6_act, &
-    !  nc, d_input, d_hidden, d_output)
+    ! RH constraint
+    q_rel_air_constraint(:) = q_rel_air(:)
+    CALL modified_sigmoid(q_rel_air_constraint, nc)
 
     CALL forward(                                    &
       nn_inputs,     nn_outputs,                     & 
@@ -394,7 +432,215 @@ CONTAINS
       nn_layer5_out, nn_layer5_act, nn_layer5_mask,  &
       layer6_weight, layer6_bias, 'linear',          &
       nn_layer6_out, nn_layer6_act, nn_layer6_mask,  &
-      nc, d_input, d_hidden, d_output, keep_prob)
+      nc, d_input, d_hidden, d_output, keep_prob,    &
+      q_rel_air_constraint)
+
+    burned_fract = nn_outputs(:,1)/100.
+    WHERE (burned_fract < 0.) burned_fract = 0.
+    WHERE (burned_fract > 1.) burned_fract = 1.
+
+    ! saving in memory
+    IF (is_saving .eq. 1) THEN
+      V1_memory (:,memory_idx) = nn_inputs(:,1)
+      V2_memory (:,memory_idx) = nn_inputs(:,2)
+      V3_memory (:,memory_idx) = nn_inputs(:,3)
+      V4_memory (:,memory_idx) = nn_inputs(:,4)
+      V5_memory (:,memory_idx) = nn_inputs(:,5)
+      V6_memory (:,memory_idx) = nn_inputs(:,6)
+      V7_memory (:,memory_idx) = nn_inputs(:,7)
+      V8_memory (:,memory_idx) = nn_inputs(:,8)
+      V9_memory (:,memory_idx) = nn_inputs(:,9)
+      V10_memory(:,memory_idx) = nn_inputs(:,10)
+      V11_memory(:,memory_idx) = nn_inputs(:,11)
+      V12_memory(:,memory_idx) = nn_inputs(:,12)
+      V13_memory(:,memory_idx) = nn_inputs(:,13)
+      V14_memory(:,memory_idx) = nn_inputs(:,14)
+      V15_memory(:,memory_idx) = nn_inputs(:,15)
+      V16_memory(:,memory_idx) = nn_inputs(:,16)
+      V17_memory(:,memory_idx) = nn_inputs(:,17)
+      V18_memory(:,memory_idx) = nn_inputs(:,18)
+      V19_memory(:,memory_idx) = nn_inputs(:,19)
+      V20_memory(:,memory_idx) = nn_inputs(:,20)
+      V21_memory(:,memory_idx) = nn_inputs(:,21)
+      V22_memory(:,memory_idx) = nn_inputs(:,22)
+      V23_memory(:,memory_idx) = nn_inputs(:,23)
+      V24_memory(:,memory_idx) = nn_inputs(:,24)
+      V25_memory(:,memory_idx) = nn_inputs(:,25)
+      V26_memory(:,memory_idx) = nn_inputs(:,26)
+      V27_memory(:,memory_idx) = nn_inputs(:,27)
+      V28_memory(:,memory_idx) = nn_inputs(:,28)
+      V29_memory(:,memory_idx) = nn_inputs(:,29)
+      V30_memory(:,memory_idx) = nn_inputs(:,30)
+      V31_memory(:,memory_idx) = nn_inputs(:,31)
+      V32_memory(:,memory_idx) = nn_inputs(:,32)
+      V33_memory(:,memory_idx) = nn_inputs(:,33)
+      RHC_memory(:,memory_idx) = q_rel_air_constraint(:)
+      Y_memory  (:,memory_idx) = fba_smooth(:)
+    ENDIF
+
+    ! training
+    IF (is_training .eq. 1) THEN
+
+      ! random training batch from memory
+      k=0
+      DO i = 1,nc
+      DO j = 1,INT(bs/nc)
+        k = k+1
+
+        IF (k .eq. 1) THEN
+          idx = memory_idx
+        ELSE
+          call RANDOM_NUMBER(u)
+          idx = 1 + INT(FLOOR((730)*u))
+        ENDIF
+        
+        tr_inputs(k,1)  = V1_memory(i,idx)
+        tr_inputs(k,2)  = V2_memory(i,idx)
+        tr_inputs(k,3)  = V3_memory(i,idx)
+        tr_inputs(k,4)  = V4_memory(i,idx)
+        tr_inputs(k,5)  = V5_memory(i,idx)
+        tr_inputs(k,6)  = V6_memory(i,idx)
+        tr_inputs(k,7)  = V7_memory(i,idx)
+        tr_inputs(k,8)  = V8_memory(i,idx)
+        tr_inputs(k,9)  = V9_memory(i,idx)
+        tr_inputs(k,10) = V10_memory(i,idx)
+        tr_inputs(k,11) = V11_memory(i,idx)
+        tr_inputs(k,12) = V12_memory(i,idx)
+        tr_inputs(k,13) = V13_memory(i,idx)
+        tr_inputs(k,14) = V14_memory(i,idx)
+        tr_inputs(k,15) = V15_memory(i,idx)
+        tr_inputs(k,16) = V16_memory(i,idx)
+        tr_inputs(k,17) = V17_memory(i,idx)
+        tr_inputs(k,18) = V18_memory(i,idx)
+        tr_inputs(k,19) = V19_memory(i,idx)
+        tr_inputs(k,20) = V20_memory(i,idx)
+        tr_inputs(k,21) = V21_memory(i,idx)
+        tr_inputs(k,22) = V22_memory(i,idx)
+        tr_inputs(k,23) = V23_memory(i,idx)
+        tr_inputs(k,24) = V24_memory(i,idx)
+        tr_inputs(k,25) = V25_memory(i,idx)
+        tr_inputs(k,26) = V26_memory(i,idx)
+        tr_inputs(k,27) = V27_memory(i,idx)
+        tr_inputs(k,28) = V28_memory(i,idx)
+        tr_inputs(k,29) = V29_memory(i,idx)
+        tr_inputs(k,30) = V30_memory(i,idx)
+        tr_inputs(k,31) = V31_memory(i,idx)
+        tr_inputs(k,32) = V32_memory(i,idx)
+        tr_inputs(k,33) = V33_memory(i,idx)
+        tr_q_rel_air_constraint(k) = RHC_memory(i,idx)
+        tr_target(k) = Y_memory(i,idx)
+      ENDDO
+      ENDDO
+
+      ! generate dropout mask
+      keep_prob = 0.9
+      CALL generate_dropout_mask(tr_layer1_mask, keep_prob, bs, d_hidden)
+      CALL generate_dropout_mask(tr_layer2_mask, keep_prob, bs, d_hidden)
+      CALL generate_dropout_mask(tr_layer3_mask, keep_prob, bs, d_hidden)
+      CALL generate_dropout_mask(tr_layer4_mask, keep_prob, bs, d_hidden)
+      CALL generate_dropout_mask(tr_layer5_mask, keep_prob, bs, d_hidden)
+      tr_layer6_mask(:,:) = 1.
+
+      ! Forward propagation
+      CALL forward(                                    &
+        tr_inputs,     tr_outputs,                     & 
+        layer1_weight, layer1_bias, 'leaky_relu',      & 
+        tr_layer1_out, tr_layer1_act, tr_layer1_mask,  &
+        layer2_weight, layer2_bias, 'leaky_relu',      &
+        tr_layer2_out, tr_layer2_act, tr_layer2_mask,  &
+        layer3_weight, layer3_bias, 'leaky_relu',      &
+        tr_layer3_out, tr_layer3_act, tr_layer3_mask,  &
+        layer4_weight, layer4_bias, 'leaky_relu',      &
+        tr_layer4_out, tr_layer4_act, tr_layer4_mask,  &
+        layer5_weight, layer5_bias, 'leaky_relu',      &
+        tr_layer5_out, tr_layer5_act, tr_layer5_mask,  &
+        layer6_weight, layer6_bias, 'linear',          &
+        tr_layer6_out, tr_layer6_act, tr_layer6_mask,  &
+        bs, d_input, d_hidden, d_output, keep_prob,    &
+        tr_q_rel_air_constraint)
+
+      ! clear gradients
+      dW1(:,:) = 0.;  db1(:) = 0.
+      dW2(:,:) = 0.;  db2(:) = 0.
+      dW3(:,:) = 0.;  db3(:) = 0.
+      dW4(:,:) = 0.;  db4(:) = 0.
+      dW5(:,:) = 0.;  db5(:) = 0.
+      dW6(:,:) = 0.;  db6(:) = 0.
+
+      ! Backward propagation
+      CALL backward(                                                               &
+        tr_inputs, tr_outputs, tr_target,                                          &
+        layer1_weight, 'leaky_relu', tr_layer1_out, tr_layer1_act, tr_layer1_mask, &
+        layer2_weight, 'leaky_relu', tr_layer2_out, tr_layer2_act, tr_layer2_mask, &
+        layer3_weight, 'leaky_relu', tr_layer3_out, tr_layer3_act, tr_layer3_mask, &
+        layer4_weight, 'leaky_relu', tr_layer4_out, tr_layer4_act, tr_layer4_mask, &
+        layer5_weight, 'leaky_relu', tr_layer5_out, tr_layer5_act, tr_layer5_mask, &
+        layer6_weight, 'linear',     tr_layer6_out, tr_layer6_act, tr_layer6_mask, &
+        dW1, dW2, dW3, dW4, dW5, dW6,                                              &
+        db1, db2, db3, db4, db5, db6,                                              &
+        bs, d_input, d_hidden, d_output, keep_prob,                                &
+        tr_q_rel_air_constraint)
+
+      lr_rate = 1e-4
+      CALL update(                                     &
+        dW1, dW2, dW3, dW4, dW5, dW6,                  &
+        db1, db2, db3, db4, db5, db6,                  &
+        mW1, mW2, mW3, mW4, mW5, mW6,                  &
+        mb1, mb2, mb3, mb4, mb5, mb6,                  &
+        vW1, vW2, vW3, vW4, vW5, vW6,                  &
+        vb1, vb2, vb3, vb4, vb5, vb6,                  &
+        layer1_weight,  layer2_weight,  layer3_weight, &
+        layer4_weight,  layer5_weight,  layer6_weight, &
+        layer1_bias,    layer2_bias,    layer3_bias,   &
+        layer4_bias,    layer5_bias,    layer6_bias,   &
+        lr_rate, iteration, d_input, d_hidden, d_output)
+
+        !loss = sum((tr_outputs(:,1) - tr_target)**2)/float(bs)
+    ENDIF
+
+
+
+
+    ! generate dropout mask
+    !IF (is_training .eq. 1) THEN
+    !  keep_prob = 0.9
+    !  CALL generate_dropout_mask(nn_layer1_mask, keep_prob, nc, d_hidden)
+    !  CALL generate_dropout_mask(nn_layer2_mask, keep_prob, nc, d_hidden)
+    !  CALL generate_dropout_mask(nn_layer3_mask, keep_prob, nc, d_hidden)
+    !  CALL generate_dropout_mask(nn_layer4_mask, keep_prob, nc, d_hidden)
+    !  CALL generate_dropout_mask(nn_layer5_mask, keep_prob, nc, d_hidden)
+    !ELSE
+    !  keep_prob = 1.
+    !  nn_layer1_mask(:,:) = 1.
+    !  nn_layer2_mask(:,:) = 1.
+    !  nn_layer3_mask(:,:) = 1.
+    !  nn_layer4_mask(:,:) = 1.
+    !  nn_layer5_mask(:,:) = 1.  
+    !ENDIF
+    !nn_layer6_mask(:,:) = 1.
+
+    ! RH constraint
+    !q_rel_air_constraint(:) = q_rel_air(:)
+    !CALL modified_sigmoid(q_rel_air_constraint, nc)
+
+
+    ! Forward propagation
+    !CALL forward(                                    &
+    !  nn_inputs,     nn_outputs,                     & 
+    !  layer1_weight, layer1_bias, 'leaky_relu',      & 
+    !  nn_layer1_out, nn_layer1_act, nn_layer1_mask,  &
+    !  layer2_weight, layer2_bias, 'leaky_relu',      &
+    !  nn_layer2_out, nn_layer2_act, nn_layer2_mask,  &
+    !  layer3_weight, layer3_bias, 'leaky_relu',      &
+    !  nn_layer3_out, nn_layer3_act, nn_layer3_mask,  &
+    !  layer4_weight, layer4_bias, 'leaky_relu',      &
+    !  nn_layer4_out, nn_layer4_act, nn_layer4_mask,  &
+    !  layer5_weight, layer5_bias, 'leaky_relu',      &
+    !  nn_layer5_out, nn_layer5_act, nn_layer5_mask,  &
+    !  layer6_weight, layer6_bias, 'linear',          &
+    !  nn_layer6_out, nn_layer6_act, nn_layer6_mask,  &
+    !  nc, d_input, d_hidden, d_output, keep_prob,    &
+    !  q_rel_air_constraint)
 
     ! 1st layer
     !nn_layer1_out(:,1:128) = matmul(nn_inputs, layer1_weight(:,1:128)) + spread(layer1_bias(1:128),1,nc)
@@ -423,12 +669,12 @@ CONTAINS
     !nn_layer6_act(:,:) = nn_layer6_out(:,:) 
 
     ! clear gradients
-    dW1(:,:) = 0.;  db1(:) = 0.
-    dW2(:,:) = 0.;  db2(:) = 0.
-    dW3(:,:) = 0.;  db3(:) = 0.
-    dW4(:,:) = 0.;  db4(:) = 0.
-    dW5(:,:) = 0.;  db5(:) = 0.
-    dW6(:,:) = 0.;  db6(:) = 0.
+    !dW1(:,:) = 0.;  db1(:) = 0.
+    !dW2(:,:) = 0.;  db2(:) = 0.
+    !dW3(:,:) = 0.;  db3(:) = 0.
+    !dW4(:,:) = 0.;  db4(:) = 0.
+    !dW5(:,:) = 0.;  db5(:) = 0.
+    !dW6(:,:) = 0.;  db6(:) = 0.
 
     ! Backward propagation
     !call backward(                                         &
@@ -473,33 +719,37 @@ CONTAINS
     !    lr_rate, iteration, d_input, 128, d_output)
     !ENDIF
 
-    IF (is_training .eq. 1) then
-      CALL backward(                                                               &
-        nn_inputs, nn_outputs, fba_smooth,                                         &
-        layer1_weight, 'leaky_relu', nn_layer1_out, nn_layer1_act, nn_layer1_mask, &
-        layer2_weight, 'leaky_relu', nn_layer2_out, nn_layer2_act, nn_layer2_mask, &
-        layer3_weight, 'leaky_relu', nn_layer3_out, nn_layer3_act, nn_layer3_mask, &
-        layer4_weight, 'leaky_relu', nn_layer4_out, nn_layer4_act, nn_layer4_mask, &
-        layer5_weight, 'leaky_relu', nn_layer5_out, nn_layer5_act, nn_layer5_mask, &
-        layer6_weight, 'linear',     nn_layer6_out, nn_layer6_act, nn_layer6_mask, &
-        dW1, dW2, dW3, dW4, dW5, dW6,                                              &
-        db1, db2, db3, db4, db5, db6,                                              &
-        nc, d_input, d_hidden, d_output, keep_prob)
+    !IF (is_training .eq. 1) then
+    !  CALL backward(                                                               &
+    !    nn_inputs, nn_outputs, fba_smooth,                                         &
+    !    layer1_weight, 'leaky_relu', nn_layer1_out, nn_layer1_act, nn_layer1_mask, &
+    !    layer2_weight, 'leaky_relu', nn_layer2_out, nn_layer2_act, nn_layer2_mask, &
+    !    layer3_weight, 'leaky_relu', nn_layer3_out, nn_layer3_act, nn_layer3_mask, &
+    !    layer4_weight, 'leaky_relu', nn_layer4_out, nn_layer4_act, nn_layer4_mask, &
+    !    layer5_weight, 'leaky_relu', nn_layer5_out, nn_layer5_act, nn_layer5_mask, &
+    !    layer6_weight, 'linear',     nn_layer6_out, nn_layer6_act, nn_layer6_mask, &
+    !    dW1, dW2, dW3, dW4, dW5, dW6,                                              &
+    !    db1, db2, db3, db4, db5, db6,                                              &
+    !    nc, d_input, d_hidden, d_output, keep_prob,                                &
+    !    q_rel_air_constraint)
 
-      lr_rate = 1e-12
-      CALL update(                                     &
-        dW1, dW2, dW3, dW4, dW5, dW6,                  &
-        db1, db2, db3, db4, db5, db6,                  &
-        mW1, mW2, mW3, mW4, mW5, mW6,                  &
-        mb1, mb2, mb3, mb4, mb5, mb6,                  &
-        vW1, vW2, vW3, vW4, vW5, vW6,                  &
-        vb1, vb2, vb3, vb4, vb5, vb6,                  &
-        layer1_weight,  layer2_weight,  layer3_weight, &
-        layer4_weight,  layer5_weight,  layer6_weight, &
-        layer1_bias,    layer2_bias,    layer3_bias,   &
-        layer4_bias,    layer5_bias,    layer6_bias,   &
-        lr_rate, iteration, d_input, d_hidden, d_output)
-    ENDIF
+    !  lr_rate = 5e-7
+    !  CALL update(                                     &
+    !    dW1, dW2, dW3, dW4, dW5, dW6,                  &
+    !    db1, db2, db3, db4, db5, db6,                  &
+    !    mW1, mW2, mW3, mW4, mW5, mW6,                  &
+    !    mb1, mb2, mb3, mb4, mb5, mb6,                  &
+    !    vW1, vW2, vW3, vW4, vW5, vW6,                  &
+    !    vb1, vb2, vb3, vb4, vb5, vb6,                  &
+    !    layer1_weight,  layer2_weight,  layer3_weight, &
+    !    layer4_weight,  layer5_weight,  layer6_weight, &
+    !    layer1_bias,    layer2_bias,    layer3_bias,   &
+    !    layer4_bias,    layer5_bias,    layer6_bias,   &
+    !    lr_rate, iteration, d_input, d_hidden, d_output)
+
+    !    loss = sum((nn_outputs(:,1) - fba_smooth)**2)/float(nc)
+    !    print*, loss
+    !ENDIF
 
 
     !if (sum(dW6) .gt. 0) then
@@ -559,10 +809,21 @@ CONTAINS
     !if (maxval(nn_outputs(:,1)) .gt. 0) then
     !  print*, maxval(nn_outputs(:,1))
     !endif
-    burned_fract = nn_outputs(:,1)/100.
+    !burned_fract = nn_outputs(:,1)/100.
 
-    WHERE (burned_fract < 0.) burned_fract = 0.
-    WHERE (burned_fract > 1.) burned_fract = 1.
+    ! constrants
+    !burned_fract = burned_fract*(1-pfts_fract(:,1)-pfts_fract(:,9))
+    !burned_fract = burned_fract*nn_inputs(:,19)
+
+    !q_rel_air_constraint = q_rel_air/100.
+    !where (q_rel_air_constraint < 0) q_rel_air_constraint = 0.
+    !where (q_rel_air_constraint > 1) q_rel_air_constraint = 1.
+    !q_rel_air_constraint = 1/(1+exp(-20*(q_rel_air_constraint-0.5)))
+    !burned_fract = burned_fract*(1-q_rel_air_constraint)
+    
+
+    !WHERE (burned_fract < 0.) burned_fract = 0.
+    !WHERE (burned_fract > 1.) burned_fract = 1.
     
   END SUBROUTINE burned_fract_dl
 
@@ -732,8 +993,20 @@ CONTAINS
     REAL(wp), INTENT(INOUT) :: y(d1,d2)
 
     y(:,:) = x(:,:)
-    WHERE(x < 0.) y = 0.01*x
+    WHERE(x < 0.) y = 0.01_wp*x
     END SUBROUTINE leaky_ReLU
+
+
+  SUBROUTINE modified_sigmoid(x, d1)
+      IMPLICIT NONE
+      INTEGER,  INTENT(IN) :: d1
+      REAL(wp), INTENT(INOUT) :: x(d1)
+
+      x = x/100._wp
+      WHERE(x < 0.) x = 0._wp
+      WHERE(x > 1.) x = 1._wp
+      x = 1._wp/(1._wp+EXP(-20._wp*(x-0.5_wp)))
+      END SUBROUTINE modified_sigmoid
 
 
   SUBROUTINE single_forward_propagation(    &
@@ -795,7 +1068,8 @@ CONTAINS
       W4, b4, act4, layer4_out, layer4_act, layer4_mask,  &
       W5, b5, act5, layer5_out, layer5_act, layer5_mask,  &
       W6, b6, act6, layer6_out, layer6_act, layer6_mask,  &
-      batch_size, d_in, d_hid, d_out, keep_prob           )
+      batch_size, d_in, d_hid, d_out, keep_prob,          &
+      rh_constraint                                       )
 
     IMPLICIT NONE
     INTEGER,  INTENT(IN) :: batch_size, d_in, d_hid, d_out
@@ -831,7 +1105,9 @@ CONTAINS
     REAL(wp), INTENT(INOUT) :: layer5_act(batch_size, d_hid)
     REAL(wp), INTENT(INOUT) :: layer6_out(batch_size, d_out)
     REAL(wp), INTENT(INOUT) :: layer6_act(batch_size, d_out)
-    REAL(wp), INTENT(INOUT) :: output(batch_size,d_out)
+    REAL(wp), INTENT(INOUT) :: output    (batch_size, d_out)
+    REAL(wp), INTENT(IN)    :: rh_constraint(batch_size)
+
 
     CALL single_forward_propagation(input,      W1, b1, act1, &
       & batch_size, d_in,  d_hid,  keep_prob,                 &
@@ -854,6 +1130,11 @@ CONTAINS
 
     output(:,:) = layer6_act(:,:)
 
+    ! constraints
+    output(:,1) = output(:,1)*(1._wp-input(:,25)-input(:,33))
+    output(:,1) = output(:,1)*input(:,19)
+    output(:,1) = output(:,1)*(1._wp-rh_constraint)
+
     END SUBROUTINE forward
 
 
@@ -864,7 +1145,7 @@ CONTAINS
       REAL(wp), INTENT(IN)    :: z (d1,d2)
       REAL(wp), INTENT(INOUT) :: dz(d1,d2)
 
-      dz(:,:) = 0.
+      dz(:,:) = 0._wp
       WHERE(z > 0.) dz = dy
       END SUBROUTINE dReLU
 
@@ -877,7 +1158,7 @@ CONTAINS
       REAL(wp), INTENT(INOUT) :: dz(d1,d2)
 
       dz(:,:) = dy(:,:)
-      WHERE(z < 0.) dz = 0.01*dy
+      WHERE(z < 0.) dz = 0.01_wp*dy
       END SUBROUTINE dleaky_ReLU
 
 
@@ -942,14 +1223,14 @@ CONTAINS
 
       derivative_W_(:,:) = derivative_W_(:,:)/float(batch_size)
       derivative_W (:,:) = derivative_W(:,:)+derivative_W_(:,:)
-      WHERE(derivative_W >  1e-12) derivative_W =  1e-12
-      WHERE(derivative_W < -1e-12) derivative_W = -1e-12
+      WHERE(derivative_W >  1e-1) derivative_W =  1e-1
+      WHERE(derivative_W < -1e-1) derivative_W = -1e-1
 
       derivative_b_    = SUM(derivative_Z_, dim=1)
       derivative_b_(:) = derivative_b_(:)/float(batch_size)
       derivative_b (:) = derivative_b(:)+derivative_b_(:)
-      WHERE(derivative_b >  1e-12) derivative_b =  1e-12
-      WHERE(derivative_b < -1e-12) derivative_b = -1e-12
+      WHERE(derivative_b >  1e-1) derivative_b =  1e-1
+      WHERE(derivative_b < -1e-1) derivative_b = -1e-1
 
       derivative_X_ = matmul(derivative_Z_, transpose(weight))
 
@@ -984,7 +1265,8 @@ CONTAINS
           W6, act6, layer6_out, layer6_act, layer6_mask,  &
           dW1, dW2, dW3, dW4, dW5, dW6,                   &
           db1, db2, db3, db4, db5, db6,                   &
-          batch_size, d_in, d_hid, d_out, keep_prob       )
+          batch_size, d_in, d_hid, d_out, keep_prob,      &
+          rh_constraint                                   )
 
       IMPLICIT NONE
       INTEGER,  INTENT(IN) :: batch_size, d_in, d_hid, d_out
@@ -1028,6 +1310,7 @@ CONTAINS
       REAL(wp), INTENT(INOUT) :: dW4(d_hid,d_hid), db4(d_hid)
       REAL(wp), INTENT(INOUT) :: dW5(d_hid,d_hid), db5(d_hid)
       REAL(wp), INTENT(INOUT) :: dW6(d_hid,d_out), db6(d_out)
+      REAL(wp), INTENT(IN)    :: rh_constraint(batch_size)
 
       ! local
       REAL(wp) :: dlayer1_act_(batch_size, d_hid)
@@ -1040,9 +1323,14 @@ CONTAINS
 
       dlayer6_act_(:,1) = 2.*(output(:,1)-target_y(:)*100)    ! MSE
 
+      ! constraints
+      dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-input(:,25)-input(:,33))
+      dlayer6_act_(:,1) = dlayer6_act_(:,1)*input(:,19)
+      dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-rh_constraint(:))
+
       CALL single_backward_propagation(                      &
         & dlayer6_act_, layer6_mask, layer6_out, layer5_act, &
-        & W5, act6, batch_size, d_hid, d_out, 1._wp,         &
+        & W6, act6, batch_size, d_hid, d_out, 1._wp,         &
         & dlayer5_act_, dW6, db6                             )
       CALL single_backward_propagation(                      &
         & dlayer5_act_, layer5_mask, layer5_out, layer4_act, &
@@ -1073,7 +1361,7 @@ CONTAINS
           learning_rate, n_iter, d1                  )
 
       IMPLICIT NONE
-      INTEGER,  INTENT(IN) :: n_iter, d1
+      INTEGER,  INTENT(IN)    :: n_iter, d1
       REAL(wp), INTENT(IN)    :: learning_rate
       REAL(wp), INTENT(IN)    :: gradients(d1)
       REAL(wp), INTENT(INOUT) :: momentum1(d1)
@@ -1082,18 +1370,18 @@ CONTAINS
 
       ! hyper-parameters
       REAL(wp) :: beta1, beta2
-      beta1 = 0.9
-      beta2 = 0.999
+      beta1 = 0.9_wp     !0.9
+      beta2 = 0.999_wp   !0.999
 
-      momentum1(:)=beta1*momentum1(:)+(1-beta1)*gradients(:)
-      momentum2(:)=beta2*momentum2(:)+(1-beta2)*(gradients(:)**2)
+      momentum1(:)=beta1*momentum1(:)+(1._wp-beta1)*gradients(:)
+      momentum2(:)=beta2*momentum2(:)+(1._wp-beta2)*(gradients(:)**2._wp)
 
       !weights(:) = weights(:)-learning_rate                     &
       !           * (momentum1(:)  /(1-beta1**n_iter))           &
       !           / (((momentum2(:)/(1-beta2**n_iter))**0.5)+1e-7)
-      weights(:) = weights(:)-learning_rate                            &
-                 * (momentum1(:)  /((1-beta1**n_iter)+1e-8))           &
-                 / (((momentum2(:)/((1-beta2**n_iter)+1e-8))**0.5)+1e-8)
+      weights(:) = weights(:)-learning_rate                                   &
+                 * (momentum1(:)  /((1._wp-beta1**n_iter)+1e-8))              &
+                 / (((momentum2(:)/((1._wp-beta2**n_iter)+1e-8))**0.5_wp)+1e-8)
 
 
       END SUBROUTINE Adam_optimizer_1d
@@ -1104,7 +1392,7 @@ CONTAINS
           learning_rate, n_iter, d1, d2              )
 
       IMPLICIT NONE
-      INTEGER,  INTENT(IN) :: n_iter, d1, d2
+      INTEGER,  INTENT(IN)    :: n_iter, d1, d2
       REAL(wp), INTENT(IN)    :: learning_rate
       REAL(wp), INTENT(IN)    :: gradients(d1,d2)
       REAL(wp), INTENT(INOUT) :: momentum1(d1,d2)
@@ -1113,15 +1401,15 @@ CONTAINS
 
       ! hyper-parameters
       REAL(wp) :: beta1, beta2
-      beta1 = 0.9
-      beta2 = 0.999
+      beta1 = 0.9_wp     !0.9
+      beta2 = 0.999_wp   !0.999
 
-      momentum1(:,:)=beta1*momentum1(:,:)+(1-beta1)*gradients(:,:)
-      momentum2(:,:)=beta2*momentum2(:,:)+(1-beta2)*(gradients(:,:)**2)
+      momentum1(:,:)=beta1*momentum1(:,:)+(1._wp-beta1)*gradients(:,:)
+      momentum2(:,:)=beta2*momentum2(:,:)+(1._wp-beta2)*(gradients(:,:)**2._wp)
 
-      weights(:,:) = weights(:,:)-learning_rate                       &
-                   * (momentum1(:,:)  /((1-beta1**n_iter)+1e-8))      &
-                   / (((momentum2(:,:)/((1-beta2**n_iter)+1e-8))**0.5 &
+      weights(:,:) = weights(:,:)-learning_rate                              &
+                   * (momentum1(:,:)  /((1._wp-beta1**n_iter)+1e-8))         &
+                   / (((momentum2(:,:)/((1._wp-beta2**n_iter)+1e-8))**0.5_wp &
                       )+1e-8)
 
       END SUBROUTINE Adam_optimizer_2d

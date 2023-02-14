@@ -41,10 +41,10 @@ MODULE mo_anthro2l_memory_class
       & a_temperature,            & 
       & a_rel_humidity,           &
       & fba,                      &
-      & fba_smooth
-      !& population,               &
-      !& gdp,                      &
-      !& hdi,                      &
+      & fba_smooth,               &
+      & population,               &
+      & gdp,                      &
+      & hdi
       !& land_use_primf,           &
       !& land_use_c4per,           &
       !& land_use_urban,           &
@@ -153,32 +153,32 @@ CONTAINS
       !& output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'population', mem%population,                          &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('population density (anthropogenic)', '', ''),                  &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'population', mem%population,                          &
+      & hgrid, surface,                                                      &
+      & t_cf('population density (anthropogenic)', '', ''),                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'gdp', mem%gdp,                                        &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('GDP (anthropogenic)', '', ''),                                 &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'gdp', mem%gdp,                                        &
+      & hgrid, surface,                                                      &
+      & t_cf('GDP (anthropogenic)', '', ''),                                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'hdi', mem%hdi,                                        &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('HDI (anthropogenic)', '', ''),                                 &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'hdi', mem%hdi,                                        &
+      & hgrid, surface,                                                      &
+      & t_cf('HDI (anthropogenic)', '', ''),                                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
     !CALL mem%Add_var( 'land_use_primf', mem%land_use_primf,                  &
     !  & hgrid, surface,                                                      &

@@ -131,9 +131,9 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: rHcf_varname  = 'rHcf'             ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: fba_varname   = 'fba'              ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: fba_smooth_varname  = 'fba_smooth' ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: popd_varname  = 'population'       ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: gdp_varname   = 'gdp'              ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: hdi_varname   = 'hdi'              ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: popd_varname  = 'population'       ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: gdp_varname   = 'gdp'              ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: hdi_varname   = 'hdi'              ! < Rackhun Son >
   !CHARACTER(len=*), PARAMETER :: primf_varname = 'primf'            ! < Rackhun Son >
   !CHARACTER(len=*), PARAMETER :: c4per_varname = 'c4per'            ! < Rackhun Son >
   !CHARACTER(len=*), PARAMETER :: urban_varname = 'urban'            ! < Rackhun Son >
@@ -229,9 +229,9 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: rHcf            !! relative humidity from anthropogenic forcing [%]
      TYPE(input_variable_type) :: fba             !! fraction of burned area from anthropogenic forcing [%]
      TYPE(input_variable_type) :: fba_smooth      !! smoothed fraction of burned area from anthropogenic forcing [%]
-     !TYPE(input_variable_type) :: population      !! population density from anthropogenic forcing 
-     !TYPE(input_variable_type) :: gdp             !! GDP from anthropogenic forcing 
-     !TYPE(input_variable_type) :: hdi             !! HDI from anthropogenic forcing
+     TYPE(input_variable_type) :: population      !! population density from anthropogenic forcing 
+     TYPE(input_variable_type) :: gdp             !! GDP from anthropogenic forcing 
+     TYPE(input_variable_type) :: hdi             !! HDI from anthropogenic forcing
      !TYPE(input_variable_type) :: land_use_primf  !! primf land use from anthropogenic forcing
      !TYPE(input_variable_type) :: land_use_c4per  !! c4per land use from anthropogenic forcing
      !TYPE(input_variable_type) :: land_use_urban  !! urban land use from anthropogenic forcing
@@ -266,7 +266,7 @@ CONTAINS
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
     & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                   &
     & a_temperature, a_rel_humidity, fba, fba_smooth,                                      &   ! < Rackhun Son >
-    !, population, gdp, hdi, &
+    & population, gdp, hdi,                                                                &
     !& land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn, land_use_secdn, &
     !& land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx, land_use_c3per, land_use_secmb)   ! < Rackhun Son >
     & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &
@@ -312,9 +312,9 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: a_rel_humidity(:,:)     ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: fba(:,:)                ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: fba_smooth(:,:)         ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: population(:,:)         ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: gdp(:,:)                ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: hdi(:,:)                ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: population(:,:)         ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: gdp(:,:)                ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: hdi(:,:)                ! < Rackhun Son >
     !REAL(wp), INTENT(OUT) :: land_use_primf(:,:)     ! < Rackhun Son >
     !REAL(wp), INTENT(OUT) :: land_use_c4per(:,:)     ! < Rackhun Son >
     !REAL(wp), INTENT(OUT) :: land_use_urban(:,:)     ! < Rackhun Son >
@@ -404,9 +404,9 @@ CONTAINS
     a_rel_humidity(:,:)    = 0._wp      ! < Rackhun Son >
     fba(:,:)               = 0._wp      ! < Rackhun Son >
     fba_smooth(:,:)        = 0._wp      ! < Rackhun Son >
-    !population(:,:)        = 0._wp      ! < Rackhun Son >
-    !gdp(:,:)               = 0._wp      ! < Rackhun Son >
-    !hdi(:,:)               = 0._wp      ! < Rackhun Son >
+    population(:,:)        = 0._wp      ! < Rackhun Son >
+    gdp(:,:)               = 0._wp      ! < Rackhun Son >
+    hdi(:,:)               = 0._wp      ! < Rackhun Son >
     !land_use_primf(:,:)    = 0._wp      ! < Rackhun Son >
     !land_use_c4per(:,:)    = 0._wp      ! < Rackhun Son >
     !land_use_urban(:,:)    = 0._wp      ! < Rackhun Son >
@@ -622,9 +622,9 @@ CONTAINS
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%rHcf, a_rel_humidity)
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%fba,  fba)
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%fba_smooth,  fba_smooth)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%population, population)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%gdp, gdp)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%hdi, hdi)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%population, population)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%gdp, gdp)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%hdi, hdi)
     !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_primf, land_use_primf)
     !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c4per, land_use_c4per)
     !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_urban, land_use_urban)
@@ -1082,12 +1082,12 @@ CONTAINS
       & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%fba)
     CALL init_forcing_input_variable(fba_smooth_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
       & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%fba_smooth)
-    !CALL init_forcing_input_variable(popd_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%population)
-    !CALL init_forcing_input_variable(gdp_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%gdp)
-    !CALL init_forcing_input_variable(hdi_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%hdi)
+    CALL init_forcing_input_variable(popd_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%population)
+    CALL init_forcing_input_variable(gdp_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%gdp)
+    CALL init_forcing_input_variable(hdi_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%hdi)
     !CALL init_forcing_input_variable(primf_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
     !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_primf)
     !CALL init_forcing_input_variable(c4per_varname, forcing_anthro_frequ, forcing_anthro_ocean, &

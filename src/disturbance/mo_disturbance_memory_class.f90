@@ -29,7 +29,8 @@ MODULE mo_disturb_memory_class
 
   PUBLIC :: t_disturb_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 40
+  !INTEGER, PARAMETER :: max_no_of_vars = 40
+  INTEGER, PARAMETER :: max_no_of_vars = 70   ! < Rackhun Son >
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
@@ -66,7 +67,44 @@ MODULE mo_disturb_memory_class
     swl2_clim,                & ! for Fire <Rackhun Son>
     swl3_clim,                & ! for Fire <Rackhun Son>
     swl4_clim,                & ! for Fire <Rackhun Son>
-    lai_clim                    ! for Fire <Rackhun Son>
+    lai_clim,                 & ! for Fire <Rackhun Son>
+
+    V1_memory,                & ! for Fire <Rackhun Son>
+    V2_memory,                & ! for Fire <Rackhun Son>
+    V3_memory,                & ! for Fire <Rackhun Son>
+    V4_memory,                & ! for Fire <Rackhun Son>
+    V5_memory,                & ! for Fire <Rackhun Son>
+    V6_memory,                & ! for Fire <Rackhun Son>
+    V7_memory,                & ! for Fire <Rackhun Son>
+    V8_memory,                & ! for Fire <Rackhun Son>
+    V9_memory,                & ! for Fire <Rackhun Son>
+    V10_memory,               & ! for Fire <Rackhun Son>
+    V11_memory,               & ! for Fire <Rackhun Son>
+    V12_memory,               & ! for Fire <Rackhun Son>
+    V13_memory,               & ! for Fire <Rackhun Son>
+    V14_memory,               & ! for Fire <Rackhun Son>
+    V15_memory,               & ! for Fire <Rackhun Son>
+    V16_memory,               & ! for Fire <Rackhun Son>
+    V17_memory,               & ! for Fire <Rackhun Son>
+    V18_memory,               & ! for Fire <Rackhun Son>
+    V19_memory,               & ! for Fire <Rackhun Son>
+    V20_memory,               & ! for Fire <Rackhun Son>
+    V21_memory,               & ! for Fire <Rackhun Son>
+    V22_memory,               & ! for Fire <Rackhun Son>
+    V23_memory,               & ! for Fire <Rackhun Son>
+    V24_memory,               & ! for Fire <Rackhun Son>
+    V25_memory,               & ! for Fire <Rackhun Son>
+    V26_memory,               & ! for Fire <Rackhun Son>
+    V27_memory,               & ! for Fire <Rackhun Son>
+    V28_memory,               & ! for Fire <Rackhun Son>
+    V29_memory,               & ! for Fire <Rackhun Son>
+    V30_memory,               & ! for Fire <Rackhun Son>
+    V31_memory,               & ! for Fire <Rackhun Son>
+    V32_memory,               & ! for Fire <Rackhun Son>
+    V33_memory,               & ! for Fire <Rackhun Son>
+    RHC_memory,               & ! for Fire <Rackhun Son>
+    Y_memory
+
     !lstm_hidden,             & ! for Fire <Rackhun Son>
     !lstm_cell,               & ! for Fire <Rackhun Son>
 
@@ -102,7 +140,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid           ! Horizontal grid
     TYPE(t_jsb_vgrid), POINTER :: surface         ! Vertical grids
-    TYPE(t_jsb_vgrid), POINTER :: daily             ! daily time grids <Rackhun Son>
+    TYPE(t_jsb_vgrid), POINTER :: daily           ! daily time grids <Rackhun Son>
+    TYPE(t_jsb_vgrid), POINTER :: memory          ! memory           <Rackhun Son>
     !TYPE(t_jsb_vgrid), POINTER :: d_lstm            ! LSTM hidden grids <Rackhun Son>
     INTEGER :: table
 
@@ -117,6 +156,7 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
     daily   => Get_vgrid('daily')      ! 366 days <Rackhun Son>
+    memory  => Get_vgrid('memory')     ! training memory <Rackhun Son>
     !d_lstm  => Get_vgrid('d_lstm')     ! LSTM hidden dimension <Rackhun Son>
 
     ALLOCATE(mem%lightning_climatology(hgrid%nproma, hgrid%nblks, 1:366))   ! lightning climatology <Rackhun Son>
@@ -352,6 +392,288 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
+
+
+    CALL mem%Add_var('V1_memory', mem%V1_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V1_memory', '-',                                              &
+      &  'V1 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V2_memory', mem%V2_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V2_memory', '-',                                              &
+      &  'V2 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V3_memory', mem%V3_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V3_memory', '-',                                              &
+      &  'V3 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V4_memory', mem%V4_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V4_memory', '-',                                              &
+      &  'V4 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V5_memory', mem%V5_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V5_memory', '-',                                              &
+      &  'V5 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V6_memory', mem%V6_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V6_memory', '-',                                              &
+      &  'V6 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V7_memory', mem%V7_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V7_memory', '-',                                              &
+      &  'V7 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V8_memory', mem%V8_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V8_memory', '-',                                              &
+      &  'V8 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V9_memory', mem%V9_memory,                            &
+      & hgrid, memory,                                                      &
+      & t_cf('V9_memory', '-',                                              &
+      &  'V9 memory'),                                                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V10_memory', mem%V10_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V10_memory', '-',                                             &
+      &  'V10 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V11_memory', mem%V11_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V11_memory', '-',                                             &
+      &  'V11 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V12_memory', mem%V12_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V12_memory', '-',                                             &
+      &  'V12 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V13_memory', mem%V13_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V13_memory', '-',                                             &
+      &  'V13 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V14_memory', mem%V14_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V14_memory', '-',                                             &
+      &  'V14 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V15_memory', mem%V15_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V15_memory', '-',                                             &
+      &  'V15 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V16_memory', mem%V16_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V16_memory', '-',                                             &
+      &  'V16 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V17_memory', mem%V17_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V17_memory', '-',                                             &
+      &  'V17 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V18_memory', mem%V18_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V18_memory', '-',                                             &
+      &  'V18 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V19_memory', mem%V19_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V19_memory', '-',                                             &
+      &  'V19 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V20_memory', mem%V20_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V20_memory', '-',                                             &
+      &  'V20 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V21_memory', mem%V21_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V21_memory', '-',                                             &
+      &  'V21 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V22_memory', mem%V22_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V22_memory', '-',                                             &
+      &  'V22 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V23_memory', mem%V23_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V23_memory', '-',                                             &
+      &  'V23 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V24_memory', mem%V24_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V24_memory', '-',                                             &
+      &  'V24 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V25_memory', mem%V25_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V25_memory', '-',                                             &
+      &  'V25 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V26_memory', mem%V26_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V26_memory', '-',                                             &
+      &  'V26 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V27_memory', mem%V27_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V27_memory', '-',                                             &
+      &  'V27 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V28_memory', mem%V28_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V28_memory', '-',                                             &
+      &  'V28 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V29_memory', mem%V29_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V29_memory', '-',                                             &
+      &  'V29 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V30_memory', mem%V30_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V30_memory', '-',                                             &
+      &  'V30 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V31_memory', mem%V31_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V31_memory', '-',                                             &
+      &  'V31 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V32_memory', mem%V32_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V32_memory', '-',                                             &
+      &  'V32 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V33_memory', mem%V33_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V33_memory', '-',                                             &
+      &  'V33 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('RHC_memory', mem%RHC_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('RHC_memory', '-',                                             &
+      &  'RHC memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('Y_memory', mem%Y_memory,                              &
+      & hgrid, memory,                                                      &
+      & t_cf('Y_memory', '-',                                               &
+      &  'Y memory'),                                                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
 
     !CALL mem%Add_var('lstm_hidden', mem%lstm_hidden,                        &
     !  & hgrid, d_lstm,                                                      &

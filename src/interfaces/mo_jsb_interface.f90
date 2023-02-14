@@ -111,10 +111,10 @@ CONTAINS
     & a_temperature,                                                    &
     & a_rel_humidity,                                                   &
     & fba,                                                              &
-    & fba_smooth)
-    !& population,                                                       &
-    !& gdp,                                                              &
-    !& hdi,                                                              &
+    & fba_smooth,                                                       &
+    & population,                                                       &
+    & gdp,                                                              &
+    & hdi)                                                              
     !& land_use_primf,                                                   &
     !& land_use_c4per,                                                   &
     !& land_use_urban,                                                   &
@@ -228,10 +228,10 @@ CONTAINS
       & a_temperature(:),                &
       & a_rel_humidity(:),               &
       & fba(:),                          &
-      & fba_smooth(:)
-      !& population(:),                   &
-      !& gdp(:),                          &
-      !& hdi(:),                          &
+      & fba_smooth(:),                   &
+      & population(:),                   &
+      & gdp(:),                          &
+      & hdi(:)
       !& land_use_primf(:),               &
       !& land_use_c4per(:),               &
       !& land_use_urban(:),               &
@@ -342,9 +342,9 @@ CONTAINS
       & a_rel_humidity     = a_rel_humidity(:),     &
       & fba                = fba(:),                &
       & fba_smooth         = fba_smooth(:),         &
-      !& population         = population(:),         &
-      !& gdp                = gdp(:),                &
-      !& hdi                = hdi(:),                &
+      & population         = population(:),         &
+      & gdp                = gdp(:),                &
+      & hdi                = hdi(:),                &
       !& land_use_primf     = land_use_primf(:),     &
       !& land_use_c4per     = land_use_c4per(:),     &
       !& land_use_urban     = land_use_urban(:),     &
