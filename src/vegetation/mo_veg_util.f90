@@ -93,42 +93,6 @@ CONTAINS
     dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_establishment
     dsl4jsb_Def_pool(t_veg_elements_pool) :: veg_reserve_use
 #endif
-    ! Declare pointers to variables in memory
-    ! VEG_ 2D
-    dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
-    dsl4jsb_Real2D_onChunk      :: maint_respiration
-    dsl4jsb_Real2D_onChunk      :: maint_respiration_c13
-    dsl4jsb_Real2D_onChunk      :: maint_respiration_c14
-    dsl4jsb_Real2D_onChunk      :: growth_respiration
-    dsl4jsb_Real2D_onChunk      :: growth_respiration_c13
-    dsl4jsb_Real2D_onChunk      :: growth_respiration_c14
-    dsl4jsb_Real2D_onChunk      :: n_transform_respiration
-    dsl4jsb_Real2D_onChunk      :: n_fixation_respiration
-    dsl4jsb_Real2D_onChunk      :: n_processing_respiration
-    dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c13
-    dsl4jsb_Real2D_onChunk      :: n_processing_respiration_c14
-    dsl4jsb_Real2D_onChunk      :: npp
-    dsl4jsb_Real2D_onChunk      :: npp_c13
-    dsl4jsb_Real2D_onChunk      :: npp_c14
-    dsl4jsb_Real2D_onChunk      :: net_growth 
-    dsl4jsb_Real2D_onChunk      :: uptake_nh4
-    dsl4jsb_Real2D_onChunk      :: uptake_nh4_n15
-    dsl4jsb_Real2D_onChunk      :: uptake_no3
-    dsl4jsb_Real2D_onChunk      :: uptake_no3_n15
-    dsl4jsb_Real2D_onChunk      :: n_fixation
-    dsl4jsb_Real2D_onChunk      :: n_fixation_n15
-    dsl4jsb_Real2D_onChunk      :: uptake_po4
-    dsl4jsb_Real2D_onChunk      :: recycling_leaf_n
-    dsl4jsb_Real2D_onChunk      :: recycling_leaf_n15
-    dsl4jsb_Real2D_onChunk      :: recycling_leaf_p
-    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n
-    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_n15
-    dsl4jsb_Real2D_onChunk      :: recycling_fine_root_p
-    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n
-    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_n15
-    dsl4jsb_Real2D_onChunk      :: recycling_heart_wood_p
-    dsl4jsb_Real2D_onChunk      :: delta_dens_ind
-    dsl4jsb_Real2D_onChunk      :: unit_transpiration
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -159,42 +123,6 @@ CONTAINS
     CALL veg_establishment%Associate_chunk_var_ptr(ics, ice, iblk)
     CALL veg_reserve_use%Associate_chunk_var_ptr(ics, ice, iblk)
 #endif
-    ! Get process variables (Set pointers to variables in memory)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_pot)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, growth_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_transform_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c13)
-    dsl4jsb_Get_var2D_onChunk(VEG_, npp_c14)
-    dsl4jsb_Get_var2D_onChunk(VEG_, net_growth)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_nh4_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_no3_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation)
-    dsl4jsb_Get_var2D_onChunk(VEG_, n_fixation_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, uptake_po4)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_leaf_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_fine_root_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_n15)
-    dsl4jsb_Get_var2D_onChunk(VEG_, recycling_heart_wood_p)
-    dsl4jsb_Get_var2D_onChunk(VEG_, delta_dens_ind)
-    dsl4jsb_Get_var2D_onChunk(VEG_, unit_transpiration)
-
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -219,42 +147,42 @@ CONTAINS
 #endif
 
     ! flux variables
-    maint_respiration_pot(:) = zero          !< maintenance respiration (micro-mol CO2 m-2 s-1)
-    maint_respiration(:) = zero              !< maintenance respiration (micro-mol CO2 m-2 s-1)
-    maint_respiration_c13(:) = zero          !< maintenance respiration (micro-mol 13CO2 m-2 s-1)
-    maint_respiration_c14(:) = zero          !< maintenance respiration (micro-mol 14CO2 m-2 s-1)
-    growth_respiration(:) = zero             !< growth respiration (micro-mol CO2 m-2 s-1)
-    growth_respiration_c13(:) = zero         !< growth respiration (micro-mol 13CO2 m-2 s-1)
-    growth_respiration_c14(:) = zero         !< growth respiration (micro-mol 14CO2 m-2 s-1)
-    n_transform_respiration(:) = zero        !< respiration associated with N transformation (micro-mol CO2 m-2 s-1)
-    n_fixation_respiration(:) = zero         !< respiration associated with N fixation (micro-mol CO2 m-2 s-1)
-    n_processing_respiration(:) = zero       !< respiration associated with N fixation (micro-mol CO2 m-2 s-1)
-    n_processing_respiration_c13(:) = zero   !< respiration associated with N fixation (micro-mol 13CO2 m-2 s-1)
-    n_processing_respiration_c14(:) = zero   !< respiration associated with N fixation (micro-mol 14CO2 m-2 s-1)
-    npp(:) = zero                            !< net primary production (micro-mol CO2 m-2 s-1)
-    npp_c13(:) = zero                        !< net primary production (micro-mol 13CO2 m-2 s-1)
-    npp_c14(:) = zero                        !< net primary production (micro-mol 14CO2 m-2 s-1)
-    net_growth(:) = zero                     !< net growth (micro-mol CO2 m-2 s-1)
-    uptake_nh4(:) = zero                     !< NH4 uptake (micro-mol N m-2 s-1) 
-    uptake_nh4_n15(:) = zero                 !< 15NH4 uptake (micro-mol N m-2 s-1)
-    uptake_no3(:) = zero                     !< NO3 uptake (micro-mol N m-2 s-1)
-    uptake_no3_n15(:) = zero                 !< 15NO3 uptake (micro-mol N m-2 s-1)
-    n_fixation(:) = zero                     !< ??
-    n_fixation_n15(:) = zero                 !< ??
-    uptake_po4(:) = zero                     !< ??
-    recycling_leaf_n(:) = zero               !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-    recycling_leaf_n15(:) = zero             !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
-    recycling_leaf_p(:) = zero               !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-    recycling_fine_root_n(:) = zero          !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    recycling_fine_root_n15(:) = zero        !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
-    recycling_fine_root_p(:) = zero          !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    recycling_heart_wood_n(:) = zero         !< net flux of N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    recycling_heart_wood_n15(:) = zero       !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1) 
-    recycling_heart_wood_p(:) = zero         !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    dsl4jsb_var2D_onChunk(VEG_, maint_respiration_pot) = zero !< maintenance respiration (micro-mol CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, maint_respiration) = zero              !< maintenance respiration (micro-mol CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, maint_respiration_c13) = zero          !< maintenance respiration (micro-mol 13CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, maint_respiration_c14) = zero          !< maintenance respiration (micro-mol 14CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, growth_respiration) = zero             !< growth respiration (micro-mol CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, growth_respiration_c13) = zero         !< growth respiration (micro-mol 13CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, growth_respiration_c14) = zero         !< growth respiration (micro-mol 14CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, n_transform_respiration) = zero        !< respiration associated with N transformation (micro-mol CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, n_fixation_respiration) = zero         !< respiration associated with N fixation (micro-mol CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, n_processing_respiration) = zero       !< respiration associated with N fixation (micro-mol CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, n_processing_respiration_c13) = zero   !< respiration associated with N fixation (micro-mol 13CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, n_processing_respiration_c14) = zero   !< respiration associated with N fixation (micro-mol 14CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, npp) = zero                            !< net primary production (micro-mol CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, npp_c13) = zero                        !< net primary production (micro-mol 13CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, npp_c14) = zero                        !< net primary production (micro-mol 14CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, net_growth) = zero                     !< net growth (micro-mol CO2 m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, uptake_nh4) = zero                     !< NH4 uptake (micro-mol N m-2 s-1) 
+    dsl4jsb_var2D_onChunk(VEG_, uptake_nh4_n15) = zero                 !< 15NH4 uptake (micro-mol N m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, uptake_no3) = zero                     !< NO3 uptake (micro-mol N m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, uptake_no3_n15) = zero                 !< 15NO3 uptake (micro-mol N m-2 s-1)
+    dsl4jsb_var2D_onChunk(VEG_, n_fixation) = zero                     !< ??
+    dsl4jsb_var2D_onChunk(VEG_, n_fixation_n15) = zero                 !< ??
+    dsl4jsb_var2D_onChunk(VEG_, uptake_po4) = zero                     !< ??
+    dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_n) = zero               !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
+    dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_n15) = zero             !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_p) = zero               !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
+    dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_n) = zero          !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
+    dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_n15) = zero        !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_p) = zero          !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
+    dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n) = zero         !< net flux of N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
+    dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n15) = zero       !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_p) = zero         !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
 
-    ! other variables
-    delta_dens_ind(:) = zero                 !< ??
-    unit_transpiration(:) = zero             !< ??
+    ! ! other variables
+    dsl4jsb_var2D_onChunk(VEG_, delta_dens_ind) = zero                 !< ??
+    dsl4jsb_var2D_onChunk(VEG_, unit_transpiration) = zero             !< ??
 
   END SUBROUTINE reset_veg_fluxes
 

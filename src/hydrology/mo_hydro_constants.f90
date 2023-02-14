@@ -22,7 +22,7 @@ MODULE mo_hydro_constants
 
   INTEGER, PARAMETER ::                    &
     ! Identifiers used for the soil hydrology model
-    & BooksCorey_      = 1,                &
+    & BrooksCorey_     = 1,                &
     & ClappHornberger_ = 2,                &
     & VanGenuchten_    = 3,                &
     ! Identifiers used for the interpolation scheme
