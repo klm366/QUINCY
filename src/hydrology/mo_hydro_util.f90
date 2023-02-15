@@ -98,7 +98,7 @@ CONTAINS
     n  = SIZE(dz,2)       ! Number of soil layers
 
     !$claw acc data present(ws, dz, dz_root, ws_root) create(bottom, bottom_m1, root_depth)
-    !$claw acc parallel default(none)
+    !$claw acc parallel default(present)
     !$claw acc loop gang vector
     DO j = 1, SIZE(ws, 1)
       bottom (j)    = SUM(dz (j,:))

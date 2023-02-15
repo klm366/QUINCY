@@ -419,6 +419,7 @@ CONTAINS
     USE mo_hydro_interface,    ONLY: global_hydrology_diagnostics
     USE mo_pheno_interface,    ONLY: global_phenology_diagnostics
     USE mo_carbon_interface,   ONLY: global_carbon_diagnostics
+    USE mo_pplcc_interface,    ONLY: global_pplcc_diagnostics
 #ifndef __NO_JSBACH_HD__
     USE mo_interface_hd_ocean, ONLY: interface_hd_ocean
     USE mo_hd_interface,       ONLY: hd_check_water_budget, hd_lateral_flow
@@ -427,6 +428,7 @@ CONTAINS
     dsl4jsb_Use_processes SEB_
     dsl4jsb_Use_processes HYDRO_
     dsl4jsb_Use_processes PHENO_
+    dsl4jsb_Use_processes PPLCC_
 
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
@@ -489,6 +491,9 @@ CONTAINS
     END IF
     IF (model%processes(CARBON_)%p%config%active) THEN
       CALL global_carbon_diagnostics(tile)
+    END IF
+    IF (model%processes(PPLCC_)%p%config%active) THEN
+      CALL global_pplcc_diagnostics(tile)
     END IF
 
     l_trace_memory = .FALSE.

@@ -405,7 +405,7 @@ CONTAINS
         & grnd_hflx_snow     (:)  &
         & )
 
-      !$claw acc parallel loop default(none) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
+      !$claw acc parallel loop default(present) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
       DO i = 1, nc
         IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
           t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
@@ -557,6 +557,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

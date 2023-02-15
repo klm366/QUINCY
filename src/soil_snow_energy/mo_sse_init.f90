@@ -27,7 +27,7 @@ MODULE mo_sse_init
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,             ONLY: missval
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
-  USE mo_util,               ONLY: int2string
+  USE mo_util,               ONLY: int2string, soil_init_from_texture
 
   dsl4jsb_Use_processes SSE_, SEB_, HYDRO_
   dsl4jsb_Use_config(SSE_)
@@ -45,11 +45,31 @@ MODULE mo_sse_init
     & fao_thermal_diff(0:6) = (/7.4e-7_wp ,8.7e-7_wp ,8.0e-7_wp ,7.4e-7_wp ,7.1e-7_wp ,6.7e-7_wp ,-1._wp/), &
     & fao_vol_hcap    (0:6) = (/2.25e+6_wp,1.93e+6_wp,2.10e+6_wp,2.25e+6_wp,2.36e+6_wp,2.48e+6_wp,-1._wp/)
 
+  ! heat capacity [J/Km^3] (s. table 2.2 in Reick et al. (2020) Reports on Earth System Science 240)
+  REAL(wp), PARAMETER ::  heat_cap_sand = 1.93e+06_wp
+  REAL(wp), PARAMETER ::  heat_cap_silt = 2.25e+06_wp
+  REAL(wp), PARAMETER ::  heat_cap_clay = 2.48e+06_wp
+  REAL(wp), PARAMETER ::  heat_cap_oc = 2.5e+06_wp ! see vol_hcap_org in mo_sse_constants.f90
+
+  ! heat conductivity (s. table 2.2 in Reick et al. (2020) Reports on Earth System Science 240)
+  REAL(wp), PARAMETER ::  heat_cond_sand = 1.6791_wp
+  REAL(wp), PARAMETER ::  heat_cond_silt = 1.665_wp
+  REAL(wp), PARAMETER ::  heat_cond_clay = 1.6616_wp
+  REAL(wp), PARAMETER ::  heat_cond_oc = 0.25_wp ! see hcond_org in mo_sse_constants.f90
+
   TYPE t_sse_init_vars
     REAL(wp), POINTER ::     &
       & fao         (:,:  ) => NULL(), &
       & vol_heat_cap(:,:  ) => NULL(), &
       & heat_cond   (:,:  ) => NULL(), &
+      & fr_sand     (:,:  ) => Null(), &
+      & fr_silt     (:,:  ) => Null(), &
+      & fr_clay     (:,:  ) => Null(), &
+      & fr_oc       (:,:  ) => Null(), &
+      & fr_sand_deep(:,:  ) => Null(), &
+      & fr_silt_deep(:,:  ) => Null(), &
+      & fr_clay_deep(:,:  ) => Null(), &
+      & fr_oc_deep  (:,:  ) => Null(), &
       & t_srf_mon   (:,:,:) => NULL(), &
       & ifs_tsoil   (:,:,:) => NULL(), &
       & ifs_tskin   (:,:  ) => NULL()
@@ -91,6 +111,15 @@ CONTAINS
       & sse_init_vars%heat_cond     &
       & )
 
+    IF (ASSOCIATED(sse_init_vars%fr_sand)) DEALLOCATE(sse_init_vars%fr_sand)
+    IF (ASSOCIATED(sse_init_vars%fr_silt)) DEALLOCATE(sse_init_vars%fr_silt)
+    IF (ASSOCIATED(sse_init_vars%fr_clay)) DEALLOCATE(sse_init_vars%fr_clay)
+    IF (ASSOCIATED(sse_init_vars%fr_oc)) DEALLOCATE(sse_init_vars%fr_oc)
+    IF (ASSOCIATED(sse_init_vars%fr_sand_deep)) DEALLOCATE(sse_init_vars%fr_sand_deep)
+    IF (ASSOCIATED(sse_init_vars%fr_silt_deep)) DEALLOCATE(sse_init_vars%fr_silt_deep)
+    IF (ASSOCIATED(sse_init_vars%fr_clay_deep)) DEALLOCATE(sse_init_vars%fr_clay_deep)
+    IF (ASSOCIATED(sse_init_vars%fr_oc_deep)) DEALLOCATE(sse_init_vars%fr_oc_deep)
+
     IF (ASSOCIATED(sse_init_vars%t_srf_mon)) DEALLOCATE(sse_init_vars%t_srf_mon)
 
     IF (ASSOCIATED(sse_init_vars%ifs_tsoil)) DEALLOCATE(sse_init_vars%ifs_tsoil)
@@ -121,59 +150,145 @@ CONTAINS
     nblks  = grid%Get_nblks()
     soil_e => Get_vgrid('soil_depth_energy')
 
-    ALLOCATE(                                          &
-      & sse_init_vars%fao         (nproma, nblks    ), &
-      & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
-      & sse_init_vars%heat_cond   (nproma, nblks    )  &
-      & )
-
-    sse_init_vars%fao         (:,:)   = missval
-    sse_init_vars%vol_heat_cap(:,:)   = missval
-    sse_init_vars%heat_cond   (:,:)   = missval
-
-    IF (model%config%init_from_ifs) THEN
-      ALLOCATE(sse_init_vars%ifs_tsoil(nproma,ifs_nsoil,nblks))
-      sse_init_vars%ifs_tsoil(:,:,:) = missval
-      ALLOCATE(sse_init_vars%ifs_tskin(nproma,nblks))
-      sse_init_vars%ifs_tskin(:,:) = missval
-    ELSE
-      ALLOCATE(sse_init_vars%t_srf_mon(nproma, nblks, 12))
-      sse_init_vars%t_srf_mon(:,:,:) = missval
-    END IF
-
-
-    ! Get soil config
-    dsl4jsb_Get_config(SSE_)
-
     IF (.NOT. tile%Is_process_active(SSE_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Reading soil energy boundary conditions for tile '//TRIM(tile%name))
 
+    ! Get soil config
+    dsl4jsb_Get_config(SSE_)
+
+    ALLOCATE(                                          &
+      & sse_init_vars%vol_heat_cap(nproma, nblks    ), &
+      & sse_init_vars%heat_cond   (nproma, nblks    )  &
+      & )
+
+    sse_init_vars%vol_heat_cap(:,:)   = missval
+    sse_init_vars%heat_cond   (:,:)   = missval
+
+    IF (      .NOT. (dsl4jsb_Config(SSE_)%l_heat_cap_map .AND. dsl4jsb_Config(SSE_)%l_heat_cond_map) &
+      & .AND. .NOT. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+      ALLOCATE(sse_init_vars%fao(nproma, nblks))
+      sse_init_vars%fao(:,:)   = missval
+    END IF
+
+    IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+      ALLOCATE(                                          &
+        & sse_init_vars%fr_sand     (nproma, nblks    ), &
+        & sse_init_vars%fr_silt     (nproma, nblks    ), &
+        & sse_init_vars%fr_clay     (nproma, nblks    ), &
+        & sse_init_vars%fr_oc       (nproma, nblks    ), &
+        & sse_init_vars%fr_sand_deep(nproma, nblks    ), &
+        & sse_init_vars%fr_silt_deep(nproma, nblks    ), &
+        & sse_init_vars%fr_clay_deep(nproma, nblks    ), &
+        & sse_init_vars%fr_oc_deep  (nproma, nblks    )  &
+        & )
+
+      sse_init_vars%fr_sand     (:,:)   = missval
+      sse_init_vars%fr_silt     (:,:)   = missval
+      sse_init_vars%fr_clay     (:,:)   = missval
+      sse_init_vars%fr_oc       (:,:)   = missval
+      sse_init_vars%fr_sand_deep(:,:)   = missval
+      sse_init_vars%fr_silt_deep(:,:)   = missval
+      sse_init_vars%fr_clay_deep(:,:)   = missval
+      sse_init_vars%fr_oc_deep  (:,:)   = missval
+    END IF ! l_soil_texture
+
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
 
-    ! Thermal diffusivity of soil
-    ptr_2D => input_file%Read_2d(                    &
-      & variable_name='fao')
-    ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-    sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), MIN(REAL(UBOUND(fao_thermal_diff,1),wp), ptr_2D(:,:)))
+    ! soil texture information
+    IF (dsl4jsb_Config(SSE_)%l_soil_texture) THEN
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='FR_SAND',              &
+        & fill_array = sse_init_vars%fr_sand)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-    input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%bc_filename, model%grid_id)
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='FR_SILT',              &
+        & fill_array = sse_init_vars%fr_silt)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-    ! Volumetric heat capacity of dry soil [J/(m^3*K)]
-    ptr_2D => input_file%Read_2d(         &
-      & variable_name='heat_capacity',            &
-      & fill_array = sse_init_vars%vol_heat_cap)
-    ptr_2D(:,:) = MERGE(ptr_2D(:,:), 2.e6_wp, ptr_2D(:,:) > 0._wp)
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='FR_CLAY',              &
+        & fill_array = sse_init_vars%fr_clay)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-    ! Heat conductivity of mineral soil
-    ptr_2D => input_file%Read_2d(         &
-      & variable_name='heat_conductivity',         &
-      & fill_array = sse_init_vars%heat_cond)
-    ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='FR_OC',                &
+        & fill_array = sse_init_vars%fr_oc)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='SUB_FR_SAND',              &
+        & fill_array = sse_init_vars%fr_sand_deep)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='SUB_FR_SILT',              &
+        & fill_array = sse_init_vars%fr_silt_deep)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='SUB_FR_CLAY',              &
+        & fill_array = sse_init_vars%fr_clay_deep)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+
+      ptr_2D => input_file%Read_2d(             &
+        & variable_name='SUB_FR_OC',                &
+        & fill_array = sse_init_vars%fr_oc_deep)
+      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
+
+      ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
+      !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_0 tile_name=tile%name
+      CALL soil_init_from_texture( &
+         heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc,                                          &
+         sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
+         sse_init_vars%fr_sand_deep(:,:), sse_init_vars%fr_silt_deep(:,:), sse_init_vars%fr_clay_deep(:,:), &
+         sse_init_vars%fr_oc(:,:), sse_init_vars%fr_oc_deep(:,:),                                           &
+         sse_init_vars%vol_heat_cap(:,:))
+
+      ! calculate soil heat conductivity incl. organic fraction
+      !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_1 tile_name=tile%name
+      CALL soil_init_from_texture( &
+         heat_cond_sand, heat_cond_silt, heat_cond_clay, heat_cond_oc,                                      &
+         sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
+         sse_init_vars%fr_sand_deep(:,:), sse_init_vars%fr_silt_deep(:,:), sse_init_vars%fr_clay_deep(:,:), &
+         sse_init_vars%fr_oc(:,:), sse_init_vars%fr_oc_deep(:,:),                                           &
+         sse_init_vars%heat_cond(:,:))
+    ELSE
+      IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+        ! FAO
+        ptr_2D => input_file%Read_2d(variable_name='fao')
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
+        sse_init_vars%fao(:,:) = MAX(REAL(LBOUND(fao_thermal_diff,1),wp), &
+                                     MIN(REAL(UBOUND(fao_thermal_diff,1),wp), ptr_2D(:,:)))
+      END IF
+
+      IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
+        ! Volumetric heat capacity of dry soil [J/(m^3*K)]
+        ptr_2D => input_file%Read_2d(         &
+          & variable_name='heat_capacity',            &
+          & fill_array = sse_init_vars%vol_heat_cap)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 2.e6_wp, ptr_2D(:,:) > 0._wp)
+      END IF
+
+      IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+        ! Heat conductivity of mineral soil
+        ptr_2D => input_file%Read_2d(         &
+          & variable_name='heat_conductivity',         &
+          & fill_array = sse_init_vars%heat_cond)
+        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.2_wp, ptr_2D(:,:) > 0._wp)
+      END IF
+
+    END IF ! l_soil_texture
 
     CALL input_file%Close()
 
     IF (model%config%init_from_ifs) THEN
+
+      ALLOCATE(sse_init_vars%ifs_tsoil(nproma,ifs_nsoil,nblks))
+      sse_init_vars%ifs_tsoil(:,:,:) = missval
+      ALLOCATE(sse_init_vars%ifs_tskin(nproma,nblks))
+      sse_init_vars%ifs_tskin(:,:) = missval
       DO isoil=1,ifs_nsoil
         ptr_2D => model%config%ifs_input_file%Read_2d_1lev_1time( &
           & variable_name='STL'//int2string(isoil))
@@ -184,6 +299,9 @@ CONTAINS
       sse_init_vars%ifs_tskin(:,:) = ptr_3D(:,:,1)
 
     ELSE
+
+      ALLOCATE(sse_init_vars%t_srf_mon(nproma, nblks, 12))
+      sse_init_vars%t_srf_mon(:,:,:) = missval
 
       input_file = jsb_netcdf_open_input(dsl4jsb_Config(SSE_)%ic_filename, model%grid_id)
 
@@ -223,13 +341,8 @@ CONTAINS
     ! Get soil memory of the tile
     dsl4jsb_Get_memory(SSE_)
 
-    ! Thermal diffusivity of soil
-    DO iblk=1,SIZE(sse_init_vars%fao,2)
-      dsl4jsb_var_ptr(SSE_,thermal_diffusivity)(:,iblk) = fao_thermal_diff(NINT(sse_init_vars%fao(:,iblk)))
-    END DO
-
     ! Volumetric heat capacity of dry soil [J/(m^3*K)]
-    IF (dsl4jsb_Config(SSE_)%l_heat_cap_map) THEN
+    IF (dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
       dsl4jsb_var_ptr(SSE_, vol_heat_cap) = sse_init_vars%vol_heat_cap
     ELSE
       DO iblk=1,SIZE(sse_init_vars%fao,2)
@@ -238,18 +351,20 @@ CONTAINS
     END IF
 
     ! Heat conductivity of mineral soil
-    IF (dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
+    IF (dsl4jsb_Config(SSE_)%l_heat_cond_map .OR. dsl4jsb_Config(SSE_)%l_soil_texture) THEN
       dsl4jsb_var_ptr(SSE_, heat_cond) = sse_init_vars%heat_cond
     ELSE
+    ! Thermal diffusivity of soil from FAO
+      DO iblk=1,SIZE(sse_init_vars%fao,2)
+        dsl4jsb_var_ptr(SSE_,thermal_diffusivity)(:,iblk) = fao_thermal_diff(NINT(sse_init_vars%fao(:,iblk)))
+      END DO  
       dsl4jsb_var2D_onDomain(SSE_, heat_cond) = &
         & dsl4jsb_var2D_onDomain(SSE_, vol_heat_cap) * dsl4jsb_var2D_onDomain(SSE_, thermal_diffusivity)
     END IF
 
-    !$acc data present(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity), &
-    !$acc dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap), &
+    !$acc data present(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap), &
     !$acc dsl4jsb_var2D_onDomain(SSE_,heat_cond))
-    !$acc update device(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity), &
-    !$acc dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap), &
+    !$acc update device(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap), &
     !$acc dsl4jsb_var2D_onDomain(SSE_,heat_cond))
     !$acc end data
 

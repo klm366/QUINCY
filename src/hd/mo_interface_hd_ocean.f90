@@ -15,7 +15,7 @@ MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: finish, warning
+  USE mo_exception,           ONLY: finish, message
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: Get_model
@@ -31,6 +31,7 @@ MODULE mo_interface_hd_ocean
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
 
   dsl4jsb_Use_processes HYDRO_, HD_
+  dsl4jsb_Use_config(HD_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(HD_)
 
@@ -73,17 +74,24 @@ CONTAINS
     INTEGER :: nproma, nblks
     LOGICAL,  ALLOCATABLE :: is_valid(:)
 
+    dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HD_)
+
     dsl4jsb_Real2D_onDomain :: hd_mask
 
-    model_id = 1 ! does not work when nesting is active
+    ! It is assumed that only one domain is active (jg=1) i.e. no nesting.
+    ! Currently, this requirement is fulfilled since ocean coupling is only set up for one domain.
+    model_id = 1
 
     model => Get_model(model_id)
-    grid  => Get_grid(model%grid_id)
+
+    dsl4jsb_Get_config(HD_)
+    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
 
     CALL model%Get_top_tile(tile)
     dsl4jsb_Get_memory(HD_)
 
+    grid  => Get_grid(model%grid_id)
     nproma = grid%Get_nproma()
     nblks  = grid%Get_nblks()
 
@@ -134,6 +142,7 @@ CONTAINS
     !
     TYPE(t_jsb_grid),  POINTER    :: grid
 
+    dsl4jsb_Def_config(HD_)
     dsl4jsb_Def_memory(HYDRO_)
 
     TYPE(t_jsb_model), POINTER :: model
@@ -157,10 +166,12 @@ CONTAINS
 
     IF ( .NOT. is_coupled_run() ) RETURN
 
-    IF (ASSOCIATED(tile%parent)) &
-      & CALL finish(TRIM(routine), 'HD model works on root tile only!')
-
     model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(HD_)
+    IF (.NOT. dsl4jsb_Config(HD_)%active) RETURN
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'HD model works on root tile only!')
 
     grid => Get_grid(model%grid_id)
 
@@ -201,7 +212,7 @@ CONTAINS
     IF ( info > 1 .AND. info < 7 ) write_coupler_restart = .TRUE.
 
     IF ( write_coupler_restart ) THEN
-       CALL warning(TRIM(routine), 'YAC says it is put for restart')
+       CALL message(TRIM(routine), 'YAC says it is put for restart')
     ENDIF
 
     DEALLOCATE(buffer)
