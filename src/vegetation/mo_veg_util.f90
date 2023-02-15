@@ -400,7 +400,7 @@ CONTAINS
 #ifdef __QUINCY_STANDALONE__
     vgrid_canopy  => Get_vgrid('canopy_layer')
 #else
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+    vgrid_canopy  => Get_vgrid('canopy_layer')
 #endif
     ncanopy       =  vgrid_canopy%n_levels
     dsl4jsb_Get_config(ASSIMI_)

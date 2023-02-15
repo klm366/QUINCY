@@ -49,7 +49,7 @@ CONTAINS
     USE mo_jsb_physical_constants,  ONLY: r_gas, Tzero
     USE mo_isotope_util,            ONLY: calc_fractionation
     USE mo_phy_schemes
-    USE mo_assimi_constants,        ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
+    USE mo_assimi_parameters,        ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
     USE mo_rad_process,             ONLY: Has_minimal_radiation
     dsl4jsb_Use_config(ASSIMI_)    
     dsl4jsb_Use_memory(A2L_)
@@ -153,7 +153,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+    vgrid_canopy  => Get_vgrid('canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
     no_omp_thread = Get_omp_thread()
     ! ----------------------------------------------------------------------------------------------------- !
@@ -412,9 +412,10 @@ CONTAINS
 
   USE mo_veg_constants,             ONLY: fmaint_rate_base  
   USE mo_jsb_physical_constants,    ONLY: r_gas, Tzero
-  USE mo_assimi_constants,          ONLY: E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v, CiCa_default_C3, CiCa_default_C4, &
+  USE mo_assimi_parameters,         ONLY: E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v, CiCa_default_C3, CiCa_default_C4, &
                                           ps_it_max, ci_max, alpha_i, Tref_pepc, Tbase_pepc, pO2, jmax2n, vcmax2n, ka, pepc2n, &
-                                          chl2n, Dwv2co2_air, Dwv2co2_turb, ic3phot, ic4phot
+                                          chl2n
+  USE mo_assimi_constants,          ONLY: Dwv2co2_air, Dwv2co2_turb, ic3phot, ic4phot
   USE mo_veg_respiration,           ONLY: temperature_response_respiration
 
   IMPLICIT NONE
@@ -763,7 +764,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION calc_beta_soa(soa_tsoa_mavg,phenology_type) RESULT(beta_soa)
 
     USE mo_pheno_constants,            ONLY: ievergreen
-    USE mo_assimi_constants,           ONLY: soa_b, soa_t_s
+    USE mo_assimi_parameters,          ONLY: soa_b, soa_t_s
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp), INTENT(in)  :: soa_tsoa_mavg    !< state of acclimation
     INTEGER,  INTENT(in)  :: phenology_type   !< phenology type of the plant
@@ -794,9 +795,10 @@ CONTAINS
   !>
   PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
   
-    USE mo_assimi_constants,       ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
+    USE mo_assimi_parameters,      ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
                                          discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
-                                         discr_ps_phi, ic3phot, ic4phot
+                                         discr_ps_phi
+    USE mo_assimi_constants,       ONLY: ic3phot, ic4phot
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp),     INTENT(in) :: ci                     !< leaf internal CO2 concentration (ppm)
     REAL(wp),     INTENT(in) :: ca                     !< atmospheric CO2 concentration (ppm)
