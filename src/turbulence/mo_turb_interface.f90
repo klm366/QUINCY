@@ -495,13 +495,13 @@ CONTAINS
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,    qsat_star)              ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_wet)              ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_pond)             ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,  ice_pond)               ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail_max) ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,  wtr_rootzone_avail)     ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_sl)            ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_fc_sl)         ! in
       dsl4jsb_Get_var3D_onChunk(HYDRO_,  wtr_soil_pwp_sl)        ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  fract_pond)             ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,  ice_pond)               ! in
     END IF
 
     ! ---------------------------

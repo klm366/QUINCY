@@ -54,6 +54,7 @@ MODULE mo_hydro_memory_class
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
       & fract_pond,           & !< Fraction of tile assumed inundated at given water level              [/]
+      & fract_pond_max,       & !< Maximum fraction of tile assumed inundated at maximum water level    [/]
       & weq_pond,             & !< Water content of pond reservoir                                      [m water equivalent]
       & weq_pond_max,         & !< Maximum water content of pond reservoir                              [m water equivalent]
       & wtr_pond,             & !< Liquid water content of pond reservoir                               [m water equivalent]
@@ -282,13 +283,6 @@ CONTAINS
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    CALL mem%Add_var( 'weq_pond_max', mem%weq_pond_max,                                 &
-      & hgrid, surface,                                                                 &
-      & t_cf('weq_pond_max', 'm (water equivalent)', 'Maximum surface pond reservoir'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-      & prefix, suffix,                                                                 &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
     CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
       & hgrid, surface,                                                              &
       & t_cf('weq_pond', 'm (water equivalent)', 'Surface pond reservoir'),          &
@@ -487,7 +481,21 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp)
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'fract_pond_max', mem%fract_pond_max,                               &
+      & hgrid, surface,                                                                   &
+      & t_cf('fract_pond_max', '/', 'Maximum surface fraction available for inundation'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT  )
+
+    CALL mem%Add_var( 'weq_pond_max', mem%weq_pond_max,                                   &
+      & hgrid, surface,                                                                   &
+      & t_cf('weq_pond_max', 'm (water equivalent)', 'Maximum surface pond reservoir'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT )
 
 
     ! Additional variables for land type

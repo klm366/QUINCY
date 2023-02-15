@@ -48,7 +48,8 @@ MODULE mo_hydro_config_class
       & l_organic,           & !< Use organic component of soil layers
       & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero        !< Allow infiltration at soil temperatures below 0degC
+      & l_infil_subzero,     & !< Allow infiltration at soil temperatures below 0degC
+      & l_ponds                !< Additional surface water storage
     INTEGER               :: &
       & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
       & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean 
@@ -79,7 +80,7 @@ CONTAINS
     REAL(wp)                    :: max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
-    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
+    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -97,6 +98,7 @@ CONTAINS
       & l_socmap,                   &
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
+      & l_ponds,                    &
       & soilhydmodel,               &
       & interpol_mean
 
@@ -128,6 +130,7 @@ CONTAINS
     l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
     l_infil_subzero   = .TRUE.
+    l_ponds           = .FALSE.
     soilhydmodel      = "BrooksCorey"
     interpol_mean     = "upstream"
 
@@ -178,6 +181,9 @@ CONTAINS
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
+
+    config%l_ponds = l_ponds
+    IF (l_ponds) CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not tested!!')
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))
     CASE("brookscorey")
