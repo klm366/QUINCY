@@ -385,7 +385,7 @@ CONTAINS
         & initval_r=0.0_wp )
         
       CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
-        & hgrid, canopy_layer,                                               &
+        & hgrid, vgrid_canopy,                                               &
         & t_cf('LAI for each canopy layer', '', ''),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &

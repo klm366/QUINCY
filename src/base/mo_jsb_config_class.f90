@@ -374,4 +374,3 @@ CONTAINS
     CALL message(TRIM(short_name), TRIM(message_text))
 
   END SUBROUTINE setup_element
-#endif

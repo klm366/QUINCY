@@ -68,7 +68,8 @@ CONTAINS
     USE mo_jsb_physical_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_atmland_constants,           ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, &
       & def_co2_mixing_ratio_C14, def_co2_deltaC13, def_co2_deltaC14
-    USE mo_assimi_constants,            ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
+    USE mo_assimi_parameters,           ONLY: CiCa_default_C3, CiCa_default_C4
+    USE mo_assimi_constants,            ONLY: ic3phot, ic4phot
     USE mo_veg_constants,               ONLY: itree
     USE mo_sb_constants                 ! e.g., ONLY: nh4_solute_prescribe, no3_solute_prescribe
     ! ----------------------------------------------------------------------------------------------------- !

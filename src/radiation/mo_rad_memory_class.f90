@@ -247,8 +247,7 @@ CONTAINS
 #ifdef __QUINCY_STANDALONE__
     vgrid_canopy => Get_vgrid('canopy_layer')
 #else
-    canopy_layer => Get_vgrid('canopy_layer')
-    vgrid_canopy => Get_vgrid('canopy_layer_q_')  !! quincy
+    vgrid_canopy => Get_vgrid('canopy_layer')
     dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(HYDRO_)
 
@@ -446,28 +445,28 @@ CONTAINS
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.5_wp )
 
       CALL mem%Add_var('fapar_cl', mem%faPAR_cl,                                  &
-        & hgrid, canopy_layer,                                                    &
+        & hgrid, vgrid_canopy,                                                    &
         & t_cf('Absorbed PAR per canopy layer [fraction of irradiance]', '', ''), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),      &
         & prefix, suffix,                                                         &
         & lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL mem%Add_var('apar_per_lai_cl', mem%apar_per_lai_cl,               &
-        & hgrid, canopy_layer,                                               &
+        & hgrid, vgrid_canopy,                                               &
         & t_cf('Absorbed PAR per canopy layer (LAI area).', '', ''),         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & loutput=.FALSE., lrestart=.FALSE., initval_r=0.0_wp )
 
       !  CALL mem%Add_var('apar_per_lai_cl_nacc', mem%apar_per_lai_cl_nacc,                 &
-      !    & hgrid, canopy_layer,                                                           &
+      !    & hgrid, vgrid_canopy,                                                           &
       !    & t_cf('PAR absorbed by the canopy (accumulated over output timestep)', '', ''), &
       !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),             &
       !    & prefix, suffix,                                                                &
       !    & lrestart=.TRUE., initval_r=0.0_wp )
 
       !  CALL mem%Add_var('apar_per_lai_cl_tavg', mem%apar_per_lai_cl_tavg,                &
-      !    & hgrid, canopy_layer,                                                          &
+      !    & hgrid, vgrid_canopy,                                                          &
       !    & t_cf('PAR absorbed by the canopy (mean value over output timestep)', '', ''), &
       !    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),            &
       !    & prefix, suffix,                                                               &

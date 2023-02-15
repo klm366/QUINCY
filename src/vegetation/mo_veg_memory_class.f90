@@ -390,7 +390,7 @@ CONTAINS
 #ifdef __QUINCY_STANDALONE__
     vgrid_canopy  => Get_vgrid('canopy_layer')
 #else
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+    vgrid_canopy  => Get_vgrid('canopy_layer')
 #endif
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 

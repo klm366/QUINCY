@@ -408,7 +408,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_parameters                                     ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     !-----------------------------------------------------------------------
@@ -737,7 +737,7 @@ CONTAINS
     & NPP_pot_rate_ca )
 
     ! Use Declarations
-    USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
+    USE mo_assimi_parameters,   ONLY: f_aut_leaf, cCost
 
     ! Arguments
     REAL(wp),  INTENT(in), DIMENSION(:) ::   &
@@ -752,7 +752,7 @@ CONTAINS
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
-    REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
+    REAL(wp)             :: hlp
     REAL(wp)             :: maintenanceRespiration ! R_m
     REAL(wp)             :: growthRespiration      ! R_g
     INTEGER :: nc, ic

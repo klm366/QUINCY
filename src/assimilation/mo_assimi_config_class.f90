@@ -28,11 +28,17 @@ MODULE mo_assimi_config_class
   !> ASSIMI_ configuration parameters
   !>
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
-     LOGICAL               :: init_running_means ! initialize npp buffer for NLCC process
-     INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
-                                               ! R: could be different for other processes e.g. for radiation
-     REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
-    !! quincy
+    !> common parameters used by all models
+    !>
+    INTEGER                 :: ncanopy            !< number of canopy layers
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> MODEL_JSBACH
+    !> 
+    LOGICAL                 :: init_running_means ! initialize npp buffer for NLCC process
+    REAL(wp), ALLOCATABLE   :: canopy_bound_lai(:)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> MODEL_QUINCY
+    !> 
     LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
     LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
@@ -51,6 +57,10 @@ CONTAINS
   !>
   SUBROUTINE Init_assimi_config(config)
 
+  ! ======================================================================================================= !
+  !> read ASSIMI_ namelist and init configuration parameters
+  !>
+  SUBROUTINE Init_assimi_config(config)
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
     USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,           ONLY: Register_vgrid
@@ -89,10 +99,22 @@ CONTAINS
 
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-
-    nml_unit = position_nml('jsb_assimi_nml', nml_handler, STATUS=istat)
+    nml_unit    = position_nml('jsb_assimi_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_assimi_nml)
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Write namelist values into config
+    config%active                       = active
+    config%ic_filename                  = ic_filename
+    config%bc_filename                  = bc_filename
+    config%ncanopy                      = ncanopy_q_
+    !! MODEL_JSBACH
+    config%init_running_means           = init_running_means
+    !! MODEL_QUINCY
+    config%flag_optimal_Nfraction       = flag_optimal_Nfraction
+    config%flag_t_resp_acclimation      = flag_t_resp_acclimation
+    config%flag_t_jmax_acclimation      = flag_t_jmax_acclimation
+    config%canopy_layer_scheme          = TRIM(canopy_layer_scheme)
+    config%canopy_conductance_scheme    = TRIM(canopy_conductance_scheme)
     CALL close_nml(nml_handler)
 
     config%active              = active
@@ -109,6 +131,12 @@ CONTAINS
       & levels = (/ (REAL(icanopy, kind=wp), icanopy=1, config%ncanopy) /), units = '')
     CALL register_vgrid(vgrid_canopy)
 
+    ! Create vertical axis for canopy layers
+    vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
+      & longname = 'Canopy layers from ASSIMI_ JSBACH', &
+      & levels = (/ (REAL(i, kind=wp), i=1, config%ncanopy) /), units = '')
+    CALL register_vgrid(vgrid_canopy)
+    
     ! Prepare canopy boundaries of lai_cl
     ALLOCATE(config%canopy_bound_lai(0:config%ncanopy))
     DO icanopy = 0,config%ncanopy
@@ -125,55 +153,53 @@ CONTAINS
     !! 
     !! layer 1 is the top canopy layer (reversed order of vgrid axis) \n
     !! and the value of the upper bound of a layer is larger than the value of the lower bound of the same layer
-    ALLOCATE(canopy_layer_thickness_profile(ncanopy_q_))
+    !!
+    ALLOCATE(canopy_layer_thickness_profile(config%ncanopy))
     SELECT CASE(TRIM(config%canopy_layer_scheme))
-      CASE ("standard")
-        canopy_layer_thickness_profile(:) = 0.5_wp
-
-      CASE ("fapar")
-        ! alternative canopy layer depth calculation, approximately proportional to FAPAR to  
-        ! reduce impact of actual canopy layering on PS calculation
-        dAPAR = 1._wp/REAL(ncanopy_q_,KIND=wp)
-        DO icanopy=1,ncanopy_q_
-          canopy_layer_thickness_profile(icanopy) = -1.0_wp/k_canopy_layer * LOG(1._wp-(dAPAR*icanopy)+eps4)
-        END DO
-
-      CASE DEFAULT
-        WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme',canopy_layer_scheme
-        CALL finish(routine, message_text) 
+    CASE ("standard")
+      canopy_layer_thickness_profile(:) = 0.5_wp
+    CASE ("fapar")
+      ! alternative canopy layer depth calculation, approximately proportional to FAPAR
+      ! to reduce impact of actual canopy layering on PS calculation
+      dAPAR = 1.0_wp / REAL(config%ncanopy, KIND=wp)
+      DO icanopy = 1,config%ncanopy
+        canopy_layer_thickness_profile(icanopy) = -1.0_wp / k_canopy_layer * LOG(1._wp - (dAPAR * icanopy) + eps4)
+      END DO
+    CASE DEFAULT
+      WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme', config%canopy_layer_scheme
+      CALL finish(routine, message_text) 
     END SELECT
 
-    !< check canopy-conductance scheme
-    !! 
+    !> check validity of canopy-conductance scheme
+    !>
     SELECT CASE(TRIM(config%canopy_conductance_scheme))
-      CASE ("medlyn")
-        CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
-          &                         ' the local lctlib_g1 variable is set to lctlib%g1_medlyn')
-      CASE ("ballberry")
-        CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
-          &                         ' the local lctlib_g1 variable is set to lctlib%g1_bberry')
-      CASE DEFAULT
-        WRITE(message_text,'(2a)') 'invalid canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme)
-        CALL finish(routine, message_text) 
+    CASE ("medlyn")
+      CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
+        &                         ' the local lctlib_g1 variable is set to lctlib%g1_medlyn')
+    CASE ("ballberry")
+      CALL message(TRIM(routine), 'Using the canopy_conductance_scheme: '//TRIM(config%canopy_conductance_scheme)// &
+        &                         ' the local lctlib_g1 variable is set to lctlib%g1_bberry')
+    CASE DEFAULT
+      WRITE(message_text,'(2a)') 'invalid canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme)
+      CALL finish(routine, message_text) 
     END SELECT
 
-    !< Create vertical axis
-    !! 
+    !> Create vertical axis - canopy layers
+    !> 
     !! these are "infrastructure" values, constant across PFTs and sites, and they do not interfere with tree height \n
     !! vgrid_canopy% lbounds, ubounds, and levels is calculated by 'new_vgrid()'
     !! 
     !! note: the axis of the canopy_layer vgrid is used as "reversed", i.e., layer 1 is the top canopy layer \n
     !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
-    vgrid_canopy  => new_vgrid('canopy_layer_q_', ZAXIS_GENERIC, ncanopy_q_, &
-                      longname='Canopy layers (leaf mass per layer as LAI) from ASSIMI_ QUINCY', &
-                      units='m2 m-2 LAI', &
-                      ! levels=   , &
-                      ! lbounds=  , & 
-                      ! ubounds=  , &
-                      dz=canopy_layer_thickness_profile(:))
-    CALL register_vgrid(vgrid_canopy)
-
-  END SUBROUTINE Init_assimi_config
+    vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
+      & longname = 'Canopy layers (leaf mass per layer as LAI) from ASSIMI_ QUINCY', &
+      & units = 'm2 m-2 LAI', &
+      ! levels=   , &
+      ! lbounds=  , & 
+      ! ubounds=  , &
+      & dz = canopy_layer_thickness_profile(:))
+    CALL register_vgrid(vgrid_canopy)    
+  END SUBROUTINE Init_assimi_config_quincy
 
 #endif
 END MODULE mo_assimi_config_class
