@@ -26,6 +26,7 @@
 !! First version by Reiner Schnur (2013-04-04);
 !! replaces the previous SLM mo_veg_config_class created 2016-03-17 that was based on the JSBACH4 mo_veg_config_class anyway;
 !! integration into SLM by Jan Engel, MPI BGC (20160401)
+!! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
 !!
 MODULE mo_veg_config_class
 #ifndef __NO_JSBACH__
@@ -41,7 +42,10 @@ MODULE mo_veg_config_class
   ! Module variables
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_veg_config
+  PUBLIC :: t_veg_config, Get_number_of_veg_compartments
+  PUBLIC :: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, VEG_PART_SAP_WOOD_IDX, &
+    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX, &
+    &       VEG_PART_SEED_BED_IDX
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config
@@ -58,10 +62,26 @@ MODULE mo_veg_config_class
                                                    !! "none population cohort"   
     CHARACTER(15)    :: biomass_alloc_scheme       !< select scheme for veg biomass allocation: fixed dynamic optimal
     CHARACTER(15)    :: leaf_stoichom_scheme       !< select scheme for C/N leaf stoichometry:  fixed dynamic optimal
+
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
   END type t_veg_config
 
+  !> INDs of vegetation compartments (since vegetation compartments are static, these are also used as IDs)
+  ENUM, BIND(C)
+    ENUMERATOR ::               &
+      & VEG_PART_LEAF_IDX = 1,    &   !< leaves
+      & VEG_PART_FINE_ROOT_IDX,   &   !< fine roots
+      & VEG_PART_COARSE_ROOT_IDX, &   !< coarse roots
+      & VEG_PART_SAP_WOOD_IDX,    &   !< sap wood
+      & VEG_PART_HEART_WOOD_IDX,  &   !< heart wood
+      & VEG_PART_LABILE_IDX,      &   !< labile
+      & VEG_PART_RESERVE_IDX,     &   !< reserve
+      & VEG_PART_FRUIT_IDX,       &   !< fruit
+      & VEG_PART_SEED_BED_IDX,    &   !< seed bed
+      & LAST_VEG_PART_IDX ! needs to be the last -- it is used to determine the number of compartments
+  END ENUM
+  
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_config_class'
 
 CONTAINS
@@ -103,9 +123,7 @@ CONTAINS
       biomass_alloc_scheme,         &
       leaf_stoichom_scheme
 
-    ! variables for reading model-options from namelist
-    INTEGER  :: nml_handler, nml_unit, istat
-
+    INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
@@ -140,6 +158,17 @@ CONTAINS
     config%leaf_stoichom_scheme          = leaf_stoichom_scheme
 
   END SUBROUTINE Init_veg_config
+
+
+  ! ====================================================================================================== !
+  !>
+  !> Returns the number of veg compartments defined in the enumerator
+  !>
+  FUNCTION Get_number_of_veg_compartments() RESULT(last_type_id)
+    INTEGER :: last_type_id
+
+    last_type_id = LAST_VEG_PART_IDX - 1
+  END FUNCTION Get_number_of_veg_compartments
 
 #endif
 END MODULE mo_veg_config_class

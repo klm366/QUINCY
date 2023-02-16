@@ -791,7 +791,7 @@ CONTAINS
 
     END DO
 
-    ! Iterate over tiles, crosscheck tile structure and collect conserved quantities
+    ! Iterate over tiles, crosscheck tile structure, and collect conserved quantities
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &

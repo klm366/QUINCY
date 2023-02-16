@@ -1580,18 +1580,18 @@ CONTAINS
 !! #################################################################################################################################
 
   USE mo_kind,                   ONLY: wp
-  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
   USE mo_jsb_control,            ONLY: debug_on
   USE mo_exception,              ONLY: finish, message
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool_elem2d, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, t_jsb_pool_elem2d, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_subset,             ONLY: t_subset, ON_DOMAIN, ON_CHUNK
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: all_elements, Create_veg_tissues_pool
+  PUBLIC :: all_elements
+  PUBLIC :: create_veg_tissues_pool
   PUBLIC :: t_veg_main_pool, t_veg_tissues_pool, t_veg_elements_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -1809,15 +1809,15 @@ CONTAINS
     TYPE(t_veg_elements_pool),  POINTER :: veg_reserve_use  
   END TYPE t_veg_main_pool
 
-  !> list with the element_id of all elements used in VEG_ as defined above
-  !! is allocated in Init_PROC_memory
+  !-----------------------------------------------------------------------------------------------------
+  !> list with the element_id of all elements as defined above
+  !! is allocated and initalized in Init_PROC_memory
+  !-----------------------------------------------------------------------------------------------------
   INTEGER, ALLOCATABLE, SAVE :: all_elements(:)
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_memory_class_util'
 
-
 CONTAINS
-
 
   !-----------------------------------------------------------------------------------------------------
   !> helper function for t_veg_elements_pool
@@ -1896,11 +1896,12 @@ CONTAINS
   !> initializing an object of the VEG_ elements pool "t_veg_elements_pool"
   !! "pool_object%Init()"
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE t_veg_elements_pool_init(this, name, shortname, l_elements, element_list, element_unit)
-
+  SUBROUTINE t_veg_elements_pool_init(this, name, shortname, elements_index_map, &
+    &                                 l_elements, element_list, element_unit)
     CLASS(t_veg_elements_pool), INTENT(inout) :: this               ! object of TYPE t_veg_elements_pool
     CHARACTER(LEN=*),           INTENT(in)    :: name               ! pool name       (No spaces !)
     CHARACTER(LEN=*),           INTENT(in)    :: shortname          ! pool short name (No spaces !)
+    INTEGER,                    INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
     LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements         ! IF pool has elements 
     INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:)    ! list of elements; use if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit       ! unit of elements
@@ -2168,11 +2169,12 @@ CONTAINS
   !> initializing the element-variables of an object of the VEG_ tissues pool "t_veg_tissues_pool"
   !! "pool_object%Init()"
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE t_veg_tissues_pool_init(this, name, shortname, l_elements, element_list, element_unit)
-
+  SUBROUTINE t_veg_tissues_pool_init(this, name, shortname, elements_index_map, &
+    &                                l_elements, element_list, element_unit)
     CLASS(t_veg_tissues_pool),  INTENT(inout) :: this               ! object of TYPE t_veg_tissues_pool
     CHARACTER(LEN=*),           INTENT(in)    :: name               ! pool name       (No spaces !)
     CHARACTER(LEN=*),           INTENT(in)    :: shortname          ! pool short name (No spaces !)
+    INTEGER,                    INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
     LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements         ! IF pool has elements 
     INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:)    ! list of elements; use if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit       ! unit of elements
@@ -2338,12 +2340,13 @@ CONTAINS
   !!   add and init all its objects of the "t_veg_elements_pool" with "pool_object%Init()"
   !!   "object => Create_veg_tissues_pool()"
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_veg_tissues_pool(name, shortname, unit, lct_ids, pool_prefix, pool_suffix) RESULT(veg_tissues_pool)
-
+  FUNCTION Create_veg_tissues_pool(name, shortname, unit, lct_ids, elements_index_map, pool_prefix, pool_suffix) &
+    &      RESULT(veg_tissues_pool)
     CHARACTER(LEN=*),           INTENT(in)  :: name
     CHARACTER(LEN=*),           INTENT(in)  :: shortname
     CHARACTER(LEN=*),           INTENT(in)  :: unit
     INTEGER,                    INTENT(in)  :: lct_ids(:)
+    INTEGER,                    INTENT(in)  :: elements_index_map(:)  ! elements ID -> IND
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_prefix
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_suffix
     TYPE(t_veg_tissues_pool),   POINTER     :: veg_tissues_pool
@@ -2360,62 +2363,80 @@ CONTAINS
 
     ! tissue pool init
     ALLOCATE(veg_tissues_pool)
-    CALL veg_tissues_pool%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
+    CALL veg_tissues_pool%Init(name, shortname, elements_index_map(:), l_elements=.TRUE., element_unit=unit)
     
     ! element pools allocate & init & add to tissue pool
     ! "shortname" is used for model output
     ! "element_list" is optional and can be used to select specific elements (not needed when all elements may be added)
     ! leaf
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='leaf_pool'//suffix_loc, shortname='leaf', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='leaf_pool'//suffix_loc, shortname='leaf', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%leaf => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! fine_root
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='fine_root_pool'//suffix_loc, shortname='fine_root', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='fine_root_pool'//suffix_loc, shortname='fine_root', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%fine_root => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! coarse_root
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='coarse_root_pool'//suffix_loc, shortname='coarse_root', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='coarse_root_pool'//suffix_loc, shortname='coarse_root', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%coarse_root => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! sap_wood
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='sap_wood_pool'//suffix_loc, shortname='sap_wood', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='sap_wood_pool'//suffix_loc, shortname='sap_wood', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%sap_wood => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! heart_wood
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='heart_wood_pool'//suffix_loc, shortname='heart_wood', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='heart_wood_pool'//suffix_loc, shortname='heart_wood', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%heart_wood => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! labile
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='labile_pool'//suffix_loc, shortname='labile', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='labile_pool'//suffix_loc, shortname='labile', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%labile => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! reserve
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='reserve_pool'//suffix_loc, shortname='reserve', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='reserve_pool'//suffix_loc, shortname='reserve', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%reserve => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! fruit
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='fruit_pool'//suffix_loc, shortname='fruit', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='fruit_pool'//suffix_loc, shortname='fruit', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%fruit => veg_elements_pool
     NULLIFY(veg_elements_pool)
     ! seed_bed
     ALLOCATE(veg_elements_pool)
-    CALL veg_elements_pool%Init(name='seed_bed_pool'//suffix_loc, shortname='seed_bed', l_elements=.TRUE., element_unit=unit)
+    CALL veg_elements_pool%Init(name='seed_bed_pool'//suffix_loc, shortname='seed_bed', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL veg_tissues_pool%Add_pool(veg_elements_pool)
     veg_tissues_pool%seed_bed => veg_elements_pool
     NULLIFY(veg_elements_pool)

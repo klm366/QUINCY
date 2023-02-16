@@ -140,6 +140,8 @@ CONTAINS
     LOGICAL                       :: init_from_ifs
     CHARACTER(len=filename_max)   :: ifs_filename
 
+
+
     NAMELIST /jsb_model_nml/  &
       model_scheme, &
       use_tmx, &
@@ -163,6 +165,7 @@ CONTAINS
 #endif
       init_from_ifs, &
       ifs_filename
+
 
     INTEGER :: nml_handler, nml_unit, istat, i
 
