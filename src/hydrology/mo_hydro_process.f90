@@ -79,13 +79,14 @@ CONTAINS
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
     & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
     & t_air, skinres_canopy_max, skinres_max, weq_pond_max,         &
+    & fract_pond_max,                                               &
     & fract_snow, fract_wet, hcap_grnd, evapotrans, evapopot,       &
     & transpiration, rain, snow, weq_rootzone, weq_rootzone_max,    &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & fract_pond, weq_pond, wtr_pond, ice_pond, q_snocpymlt,        &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
-    & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil,       &
-    & evapo_pond, evapo_deficit, infilt, runoff)
+    & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
+    & water_to_soil, evapo_deficit, infilt, runoff)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
@@ -98,7 +99,7 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
-      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:),             &
+      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_pond_max(:), &
       & fract_snow(:), fract_wet(:), hcap_grnd(:), evapotrans(:),           &
       & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
       & weq_rootzone_max(:)
@@ -139,6 +140,8 @@ CONTAINS
       & rain_to_skinres(nc),      & !< amount of rain going into the skin reservoir
       & wtr_skin_pre_rain(nc),    & !< amount of water in the skin reservoir prior to the update [m]
       & t_pond(nc),               & !< surface pond water temperature [K]
+      & wtr_pond_inflow(nc),      & !< pond inflow [m]
+      & wtr_pond_outflow(nc),     & !< pond outflow [m]
       & pond_change_pot(nc)         !< ??
 
     !
@@ -158,6 +161,8 @@ CONTAINS
     evapo_snow(:)        = 0._wp
     pond_freeze(:)       = 0._wp
     pond_melt(:)         = 0._wp
+    wtr_pond_inflow(:)   = 0._wp
+    wtr_pond_outflow(:)  = 0._wp
     water_to_soil(:)     = 0._wp
     evapo_deficit(:)     = 0._wp
 
@@ -243,6 +248,8 @@ CONTAINS
     END IF
 
     !  Freezing and melting of surface pond reservoir
+    ! @todo add t_pond as persistent variable, provide specific heat capacity
+    !       and move to sse routine. Also use ice density for ice fluxes
     !------------------------
     ! 1.) Potential melting:
     t_pond(:) = t_unfilt(:) - snowmelt_soil(:) / hcap_grnd(:) * (alf*rhoh2o)
@@ -274,26 +281,25 @@ CONTAINS
     !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
     evapo_skin_in_m(:) = wtr_skin(:) - (wtr_skin_pre_rain(:) + rain_to_skinres(:))
 
+    ! Limit pond evaporation to the available pond weq
     evapo_pond_in_m(:) = MAX(-(wtr_pond(:) + ice_pond(:)), evapo_pond_pot_in_m(:))
+    ! Only evaporate from ponds if demand cannot be fullfilled from skin reservoir and transpiration
+    evapo_pond_in_m(:) = MAX(evapo_pond_in_m(:), &
+      & MIN(0._wp, evapotrans_no_snow(:) - evapo_skin_in_m(:) - transpiration_in_m(:)))
 
-    evapo_pond_in_m(:) = MAX(evapo_pond_in_m(:),          &
-                    & MIN(0._wp, evapotrans_no_snow(:) - evapo_skin_in_m(:) - transpiration_in_m(:)))
-
-    ! @todo why doesn't it rain into ponds?
-    WHERE (-evapo_pond_in_m(:) > ice_pond(:) )
-      wtr_pond(:) = wtr_pond(:) + ice_pond(:) + evapo_pond_in_m(:)
+    ! Add dew to liquid pond storage or evaporate pond water
+    WHERE (evapo_pond_in_m(:) > 0._wp .OR. -evapo_pond_in_m(:) <= wtr_pond(:))
+      wtr_pond(:) = wtr_pond(:) + evapo_pond_in_m(:)
+    ELSE WHERE (-evapo_pond_in_m(:) < wtr_pond(:) + ice_pond(:))
+      ice_pond(:) = ice_pond(:) + (evapo_pond_in_m(:) + wtr_pond(:))
+      wtr_pond(:) = 0._wp
+    ELSE WHERE
+      evapo_deficit(:) = evapo_deficit(:) + (evapo_pond_in_m(:) + wtr_pond(:) + ice_pond(:))
+      wtr_pond(:) = 0._wp
       ice_pond(:) = 0._wp
-    ELSE WHERE
-      ice_pond(:) = ice_pond(:) + evapo_pond_in_m(:)
-    END WHERE
-    weq_pond(:)   = ice_pond(:) + wtr_pond(:)
-    WHERE (weq_pond_max(:) > 1.E-20_wp .AND. weq_pond(:) > 1.E-20_wp)
-      fract_pond(:) = MIN(1._wp, (weq_pond(:) / weq_pond_max(:))**0.5_wp)
-    ELSE WHERE
-      fract_pond(:) = 0._wp
     END WHERE
 
-    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:)
+    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:) - evapo_pond_in_m(:)
     WHERE (evapo_skin_pot_in_m(:) < 0._wp)
       evapo_deficit(:) = evapo_deficit(:) + evapo_skin_pot_in_m(:) - evapo_skin_in_m(:)
     END WHERE
@@ -301,7 +307,7 @@ CONTAINS
 
     ! positive values of evaporation and transpiration (dew) are added to water_to_soil
     ! negative fluxes change soil moisture later in calc_soil_hydrology
-    WHERE (evapo_soil_in_m(:) > 0._wp) water_to_soil(:) = water_to_soil(:) + evapo_soil_in_m(:)
+    WHERE (evapo_soil_in_m(:)    > 0._wp) water_to_soil(:) = water_to_soil(:) + evapo_soil_in_m(:)
     WHERE (transpiration_in_m(:) > 0._wp) water_to_soil(:) = water_to_soil(:) + transpiration_in_m(:)
 
     ! Compute snow density
@@ -322,6 +328,13 @@ CONTAINS
       snow_soil_dens(:) = dens_snow
     END IF
 
+    ! Temporary: check with WEED scheme
+    wtr_pond_inflow(:)  = water_to_soil(:) * fract_pond_max(:)
+    wtr_pond_outflow(:) = (wtr_pond(:) + wtr_pond_inflow(:)) * 0.05_wp
+    wtr_pond(:)         = wtr_pond(:)  + wtr_pond_inflow(:) - wtr_pond_outflow(:)
+    ! Temporary
+    water_to_soil(:)    = water_to_soil(:) - wtr_pond_inflow(:) + wtr_pond_outflow(:)
+
     !---------------------
     !> Infiltration and surface runoff
     !---------------------
@@ -341,6 +354,14 @@ CONTAINS
         &              runoff(:), infilt(:))
 
     END IF
+
+    ! Update pond fraction
+    weq_pond(:)   = ice_pond(:) + wtr_pond(:)
+    WHERE (weq_pond_max(:) > 1.E-20_wp .AND. weq_pond(:) > 1.E-20_wp)
+      fract_pond(:) = MIN(1._wp, (weq_pond(:) / weq_pond_max(:))**0.5_wp) * fract_pond_max(:)
+    ELSE WHERE
+      fract_pond(:) = 0._wp
+    END WHERE
 
     ! Transform fluxes in output from [m] to [kg m-2 s-1]
     snowmelt_soil(:) = snowmelt_soil(:) * rhoh2o / dtime
