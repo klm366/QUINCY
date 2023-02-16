@@ -21,7 +21,11 @@ MODULE mo_jsb_pool_class
     CHARACTER(LEN=:),  ALLOCATABLE :: name                                     ! No spaces!
     CHARACTER(LEN=:),  ALLOCATABLE :: path                                     ! 
     CHARACTER(LEN=:),  ALLOCATABLE :: element_unit                             ! unit of pool element variables (used for output stream)
+    INTEGER                        :: id                            = -1
+      !< a pool id that - if set /= -1 - should be unique (from mo_lnd_bgcm_store_class)
     INTEGER                        :: owner_model_id                = 0        ! ID of the jsbach model this pool is running at
+    LOGICAL                        :: contains_elements             = .FALSE.  ! contains element variables
+    LOGICAL                        :: contains_bgcm                 = .FALSE.  ! contains bgc_material (t_jsb_pool)
     LOGICAL                        :: contains_elem_1d_ptr_to_chunk = .FALSE.  ! t_jsb_pool_elem2d -> set TRUE in the pool init routines in the PROC_memory_class
     LOGICAL                        :: contains_elem_2d_ptr_to_chunk = .FALSE.  ! t_jsb_pool_elem3d -> set TRUE in the pool init routines in the PROC_memory_class
     CLASS(t_jsb_pool_p),   POINTER :: pool_list(:) => NULL()                   ! children
@@ -54,11 +58,12 @@ MODULE mo_jsb_pool_class
   END TYPE t_jsb_pool_p
 
   ABSTRACT INTERFACE
-    SUBROUTINE init_iface(this, name, shortname, l_elements, element_list, element_unit)
+    SUBROUTINE init_iface(this, name, shortname, elements_index_map, l_elements, element_list, element_unit)
       IMPORT t_jsb_pool
       CLASS(t_jsb_pool),          INTENT(inout) :: this
       CHARACTER(LEN=*),           INTENT(in)    :: name
       CHARACTER(LEN=*),           INTENT(in)    :: shortname
+      INTEGER,                    INTENT(in)    :: elements_index_map(:)
       LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements      ! Add elements yes or no?
       INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:) ! Select elements to add
       CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit
@@ -250,15 +255,19 @@ CONTAINS
 
   END SUBROUTINE t_jsb_pool_add_var
 
-  SUBROUTINE t_jsb_pool_add_pool(this, pool)
+  SUBROUTINE t_jsb_pool_add_pool(this, pool, id)
 
     CLASS(t_jsb_pool),         INTENT(inout) :: this
-    CLASS(t_jsb_pool), TARGET, INTENT(in)    :: pool
+    CLASS(t_jsb_pool), TARGET, INTENT(inout) :: pool
+    INTEGER, OPTIONAL,         INTENT(in)    :: id  !< unique id of this bgcm
 
     TYPE(t_jsb_pool_p), POINTER :: pool_list(:), leaf_list(:)
     INTEGER :: n_pools, n_leaves, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_pool_add_pool'
+
+    ! if bgc materials should be used within the bgcm store, they need to have a unique id for quick association
+    IF( PRESENT(id)) pool%id = id
 
     IF (ASSOCIATED(this%pool_list)) THEN
       n_pools = SIZE(this%pool_list)

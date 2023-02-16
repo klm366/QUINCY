@@ -65,7 +65,9 @@ MODULE mo_jsb_memory_class
     CHARACTER(len=SHORT_NAME_LEN) :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
     INTEGER :: no_of_vars = 0
-    CLASS(t_jsb_pool), POINTER :: pools => NULL()
+    LOGICAL :: has_bgc_materials = .FALSE.
+    CLASS(t_jsb_pool), POINTER :: pools         => NULL()
+    CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()   ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
     CLASS(t_jsb_param), POINTER :: param => NULL()
@@ -545,6 +547,7 @@ CONTAINS
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL3D
+    var%len_dim3 = vgrid%n_levels
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
     IF (loutput_loc) THEN

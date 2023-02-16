@@ -581,8 +581,12 @@ CONTAINS
           END ASSOCIATE
         END DO
 
+        ! mem%pools
         IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
           & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
+        ! mem%bgc_material
+        IF (ASSOCIATED(tile%mem(iproc)%p%bgc_material)) &
+          & CALL tile%mem(iproc)%p%bgc_material%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
 
       END DO
 
