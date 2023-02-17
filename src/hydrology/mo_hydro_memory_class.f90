@@ -281,6 +281,7 @@ CONTAINS
       & t_cf('fract_pond', '/', 'Inundated surface fraction'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & output_level=BASIC,                                                    &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
@@ -295,6 +296,7 @@ CONTAINS
       & t_cf('wtr_pond', 'm (water equivalent)', 'Liquid water in pond reservoir'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & output_level=BASIC,                                                    &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
@@ -302,6 +304,7 @@ CONTAINS
       & t_cf('ice_pond', 'm (water equivalent)', 'Frozen water in pond reservoir'),          &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
+      & output_level=BASIC,                                                    &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'runoff_retention', mem%runoff_retention,                         &
@@ -352,6 +355,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC,                                                    &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'pond_freeze', mem%pond_freeze,                                &
@@ -360,6 +364,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
+      & output_level=BASIC,                                                    &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'infilt', mem%infilt,                                          &
@@ -761,6 +766,7 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'evapo_skin', mem%evapo_skin,                          &
