@@ -284,10 +284,6 @@ CONTAINS
     CALL input_file%Close()
 
     IF (model%config%init_from_ifs) THEN
-    ELSE
-    END IF
-
-    IF (model%config%init_from_ifs) THEN
 
       ALLOCATE(sse_init_vars%ifs_tsoil(nproma,ifs_nsoil,nblks))
       sse_init_vars%ifs_tsoil(:,:,:) = missval
