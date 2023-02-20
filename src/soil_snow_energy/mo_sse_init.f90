@@ -106,11 +106,11 @@ CONTAINS
   SUBROUTINE sse_finalize_init_vars
 
     DEALLOCATE(                     &
-      & sse_init_vars%fao,          &
       & sse_init_vars%vol_heat_cap, &
       & sse_init_vars%heat_cond     &
       & )
 
+    IF (ASSOCIATED(sse_init_vars%fao)) DEALLOCATE(sse_init_vars%fao)  
     IF (ASSOCIATED(sse_init_vars%fr_sand)) DEALLOCATE(sse_init_vars%fr_sand)
     IF (ASSOCIATED(sse_init_vars%fr_silt)) DEALLOCATE(sse_init_vars%fr_silt)
     IF (ASSOCIATED(sse_init_vars%fr_clay)) DEALLOCATE(sse_init_vars%fr_clay)
@@ -282,6 +282,10 @@ CONTAINS
     END IF ! l_soil_texture
 
     CALL input_file%Close()
+
+    IF (model%config%init_from_ifs) THEN
+    ELSE
+    END IF
 
     IF (model%config%init_from_ifs) THEN
 
