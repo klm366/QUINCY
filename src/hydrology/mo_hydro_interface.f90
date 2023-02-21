@@ -509,7 +509,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)         ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
-
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! in
 
     IF (tile%is_glacier) THEN
@@ -994,7 +993,8 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_fc_sl      ), &
       & dsl4jsb_var3D_onChunk (HYDRO_, w_soil_pwp_sl     ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ) &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ), &
+      & dsl4jsb_var2D_onChunk (HYDRO_, ws_negative       ) &
       & )
 
     !$claw acc data present(max_moist, w_soil_rel, w_soil_column)
@@ -1059,6 +1059,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_pwp_sl,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, ws_negative,     weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
