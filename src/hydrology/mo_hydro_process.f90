@@ -515,16 +515,16 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
-    & soilhydmodel, interpol_mean,                                      &
+    & soilhydmodel, interpol_mean,                                                       &
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,     &
-    & evapotrans_soil, transpiration,                                     &
+    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
+    & evapotrans_soil, transpiration,                                                    &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,           &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, evapo_deficit,             &
     ! out
-    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl,                                      &
-    & infilt_over, drainage, drain_rock, drain_lat                                       &
+    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
+      drain_lat, wtr_soilhyd_res                                                         &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -546,7 +546,7 @@ CONTAINS
       & lat, lon,                              &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff
+      & tpe_overflow, infilt, runoff, evapo_deficit
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -659,7 +659,7 @@ CONTAINS
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
       &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
-      &     tpe_overflow, wtr_soilhyd_res, ltpe_closed, ltpe_open)
+      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
 
     ! Aggregate the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
@@ -673,12 +673,13 @@ CONTAINS
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector
     DO i = 1, nc
-      infilt(i)      = infilt     (i) * rhoh2o / dtime
-      runoff(i)      = runoff     (i) * rhoh2o / dtime
-      infilt_over(i) = infilt_over(i) * rhoh2o / dtime
-      drainage(i)    = drainage   (i) * rhoh2o / dtime
-      drain_rock(i)  = drain_rock (i) * rhoh2o / dtime
-      drain_lat(i)   = drain_lat  (i) * rhoh2o / dtime
+      infilt(i)        = infilt       (i) * rhoh2o / dtime
+      runoff(i)        = runoff       (i) * rhoh2o / dtime
+      infilt_over(i)   = infilt_over  (i) * rhoh2o / dtime
+      drainage(i)      = drainage     (i) * rhoh2o / dtime
+      drain_rock(i)    = drain_rock   (i) * rhoh2o / dtime
+      drain_lat(i)     = drain_lat    (i) * rhoh2o / dtime
+      evapo_deficit(i) = evapo_deficit(i) * rhoh2o / dtime
     END DO
     !$claw acc end data
     !$claw acc end data
@@ -821,7 +822,7 @@ CONTAINS
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,          &
     & infilt, infilt_over, drain_rock, drain_lat,                  &
-    & tpe_overflow, wtr_soilhyd_res,                               &
+    & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                &
     & ltpe_closed, ltpe_open)
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
@@ -854,6 +855,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! drainage from lowest soil layer [m]
     REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! overflow from subsurface soil layers [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
+    REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           ! Water evaporated from unintended sources [m]
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -950,8 +952,8 @@ CONTAINS
     !    mobile water
     CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, w_soil_wilt_fract, root_depth_sl, &
       &                      dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m,   &
-      &                      wtr_soil_sl - wtr_rsdl_sl, evapo_soil_sl1, transpiration_sl,    &
-      &                      deficit_evapotrans)
+      &                      wtr_soil_sl - wtr_rsdl_sl, evapo_deficit, evapo_soil_sl1,       &
+      &                      transpiration_sl, deficit_evapotrans)
 
     DO i = 1, nc
       ! Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
@@ -1104,9 +1106,6 @@ CONTAINS
           ice_soil_sl(i,j) = MAX(0._wp, ice_soil_sl(i,j) + deficit_evapotrans(i) * ice_soil_sl(i,j) / weq_soil(i))
         END IF
       END DO
-      ! @todo even after the correction, there are still cells with zero soil moisture and a negative
-      !       deficit_evapotrans left. However, these do not seem to violate the overall water balance.
-      !       Are these cells which should not be included in the soil hydrology computation?
     END DO
 
     ! Additional corrections for excess soil moisture
@@ -1231,6 +1230,7 @@ CONTAINS
     & transpiration_in_m,         &
     & evapo_soil_in_m,            &
     & wtr_soil_sl,                &
+    & evapo_deficit,              &
     & evapo_soil_sl1,             &
     & transpiration_sl,           &
     & deficit_evapotrans          &
@@ -1262,6 +1262,7 @@ CONTAINS
     REAL(wp), INTENT(in)     :: evapo_soil_in_m(:)      ! bare soil evaporation [m]
 
     REAL(wp), INTENT(in)     :: wtr_soil_sl(:,:)        ! water content of the soil layer [m]
+    REAL(wp), INTENT(inout)  :: evapo_deficit(:)        ! ET take from other storages/layers than intended [m]
 
     REAL(wp), INTENT(OUT)    :: evapo_soil_sl1(:)       ! Soil evaporation from the top soil layer [m]
     REAL(wp), INTENT(OUT)    :: transpiration_sl(:,:)   ! Transpiration from soil layers [m]
@@ -1385,6 +1386,7 @@ CONTAINS
       !  Total deficit from evapotranspiration
       ! -----------------------------------------
       deficit_evapotrans(i) = deficit_evapo(i) + deficit_trans(i)
+      evapo_deficit(i)      = evapo_deficit(i) + deficit_evapo(i) + deficit_trans(i)
 
       ! If the deficit can be reduced by redistributing transpiration extraction from different layers,
       !   it should be done already here. The deficit should be taken from layers starting at the
