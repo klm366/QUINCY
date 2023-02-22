@@ -683,7 +683,7 @@ CONTAINS
         & snowmelt(:),                    & !< snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
         & pond_freeze(:),                 & !<
         & pond_melt(:),                   & !<
-        & evapotrans_soil(:),             & !< evapotranspiration from soil w/o skin and snow reservoirs [kg m-2 s-1]
+        & evapotrans_soil(:),             & !< evapotranspiration from soil w/o skin, snow and pond reservoirs [kg m-2 s-1]
         & evapo_skin(:),                  & !< evaporation from skin reservoir [kg m-2 s-1]
         & evapo_snow(:),                  & !< evaporation from snow [kg m-2 s-1]
         & evapo_pond(:),                  & !<
@@ -2160,6 +2160,7 @@ CONTAINS
       & runoff, &
       & drainage, &
       & evapotrans, &
+      & evapo_deficit, &
       & wtr_skin, &
       & weq_snow, &
       & weq_pond, &
@@ -2171,18 +2172,20 @@ CONTAINS
       & ice_soil_sl
 
     REAL(wp), POINTER :: &
-      & area(:)
+      & area(:), lat(:), lon(:)
 
     ! Locally allocated vectors
     !
     REAL(wp) :: &
       & tile_fract (options%nc), &
-      & weq_land_new(options%nc)
+      & weq_land_new(options%nc), &
+      & tile_area(options%nc)
 
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
+    CHARACTER(len=4096)         :: message_text
 
     iblk  = options%iblk
     ics   = options%ics
@@ -2199,6 +2202,8 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     area => grid%area (ics:ice, iblk)
+    lat  => grid%lat(ics:ice, iblk)
+    lon  => grid%lon(ics:ice, iblk)
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
@@ -2215,6 +2220,7 @@ CONTAINS
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
@@ -2224,6 +2230,7 @@ CONTAINS
     !$claw acc parallel loop gang vector
     DO i=1,nc
       tile_fract(i) = tile%fract(ics-1+i,iblk)
+      tile_area(i)  = tile_fract(i) * area(i)
     END DO
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
@@ -2245,6 +2252,28 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       weq_balance_err(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
     END IF
+
+    !$claw acc parallel loop gang vector
+    DO i=1,nc
+      IF (ABS(weq_balance_err(i)) > 1.0e-3_wp) THEN
+        WRITE (message_text,*) 'Water balance violation [m3] at ',                                &
+          & lat(i),'N and ',lon(i),'E:',                                           NEW_LINE('a'), &
+          & 'WB Error:           ', weq_balance_err(i),                            NEW_LINE('a'), &
+          & 'Rainfall:           ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+          & 'Snowfall:           ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+          & 'Evapotranspiration: ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+          & 'Runoff:             ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+          & 'Drainage:           ', drainage(i)   * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+          & 'Skin reservoir:     ', wtr_skin(i)           * tile_area(i),          NEW_LINE('a'), &
+          & 'Snow reservoir:     ', weq_snow(i)           * tile_area(i),          NEW_LINE('a'), &
+          & 'Pond reservoir:     ', weq_pond(i)           * tile_area(i),          NEW_LINE('a'), &
+          & 'Soil water:         ', SUM(wtr_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
+          & 'Soil ice:           ', SUM(ice_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
+          & 'Old reservoirs:     ', weq_land(i),                                   NEW_LINE('a'), &
+          & 'ET deficit:         ', evapo_deficit(i) * tile_area(i) / rhoh2o * dtime
+        CALL message ('update_water_balance', message_text, all_print=.TRUE.)
+      END IF
+    END DO
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
     weq_land(:) = weq_land_new(:)
