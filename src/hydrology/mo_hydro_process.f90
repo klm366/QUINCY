@@ -91,7 +91,6 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: nc
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
@@ -142,7 +141,8 @@ CONTAINS
       & t_pond(nc),               & !< surface pond water temperature [K]
       & wtr_pond_inflow(nc),      & !< pond inflow [m]
       & wtr_pond_outflow(nc),     & !< pond outflow [m]
-      & pond_change_pot(nc)         !< ??
+      & pond_change_pot(nc),      & !< ??
+      & pond_flowlag(nc)            !< Lateral water flow lag for ponds [timesteps]
 
     !
     !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
@@ -150,6 +150,10 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp ! [K]
     REAL(wp), PARAMETER :: zc2=1.87E5_wp       ! [Ks]
     REAL(wp), PARAMETER :: zc3=1.56E5_wp       ! [m]
+
+    ! These parameters are used for lateral pond flow in the WEED scheme and could
+    ! be become part of the namelist if needed
+    REAL(wp), PARAMETER :: baselag = 200.0_wp * 86400.0 !< Baselag for lateral outflow [s]
 
     !$claw sca
 
@@ -328,14 +332,6 @@ CONTAINS
       snow_soil_dens(:) = dens_snow
     END IF
 
-    ! Temporary: check with WEED scheme
-    wtr_pond_inflow(:)  = water_to_soil(:) * fract_pond_max(:)
-    wtr_pond_outflow(:) = (wtr_pond(:) + wtr_pond_inflow(:)) * 0.05_wp
-    wtr_pond(:)         = wtr_pond(:)  + wtr_pond_inflow(:) - wtr_pond_outflow(:)
-    weq_pond(:)         = ice_pond(:) + wtr_pond(:)
-    ! Temporary
-    water_to_soil(:)    = water_to_soil(:) - wtr_pond_inflow(:) + wtr_pond_outflow(:)
-
     !---------------------
     !> Infiltration and surface runoff
     !---------------------
@@ -349,6 +345,26 @@ CONTAINS
       infilt(:) = water_to_soil(:)
 
     ELSE
+      ! Lateral water flows from ponds are connected to the choice of the surface runoff
+      ! and infiltration scheme. The following pond flow scheme is based on the WEED
+      ! scheme (cite) and designed to work with the ARNO runoff scheme.
+
+      ! Compute pond outflow lag based on a base lag of 200 days and the relative steepness
+      ! These parameters could become part of the namelist if needed
+      pond_flowlag(:) = MIN(baselag / dtime, MAX(1.0_wp, &
+        &  (1.0_wp - steepness(:)**(0.25_wp)) * (baselag / dtime)))
+      ! Compute lateral inflow and outflow for ponds
+      wtr_pond_inflow(:)  = water_to_soil(:) * fract_pond_max(:)
+      wtr_pond_outflow(:) = (wtr_pond(:) + wtr_pond_inflow(:)) &
+        &                 / (MAX(0.01_wp, 1._wp - fract_pond(:)) * pond_flowlag(:))
+      ! Update pond storages
+      wtr_pond(:)         = wtr_pond(:) + wtr_pond_inflow(:) - wtr_pond_outflow(:)
+      weq_pond(:)         = ice_pond(:) + wtr_pond(:)
+
+      ! Update amount of water available for runoff and infiltration
+      water_to_soil(:)    = water_to_soil(:) - wtr_pond_inflow(:) + wtr_pond_outflow(:)
+
+      ! Compute surface runoff and infiltration
       CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,        &
         &              water_to_soil(:), weq_rootzone(:),      &
         &              steepness(:), weq_rootzone_max(:),      &
