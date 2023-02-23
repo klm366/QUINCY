@@ -108,7 +108,8 @@ MODULE mo_hydro_memory_class
       & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_wet,            & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
+      & fract_wet,            & !< Wet (skin and pond reservoir) fraction of tile (soil and canopy)         []
+      & fract_skin,           & !< Wet skin reservoir fraction of tile (soil and canopy)                    []
       & wtr_skin,             & !< Water content in skin reservoir (soil and canopy)                        [m]
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
@@ -562,6 +563,13 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), grib2_desc,                            &
         & prefix, suffix,                                                        &
         & output_level=BASIC,                                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'fract_skin', mem%fract_skin,                            &
+        & hgrid, surface,                                                        &
+        & t_cf('fract_skin', '-', 'Wet skin reservoir fraction'),                &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                            &
+        & prefix, suffix,                                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF

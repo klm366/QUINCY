@@ -218,8 +218,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)     ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)       ! inout
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)       ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)       ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)       ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)    ! in
@@ -341,8 +341,7 @@ CONTAINS
 
     ! Account for ice in ponds
     DO i=1, size(s_star,dim=1)
-      IF (ice_pond(i) > 1.E-20_wp) THEN
-      !IF (fract_pond(i) > 1.E-20_wp .AND. ice_pond(i) > 1.E-20_wp) THEN
+      IF (ice_pond(i) > EPSILON(1.0_wp)) THEN
         frozen_fract(i) = fract_snow(i) + (1._wp - fract_snow(i)) * fract_pond(i)
       ELSE
         frozen_fract(i) = fract_snow(i)
@@ -423,7 +422,7 @@ CONTAINS
 
       !$claw acc data present(has_snow_layer,is_glacier,wtr_soil_sl,liquid_max,t_star,ice_soil_sl)
       !$claw acc parallel loop gang vector
-      DO i=1,size(t_star, dim=1)  
+      DO i=1,size(t_star, dim=1)
         IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
           ! Freezing of water in pond reservoir
           IF (wtr_pond(i) > w_soil_critical_tmp) THEN
