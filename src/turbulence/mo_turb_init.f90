@@ -133,7 +133,7 @@ CONTAINS
 
   END SUBROUTINE turb_init_bc
 
-  RECURSIVE SUBROUTINE turb_init_ic(tile)
+  SUBROUTINE turb_init_ic(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
