@@ -45,6 +45,7 @@ MODULE mo_hydro_config_class
     CHARACTER(len=10)     :: &
       & scheme_stom_cond       !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               :: &
+      & enforce_water_budget,& !< stop in case of water conservation problem
       & l_organic,           & !< Use organic component of soil layers
       & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
@@ -80,7 +81,7 @@ CONTAINS
     REAL(wp)                    :: max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
-    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, l_ponds
+    LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -94,6 +95,7 @@ CONTAINS
       & snow_depth_max,             &
       & max_pond_depth,             &
       & scheme_stom_cond,           &
+      & enforce_water_budget,       &
       & l_organic,                  &
       & l_socmap,                   &
       & l_glac_in_soil,             &
@@ -126,6 +128,7 @@ CONTAINS
     snow_depth_max    = -1.0_wp             ! -1: no limitation
     max_pond_depth    = 0.1_wp              ! [m]
     scheme_stom_cond  = 'echam5'
+    enforce_water_budget = .TRUE.
     l_organic         = .TRUE.
     l_socmap          = .TRUE.
     l_glac_in_soil    = .FALSE.
@@ -165,6 +168,14 @@ CONTAINS
     CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(max_pond_depth)))
 
     config%scheme_stom_cond    = scheme_stom_cond
+
+    config%enforce_water_budget = enforce_water_budget
+    IF (enforce_water_budget) THEN
+      CALL message(TRIM(routine), 'Model will finish in case of land surface water balance violation. '// &
+        & 'Set enforce_water_budget to .False. to run the model anyway.')
+    ELSE
+      CALL message(TRIM(routine), 'WARNING: Model will not stop due to land surface water balance violation.')
+    END IF
 
     config%l_organic           = l_organic
     IF (l_organic) THEN

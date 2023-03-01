@@ -2176,6 +2176,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_grid),  POINTER    :: grid
 
+    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
 
@@ -2231,6 +2232,7 @@ CONTAINS
     lat  => grid%lat(ics:ice, iblk)
     lon  => grid%lon(ics:ice, iblk)
 
+    dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
 
@@ -2243,10 +2245,10 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)            ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow)            ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)       ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)            ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
@@ -2297,7 +2299,11 @@ CONTAINS
           & 'Soil ice:           ', SUM(ice_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
           & 'Old reservoirs:     ', weq_land(i),                                   NEW_LINE('a'), &
           & 'ET deficit:         ', evapo_deficit(i) * tile_area(i) / rhoh2o * dtime
-        CALL finish (TRIM(routine), message_text)
+        IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget) THEN
+          CALL finish (TRIM(routine), message_text)
+        ELSE
+          CALL message (TRIM(routine), message_text, all_print=.TRUE.)
+        END IF
       END IF
     END DO
 
