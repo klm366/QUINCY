@@ -532,7 +532,7 @@ CONTAINS
         ws_max(i) = ws_max_mineral(i)
       END IF
     END DO
-    !$claw acc end parallel
+    !$claw acc end parallel loop
     !$claw acc end data
 
     CALL get_water_in_root_zone(soil_ice_l(:,:), soil_depth_l(:,:), root_depth_l(:,:), ice_rootzone(:))

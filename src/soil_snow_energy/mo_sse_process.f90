@@ -557,7 +557,7 @@ CONTAINS
             END IF
           END DO 
         END DO
-        !$claw acc end parallel
+        !$claw acc end parallel loop
         !$claw acc end data
 
         ! Note: only either frozen or melt is non-zero at any given point
