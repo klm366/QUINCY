@@ -30,6 +30,7 @@ MODULE mo_assimi_config_class
   PUBLIC :: t_assimi_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_assimi_config
+     LOGICAL               :: init_running_means ! initialize npp buffer for NLCC process
      INTEGER               :: ncanopy          ! number of canopy layers for the assimi process
                                                ! R: could be different for other processes e.g. for radiation
      REAL(wp), ALLOCATABLE :: canopy_bound_lai(:)
@@ -62,6 +63,7 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
+    LOGICAL                     :: init_running_means
     INTEGER                     :: ncanopy, i
     TYPE(t_jsb_vgrid), POINTER  :: canopy_layer
     !! quincy
@@ -80,6 +82,7 @@ CONTAINS
      & active,                 &
      & ic_filename,            &
      & bc_filename,            &
+     & init_running_means,     &
      !! quincy
        flag_optimal_Nfraction,    &
        flag_t_resp_acclimation,   &
@@ -101,6 +104,7 @@ CONTAINS
     active              = .TRUE.
     bc_filename         = 'bc_land_assimi.nc'
     ic_filename         = 'ic_land_assimi.nc'
+    init_running_means  = .FALSE.
     ncanopy             = 3
     !X e.g: use_alb_veg_simple        = .FALSE.
     !! quincy
@@ -120,6 +124,7 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
+    config%init_running_means  = init_running_means
     config%ncanopy             = ncanopy
     !! quincy
     config%flag_optimal_Nfraction        = flag_optimal_Nfraction

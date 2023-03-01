@@ -21,7 +21,7 @@ MODULE mo_assimi_process
   PRIVATE
 
   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation_waterunlimited, &
-    &       calc_assimilation_waterlimited, calc_NPP_pot_rate
+    &       calc_assimilation_waterlimited, calc_NPP_pot_rate, calc_NPPbuf
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_process'
 
@@ -790,6 +790,50 @@ CONTAINS
     NPP_pot_rate_ca = gross_assimilation_ca - maintenanceRespiration - growthRespiration
 
   END SUBROUTINE calc_NPP_pot_rate
+
+  !
+  ! ===============================================================================================================================
+  !>
+  !! @brief   Compute running average of NPP for NLCC process
+  !!
+  !! @par Revision History
+  !!   Routine based on the former JSBACH3 routine update_climbuf
+  !!   Adapted for JSBACH4 in August 2020 by T. Raddatz
+  !!
+
+  PURE ELEMENTAL SUBROUTINE calc_NPPbuf (lstart, init_running_means, new_year, delta_time, NPP, &
+                                         seconds_year, NPP_sum_year, NPP_mean_5year)
+
+    LOGICAL,  INTENT(in)    :: lstart             ! first time step in a simulation
+    LOGICAL,  INTENT(in)    :: init_running_means ! initialize the min/max temperature climatology
+    LOGICAL,  INTENT(in)    :: new_year           ! first time step in a year
+    REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
+    REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: seconds_year       ! sum of seconds till new_year
+    REAL(wp), INTENT(inout) :: NPP_sum_year       ! 
+    REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
+
+!   local variables
+    REAL(wp) :: prev_year_mean_NPP ! NPP of previous year
+
+   ! update NPP_sum_year and NPP_mean_5year
+   IF (.NOT. new_year .OR. lstart) THEN
+      NPP_sum_year = NPP_sum_year + NPP * delta_time
+   ELSE
+      prev_year_mean_NPP = NPP_sum_year / seconds_year
+      NPP_sum_year = NPP * delta_time
+      IF (init_running_means) THEN
+         NPP_mean_5year = prev_year_mean_NPP
+      ELSE
+         NPP_mean_5year = (NPP_mean_5year * 4._wp + prev_year_mean_NPP) / 5._wp
+      END IF
+   ENDIF
+
+   ! count time in seconds that has passed till summing of NPP started
+   seconds_year = seconds_year + delta_time
+   IF (new_year) seconds_year = delta_time
+
+  END SUBROUTINE calc_NPPbuf
 
 #endif
 END MODULE mo_assimi_process
