@@ -206,7 +206,7 @@ CONTAINS
 
   END SUBROUTINE rad_init_bc
 
-  RECURSIVE SUBROUTINE rad_init_ic(tile)
+  SUBROUTINE rad_init_ic(tile)
 
     USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
       &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater

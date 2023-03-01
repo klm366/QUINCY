@@ -557,6 +557,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_soil_freeze_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, w_ice_melt_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   vol_heat_cap,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   heat_cond,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
