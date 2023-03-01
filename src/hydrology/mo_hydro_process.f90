@@ -78,12 +78,11 @@ CONTAINS
   SUBROUTINE calc_surface_hydrology_land (                          &
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
     & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
-    & t_air, skinres_canopy_max, skinres_max,        &
-    & fract_pond_max,                                               &
+    & t_air, skinres_canopy_max, skinres_max, fract_pond_max,       &
     & fract_snow, fract_skin, fract_pond, hcap_grnd, evapotrans, evapopot,      &
     & transpiration, rain, snow, weq_rootzone, weq_rootzone_max,    &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
-    & weq_pond, wtr_pond, ice_pond, q_snocpymlt,        &
+    & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
     & water_to_soil, evapo_deficit, infilt, runoff)
@@ -104,7 +103,7 @@ CONTAINS
       & weq_rootzone_max(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
-      & weq_pond(:), wtr_pond(:), ice_pond(:)
+      & wtr_pond(:), ice_pond(:)
     REAL(wp), INTENT(out)   ::                                              &
       & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
       & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
@@ -359,7 +358,6 @@ CONTAINS
         &                 / (MAX(0.01_wp, 1._wp - fract_pond(:)) * pond_flowlag(:))
       ! Update pond storages
       wtr_pond(:)         = wtr_pond(:) + wtr_pond_inflow(:) - wtr_pond_outflow(:)
-      weq_pond(:)         = ice_pond(:) + wtr_pond(:)
 
       ! Update amount of water available for runoff and infiltration
       water_to_soil(:)    = water_to_soil(:) - wtr_pond_inflow(:) + wtr_pond_outflow(:)
@@ -528,9 +526,9 @@ CONTAINS
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
-    & evapotrans_soil, transpiration,                                                    &
+    & fract_pond_max, evapotrans_soil, transpiration,                                    &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, evapo_deficit,             &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow, evapo_deficit,   &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
       drain_lat, wtr_soilhyd_res                                                         &
@@ -552,10 +550,10 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & lat, lon,                              &
-      & evapotrans_soil, transpiration
+      & lat, lon,                                       &
+      & fract_pond_max, evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit
+      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -670,11 +668,16 @@ CONTAINS
       &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
       &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
 
-    ! Aggregate the different runoff flux components
+    ! Aggregate or distribute the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
     drainage(:)  = drainage(:) + drain_rock(:) + drain_lat(:)
-    runoff(:)    = runoff(:) + infilt_over(:)
-
+    WHERE (fract_pond_max(:) > EPSILON(1._wp))
+      ! Infiltration overflow goes into ponds water storage
+      wtr_pond(:) = wtr_pond(:) + infilt_over(:)
+    ELSEWHERE
+      ! Infitration overflow goes into surface runoff
+      runoff(:)    = runoff(:) + infilt_over(:)
+    END WHERE
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
