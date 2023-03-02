@@ -1575,7 +1575,7 @@ CONTAINS
     USE mo_jsb_control,         ONLY: debug_on
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_assimi_util,         ONLY: real_update_time_average_assimilation => update_time_average_assimilation
+    USE mo_assimi_util,         ONLY: calculate_time_average_assimilation
     dsl4jsb_Use_processes ASSIMI_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1588,8 +1588,7 @@ CONTAINS
     IF (debug_on() .AND. options%iblk == 1) &
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-
-    CALL real_update_time_average_assimilation(tile, options)
+    CALL calculate_time_average_assimilation(tile, options)
     
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 

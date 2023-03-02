@@ -41,7 +41,7 @@ MODULE mo_veg_util
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: reset_veg_fluxes, update_time_average_vegetation
+  PUBLIC :: reset_veg_fluxes, calculate_time_average_vegetation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_util'
 
@@ -190,7 +190,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> calculate time moving averages and daytime averages for VEG_
   !>
-  SUBROUTINE update_time_average_vegetation(tile, options)
+  SUBROUTINE calculate_time_average_vegetation(tile, options)
 
     USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8
@@ -237,7 +237,7 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_vegetation'
+    CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
@@ -895,7 +895,7 @@ CONTAINS
 #undef Passback_veg_exudation
 #endif
 
-  END SUBROUTINE update_time_average_vegetation
+  END SUBROUTINE calculate_time_average_vegetation
 
 #endif
 END MODULE mo_veg_util
