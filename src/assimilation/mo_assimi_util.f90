@@ -124,6 +124,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: daytime_counter
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps
@@ -138,7 +139,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: beta_air_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_air_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: daytime_counter
     dsl4jsb_Real2D_onChunk      :: beta_air_daytime
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_daytime
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_daytime
@@ -167,6 +167,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)        ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                  ! in
     ! ASSIMI_
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                      ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps)                  ! in
@@ -181,7 +182,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg)        ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tfrac_mavg)           ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_tcnl_mavg)            ! out
-    dsl4jsb_Get_var2D_onChunk(ASSIMI_, daytime_counter)               ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air_daytime)              ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_ps_daytime)          ! out
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soil_gs_daytime)          ! out
@@ -208,14 +208,13 @@ CONTAINS
     !>
 
     ! docu:
-    ! prev_two_cos_zenith_angle and prev_one_cos_zenith_angle are updated in update_atm2land()
+    ! cos_zenith_angle tracing variables and daytime_counter are updated 
+    ! in update_atm2land() or directly in the ICON-Land standalone driver, respectively
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ipoint = 1, nc
       IF (swpar_srf_down(ipoint) > eps8) THEN
-        ! count number of daytime values
-        daytime_counter(ipoint) = daytime_counter(ipoint) + 1.0_wp
         ! add values
         beta_air_daytime_dacc(ipoint)       = beta_air_daytime_dacc(ipoint)     + beta_air(ipoint)
         beta_soil_ps_daytime_dacc(ipoint)   = beta_soil_ps_daytime_dacc(ipoint) + beta_soil_ps(ipoint)
@@ -241,8 +240,6 @@ CONTAINS
         beta_air_daytime_dacc(ipoint)     = 0.0_wp
         beta_soil_ps_daytime_dacc(ipoint) = 0.0_wp
         beta_soil_gs_daytime_dacc(ipoint) = 0.0_wp
-        ! zero the counter for number of accumulated values (*_dacc) per day
-        daytime_counter(ipoint)      = 0.0_wp
       END IF
     END DO
 

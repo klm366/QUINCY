@@ -88,16 +88,15 @@ MODULE mo_jsb_physical_constants
   !   ckap & zkappa are defined in drivers/mo_jsb4_forcing
   !   cpvd1 is defined in mo_physical_constants_iface (pointing to vtmpc2 in mo_physical_constants.f90)
   REAL(wp), PARAMETER :: &
-    & r_gas        = 8.3144_wp        ,  &      !< universal gas constant (J / mol / K) 
-    & r_gas_dryair = 287.04_wp       ,  &       !< specific gas constant for dry air (J / kg / K) 
-    & r_gas_vapour = 461.51_wp        ,  &      !< specific gas constant for water vapour (J / kg / K) 
+    & r_gas        = argas            ,  &      !< universal gas constant (J / mol / K) 
+    & r_gas_dryair = rd               ,  &      !< specific gas constant for dry air (J / kg / K) 
+    & r_gas_vapour = rv               ,  &      !< specific gas constant for water vapour (J / kg / K) 
     & Dwv          = 0.0000242_wp     ,  &      !< diffusion coefficient for water vapour in air (m2 s-1) 
     & Dco2         = 0.0000151_wp     ,  &      !< diffusion coefficient for CO2 in air (m2 s-1) 
     & Tzero        = 273.15_wp        ,  &      !< the value of Tzero (QUINCY) is identical with tmelt (ECHAM/ICON/jsbach4)
                                                 !<  but in reality tmelt is not always at Tzero [K]
-    & LatentHeatVaporization = 2.5008e6_wp , &  !< 
-    & LatentHeatSublimation  = 2.8345e6_wp , &  !< 
-    & vtmpc1       = r_gas_vapour / r_gas_dryair - 1.0_wp  !< ...  see also comments in drivers/mo_jsb4_forcing.f90 
+    & LatentHeatVaporization = alv , &          !< [J/kg]   latent heat for vaporisation
+    & LatentHeatSublimation  = als              !< [J/kg]   latent heat for sublimation
   ! molar masses
   REAL(wp), PARAMETER :: &
     & molar_mass_C    = 12.0112_wp    ,  &      !< g C / mol C

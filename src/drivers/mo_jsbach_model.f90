@@ -780,6 +780,7 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
+    USE mo_jsb_math_constants,        ONLY: eps8
 
 #ifndef __NO_QUINCY__
     USE mo_iq_atm2land_process,        ONLY: update_local_time_and_daytime_counter
@@ -825,6 +826,14 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: daytime_counter
     dsl4jsb_Real2D_onDomain :: local_time_day_seconds
 #endif
+
+    ! quincy
+    dsl4jsb_Real2D_onDomain :: swpar_srf_down
+    dsl4jsb_Real2D_onDomain :: prev_one_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: prev_three_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: daytime_counter
+
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)

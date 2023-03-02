@@ -399,8 +399,10 @@ CONTAINS
     END IF
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      prev_one_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
-      prev_two_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+      prev_one_cos_zenith_angle   => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
+      prev_two_cos_zenith_angle   => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+      prev_three_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)
+      daytime_counter             => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
     END IF
 
     !$acc parallel default(present)
