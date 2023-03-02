@@ -183,9 +183,6 @@ MODULE mo_assimi_memory_class
       & beta_soil_gs_tfrac_mavg   , &  !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
       & beta_soil_gs_tcnl_mavg         !< scaling factor to account for soil moisture constraints on conductance time-averaged [unitless]
 
-    TYPE(t_jsb_var_real2d)    :: &   
-      & daytime_counter                !< number of timesteps of current day with light available [#]
-
   CONTAINS
     PROCEDURE :: Init => Init_assimi_memory
   END TYPE t_assimi_memory
@@ -894,16 +891,6 @@ CONTAINS
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
-      CALL mem%Add_var('daytime_counter', mem%daytime_counter, &
-        & hgrid, surface, &
-        & t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
     END IF
   END SUBROUTINE Init_assimi_memory_quincy
 

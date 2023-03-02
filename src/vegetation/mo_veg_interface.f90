@@ -689,7 +689,6 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
 
     ! VEG_ 2D
-    dsl4jsb_Aggregate_onChunk(VEG_, daytime_counter                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, t_air_daytime_dacc                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, press_srf_daytime_dacc            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_daytime_dacc     , weighted_by_fract)

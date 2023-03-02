@@ -1383,7 +1383,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tfrac_mavg         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tcnl_mavg          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, daytime_counter             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_daytime            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_daytime        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_daytime        , weighted_by_fract)

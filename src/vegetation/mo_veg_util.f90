@@ -263,6 +263,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: daytime_counter
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
     dsl4jsb_Real2D_onChunk      :: net_assimilation_boc
@@ -361,7 +362,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: maint_respiration
     dsl4jsb_Real2D_onChunk      :: n_processing_respiration
     dsl4jsb_Real2D_onChunk      :: exudation_c_tmyc_mavg
-    dsl4jsb_Real2D_onChunk      :: daytime_counter
     dsl4jsb_Real2D_onChunk      :: press_srf_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: ga_daytime_dacc
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt_daytime_dacc
@@ -432,6 +432,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)
     ! ASSIMI_
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, net_assimilation_boc)
@@ -530,7 +531,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(VEG_, maint_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, n_processing_respiration)
     dsl4jsb_Get_var2D_onChunk(VEG_, exudation_c_tmyc_mavg)
-    dsl4jsb_Get_var2D_onChunk(VEG_, daytime_counter)
     dsl4jsb_Get_var2D_onChunk(VEG_, press_srf_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, ga_daytime_dacc)
     dsl4jsb_Get_var2D_onChunk(VEG_, t_jmax_opt_daytime_dacc)
@@ -583,14 +583,13 @@ CONTAINS
     !>
 
     ! docu:
-    ! prev_two_cos_zenith_angle and prev_one_cos_zenith_angle are updated in update_atm2land()
+    ! cos_zenith_angle tracing variables and daytime_counter are updated 
+    ! in update_atm2land() or directly in the ICON-Land standalone driver, respectively
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
       IF (swpar_srf_down(ic) > eps8) THEN
-        ! count number of daytime values
-        daytime_counter(ic) = daytime_counter(ic) + 1.0_wp
         ! 1D var - add values
         t_air_daytime_dacc(ic)            = t_air_daytime_dacc(ic)            + t_air(ic)
         press_srf_daytime_dacc(ic)        = press_srf_daytime_dacc(ic)        + press_srf(ic)
@@ -639,8 +638,6 @@ CONTAINS
         t_jmax_opt_daytime_dacc(ic)            = 0.0_wp
         ! 2D
         fleaf_sunlit_daytime_dacc_cl(ic,:)     = 0.0_wp
-        ! zero the counter for number of accumulated values (*_dacc) per day
-        daytime_counter(ic)                    = 0.0_wp
       END IF
     END DO
 

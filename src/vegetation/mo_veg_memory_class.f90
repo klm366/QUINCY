@@ -248,8 +248,6 @@ MODULE mo_veg_memory_class
                                     ga_daytime_dacc               , & !< aerodynamic conductance average of the previous day [m s-1]
                                     beta_sinklim_ps_daytime_dacc  , & !< scaling factor to account for soil moisture constraints on photosynthesis average of the previous day [unitless]
                                     t_jmax_opt_daytime_dacc           !< optimal temperature for electron transport of photosynthesis value accumulated over current day [deg C]
-    TYPE(t_jsb_var_real2d)          :: &   
-                                    daytime_counter                   !< number of timesteps of current day with light available [#]
 
     !------------------------------------------------------------------------------------------------------ !
     !>moving averages
@@ -1997,17 +1995,6 @@ CONTAINS
       CALL mem%Add_var('t_jmax_opt_daytime_dacc', mem%t_jmax_opt_daytime_dacc, &
         & hgrid, surface, &
         & t_cf('t_jmax_opt_daytime_dacc', '', 'value accumulated over current day '), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
-        & initval_r = 0.0_wp)
-  
-      CALL mem%Add_var('daytime_counter', mem%daytime_counter, &
-        & hgrid, surface, &
-        & t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
