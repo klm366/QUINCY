@@ -17,7 +17,7 @@ MODULE mo_assimi_util
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: reset_assimi_fluxes, update_time_average_assimilation
+  PUBLIC :: reset_assimi_fluxes, calculate_time_average_assimilation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_util'
 
@@ -90,7 +90,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> calculate time moving averages and daytime averages for ASSIMI_
   !>
-  SUBROUTINE update_time_average_assimilation(tile, options)
+  SUBROUTINE calculate_time_average_assimilation(tile, options)
 
     USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8
@@ -112,7 +112,7 @@ CONTAINS
     REAl(wp), DIMENSION(options%nc)         :: hlp                  !< helper
     INTEGER                                 :: ipoint               !< looping
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_assimilation'
+    CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_assimilation'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(ASSIMI_)
@@ -283,7 +283,7 @@ CONTAINS
     beta_air_tcnl_mavg(:)      = calc_time_mavg(beta_air_tcnl_mavg(:), beta_air(:), &
                                                 mavg_period_tcnl, do_calc=l_growing_season(:))
 
-  END SUBROUTINE update_time_average_assimilation
+  END SUBROUTINE calculate_time_average_assimilation
 
 #endif
 END MODULE mo_assimi_util
