@@ -89,7 +89,6 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: nc
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
@@ -420,7 +419,7 @@ CONTAINS
   ! @param [in]      nc                  Vector lenth
   ! @param [in]      nsoil               Number of soil layers
   ! @param [in]      dtime               Time step [s]
-  ! @param [in]      l_infil_subzero     Allow infiltration at soil temperatures below 0°C
+  ! @param [in]      l_infil_subzero     Allow infiltration at soil temperatures below 0degC
   ! @param [in]      soil_depth_sl       Thicknesses of soil layers until bedrocj [m]
   ! @param [in]      root_depth_sl       Thicknesses of soil layers until rooting depth [m]
   ! @param [in]      hyd_cond_sat_sl     Hydraulic conductivity of saturated soil [m/s]
