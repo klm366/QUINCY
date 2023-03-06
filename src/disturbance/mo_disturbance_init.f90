@@ -85,7 +85,7 @@ CONTAINS
 !
 !   END SUBROUTINE disturb_init_bc
 !
-!   RECURSIVE SUBROUTINE disturb_init_ic(tile)
+!   SUBROUTINE disturb_init_ic(tile)
 !
 !     !USE mo_disturb_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial
 !

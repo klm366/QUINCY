@@ -313,7 +313,7 @@ CONTAINS
       & t_air_in_Celcius,              &
       & LaiMax_corrected,              &
       & veg_fract_correction_old,      &
-      & old_c_state_sum, dummy_flux
+      & old_c_state_sum_ta, dummy_flux
 
     TYPE(t_jsb_grid), POINTER :: grid
 
@@ -393,7 +393,7 @@ CONTAINS
 
     !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
     !$claw create(LaiMax_corrected, veg_fract_correction_old) &
-    !$claw create(old_c_state_sum, dummy_flux)
+    !$claw create(old_c_state_sum_ta, dummy_flux)
     IF ( .NOT. tile%Is_process_active(ASSIMI_)) THEN
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
@@ -546,13 +546,14 @@ CONTAINS
           & )
 
         ! redistribute
-        CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
+        CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
         CALL rescale_carbon_upon_reference_area_change(tile, options, veg_fract_correction_old, veg_fract_correction)
 
         !$claw expand parallel update
         dummy_flux(:) = 0._wp
-        CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
+        ! todo: adapt for GPU
+        CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
           & dummy_flux(:), cconservation_allom(:))
       END IF
 

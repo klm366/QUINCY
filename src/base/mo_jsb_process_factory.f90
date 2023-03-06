@@ -86,7 +86,7 @@ MODULE mo_jsb_process_factory
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 20
+  INTEGER, PARAMETER :: max_no_of_processes = 23
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory'
 
@@ -149,7 +149,6 @@ CONTAINS
       CALL Register_tlcc_tasks(return_ptr, model_id)
       ALLOCATE(t_tlcc_config::return_ptr%config)
     CASE (TCQ_)
-      return_ptr%l_changes_fractions = .TRUE.
       CALL Register_tcq_tasks(return_ptr, model_id)
       ALLOCATE(t_tcq_config::return_ptr%config)
     CASE (ALCC_)
