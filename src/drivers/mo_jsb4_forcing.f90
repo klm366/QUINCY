@@ -15,7 +15,7 @@
 !!   -- adopted most of the options which were provided in the jsbach3 namelist (e.g. different sw-schemes incl. using clouds)
 !!   -- After revision 304 (https://svn.zmaw.de/svn/jsbach/branches/jsbach-jn r304): removed currently not required functions:
 !!      several sw schemes (shortwave_from_cloudcover, shortwave_from_fpar_orig, shortwave_from_fpar_ccdas, shortwave_from_fsw,
-!!      shortwave_from_fsw_orig), lw cloud scheme (longwave_rad_down) and calculation of vapour_pressure
+!!      shortwave_from_fsw_orig), lw cloud scheme (longwave_rad_down) and calculation of vapor_pressure
 !! Adapted according to jsb3 offline modifications by Marvin, Philipp et al. Jan. 24, 2017 -- r8893  by Julia Nabel (2017-07)
 !!
 !! Added the compatibility with ICON-A         by Rainer Schneck (2020-01-21)
@@ -42,9 +42,8 @@ MODULE mo_jsb4_forcing
   USE mo_kind,                   ONLY: wp
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string
-  USE mo_physical_constants,     ONLY: tmelt, p0sl_bg, rd, amco2, amd, cpd, vtmpc1, vtmpc2, rdv
-  USE mo_jsb_physical_constants, ONLY: cvdifts, grav ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
-  USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
+  USE mo_jsb_physical_constants, ONLY: tmelt, p0sl_bg, rd, amco2, amd, cpd, rdv, rvd1, cpvd1, cvdifts, grav
+  USE mo_phy_schemes,            ONLY: calc_qsat_from_esat, calc_qsat
 #ifdef __ICON__
 #ifdef __NO_RTE_RRTMGP__
     USE mo_psrad_orbit,       ONLY: inquire_declination
@@ -75,7 +74,7 @@ MODULE mo_jsb4_forcing
   PRIVATE
 
   PUBLIC :: get_interface_variables_from_external_forcing, init_forcing, finalize_external_forcing, &
-    &       sat_specific_humidity, forcing_options
+    &       forcing_options
 
   REAL(wp), SAVE :: delta_time, time_step_len
   INTEGER,  SAVE :: time_steps_per_day
@@ -374,12 +373,13 @@ CONTAINS
     CASE(NONE_)
       ! ratio of actual to potential evapotranspiration from the previous day
       IF (forcing_options%air_temperature_as_timestep) THEN
-        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), &
+        temporary_data1 = sat_vapor_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), &
           & MINVAL(forcing_input%air_temp%data_read(:,:,:), DIM=3), t_air_C(:,:))
       ELSE
-        temporary_data1 = vapour_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
+        temporary_data1 = sat_vapor_pressure_from_evapor(nblks, ice, icz, evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
       ENDIF
-      q_air(:,:) = fun_specific_humidity(temporary_data1(:,:), press_srf(:,:))
+      temporary_data1(:,:) = temporary_data1(:,:) * rdv
+      q_air(:,:) = calc_qsat_from_esat(temporary_data1(:,:), press_srf(:,:))
 
     CASE(RH_)
       ALLOCATE(rel_humidity(ice, nblks))
@@ -401,7 +401,7 @@ CONTAINS
         ELSE
           ic = ice
         END IF
-        CALL sat_specific_humidity(ice, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
+        CALL calc_qsat(routine, ic, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk), iblk, ice)
       ENDDO
       ! Get specific humidity
       IF (forcing_input%rel_humidity%frequency .EQ. TIMESTEP_) THEN
@@ -443,7 +443,7 @@ CONTAINS
         ELSE
           ic = ice
         END IF
-        CALL sat_specific_humidity(ic, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk))
+        CALL calc_qsat(routine, ic, t_air(1:ic,iblk), press_srf(1:ic,iblk), sat_spec_humidity(1:ic,iblk), iblk, ice)
       ENDDO
       q_air(:,:) = MIN(q_air(:,:),sat_spec_humidity(:,:))
     END SELECT
@@ -1335,16 +1335,16 @@ CONTAINS
       ! according to Saucier, WJ Principles of Meteoroligical Analyses
       ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
       ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
-      ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * qair) ! virtual potential temperature
+      ! tvd = tair * (100000/p_pa)^zkappa * 1 + rvd1 * qair) ! virtual potential temperature
       zsigma    = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
       air_pressure(1:ic) = zsigma * pressure(1:ic, iblk)
-      ztvd(1:ic) = ( temp_air(1:ic, iblk) * ( 100000._wp/air_pressure(1:ic))**zkappa ) * ( 1._wp + vtmpc1 * qair(1:ic, iblk))
-      ztvir(1:ic) = temp_air(1:ic, iblk) * ( 1._wp + vtmpc1 * qair(1:ic, iblk) )
+      ztvd(1:ic) = ( temp_air(1:ic, iblk) * ( 100000._wp/air_pressure(1:ic))**zkappa ) * ( 1._wp + rvd1 * qair(1:ic, iblk))
+      ztvir(1:ic) = temp_air(1:ic, iblk) * ( 1._wp + rvd1 * qair(1:ic, iblk) )
 
       ! virtual potential surface temperature
-      CALL sat_specific_humidity(ic, t_srf_proc(1:ic,iblk), pressure(1:ic,iblk), qsat_surf(1:ic))
+      CALL calc_qsat(routine, ic, t_srf_proc(1:ic,iblk), pressure(1:ic,iblk), qsat_surf(1:ic), iblk, ice)
       ztvs(1:ic) = t_srf_proc(1:ic,iblk) * ( 100000._wp/pressure(1:ic,iblk))**zkappa * &
-        & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) &
+        & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) &
         & * qair(1:ic,iblk)))
 
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
@@ -1373,7 +1373,7 @@ CONTAINS
         & + zgh(1:ic) / (grav * rough_h_srf_proc(1:ic,iblk)))))
 
       ! ignoring cloud water correction (see mo_surface_land.f90)
-      zcons(1:ic) = zcons12 * pressure(1:ic,iblk) / ( temp_air(1:ic,iblk) * (1._wp + vtmpc1 * qair(1:ic,iblk)))
+      zcons(1:ic) = zcons12 * pressure(1:ic,iblk) / ( temp_air(1:ic,iblk) * (1._wp + rvd1 * qair(1:ic,iblk)))
       zcfnchl(1:ic)  = zcons(1:ic) * SQRT(zdu2(1:ic)) * zchnl(1:ic)
 
       ! Stable / Unstable case
@@ -1391,7 +1391,7 @@ CONTAINS
       ! This follows now Jan Polcher's explicit solution, i.e. atmospheric conditions at t+1 are assumed to be valid
       !---------------------------------------------------------------------------------------------------------------
       t_acoef(1:ic,iblk) = 0.0_wp
-      t_bcoef(1:ic,iblk) = cpd * (1 + vtmpc2 * qair(1:ic,iblk)) * temp_air(1:ic,iblk) + zgh(1:ic)
+      t_bcoef(1:ic,iblk) = cpd * (1 + cpvd1 * qair(1:ic,iblk)) * temp_air(1:ic,iblk) + zgh(1:ic)
       q_acoef(1:ic,iblk) = 0.0_wp
       q_bcoef(1:ic,iblk) = qair(1:ic,iblk)
 
@@ -1454,6 +1454,8 @@ CONTAINS
     ! helpers
     INTEGER    :: i, j, jj
     INTEGER    :: offset(1)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':spec_humidity_from_rel_humidity'
 
     CALL inquire_declination(declination)
 
@@ -1519,7 +1521,7 @@ CONTAINS
       pressure(:) = &
         & p0sl_bg * ( 1._wp - elevation(i)*gamma /(tmelt+tmp(:) + elevation(i)*gamma))**(grav/rd/gamma)
 
-      CALL sat_specific_humidity(time_steps_per_day, tmp(:) + tmelt, pressure(:), qsat(:)) ! present saturated qair
+      CALL calc_qsat(routine, time_steps_per_day, tmp(:) + tmelt, pressure(:), qsat(:)) ! present saturated qair
 
       ! implied RH from minimum saturated specific humidity
       rh_test=SUM(MINVAL(qsat(:))/qsat(:))/nstep
@@ -1579,93 +1581,12 @@ CONTAINS
   END SUBROUTINE spec_humidity_from_rel_humidity
 
   !>
-  !! @brief Returns saturation specific humidity for given temperature and pressure
+  !! @brief computes saturated vapor pressure from actual and potential evapotranspiration
   !!
   !! @par History
-  !! Copied from jsbach3: mo_atmosphere: sat_specific_humidity    by Julia Nabel (2016)
-  !!
-  SUBROUTINE sat_specific_humidity(temp_dim, temp, pressure, qsat)
-    ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
-    ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
-    ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-
-    INTEGER,  INTENT(IN) :: temp_dim
-    REAL(wp), INTENT(IN) :: temp(:)      ! Air temperature at level [K]
-    REAL(wp), INTENT(IN) :: pressure(:)  ! Pressure at level [Pa]
-    REAL(wp), INTENT(OUT):: qsat(:)
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
-
-    INTEGER :: i
-!    REAL(wp) :: vtmpc1           ! in jsb3 this is set in this function, but it is also already calculated in mo_physical_constants!
-    INTEGER  :: it(1:temp_dim)
-    REAL(wp) :: tluc(1:temp_dim)
-
-    !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
-    DO i = 1,temp_dim
-      IF ((temp(i) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)) .OR. (temp(i) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp))) THEN
-        WRITE (message_text,*) &
-          & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-          & '- temperature was: ', temp(i), 'K. One thing to check: consistency of land-sea mask and forcing.'
-        CALL finish(TRIM(routine), TRIM(message_text))
-      ENDIF
-    ENDDO
-
-    ! vtmpc1 = 0.6077686814143877_wp"   ! copied from jsb3 ... however it is already calculated in mo_physical_constants as 0.607824693423?!
-    it = NINT(temp*1000._wp)
-    tluc = tlucua(it)
-
-    WHERE (it >= jptlucu1 .AND. it <= jptlucu2)
-      qsat = tluc / (pressure - vtmpc1*tluc)
-    ELSEWHERE
-      qsat = HUGE(1._wp)
-    END WHERE
-
-  END SUBROUTINE sat_specific_humidity
-
-  !>
-  !! @brief Returns saturation specific humidity for given air and vapour pressure
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: specific_humidity    by Julia Nabel
+  !! Copied from jsbach3: mo_jsbalone_forcing: vapor_pressure_from_evapor    by Julia Nabel
   !
-  ! === specific_humidity() =======================================================================================================
-  !
-  ! Specific humidity is computed here by assuming that each component of a mixture of dry air and vapor can be considered as an
-  ! ideal gas. So, let m_d and m_v the masses of the two components in a fixed volume V. Then the specific humidity "q" is
-  ! defined as
-  ! (1) q = m_v/(m_v+m_d)
-  ! Closely related is the moisture mixing ratio "r"
-  ! (2) r = m_v/m_d
-  ! Hence,
-  ! (3) q = r/(1+r)
-  ! Next it is assumed that both, dray air and vapor behave like ideal gases:
-  ! (4) p_d*V = m_d*R_d*T and p_v*V = m_v*R_v*T,
-  ! where p_d is the partial pressure of the dry air and p_v the vapor pressure, R_d and R_v the gas constants and T the
-  ! temperature. Noting that air pressure "p" is the sum of the two partial pressures (p=p_d+p_v) the division of the two gas
-  ! equation by each other gives by using (2):
-  ! (5) r = eps*p_v/(p-p_v),
-  ! where eps=R_d/R_v is the ratio of gas constants. Entering ths into (3) one finally obtains for the specific humidity:
-  !                 p_v
-  ! (6) q = eps -------------
-  !             p-(1-eps)*p_v
-  !
-  PURE elemental FUNCTION fun_specific_humidity(vapour_pressure, air_pressure)
-    REAL(wp)            :: fun_specific_humidity !! (from [0,1])
-    REAL(wp),INTENT(in) :: vapour_pressure   !! [N/m^2]
-    REAL(wp),INTENT(in) :: air_pressure      !! air pressure at bottom [N/m^2]
-
-    !in jsbach3 rdv=eps
-    fun_specific_humidity = rdv*vapour_pressure/(air_pressure - (1._wp-rdv)*vapour_pressure)
-  END FUNCTION fun_specific_humidity
-
-  !>
-  !! @brief computes vapor pressure from actual and potential evapotranspiration
-  !!
-  !! @par History
-  !! Copied from jsbach3: mo_jsbalone_forcing: vapour_pressure_from_evapor    by Julia Nabel
-  !
-  ! === vapour_pressure_from_evapor() =============================================================================================
+  ! === sat_vapor_pressure_from_evapor() ========================================================================================
   !
   ! Vapor pressure is computed according to a method described in [1] from actual and potential evapotranspiration.
   ! Typically the mean vapor pressure at a day is approximately equal to the saturation vapor pressure at sunrise
@@ -1695,21 +1616,22 @@ CONTAINS
   ! this module. For desert studies it might be good to reduce h0 even further. As the specific humidity does not have a
   ! significant diurnal cycle, h1 is set to 0.
   !vg<<
-  FUNCTION vapour_pressure_from_evapor(nblks, ice, icz, evapo_ratio_mean, Tmin, Tair)
+  FUNCTION sat_vapor_pressure_from_evapor(nblks, ice, icz, evapo_ratio_mean, Tmin, Tair)
     INTEGER,  INTENT(IN) :: nblks, ice, icz
     REAL(wp), INTENT(IN) :: evapo_ratio_mean(:,:)  !! fe(d-1) of Eq. (1)
     REAL(wp), INTENT(IN) :: Tmin(:,:)              !! minimum temperature (= temperature at sunrise)
     REAL(wp), INTENT(IN) :: Tair(:,:)              !! temperature at current time step
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':vapour_pressure_from_evapor'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':vapor_pressure_from_evapor'
 
     REAL(wp), PARAMETER :: h0 = 0.6_wp  !! (0.96_wp) tuning constant for computing vapor pressure
     REAL(wp), PARAMETER :: h1 = 0.0_wp  !! (0.49_wp) tuning constant for computing vapor pressure
 
-    REAL(wp) :: vapour_pressure_from_evapor(ice, nblks) !! the vapour pressure
-    REAL(wp) :: evapo_sat        ! saturation pressure at actual temperature
-    REAL(wp) :: evapo_sat_min    ! saturation pressure at minimum temperature of day (= at sunrise)
-    REAL(wp) :: e0_vap           ! vapor pressure at sunrise
+    REAL(wp) :: sat_vapor_pressure_from_evapor(ice, nblks) !! the saturated vapor pressure
+
+    REAL(wp) :: e_sat(ice)        ! saturation pressure at actual temperature
+    REAL(wp) :: e_sat_min(ice)    ! saturation pressure at minimum temperature of day (= at sunrise)
+    REAL(wp) :: e0_vap            ! vapor pressure at sunrise
 
     INTEGER :: i,j,ic
 
@@ -1719,32 +1641,20 @@ CONTAINS
       ELSE
         ic = ice
       END IF
+
+      CALL calc_qsat(routine, ic, Tmin(1:ic,j) + tmelt, Tmin(1:ic,j), e_sat_min(1:ic), l_esat_only=.TRUE.)
+      CALL calc_qsat(routine, ic, Tair(1:ic,j) + tmelt, Tair(1:ic,j), e_sat(1:ic), l_esat_only=.TRUE.)
+                                                        ! v  
+                                                        ! |----> dummy argument here
+      e_sat_min(:) = e_sat_min(:) / rdv  ! saturation vapor pressure at minimum temperature
+      e_sat(:)     = e_sat    (:) / rdv  ! saturation vapor pressure at actual temperature
       DO i = 1,ic
-        !Assertion: the expected temperature range is indirectly defined by the tlucua bounds -> consistency check
-        IF ((Tmin(i,j) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)-tmelt) &
-            & .OR. (Tmin(i,j) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp)-tmelt)) THEN
-          WRITE (message_text,*) &
-            & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-            & '- tmin temperature was: ', Tmin(i,j), ' degC. One thing to check: consistency of land-sea mask and forcing.'
-          CALL finish(TRIM(routine), TRIM(message_text))
-        ENDIF
-        IF ((Tair(i,j) .LT. REAL(LBOUND(tlucua,dim=1)/1000._wp)-tmelt) &
-            & .OR. (Tair(i,j) .GT. REAL(UBOUND(tlucua,dim=1)/1000._wp)-tmelt)) THEN
-          WRITE (message_text,*) &
-            & 'Inconsistency with tlucua bounds (would give a seg. fault or a floating invalid operation exception)', &
-            & '- air temperature was: ', Tmin(i,j), ' degC. One thing to check: consistency of land-sea mask and forcing.'
-          CALL finish(TRIM(routine), TRIM(message_text))
-        ENDIF
-
-        !jsb3: rdv = eps
-        evapo_sat_min = tlucua(INT(1000._wp * (Tmin(i,j) + tmelt)))/rdv ! saturation pressure at minimum temperature
-        evapo_sat     = tlucua(INT(1000._wp * (Tair(i,j) + tmelt)))/rdv ! saturation pressure at actual temperature
-        e0_vap = evapo_sat_min * (h0 + (1._wp - h0) * evapo_ratio_mean(i,j))                               ! Eq. (2) from above
-        vapour_pressure_from_evapor(i,j) = e0_vap + h1 * evapo_ratio_mean(i,j) * (evapo_sat - evapo_sat_min) ! Eq. (3) from above
-
+        e0_vap = e_sat_min(i) * (h0 + (1._wp - h0) * evapo_ratio_mean(i,j))                                   ! Eq. (2) from above
+        sat_vapor_pressure_from_evapor(i,j) = e0_vap + h1 * evapo_ratio_mean(i,j) * (e_sat(i) - e_sat_min(i)) ! Eq. (3) from above
       ENDDO
     ENDDO
-  END FUNCTION vapour_pressure_from_evapor
+
+  END FUNCTION sat_vapor_pressure_from_evapor
 
 
   !>

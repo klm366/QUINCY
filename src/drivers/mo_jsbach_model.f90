@@ -135,7 +135,7 @@ CONTAINS
     USE mo_var_list_register_utils, ONLY: vlr_print_groups, vlr_print_vls
 
     USE mo_dynamics_config,         ONLY: iequations
-    USE mo_echam_convect_tables,    ONLY: init_convect_tables
+    USE mo_phy_schemes,             ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
 
@@ -178,6 +178,10 @@ CONTAINS
     INTEGER, ALLOCATABLE :: output_jfile(:) ! number of output files
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_model'
+
+#ifdef _OPENACC
+    CALL finish('========= ', 'The JSBACH standalone model does not work yet if model is compiled with _OPENACC')
+#endif
 
     CALL message('======== ', 'Starting the ICON JSBACH standalone model ...')
     CALL message('', '')
