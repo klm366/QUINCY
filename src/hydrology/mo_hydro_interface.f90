@@ -2204,15 +2204,16 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp) :: &
-      & tile_fract (options%nc), &
+      & tile_fract (options%nc),  &
       & weq_land_new(options%nc), &
-      & tile_area(options%nc)
+      & tile_area(options%nc),    &
+      & wb_threshold(options%nc)
 
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
-    CHARACTER(len=4096)         :: message_text
+    CHARACTER(len=4096)         :: message_text_long
 
     iblk  = options%iblk
     ics   = options%ics
@@ -2281,28 +2282,44 @@ CONTAINS
       weq_balance_err(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
     END IF
 
+    ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
+    ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
+    wb_threshold(:) = 1.0e-11_wp * tile_area(:) / dtime
+
     !$claw acc parallel loop gang vector
     DO i=1,nc
-      IF (ABS(weq_balance_err(i)) > 1.0e-3_wp) THEN
-        WRITE (message_text,*) 'Water balance violation [m3] at ',                                &
-          & lat(i),'N and ',lon(i),'E:',                                           NEW_LINE('a'), &
-          & 'WB Error:           ', weq_balance_err(i),                            NEW_LINE('a'), &
-          & 'Rainfall:           ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-          & 'Snowfall:           ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-          & 'Evapotranspiration: ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-          & 'Runoff:             ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-          & 'Drainage:           ', drainage(i)   * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-          & 'Skin reservoir:     ', wtr_skin(i)           * tile_area(i),          NEW_LINE('a'), &
-          & 'Snow reservoir:     ', weq_snow(i)           * tile_area(i),          NEW_LINE('a'), &
-          & 'Pond reservoir:     ', weq_pond(i)           * tile_area(i),          NEW_LINE('a'), &
-          & 'Soil water:         ', SUM(wtr_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
-          & 'Soil ice:           ', SUM(ice_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
-          & 'Old reservoirs:     ', weq_land(i),                                   NEW_LINE('a'), &
-          & 'ET deficit:         ', evapo_deficit(i) * tile_area(i) / rhoh2o * dtime
-        IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget) THEN
-          CALL finish (TRIM(routine), message_text)
+      IF (ABS(weq_balance_err(i)) > wb_threshold(i)) THEN
+        IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
+          WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',           NEW_LINE('a'), &
+            & 'on ',TRIM(tile%name),' tile at', lat(i),'N and ',lon(i),'E:',         NEW_LINE('a'), &
+            & 'WB Error:           ', weq_balance_err(i),                            NEW_LINE('a'), &
+            & 'Rainfall:           ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Snowfall:           ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Evapotranspiration: ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Runoff:             ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Drainage:           ', drainage(i)   * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Skin reservoir:     ', wtr_skin(i)           * tile_area(i),          NEW_LINE('a'), &
+            & 'Snow reservoir:     ', weq_snow(i)           * tile_area(i),          NEW_LINE('a'), &
+            & 'Pond reservoir:     ', weq_pond(i)           * tile_area(i),          NEW_LINE('a'), &
+            & 'Soil water:         ', SUM(wtr_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
+            & 'Soil ice:           ', SUM(ice_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
+            & 'Old reservoirs:     ', weq_land(i),                                   NEW_LINE('a'), &
+            & 'ET deficit:         ', evapo_deficit(i) * tile_area(i) / rhoh2o * dtime
         ELSE
-          CALL message (TRIM(routine), message_text, all_print=.TRUE.)
+          WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',           NEW_LINE('a'), &
+            & 'on ',TRIM(tile%name),' tile at', lat(i),'N and ',lon(i),'E:',         NEW_LINE('a'), &
+            & 'WB Error:           ', weq_balance_err(i),                            NEW_LINE('a'), &
+            & 'Rainfall:           ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Snowfall:           ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Evapotranspiration: ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Runoff:             ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Drainage:           ', drainage(i)   * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Pond reservoir:     ', weq_pond(i)   * tile_area(i)
+        END IF
+        IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget) THEN
+          CALL finish (TRIM(routine), message_text_long)
+        ELSE
+          CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
         END IF
       END IF
     END DO
