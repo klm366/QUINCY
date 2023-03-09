@@ -110,6 +110,7 @@ CONTAINS
     !
     !  local variables
     !
+    INTEGER :: i
     REAL(wp) ::                   &
       & rain_in_m(nc),            & !< amount of rainfall within time step [m]
       & new_snow(nc),             & !< amount of snowfall within time step [m]
@@ -294,6 +295,25 @@ CONTAINS
         &              runoff(:), infilt(:))
 
     END IF
+
+    do i = 1, nc
+      if ( transpiration_in_m(i) <  evapotrans_soil_in_m(i)) then
+        WRITE (message_text,*) 'ET separation failed at ', &
+          & i,                              NEW_LINE('a'), &
+          & 'pet_in_m:               ', evapopot(i) * dtime/rhoh2o,    NEW_LINE('a'), &
+          & 'evapo_snow_pot_in_m:    ', evapo_snow_pot_in_m(i),        NEW_LINE('a'), &
+          & 'evapo_skin_pot_in_m:    ', evapo_skin_pot_in_m(i),        NEW_LINE('a'), &
+          & 'evapotrans_in_m:        ', evapotrans_in_m(i),            NEW_LINE('a'), &
+          & 'evapo_snow_in_m:        ', evapo_snow_in_m(i),            NEW_LINE('a'), &
+          & 'evapo_skin_in_m:        ', evapo_skin_in_m(i),            NEW_LINE('a'), &
+          & 'evapotrans_no_snow:     ', evapotrans_no_snow(i),         NEW_LINE('a'), &
+          & 'evapotrans_soil_in_m:   ', evapotrans_soil_in_m(i),       NEW_LINE('a'), &
+          & 'transiration_in_m:      ', transpiration_in_m(i),         NEW_LINE('a'), &
+          & 'evapo_soil_in_m:        ', evapo_soil_in_m(i)
+        call finish('calc_surface_hydrology:', message_text)
+      end if
+    end do
+
 
     ! Transform fluxes in output from [m] to [kg m-2 s-1]
     snowmelt_soil(:)   = snowmelt_soil(:) * rhoh2o / dtime
