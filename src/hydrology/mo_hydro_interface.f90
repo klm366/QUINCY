@@ -441,6 +441,7 @@ CONTAINS
       & skinres_canopy_max, &
       & weq_rootzone,       &
       & weq_rootzone_max,   &
+      & weq_soil,           &
       & trans_tmp
 
     LOGICAL  :: lstart
@@ -619,7 +620,7 @@ CONTAINS
         snow_soil_dens(:) = dens_snow
       END IF
     ELSE
-      ! Compute actual and maximum total rootzone moisture (liquid + ice)
+      ! Compute actual and maximum total rootzone moisture as well as the total water amount in the soil (liquid + ice)
       CALL get_amount_in_rootzone( &
         &  dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl) + dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl),    &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
@@ -628,6 +629,8 @@ CONTAINS
         &  dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl) * dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl),    &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone_max)
+      weq_soil(:) = SUM(dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl) &
+        &             + dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl), dim=2)
       IF (tile%is_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
         trans_tmp(:) = transpiration(:)
@@ -664,6 +667,7 @@ CONTAINS
         & snow(:),                        & !< solid precipitation [kg m-2 s-1]
         & weq_rootzone(:),                & !< total rootzone water content [m]
         & weq_rootzone_max(:),            & !< maximum total rootzone water content [m]
+        & weq_soil(:),                    & !< total column soil moisture [m]
         ! inout
         & wtr_skin(:),                    & !< water content of the skin reservoir (vegetation and bare soil) [m]
         & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]

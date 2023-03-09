@@ -79,8 +79,9 @@ CONTAINS
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
     & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
     & t_air, skinres_canopy_max, skinres_max, fract_pond_max,       &
-    & fract_snow, fract_skin, fract_pond, hcap_grnd, evapotrans, evapopot,      &
-    & transpiration, rain, snow, weq_rootzone, weq_rootzone_max,    &
+    & fract_snow, fract_skin, fract_pond, hcap_grnd, evapotrans,    &
+    & evapopot, transpiration, rain, snow,                          &
+    & weq_rootzone, weq_rootzone_max, weq_soil,                     &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
@@ -100,7 +101,7 @@ CONTAINS
       & skinres_canopy_max(:), skinres_max(:), fract_pond_max(:), &
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:), evapotrans(:),  &
       & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
-      & weq_rootzone_max(:)
+      & weq_rootzone_max(:), weq_soil(:)
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & wtr_pond(:), ice_pond(:)
@@ -290,6 +291,16 @@ CONTAINS
     evapo_pond_in_m(:) = MAX(evapo_pond_in_m(:), &
       & MIN(0._wp, evapotrans_no_snow(:) - evapo_skin_in_m(:) - transpiration_in_m(:)))
 
+    ! Update evaporation required from the soil
+    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:) - evapo_pond_in_m(:)
+    WHERE (weq_soil(:) + evapotrans_soil_in_m(:) < 0._wp)
+      ! If the soil does not contain enough moisture, evaporate from ponds instead if possible
+      evapo_pond_in_m(:)      = MAX(-(wtr_pond(:) + ice_pond(:)), &
+        &                       evapo_pond_in_m(:) + (weq_soil(:) + evapotrans_soil_in_m(:)))
+      evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:) - evapo_pond_in_m(:)
+    END WHERE
+    evapo_soil_in_m(:) = evapotrans_soil_in_m(:) - transpiration_in_m(:)
+
     ! Add dew to liquid pond storage or evaporate pond water
     WHERE (evapo_pond_in_m(:) > 0._wp .OR. -evapo_pond_in_m(:) <= wtr_pond(:))
       wtr_pond(:) = wtr_pond(:) + evapo_pond_in_m(:)
@@ -302,11 +313,9 @@ CONTAINS
       ice_pond(:) = 0._wp
     END WHERE
 
-    evapotrans_soil_in_m(:) = evapotrans_no_snow(:) - evapo_skin_in_m(:) - evapo_pond_in_m(:)
     WHERE (evapo_skin_pot_in_m(:) < 0._wp)
       evapo_deficit(:) = evapo_deficit(:) + evapo_skin_pot_in_m(:) - evapo_skin_in_m(:)
     END WHERE
-    evapo_soil_in_m(:) = evapotrans_soil_in_m(:) - transpiration_in_m(:)  ! Evaporation from ground
 
     ! positive values of evaporation and transpiration (dew) are added to water_to_soil
     ! negative fluxes change soil moisture later in calc_soil_hydrology
