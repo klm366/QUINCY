@@ -84,6 +84,7 @@ CONTAINS
     & swl2,        swl2_clim_m,             & ! in
     & swl3,        swl3_clim_m,             & ! in
     & swl4,        swl4_clim_m,             & ! in
+    & swl5,        swl5_clim_m,             & ! in
     & lai,         lai_clim_m,              & ! in
     !& modified_pfts_fract,                  & ! in
     & pfts_fract,                           & ! in
@@ -157,6 +158,8 @@ CONTAINS
     & V25_memory, V26_memory, V27_memory,    & ! inout
     & V28_memory, V29_memory, V30_memory,    & ! inout
     & V31_memory, V32_memory, V33_memory,    & ! inout
+    & V34_memory, V35_memory, V36_memory,    & ! inout
+    & V37_memory, V38_memory, V39_memory,    & ! inout
     & RHC_memory, Y_memory,                  & ! inout
 
     !& i2i_weight,    i2i_bias,              & ! in
@@ -188,6 +191,7 @@ CONTAINS
       & swl2(:),        swl2_clim_m(:),             &
       & swl3(:),        swl3_clim_m(:),             &
       & swl4(:),        swl4_clim_m(:),             &
+      & swl5(:),        swl5_clim_m(:),             &
       & lai(:),         lai_clim_m(:),              &
 
       !& modified_pfts_fract(:,:),                   &
@@ -286,12 +290,15 @@ CONTAINS
       & V25_memory(:,:), V26_memory(:,:), V27_memory(:,:),    & ! inout (training)
       & V28_memory(:,:), V29_memory(:,:), V30_memory(:,:),    & ! inout (training)
       & V31_memory(:,:), V32_memory(:,:), V33_memory(:,:),    & ! inout (training)
+      & V34_memory(:,:), V35_memory(:,:), V36_memory(:,:),    & ! inout (training)
+      & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),    & ! inout (training)
       & RHC_memory(:,:), Y_memory(:,:),                       & ! inout (training)
 
       & burned_fract(:)                               ! inout
 
     ! Locals
-    INTEGER, PARAMETER :: bs = 1024
+    !INTEGER, PARAMETER :: bs = 1024
+    INTEGER, PARAMETER :: bs = 128
     REAL(wp) ::                                                   &
       & nn_inputs    (nc, d_input),                               &
       & nn_layer1_out(nc, d_hidden), nn_layer1_act(nc, d_hidden), &
@@ -378,32 +385,41 @@ CONTAINS
                    / (minmax(15,2)                 - minmax(15,1)+1e-8)
     nn_inputs(:,16)= (swl4(:)-swl4_clim_m(:)       - minmax(16,1))      &
                    / (minmax(16,2)                 - minmax(16,1)+1e-8) 
-    nn_inputs(:,17)= (lai(:)                       - minmax(17,1))      &
+    nn_inputs(:,17)= (swl5(:)                      - minmax(17,1))      &
                    / (minmax(17,2)                 - minmax(17,1)+1e-8)
-    nn_inputs(:,18)= (lai(:)-lai_clim_m(:)         - minmax(18,1))      &
-                   / (minmax(18,2)                 - minmax(18,1)+1e-8)
-    nn_inputs(:,19)= (fuel(:)                      - minmax(19,1))      &
-                   / (minmax(19,2)                 - minmax(19,1)+1e-8)
-    nn_inputs(:,20)= (lightning_climatology(:)     - minmax(20,1))      &
-                   / (minmax(20,2)                 - minmax(20,1)+1e-8)
-    nn_inputs(:,21)= (LOG(gdp(:)+1._wp)            - minmax(21,1))      &
-                   / (minmax(21,2)                 - minmax(21,1)+1e-8)
-    nn_inputs(:,22)= (hdi(:)                       - minmax(22,1))      &
-                   / (minmax(22,2)                 - minmax(22,1)+1e-8)
-    nn_inputs(:,23)= (LOG(population(:)+1._wp)     - minmax(23,1))      &
-                   / (minmax(23,2)                 - minmax(23,1)+1e-8)
-    nn_inputs(:,24)= (elevation(:)                 - minmax(24,1))      &
-                   / (minmax(24,2)                 - minmax(24,1)+1e-8) 
+    nn_inputs(:,18)= (swl5(:)-swl5_clim_m(:)       - minmax(18,1))      &
+                   / (minmax(18,2)                 - minmax(18,1)+1e-8) 
 
-    nn_inputs(:,25)= pfts_fract(:,1)
-    nn_inputs(:,26)= pfts_fract(:,2)
-    nn_inputs(:,27)= pfts_fract(:,3)
-    nn_inputs(:,28)= pfts_fract(:,4)
-    nn_inputs(:,29)= pfts_fract(:,5)
-    nn_inputs(:,30)= pfts_fract(:,6)
-    nn_inputs(:,31)= pfts_fract(:,7)
-    nn_inputs(:,32)= pfts_fract(:,8)
-    nn_inputs(:,33)= pfts_fract(:,9)
+    nn_inputs(:,19)= (lai(:)                       - minmax(19,1))      &
+                   / (minmax(19,2)                 - minmax(19,1)+1e-8)
+    nn_inputs(:,20)= (lai(:)-lai_clim_m(:)         - minmax(20,1))      &
+                   / (minmax(20,2)                 - minmax(20,1)+1e-8)
+    nn_inputs(:,21)= (fuel(:)                      - minmax(21,1))      &
+                   / (minmax(21,2)                 - minmax(21,1)+1e-8)
+    nn_inputs(:,22)= (lightning_climatology(:)     - minmax(22,1))      &
+                   / (minmax(22,2)                 - minmax(22,1)+1e-8)
+    nn_inputs(:,23)= (LOG(gdp(:)+1._wp)            - minmax(23,1))      &
+                   / (minmax(23,2)                 - minmax(23,1)+1e-8)
+    nn_inputs(:,24)= (hdi(:)                       - minmax(24,1))      &
+                   / (minmax(24,2)                 - minmax(24,1)+1e-8)
+    nn_inputs(:,25)= (LOG(population(:)+1._wp)     - minmax(25,1))      &
+                   / (minmax(25,2)                 - minmax(25,1)+1e-8)
+    nn_inputs(:,26)= (elevation(:)                 - minmax(26,1))      &
+                   / (minmax(26,2)                 - minmax(26,1)+1e-8) 
+
+    nn_inputs(:,27)= pfts_fract(:,1)
+    nn_inputs(:,28)= pfts_fract(:,2)
+    nn_inputs(:,29)= pfts_fract(:,3)
+    nn_inputs(:,30)= pfts_fract(:,4)
+    nn_inputs(:,31)= pfts_fract(:,5)
+    nn_inputs(:,32)= pfts_fract(:,6)
+    nn_inputs(:,33)= pfts_fract(:,7)
+    nn_inputs(:,34)= pfts_fract(:,8)
+    nn_inputs(:,35)= pfts_fract(:,9)
+    nn_inputs(:,36)= pfts_fract(:,10)
+    nn_inputs(:,37)= pfts_fract(:,11)
+    nn_inputs(:,38)= pfts_fract(:,12)
+    nn_inputs(:,39)= pfts_fract(:,13)
      
     ! calculate FBA
     keep_prob = 1.
@@ -474,6 +490,12 @@ CONTAINS
       V31_memory(:,memory_idx) = nn_inputs(:,31)
       V32_memory(:,memory_idx) = nn_inputs(:,32)
       V33_memory(:,memory_idx) = nn_inputs(:,33)
+      V34_memory(:,memory_idx) = nn_inputs(:,34)
+      V35_memory(:,memory_idx) = nn_inputs(:,35)
+      V36_memory(:,memory_idx) = nn_inputs(:,36)
+      V37_memory(:,memory_idx) = nn_inputs(:,37)
+      V38_memory(:,memory_idx) = nn_inputs(:,38)
+      V39_memory(:,memory_idx) = nn_inputs(:,39)
       RHC_memory(:,memory_idx) = q_rel_air_constraint(:)
       Y_memory  (:,memory_idx) = fba_smooth(:)
     ENDIF
@@ -527,6 +549,12 @@ CONTAINS
         tr_inputs(k,31) = V31_memory(i,idx)
         tr_inputs(k,32) = V32_memory(i,idx)
         tr_inputs(k,33) = V33_memory(i,idx)
+        tr_inputs(k,34) = V34_memory(i,idx)
+        tr_inputs(k,35) = V35_memory(i,idx)
+        tr_inputs(k,36) = V36_memory(i,idx)
+        tr_inputs(k,37) = V37_memory(i,idx)
+        tr_inputs(k,38) = V38_memory(i,idx)
+        tr_inputs(k,39) = V39_memory(i,idx)
         tr_q_rel_air_constraint(k) = RHC_memory(i,idx)
         tr_target(k) = Y_memory(i,idx)
       ENDDO
@@ -581,7 +609,7 @@ CONTAINS
         bs, d_input, d_hidden, d_output, keep_prob,                                &
         tr_q_rel_air_constraint)
 
-      lr_rate = 1e-3
+      lr_rate = 1e-5
       CALL update(                                     &
         dW1, dW2, dW3, dW4, dW5, dW6,                  &
         db1, db2, db3, db4, db5, db6,                  &
@@ -1129,8 +1157,10 @@ CONTAINS
     output(:,:) = layer6_act(:,:)
 
     ! constraints
-    output(:,1) = output(:,1)*(1._wp-input(:,25)-input(:,33))
-    output(:,1) = output(:,1)*input(:,19)
+    !output(:,1) = output(:,1)*(1._wp-input(:,25)-input(:,33))
+    !output(:,1) = output(:,1)*input(:,19)
+    output(:,1) = output(:,1)*(1._wp-input(:,27)-input(:,39))
+    output(:,1) = output(:,1)*input(:,21)
     output(:,1) = output(:,1)*(1._wp-rh_constraint)
 
     END SUBROUTINE forward
@@ -1322,8 +1352,11 @@ CONTAINS
       dlayer6_act_(:,1) = 2.*(output(:,1)-target_y(:)*100)    ! MSE
 
       ! constraints
-      dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-input(:,25)-input(:,33))
-      dlayer6_act_(:,1) = dlayer6_act_(:,1)*input(:,19)
+      !dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-input(:,25)-input(:,33))
+      !dlayer6_act_(:,1) = dlayer6_act_(:,1)*input(:,19)
+      !dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-rh_constraint(:))
+      dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-input(:,27)-input(:,39))
+      dlayer6_act_(:,1) = dlayer6_act_(:,1)*input(:,21)
       dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-rh_constraint(:))
 
       CALL single_backward_propagation(                      &

@@ -207,6 +207,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swl2_ave               ! daily average of volumetric soil water content in the 2nd layer <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: swl3_ave               ! daily average of volumetric soil water content in the 3rd layer <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: swl4_ave               ! daily average of volumetric soil water content in the 4th layer <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: swl5_ave               ! daily average of volumetric soil water content in the 4th layer <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: lai_ave                ! daily average of LAI <Rackhun Son>
 
     dsl4jsb_Real3D_onChunk :: t_air_clim             ! daily climatology of temperature <Rackhun Son>
@@ -216,6 +217,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: swl2_clim              ! daily climatology of volumetric soil water content in the 2nd layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: swl3_clim              ! daily climatology of volumetric soil water content in the 3rd layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: swl4_clim              ! daily climatology of volumetric soil water content in the 4th layer <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: swl5_clim              ! daily climatology of volumetric soil water content in the 4th layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: lai_clim               ! daily climatology of LAI <Rackhun Son>
 
     dsl4jsb_Real3D_onChunk :: V1_memory              ! training memory <Rackhun Son>
@@ -251,6 +253,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: V31_memory             ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: V32_memory             ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: V33_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V34_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V35_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V36_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V37_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V38_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V39_memory             ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: RHC_memory             ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: Y_memory               ! training memory <Rackhun Son>
 
@@ -288,7 +296,8 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: cover_fract_pot
 
-    REAL(wp), DIMENSION(options%nc, 9) :: &
+    !REAL(wp), DIMENSION(options%nc, 9) :: &
+    REAL(wp), DIMENSION(options%nc, 13) :: &
       & modified_pfts_fract                ! modified pft fractions for Fire <Rackhun Son>
 
     ! Locally allocated vectors
@@ -394,6 +403,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl2_ave)                 ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl3_ave)                 ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl4_ave)                 ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   swl5_ave)                 ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   lai_ave)                  ! in <Rackhun Son>
 
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   t_air_clim)               ! in <Rackhun Son>
@@ -403,6 +413,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl2_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl3_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl4_clim)                ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl5_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   lai_clim)                 ! in <Rackhun Son>
 
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   V1_memory)                ! in <Rackhun Son>
@@ -438,6 +449,12 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   V31_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   V32_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   V33_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V34_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V35_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V36_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V37_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V38_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V39_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   RHC_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   Y_memory  )               ! in <Rackhun Son>
 
@@ -465,6 +482,8 @@ CONTAINS
     ! R: This may be later in a climbuf process for dynveg and disturbance.
     ! Maximum daily wind speed and relative air humidity smoothed in time
     persist = persist_rel_hum ** (1._wp/REAL(timesteps_per_day(options%dtime),wp))
+    print*, REAL(timesteps_per_day(options%dtime),wp)
+    
     q_rel_air_climbuf(:) = q_rel_air_climbuf(:) * persist  +  MIN(q_rel_air(:),100._wp) * (1._wp - persist)
 
     IF (.NOT. is_newday(options%current_datetime, options%dtime) .OR. is_time_experiment_start(options%current_datetime)) THEN
@@ -507,6 +526,7 @@ CONTAINS
     swl2_ave(:)  = swl2_ave(:)  + wtr_soil_sl(:,2)*(options%dtime/60._wp/60._wp/24._wp)
     swl3_ave(:)  = swl3_ave(:)  + wtr_soil_sl(:,3)*(options%dtime/60._wp/60._wp/24._wp)
     swl4_ave(:)  = swl4_ave(:)  + wtr_soil_sl(:,4)*(options%dtime/60._wp/60._wp/24._wp)
+    swl5_ave(:)  = swl5_ave(:)  + wtr_soil_sl(:,5)*(options%dtime/60._wp/60._wp/24._wp)
     lai_ave(:)   = lai_ave(:)   + lai(:)          *(options%dtime/60._wp/60._wp/24._wp)
 
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
@@ -516,6 +536,7 @@ CONTAINS
         diff_year = FLOAT(iyr-time_config%tc_exp_startdate%date%year) +1._wp
 
         iteration  = 0
+        is_training = 0
         IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
           is_training = 1
           iteration = (iyr-2003)*5946*365 + (day_of_year-1)*5946 + iblk*600
@@ -545,6 +566,7 @@ CONTAINS
           swl2_ave(:)  = swl2_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
           swl3_ave(:)  = swl3_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
           swl4_ave(:)  = swl4_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
+          swl5_ave(:)  = swl5_ave(:)  /(options%dtime/60._wp/60._wp/24._wp)
           lai_ave(:)   = lai_ave(:)   /(options%dtime/60._wp/60._wp/24._wp)
 
           t_air_clim(:,day_of_year) = t_air_ave(:) !/(options%dtime/60._wp/60._wp/24._wp)
@@ -554,6 +576,7 @@ CONTAINS
           swl2_clim(:,day_of_year)  = swl2_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
           swl3_clim(:,day_of_year)  = swl3_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
           swl4_clim(:,day_of_year)  = swl4_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
+          swl5_clim(:,day_of_year)  = swl5_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
           lai_clim(:,day_of_year)   = lai_ave(:)   !/(options%dtime/60._wp/60._wp/24._wp)
 
         !ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
@@ -568,6 +591,7 @@ CONTAINS
             swl2_clim(:,day_of_year)  = swl2_ave(:)
             swl3_clim(:,day_of_year)  = swl3_ave(:)
             swl4_clim(:,day_of_year)  = swl4_ave(:)
+            swl5_clim(:,day_of_year)  = swl5_ave(:)
             lai_clim(:,day_of_year)   = lai_ave(:)
 
           ELSEIF (day_of_year == 60) Then                                ! 2/29 <= 2/28
@@ -608,20 +632,26 @@ CONTAINS
             swl2_clim(:,day_of_year)  = swl2_clim(:,day_of_year)  + swl2_ave(:)
             swl3_clim(:,day_of_year)  = swl3_clim(:,day_of_year)  + swl3_ave(:)
             swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)  + swl4_ave(:)
+            swl5_clim(:,day_of_year)  = swl5_clim(:,day_of_year)  + swl5_ave(:)
             lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)   + lai_ave(:)
           ENDIF
         ENDIF
 
         ! modify pft fractions for Fire
-        modified_pfts_fract(:,1) = fract_snow(:)
-        modified_pfts_fract(:,2) = pfts_fract(:,1)*(1-fract_snow(:))*fract_fpc_max     ! Tropical broadleaf evergreen
-        modified_pfts_fract(:,3) = pfts_fract(:,2)*(1-fract_snow(:))*fract_fpc_max     ! Tropical broadleaf deciduous
-        modified_pfts_fract(:,4) = pfts_fract(:,3)*(1-fract_snow(:))*fract_fpc_max     ! Extra-tropical broadleaf evergreen
-        modified_pfts_fract(:,5) = pfts_fract(:,4)*(1-fract_snow(:))*fract_fpc_max     ! Extra_tropical broadleaf deciduous
-        modified_pfts_fract(:,6) = pfts_fract(:,5)*(1-fract_snow(:))*fract_fpc_max     ! Raingreen Shrubs
-        modified_pfts_fract(:,7) = pfts_fract(:,6)*(1-fract_snow(:))*fract_fpc_max     ! Deciduous Shrubs
-        modified_pfts_fract(:,8) = SUM(pfts_fract(:,7:8),DIM=2)*(1-fract_snow(:))*fract_fpc_max   ! Grass
-        modified_pfts_fract(:,9) = (1-fract_snow(:))*(1-fract_fpc_max)                 ! Others
+        modified_pfts_fract(:,1)  = fract_snow(:)
+        modified_pfts_fract(:,2)  = pfts_fract(:,1) *(1-fract_snow(:))*fract_fpc_max     ! Tropical broadleaf evergreen
+        modified_pfts_fract(:,3)  = pfts_fract(:,2) *(1-fract_snow(:))*fract_fpc_max     ! Tropical broadleaf deciduous
+        modified_pfts_fract(:,4)  = pfts_fract(:,3) *(1-fract_snow(:))*fract_fpc_max     ! Extra-tropical broadleaf evergreen
+        modified_pfts_fract(:,5)  = pfts_fract(:,4) *(1-fract_snow(:))*fract_fpc_max     ! Extra_tropical broadleaf deciduous
+        modified_pfts_fract(:,6)  = pfts_fract(:,5) *(1-fract_snow(:))*fract_fpc_max     ! Raingreen Shrubs
+        modified_pfts_fract(:,7)  = pfts_fract(:,6) *(1-fract_snow(:))*fract_fpc_max     ! Deciduous Shrubs
+        !modified_pfts_fract(:,8)  = SUM(pfts_fract(:,7:8),DIM=2)*(1-fract_snow(:))*fract_fpc_max   ! Grass
+        modified_pfts_fract(:,8)  = pfts_fract(:,7) *(1-fract_snow(:))*fract_fpc_max     !
+        modified_pfts_fract(:,9)  = pfts_fract(:,8) *(1-fract_snow(:))*fract_fpc_max     !
+        modified_pfts_fract(:,10) = pfts_fract(:,9) *(1-fract_snow(:))*fract_fpc_max     !
+        modified_pfts_fract(:,11) = pfts_fract(:,10)*(1-fract_snow(:))*fract_fpc_max     !
+        modified_pfts_fract(:,12) = pfts_fract(:,11)*(1-fract_snow(:))*fract_fpc_max     !
+        modified_pfts_fract(:,13) = (1-fract_snow(:))*(1-fract_fpc_max)                  ! Others
 
         lightning_climatology => dsl4jsb_memory(DISTURB_)%lightning_climatology(ics:ice, iblk, day_of_year)    ! <Rackhun Son>
 
@@ -683,6 +713,8 @@ CONTAINS
               & swl3_clim(:,day_of_year)/diff_year,                       &
               & swl4_ave(:),                                              &
               & swl4_clim(:,day_of_year)/diff_year,                       &
+              & swl5_ave(:),                                              &
+              & swl5_clim(:,day_of_year)/diff_year,                       &
               & lai_ave(:),                                               &
               & lai_clim(:,day_of_year)/diff_year,                        &
               & modified_pfts_fract(:,:),                                 &
@@ -762,6 +794,8 @@ CONTAINS
               & V25_memory(:,:), V26_memory(:,:), V27_memory(:,:),        &
               & V28_memory(:,:), V29_memory(:,:), V30_memory(:,:),        &
               & V31_memory(:,:), V32_memory(:,:), V33_memory(:,:),        &
+              & V34_memory(:,:), V35_memory(:,:), V36_memory(:,:),        &
+              & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),        &
               & RHC_memory(:,:), Y_memory(:,:),                           &
 
               !& dsl4jsb_Config(DISTURB_)%i2i_weight,                      &
@@ -876,6 +910,7 @@ CONTAINS
       swl2_ave(:) = 0.
       swl3_ave(:) = 0.
       swl4_ave(:) = 0.
+      swl5_ave(:) = 0.
       lai_ave(:) = 0.
 
 

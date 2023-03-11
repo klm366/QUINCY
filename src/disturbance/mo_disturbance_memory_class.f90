@@ -30,7 +30,7 @@ MODULE mo_disturb_memory_class
   PUBLIC :: t_disturb_memory, max_no_of_vars
 
   !INTEGER, PARAMETER :: max_no_of_vars = 40
-  INTEGER, PARAMETER :: max_no_of_vars = 70   ! < Rackhun Son >
+  INTEGER, PARAMETER :: max_no_of_vars = 80   ! < Rackhun Son >
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
@@ -56,6 +56,7 @@ MODULE mo_disturb_memory_class
     swl2_ave,                 & ! for Fire <Rackhun Son>
     swl3_ave,                 & ! for Fire <Rackhun Son>
     swl4_ave,                 & ! for Fire <Rackhun Son>
+    swl5_ave,                 & ! for Fire <Rackhun Son>
     lai_ave                     ! for Fire <Rackhun Son>
 
   TYPE(t_jsb_var_real3d) ::   &
@@ -67,6 +68,7 @@ MODULE mo_disturb_memory_class
     swl2_clim,                & ! for Fire <Rackhun Son>
     swl3_clim,                & ! for Fire <Rackhun Son>
     swl4_clim,                & ! for Fire <Rackhun Son>
+    swl5_clim,                & ! for Fire <Rackhun Son>
     lai_clim,                 & ! for Fire <Rackhun Son>
 
     V1_memory,                & ! for Fire <Rackhun Son>
@@ -102,6 +104,12 @@ MODULE mo_disturb_memory_class
     V31_memory,               & ! for Fire <Rackhun Son>
     V32_memory,               & ! for Fire <Rackhun Son>
     V33_memory,               & ! for Fire <Rackhun Son>
+    V34_memory,               & ! for Fire <Rackhun Son>
+    V35_memory,               & ! for Fire <Rackhun Son>
+    V36_memory,               & ! for Fire <Rackhun Son>
+    V37_memory,               & ! for Fire <Rackhun Son>
+    V38_memory,               & ! for Fire <Rackhun Son>
+    V39_memory,               & ! for Fire <Rackhun Son>
     RHC_memory,               & ! for Fire <Rackhun Son>
     Y_memory
 
@@ -313,6 +321,14 @@ CONTAINS
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
 
+    CALL mem%Add_var('swl5_ave', mem%swl5_ave,                              &
+      & hgrid, surface,                                                     &
+      & t_cf('swl5_ave', 'm3/m3',                                           &
+      &  'daily average of volumetric soil water content in the 5th layer'),&
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
     CALL mem%Add_var('lai_ave', mem%lai_ave,                                &
       & hgrid, surface,                                                     &
       & t_cf('lai_ave', '-',                                                &
@@ -381,6 +397,14 @@ CONTAINS
       & hgrid, daily,                                                       &
       & t_cf('swl4_clim', 'm3/m3',                                          &
       &  'daily climatology of soil water content in the 4th layer'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('swl5_clim', mem%swl5_clim,                            &
+      & hgrid, daily,                                                       &
+      & t_cf('swl5_clim', 'm3/m3',                                          &
+      &  'daily climatology of soil water content in the 5th layer'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
@@ -654,6 +678,54 @@ CONTAINS
       & hgrid, memory,                                                      &
       & t_cf('V33_memory', '-',                                             &
       &  'V33 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V34_memory', mem%V34_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V34_memory', '-',                                             &
+      &  'V34 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V35_memory', mem%V35_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V35_memory', '-',                                             &
+      &  'V35 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V36_memory', mem%V36_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V36_memory', '-',                                             &
+      &  'V36 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V37_memory', mem%V37_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V37_memory', '-',                                             &
+      &  'V37 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V38_memory', mem%V38_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V38_memory', '-',                                             &
+      &  'V38 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V39_memory', mem%V39_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V39_memory', '-',                                             &
+      &  'V39 memory'),                                                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
