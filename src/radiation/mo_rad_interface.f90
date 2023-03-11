@@ -1283,10 +1283,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: daytime_counter
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! 2D RAD_
-    dsl4jsb_Real2D_onChunk      :: daytime_counter
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
     ! 3D RAD_
@@ -1313,7 +1313,7 @@ CONTAINS
 #ifdef __QUINCY_STANDALONE__
     vgrid_canopy  => Get_vgrid('canopy_layer')
 #else
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+    vgrid_canopy  => Get_vgrid('canopy_layer')
 #endif
     ncanopy       =  vgrid_canopy%n_levels
     dsl4jsb_Get_memory(A2L_)
@@ -1334,10 +1334,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)               ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
     ! PHENO_
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
     ! 2D RAD_
-    dsl4jsb_Get_var2D_onChunk(RAD_, daytime_counter)                ! inout
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)                  ! in 
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout 
     ! 3D RAD_
@@ -1376,14 +1376,13 @@ CONTAINS
     !>
 
     ! docu:
-    ! prev_two_cos_zenith_angle and prev_one_cos_zenith_angle are updated in update_atm2land()
+    ! cos_zenith_angle tracing variables and daytime_counter are updated 
+    ! in update_atm2land() or directly in the ICON-Land standalone driver, respectively
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
       IF (swpar_srf_down(ic) > eps8) THEN
-        ! count number of daytime values
-        daytime_counter(ic) = daytime_counter(ic) + 1.0_wp
         ! add values
         DO icanopy = 1, ncanopy
           ppfd_sunlit_daytime_dacc_cl(ic,icanopy)  = ppfd_sunlit_daytime_dacc_cl(ic,icanopy) + &
@@ -1413,8 +1412,6 @@ CONTAINS
         ! zero the accumulation variables after daily average has been calculated
         ppfd_sunlit_daytime_dacc_cl(ic,:) = 0.0_wp
         ppfd_shaded_daytime_dacc_cl(ic,:) = 0.0_wp
-        ! zero the counter for number of accumulated values (*_dacc) per day
-        daytime_counter(ic) = 0.0_wp
       END IF
     END DO
 
@@ -1487,7 +1484,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(RAD_)
 
-    dsl4jsb_Aggregate_onChunk(RAD_, daytime_counter               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg    , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl   , weighted_by_fract)

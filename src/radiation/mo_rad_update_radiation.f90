@@ -160,7 +160,7 @@ CONTAINS
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+    vgrid_canopy  => Get_vgrid('canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
     ! ..

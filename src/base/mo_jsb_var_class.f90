@@ -45,6 +45,8 @@ MODULE mo_jsb_var_class
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     CHARACTER(len=:), ALLOCATABLE :: unit
     INTEGER                       :: type                      ! REAL1D / REAL2D / REAL3D
+    INTEGER                       :: len_dim3 = -1
+      !< bookkeeping variable for quick access of the size of the third dimension (only /= -1 if there is one)
     INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK
     CHARACTER(len=:), ALLOCATABLE :: element_name              ! 
     CHARACTER(len=:), ALLOCATABLE :: element_shortname         ! Short name of element

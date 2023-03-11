@@ -99,7 +99,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_constants                                     ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_parameters                                    ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas  ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     LOGICAL,  INTENT(in) ::   &
@@ -423,7 +423,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_parameters                                     ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     !-----------------------------------------------------------------------
@@ -756,7 +756,7 @@ CONTAINS
     & NPP_pot_rate_ca )
 
     ! Use Declarations
-    USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
+    USE mo_assimi_parameters,   ONLY: f_aut_leaf, cCost
 
     ! Arguments
     !$claw model-data
@@ -772,7 +772,7 @@ CONTAINS
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
-    REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
+    REAL(wp)             :: hlp
     REAL(wp)             :: maintenanceRespiration ! R_m
     REAL(wp)             :: growthRespiration      ! R_g
 
@@ -784,7 +784,8 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-
+    
+    hlp =  (cCost -1._wp) / cCost
     maintenanceRespiration = dark_respiration_ca / f_aut_leaf
     growthRespiration = max(0._wp,hlp * (gross_assimilation_ca - maintenanceRespiration))
     NPP_pot_rate_ca = gross_assimilation_ca - maintenanceRespiration - growthRespiration

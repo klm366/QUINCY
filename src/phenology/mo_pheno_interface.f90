@@ -55,25 +55,32 @@ MODULE mo_pheno_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
 
+  ! ======================================================================================================= !
   !> Type definition for the phenology task
+  !>  
+  !>   MODEL_JSBACH and MODEL_QUINCY
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_phenology
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_phenology    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_phenology !< Aggregates computed task variables
   END TYPE   tsk_phenology
-
   !> Constructor interface for update_phenology task
+  !>
   INTERFACE   tsk_phenology
     PROCEDURE Create_task_phenology         !< Constructor function for task
   END INTERFACE   tsk_phenology
 
+  ! ======================================================================================================= !
   !> Type definition for foliage_projected_cover task
+  !>  
+  !>   MODEL_JSBACH
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_foliage_projected_cover
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_fpc
     PROCEDURE, NOPASS :: Aggregate => aggregate_fpc
   END TYPE tsk_foliage_projected_cover
-
   !> Constructor interface for foliage_projected_cover task
   INTERFACE tsk_foliage_projected_cover
     PROCEDURE Create_task_foliage_projected_cover

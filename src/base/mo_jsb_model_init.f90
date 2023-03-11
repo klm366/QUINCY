@@ -461,6 +461,10 @@ CONTAINS
       CALL model%Queue_task(VEG_,     "reset_veg_fluxes")           ! 
       CALL model%Queue_task(SB_,      "reset_sb_fluxes")            ! 
       CALL model%Queue_task(SPQ_,     "reset_spq_fluxes")           ! 
+      ! testing bgcm
+      CALL model%Queue_task(SB_,      "copy_pool_to_bgcm_test")     ! 
+      CALL model%Queue_task(SB_,      "sb_pool_test")               ! 
+      CALL model%Queue_task(SB_,      "sb_bgcm_pool_test")          ! 
       ! science
       CALL model%Queue_task(SB_,      "sb_rate_modifier")           ! 
       CALL model%Queue_task(SPQ_,     "soil_turbulence")            ! 
@@ -524,6 +528,10 @@ CONTAINS
       CALL tile%Init(TRIM(model%shortname), '', TRIM(tile%name),                &
         & grid_id = model%grid_id,                                              &
         & in_var_groups=one_of(TRIM(tile%name), model%config%output_tiles) > 0)
+
+      ! setup bgc material store (if running with processes that have bgcms)
+      CALL tile%Count_and_classify_bgc_materials()
+      CALL tile%Collect_bgc_materials()
 
       ! ---------------------------------------------------------------------------------------------- !
       !>
@@ -771,7 +779,7 @@ CONTAINS
 
     END DO
 
-    ! Iterate over tiles, crosscheck tile structure and collect conserved quantities
+    ! Iterate over tiles, crosscheck tile structure, and collect conserved quantities
     CALL model%Reset_tiles()
     CALL model%Get_top_tile(tile)
     IF (.NOT. ASSOCIATED(tile)) &

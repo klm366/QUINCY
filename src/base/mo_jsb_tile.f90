@@ -49,13 +49,15 @@ MODULE mo_jsb_tile
     PROCEDURE :: Init           => Init_tile
     PROCEDURE :: Init_fractions => Init_fractions_on_tile
     PROCEDURE :: Init_vars      => Init_vars_on_tile
+    PROCEDURE :: Print          => Print_tile
+    PROCEDURE :: Handler        => Process_task_on_tile
     PROCEDURE :: Is_process_calculated       => Is_process_calculated_on_tile
     PROCEDURE :: Is_process_active           => Is_process_active_on_tile
     PROCEDURE :: Has_process_memory          => Has_process_memory_on_tile
     PROCEDURE :: Count_conserved_quantities  => Count_conserved_quantities_on_tile
     PROCEDURE :: Collect_conserved_variables => Collect_conserved_variables_on_tile
-    PROCEDURE :: Print          => Print_tile
-    PROCEDURE :: Handler        => Process_task_on_tile
+    PROCEDURE :: Count_and_classify_bgc_materials => Count_and_classify_bgc_materials_on_tile
+    PROCEDURE :: Collect_bgc_materials            => Collect_bgc_materials_on_tile
   END TYPE t_jsb_tile
 
   !> Used to create a vector of tiles
@@ -733,6 +735,161 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
+  !> Identifies the number and types of bgc materials on this tile
+  !> NOTE: Currently we are not really generic here but only expect 1l or 2l bgcms! 
+  !>       If something more generic is required in the future it'll need to be implemented then
+  !>       or alternatively if the bgcm stores as required for quincy are not required but "deeper" bgcm
+  !>       structures are, the collection of the pointers in the bgcm store might be surpressed if using
+  !>       bgcms but not Quincy...
+  !>
+  SUBROUTINE Count_and_classify_bgc_materials_on_tile(this)
+
+    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
+    USE mo_jsb_pool_class,      ONLY: t_jsb_pool
+    USE mo_lnd_bgcm_store,      ONLY: t_lnd_bgcm_store
+    USE mo_lnd_bgcm_class,      ONLY: assert_no_compartment_bgc_materials, get_dimension_of_element_variables
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the bgc materials are checked
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_memory), POINTER     :: mem
+    CLASS(t_jsb_pool), POINTER       :: bgcm
+    CLASS(t_lnd_bgcm_store), POINTER :: bgcm_store
+    INTEGER                          :: i_proc, i_bgcm, i_compartment
+    INTEGER                          :: nr_of_bgcms_this_proc, nr_of_compartments
+    INTEGER                          :: this_dim, common_dim
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Count_and_classify_bgc_materials_on_tile'
+    ! -------------------------------------------------------------------------------------------------- !
+    IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
+    
+    ! Loop over all processes
+    DO i_proc = 1, max_no_of_processes
+
+      ! if the current process is not on the current tile exit DO loop
+      SELECT CASE (this%process_action(i_proc))
+      CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
+        CYCLE
+      END SELECT
+
+      ! also exit the Do loop if this process has no memory
+      IF (.NOT. ASSOCIATED(this%mem(i_proc)%p)) CYCLE
+
+      ! Only processes are relevant here that have any bgc material in their process memory
+      mem => this%mem(i_proc)%p
+      IF(mem%has_bgc_materials) THEN
+
+        ! If this is the first memory in which we find a bgc material the store needs to be initialised
+        IF (.NOT. ASSOCIATED(this%bgcm_store)) THEN
+          ALLOCATE(bgcm_store)
+          this%bgcm_store => bgcm_store
+        ENDIF
+
+        nr_of_bgcms_this_proc = SIZE(mem%bgc_material%pool_list)
+        this%bgcm_store%nr_of_bgc_materials = this%bgcm_store%nr_of_bgc_materials + nr_of_bgcms_this_proc
+        DO i_bgcm = 1, nr_of_bgcms_this_proc
+          bgcm => mem%bgc_material%pool_list(i_bgcm)%p
+
+          IF(bgcm%contains_elements) THEN
+            ! i.e. directly elements and no compartments
+            CALL assert_no_compartment_bgc_materials(bgcm, this%name, routine)
+            this_dim = get_dimension_of_element_variables(bgcm, this%name, routine)
+            IF(this_dim == 2) THEN
+              this%bgcm_store%nr_of_1l_2d_bgc_materials = this%bgcm_store%nr_of_1l_2d_bgc_materials + 1
+            ELSEIF(this_dim == 3) THEN
+              this%bgcm_store%nr_of_1l_3d_bgc_materials = this%bgcm_store%nr_of_1l_3d_bgc_materials + 1
+            ENDIF
+          ELSE
+            ! i.e. no elements but one layer of compartments which are then expected to have elements
+            ! but no further compartments! 
+            nr_of_compartments = SIZE(bgcm%pool_list)
+            common_dim = -1
+            DO i_compartment = 1, nr_of_compartments
+              IF(.NOT. bgcm%pool_list(i_compartment)%p%contains_elements) THEN
+                CALL finish(TRIM(routine), 'Found bgcm '//TRIM(bgcm%name)//' in tile '//TRIM(this%name)// &
+                  & ' that contains a compartment without elements '//                                    &
+                  &  TRIM(bgcm%pool_list(i_compartment)%p%name)//                                         &
+                  & ' but no behaviour is implemented for this so far, please check!')
+              ENDIF
+              CALL assert_no_compartment_bgc_materials(bgcm%pool_list(i_compartment)%p, this%name, routine)
+              this_dim = get_dimension_of_element_variables(bgcm%pool_list(i_compartment)%p, this%name, routine)
+              IF(i_compartment == 1) THEN
+                common_dim = this_dim
+              ELSEIF(common_dim /= this_dim) THEN
+                CALL finish(TRIM(routine), &
+                  & 'Found compartments with elements with different dimensions for the bgcm '// &
+                  & TRIM(bgcm%name)//' in tile '//TRIM(this%name)//                              &
+                  & ', but no behaviour is implemented for this so far, please check!')
+              ENDIF
+            ENDDO ! For each compartment
+            IF(common_dim == 2) THEN
+              this%bgcm_store%nr_of_2l_2d_bgc_materials = this%bgcm_store%nr_of_2l_2d_bgc_materials + 1
+            ELSEIF(common_dim == 3) THEN
+              this%bgcm_store%nr_of_2l_3d_bgc_materials = this%bgcm_store%nr_of_2l_3d_bgc_materials + 1
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDIF
+    ENDDO
+
+  END SUBROUTINE Count_and_classify_bgc_materials_on_tile
+
+  ! ======================================================================================================= !
+  !>
+  !> Collects the pointers to the variables that contain bgc elements
+  !>
+  SUBROUTINE Collect_bgc_materials_on_tile(this)
+    USE mo_jsb_memory_class,     ONLY: t_jsb_memory
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are collected
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_memory), POINTER  :: mem
+    INTEGER                       :: i_proc
+    INTEGER                       :: ind_1l_2d_bgcm, ind_2l_2d_bgcm, ind_1l_3d_bgcm, ind_2l_3d_bgcm
+    INTEGER                       :: ind_bgcm
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_bgc_materials_on_tile'
+    ! -------------------------------------------------------------------------------------------------- !
+    IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
+
+    ! If there is any process on this tile that has bgc materials, an instance of the bgcm store
+    ! would have been created on this tile in the collection routine
+    IF(ASSOCIATED(this%bgcm_store)) THEN
+      CALL this%bgcm_store%init()
+
+      ! and init indices for bookkeeping
+      ind_bgcm = 0
+      ind_1l_2d_bgcm = 0
+      ind_2l_2d_bgcm = 0
+      ind_1l_3d_bgcm = 0
+      ind_2l_3d_bgcm = 0
+    ELSE
+      ! If there is no bgcm store, then there are no active processes with bgcm material on this tile
+      RETURN
+    ENDIF
+
+    ! Loop over all processes
+    DO i_proc=1,max_no_of_processes
+      ! if the current process is not on the current tile exit DO loop
+      SELECT CASE (this%process_action(i_proc))
+      CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
+        CYCLE
+      END SELECT
+
+      ! also exit the DO loop if this process has no memory
+      IF (.NOT. ASSOCIATED(this%mem(i_proc)%p)) CYCLE
+
+      ! Only processes are relevant here that have any bgc material in their process memory
+      mem => this%mem(i_proc)%p
+      IF(mem%has_bgc_materials) THEN
+        CALL this%bgcm_store%append_bgcms(mem%bgc_material, this%name, &
+          & ind_bgcm, ind_1l_2d_bgcm, ind_2l_2d_bgcm, ind_1l_3d_bgcm, ind_2l_3d_bgcm)
+      ENDIF
+    ENDDO
+
+  END SUBROUTINE Collect_bgc_materials_on_tile
+
+  ! ======================================================================================================= !
+  !>
   !> Identifies the conserved quantity types (CQTs) in use on this tile and counts conserved quantities (CQs) of each CQT
   !>
   SUBROUTINE Count_conserved_quantities_on_tile(this)
@@ -798,7 +955,10 @@ CONTAINS
       END DO
     END DO
 
-  END SUBROUTINE Count_conserved_quantities_on_tile  
+  END SUBROUTINE Count_conserved_quantities_on_tile
+
+
+
 
   ! ======================================================================================================= !
   !>
@@ -854,7 +1014,7 @@ CONTAINS
               last_index = this%conserved_quantities(ind)%p%last_index_used
               ! Assert: last_index > no_of_vars should not be possible
               IF ( nrOfConsQuans < last_index) &
-                & CALL finish(TRIM(routine), 'Assigned conserved quantities exceed expected number.')              
+                & CALL finish(TRIM(routine), 'Assigned conserved quantities exceed expected number.')
 
               ! Add current variable
               this%conserved_quantities(ind)%p%cq_vars_2D(last_index)%p => mem%vars(i)%p
@@ -873,7 +1033,7 @@ CONTAINS
       END DO
     END DO
 
-  END SUBROUTINE Collect_conserved_variables_on_tile  
+  END SUBROUTINE Collect_conserved_variables_on_tile
 
   ! ======================================================================================================= !
   !>
