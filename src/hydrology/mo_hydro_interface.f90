@@ -731,7 +731,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_skin,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_snow,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, water_to_soil,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, infilt,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
@@ -1094,7 +1093,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
       ! out
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
@@ -1102,7 +1101,8 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         )      &
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
       & )
 
     ! Convert soil hydrology balance error to volume
@@ -1154,6 +1154,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -2128,6 +2129,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER    :: model
     TYPE(t_jsb_grid),  POINTER    :: grid
 
+    dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(A2L_)
 
@@ -2138,6 +2140,7 @@ CONTAINS
       & runoff, &
       & drainage, &
       & evapotrans, &
+      & evapo_deficit, &
       & wtr_skin, &
       & weq_snow, &
       & weq_fluxes, &    ! [m3 s-1]
@@ -2148,18 +2151,21 @@ CONTAINS
       & ice_soil_sl
 
     REAL(wp), POINTER :: &
-      & area(:)
+      & area(:), lat(:), lon(:)
 
     ! Locally allocated vectors
     !
     REAL(wp) :: &
-      & tile_fract (options%nc), &
-      & weq_land_new(options%nc)
+      & tile_fract (options%nc),  &
+      & weq_land_new(options%nc), &
+      & tile_area(options%nc),    &
+      & wb_threshold(options%nc)
 
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
+    CHARACTER(len=4096)         :: message_text_long
 
     iblk  = options%iblk
     ics   = options%ics
@@ -2176,7 +2182,10 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     area => grid%area (ics:ice, iblk)
+    lat  => grid%lat(ics:ice, iblk)
+    lon  => grid%lon(ics:ice, iblk)
 
+    dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
 
@@ -2189,6 +2198,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)            ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow)            ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)       ! in
     END IF
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans)          ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_fluxes)          ! out
@@ -2200,6 +2210,7 @@ CONTAINS
     !$claw acc parallel loop gang vector
     DO i=1,nc
       tile_fract(i) = tile%fract(ics-1+i,iblk)
+      tile_area(i)  = tile_fract(i) * area(i)
     END DO
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
@@ -2221,6 +2232,46 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
       weq_balance_err(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
     END IF
+
+    ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
+    ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
+    wb_threshold(:) = 1.0e-11_wp * tile_area(:) / dtime
+
+    !$claw acc parallel loop gang vector
+    DO i=1,nc
+      IF (ABS(weq_balance_err(i)) > wb_threshold(i)) THEN
+        IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
+          WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',           NEW_LINE('a'), &
+            & 'on ',TRIM(tile%name),' tile at', lat(i),'N and ',lon(i),'E:',         NEW_LINE('a'), &
+            & 'WB Error:           ', weq_balance_err(i),                            NEW_LINE('a'), &
+            & 'Rainfall:           ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Snowfall:           ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Evapotranspiration: ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Runoff:             ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Drainage:           ', drainage(i)   * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Skin reservoir:     ', wtr_skin(i)           * tile_area(i),          NEW_LINE('a'), &
+            & 'Snow reservoir:     ', weq_snow(i)           * tile_area(i),          NEW_LINE('a'), &
+            & 'Soil water:         ', SUM(wtr_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
+            & 'Soil ice:           ', SUM(ice_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
+            & 'Old reservoirs:     ', weq_land(i),                                   NEW_LINE('a'), &
+            & 'ET deficit:         ', evapo_deficit(i) * tile_area(i) / rhoh2o * dtime
+        ELSE
+          WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',           NEW_LINE('a'), &
+            & 'on ',TRIM(tile%name),' tile at', lat(i),'N and ',lon(i),'E:',         NEW_LINE('a'), &
+            & 'WB Error:           ', weq_balance_err(i),                            NEW_LINE('a'), &
+            & 'Rainfall:           ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Snowfall:           ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Evapotranspiration: ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Runoff:             ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Drainage:           ', drainage(i)   * tile_area(i) / rhoh2o * dtime
+        END IF
+        IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget) THEN
+          CALL finish (TRIM(routine), message_text_long)
+        ELSE
+          CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+        END IF
+      END IF
+    END DO
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
     weq_land(:) = weq_land_new(:)

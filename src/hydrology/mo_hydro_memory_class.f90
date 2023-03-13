@@ -690,11 +690,10 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      !Todo: is this variable of any interest?
       CALL mem%Add_var( 'evapo_deficit', mem%evapo_deficit,                    &
         & hgrid, surface,                                                      &
-        & t_cf('evapo_deficit', 'm',   'Water that would have been evaporated  &
-              & additionally, if there had been more snow or surface water'),  &
+        & t_cf('evapo_deficit', 'm', 'Water which evaporated from other sources&
+              &/soillayers then intented'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &

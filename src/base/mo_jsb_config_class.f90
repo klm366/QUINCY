@@ -38,6 +38,7 @@ MODULE mo_jsb_config_class
                                                           !! models schemes: jsbach, jsbach combined with quincy, quincy
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
+    LOGICAL                        :: enforce_water_budget
     LOGICAL                        :: use_quincy
     CHARACTER(len=10)              :: quincy_model
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
@@ -103,6 +104,7 @@ CONTAINS
     INTEGER                       :: model_scheme                 !< model_scheme as ENUM (mo_jsb_model_class), used in model
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
+    LOGICAL                       :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
@@ -118,6 +120,7 @@ CONTAINS
       model_scheme_char, &
       use_lakes, &
       use_glacier, &
+      enforce_water_budget, &
       quincy_model, &
       l_compat401, &
       usecase, &
@@ -151,6 +154,7 @@ CONTAINS
     model_scheme               = MODEL_JSBACH   ! ENUM: MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
+    enforce_water_budget       = .TRUE.
     quincy_model               = 'land'
     l_compat401                = .FALSE.
     grid_filename              = ''
@@ -197,6 +201,7 @@ CONTAINS
     ! set other namelist options
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
+    model_config%enforce_water_budget       = enforce_water_budget
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
@@ -204,6 +209,14 @@ CONTAINS
     model_config%hsm_mode                   = hsm_mode
     model_config%fract_filename             = fract_filename
     model_config%relative_fractions_in_file = relative_fractions_in_file
+
+    IF (enforce_water_budget) THEN
+      CALL message(TRIM(routine), 'Model will finish in case of any water balance violation on land. '// &
+        & 'Set enforce_water_budget to .False. to run the model anyway.')
+    ELSE
+      CALL message(TRIM(routine), 'WARNING: Model will not stop due to any land water balance violation.')
+    END IF
+
     ! quincy - temporary solution @TODO
     model_config%dtime                        = 1800.0_wp   ! length of one time step in seconds
     model_config%flag_stand_harvest           = .FALSE.
