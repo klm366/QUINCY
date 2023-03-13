@@ -38,6 +38,7 @@ MODULE mo_jsb_config_class
     INTEGER                        :: model_scheme        !< model_scheme as integer
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
+    LOGICAL                        :: enforce_water_budget
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
@@ -112,6 +113,7 @@ CONTAINS
     CHARACTER(len=20)             :: model_scheme     !< model_scheme: jsbach / jsbach_quincy / quincy
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
+    LOGICAL                       :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
@@ -134,6 +136,7 @@ CONTAINS
       model_scheme, &
       use_lakes, &
       use_glacier, &
+      enforce_water_budget, &
       quincy_model, &
       l_compat401, &
       usecase, &
@@ -171,6 +174,7 @@ CONTAINS
     model_scheme               = "jsbach"
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
+    enforce_water_budget       = .TRUE.
     quincy_model               = 'land'
     l_compat401                = .FALSE.
     grid_filename              = ''
@@ -227,6 +231,7 @@ CONTAINS
     ! set other namelist options
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
+    model_config%enforce_water_budget       = enforce_water_budget
     model_config%quincy_model               = TRIM(quincy_model)
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
@@ -240,6 +245,13 @@ CONTAINS
     model_config%include_carbon14           = include_carbon14
     model_config%include_nitrogen15         = include_nitrogen15
     CALL setup_element_index_map_in_config(model_config, routine)
+
+    IF (enforce_water_budget) THEN
+      CALL message(TRIM(routine), 'Model will finish in case of any water balance violation on land. '// &
+        & 'Set enforce_water_budget to .False. to run the model anyway.')
+    ELSE
+      CALL message(TRIM(routine), 'WARNING: Model will not stop due to any land water balance violation.')
+    END IF
 
     ! quincy - temporary solution @TODO
     model_config%dtime                        = 1800.0_wp   ! length of one time step in seconds
