@@ -64,7 +64,7 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime
     USE mo_atmland_constants,     ONLY: min_wind, max_wind 
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_jsb_physical_constants,ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts, zkappa, rvd1
+    USE mo_jsb_physical_constants,ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, zkappa, rvd1
     USE mo_spq_constants,         ONLY: height_wind
 
     ! Use of process configurations (t_PROC_config)
@@ -91,7 +91,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: fract_fpc, blended_height 
     REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp)                              :: steplen
+    REAL(wp)                              :: steplen, alpha
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_turbulence'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -129,6 +129,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
@@ -213,7 +214,7 @@ CONTAINS
     ! effectively this limits drag to values larger than about 10% of the neutral drag
     zril(:)       = MIN(zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:) + ztvs(:)) / 2._wp ), 0.5_wp)
 
-    CALL calc_drag_coefficient(steplen, &
+    CALL calc_drag_coefficient(steplen, alpha, &
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
                                zg(:),zgh(:),z0m(:),z0h(:), &
                                zril(:), &                 ! inout
@@ -236,18 +237,19 @@ CONTAINS
   !! Calculates drag coefficient and aerodynamic conductance 
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_drag_coefficient( &
-                                   steplen, &
+                                   steplen, alpha, &
                                    t_air,q_air,wind_air,press_srf, & 
                                    zg,zgh,z0m,z0h,zril, & 
                                    drag_srf,pch,ga)            
 
     USE mo_phy_schemes,             ONLY: heat_transfer_coef
-    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, cvdifts, rvd1
+    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, rvd1
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut 
     REAL(wp),                        INTENT(in)    :: steplen                !< step length for this process
+    REAL(wp),                        INTENT(in)    :: alpha                  !< impliciteness factor
     REAL(wp),                        INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
@@ -278,7 +280,7 @@ CONTAINS
     zcons8     = 2._wp * 5.0_wp 
     zcons9     = 3._wp * 5.0_wp 
     zcons11    = 3._wp * 5.0_wp * 5.0_wp
-    zcons12    = cvdifts * steplen * grav / r_gas_dryair 
+    zcons12    = alpha * steplen * grav / r_gas_dryair 
     zdu2       = wind_air**2._wp
 
     ! Neutral drag coefficient for momentum and heat
