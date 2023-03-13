@@ -292,6 +292,13 @@ CONTAINS
 #endif
 #endif
 
+    IF (enforce_water_budget) THEN
+      CALL message(TRIM(routine), 'Model will finish in case of any water balance violation on land. '// &
+        & 'Set enforce_water_budget to .False. to run the model anyway.')
+    ELSE
+      CALL message(TRIM(routine), 'WARNING: Model will not stop due to any land water balance violation.')
+    END IF
+
     ! quincy - temporary solution @TODO
     model_config%flag_stand_harvest           = .FALSE.
     model_config%stand_replacing_year         = 1500
