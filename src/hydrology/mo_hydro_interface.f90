@@ -1629,7 +1629,7 @@ CONTAINS
       & heat_tcoef   (:)     !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -1642,6 +1642,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -1673,8 +1674,8 @@ CONTAINS
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_1 tile_name=tile%name
       q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
-      heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)  ! Transfer coefficient
-      evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_lwtr(:)) ! Potential evaporation
+      heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen, alpha)  ! Transfer coefficient
+      evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_lwtr(:))        ! Potential evaporation
       !$claw end expand
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
@@ -1687,8 +1688,8 @@ CONTAINS
 
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_2 tile_name=tile%name
         q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:) ! New moisture at lowest atmospheric level by back-substitution
-        heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)  ! Transfer coefficient
-        evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:)) ! Potential evaporation
+        heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen, alpha)  ! Transfer coefficient
+        evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:))        ! Potential evaporation
         evapopot  (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
         !$claw end expand
       ELSE
@@ -1715,7 +1716,7 @@ CONTAINS
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
       q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
-      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)  ! Transfer coefficient
+      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)  ! Transfer coefficient
 
       ! Compute effective air moisture and surface saturation humidity
       q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
@@ -1873,7 +1874,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_skin_fraction'
 
     INTEGER  :: iblk, ics, ice
-    REAL(wp) :: dtime, steplen, config_w_skin_max
+    REAL(wp) :: dtime, steplen, alpha, config_w_skin_max
     !$claw verbatim INTEGER, SAVE :: task_counter = 1
 
     ! Declare pointers for process configuration and memory
@@ -1910,6 +1911,7 @@ CONTAINS
     ice     = options%ice
     dtime   = options%dtime
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(HYDRO_)) RETURN
 
@@ -2012,6 +2014,7 @@ CONTAINS
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
         & steplen,                   & ! in
+        & alpha,                     & ! in
         & skinres_max(:),            & ! in
         & oro_stddev(:),             & ! in
         & t(:),                      & ! in, from the previous time step as long as this is called before the asselin filter
@@ -2036,6 +2039,7 @@ CONTAINS
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in
         & steplen,                    & ! in
+        & alpha,                      & ! in
         & skinres_max,                & ! in
         & oro_stddev(:),              & ! in
         & t(:),                       & ! in

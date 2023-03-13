@@ -1036,7 +1036,8 @@ CONTAINS
       IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
       ! Update options
-      CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
+      CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
+        &                    dtime=dtime, steplen=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
       CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 

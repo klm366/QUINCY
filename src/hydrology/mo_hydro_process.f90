@@ -1376,6 +1376,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
     & dtime,                                     & ! in
     & steplen,                                   & ! in
+    & alpha,                                     & ! in
     & skinres_max,                               & ! in
     & oro_stddev,                                & ! in
     & t_srf_old,                                 & ! in
@@ -1395,7 +1396,8 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
-      & steplen
+      & steplen,            &
+      & alpha
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
@@ -1440,7 +1442,7 @@ CONTAINS
 
     ! Potential evaporation using old values of air and surface humidity
     qsat_srf_old = qsat(t_srf_old, press_srf)
-    evapo_pot =  -1._wp * heat_transfer_coef(drag_srf, steplen) * (q_air - qsat_srf_old)  ! Positive upwards
+    evapo_pot =  -1._wp * heat_transfer_coef(drag_srf, steplen, alpha) * (q_air - qsat_srf_old)  ! Positive upwards
 
     ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy; same for skin reservoir
@@ -1461,6 +1463,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_wskin_fractions_bare( &
     & dtime,                                      & ! in
     & steplen,                                    & ! in
+    & alpha,                                      & ! in
     & skinres_max,                                & ! in
     & oro_stddev,                                 & ! in
     & t_srf,                                      & ! in
@@ -1478,7 +1481,8 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
-      & steplen
+      & steplen,            &
+      & alpha
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
@@ -1516,7 +1520,7 @@ CONTAINS
     ! Potential evaporation using old values of air and surface humidity
     t_srf_old = t_srf
     qsat_srf_old = qsat(t_srf_old, press_srf)
-    evapo_pot =  heat_transfer_coef(drag_srf, steplen) * (qsat_srf_old - q_air) ! Positive upwards
+    evapo_pot =  heat_transfer_coef(drag_srf, steplen, alpha) * (qsat_srf_old - q_air) ! Positive upwards
 
     ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy together

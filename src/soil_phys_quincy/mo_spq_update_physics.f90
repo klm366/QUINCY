@@ -89,7 +89,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: rel_hum
     INTEGER                               :: isoil
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp)                              :: steplen
+    REAL(wp)                              :: steplen, alpha
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_spq_physics'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -175,6 +175,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
@@ -279,7 +280,7 @@ CONTAINS
     !> 2.0 Calculate surface energy budget
     !!
     CALL calc_surface_energy_balance(nc, nsoil_sb, &
-                                     steplen, &
+                                     steplen, alpha, &
                                      sw_srf_net(:),lw_srf_down(:), & 
                                      t_air(:),t_acoef(:),t_bcoef(:), & 
                                      q_air(:),q_acoef(:),q_bcoef(:), & 
@@ -326,7 +327,7 @@ CONTAINS
   !! Calculates surface energy fluxes and deep soil temperatures 
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_surface_energy_balance(nc, nsoil_sb, &
-                                         steplen, &
+                                         steplen, alpha, &
                                          sw_srf_net,lw_srf_down, & 
                                          t_air,t_acoef,t_bcoef, & 
                                          q_air,q_acoef,q_bcoef, & 
@@ -344,7 +345,7 @@ CONTAINS
     USE mo_atmland_util,              ONLY: calc_spec_humidity_sat
     USE mo_spq_constants,             ONLY: w_skin_max
     USE mo_jsb_physical_constants,    ONLY: r_gas_dryair, LatentHeatSublimation, LatentHeatVaporization, &
-                                            stbo, zemiss_def, grav, cvdifts, cpd, cpvd1
+                                            stbo, zemiss_def, grav, cpd, cpvd1
     USE mo_phy_schemes,               ONLY: heat_transfer_coef, q_effective, surface_dry_static_energy
     
 
@@ -354,6 +355,7 @@ CONTAINS
     INTEGER,                                          INTENT(in)    :: nc, &                  !< dimensions
                                                                        nsoil_sb
     REAL(wp),                                         INTENT(in)    :: steplen                !< step length for this process
+    REAL(wp),                                         INTENT(in)    :: alpha                  !< Implicitness factor
     REAL(wp), DIMENSION(nc),                          INTENT(in)    :: sw_srf_net, &          !< net shortwave radiation [W/m2] 
                                                                        lw_srf_down, &         !< longwave downward radiation [W/m2]
                                                                        t_air, &               !< air temperature [K]
@@ -423,7 +425,7 @@ CONTAINS
 
     !> 1.1 Calculate heat transfer coefficient
     !!
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)
     
     !> 1.2 net radiation flux at the surface
     !!
@@ -471,6 +473,7 @@ CONTAINS
     !> 2.3 solve energy balance calculation using implicit formulation (JSBACH4)
     !!
     hlp1 = calc_temp_srf_new_implicit(steplen, &
+                                      alpha, &
                                       t2s_conv(:), & 
                                       t_acoef(:), &
                                       t_bcoef(:), &
@@ -488,7 +491,11 @@ CONTAINS
                                       heat_capa_sl(:,1) * bulk_dens_sl(:,1) * soil_depth_sl(:,1)) 
 
     ! time-filtering as in JSBACH3
-    s_star(:)     = 1._wp / cvdifts * hlp1(:) + (1._wp - 1._wp / cvdifts) * s_old(:) 
+    IF (alpha /= 1._wp) THEN
+      s_star(:)     = 1._wp / alpha * hlp1(:) + (1._wp - 1._wp / alpha) * s_old(:) 
+    ELSE
+      s_star(:)     = hlp1(:)
+    END IF
     t_srf_new(:)  = s_star(:) / t2s_conv(:)
     q_sat_star(:) = q_sat_srf(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:) 
 
@@ -1027,17 +1034,18 @@ CONTAINS
   !!   srf_energy_bal/mo_seb_land:update_surface_energy_land:surface_temp_implicit
   !!
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL FUNCTION calc_temp_srf_new_implicit(steplen,t2s_conv,t_Acoef,t_Bcoef,q_Acoef,q_Bcoef, & 
+  ELEMENTAL FUNCTION calc_temp_srf_new_implicit(steplen, alpha, t2s_conv,t_Acoef,t_Bcoef,q_Acoef,q_Bcoef, & 
                                                   s_old,qsat_srf_old,dQdT, & 
                                                   net_radiation,ground_heat_flx,heat_transfer_coef, & 
                                                   cair,csat,snow_cover_fract,heat_capa_srf) RESULT (s_new)
 
-    USE mo_jsb_physical_constants,    ONLY: LatentHeatVaporization, LatentHeatSublimation, cvdifts, stbo, zemiss_def
+    USE mo_jsb_physical_constants,    ONLY: LatentHeatVaporization, LatentHeatSublimation, stbo, zemiss_def
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 In
     REAL(wp), INTENT(in) :: steplen, & 
+                            alpha,   &
                             t2s_conv, & 
                             t_Acoef, & 
                             t_Bcoef, & 
@@ -1058,7 +1066,7 @@ CONTAINS
      ! local
      REAL(wp) :: pdt, zicp, zca, zcs, zcolin, zcohfl, zcoind
 
-     pdt = cvdifts * steplen
+     pdt = alpha * steplen
 
      zicp = 1._wp / t2s_conv 
  
