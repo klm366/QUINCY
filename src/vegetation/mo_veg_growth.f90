@@ -153,7 +153,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: swpar_fdiffuse
+    dsl4jsb_Real2D_onChunk      :: fract_par_diffuse
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soa
@@ -366,7 +366,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)                   ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)                                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                     ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)                     ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)                  ! in
     ! ASSIMI_ 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                        ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)                        ! in
@@ -775,7 +775,7 @@ CONTAINS
                                               ppfd_sunlit_cl(:,:)                                     , &
                                               ppfd_shaded_cl(:,:)                                     , &
                                               swpar_srf_down(:)                                       , &
-                                              swpar_fdiffuse(:)                                       , & ! in
+                                              fract_par_diffuse(:)                                    , & ! in
                                               unit_npp(:)                                             , & ! out
                                               unit_transpiration(:)                                   )   ! out 
     

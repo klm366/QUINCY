@@ -148,7 +148,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: prev_two_cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: daytime_counter
-    
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
