@@ -647,6 +647,9 @@ CONTAINS
           !
       ENDIF
 
+      !! ============== Include decay of crop harvest in soil respiration =============
+      soil_respiration = soil_respiration + cflux_crop_harvest_2_atmos
+
       ! determine annual maximum content of green pool for NLCC process
       IF (new_year) THEN
          max_green_bio = c_green
