@@ -641,13 +641,15 @@ CONTAINS
           !
       ENDIF
 
+      !! ============== Include decay of crop harvest in soil respiration =============
+      soil_respiration = soil_respiration + cflux_crop_harvest_2_atmos
+
       ! determine annual maximum content of green pool for NLCC process
       IF (new_year) THEN
          max_green_bio = c_green
       ELSEIF (new_day) THEN
          max_green_bio = MAX(max_green_bio, c_green)
       ENDIF
-
 
       ! R: In JSBACH3 wurden alle C-pools auf canopy Flaeche gezogen gerechnet. Ebenso die C Fluxe.
       !    Fuer den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
