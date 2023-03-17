@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the utilities for the soil and snow energy process
+!! @brief Contains the utilities for the topmodel wetland diagnostics
 !!
 !! @author
 !!  Stiig Wilkenskjeld, MPI-M Hamburg

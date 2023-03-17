@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the routines for the soil and snow energy processes
+!! @brief Contains the routines for the topmodel wetland diagnostics
 !!
 !! @author
 !!  Stiig Wilkenskjeld, MPI-M Hamburg
