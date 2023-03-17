@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the memory class for the soil and snow energy process.
+!! @brief Contains the memory class for the topmodel wetland diagnostics
 !!
 !! @author
 !!  Stiig Wilkenskjeld, MPI-M Hamburg

@@ -1,5 +1,5 @@
 !>
-!! @brief Contains the interfaces to the soil and snow energy processes
+!! @brief Contains the interfaces to the topmodel wetland diagnostics
 !!
 !! @author
 !!  Stiig Wilkenskjeld, MPI-M Hamburg
@@ -43,7 +43,7 @@ use mo_util, only: real2string, int2string, logical2string
 
   PUBLIC :: Register_top_tasks
 
-  !> Type definition for soil_temp_and_hydro task
+  !> Type definition for topmodel task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_top
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_topmodel

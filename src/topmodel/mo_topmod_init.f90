@@ -1,5 +1,5 @@
 !>
-!! @brief Initialization of the the soil and snow memory.
+!! @brief Initialization of the topmodel wetland scheme.
 !!
 !! @author
 !!  Stiig Wilkenskjeld, MPI-M Hamburg
@@ -36,7 +36,7 @@ MODULE mo_top_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: topmodel_init !, init_soil_properties
+  PUBLIC :: topmodel_init
 
   TYPE t_top_init_vars
     REAL(wp), POINTER ::                 &
@@ -56,7 +56,7 @@ MODULE mo_top_init
 CONTAINS
 
   !
-  !> Intialize soil and snow energy process (after memory has been set up)
+  !> Intialize topmodel wetland process (after memory has been set up)
   !
   SUBROUTINE topmodel_init(tile)
 
@@ -74,7 +74,7 @@ CONTAINS
     CALL topmodel_init_bc(tile)
     CALL topmodel_init_ic(tile)
 
-    IF (tile%Is_last_process_tile(SSE_)) THEN
+    IF (tile%Is_last_process_tile(TOP_)) THEN
       CALL topmodel_finalize_init_vars()
     END IF
 
