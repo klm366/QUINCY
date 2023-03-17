@@ -322,13 +322,9 @@ CONTAINS
   ! Note that this routine should only be applied to special vegetation classes
   SUBROUTINE update_assimilation_scaling_factors(tile, options)
 
-#ifdef __ICON__
-    USE mo_radiation_orbit,   ONLY: inquire_declination
-#else
-    USE mo_orbit,             ONLY: inquire_declination
-#endif
-    USE mo_jsb_grid,          ONLY: Get_grid
-    USE mo_assimi_process,    ONLY: calc_assimilation_scaling_factors
+    USE mo_orbit_solar,    ONLY: inquire_declination
+    USE mo_jsb_grid,       ONLY: Get_grid
+    USE mo_assimi_process, ONLY: calc_assimilation_scaling_factors
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
