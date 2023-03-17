@@ -22,16 +22,14 @@ MODULE mo_wlcc_interface
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message, finish
 
-  USE mo_jsb_varlist,     ONLY: VARNAME_LEN
-
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes WLCC_, PPLCC_, DISTURB_, CARBON_, PHENO_
+  dsl4jsb_Use_processes WLCC_, DISTURB_, CARBON_
 
   IMPLICIT NONE
   PRIVATE
@@ -92,15 +90,13 @@ CONTAINS
   SUBROUTINE update_wlcc(tile, options)
 
     USE mo_jsb_time,          ONLY: is_newday
-    USE mo_jsb_lcc_class,     ONLY: t_jsb_lcc_proc, &
-      &                             transfer_from_active_to_passive_var_onChunk, copy_from_active_to_passive_var_onChunk
+    USE mo_jsb_lcc_class,     ONLY: min_cf_change, t_jsb_lcc_proc, copy_from_active_to_passive_var_onChunk
     USE mo_jsb_lcc,           ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc, transfer_active_to_passive_onChunk
-    USE mo_carbon_constants,  ONLY: fract_green_aboveGround, fract_wood_aboveGround, sec_per_day
+    USE mo_carbon_constants,  ONLY: sec_per_day
+    USE mo_fage_interface,    ONLY: recalc_fract_per_age_upon_disturbance
 
-    dsl4jsb_Use_memory(PHENO_)
     dsl4jsb_Use_memory(DISTURB_)
     dsl4jsb_Use_config(WLCC_)
-    dsl4jsb_Use_config(CARBON_)
 
     IMPLICIT NONE
 
@@ -111,7 +107,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_wlcc'
     LOGICAL, PARAMETER :: allAtOnce = .FALSE.
 
-    CLASS(t_jsb_tile_abstract), POINTER :: current_tile, disturbed_tile
+    CLASS(t_jsb_tile_abstract), POINTER :: current_tile, d_tile
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
 
@@ -122,13 +118,14 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: current_fract
 
-    dsl4jsb_Def_config(CARBON_)
+    LOGICAL  :: d_tile_is_ac       ! if the disturbed tile is a ac tile (only if running with age classes)
+    INTEGER  :: i_first_ac         ! index of first ac (only if running with age classes)
+    CLASS(t_jsb_tile_abstract), POINTER :: first_ac ! pointer to first ac (only if running with age classes)
+  
     dsl4jsb_Def_config(WLCC_)
-    dsl4jsb_Def_memory_tile(DISTURB_, disturbed_tile)
-    dsl4jsb_Def_memory_tile(PHENO_, disturbed_tile)
-    dsl4jsb_Real2D_onChunk :: damaged_fract_disturbed_tile
-    dsl4jsb_Real2D_onChunk :: veg_fract_correction_disturbed_tile
-    dsl4jsb_Real2D_onChunk :: fract_fpc_max_disturbed_tile
+    dsl4jsb_Def_memory_tile(DISTURB_, d_tile)
+    dsl4jsb_Real2D_onChunk :: damaged_fract_d_tile
+
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
@@ -141,14 +138,7 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_config(WLCC_)
-    dsl4jsb_Get_config(CARBON_)
 
-    !>
-    !> 1. Get lcc structure
-    !>
-    dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
-    nr_of_tiles = lcc_relocations%nr_of_tiles
-    
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(WLCC_)) RETURN
 
@@ -157,12 +147,23 @@ CONTAINS
     
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    ! Assert, that this tile is the VEG tile 
-    ! - this lcc process works on the PFT tiles but is controlled on their parent tile
-    IF (.NOT. tile%name .EQ. 'veg') THEN
-      CALL finish(TRIM(routine), 'Violation of precondition: wlcc processes is expected to run on the veg tile, instead' &
-        & //' tried to run on '// trim(tile%name))
+    ! Assertion: wlcc is currently implemented to run on
+    ! - the veg tile in the pft use case
+    ! - the pfts or pftXX_fcXX tiles (if running with age classes)
+    IF(.NOT. INDEX(tile%name, 'pft') > 0) THEN
+      IF(.NOT. (TRIM(model%config%usecase) == 'jsbach_pfts' .AND. (INDEX(tile%name, 'veg') > 0))) THEN
+        CALL finish(TRIM(routine), 'Violation of assertion: wlcc (currently) is implemented to run on ' &
+        & //' the pft tiles or the veg tile in the pft use case or - on the pft tiles or the ' &
+        & //' acs (if with age classes), but tried to run for: ' // trim(tile%name) // '. Please check.')
+      ENDIF
     ENDIF
+
+    !>
+    !> 1. Get lcc structure
+    !>
+    dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
+    nr_of_tiles = lcc_relocations%nr_of_tiles
+    
 
     ! Allocate area vectors
     ALLOCATE(initial_area(nc, nr_of_tiles))
@@ -180,18 +181,37 @@ CONTAINS
     !>         [TR: suggested to permute the order of tiles in the loop for alcc with transitions]
     !>
     IF (dsl4jsb_Config(WLCC_)%separate) THEN ! => 2b
-      nr_of_lcc_events = tile%Get_no_of_children()
+      nr_of_lcc_events = nr_of_tiles
       nr_of_combined_tiles = 1
     ELSE ! not in a do loop but all at once    => 2a
       nr_of_lcc_events = 1
-      nr_of_combined_tiles = tile%Get_no_of_children()
+      nr_of_combined_tiles = nr_of_tiles
     ENDIF
 
-    ! In both cases: start with the first child
-    disturbed_tile => tile%Get_first_child_tile()
+    ! initiate pointers, logicals and indices to enable lcc, particularly if running with forest age classes
+    d_tile_is_ac = .FALSE.
+    IF(tile%Has_children()) THEN
+      d_tile => tile%Get_first_child_tile()
+      IF(d_tile%Has_children()) THEN
+        CALL finish(TRIM(routine), 'Violation of assertion: wlcc (currently) is not implemented to run on ' &
+          & //'a hierarchy level with more descendants than direct children. Tried to run on ' &
+          & // trim(tile%name) // '. Please check.')
+      ENDIF
+      IF(TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
+        ! Assert: for wlcc (currently) first age class is expected first in the list of involved tiles
+        IF (.NOT. (d_tile%name .EQ. lcc_relocations%tile_names(1))) THEN
+          CALL finish(TRIM(routine), 'Violation of assertion: for wlcc (currently) the first age class is ' &
+            & //'expected to be listed as first involved tile, instead found: '// trim(d_tile%name))
+        ENDIF
+        first_ac => d_tile
+        i_first_ac = 1
+        d_tile_is_ac = .TRUE.
+      ENDIF
+    ELSE
+      d_tile => tile%self_tile
+    ENDIF
 
-    DO i =1,nr_of_lcc_events ! < outer loop enclosing one full lcc-cycle
-
+    DO i = 1,nr_of_lcc_events ! < outer loop enclosing one full lcc-cycle
       ! Collect initial area of all involved tiles
       CALL init_lcc_reloc(lcc_relocations, options, tile, initial_area)
 
@@ -211,23 +231,55 @@ CONTAINS
           i_tile = j
         ENDIF
 
+        IF(TRIM(model%config%usecase) == 'jsbach_forest_age_classes') THEN
+          ! Assertion: if running with age classes all classes are expected to be involved with wlcc
+          IF (.NOT. (d_tile%name .EQ. lcc_relocations%tile_names(i_tile))) THEN
+            CALL finish(TRIM(routine), 'Violation of assertion: for wlcc (currently) all age classes are expected ' &
+              & //'to be listed as involved, but found not involved age-class: '// trim(d_tile%name))
+          ENDIF
+        ENDIF
+
         ! - add damaged area of current child to lost area
-        CALL disturbed_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
-  ! this ugly indentation is needed to avoid a too long line after dsl macro application
-  dsl4jsb_Get_memory_tile(DISTURB_, disturbed_tile)
-        dsl4jsb_Get_var2d_onChunk_tile_name(DISTURB_, damaged_fract, disturbed_tile)
-        dsl4jsb_Get_memory_tile(PHENO_, disturbed_tile)
-        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, veg_fract_correction, disturbed_tile)
-        dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, fract_fpc_max, disturbed_tile)
+        CALL d_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
+        dsl4jsb_Get_memory_tile(DISTURB_, d_tile)
+        dsl4jsb_Get_var2d_onChunk_tile_name(DISTURB_, damaged_fract, d_tile)
 
-        lost_area(:,i_tile) = damaged_fract_disturbed_tile(:) * current_fract(:)
-        gained_area(:,i_tile) = damaged_fract_disturbed_tile(:) * current_fract(:)
+        lost_area(:,i_tile) = damaged_fract_d_tile(:) * current_fract(:)
+        WHERE(lost_area(:,i_tile) < min_cf_change)
+          lost_area(:,i_tile) = 0.0_wp
+        END WHERE
 
-        disturbed_tile => disturbed_tile%Get_next_sibling_tile()
-      END DO
+        IF(ANY(lost_area(:,i_tile) > 0._wp)) THEN
+          ! - care for the gained area  -> @todo change when bare land tile available
+          ! ... if forest age classes are used the area of any disturbed age class is added to the first class
+          IF(d_tile_is_ac) THEN
+            gained_area(:,i_first_ac) = gained_area(:,i_first_ac) + lost_area(:,i_tile)
+            ! for all but the first age class thus the fractions need to be adapted
+            IF(.NOT. d_tile%Is_first_child()) THEN
+              current_fract(:) = current_fract(:) -  lost_area(:,i_tile)
+              CALL d_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
+              CALL first_ac%Get_fraction(ics, ice, iblk, fract=current_fract(:))
+              current_fract(:) = current_fract(:) + lost_area(:,i_tile)
+              CALL first_ac%Set_fraction(ics, ice, iblk, fract=current_fract(:))
+
+              ! Updated tracked age
+              CALL recalc_fract_per_age_upon_disturbance(tile, options, i_tile, lost_area(:,i_tile))
+
+            ENDIF
+
+          ELSE
+            ! else (currently) back to the tile itself
+            gained_area(:,i_tile) = damaged_fract_d_tile(:) * current_fract(:)
+          ENDIF
+        ENDIF
+
+        ! - go to next tile (if associated)
+        d_tile => d_tile%Get_next_sibling_tile()
+
+      END DO ! inner loop collecting lcc movements within this lcc-cycle
 
       ! Only needs to be executed if there is area to be moved
-      IF (ANY(lost_area(:, :) > 0.0_wp)) THEN
+      IF (ANY(lost_area(:, :) > 0._wp)) THEN
 
         !>
         !> 3. Each lcc process needs to call start lcc to collect to be transferred matter
@@ -243,39 +295,45 @@ CONTAINS
         !>     4.b and finally by calling the more general transfer_active_to_passive_onChunk lcc routine where calls to
         !>         process specific relocation routines can be specified
         !>
-        current_tile => tile%Get_first_child_tile()
+        IF(tile%Has_children()) THEN
+          current_tile => tile%Get_first_child_tile()
+        ELSE
+          current_tile => tile%self_tile
+        ENDIF
+        
         i_tile = 0
-        DO WHILE (ASSOCIATED(current_tile))
-          IF (ANY(current_tile%name .EQ. lcc_relocations%tile_names)) THEN
-            i_tile = i_tile + 1
-            IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
-              ! 4a -- 'special transfer'
-              IF (current_tile%Has_process_memory(CARBON_)) THEN
-                ! treat vegetation pools: copy matter for diagnostics
-                ! -> matter itself will be actively transferred to soils by the generic routine in the carbon interface
-                conversion_fact = 1.0_wp / sec_per_day
-                CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, &
-                  & 'c_woods', 'cflux_dist_woods_2_soil', conversion_fact = conversion_fact )
-                CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, &
-                  & 'c_green', 'cflux_dist_green_2_soil', conversion_fact = conversion_fact )
-                CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, options, &
-                  & 'c_reserve', 'cflux_dist_green_2_soil', conversion_fact = conversion_fact )
-              ENDIF
-              ! 4b -- general transfer of active vars
-              CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
+        DO WHILE (i_tile < nr_of_tiles)
+
+          i_tile = i_tile + 1
+          IF (ANY(lost_area(:, i_tile) > 0.0_wp)) THEN
+            ! 4a -- 'special transfer'
+            IF (current_tile%Has_process_memory(CARBON_)) THEN
+              ! treat vegetation pools: copy matter for diagnostics
+              ! -> matter itself will be actively transferred to soils by the generic routine in the carbon interface
+              conversion_fact = 1.0_wp / sec_per_day
+              CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
+                & 'c_woods', 'cflux_dist_woods_2_soil', conversion_fact = conversion_fact )
+              CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
+                & 'c_green', 'cflux_dist_green_2_soil', conversion_fact = conversion_fact )
+              CALL copy_from_active_to_passive_var_onChunk(lcc_relocations, i_tile, iblk, ics, ice, &
+                & 'c_reserve', 'cflux_dist_green_2_soil', conversion_fact = conversion_fact )
             ENDIF
-            !last_involved_tile => current_tile
+            ! 4b -- general transfer of active vars
+            CALL transfer_active_to_passive_onChunk(lcc_relocations, current_tile, i_tile, options)
           ENDIF
 
+          ! - go to next tile (if associated)
           current_tile => current_tile%Get_next_sibling_tile()
+
         ENDDO
 
         !>
         !> 5. Each lcc process needs to call end lcc to make the passive matter transfer
         !>
         CALL end_lcc_reloc(lcc_relocations, options, gained_area)
+
       ENDIF ! ... only to be conducted if there is any area movement
-    ENDDO ! Number of lcc-cycles: depending on if are movement is to be "separate" or mixed
+    ENDDO ! outer loop enclosing one full lcc-cycle: depending on if are movement is to be "separate" or mixed
 
     !>
     !> 6. Deallocate area vectors

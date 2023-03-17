@@ -55,121 +55,135 @@ MODULE mo_assimi_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_interface'
 
+  ! ======================================================================================================= !
   !> Type definition for assimilation_scaling_factors task
+  !>  
+  !>   MODEL_JSBACH
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_assimilation_scaling_factors
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation_scaling_factors    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation_scaling_factors !< Aggregates computed task variables
   END TYPE   tsk_assimilation_scaling_factors
-
   !> Constructor interface for assimilation_scaling_factors task
+  !>
   INTERFACE   tsk_assimilation_scaling_factors
     PROCEDURE Create_task_assimilation_scaling_factors         !< Constructor function for task
   END INTERFACE   tsk_assimilation_scaling_factors
 
+  ! ======================================================================================================= !
   !> Type definition for canopy_cond_unstressed task
+  !>  
+  !>   MODEL_JSBACH
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_unstressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_unstressed    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_unstressed !< Aggregates computed task variables
   END TYPE tsk_canopy_cond_unstressed
-
   !> Constructor interface for canopy_cond_unstressed task
+  !>
   INTERFACE tsk_canopy_cond_unstressed
     PROCEDURE Create_task_canopy_cond_unstressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_unstressed
 
+  ! ======================================================================================================= !
   !> Type definition for canopy_cond_stressed task
+  !>  
+  !>   MODEL_JSBACH
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_stressed    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_cond_stressed !< Aggregates computed task variables
   END TYPE tsk_canopy_cond_stressed
-
   !> Constructor interface for canopy_cond_stressed task
+  !>
   INTERFACE tsk_canopy_cond_stressed
     PROCEDURE Create_task_canopy_cond_stressed     !< Constructor function for task
   END INTERFACE tsk_canopy_cond_stressed
 
+  ! ======================================================================================================= !
   !> Type definition for assimilation task
+  !>  
+  !>   MODEL_JSBACH
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_assimilation !< Aggregates computed task variables
   END TYPE tsk_assimilation
-
   !> Constructor interface for assimilation task
+  !>
   INTERFACE tsk_assimilation
     PROCEDURE Create_task_assimilation     !< Constructor function for task
   END INTERFACE tsk_assimilation
 
+  ! ======================================================================================================= !
   !> Type definition for NPP buffer task
+  !>  
+  !>   MODEL_JSBACH
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_npp_buffer
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_npp_buffer    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_npp_buffer !< Aggregates computed task variables
   END TYPE tsk_npp_buffer
-
   !> Constructor interface for assimilation task
+  !>
   INTERFACE tsk_npp_buffer
     PROCEDURE Create_task_npp_buffer     !< Constructor function for task
   END INTERFACE tsk_npp_buffer
 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
   !> Type definition: reset_assimi_fluxes task
-  !! 
-  !-----------------------------------------------------------------------------------------------------
+  !>  
+  !>   MODEL_QUINCY
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_assimi_fluxes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_reset_assimi_fluxes     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_reset_assimi_fluxes  !< Aggregates computed task variables
   END TYPE tsk_reset_assimi_fluxes
-
-  !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: reset_assimi_fluxes task
-  !! 
-  !-----------------------------------------------------------------------------------------------------
+  !>
   INTERFACE tsk_reset_assimi_fluxes
     PROCEDURE Create_task_reset_assimi_fluxes         !< Constructor function for task
   END INTERFACE tsk_reset_assimi_fluxes
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Type definition: update_canopy_fluxes task
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_canopy_fluxes
+  ! ======================================================================================================= !
+  !> Type definition: canopy_fluxes task
+  !>  
+  !>   MODEL_QUINCY
+  !>  
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_fluxes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_fluxes    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_canopy_fluxes !< Aggregates computed task variables
-  END TYPE tsk_update_canopy_fluxes
-  
-  !-----------------------------------------------------------------------------------------------------
+  END TYPE tsk_canopy_fluxes
   !> Constructor interface: update_canopy_fluxes task
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  INTERFACE tsk_update_canopy_fluxes
-    PROCEDURE Create_task_update_canopy_fluxes         !< Constructor function for task
-  END INTERFACE tsk_update_canopy_fluxes
+  !>
+  INTERFACE tsk_canopy_fluxes
+    PROCEDURE Create_task_canopy_fluxes         !< Constructor function for task
+  END INTERFACE tsk_canopy_fluxes
 
   ! ======================================================================================================= !
-  !>Type definition: time_average_assimilation task
-  !>
+  !> Type definition: time_average_assimilation task
+  !>  
+  !>   MODEL_QUINCY
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_time_average_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_time_average_assimilation    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_assimilation !< Aggregates computed task variables
   END TYPE tsk_time_average_assimilation
-
-  ! ======================================================================================================= !
-  !>Constructor interface: time_average_assimilation task
+  !> Constructor interface: time_average_assimilation task
   !>
   INTERFACE tsk_time_average_assimilation
-    PROCEDURE Create_task_update_time_average_assimilation         !< Constructor function for task
+    PROCEDURE Create_task_time_average_assimilation         !< Constructor function for task
   END INTERFACE tsk_time_average_assimilation
 
-
 CONTAINS
-
 
   ! ------------------------------------------------------------------------------------------------------- !
   !>Constructors for tasks
@@ -259,49 +273,35 @@ CONTAINS
   !! 
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_reset_assimi_fluxes(model_id) RESULT(return_ptr)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-
     ALLOCATE(tsk_reset_assimi_fluxes::return_ptr)
     CALL return_ptr%Construct(name='reset_assimi_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
-
   END FUNCTION Create_task_reset_assimi_fluxes
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_canopy_fluxes task
   !! 
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_task_update_canopy_fluxes(model_id) RESULT(return_ptr)
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+  FUNCTION Create_task_canopy_fluxes(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
-
-    ALLOCATE(tsk_update_canopy_fluxes::return_ptr)
+    ALLOCATE(tsk_canopy_fluxes::return_ptr)
     CALL return_ptr%Construct(name='canopy_fluxes', process_id=ASSIMI_, owner_model_id=model_id)
-    
-  END FUNCTION Create_task_update_canopy_fluxes
+  END FUNCTION Create_task_canopy_fluxes
 
   ! ======================================================================================================= !
   !>Constructor: tsk_time_average_assimilation task
   !> 
-  FUNCTION Create_task_update_time_average_assimilation(model_id) RESULT(return_ptr)
-
+  FUNCTION Create_task_time_average_assimilation(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_time_average_assimilation::return_ptr)
     CALL return_ptr%Construct(name='tavrg_assimilation', process_id=ASSIMI_, owner_model_id=model_id)
-    
-  END FUNCTION Create_task_update_time_average_assimilation
+  END FUNCTION Create_task_time_average_assimilation
 
 
 
@@ -336,7 +336,7 @@ CONTAINS
       CALL this%Register_task(tsk_npp_buffer(model_id))
     CASE (MODEL_QUINCY)
       CALL this%Register_task(tsk_reset_assimi_fluxes(model_id))
-      CALL this%Register_task(tsk_update_canopy_fluxes(model_id))
+      CALL this%Register_task(tsk_canopy_fluxes(model_id))
       CALL this%Register_task(tsk_time_average_assimilation(model_id))
     END SELECT
 
@@ -891,7 +891,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder für assimilation noch wo anderst
+    ! R: Diese Berechung hier habe ich raus genommen, da CO2_conc_leaf_unlimited_acc weder fuer assimilation noch wo anderst
     !    verwendet wird. Wird nur ausgegeben. Braucht man wahrscheinlich nicht mehr, auch nicht im Output.
     ! bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) = bethy%CO2_conc_leaf_unlimited_acc(kidx0:kidx1,itile) + &
     !                                                             CO2_conc_leaf_cl * dtime
@@ -1325,7 +1325,7 @@ CONTAINS
     USE mo_jsb_control,         ONLY: debug_on
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_assimi_util,         ONLY: real_update_time_average_assimilation => update_time_average_assimilation
+    USE mo_assimi_util,         ONLY: calculate_time_average_assimilation
     dsl4jsb_Use_processes ASSIMI_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1338,8 +1338,7 @@ CONTAINS
     IF (debug_on() .AND. options%iblk == 1) &
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-
-    CALL real_update_time_average_assimilation(tile, options)
+    CALL calculate_time_average_assimilation(tile, options)
     
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 
@@ -1383,7 +1382,6 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tcnl_mavg      , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tfrac_mavg         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_tcnl_mavg          , weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(ASSIMI_, daytime_counter             , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_air_daytime            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_ps_daytime        , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_daytime        , weighted_by_fract)

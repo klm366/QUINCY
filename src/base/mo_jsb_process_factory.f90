@@ -18,25 +18,26 @@ MODULE mo_jsb_process_factory
   USE mo_jsb_process_class,     ONLY: t_jsb_process, Get_process_name
   USE mo_jsb_memory_class,      ONLY: t_jsb_memory
   !
-  USE mo_a2l_memory_class,      ONLY: t_a2l_memory
-  USE mo_l2a_memory_class,      ONLY: t_l2a_memory
-  USE mo_seb_memory_class,      ONLY: t_seb_memory
-  USE mo_turb_memory_class,     ONLY: t_turb_memory
-  USE mo_sse_memory_class,      ONLY: t_sse_memory
-  USE mo_hydro_memory_class,    ONLY: t_hydro_memory
-  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
-  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
-  USE mo_rad_memory_class,      ONLY: t_rad_memory
-  USE mo_carbon_memory_class,   ONLY: t_carbon_memory
-  USE mo_disturb_memory_class,  ONLY: t_disturb_memory
-  USE mo_fuel_memory_class,     ONLY: t_fuel_memory
-  USE mo_pplcc_memory_class,    ONLY: t_pplcc_memory
-  USE mo_tcq_memory_class,      ONLY: t_tcq_memory
-  USE mo_alcc_memory_class,     ONLY: t_alcc_memory
-  USE mo_nlcc_memory_class,     ONLY: t_nlcc_memory
-  USE mo_veg_memory_class,      ONLY: t_veg_memory
-  USE mo_sb_memory_class,       ONLY: t_sb_memory
-  USE mo_spq_memory_class,      ONLY: t_spq_memory
+  USE mo_a2l_memory_class,     ONLY: t_a2l_memory
+  USE mo_l2a_memory_class,     ONLY: t_l2a_memory
+  USE mo_seb_memory_class,     ONLY: t_seb_memory
+  USE mo_turb_memory_class,    ONLY: t_turb_memory
+  USE mo_sse_memory_class,     ONLY: t_sse_memory
+  USE mo_hydro_memory_class,   ONLY: t_hydro_memory
+  USE mo_assimi_memory_class,  ONLY: t_assimi_memory
+  USE mo_pheno_memory_class,   ONLY: t_pheno_memory
+  USE mo_rad_memory_class,     ONLY: t_rad_memory
+  USE mo_carbon_memory_class,  ONLY: t_carbon_memory
+  USE mo_disturb_memory_class, ONLY: t_disturb_memory
+  USE mo_fuel_memory_class,    ONLY: t_fuel_memory
+  USE mo_pplcc_memory_class,   ONLY: t_pplcc_memory
+  USE mo_tcq_memory_class,     ONLY: t_tcq_memory
+  USE mo_fage_memory_class,    ONLY: t_fage_memory
+  USE mo_alcc_memory_class,    ONLY: t_alcc_memory
+  USE mo_nlcc_memory_class,    ONLY: t_nlcc_memory
+  USE mo_veg_memory_class,     ONLY: t_veg_memory
+  USE mo_sb_memory_class,      ONLY: t_sb_memory
+  USE mo_spq_memory_class,     ONLY: t_spq_memory
   USE mo_anthro2l_memory_class, ONLY: t_anthro2l_memory     ! < Rackhun Son >
   
 #ifndef __NO_JSBACH_HD__
@@ -72,6 +73,8 @@ MODULE mo_jsb_process_factory
   USE mo_tlcc_config_class,     ONLY: t_tlcc_config
   USE mo_tcq_interface,         ONLY: Register_tcq_tasks
   USE mo_tcq_config_class,      ONLY: t_tcq_config
+  USE mo_fage_interface,        ONLY: Register_fage_tasks
+  USE mo_fage_config_class,     ONLY: t_fage_config
   USE mo_alcc_interface,        ONLY: Register_alcc_tasks
   USE mo_alcc_config_class,     ONLY: t_alcc_config
   USE mo_flcc_interface,        ONLY: Register_flcc_tasks
@@ -89,7 +92,7 @@ MODULE mo_jsb_process_factory
 
   USE mo_jsb_process_class, ONLY: &
     & A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    & PPLCC_, TLCC_, TCQ_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, ANTHRO2L_     ! < Rackhun Son >
+    & PPLCC_, TLCC_, TCQ_, ALCC_, FAGE_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, ANTHRO2L_     ! < Rackhun Son >
 
   IMPLICIT NONE
   PRIVATE
@@ -97,7 +100,7 @@ MODULE mo_jsb_process_factory
   PUBLIC :: Create_process_memory
   PUBLIC :: Create_process, max_no_of_processes
 
-  INTEGER, PARAMETER :: max_no_of_processes = 23
+  INTEGER, PARAMETER :: max_no_of_processes = 42
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_process_factory'
 
@@ -116,6 +119,9 @@ CONTAINS
     return_ptr%name           = Get_process_name(iproc)
     return_ptr%owner_model_id = model_id
 
+    ! register tasks and set some process properties
+    ! e.g. land cover change (lcc) processes should set l_changes_fractions to .TRUE. here
+    ! and processes that do not have a memory module also need to specify this here
     SELECT CASE (iproc)
     CASE (A2L_, L2A_)
       ! Do nothing for A2L and L2A: these processes currently have no tasks and no config
@@ -167,6 +173,10 @@ CONTAINS
     CASE (TCQ_)
       CALL Register_tcq_tasks(return_ptr, model_id)
       ALLOCATE(t_tcq_config::return_ptr%config)
+    CASE (FAGE_)
+      return_ptr%l_changes_fractions = .TRUE.
+      CALL Register_fage_tasks(return_ptr, model_id)
+      ALLOCATE(t_fage_config::return_ptr%config)
     CASE (ALCC_)
       return_ptr%l_changes_fractions = .TRUE.
       CALL Register_alcc_tasks(return_ptr, model_id)
@@ -208,25 +218,26 @@ CONTAINS
 
   FUNCTION Create_process_memory(iproc) RESULT(return_ptr)
 
-    USE mo_a2l_memory_class,      ONLY: max_no_of_a2l_vars => max_no_of_vars
-    USE mo_l2a_memory_class,      ONLY: max_no_of_l2a_vars => max_no_of_vars
-    USE mo_seb_memory_class,      ONLY: max_no_of_seb_vars => max_no_of_vars
-    USE mo_turb_memory_class,     ONLY: max_no_of_turb_vars => max_no_of_vars
-    USE mo_sse_memory_class,      ONLY: max_no_of_sse_vars => max_no_of_vars
-    USE mo_hydro_memory_class,    ONLY: max_no_of_hydro_vars => max_no_of_vars
-    USE mo_assimi_memory_class,   ONLY: max_no_of_assimi_vars => max_no_of_vars
-    USE mo_pheno_memory_class,    ONLY: max_no_of_pheno_vars => max_no_of_vars
-    USE mo_rad_memory_class,      ONLY: max_no_of_rad_vars => max_no_of_vars
-    USE mo_carbon_memory_class,   ONLY: max_no_of_carbon_vars => max_no_of_vars
-    USE mo_disturb_memory_class,  ONLY: max_no_of_disturb_vars => max_no_of_vars
-    USE mo_fuel_memory_class,     ONLY: max_no_of_fuel_vars => max_no_of_vars
-    USE mo_pplcc_memory_class,    ONLY: max_no_of_pplcc_vars => max_no_of_vars
-    USE mo_tcq_memory_class,      ONLY: max_no_of_tcq_vars => max_no_of_vars
-    USE mo_alcc_memory_class,     ONLY: max_no_of_alcc_vars => max_no_of_vars
-    USE mo_nlcc_memory_class,     ONLY: max_no_of_nlcc_vars => max_no_of_vars
-    USE mo_veg_memory_class,      ONLY: max_no_of_veg_vars => max_no_of_vars
-    USE mo_sb_memory_class,       ONLY: max_no_of_sb_vars => max_no_of_vars
-    USE mo_spq_memory_class,      ONLY: max_no_of_spq_vars => max_no_of_vars
+    USE mo_a2l_memory_class,     ONLY: max_no_of_a2l_vars => max_no_of_vars
+    USE mo_l2a_memory_class,     ONLY: max_no_of_l2a_vars => max_no_of_vars
+    USE mo_seb_memory_class,     ONLY: max_no_of_seb_vars => max_no_of_vars
+    USE mo_turb_memory_class,    ONLY: max_no_of_turb_vars => max_no_of_vars
+    USE mo_sse_memory_class,     ONLY: max_no_of_sse_vars => max_no_of_vars
+    USE mo_hydro_memory_class,   ONLY: max_no_of_hydro_vars => max_no_of_vars
+    USE mo_assimi_memory_class,  ONLY: max_no_of_assimi_vars => max_no_of_vars
+    USE mo_pheno_memory_class,   ONLY: max_no_of_pheno_vars => max_no_of_vars
+    USE mo_rad_memory_class,     ONLY: max_no_of_rad_vars => max_no_of_vars
+    USE mo_carbon_memory_class,  ONLY: max_no_of_carbon_vars => max_no_of_vars
+    USE mo_disturb_memory_class, ONLY: max_no_of_disturb_vars => max_no_of_vars
+    USE mo_fuel_memory_class,    ONLY: max_no_of_fuel_vars => max_no_of_vars
+    USE mo_pplcc_memory_class,   ONLY: max_no_of_pplcc_vars => max_no_of_vars
+    USE mo_tcq_memory_class,     ONLY: max_no_of_tcq_vars => max_no_of_vars
+    USE mo_fage_memory_class,    ONLY: max_no_of_fage_vars => max_no_of_vars
+    USE mo_alcc_memory_class,    ONLY: max_no_of_alcc_vars => max_no_of_vars
+    USE mo_nlcc_memory_class,    ONLY: max_no_of_nlcc_vars => max_no_of_vars
+    USE mo_veg_memory_class,     ONLY: max_no_of_veg_vars => max_no_of_vars
+    USE mo_sb_memory_class,      ONLY: max_no_of_sb_vars => max_no_of_vars
+    USE mo_spq_memory_class,     ONLY: max_no_of_spq_vars => max_no_of_vars
     USE mo_anthro2l_memory_class, ONLY: max_no_of_anthro2l_vars => max_no_of_vars     ! < Rackhun Son >
 #ifndef __NO_JSBACH_HD__
     USE mo_hd_memory_class,       ONLY: max_no_of_hd_vars => max_no_of_vars
@@ -286,6 +297,9 @@ CONTAINS
     CASE (TCQ_)
       ALLOCATE(t_tcq_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_tcq_vars
+    CASE (FAGE_)
+      ALLOCATE(t_fage_memory::return_ptr)
+      return_ptr%max_no_of_vars = max_no_of_fage_vars
     CASE (ALCC_)
       ALLOCATE(t_alcc_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_alcc_vars

@@ -222,13 +222,18 @@ CONTAINS
 
   END SUBROUTINE Configure_model_processes
 
+  ! ======================================================================================================= !
+  !> 
+  !> Checks if there is an active process that changes fractions on this tile
+  !>
   FUNCTION Any_process_changes_fractions(this) RESULT(l_fractions_change)
-
-    CLASS(t_jsb_model), INTENT(inout) :: this
-    LOGICAL                           :: l_fractions_change
-
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_model), INTENT(inout) :: this                 !< tile to check
+    LOGICAL                           :: l_fractions_change   
+      !< true if there is any active land cover change (lcc) process
+    ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: iproc
-
+    ! -------------------------------------------------------------------------------------------------- !
     l_fractions_change = .FALSE.
     DO iproc=1,SIZE(this%processes)
       IF (ASSOCIATED(this%processes(iproc)%p)) THEN
@@ -459,7 +464,7 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -468,6 +473,7 @@ CONTAINS
     TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: current_datetime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: dtime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: steplen
+    REAL(wp),         OPTIONAL,          INTENT(in)    :: alpha
     INTEGER,          OPTIONAL,          INTENT(in)    :: iblk
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
     INTEGER,          OPTIONAL,          INTENT(in)    :: ice
@@ -479,6 +485,7 @@ CONTAINS
 
     CALL assign_if_present(this%options(no_omp_thread)%dtime,   dtime)
     CALL assign_if_present(this%options(no_omp_thread)%steplen, steplen)
+    CALL assign_if_present(this%options(no_omp_thread)%alpha,   alpha)
     CALL assign_if_present(this%options(no_omp_thread)%iblk,    iblk)
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
@@ -576,8 +583,12 @@ CONTAINS
           END ASSOCIATE
         END DO
 
+        ! mem%pools
         IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
           & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
+        ! mem%bgc_material
+        IF (ASSOCIATED(tile%mem(iproc)%p%bgc_material)) &
+          & CALL tile%mem(iproc)%p%bgc_material%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
 
       END DO
 

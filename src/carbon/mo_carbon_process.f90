@@ -958,7 +958,7 @@ CONTAINS
     !! heterotrophic soil respiration.
     !! For documention of yasso see Liski et al 2005, Tuomi et al 2008,2009,2011
     !!
-    !! implementation: Tea Thum (FMI), Petri Räisänen (FMI), Daniel Goll (MPI-M)
+    !! implementation: Tea Thum (FMI), Petri Raeisaenen (FMI), Daniel Goll (MPI-M)
     !!-------------------------------------------------------------------------------------------------------------------------
 
     USE mo_jsb_physical_constants, ONLY: tmelt

@@ -20,10 +20,10 @@
 !! @brief Contains the routines to calculate the canopy layer C and N content, and routines using this functionality
 !!
 !! @author
-!!  Sönke Zaehle, Silvia Caldararu, MPI-BGC Jena
+!!  Soenke Zaehle, Silvia Caldararu, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2016-29-08)
+!! First version by Soenke Zaehle (2016-29-08)
 !!
 !!
 MODULE mo_veg_canopy
@@ -98,7 +98,8 @@ CONTAINS
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, &
                                           jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4, &
                                           jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl
-    USE mo_assimi_constants,        ONLY: kn, chl2n, ic4phot, jmax2n, k1_fn_struc, vcmax2n
+    USE mo_assimi_parameters,       ONLY: kn, chl2n, jmax2n, k1_fn_struc, vcmax2n
+    USE mo_assimi_constants,        ONLY: ic4phot
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_jsb_math_constants,      ONLY: eps8, eps12
 
@@ -328,8 +329,8 @@ CONTAINS
            ! ! implied Vmax and Jmax in nmol / g DW / s
            ! !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
            ! !hlp2(:,:) = exp(5.49435_wp + 0.37345_wp*log10(hlp4(:,:)) + 0.41435_wp*log10(hlp3(:,:)))
-           ! ! convert to f_rub_cl: Vmax = vmax2n * frub * leaf_n | µmol / m2 / s
-           ! !                      Vmax1 = vmax2n * frub * leaf_n / DW * 1000 | nmol / gDW / s
+           ! ! convert to f_rub_cl: Vmax = vmax2n * frub * leaf_n | micro-mol / m2 / s
+           ! !                      Vmax1 = vmax2n * frub * leaf_n / DW * 1000 | nmol / gDW / s
            ! !                      exp(X) = vmax2n * frub * leaf_n
            ! !                      frub = exp(X) / leaf_n / vmax2n         
            ! !fn_rub_cl(:,:) = exp(4.44904_wp + 0.3472_wp*log(hlp4(:,:)) + 0.49078*log(hlp3(:,:))) / & 
@@ -895,7 +896,7 @@ CONTAINS
                                                   ppfd_sunlit_cl          , &
                                                   ppfd_shaded_cl          , &
                                                   swpar_srf_down          , &
-                                                  swpar_fdiffuse          , &
+                                                  fract_par_diffuse       , &
                                                   unit_npp                , &
                                                   unit_transpiration )
 
@@ -932,7 +933,7 @@ CONTAINS
                                                           q_air                   , &   !< air specific humidity (--)
                                                           co2_mixing_ratio        , &   !< co2 mixing ratio (ppm)
                                                           ga                      , &   !< air temperature (K)
-                                                          net_assimilation        , &   !< net assimilation rate (µmol CO2 / m2 / s)
+                                                          net_assimilation        , &   !< net assimilation rate (micro-mol CO2 / m2 / s)
                                                           canopy_cond             , &   !< canopy conductance (m/s)
                                                           beta_air                , &   !< air humidity limiting factor for photosynthesis
                                                           beta_soa                , &   !< spring air temp lim factor for Evergr. needlel. photosynthesis
@@ -953,7 +954,7 @@ CONTAINS
                                                           ppfd_sunlit_cl          , &   !< ..
                                                           ppfd_shaded_cl                !< ..
     REAl(wp),DIMENSION(nc),                 INTENT(in) :: swpar_srf_down          , &   !< ..
-                                                          swpar_fdiffuse                !< ..
+                                                          fract_par_diffuse             !< ..
     REAL(wp),DIMENSION(nc),                 INTENT(out):: unit_npp                , &   !< unit change of NPP per ??
                                                           unit_transpiration            !< unit change of NPP per ??
     ! ---------------------------
@@ -1060,7 +1061,8 @@ CONTAINS
     ! In case of no leaves set top layer PAR to SW value
     WHERE (lai(:) < eps8)
        loc_ppfd_sunlit_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_srf_down(:) * rad2ppfd
-       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_fdiffuse(:) * swpar_srf_down(:) * rad2ppfd
+       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib_sigma_vis) &
+         &                         * fract_par_diffuse(:) * swpar_srf_down(:) * rad2ppfd
        loc_fleaf_sunlit_cl(:,1) = exp(-kbl0_vis * cumm_lai_new_cl(:,1))
     END WHERE
 

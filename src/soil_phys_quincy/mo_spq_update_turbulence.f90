@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the Task update_soil_turbulence
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
+!! First version by Soenke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
 !!
 MODULE mo_spq_update_turbulence
 #ifndef __NO_JSBACH__
@@ -64,7 +64,7 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime
     USE mo_atmland_constants,     ONLY: min_wind, max_wind 
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_jsb_physical_constants,ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, cvdifts, zkappa, vtmpc1
+    USE mo_jsb_physical_constants,ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, zkappa, rvd1
     USE mo_spq_constants,         ONLY: height_wind
 
     ! Use of process configurations (t_PROC_config)
@@ -91,7 +91,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: fract_fpc, blended_height 
     REAL(wp)                              :: zcons8, zcons9, zcons11, zcons12
     INTEGER                               :: iblk, ics, ice, nc
-    REAL(wp)                              :: steplen
+    REAL(wp)                              :: steplen, alpha
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_soil_turbulence'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -129,6 +129,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
@@ -199,12 +200,13 @@ CONTAINS
     ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
     ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
     ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * q_air) ! virtual potential temperature
-    ztvd(:)       = t_air(:) * ( 100000._wp/press_srf(:))**zkappa * ( 1._wp + vtmpc1 * q_air(:) )
-    ztvir(:)      = t_air(:) * ( 1._wp + vtmpc1 * q_air(:) )
+    ! rvd1=>vtmpc1
+    ztvd(:)       = t_air(:) * ( 100000._wp/press_srf(:))**zkappa * ( 1._wp + rvd1 * q_air(:) )
+    ztvir(:)      = t_air(:) * ( 1._wp + rvd1 * q_air(:) )
     ! virtual potential surface temperature
     q_sat_surf(:) = calc_spec_humidity_sat(t_soil_sl(:,1),press_srf(:))
     ztvs(:)       = t_soil_sl(:,1) * ( 100000._wp/press_srf(:))**zkappa * &
-                    ( 1._wp + vtmpc1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
+                    ( 1._wp + rvd1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
 
     ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
     ! ztvd, ztvs are now virtual potential temperatures, changed by Thomas Raddatz 07.2014
@@ -212,7 +214,7 @@ CONTAINS
     ! effectively this limits drag to values larger than about 10% of the neutral drag
     zril(:)       = MIN(zg(:) * ( ztvd(:) - ztvs(:) ) / ( zdu2(:) * (ztvd(:) + ztvs(:)) / 2._wp ), 0.5_wp)
 
-    CALL calc_drag_coefficient(steplen, &
+    CALL calc_drag_coefficient(steplen, alpha, &
                                t_air(:),q_air(:),wind_air(:),press_srf(:), & 
                                zg(:),zgh(:),z0m(:),z0h(:), &
                                zril(:), &                 ! inout
@@ -235,18 +237,19 @@ CONTAINS
   !! Calculates drag coefficient and aerodynamic conductance 
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL SUBROUTINE calc_drag_coefficient( &
-                                   steplen, &
+                                   steplen, alpha, &
                                    t_air,q_air,wind_air,press_srf, & 
                                    zg,zgh,z0m,z0h,zril, & 
                                    drag_srf,pch,ga)            
 
     USE mo_phy_schemes,             ONLY: heat_transfer_coef
-    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, cvdifts, vtmpc1
+    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, rvd1
 
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut 
     REAL(wp),                        INTENT(in)    :: steplen                !< step length for this process
+    REAL(wp),                        INTENT(in)    :: alpha                  !< impliciteness factor
     REAL(wp),                        INTENT(in)    :: t_air, &
                                                       q_air, &
                                                       wind_air, &
@@ -277,7 +280,7 @@ CONTAINS
     zcons8     = 2._wp * 5.0_wp 
     zcons9     = 3._wp * 5.0_wp 
     zcons11    = 3._wp * 5.0_wp * 5.0_wp
-    zcons12    = cvdifts * steplen * grav / r_gas_dryair 
+    zcons12    = alpha * steplen * grav / r_gas_dryair 
     zdu2       = wind_air**2._wp
 
     ! Neutral drag coefficient for momentum and heat
@@ -290,8 +293,8 @@ CONTAINS
     zucfl  = 1._wp / (1._wp + zcons11 * zcdnl * SQRT(ABS(zril) * (1._wp  + zg / (grav * z0m))))
     zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp  + zgh / (grav * z0h))))
 
-    ! ignoring cloud water correction (see mo_surface_land.f90)
-    zcons    = zcons12 * press_srf / ( t_air * (1._wp + vtmpc1 * q_air))
+    ! ignoring cloud water correction (see mo_surface_land.f90) rvd1=>vtmpc1
+    zcons    = zcons12 * press_srf / ( t_air * (1._wp + rvd1 * q_air))
     zcfncl   = zcons * SQRT(zdu2) * zcdnl
     zcfnchl  = zcons * SQRT(zdu2) * zchnl
 

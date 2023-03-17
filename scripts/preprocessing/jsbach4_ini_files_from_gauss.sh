@@ -39,7 +39,7 @@ ggrids=""                    # disable Gaussian grids
 
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
-  mlogin*|mistralpp*|levante*)
+  levante*)
     output_root=/pool/data/ICON/grids/public/mpim
     # output_root=/pool/data/ICON/grids/private/jsbach/mpim
     # output_root=/work/mj0060/m212005/ini_files
@@ -125,12 +125,6 @@ case `hostname` in
     module load netcdf-c/4.8.1-gcc-11.2.0
     module load nag/7.1-gcc-11.2.0
     module list
-    ;;
-  mlogin*|mistralpp*)
-    module load cdo/1.9.6-magicsxx-gcc64
-    module load nco/4.6.7-gcc48
-    module load netcdf_c/4.3.2-gcc48
-    module load nag/6.2
     ;;
    *)
     #module load cdo/1.7.2-gccsys       # cdo 1.8.0 has problems with remapcon
@@ -623,6 +617,15 @@ function generate_output_files {
 
   outfile="${grid_name}_bc_land_soil_${year}.nc"
   echo "Generating output file ${outfile} ..."
+
+  # Initial files on the Gaussian grid should not contain missing values. Variable
+  # fract_org_sl is adapted here (after extrapolation), as the icon grid initial
+  # files should not be affected.
+  if [[ $(echo ${grid_name} | cut -c1) == T ]]; then   # Gausian grid
+    cdo setmisstoc,0 ${grid_name}_fract_org_sl_remap.nc  ${grid_name}_fract_org_sl_remap.tmp
+    mv ${grid_name}_fract_org_sl_remap.tmp ${grid_name}_fract_org_sl_remap.nc
+  fi
+
   ${cdo} merge \
       ${grid_name}_soil_depth_remap.nc \
       ${grid_name}_root_depth_remap.nc \
@@ -803,15 +806,16 @@ for bisection in $bisections $ggrids
 do
   [[ $(echo ${bisection} | cut -c1) == T ]] && jsb4icon=false || jsb4icon=true
   if [[ ${jsb4icon} == true ]]; then
-    if [[ $bisection -ge 8  ]]
+    bisect=$(echo ${bisection} | awk '{print $1 + 0}')
+    if [[ $bisect -ge 8  ]]
     then
-      ## cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
+      # cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
       ulimit -s unlimited
       ulimit -v unlimited
       ulimit -m unlimited
     fi
 
-    if [[ $bisection -le 5 ]]
+    if [[ $bisect -le 5 ]]
     then
       remap_scheme=ycon
     else
@@ -819,7 +823,6 @@ do
     fi
 
     grid_name=${refinement}
-    bisect=$(echo ${bisection} | tr -d ^0)
     source_res=${source_res_dict[${bisect}]}
   else         # jsbach4 on gaussian grid
     grid_name=${bisection}

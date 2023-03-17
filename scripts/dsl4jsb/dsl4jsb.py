@@ -73,7 +73,7 @@ macros = {
         r'\1__conf'],
     'get_lcc_relocations': [re.compile(
         r'dsl4jsb_Get_lcc_relocations *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
-        r'\2 => model%processes(\1_)%p%lcc_relocations'],
+        r'\2 => tile%lcc_processes(\1_)%p'],
     'lctlib': [re.compile(
         r'dsl4jsb_Lctlib', re.IGNORECASE),
         r'model%lctlib(tile%lcts(1)%lib_id)'],
@@ -113,6 +113,12 @@ macros = {
     'get_var2d_ondomain': [re.compile(
         r'dsl4jsb_Get_var2D_onDomain *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:)'],
+    'get_var2d_ondomain_tile': [re.compile(
+        r'dsl4jsb_Get_var2D_onDomain_tile *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => \1__mem__\3%\2%ptr(:,:)'],
+    'get_var2d_ondomain_tile_name': [re.compile(
+        r'dsl4jsb_Get_var2D_onDomain_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2_\3 => \1__mem__\3%\2%ptr(:,:)'],
     'get_var3d_ondomain': [re.compile(
         r'dsl4jsb_Get_var3D_onDomain *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:,:)'],

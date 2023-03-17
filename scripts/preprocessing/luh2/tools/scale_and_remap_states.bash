@@ -32,7 +32,7 @@ while [ $year -le $endYear ]; do
     cdo -s -remap,${cdoGrid},${workPath}tmp_weights.nc ${workPath}${inFilePrefix}${year_char}.nc ${workPath}${prefixMapped}${year_char}.nc
     # Remove lat_bnd from output file
     ncks -C -O -x -v lat_bnds ${workPath}${prefixMapped}${year_char}.nc ${workPath}${prefixMapped}${year_char}.nc
-    # scale: the area fractions in several 0.25° cells in LUH do not sum up to 1, 
+    # scale: the area fractions in several 0.25 deg cells in LUH do not sum up to 1, 
     #        because water is excluded (sum(area fractions) = 1 - ice - water) [beside accuracy issues this is a static mask in LUH2]
     #           -> this is particularly true for coastline gridcells!
     #        Here the vegetation fractions are scaled up proportionally such that sum(area fractions) = 1 

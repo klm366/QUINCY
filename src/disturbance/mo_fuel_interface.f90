@@ -109,7 +109,6 @@ CONTAINS
   SUBROUTINE update_fuel(tile, options)
 
     USE mo_fuel_process,     ONLY: calc_fuel_jsbach
-    USE mo_carbon_interface, ONLY: recalc_per_tile_vars
     USE mo_jsb_time,         ONLY: is_newday
     USE mo_jsb_tile_class,   ONLY: t_jsb_tile_abstract
 

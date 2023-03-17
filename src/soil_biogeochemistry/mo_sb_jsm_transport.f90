@@ -20,10 +20,10 @@
 !! @brief Contains the science routines for vertical transport along the soil column 
 !!
 !! @author
-!!  Sönke Zaehle 
+!!  Soenke Zaehle 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20170124): adopted from JSM_interface and JSM_core
+!! First version by Soenke Zaehle (20170124): adopted from JSM_interface and JSM_core
 !!
 MODULE mo_sb_jsm_transport
 #ifndef __NO_JSBACH__
@@ -102,29 +102,29 @@ CONTAINS
 !     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_po4_solute   !< rate of PO4 transport [mol/m3/timestep]
 !     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_nh4_n15_solute !< rate of N15H4 transport [mol/m3/timestep]
 !     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: transport_no3_n15_solute !< rate of N15O3 transport [mol/m3/timestep]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_carbon      !< rate of DOM-C leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_nitrogen    !< rate of DOM-N leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_phosphorus  !< rate of DOM-P leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_carbon13    !< rate of DOM-C13 leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_carbon14    !< rate of DOM-C14 leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_nitrogen15  !< rate of DOM-N15 leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_nh4_solute      !< rate of NH4 leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_no3_solute      !< rate of NO3 leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_po4_solute      !< rate of PO4 leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_nh4_n15_solute  !< rate of 14NH4 leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_no3_n15_solute  !< rate of 15NO3 leaching [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_noy            !< vertical transport of NOy [µmol/m3/s]
-!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_noy_n15        !< vertical transport of 15NOy [µmol/m3/s]
-!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2o            !< vertical transport of N2O [µmol/m3/s]
-!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2o_n15        !< vertical transport of 15N2O [µmol/m3/s]
-!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2             !< vertical transport of N2 [µmol/m3/s]
-!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2_n15         !< vertical transport of 15N2 [µmol/m3/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_noy             !< soil efflux of NOy [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_noy_n15         !< soil efflux of 15NOy [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2o             !< soil efflux of N2O [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2o_n15         !< soil efflux of 15N2O [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2              !< soil efflux of N2 [µmol/m2/s]
-!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2_n15          !< soil efflux of 15N2 [µmol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_carbon      !< rate of DOM-C leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_nitrogen    !< rate of DOM-N leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_phosphorus  !< rate of DOM-P leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_carbon13    !< rate of DOM-C13 leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_carbon14    !< rate of DOM-C14 leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_dom_nitrogen15  !< rate of DOM-N15 leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_nh4_solute      !< rate of NH4 leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_no3_solute      !< rate of NO3 leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_po4_solute      !< rate of PO4 leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_nh4_n15_solute  !< rate of 14NH4 leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(inout) :: leaching_no3_n15_solute  !< rate of 15NO3 leaching [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_noy            !< vertical transport of NOy [micro-mol/m3/s]
+!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_noy_n15        !< vertical transport of 15NOy [micro-mol/m3/s]
+!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2o            !< vertical transport of N2O [micro-mol/m3/s]
+!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2o_n15        !< vertical transport of 15N2O [micro-mol/m3/s]
+!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2             !< vertical transport of N2 [micro-mol/m3/s]
+!     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: transport_n2_n15         !< vertical transport of 15N2 [micro-mol/m3/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_noy             !< soil efflux of NOy [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_noy_n15         !< soil efflux of 15NOy [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2o             !< soil efflux of N2O [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2o_n15         !< soil efflux of 15N2O [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2              !< soil efflux of N2 [micro-mol/m2/s]
+!     REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2_n15          !< soil efflux of 15N2 [micro-mol/m2/s]
 !     ! ---------------------------
 !     ! 0.2 Local
 !     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_liquid_phase_transport_wrapper'

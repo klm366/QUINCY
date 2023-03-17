@@ -20,10 +20,10 @@
 !! @brief Contains the interface for plant growth and turnover processes 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719)
 !!
 MODULE mo_veg_interface
@@ -640,7 +640,7 @@ CONTAINS
     USE mo_jsb_control,         ONLY: debug_on
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,      ONLY: t_jsb_task_options
-    USE mo_veg_util,            ONLY: real_update_time_average_vegetation => update_time_average_vegetation
+    USE mo_veg_util,            ONLY: calculate_time_average_vegetation
     dsl4jsb_Use_processes VEG_
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -653,8 +653,7 @@ CONTAINS
     IF (debug_on() .AND. options%iblk == 1) &
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-
-    CALL real_update_time_average_vegetation(tile, options)
+    CALL calculate_time_average_vegetation(tile, options)
     
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 
@@ -689,7 +688,6 @@ CONTAINS
     dsl4jsb_Get_memory(VEG_)
 
     ! VEG_ 2D
-    dsl4jsb_Aggregate_onChunk(VEG_, daytime_counter                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, t_air_daytime_dacc                , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, press_srf_daytime_dacc            , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(VEG_, co2_mixing_ratio_daytime_dacc     , weighted_by_fract)

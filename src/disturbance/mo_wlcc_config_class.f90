@@ -41,10 +41,6 @@ CONTAINS
   !> Initialize wlcc process
   !
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize wlcc process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_wlcc_config)
-  !!  
   SUBROUTINE Init_wlcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -55,18 +51,18 @@ CONTAINS
     LOGICAL                       :: active
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     LOGICAL                       :: separate !< whether burned tiles should be treated separately or at once
-    ! -------------------------------------------------------------------------------------------------- !
 
     NAMELIST /jsb_wlcc_nml/      &
-         active,                      &
-         ic_filename,                 &
-         bc_filename,                 &
+         active,                 &
+         ic_filename,            &
+         bc_filename,            &
          separate
 
     INTEGER :: nml_handler, nml_unit, istat
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_wlcc_config'
-
+    ! -------------------------------------------------------------------------------------------------- !
+    
     CALL message(TRIM(routine), 'Starting wlcc configuration')
 
     ! Set defaults

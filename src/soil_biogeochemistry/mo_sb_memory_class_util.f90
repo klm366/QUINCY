@@ -1658,14 +1658,15 @@ CONTAINS
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real3d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool_elem3d, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, t_jsb_pool_elem3d, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_subset,             ONLY: t_subset, ON_DOMAIN, ON_CHUNK
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: all_elements, Create_sb_components_pool
+  PUBLIC :: all_elements
+  PUBLIC :: Create_sb_components_pool
   PUBLIC :: t_sb_main_pool, t_sb_components_pool, t_sb_elements_pool
-
+  
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for sb_elements_pool
   !! pool with only variables
@@ -1880,15 +1881,13 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> list with the element_id of all elements as defined above
-  !! is allocated in Init_PROC_memory
+  !! is allocated and initalized in Init_PROC_memory
   !-----------------------------------------------------------------------------------------------------
   INTEGER, ALLOCATABLE, SAVE :: all_elements(:)
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_memory_class_util'
 
-
 CONTAINS
-
 
   !-----------------------------------------------------------------------------------------------------
   !> helper function for t_sb_elements_pool
@@ -1968,11 +1967,12 @@ CONTAINS
   !> initializing an object of the SB_ elements pool "t_sb_elements_pool"
   !! "pool_object%Init()"
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE t_sb_elements_pool_init(this, name, shortname, l_elements, element_list, element_unit)
-
+  SUBROUTINE t_sb_elements_pool_init(this, name, shortname, elements_index_map, &
+    &                                l_elements, element_list, element_unit)
     CLASS(t_sb_elements_pool),  INTENT(inout) :: this               ! object of TYPE t_sb_elements_pool
     CHARACTER(LEN=*),           INTENT(in)    :: name               ! pool name       (No spaces !)
     CHARACTER(LEN=*),           INTENT(in)    :: shortname          ! pool short name (No spaces !)
+    INTEGER,                    INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
     LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements         ! IF pool has elements 
     INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:)    ! list of elements; use if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit       ! unit of elements
@@ -2241,11 +2241,12 @@ CONTAINS
   !> initializing the element-variables of an object of the SB_ components pool "t_sb_components_pool"
   !! "pool_object%Init()"
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE t_sb_components_pool_init(this, name, shortname, l_elements, element_list, element_unit)
-
+  SUBROUTINE t_sb_components_pool_init(this, name, shortname, elements_index_map, &
+    &                                  l_elements, element_list, element_unit)
     CLASS(t_sb_components_pool),  INTENT(inout) :: this               ! object of TYPE t_sb_components_pool
     CHARACTER(LEN=*),             INTENT(in)    :: name               ! pool name       (No spaces !)
     CHARACTER(LEN=*),             INTENT(in)    :: shortname          ! pool short name (No spaces !)
+    INTEGER,                      INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
     LOGICAL,          OPTIONAL,   INTENT(in)    :: l_elements         ! IF pool has elements 
     INTEGER,          OPTIONAL,   INTENT(in)    :: element_list(:)    ! list of elements; use if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,   INTENT(in)    :: element_unit       ! unit of elements
@@ -2415,12 +2416,13 @@ CONTAINS
   !!   init and add all its objects of the "t_sb_elements_pool" with "pool_object%Init()"
   !!   "object => Create_sb_components_pool()"
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_sb_components_pool(name, shortname, unit, lct_ids, pool_prefix, pool_suffix) RESULT(sb_components_pool)
-
+  FUNCTION Create_sb_components_pool(name, shortname, unit, lct_ids, elements_index_map, pool_prefix, pool_suffix) &
+    &      RESULT(sb_components_pool)
     CHARACTER(LEN=*),           INTENT(in)  :: name
     CHARACTER(LEN=*),           INTENT(in)  :: shortname
     CHARACTER(LEN=*),           INTENT(in)  :: unit
     INTEGER,                    INTENT(in)  :: lct_ids(:)
+    INTEGER,                    INTENT(in)  :: elements_index_map(:)  ! elements ID -> IND
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_prefix
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_suffix
     TYPE(t_sb_components_pool), POINTER     :: sb_components_pool
@@ -2437,71 +2439,88 @@ CONTAINS
 
     ! tissue pool init
     ALLOCATE(sb_components_pool)
-    CALL sb_components_pool%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
+    CALL sb_components_pool%Init(name, shortname, elements_index_map(:), l_elements=.TRUE., element_unit=unit)
     
     ! element pools allocate & init & add to tissue pool
     ! "shortname" is used for model output
     ! "element_list" is optional and can be used to select specific elements (not needed when all elements may be added)
     ! dom
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='dom_pool'//suffix_loc, shortname='dom', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='dom_pool'//suffix_loc, shortname='dom', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%dom => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! dom_assoc
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='dom_assoc_pool'//suffix_loc, shortname='dom_assoc', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='dom_assoc_pool'//suffix_loc, shortname='dom_assoc', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%dom_assoc => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! soluable_litter
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='soluable_litter_pool'//suffix_loc, shortname='sol_litter', l_elements=.TRUE., &
-                               element_unit=unit)
+    CALL sb_elements_pool%Init(name='soluable_litter_pool'//suffix_loc, shortname='sol_litter', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%soluable_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! polymeric_litter
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='polymeric_litter_pool'//suffix_loc, shortname='pol_litter', l_elements=.TRUE., &
-                               element_unit=unit)
+    CALL sb_elements_pool%Init(name='polymeric_litter_pool'//suffix_loc, shortname='pol_litter', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%polymeric_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! woody_litter
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='woody_litter_pool'//suffix_loc, shortname='woo_litter', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='woody_litter_pool'//suffix_loc, shortname='woo_litter', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%woody_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! fungi
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='fungi_pool'//suffix_loc, shortname='fungi', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='fungi_pool'//suffix_loc, shortname='fungi', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%fungi => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! mycorrhiza
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='mycorrhiza_pool'//suffix_loc, shortname='mycorrhiza', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='mycorrhiza_pool'//suffix_loc, shortname='mycorrhiza', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%mycorrhiza => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! microbial
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='microbial_pool'//suffix_loc, shortname='microbial', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='microbial_pool'//suffix_loc, shortname='microbial', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%microbial => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! residue
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='residue_pool'//suffix_loc, shortname='residue', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='residue_pool'//suffix_loc, shortname='residue', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%residue => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! residue_assoc
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='residue_assoc_pool'//suffix_loc, shortname='residue_assoc', l_elements=.TRUE., &
-                               element_unit=unit)
+    CALL sb_elements_pool%Init(name='residue_assoc_pool'//suffix_loc, shortname='residue_assoc', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%residue_assoc => sb_elements_pool
     NULLIFY(sb_elements_pool)

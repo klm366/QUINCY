@@ -70,7 +70,8 @@ MODULE mo_hydro_memory_class
 
     TYPE(t_jsb_var_real2d) :: &
       & elevation,            & !< Elevation
-      & oro_stddev              !< Standard deviation of orography
+      & oro_stddev,           & !< Standard deviation of orography
+      & steepness               !< parameter defining the subgrid slope distribution [/]
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -360,14 +361,14 @@ CONTAINS
       & hgrid, surface,                                                              &
       & t_cf('discharge', 'm3 s-1', 'Local discharge'),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
+      & prefix, suffix, output_level=BASIC,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'discharge_ocean', mem%discharge_ocean,                        &
       & hgrid, surface,                                                              &
       & t_cf('discharge_ocean', 'm3 s-1', 'Discharge to the ocean'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
+      & prefix, suffix, output_level=BASIC,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'internal_drain', mem%internal_drain,                          &
@@ -418,6 +419,15 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'steepness', mem%steepness,                                    &
+      & hgrid, surface,                                                              &
+      & t_cf('steepness', '/', 'subgrid slope distribution shape parameter'),        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp)
+
 
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
@@ -683,11 +693,10 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      !Todo: is this variable of any interest?
       CALL mem%Add_var( 'evapo_deficit', mem%evapo_deficit,                    &
         & hgrid, surface,                                                      &
-        & t_cf('evapo_deficit', 'm',   'Water that would have been evaporated  &
-              & additionally, if there had been more snow or surface water'),  &
+        & t_cf('evapo_deficit', 'm', 'Water which evaporated from other sources&
+              &/soillayers then intented'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
