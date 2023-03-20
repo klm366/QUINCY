@@ -22,7 +22,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message, finish
+  USE mo_exception,          ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -442,6 +442,9 @@ CONTAINS
     REAL(wp) :: dtime, w_skin_max_config
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+    REAL(wp), POINTER :: lat(:), lon(:)
+    REAL(wp) :: tile_fract(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
 
@@ -456,6 +459,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
+    lat => grid%lat(ics:ice, iblk)
+    lon => grid%lon(ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -621,12 +628,18 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_9 tile_name=tile%name
         trans_tmp(:) = 0._wp
       END IF
+      !$claw acc data create(tile, tile%fract, tile_fract)
+      !$claw acc parallel loop gang vector
+      CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_hydrology_land_1 tile_name=tile%name
       CALL calc_surface_hydrology_land(   &
         ! in
         & nc,                             & !< Number of grid cells
         & lstart,                         & !< T: Start of experiment
         & dtime,                          & !< time step length [s]
+        & tile_fract(:) > 0._wp, &
+        & lat(:), &
+        & lon(:), &
         & ltpe_closed,                    & !< T: terra planet setup without runoff
         & dsl4jsb_Config(SSE_)%l_dynsnow, & !< T: Compute density of snow dynamically
         & dsl4jsb_Config(HYDRO_)%l_infil_subzero, & !< T: Allow infiltration at soil temperatures below 0degC
@@ -1605,6 +1618,7 @@ CONTAINS
       & qsat_star, &
       & qsat_lwtr, &
       & qsat_lice, &
+      & fract_snow, &
       & fact_qsat_srf, &
       & fact_qsat_trans_srf, &
       & fact_q_air, &
@@ -1629,10 +1643,12 @@ CONTAINS
       & qsat_srf_eff (:), &  !< Effective surface saturation specific humidity
       & heat_tcoef   (:)     !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: steplen, alpha
+    REAL(wp), POINTER :: lat(:), lon(:) 
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_evaporation'
 
@@ -1648,6 +1664,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    grid => Get_grid(model%grid_id)
+    lat => grid%lat(ics:ice, iblk)
+    lon => grid%lon(ics:ice, iblk)
 
     !$cla$w acc data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
     ALLOCATE(q_air(nc),q_air_eff(nc),qsat_srf_eff(nc),heat_tcoef(nc))
@@ -1710,27 +1730,46 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)       ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_trans_srf) ! in
 
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_lnd)           ! out
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    transpiration)          ! out
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
-      q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
+      q_air(:)      = q_acoef(:) * qsat_star(:) + q_bcoef(:)           ! New moisture at lowest atmospheric level by back-substitution
       heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)  ! Transfer coefficient
 
       ! Compute effective air moisture and surface saturation humidity
-      q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
-                              & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
+      q_air_eff(:)    = q_effective(SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
+        &                           SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
       qsat_srf_eff(:) = q_effective(qsat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
 
-      evapotrans_lnd(:)          = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
-      evapotrans(:) = evapotrans_lnd(:)
-      evapopot(:)           = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
+      evapotrans_lnd(:)  = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
+      evapotrans(:)      = evapotrans_lnd(:)
+      evapopot(:)        = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
       !$claw end expand
       IF (tile%contains_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_6 tile_name=tile%name
-        transpiration(:)    = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
+        transpiration(:) = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
+      END IF
+
+      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN   ! Not at start of experiment
+        DO i = 1, nc
+          IF (evapopot(i) * evapotrans(i) < 0._wp) THEN  ! both have different sign
+            WRITE (message_text,*) 'ET inconsistency on ',TRIM(tile%name),' tile at index ', &
+              & i, '(',lat(i),'N and ',lon(i),'E):',                       NEW_LINE('a'), &
+              & 'evapopot:               ', evapopot(i),                   NEW_LINE('a'), &
+              & 'evapotrans:             ', evapotrans(i),                 NEW_LINE('a'), &
+              & 'fact_qsat_srf:          ', fact_qsat_srf(i),              NEW_LINE('a'), &
+              & 'fact_q_air:             ', fact_q_air(i),                 NEW_LINE('a'), &
+              & 'q_air:                  ', q_air(i),                      NEW_LINE('a'), &
+              & 'qsat_star:              ', qsat_star(i),                  NEW_LINE('a'), &
+              & 'q_air_eff:              ', q_air_eff(i),                  NEW_LINE('a'), &
+              & 'qsat_srf_eff:           ', qsat_srf_eff(i)
+            call finish(TRIM(routine), message_text)
+          END IF
+        END DO
       END IF
 
     ELSE
