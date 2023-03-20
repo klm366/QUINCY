@@ -7,7 +7,7 @@
 # Authors: Reiner Schnur, Veronika Gayler, Rene Redler, MPI-M
 #
 # Reiner Schnur, MPI-M, 2017-04-10 initial version
-# 
+#
 # Based on scripts from Veronika Gayler, Thomas Raddatz and Marco Giorgetta
 #
 # The script generates cover fractions relative to the parent tile of the
@@ -640,6 +640,7 @@ function generate_output_files {
       ${grid_name}_soil_porosity_remap.nc \
       ${grid_name}_wilting_point_remap.nc \
       ${grid_name}_fao_remap.nc \
+      ${grid_name}_maxmoist_remap.nc \
       ${outfile}
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
