@@ -145,6 +145,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: precip_mean_day
     dsl4jsb_Real2D_onChunk :: frac_inun
     dsl4jsb_Real2D_onChunk :: frac_inun_uncorr
+    dsl4jsb_Real2D_onChunk :: frac_inun_pre
     dsl4jsb_Real2D_onChunk :: frac_inun_sum_month
     dsl4jsb_Real2D_onChunk :: frac_inun_mean_month
     dsl4jsb_Real2D_onChunk :: frac_inun_min_year
@@ -247,6 +248,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
     ! TOP_ variables
     dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun)
+    dsl4jsb_Get_var2D_onChunk(TOP_, frac_inun_pre)
     dsl4jsb_Get_var2D_onChunk(TOP_, wt_inun)
     dsl4jsb_Get_var2D_onChunk(TOP_, aet)
     dsl4jsb_Get_var2D_onChunk(TOP_, frac_liquid_top)
@@ -288,6 +290,7 @@ CONTAINS
         frac_inun_clim => dsl4jsb_memory(TOP_)%frac_inun_clim(ics:ice,iblk,:)
         CALL get_climatological_inun(frac_inun_clim(:,month),frac_inun(:),wt_inun(:))
       ENDIF
+      IF (lstart) frac_inun_pre(:) = frac_inun(:) 
     ELSE
 
       ! Variables only available if not inun_prescribed
@@ -314,6 +317,9 @@ CONTAINS
       cti_phi       => dsl4jsb_memory(TOP_)%cti_phi      (ics:ice,iblk)
       cti_chi       => dsl4jsb_memory(TOP_)%cti_chi      (ics:ice,iblk)
       cti_mu        => dsl4jsb_memory(TOP_)%cti_mu       (ics:ice,iblk)
+
+      ! Save inundated fraction from last time step for the methane process
+      frac_inun_pre(:) = frac_inun(:)
 
       ! Calculate water table
       !

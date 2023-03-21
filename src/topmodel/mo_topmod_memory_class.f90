@@ -160,6 +160,15 @@ CONTAINS
       & output_level = default_output_level,                                 &
       & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
 
+    CALL mem%Add_var( 'frac_inun_pre', mem%frac_inun_pre,                    &
+      & hgrid, surface,                                                      &
+      & t_cf('frac_inun_pre', '', 'inundated_fraction'),                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level = FULL,                                                 &
+      & initval_r=0.0_wp, isteptype=TSTEP_INSTANT )
+
     CALL mem%Add_var( 'wt_inun', mem%wt_inun,                                &
       & hgrid, surface,                                                      &
       & t_cf('water_table_on_inundated_fraction', 'm', ''),                  &
