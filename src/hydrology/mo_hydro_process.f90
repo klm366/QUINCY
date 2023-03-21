@@ -320,8 +320,8 @@ CONTAINS
     snowmelt_soil(:)   = snowmelt_soil(:) * rhoh2o / dtime
 
     evapotrans_soil(:) = evapotrans_soil_in_m(:) * rhoh2o / dtime
-    evapo_skin(:)      = evapo_skin_in_m(:)  * rhoh2o / dtime
-    evapo_snow(:)      = fract_snow(:) * evapopot(:)
+    evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
+    evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -570,10 +570,10 @@ CONTAINS
     !$claw acc parallel
     !$claw acc loop gang
     DO i = 1, nc
-      transpiration_in_m(i) = transpiration(i)  * dtime / rhoh2o
-      ! Note: at this point ignoring the amount of dew that exceeds the skin reservoir
-      !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
-      evapo_soil_in_m(i) = evapotrans_soil(i) * dtime / rhoh2o - transpiration_in_m(i)
+      ! Note: any dew is removed from these fluxes, as dew is already applied
+      !       during the surface hydrology computation
+      evapo_soil_in_m(i)    = MIN(0._wp, evapotrans_soil(i) - transpiration(i)) * dtime / rhoh2o
+      transpiration_in_m(i) = MIN(0._wp, transpiration(i))  * dtime / rhoh2o
     END DO
     !$claw acc end parallel
 
