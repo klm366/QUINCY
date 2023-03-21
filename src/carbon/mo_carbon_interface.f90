@@ -37,11 +37,12 @@ MODULE mo_carbon_interface
                                  & i_lctlib_nonsoluble, i_lctlib_humus
 
   ! Use of processes in this module (Get_carbon_memory and Get_carbon_config)
-  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_
+  dsl4jsb_Use_processes CARBON_, ASSIMI_, PHENO_, DISTURB_, A2L_, L2A_, CH4
 
   ! Use of process configurations
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
+  dsl4jsb_Use_config(CH4_)
 
   ! Use of process memories (t_carbon_memory)
   dsl4jsb_Use_memory(A2L_)
@@ -175,6 +176,7 @@ CONTAINS
 
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(CH4_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(ASSIMI_)
     dsl4jsb_Def_memory(CARBON_)
@@ -266,6 +268,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  LAI_sum                ! used to accumulate LAI over a day. Sum of LAI since Midnight.
     dsl4jsb_Real2D_onChunk ::  NPP_pot_sum            ! used to accumulated NPP-Rate over a day
     dsl4jsb_Real2D_onChunk ::  GPP_sum                ! used to accumulated GPP-Rate over a day
+    dsl4jsb_Real2D_onChunk ::  GPP_ann_sum            ! used to accumulated GPP-Rate over a year (for the methane process)
+    dsl4jsb_Real2D_onChunk ::  GPP_yYearMean          ! previous year mean (for the methane process)
     dsl4jsb_Real2D_onChunk ::  LAI_yDayMean           ! previous days mean
     dsl4jsb_Real2D_onChunk ::  LAI_yyDayMean          ! previous previous days mean
     dsl4jsb_Real2D_onChunk ::  NPP_pot_yDayMean       ! mean value of NPP-Rate yesterday (from NPP_pot_sum())
@@ -386,11 +390,13 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_sum )                   ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_sum )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_sum )                   ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_ann_sum )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_yDayMean )              ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  LAI_yyDayMean )             ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_pot_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_act_yDayMean )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yDayMean )              ! inout
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  GPP_yYearMean )             ! inout
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  soil_respiration )          ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  NPP_flux_correction)        ! inout
@@ -517,6 +523,12 @@ CONTAINS
       & cflux_c_green_2_herb = cflux_c_green_2_herb(:), NPP_act_yDayMean = NPP_act_yDayMean(:), &
       & NPP_pot_yDayMean = NPP_pot_yDayMean(:), GPP_yDayMean = GPP_yDayMean(:))
 
+    ! Give some "initial" value for GPP_yYear and initalize sum for next year
+    IF (lstart) THEN
+      GPP_yYear = GPP_ann_sum
+      GPP_ann_sum = GPP_yDayMean * sec_per_day
+    ENDIF
+
     IF( .NOT. new_day .OR. lstart) THEN ! perform daily sums if WE ARE NOT STARTING A NEW DAY
                                             ! or if we JUST STARTED AN TOTALLY NEW EXPERIMENT
 
@@ -595,7 +607,9 @@ CONTAINS
         &  cflux_crop_harvest_2_atmos                         & ! out
         & )
 
-      IF (.TRUE.) THEN ! TODO: For now - to be replaced with methane process active check
+      IF (dsl4jsb_Config(CH4_)%active) THEN
+        ! StW: TODO: Interface to be inserted here
+      ELSE
         CALL calc_soil_c( &
           & sec_per_day,                                                                       & ! in
           & LeafLit_coef_acid       = dsl4jsb_Lctlib_param(LeafLit_coef(i_lctlib_acid)),       & ! in
@@ -691,6 +705,14 @@ CONTAINS
 
     END IF ! new day
 
+    ! Calc sum of GPP for total GPP of previous year for the methane process
+    IF (new_year) THEN
+      GPP_yYear = GPP_ann_sum
+      GPP_ann_sum = GPP_yDayMean * sec_per_day
+    ELSE
+      GPP_ann_sum = GPP_ann_sum + GPP_yDayMean * sec_per_day
+    ENDIF
+
     ! Compute net CO2 fluxes exchanged with atmosphere at each time step
     !-------------------------------------------------------------------
     ! Note: carbon loss of biosphere means a positive CO2 flux to atmosphere (i.e. NEP and net CO2-flux have opposite signs)
@@ -720,7 +742,6 @@ CONTAINS
     sla(:) = dsl4jsb_Lctlib_param(specificLeafArea_C)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
 
   END SUBROUTINE update_C_NPP_pot_allocation
 
