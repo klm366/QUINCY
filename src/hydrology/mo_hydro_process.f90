@@ -16,7 +16,7 @@ MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message, finish, message_text, em_warn
+  USE mo_exception, ONLY: message, finish, message_text,warning
 
   IMPLICIT NONE
   PRIVATE
@@ -1416,7 +1416,7 @@ CONTAINS
       IF (ANY(ws_l(:,:) < -EPSILON(1._wp))) THEN
         CALL finish ('digest_infilt', message_text)
       ELSE
-        CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
+        CALL warning ('digest_infilt', message_text)
         ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
       END IF
     END IF
