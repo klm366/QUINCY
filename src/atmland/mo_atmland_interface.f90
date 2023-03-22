@@ -836,9 +836,9 @@ CONTAINS
     END IF
     IF (PRESENT(alb_vis_dir)) THEN
       IF (model%config%use_new_turb) THEN
-        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis_lnd)  ! TODO
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis)      ! TODO
       ELSE
-        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis)  ! TODO
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis_lnd)  ! TODO
       END IF
       !$acc data present(alb_vis_lnd_ptr, alb_vis_dir)
       !$acc parallel loop
@@ -849,9 +849,9 @@ CONTAINS
     END IF
     IF (PRESENT(alb_vis_dif)) THEN
       IF (model%config%use_new_turb) THEN
-        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_vis_lnd)  ! TODO
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis)      ! TODO
       ELSE
-        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_vis)  ! TODO
+        alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis_lnd)  ! TODO
       END IF
       !$acc data present(alb_vis_dif, alb_vis_lnd_ptr)
       !$acc parallel loop
@@ -862,9 +862,9 @@ CONTAINS
     END IF
     IF (PRESENT(alb_nir_dir)) THEN
       IF (model%config%use_new_turb) THEN
-        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)  ! TODO
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_nir)      ! TODO
       ELSE
-        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir)  ! TODO
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_nir_lnd)  ! TODO
       END IF
       !$acc data present(alb_nir_dir, alb_nir_lnd_ptr)
       !$acc parallel loop
@@ -875,9 +875,9 @@ CONTAINS
     END IF
     IF (PRESENT(alb_nir_dif)) THEN
       IF (model%config%use_new_turb) THEN
-        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir_lnd)
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_nir)
       ELSE
-        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_,   alb_nir)
+        alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_nir_lnd)
       END IF
       !$acc data present(alb_nir_dif, alb_nir_lnd_ptr)
       !$acc parallel loop
