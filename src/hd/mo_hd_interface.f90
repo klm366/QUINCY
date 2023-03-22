@@ -290,6 +290,7 @@ CONTAINS
       & outflow_drainage,      &
       & outflow_rivers,        &
       & outflow_resid,         &
+     !& outflow_count,         &
       & discharge,             &
       & discharge_ocean,       &
       & internal_drain,        &
@@ -356,10 +357,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, bidx_upstream)    ! IN
-
     dsl4jsb_Get_var2D_onDomain(HD_, coast_ocean)      ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, nsplit)           ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
+   !dsl4jsb_Get_var2D_onDomain(HD_, outflow_count)    ! OUT
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! OUT
@@ -423,12 +424,28 @@ CONTAINS
             jc_us  =  nidx_upstream(jc,n,blk)
             blk_us =  bidx_upstream(jc,n,blk)
             IF (jc_us > 0 .and. blk_us > 0) THEN
+              ! Workaround for NVIDIA compiler 21.3 internal compiler error
               ! Note that nsplit is set to 1._wp for use_bifurcated_rivers=false
+#if defined(__NVCOMPILER) && (__NVCOMPILER_MAJOR__ < 22  || (__NVCOMPILER_MAJOR__ == 22 && __NVCOMPILER_MINOR__ < 9))
               discharge(jc,blk) =  discharge(jc,blk)                      &
                                  + ( ( outflow_runoff(jc_us,blk_us)       &
                                      + outflow_drainage(jc_us,blk_us)     &
                                      + outflow_rivers(jc_us,blk_us)   )   &
                                    / nsplit(jc_us,blk_us)               )
+#else
+              IF (use_bifurcated_rivers) THEN
+                discharge(jc,blk) =  discharge(jc,blk)                      &
+                                   + ( ( outflow_runoff(jc_us,blk_us)       &
+                                       + outflow_drainage(jc_us,blk_us)     &
+                                       + outflow_rivers(jc_us,blk_us)   )   &
+                                     / nsplit(jc_us,blk_us)               )
+              ELSE
+                discharge(jc,blk) =  discharge(jc,blk)               &
+                                   + outflow_runoff(jc_us,blk_us)    &
+                                   + outflow_drainage(jc_us,blk_us)  &
+                                   + outflow_rivers(jc_us,blk_us)
+              END IF
+#endif
               ! Enable this block for debugging ... but this only works on one (!) processor, i.e. no halos
               !dbg>>
               ! outflow_count(jc_us,blk_us) = outflow_count(jc_us,blk_us) - 1._wp
