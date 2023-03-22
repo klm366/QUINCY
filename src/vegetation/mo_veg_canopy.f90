@@ -98,7 +98,8 @@ CONTAINS
     USE mo_veg_constants,           ONLY: carbon_per_dryweight_leaf, &
                                           jmax2vcmax_C4, k0_fn_chl_C4, k1_fn_chl_C4, k0_fn_pepc_C4, &
                                           jmax2vcmax_C3, k0_fn_chl_C3, k1_fn_chl_C3, k0_fn_pepc_C3, kfn_chl
-    USE mo_assimi_constants,        ONLY: kn, chl2n, ic4phot, jmax2n, k1_fn_struc, vcmax2n
+    USE mo_assimi_parameters,       ONLY: kn, chl2n, jmax2n, k1_fn_struc, vcmax2n
+    USE mo_assimi_constants,        ONLY: ic4phot
     USE mo_jsb_physical_constants,  ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_jsb_math_constants,      ONLY: eps8, eps12
 
@@ -895,7 +896,7 @@ CONTAINS
                                                   ppfd_sunlit_cl          , &
                                                   ppfd_shaded_cl          , &
                                                   swpar_srf_down          , &
-                                                  swpar_fdiffuse          , &
+                                                  fract_par_diffuse       , &
                                                   unit_npp                , &
                                                   unit_transpiration )
 
@@ -953,7 +954,7 @@ CONTAINS
                                                           ppfd_sunlit_cl          , &   !< ..
                                                           ppfd_shaded_cl                !< ..
     REAl(wp),DIMENSION(nc),                 INTENT(in) :: swpar_srf_down          , &   !< ..
-                                                          swpar_fdiffuse                !< ..
+                                                          fract_par_diffuse             !< ..
     REAL(wp),DIMENSION(nc),                 INTENT(out):: unit_npp                , &   !< unit change of NPP per ??
                                                           unit_transpiration            !< unit change of NPP per ??
     ! ---------------------------
@@ -1060,7 +1061,8 @@ CONTAINS
     ! In case of no leaves set top layer PAR to SW value
     WHERE (lai(:) < eps8)
        loc_ppfd_sunlit_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_srf_down(:) * rad2ppfd
-       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_fdiffuse(:) * swpar_srf_down(:) * rad2ppfd
+       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib_sigma_vis) &
+         &                         * fract_par_diffuse(:) * swpar_srf_down(:) * rad2ppfd
        loc_fleaf_sunlit_cl(:,1) = exp(-kbl0_vis * cumm_lai_new_cl(:,1))
     END WHERE
 

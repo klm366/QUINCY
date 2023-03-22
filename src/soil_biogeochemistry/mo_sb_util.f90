@@ -38,7 +38,7 @@ MODULE mo_sb_util
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: reset_sb_fluxes, update_time_average_soilbiogeochemistry
+  PUBLIC :: reset_sb_fluxes, calculate_time_average_soilbiogeochemistry
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sb_util'
 
@@ -228,7 +228,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> calculate time moving averages and daytime averages for SB_
   !>
-  SUBROUTINE update_time_average_soilbiogeochemistry(tile, options)
+  SUBROUTINE calculate_time_average_soilbiogeochemistry(tile, options)
 
     USE mo_jsb_control,             ONLY: debug_on
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
@@ -252,7 +252,7 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
     TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_soilbiogeochemistry'
+    CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_soilbiogeochemistry'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
 #ifdef __QUINCY_STANDALONE__
@@ -389,7 +389,7 @@ CONTAINS
 ! #undef Passback_sb_mycorrhiza_export
 ! #endif
 
-  END SUBROUTINE update_time_average_soilbiogeochemistry
+  END SUBROUTINE calculate_time_average_soilbiogeochemistry
 
 
 #endif

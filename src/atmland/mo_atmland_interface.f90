@@ -88,6 +88,7 @@ CONTAINS
     & )
 
     USE mo_jsb_physical_constants, ONLY: molarMassDryAir, molarMassCO2
+    USE mo_jsb_math_constants,     ONLY: eps8
 
     CLASS(t_jsb_tile_abstract), INTENT(inout)             :: tile
     TYPE(t_jsb_task_options),   INTENT(in)                :: options
@@ -145,7 +146,8 @@ CONTAINS
     ! quincy
     dsl4jsb_Real2D_onChunk :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: prev_two_cos_zenith_angle
-    
+    dsl4jsb_Real2D_onChunk :: prev_three_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk :: daytime_counter
 
     IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
 
@@ -262,8 +264,10 @@ CONTAINS
     END IF
 
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      prev_one_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
-      prev_two_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+      prev_one_cos_zenith_angle   => dsl4jsb_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
+      prev_two_cos_zenith_angle   => dsl4jsb_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+      prev_three_cos_zenith_angle => dsl4jsb_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)
+      daytime_counter             => dsl4jsb_var2D_onChunk(A2L_, daytime_counter)
     END IF
 
     !$acc parallel default(present)
@@ -472,9 +476,27 @@ CONTAINS
       IF (.NOT. PRESENT(cos_zenith_angle)) THEN
         CALL finish(TRIM(routine), 'cos_zenith_angle not present but needed for QUINCY model')
       END IF
-      prev_two_cos_zenith_angle(:) = prev_one_cos_zenith_angle(:)
-      prev_one_cos_zenith_angle(:) = cos_zenith_angle(:)      
-    END IF
+
+      ! shift cos_zenith_angle tracing
+      prev_three_cos_zenith_angle(:) = prev_two_cos_zenith_angle(:)
+      prev_two_cos_zenith_angle(:)   = prev_one_cos_zenith_angle(:)
+      prev_one_cos_zenith_angle(:)   = cos_zenith_angle(:)
+
+      DO i = 1, nc
+        ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
+        IF ((prev_one_cos_zenith_angle(i) - prev_two_cos_zenith_angle(i)) > eps8 .AND. &
+            & (prev_two_cos_zenith_angle(i) - prev_three_cos_zenith_angle(i)) <= eps8) THEN
+          ! zero the counter for number of accumulated values per day
+          daytime_counter(i) = 0.0_wp
+        ENDIF
+  
+        ! count number of daytime values
+        IF (swpar_srf_down(i) > eps8) THEN
+          daytime_counter(i) = daytime_counter(i) + 1.0_wp
+        ENDIF
+      END DO
+
+    END IF ! MODEL_QUINCY
 
   END SUBROUTINE update_atm2land
 

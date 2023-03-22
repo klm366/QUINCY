@@ -16,19 +16,20 @@
 MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_control,         ONLY: debug_on
-  USE mo_kind,                ONLY: wp, dp
-  USE mo_exception,           ONLY: message, finish
-  USE mo_io_units,            ONLY: filename_max
-  USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
+  USE mo_jsb_control,          ONLY: debug_on
+  USE mo_kind,                 ONLY: wp, dp
+  USE mo_exception,            ONLY: message, finish
+  USE mo_io_units,             ONLY: filename_max
+  USE mo_jsb_impl_constants,   ONLY: SHORT_NAME_LEN
 
-  USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
-  USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
-  USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
-  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
+  USE mo_hsm_class,            ONLY: t_Hsm, t_State, t_Message
+  USE mo_jsb_memory_class,     ONLY: t_jsb_memory_p, t_jsb_memory
+  USE mo_jsb_lct_class,        ONLY: t_jsb_lct, &
+    &                                LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+  USE mo_jsb_var_class,        ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_cqt_class,        ONLY: t_jsb_consQuan_p
+  USE mo_jsb_lcc_class,        ONLY: t_jsb_lcc_proc_p
+  USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
 
 #ifdef _OPENACC
   USE openacc
@@ -100,6 +101,7 @@ MODULE mo_jsb_tile_class
     INTEGER                                :: nr_of_cqts = 0          !< number of conserved quantity types in use on the tile 
     TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) !< list of conserved quantities sort by type
     TYPE(t_jsb_lcc_proc_p), ALLOCATABLE    :: lcc_processes(:)        !< list of lcc structures indexed by proc id
+    TYPE(t_lnd_bgcm_store), POINTER        :: bgcm_store => NULL()    !< the bgcm store collecting pools and their elements on this tile
     !CLASS(t_jsb_param_p),       POINTER    :: param(:)
     TYPE(t_jsb_memory_p),       POINTER    :: mem(:)                  !< Memory for all processes on the tile
     CLASS(t_jsb_tile_abstract), POINTER    :: self_tile => NULL()     !< pointer to the tile to enable assigning it as target
@@ -141,6 +143,8 @@ MODULE mo_jsb_tile_class
     !
     PROCEDURE(Init_interface),           DEFERRED :: Init
     PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Count_and_classify_bgc_materials
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_bgc_materials
     PROCEDURE(Init_vars_interface),      DEFERRED :: Count_conserved_quantities
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions

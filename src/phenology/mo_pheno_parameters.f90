@@ -21,7 +21,6 @@ MODULE mo_pheno_parameters
   IMPLICIT NONE
   PUBLIC
 
-
   ! ======================================================================================================= !
   !> 1.0 general PHENO_ parameters
   !>
@@ -214,7 +213,7 @@ MODULE mo_pheno_parameters
   !> 3.0 QUINCY specific parameters
   !>
   REAL(wp), SAVE :: & 
-    & gdd_t_air_threshold             !< temperature threshold for the accumulation of growing degree days [deg K]
+    & gdd_t_air_threshold = def_parameters      !< temperature threshold for the accumulation of growing degree days [deg K]
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_pheno_parameters'
 

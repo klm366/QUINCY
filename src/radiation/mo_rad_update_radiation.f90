@@ -128,7 +128,7 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: fleaf_sunlit_nir_cl
     ! A2L_
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk :: swpar_fdiffuse
+    dsl4jsb_Real2D_onChunk :: fract_par_diffuse
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
@@ -160,7 +160,7 @@ CONTAINS
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
+    vgrid_canopy  => Get_vgrid('canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
     ! ..
@@ -171,7 +171,7 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     ! Get process variables (Set pointers to variables in memory)
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)           ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)         ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)           ! in
@@ -229,11 +229,11 @@ CONTAINS
     alb_nir_soil(:) = def_alb_nir_soil
 
     !> 2.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
-    !! 
+    ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
     CALL calc_sw_srf_net(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
-                     swvis_srf_down(:), swpar_fdiffuse(:), cos_zenith_angle(:), & 
+                     swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:),& 
                      alb_vis_soil(:), &
                      arad_sunlit_vis_cl(:,:),arad_shaded_vis_cl(:,:),fleaf_sunlit_vis_cl(:,:), &
@@ -243,11 +243,12 @@ CONTAINS
     !> 3.0 calculate NIR radiation budget (absorbed radiation on canopy layers and soil + albedo)
     !! 
     !! Following Weiss & Norman, Agri. For. Met. 1985, the fraction of VIS and NIR 
-    !! diffuse radiation are very similar 
+    !! diffuse radiation are very similar
+    ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
     CALL calc_sw_srf_net(nc, ncanopy, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "nir", &
-                     swnir_srf_down(:), swpar_fdiffuse(:), cos_zenith_angle(:), & 
+                     swnir_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
                      alb_nir_soil(:), &
                      arad_sunlit_nir_cl(:,:),arad_shaded_nir_cl(:,:),fleaf_sunlit_nir_cl(:,:), &
@@ -326,7 +327,7 @@ CONTAINS
                               lctlib_crown_shape_factor , &   ! in
                               vis_nir_id          , &   ! in
                               sw_srf_down         , &   ! in
-                              sw_fdiffuse         , &   ! in
+                              fract_par_diffuse   , &   ! in
                               cos_zenith_angle    , &   ! in 
                               lai                 , &   ! in
                               lai_cl              , &   ! in
@@ -355,7 +356,8 @@ CONTAINS
     REAL(wp)                               , INTENT(in)  :: lctlib_crown_shape_factor !< lctlib parameter
     CHARACTER(len=3)                       , INTENT(in)  :: vis_nir_id         !< vis nir identifier for this function only
     REAL(wp), DIMENSION(nc)                , INTENT(in)  :: sw_srf_down        !< shortwave downward radiation flux (W m-2)
-    REAL(wp), DIMENSION(nc)                , INTENT(in)  :: sw_fdiffuse        !< fraction of diffuse radiation (--)
+    REAL(wp), DIMENSION(nc)                , INTENT(in)  :: fract_par_diffuse
+      !< fraction of diffuse radiation (--). Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
     REAL(wp), DIMENSION(nc)                , INTENT(in)  :: cos_zenith_angle   !< solar angle (radians)
     REAL(wp), DIMENSION(nc)                , INTENT(in)  :: lai                !< leaf area index (m-2 m-2)
     REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(in)  :: lai_cl             !< leaf area index of canopy layer (m-2 m-2) 
@@ -437,10 +439,10 @@ CONTAINS
     !> @par IF only do calculations if daylight is available, either direct or diffuse (in case of negative cos_zenith_angle)
     WHERE(sw_srf_down(:) > eps8)
     
-       !> Downwelling direct radiation 
-       irad_dir_down(:) = (1.0_wp - sw_fdiffuse(:)) * sw_srf_down(:)
+       !> Downwelling direct radiation (Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation)
+       irad_dir_down(:) = (1.0_wp - fract_par_diffuse(:)) * sw_srf_down(:)
        !> Downwelling diffuse radiation 
-       irad_dif_down(:) = sw_fdiffuse(:) * sw_srf_down(:)
+       irad_dif_down(:) = fract_par_diffuse(:) * sw_srf_down(:)
 
        !> @par IF lai > eps8
        WHERE(lai(:) > eps8)

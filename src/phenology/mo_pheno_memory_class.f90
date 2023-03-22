@@ -20,6 +20,7 @@ MODULE mo_pheno_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE
@@ -173,19 +174,24 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model        => Get_model(model_id)
 
+    SELECT CASE (model%config%model_scheme)
     !------------------------------------------------------------------------------------------------------ !
-    !>1.0 mem init for JSBACH model
+    !> 1.0 mem init for JSBACH model
     !>
-    IF (model%config%model_scheme == MODEL_JSBACH) THEN
+    CASE(MODEL_JSBACH)
       CALL Init_pheno_memory_jsbach(mem, prefix, suffix, lct_ids, model_id)
-    END IF
-
     !------------------------------------------------------------------------------------------------------ !
-    !>2.0 mem init for QUINCY model
+    !> 2.0 mem init for QUINCY model
     !>
-    IF (model%config%model_scheme == MODEL_QUINCY) THEN
+    CASE(MODEL_QUINCY)
       CALL Init_pheno_memory_quincy(mem, prefix, suffix, lct_ids, model_id)
-    END IF
+    !------------------------------------------------------------------------------------------------------ !
+    !> 3.0 error handling
+    !>
+    CASE DEFAULT
+      WRITE(message_text,'(2a)') 'invalid model_scheme', model%config%model_scheme
+      CALL finish(routine, message_text) 
+    END SELECT
   END SUBROUTINE Init_pheno_memory
 
   ! ======================================================================================================= !
@@ -208,17 +214,17 @@ CONTAINS
     TYPE(t_jsb_model),  POINTER :: model
     dsl4jsb_Def_config(PHENO_)
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid),  POINTER :: surface, canopy_layer        ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: surface, vgrid_canopy        ! Vertical grid
     INTEGER                     :: table                        ! ...
     TYPE(t_grib2)               :: grib2_desc                   ! used for lai settings
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_memory_jsbach'
     ! ----------------------------------------------------------------------------------------------------- !
     model        => Get_model(model_id)
     dsl4jsb_Get_config(PHENO_)
-    table        = tables(1)
+    table        =  tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    canopy_layer => Get_vgrid('canopy_layer')
+    vgrid_canopy => Get_vgrid('canopy_layer')
 
     !! !$acc enter data pcreate(mem)
 
@@ -445,7 +451,7 @@ CONTAINS
         & initval_r=0.0_wp )
         
       CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
-        & hgrid, canopy_layer,                                               &
+        & hgrid, vgrid_canopy,                                               &
         & t_cf('LAI for each canopy layer', '', ''),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
@@ -501,11 +507,7 @@ CONTAINS
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-#ifdef __QUINCY_STANDALONE__
     vgrid_canopy => Get_vgrid('canopy_layer')
-#else
-    vgrid_canopy => Get_vgrid('canopy_layer_q_')
-#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! create memory at tiles of LAND_TYPE or VEG_TYPE
