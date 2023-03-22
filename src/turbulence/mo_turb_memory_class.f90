@@ -150,38 +150,29 @@ CONTAINS
       & loutput=.FALSE.,                                                         &
       & initval_r=1.0_wp )
 
-    ! Additional variables for all lcts except lakes
-    IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &
-      &   .OR. One_of(BARE_TYPE,    lct_ids(:)) > 0 &
-      &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
-      &   .OR. One_of(GLACIER_TYPE, lct_ids(:)) > 0 &
-      &  ) ) THEN
+    CALL mem%Add_var( 'fact_q_air', mem%fact_q_air,                        &
+      & hgrid, surface,                                                    &
+      & t_cf('fact_q_air', '', ''),                                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & output_level=BASIC,                                                &
+      & initval_r=0.5_wp )
 
-      CALL mem%Add_var( 'fact_q_air', mem%fact_q_air,                        &
-        & hgrid, surface,                                                    &
-        & t_cf('fact_q_air', '', ''),                                        &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=BASIC,                                                &
-        & initval_r=0.5_wp )
+    CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,                  &
+      & hgrid, surface,                                                    &
+      & t_cf('fact_qsat_srf', '', ''),                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & output_level=BASIC,                                                &
+      & initval_r=0.5_wp )
 
-      CALL mem%Add_var( 'fact_qsat_srf', mem%fact_qsat_srf,                  &
-        & hgrid, surface,                                                    &
-        & t_cf('fact_qsat_srf', '', ''),                                     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=BASIC,                                                &
-        & initval_r=0.5_wp )
-
-      CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,      &
-        & hgrid, surface,                                                    &
-        & t_cf('fact_qsat_trans_srf', '', ''),                               &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix,                                                    &
-        & output_level=BASIC,                                                &
-        & initval_r=0.5_wp )
-
-    END IF
+    CALL mem%Add_var( 'fact_qsat_trans_srf', mem%fact_qsat_trans_srf,      &
+      & hgrid, surface,                                                    &
+      & t_cf('fact_qsat_trans_srf', '', ''),                               &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+      & prefix, suffix,                                                    &
+      & output_level=BASIC,                                                &
+      & initval_r=0.5_wp )
 
   END SUBROUTINE Init_turb_memory
 
