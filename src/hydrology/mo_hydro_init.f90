@@ -325,8 +325,9 @@ CONTAINS
             & fill_array=hydro_init_vars%fract_pond_max)
           ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
         ELSE
-          hydro_init_vars%fract_pond_max(:,:) = 1._wp
-          CALL message(TRIM(routine), '*** Warning: fract_pond_max not found in bc file --> set to 1 for all cells')
+          hydro_init_vars%fract_pond_max(:,:) = -1._wp
+          CALL message(TRIM(routine), '*** Warning: fract_pond_max not found in bc file --> '// &
+            & 'will be computed using steepness')
         END IF
       ELSE
         hydro_init_vars%fract_pond_max(:,:) = 0._wp
@@ -499,7 +500,16 @@ CONTAINS
 
       ! Maximum depth and extent of surface water ponds
       IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
-        dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+        IF (MAXVAL(hydro_init_vars%fract_pond_max(:,:)) < 0._wp) THEN
+          ! No maximum pond fraction found in init file --> estimate from steepness
+          ! This equation is based on curve fitting steepness data to the
+          ! compound topographical index (CTI) dataset (https://doi.org/10.5285/6b0c4358-2bf3-4924-aa8f-793d468b92be)
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = &
+            & 0.3_wp / ( 0.5_wp + dsl4jsb_var_ptr(HYDRO_, steepness)**0.4_wp)
+        ELSE
+          ! Maximum pond fraction read from from init file
+          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+        END IF
         dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = dsl4jsb_Config(HYDRO_)%max_pond_depth
       ELSE
         dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0._wp
