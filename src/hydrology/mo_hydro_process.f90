@@ -1030,19 +1030,15 @@ CONTAINS
       END IF
     END DO
 
-    ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water)
+    ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water,
+    ! because this has to be consistent with the computation of the upper soil layer relative humidity
+    ! in sse_processes:relative_humidity_soil)
     DO i = 1, nc
       IF (deficit_sevap(i) < 0._wp) THEN                               ! remaining soil evaporation demand
         wtr_soil_sl(i,1) = wtr_soil_sl(i,1) + deficit_sevap(i)         ! take water from uppermost soil layer
         IF (wtr_soil_sl(i,1) < 0._wp) THEN                             ! if there is not enough liquid soil water
-          ice_soil_sl(i,1) = ice_soil_sl(i,1) + wtr_soil_sl(i,1)       ! take deficit from ice content
-          wtr_soil_sl(i,1) = 0._wp
-          IF (ice_soil_sl(i,1) < 0._wp) THEN                           ! if there is not enough ice
-            deficit_sevap(i) = ice_soil_sl(i,1)                        ! this is the amount of water missing
-            ice_soil_sl(i,1) = 0._wp                                   ! soil moisture cannot be negative
-          ELSE                                                         ! no deficit remains
-            deficit_sevap(i) = 0._wp
-          END IF
+          deficit_sevap(i) = wtr_soil_sl(i,1)                          ! this is the amount of water missing
+          wtr_soil_sl(i,1) = 0._wp                                     ! soil moisture cannot be negative
         ELSE                                                           ! no deficit remains
           deficit_sevap(i) = 0._wp
         END IF
