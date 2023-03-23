@@ -22,7 +22,7 @@ MODULE mo_hydro_interface
   USE mo_jsb_control,        ONLY: debug_on
   USE mo_jsb_time,           ONLY: is_time_experiment_start
   USE mo_kind,               ONLY: wp
-  USE mo_exception,          ONLY: message, finish, message_text
+  USE mo_exception,          ONLY: message, finish
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
@@ -1629,13 +1629,10 @@ CONTAINS
       & qsat_srf_eff (:), &  !< Effective surface saturation specific humidity
       & heat_tcoef   (:)     !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc, i
+    INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: steplen, alpha
-    REAL(wp), POINTER :: lat(:), lon(:)
-    REAL(wp) :: tile_fract(options%nc)
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_evaporation'
 
@@ -1651,10 +1648,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-
-    grid => Get_grid(model%grid_id)
-    lat => grid%lat(ics:ice, iblk)
-    lon => grid%lon(ics:ice, iblk)
 
     !$cla$w acc data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
     ALLOCATE(q_air(nc),q_air_eff(nc),qsat_srf_eff(nc),heat_tcoef(nc))
@@ -1739,26 +1732,6 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_6 tile_name=tile%name
         transpiration(:) = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
       END IF
-
-      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN   ! Not at start of experiment
-        CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
-        DO i = 1, nc
-          IF (evapopot(i) * evapotrans(i) < 0._wp .AND. tile_fract(i) > EPSILON(1.0_wp)) THEN  ! both have different sign
-            WRITE (message_text,*) 'ET inconsistency on ',TRIM(tile%name),' tile at index ', &
-              & i, '(',lat(i),'N and ',lon(i),'E):',                       NEW_LINE('a'), &
-              & 'evapopot:               ', evapopot(i),                   NEW_LINE('a'), &
-              & 'evapotrans:             ', evapotrans(i),                 NEW_LINE('a'), &
-              & 'fact_qsat_srf:          ', fact_qsat_srf(i),              NEW_LINE('a'), &
-              & 'fact_q_air:             ', fact_q_air(i),                 NEW_LINE('a'), &
-              & 'q_air:                  ', q_air(i),                      NEW_LINE('a'), &
-              & 'qsat_star:              ', qsat_star(i),                  NEW_LINE('a'), &
-              & 'q_air_eff:              ', q_air_eff(i),                  NEW_LINE('a'), &
-              & 'qsat_srf_eff:           ', qsat_srf_eff(i)
-            call finish(TRIM(routine), message_text)
-          END IF
-        END DO
-      END IF
-
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
