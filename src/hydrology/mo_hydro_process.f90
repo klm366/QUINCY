@@ -76,7 +76,7 @@ CONTAINS
   !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
   !
   SUBROUTINE calc_surface_hydrology_land (                          &
-    & nc, lstart, dtime, l_fract, lat, lon, ltpe_closed, l_dynsnow, l_infil_subzero,   &
+    & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
     & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
     & t_air, skinres_canopy_max, skinres_max, fract_snow, fract_wet,&
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
@@ -93,11 +93,10 @@ CONTAINS
 
     INTEGER,  INTENT(in) :: nc
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
-    LOGICAL,  INTENT(in) :: l_fract(:)
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                 &
-      & lat(:), lon(:), steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
+      & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
       & skinres_canopy_max(:), skinres_max(:), fract_snow(:), fract_wet(:), &
       & hcap_grnd(:), evapotrans(:), evapopot(:), transpiration(:),         &
       & rain(:), snow(:), weq_rootzone(:), weq_rootzone_max(:)
@@ -111,7 +110,6 @@ CONTAINS
     !
     !  local variables
     !
-    INTEGER :: i
     REAL(wp) ::                   &
       & rain_in_m(nc),            & !< amount of rainfall within time step [m]
       & new_snow(nc),             & !< amount of snowfall within time step [m]
@@ -296,25 +294,6 @@ CONTAINS
         &              runoff(:), infilt(:))
 
     END IF
-
-    ! do i = 1, nc
-    !   if ( transpiration_in_m(i) <  evapotrans_soil_in_m(i) .AND. l_fract(i)) then
-    !     WRITE (message_text,*) 'ET separation failed at ', &
-    !       & lat(i),'N and ',lon(i),'E:',                               NEW_LINE('a'), &
-    !       & 'pet_in_m:               ', evapopot(i) * dtime/rhoh2o,    NEW_LINE('a'), &
-    !       & 'evapo_snow_pot_in_m:    ', evapo_snow_pot_in_m(i),        NEW_LINE('a'), &
-    !       & 'evapo_skin_pot_in_m:    ', evapo_skin_pot_in_m(i),        NEW_LINE('a'), &
-    !       & 'evapotrans_in_m:        ', evapotrans_in_m(i),            NEW_LINE('a'), &
-    !       & 'evapo_snow_in_m:        ', evapo_snow_in_m(i),            NEW_LINE('a'), &
-    !       & 'evapo_skin_in_m:        ', evapo_skin_in_m(i),            NEW_LINE('a'), &
-    !       & 'evapotrans_no_snow:     ', evapotrans_no_snow(i),         NEW_LINE('a'), &
-    !       & 'evapotrans_soil_in_m:   ', evapotrans_soil_in_m(i),       NEW_LINE('a'), &
-    !       & 'transiration_in_m:      ', transpiration_in_m(i),         NEW_LINE('a'), &
-    !       & 'evapo_soil_in_m:        ', evapo_soil_in_m(i)
-    !     call message('calc_surface_hydrology:', message_text, all_print=.TRUE.)
-    !   end if
-    ! end do
-
 
     ! Transform fluxes in output from [m] to [kg m-2 s-1]
     snowmelt_soil(:)   = snowmelt_soil(:) * rhoh2o / dtime
@@ -1385,7 +1364,6 @@ CONTAINS
           & 'Remaining soil evaporation deficit: ', deficit_sevap(i),      NEW_LINE('a'), &
           & 'Remaining transpiration deficit:    ', deficit_trans(i)
         CALL finish ('diagnose_evapotrans', message_text_long)
-        ! CALL message('diagnose_evapotrans', message_text_long, all_print=.TRUE.)
       END IF
     END DO
 #endif

@@ -442,9 +442,6 @@ CONTAINS
     REAL(wp) :: dtime, w_skin_max_config
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: grid
-    REAL(wp), POINTER :: lat(:), lon(:)
-    REAL(wp) :: tile_fract(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_hydrology'
 
@@ -459,10 +456,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    grid => Get_grid(model%grid_id)
-
-    lat => grid%lat(ics:ice, iblk)
-    lon => grid%lon(ics:ice, iblk)
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -628,18 +621,12 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_9 tile_name=tile%name
         trans_tmp(:) = 0._wp
       END IF
-      !$claw acc data create(tile, tile%fract, tile_fract)
-      !$claw acc parallel loop gang vector
-      CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
       !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_hydrology_land_1 tile_name=tile%name
       CALL calc_surface_hydrology_land(   &
         ! in
         & nc,                             & !< Number of grid cells
         & lstart,                         & !< T: Start of experiment
         & dtime,                          & !< time step length [s]
-        & tile_fract(:) > 0._wp, &
-        & lat(:), &
-        & lon(:), &
         & ltpe_closed,                    & !< T: terra planet setup without runoff
         & dsl4jsb_Config(SSE_)%l_dynsnow, & !< T: Compute density of snow dynamically
         & dsl4jsb_Config(HYDRO_)%l_infil_subzero, & !< T: Allow infiltration at soil temperatures below 0degC
@@ -1618,7 +1605,6 @@ CONTAINS
       & qsat_star, &
       & qsat_lwtr, &
       & qsat_lice, &
-      & fract_snow, &
       & fact_qsat_srf, &
       & fact_qsat_trans_srf, &
       & fact_q_air, &
@@ -1645,7 +1631,8 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: steplen, alpha
-    REAL(wp), POINTER :: lat(:), lon(:) 
+    REAL(wp), POINTER :: lat(:), lon(:)
+    REAL(wp) :: tile_fract(options%nc)
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
@@ -1730,7 +1717,6 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)       ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_trans_srf) ! in
 
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)         ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_lnd)           ! out
       IF (tile%contains_vegetation) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    transpiration)          ! out
@@ -1755,8 +1741,9 @@ CONTAINS
       END IF
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN   ! Not at start of experiment
+        CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
         DO i = 1, nc
-          IF (evapopot(i) * evapotrans(i) < 0._wp) THEN  ! both have different sign
+          IF (evapopot(i) * evapotrans(i) < 0._wp .AND. tile_fract(i) > EPSILON(1.0_wp)) THEN  ! both have different sign
             WRITE (message_text,*) 'ET inconsistency on ',TRIM(tile%name),' tile at index ', &
               & i, '(',lat(i),'N and ',lon(i),'E):',                       NEW_LINE('a'), &
               & 'evapopot:               ', evapopot(i),                   NEW_LINE('a'), &
