@@ -89,7 +89,6 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: nc
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
@@ -1034,7 +1033,8 @@ CONTAINS
       deficit_evapotrans(i) = deficit_sevap(i) + deficit_trans(i)
       weq_soil(i) = SUM(wtr_soil_sl(i,:)) + SUM(ice_soil_sl(i,:))  ! water and ice within the column
       IF (weq_soil(i) + deficit_evapotrans(i) < -EPSILON(1.0_wp) .AND. l_fract(i)) THEN
-        CALL finish ('soilhyd', 'ET deficit cannot be compensated with the soil moisture storage')
+        WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
+        CALL message ('soilhyd', message_text, all_print=.TRUE.)
       END IF
       DO j = 1, nsoil
         IF (deficit_evapotrans(i) < 0._wp .AND. weq_soil(i) > 0._wp) THEN
