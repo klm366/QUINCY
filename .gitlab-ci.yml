@@ -39,6 +39,16 @@ Test build doc:
     - sphinx
   when: manual
 
+test:
+  script:
+  - sh ./build-doc.sh -q
+  tags:
+    - sphinx
+  only:
+    when: manual
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+
 pages:
   stage: build_doc
   before_script:
