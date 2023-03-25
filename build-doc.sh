@@ -33,7 +33,6 @@ mkdir 3rdparty || true
 cd 3rdparty
 git clone https://github.com/RMShur/ford.git
 cd ford
-git checkout fix-continuation-lines-with-inline-docu
 git pull --rebase
 pip3 install --user -r requirements.txt
 cd ../..

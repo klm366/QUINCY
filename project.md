@@ -25,6 +25,8 @@ proc_internals: true
 search: true
 warn: false
 graph: false
+graph_maxdepth: 2
+graph_dir: ./doc/graphs
 coloured_edges: true
 md_extensions: markdown.extensions.toc
                markdown.extensions.extra
