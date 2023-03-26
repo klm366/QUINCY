@@ -78,9 +78,9 @@ CONTAINS
   SUBROUTINE calc_surface_hydrology_land (                          &
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
     & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
-    & t_air, skinres_canopy_max, skinres_max, fract_pond_max,       &
-    & fract_snow, fract_skin, fract_pond, hcap_grnd, evapotrans,    &
-    & evapopot, transpiration, rain, snow,                          &
+    & t_air, skinres_canopy_max, skinres_max, weq_pond_max,         &
+    & fract_pond_max, fract_snow, fract_skin, fract_pond,           &
+    & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
     & weq_rootzone, weq_rootzone_max, weq_soil,                     &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & wtr_pond, ice_pond, q_snocpymlt,                              &
@@ -98,7 +98,7 @@ CONTAINS
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
-      & skinres_canopy_max(:), skinres_max(:), fract_pond_max(:), &
+      & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_pond_max(:), &
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:), evapotrans(:),  &
       & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
       & weq_rootzone_max(:), weq_soil(:)
@@ -141,6 +141,8 @@ CONTAINS
       & t_pond(nc),               & !< surface pond water temperature [K]
       & wtr_pond_inflow(nc),      & !< pond inflow [m]
       & wtr_pond_outflow(nc),     & !< pond outflow [m]
+      & wtr_pond_overflow(nc),    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
+      & weq_pond(nc),             & !< total pond water storage (liquid + ice) [m]
       & pond_change_pot(nc),      & !< ??
       & pond_flowlag(nc)            !< Lateral water flow lag for ponds [timesteps]
 
@@ -368,8 +370,19 @@ CONTAINS
       ! Update pond storages
       wtr_pond(:)         = wtr_pond(:) + wtr_pond_inflow(:) - wtr_pond_outflow(:)
 
+      ! If pond water or ice storage exceeds the maximum allowed pond content, add
+      ! overflow to water_to_soil
+      ! @todo this represents forced pond melt --> energy balance?
+      wtr_pond_overflow(:) = MAX(0._wp, wtr_pond(:) + ice_pond(:) - weq_pond_max(:))
+      weq_pond(:)          = wtr_pond(:) + ice_pond(:)
+      WHERE (wtr_pond_overflow(:) > 0._wp)
+        wtr_pond(:) = wtr_pond(:) * (weq_pond_max(:) / weq_pond(:))
+        ice_pond(:) = ice_pond(:) * (weq_pond_max(:) / weq_pond(:))
+      ENDWHERE
+
       ! Update amount of water available for runoff and infiltration
-      water_to_soil(:)    = water_to_soil(:) - wtr_pond_inflow(:) + wtr_pond_outflow(:)
+      water_to_soil(:) = water_to_soil(:) - wtr_pond_inflow(:) + wtr_pond_outflow(:) &
+        &              + wtr_pond_overflow(:)
 
       ! Compute surface runoff and infiltration
       CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,        &
