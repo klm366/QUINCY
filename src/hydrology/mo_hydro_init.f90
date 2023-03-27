@@ -1087,9 +1087,11 @@ CONTAINS
 
     dsl4jsb_Real3D_onDomain :: &
       & root_depth_sl,         &
-      & ice_soil_sl,           &
-      & wtr_soil_fc_sl,        &
-      & wtr_soil_sl
+      & soil_depth_sl,         &
+      & vol_porosity_sl,       &
+      & wtr_soil_sat_sl,       &
+      & wtr_soil_sl,           &
+      & ice_soil_sl
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -1099,32 +1101,34 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HYDRO_, soil_depth)
 
     dsl4jsb_Get_var3D_onDomain(HYDRO_, root_depth_sl)
-    dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, soil_depth_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, vol_porosity_sl)
+    dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sat_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onDomain(HYDRO_, ice_soil_sl)
 
     IF (tile%contains_soil) THEN
 
-      ! Only sanitize if any of the values might trip the constraints checker in `digest_evapotrans`.
-      ! This is done to preserve bit-identical restarts because the ice content may violate the constraint
-      ! `soil water + soil ice <= field capacity` during model runs.
-      IF (ANY(wtr_soil_sl(:,:,:) + ice_soil_sl(:,:,:) > wtr_soil_fc_sl(:,:,:) + zfcmin)) THEN
+      ! Issue a warning if current soil water anywherer exceeds saturation capacity by more than a factor of
+      ! `warn_level_weq_soil_excess`.
+      IF (ANY(wtr_soil_sl(:,:,:) > warn_level_weq_soil_excess * wtr_soil_sat_sl(:,:,:))) THEN
+        maxloc_weq_soil_excess(:) = MAXLOC(wtr_soil_sl(:,:,:) - wtr_soil_sat_sl(:,:,:))
+        WRITE (message_text,*) 'liquid water content above saturation capacity at ', maxloc_weq_soil_excess(:), &
+          & ': wtr_soil_sl = ',                                                                                 &
+          & wtr_soil_sl    (maxloc_weq_soil_excess(1), maxloc_weq_soil_excess(2), maxloc_weq_soil_excess(3)),   &
+          & ', wtr_soil_sat_sl = ',                                                                             &
+          & wtr_soil_sat_sl(maxloc_weq_soil_excess(1), maxloc_weq_soil_excess(2), maxloc_weq_soil_excess(3))
+        CALL warning(routine, message_text)
+      END IF
+      ! Limit soil water and soil ice to saturation amounts.
+      IF (ANY((wtr_soil_sl(:,:,:) + ice_soil_sl(:,:,:))                &
+        &  > MAX(vol_porosity_sl (:,:,:) * soil_depth_sl(:,:,:), 0._wp))) THEN
+        ! Limit liquid soil water to saturation amount
+        wtr_soil_sl(:,:,:) = MIN(wtr_soil_sl(:,:,:), wtr_soil_sat_sl(:,:,:))
 
-        ! Issue a warning if current soil water exceeds field capacity by more than a factor of
-        ! `warn_level_weq_soil_excess` anywhere.
-        IF (ANY(wtr_soil_sl(:,:,:) > warn_level_weq_soil_excess * (wtr_soil_fc_sl(:,:,:) + zfcmin))) THEN
-          maxloc_weq_soil_excess(:) = MAXLOC(wtr_soil_sl(:,:,:) + ice_soil_sl(:,:,:) - wtr_soil_fc_sl(:,:,:))
-          WRITE (message_text,*) 'liquid water content above field capacity at ', maxloc_weq_soil_excess(:), &
-            & ': wtr_soil_sl = ', wtr_soil_sl(maxloc_weq_soil_excess(1), maxloc_weq_soil_excess(2), maxloc_weq_soil_excess(3)), &
-            & ', wtr_soil_fc_sl = ', &
-            & wtr_soil_fc_sl(maxloc_weq_soil_excess(1), maxloc_weq_soil_excess(2), maxloc_weq_soil_excess(3))
-          CALL warning(routine, message_text)
-        END IF
-
-        wtr_soil_sl(:,:,:) = MIN(wtr_soil_sl(:,:,:), wtr_soil_fc_sl(:,:,:))
-
-        ! Limit ice content such that soil water + soil ice <= field capacity.
-        ice_soil_sl(:,:,:) = MAX(0._wp, MIN(ice_soil_sl(:,:,:), wtr_soil_fc_sl(:,:,:) - wtr_soil_sl(:,:,:)))
+        ! Limit ice content such that soil water + soil ice <= saturation.
+        ice_soil_sl(:,:,:) = MAX(0._wp, MIN(ice_soil_sl(:,:,:), &
+          &                             MAX(vol_porosity_sl (:,:,:) * soil_depth_sl(:,:,:), 0._wp) - wtr_soil_sl(:,:,:)))
 
         !$acc update device(wtr_soil_sl, ice_soil_sl)
       END IF

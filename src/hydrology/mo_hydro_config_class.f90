@@ -43,6 +43,7 @@ MODULE mo_hydro_config_class
     CHARACTER(len=10)     :: &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               ::  &
+      & sanitize_restart,     & !< Sanitize water budget in case a restart file does not exacly match
       & enforce_water_budget, & !< stop in case of water conservation problem
       & l_organic,            & !< Use organic component of soil layers
       & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
@@ -78,8 +79,8 @@ CONTAINS
     REAL(wp)                    :: w_skin_max, snow_depth_max
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
-    LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_soil_texture
-    LOGICAL                     :: l_glac_in_soil, l_infil_subzero
+    LOGICAL                     :: sanitize_restart, enforce_water_budget, l_organic, l_socmap, &
+      &                            l_soil_texture, l_glac_in_soil, l_infil_subzero
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -92,6 +93,7 @@ CONTAINS
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
       & scheme_stom_cond,           &
+      & sanitize_restart,           &
       & enforce_water_budget,       &
       & l_organic,                  &
       & l_socmap,                   &
@@ -124,6 +126,7 @@ CONTAINS
     w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     scheme_stom_cond       = 'echam5'
+    sanitize_restart       = .FALSE.
     enforce_water_budget   = config%model_config%enforce_water_budget
     l_organic              = .TRUE.
     l_socmap               = .TRUE.
@@ -162,9 +165,18 @@ CONTAINS
 
     config%scheme_stom_cond       = scheme_stom_cond
 
+    config%sanitize_restart       = sanitize_restart
+    IF (config%sanitize_restart) THEN
+      CALL message(TRIM(routine), 'Soil hydrology of the restart file is sanitized.')
+    END IF
+
     config%enforce_water_budget   = enforce_water_budget
     IF (.NOT. enforce_water_budget) THEN
       CALL message(TRIM(routine), 'WARNING: Model will not stop due to land surface water balance violation.')
+    END IF
+    IF (enforce_water_budget .AND. sanitize_restart) THEN
+      CALL message(TRIM(routine), 'WARNING: Sanitizing restart files causes water balance violations.' &
+        &                       //' You should switch off enforce_water_budget in case sanitizing is needed.')
     END IF
 
     config%l_organic              = l_organic
