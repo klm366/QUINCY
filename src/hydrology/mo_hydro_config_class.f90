@@ -53,7 +53,7 @@ MODULE mo_hydro_config_class
       & l_ponds                !< Additional surface water storage
     INTEGER               :: &
       & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
-      & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean 
+      & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -133,6 +133,7 @@ CONTAINS
     l_socmap               = .TRUE.
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
+    l_ponds                = .FALSE.
     soilhydmodel           = "BrooksCorey"
     interpol_mean          = "upstream"
 
@@ -163,9 +164,6 @@ CONTAINS
       CALL message(TRIM(routine), 'Snow depth limitation: '//TRIM(real2string(snow_depth_max)))
     END IF
 
-    config%max_pond_depth = max_pond_depth
-    CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(max_pond_depth)))
-
     config%scheme_stom_cond       = scheme_stom_cond
 
     config%enforce_water_budget   = enforce_water_budget
@@ -190,7 +188,13 @@ CONTAINS
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
     config%l_ponds = l_ponds
-    IF (l_ponds) CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not tested!!')
+    IF (l_ponds) THEN
+      CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not tested!!')
+      config%max_pond_depth = max_pond_depth
+    ELSE
+      config%max_pond_depth = 0._wp
+    END IF
+    CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(config%max_pond_depth)))
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))
     CASE("brookscorey")

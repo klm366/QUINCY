@@ -327,7 +327,7 @@ CONTAINS
         ELSE
           hydro_init_vars%fract_pond_max(:,:) = -1._wp
           CALL message(TRIM(routine), '*** Warning: fract_pond_max not found in bc file --> '// &
-            & 'will be computed using steepness')
+            & 'will be computed using steepness values')
         END IF
       ELSE
         hydro_init_vars%fract_pond_max(:,:) = 0._wp
