@@ -70,10 +70,10 @@ CONTAINS
   !! @param [out]    snow_accum            snow budget change within time step [m water equivalent]
   !! @param [out]    snowmelt_soil         snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
   !! @param [out]    evapotrans_soil       evapotranspiration from soil w/o skin and snow reservoirs [kg m-2 s-1]
-  !! @param [out]    evapo_skin             evaporation from skin reservoir [kg m-2 s-1]
-  !! @param [out]    evapo_snow             evaporation from snow [kg m-2 s-1]
+  !! @param [out]    evapo_skin            evaporation from skin reservoir [kg m-2 s-1]
+  !! @param [out]    evapo_snow            evaporation from snow [kg m-2 s-1]
   !! @param [out]    water_to_soil         Water available for infiltration into the soil [m water equivalent]
-  !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
+  !! @param [out]    evapo_deficit         amount of evaporation extracted from different storage then intented [m]
   !
   SUBROUTINE calc_surface_hydrology_land (                          &
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
@@ -400,7 +400,7 @@ CONTAINS
     evapotrans_soil(:) = evapotrans_soil_in_m(:) * rhoh2o / dtime
     evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
     evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
-    evapo_snow(:)      = fract_snow(:) * evapopot(:)
+    evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -978,8 +978,8 @@ CONTAINS
     !    mobile water
     CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, w_soil_wilt_fract, root_depth_sl, &
       &                      dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m,   &
-      &                      wtr_soil_sl - wtr_rsdl_sl, evapo_soil_sl1, transpiration_sl,    &
-      &                      deficit_sevap, deficit_trans)
+      &                      wtr_soil_sl - wtr_rsdl_sl, evapo_deficit, evapo_soil_sl1,       &
+      &                      transpiration_sl, deficit_sevap, deficit_trans)
 
     DO i = 1, nc
       ! Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
@@ -1127,6 +1127,7 @@ CONTAINS
           deficit_sevap(i) = 0._wp
         END IF
       END IF
+      evapo_deficit(i) = evapo_deficit(i) + deficit_sevap(i)           ! remaining demand is added to deficit
     END DO
 
     ! Correct remaining evapotranspiration deficit
@@ -1135,9 +1136,12 @@ CONTAINS
     !       Changing the soil ice content here obviously violates the energy balance. A correction
     !       term is needed for this, if no better solution can be found to avoid the evaporation deficit.
     DO i = 1, nc
-      evapo_deficit(i) = evapo_deficit(i) + deficit_sevap(i) + deficit_trans(i)
       deficit_evapotrans(i) = deficit_sevap(i) + deficit_trans(i)
       weq_soil(i) = SUM(wtr_soil_sl(i,:)) + SUM(ice_soil_sl(i,:))  ! water and ice within the column
+      IF (weq_soil(i) + deficit_evapotrans(i) < -EPSILON(1.0_wp) .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
+        CALL message ('soilhyd', message_text, all_print=.TRUE.)
+      END IF
       DO j = 1, nsoil
         IF (deficit_evapotrans(i) < 0._wp .AND. weq_soil(i) > 0._wp) THEN
           ! reduce soil moisture and ice relative to the water content of each layer
@@ -1269,6 +1273,7 @@ CONTAINS
     & transpiration_in_m,         &
     & evapo_soil_in_m,            &
     & wtr_soil_sl,                &
+    & evapo_deficit,              &
     & evapo_soil_sl1,             &
     & transpiration_sl,           &
     & deficit_sevap,              &
@@ -1300,9 +1305,8 @@ CONTAINS
     REAL(wp), INTENT(in)     :: wtr_field_cap_sl(:,:)   ! field capacity of the layer (reduced by ice)
     REAL(wp), INTENT(in)     :: transpiration_in_m(:)   ! transpiration [m]
     REAL(wp), INTENT(in)     :: evapo_soil_in_m(:)      ! bare soil evaporation [m]
-
     REAL(wp), INTENT(in)     :: wtr_soil_sl(:,:)        ! water content of the soil layer [m]
-
+    REAL(wp), INTENT(inout)  :: evapo_deficit(:)        ! evaporation from unintented sources [m]
     REAL(wp), INTENT(OUT)    :: evapo_soil_sl1(:)       ! Soil evaporation from the top soil layer [m]
     REAL(wp), INTENT(OUT)    :: transpiration_sl(:,:)   ! Transpiration from soil layers [m]
     REAL(wp), INTENT(OUT)    :: deficit_trans(:)        ! Unaccounted transpiration [m]
@@ -1419,6 +1423,8 @@ CONTAINS
         END IF
       END DO
 
+      evapo_deficit(i) = evapo_deficit(i) + deficit_trans(i)
+
       ! If the transpiration deficit can be reduced by redistributing transpiration extraction from different layers,
       !   it should be done already here. The deficit should be taken from layers starting at the
       !   surface to accelerate the feedback on evapotranspiration.
@@ -1466,7 +1472,6 @@ CONTAINS
           & 'Remaining soil evaporation deficit: ', deficit_sevap(i),      NEW_LINE('a'), &
           & 'Remaining transpiration deficit:    ', deficit_trans(i)
         CALL finish ('diagnose_evapotrans', message_text_long)
-        ! CALL message('diagnose_evapotrans', message_text_long, all_print=.TRUE.)
       END IF
     END DO
 #endif

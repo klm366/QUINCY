@@ -473,6 +473,7 @@ CONTAINS
     bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
 
     ! Check that this bgc material complies with the expectations
+    nc = ice - ics + 1
     CALL assert_matrix_shape(this, bgcm_idx, nc, SHAPE(bgcm_matrix), tile_name, routine)
 
     ! 1level 2D -> write matrix back (elems, nc, var_dim2)
