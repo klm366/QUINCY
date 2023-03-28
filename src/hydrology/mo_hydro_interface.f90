@@ -1716,22 +1716,23 @@ CONTAINS
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
-      q_air(:)      = q_acoef(:) * qsat_star(:) + q_bcoef(:)           ! New moisture at lowest atmospheric level by back-substitution
+      q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
       heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)  ! Transfer coefficient
 
       ! Compute effective air moisture and surface saturation humidity
-      q_air_eff(:)    = q_effective(SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
-        &                           SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
+      q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
+                              & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
       qsat_srf_eff(:) = q_effective(qsat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
 
-      evapotrans_lnd(:)  = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
-      evapotrans(:)      = evapotrans_lnd(:)
-      evapopot(:)        = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
+      evapotrans_lnd(:)          = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
+      evapotrans(:) = evapotrans_lnd(:)
+      evapopot(:)           = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
       !$claw end expand
       IF (tile%contains_vegetation) THEN
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_6 tile_name=tile%name
-        transpiration(:) = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
+        transpiration(:)    = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
       END IF
+
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
