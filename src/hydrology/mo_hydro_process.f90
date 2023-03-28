@@ -93,7 +93,6 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Semi_Distributed_, Uniform_
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
     INTEGER,  INTENT(in) :: hydro_scale
@@ -1442,6 +1441,22 @@ CONTAINS
         END IF
       END IF
       evapo_deficit(ic) = evapo_deficit(ic) + deficit_sevap(ic)        ! remaining demand is added to deficit
+    END DO
+
+    ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water,
+    ! because this has to be consistent with the computation of the upper soil layer relative humidity
+    ! in sse_processes:relative_humidity_soil)
+    DO i = 1, nc
+      IF (deficit_sevap(i) < 0._wp) THEN                               ! remaining soil evaporation demand
+        wtr_soil_sl(i,1) = wtr_soil_sl(i,1) + deficit_sevap(i)         ! take water from uppermost soil layer
+        IF (wtr_soil_sl(i,1) < 0._wp) THEN                             ! if there is not enough liquid soil water
+          deficit_sevap(i) = wtr_soil_sl(i,1)                          ! this is the amount of water missing
+          wtr_soil_sl(i,1) = 0._wp                                     ! soil moisture cannot be negative
+        ELSE                                                           ! no deficit remains
+          deficit_sevap(i) = 0._wp
+        END IF
+      END IF
+      evapo_deficit(i) = evapo_deficit(i) + deficit_sevap(i)           ! remaining demand is added to deficit
     END DO
 
     ! Correct remaining evapotranspiration deficit
