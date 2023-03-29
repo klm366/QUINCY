@@ -635,12 +635,6 @@ CONTAINS
 
 
     !> 2.0 Calculate target C:N:P for each tissue type
-    !! 
-    !! this function loops over:                    \n
-    !!   points:          DO ipoint=1,nc            \n
-    !!   direction:       DO dd = 1,3               \n
-    !!   canopy layers:   DO icanopy =1, ncanopy
-    !! 
     IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
       CALL calc_dir_optimal_cn_leaf(    nc                                                        , & ! dimension
                                         ncanopy                                                   , &
