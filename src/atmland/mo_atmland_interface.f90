@@ -603,7 +603,7 @@ CONTAINS
     END IF
 
     !$acc data pcreate(fact_land, fact_lake)
-    IF (tile%contains_lake .AND. .NOT. model%config%use_new_turb .AND. .NOT. jsbach_runs_standalone()) THEN
+    IF (tile%contains_lake .AND. .NOT. model%config%use_tmx .AND. .NOT. jsbach_runs_standalone()) THEN
 
       ! With lakes, re-scale _lnd, _lice and _lwtr fluxes given back to the atmosphere so that they are relative to the
       ! jsbach grid box, not/only including lakes (JSBACH grid boxes do not include ocean fractions.). Re-scaling is
@@ -666,7 +666,7 @@ CONTAINS
     END DO
     dsl4jsb_Get_memory_tile(TURB_, land_tile)
 
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       IF (PRESENT(t_srf)) THEN
         t_filt_ptr => dsl4jsb_var2D_onChunk(SEB_, t)
         !$acc data present(t_srf, t_filt_ptr)
@@ -751,7 +751,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(evapotrans)) THEN
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         evapotrans_lnd_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans)
       ELSE
         evapotrans_lnd_ptr => dsl4jsb_var2D_onChunk(HYDRO_, evapotrans_lnd)
@@ -764,7 +764,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(latent_hflx)) THEN
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         latent_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx)
       ELSE
         latent_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   latent_hflx_lnd)
@@ -777,7 +777,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(sensible_hflx)) THEN
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         sensible_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx)
       ELSE
         sensible_hflx_lnd_ptr => dsl4jsb_var2D_onChunk(SEB_,   sensible_hflx_lnd)
@@ -835,7 +835,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(alb_vis_dir)) THEN
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis)      ! TODO
       ELSE
         alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis_lnd)  ! TODO
@@ -848,7 +848,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(alb_vis_dif)) THEN
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis)      ! TODO
       ELSE
         alb_vis_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_vis_lnd)  ! TODO
@@ -861,7 +861,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(alb_nir_dir)) THEN
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_nir)      ! TODO
       ELSE
         alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_nir_lnd)  ! TODO
@@ -874,7 +874,7 @@ CONTAINS
       !$acc end data
     END IF
     IF (PRESENT(alb_nir_dif)) THEN
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_nir)
       ELSE
         alb_nir_lnd_ptr => dsl4jsb_var2D_onChunk(RAD_, alb_nir_lnd)

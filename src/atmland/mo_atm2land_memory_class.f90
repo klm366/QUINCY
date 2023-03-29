@@ -258,7 +258,7 @@ CONTAINS
       & initval_r=101325.0_wp )  ! R: I just took average atmospheric pressure
                                  !    at sea level as value to start with...
 
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       CALL mem%Add_var( 'press_air', mem%press_air,                                         &
         & hgrid, surface,                                                                   &
         & t_cf('air_pressure', 'N m-2', 'Pressure at lowest level'), &
@@ -266,7 +266,7 @@ CONTAINS
         & prefix, suffix,                                                                   &
         & lrestart=.FALSE.,                                                                 &
         & output_level=BASIC, &
-        & initval_r=0.0_wp )
+        & initval_r=98300.0_wp )
 
       CALL mem%Add_var( 'dz_srf', mem%dz_srf,                                  &
         & hgrid, surface,                                                      &
@@ -275,7 +275,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level=FULL,                                                   &
-        & initval_r=0.0_wp )
+        & initval_r=10.0_wp )
 
       CALL mem%Add_var( 'rho_srf', mem%rho_srf,                                &
         & hgrid, surface,                                                      &
@@ -284,7 +284,7 @@ CONTAINS
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
         & output_level=BASIC,                                                  &
-        & initval_r=0.0_wp )
+        & initval_r=1.0_wp )
     ELSE
       CALL mem%Add_var( 'drag_srf', mem%drag_srf,                              &
         & hgrid, surface,                                                      &
@@ -367,7 +367,7 @@ CONTAINS
       & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
 
-    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
+    IF (.NOT. model%config%use_tmx .AND. One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 
       CALL mem%Add_var( 'drag_wtr', mem%drag_wtr,                              &
         & hgrid, surface,                                                      &

@@ -44,7 +44,8 @@ CONTAINS
 
   SUBROUTINE update_surface_energy_lake(tile, options)
 
-    USE mo_phy_schemes,            ONLY: qsat, surface_dry_static_energy
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, surface_dry_static_energy
+    USe mo_jsb_physical_constants, ONLY: cpd, cvd
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -58,6 +59,7 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
       & t,                    &
+      & s_star,               &
       & t_rad4,               &
       & t_eff4,               &
       & t_unfilt,             &
@@ -140,7 +142,8 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! out
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
+      dsl4jsb_Get_var2D_onChunk(SEB_, s_star)       ! out
       dsl4jsb_Get_var2D_onChunk(SEB_, t_rad4)       ! out
       dsl4jsb_Get_var2D_onChunk(SEB_, t_eff4)       ! out
     END IF
@@ -297,16 +300,19 @@ CONTAINS
     END IF
 
     !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_4
-    qsat_lwtr(:)  = qsat(t_lwtr(:), press_srf(:))
+    qsat_lwtr(:)  = qsat_water(t_lwtr(:), press_srf(:))
     s_lwtr(:)     = surface_dry_static_energy(t_lwtr(:), qsat_lwtr(:))
     !$claw end expand
+    IF (model%config%use_tmx) s_lwtr(:) = s_lwtr(:) * cvd / cpd
 
     IF (config_l_ice_on_lakes) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_5
-      qsat_lice(:) = qsat(t_lice(:), press_srf(:))
+      qsat_lice(:) = qsat_ice(t_lice(:), press_srf(:))
       s_lice(:)    = surface_dry_static_energy(t_lice(:), qsat_lice(:))
+      IF (model%config%use_tmx) s_lice(:) = s_lice(:) * cvd / cpd
       t(:)     = (1._wp - fract_lice(:)) * t_lwtr   (:) + fract_lice(:) * t_lice   (:)
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
+        s_star(:) = (1._wp - fract_lice(:)) * s_lwtr + fract_lice(:) * s_lice(:)
         t_rad4(:) = (1._wp - fract_lice(:)) * t_lwtr   (:)**4 + fract_lice(:) * t_lice   (:)**4
         t_eff4(:) = t_rad4(:)
       END IF
@@ -321,7 +327,8 @@ CONTAINS
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_6
       t(:) = t_lwtr(:)
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
+        s_star(:) = s_lwtr(:)
         t_rad4(:) = t_lwtr(:)**4
         t_eff4(:) = t_rad4(:)
       END IF
@@ -575,6 +582,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: sensible_hflx
     dsl4jsb_Real2D_onChunk :: latent_hflx
     dsl4jsb_Real2D_onChunk :: s_lwtr
+    dsl4jsb_Real2D_onChunk :: t_acoef
+    dsl4jsb_Real2D_onChunk :: t_bcoef
     dsl4jsb_Real2D_onChunk :: t_acoef_wtr
     dsl4jsb_Real2D_onChunk :: t_bcoef_wtr
     dsl4jsb_Real2D_onChunk :: drag_wtr
@@ -627,16 +636,15 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
 
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_wtr)       ! IN
-    dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_wtr)       ! IN
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       dsl4jsb_Get_memory(TURB_)
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef)       ! IN
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef)       ! IN
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)               ! in
     ELSE
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_wtr)       ! IN
+      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_wtr)       ! IN
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_wtr)        ! in
-      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        dsl4jsb_Get_var2D_onChunk(A2L_,   drag_ice)      ! in
-      END IF
     END IF
 
     dsl4jsb_Get_var2D_onChunk(SEB_,   s_lwtr)            ! in
@@ -647,8 +655,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)         ! in
 
     IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-      dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_ice)       ! IN
-      dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_ice)       ! IN
+      IF (.NOT. model%config%use_tmx) THEN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   t_acoef_ice)       ! IN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   t_bcoef_ice)       ! IN
+        dsl4jsb_Get_var2D_onChunk(A2L_,   drag_ice)      ! in
+      END IF
       dsl4jsb_Get_var2D_onChunk(SEB_,   s_lice)            ! in
       dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx_ice) ! out
       dsl4jsb_Get_var2D_onChunk(SEB_,   latent_hflx_ice)   ! out
@@ -669,22 +680,31 @@ CONTAINS
     ! Compute new dry static energy at lowest atmospheric level by back-substitution
     !
     !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_fluxes_lake_expand_0
-    s_air(:) = t_acoef_wtr(:) * s_lwtr  (:) + t_bcoef_wtr(:)
 
     ! Transfer coefficient
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
+      s_air(:) = t_acoef(:) * s_lwtr  (:) + t_bcoef(:)
       heat_tcoef(:) = ch(:)  ! TODO: distinguish between wtr and ice?
     ELSE
+      s_air(:) = t_acoef_wtr(:) * s_lwtr  (:) + t_bcoef_wtr(:)
       heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
     END IF
 
     ! Compute sensible heat flux
     !
     sensible_hflx_wtr(:) = heat_tcoef(:) * (s_air(:) - s_lwtr(:))
+    ! IF (ANY(ABS(sensible_hflx_wtr(:)) > 3000._wp)) THEN
+    !   sensible_hflx_wtr(:) = MIN(3000._wp, MAX(-3000._wp, sensible_hflx_wtr(:)))
+    !   print*, 'WARNING: routine - ' // 'Applied limiter for sensible_hflx_wtr'
+    ! END IF
 
     ! Compute latent heat flux
     !
     latent_hflx_wtr(:) = alv * evapo_wtr(:)
+    ! IF (ANY(ABS(latent_hflx_wtr(:)) > 3000._wp)) THEN
+    !   latent_hflx_wtr(:) = MIN(3000._wp, MAX(-3000._wp, latent_hflx_wtr(:)))
+    !   print*, 'WARNING: routine - ' // 'Applied limiter for latent_hflx_wtr'
+    ! END IF
     !$claw end expand 
 
     ! ================================================================================================================================
@@ -695,22 +715,31 @@ CONTAINS
       !
       ! Compute new dry static energy at lowest atmospheric level by back-substitution
       !
-      s_air(:) = t_acoef_ice(:) * s_lice  (:) + t_bcoef_ice(:)
 
       ! Transfer coefficient
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
+        s_air(:) = t_acoef(:) * s_lice  (:) + t_bcoef(:)
         heat_tcoef(:) = ch(:)
       ELSE
+        s_air(:) = t_acoef_ice(:) * s_lice  (:) + t_bcoef_ice(:)
         heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
       END IF
 
       ! Compute sensible heat flux
       !
       sensible_hflx_ice(:) = heat_tcoef(:) * (s_air(:) - s_lice(:))
-
+      ! IF (ANY(ABS(sensible_hflx_ice(:)) > 3000._wp)) THEN
+      !   sensible_hflx_ice(:) = MIN(3000._wp, MAX(-3000._wp, sensible_hflx_ice(:)))
+      !   print*, 'WARNING: routine - ' // 'Applied limiter for sensible_hflx_ice'
+      ! END IF
+  
       ! Compute latent heat flux
       !
       latent_hflx_ice(:) = als * evapo_ice(:)
+      ! IF (ANY(ABS(latent_hflx_ice(:)) > 3000._wp)) THEN
+      !   latent_hflx_ice(:) = MIN(3000._wp, MAX(-3000._wp, latent_hflx_ice(:)))
+      !   print*, 'WARNING: routine - ' // 'Applied limiter for latent_hflx_ice'
+      ! END IF
 
       ! ================================================================================================================================
       ! Surface fluxes for lake (wtr and ice aggregated)

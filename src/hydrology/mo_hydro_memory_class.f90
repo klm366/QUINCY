@@ -391,7 +391,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       CALL mem%Add_var( 'q_snocpymlt', mem%q_snocpymlt,                          &
         & hgrid, surface,                                                        &
         & t_cf('heating_snow_cpy_melt', 'W m-2', ''),                            &
@@ -446,7 +446,7 @@ CONTAINS
         & loutput=.TRUE., output_level=BASIC,                                                                     &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      IF (.NOT. model%config%use_new_turb) THEN
+      IF (.NOT. model%config%use_tmx) THEN
         CALL mem%Add_var( 'q_snocpymlt', mem%q_snocpymlt,                          &
           & hgrid, surface,                                                        &
           & t_cf('heating_snow_cpy_melt', 'W m-2', ''),                            &

@@ -1470,7 +1470,7 @@ CONTAINS
     & fract_snow_soil                            & ! out
     & )
 
-    USE mo_phy_schemes,            ONLY: qsat
+    USE mo_phy_schemes,            ONLY: qsat_water
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in) :: &
@@ -1518,7 +1518,7 @@ CONTAINS
 
 
     ! Potential evaporation using old values of air and surface humidity
-    qsat_srf_old = qsat(t_srf_old, press_srf)
+    qsat_srf_old = qsat_water(t_srf_old, press_srf)
     evapo_pot =  -1._wp * heat_tcoef * (q_air - qsat_srf_old)  ! Positive upwards
 
     ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
@@ -1551,7 +1551,7 @@ CONTAINS
     & fract_snow_soil                             & ! out
     & )
 
-    USE mo_phy_schemes,            ONLY: qsat
+    USE mo_phy_schemes,            ONLY: qsat_water
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     REAL(wp), INTENT(in) :: &
@@ -1592,7 +1592,7 @@ CONTAINS
 
     ! Potential evaporation using old values of air and surface humidity
     t_srf_old = t_srf
-    qsat_srf_old = qsat(t_srf_old, press_srf)
+    qsat_srf_old = qsat_water(t_srf_old, press_srf)
     evapo_pot =  heat_tcoef * (qsat_srf_old - q_air) ! Positive upwards
 
     ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than

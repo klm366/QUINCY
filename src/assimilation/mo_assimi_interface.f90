@@ -611,7 +611,7 @@ CONTAINS
 
     ! Used variables
     USE mo_hydro_process, ONLY: get_canopy_conductance
-    USE mo_phy_schemes,   ONLY: qsat
+    USE mo_phy_schemes,   ONLY: qsat_water
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -676,7 +676,7 @@ CONTAINS
     ALLOCATE(q_air_gt_qsat_tmp(nc))
     !$claw acc enter data create(q_air_gt_qsat_tmp)
     !$claw expand parallel update savepoint=ser_jsb_assimi_update_canopy_cond_stressed_expand_0 tile_name=tile%name
-    q_air_gt_qsat_tmp(:) = q_air(:) > qsat(t(:),press_srf(:))      
+    q_air_gt_qsat_tmp(:) = q_air(:) > qsat_water(t(:),press_srf(:))      
     canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
                                                     water_stress(:),           & ! in, water stress factor
                                                     q_air_gt_qsat_tmp(:)       & ! in, atmosphere saturated?

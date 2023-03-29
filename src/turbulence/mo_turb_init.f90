@@ -115,7 +115,7 @@ CONTAINS
       & variable_name='roughness_length',         &
       & fill_array = turb_init_vars%rough_m)
     ptr_2D = MERGE(ptr_2D, 1._wp, ptr_2D > 0._wp)
-    ptr_2D = MIN(ptr_2D, 5._wp) ! TODO: rough_m should not be larger than lowest model layer thickness, or even half of that !?
+    ptr_2D = MIN(ptr_2D, 3._wp) ! TODO: rough_m should not be larger than lowest model layer thickness, or even half of that !?
 
     CALL input_file%Close()
 

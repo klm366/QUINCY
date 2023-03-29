@@ -29,7 +29,7 @@ MODULE mo_seb_land
   USE mo_jsb_time,           ONLY: is_time_experiment_start
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
-  !dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(A2L_)
@@ -54,18 +54,19 @@ CONTAINS
 
     !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
     USE mo_sse_process,            ONLY: Get_liquid_max
-    USE mo_phy_schemes,            ONLY: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac2, tpfac3
+    USE mo_phy_schemes,            ONLY: qsat_water, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac1, tpfac2, tpfac3, cpd, cvd
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
     USE mo_jsb_grid,               ONLY: Get_grid
+    USE mo_turb_interface,         ONLY: update_exchange_coefficients
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
     !
-    !dsl4jsb_Def_config(SEB_)
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(RAD_)
@@ -143,7 +144,7 @@ CONTAINS
      & soil_depth_sl_vol_porosity_sl_tmp(size(liquid_max,dim=1))
     REAL(wp) :: w_soil_critical_tmp
 
-    INTEGER  :: iblk, ics, ice, nc, i
+    INTEGER  :: iblk, ics, ice, nc, i, iter
     REAL(wp) :: steplen
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
@@ -168,7 +169,7 @@ CONTAINS
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
 
-    !dsl4jsb_Get_config(SEB_)
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_config(SSE_)
 
     ! Get reference to variables for current block
@@ -226,10 +227,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   grnd_hflx)      ! IN
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
 
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       dsl4jsb_Get_var2D_onChunk(TURB_,  ch)           ! in
     ELSE
       dsl4jsb_Get_var2D_onChunk(A2L_,   drag_srf)     ! IN
+      dsl4jsb_Get_var2D_onChunk(TURB_,  ch)           ! in
     END IF
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
@@ -238,7 +240,7 @@ CONTAINS
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
     !$claw acc data present(is_glacier)
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       is_glacier(:) = tile%is_glacier
     ELSE
       IF (Contains_lct(tile%lcts, GLACIER_TYPE)) THEN
@@ -255,7 +257,7 @@ CONTAINS
     !$claw acc update device(is_glacier) ! 
     !$claw acc end data
 
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       !$claw acc data present(is_ocean, is_lake)
       is_ocean(:) = .FALSE.
       is_lake (:) = .FALSE.
@@ -328,7 +330,7 @@ CONTAINS
     ! t_unfilt_old(:) = MAX(MIN(t_unfilt(:), 380._wp), 100._wp)
     ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
-    qsat_srf_old(:) = qsat(t_old(:), press_srf(:))
+    qsat_srf_old(:) = qsat_water(t_old(:), press_srf(:))
 
     ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
     heat_cap(:) = hcap_grnd(:)
@@ -341,18 +343,20 @@ CONTAINS
     !
     ! 1. Compute sensitivity of surface saturation specific humidity to temperature
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2 tile_name=tile%name
-    dQdT(:) = ( qsat(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
+    dQdT(:) = ( qsat_water(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
 
     ! 2. Old dry static energy
     s_old(:) = surface_dry_static_energy( &
       & t_old(:), &
       & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
+    IF (model%config%use_tmx) s_old(:) = s_old(:) * cvd / cpd
 
     ! Transfer coefficient
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       heat_tcoef(:) = ch(:)
     ELSE
       heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+      ch(:) = heat_tcoef(:)
     END IF
     !$claw end expand
 
@@ -365,14 +369,34 @@ CONTAINS
       s_star(:) = s_old(:)
     ELSE
       !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
-      CALL surface_temp_implicit( nc, steplen, & ! in
-        t2s_conv(:),                           & ! in
-        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &  ! in
-        s_old(:), qsat_srf_old(:), dQdT(:),    & ! in
-        rad_srf_net(:), forc_hflx(:), heat_tcoef(:),    &  ! in
-        fact_q_air(:), fact_qsat_srf(:),       & ! in
-        fract_snow(:), heat_cap(:),            & ! in
-        & s_star(:))                             ! out
+      CALL surface_temp_implicit( nc,                    & ! in
+        MERGE(1._wp, tpfac1, model%config%use_tmx), & ! in
+        steplen,                                         & ! in
+        t2s_conv(:),                                     & ! in
+        t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),  & ! in
+        s_old(:), qsat_srf_old(:), dQdT(:),              & ! in
+        rad_srf_net(:), forc_hflx(:), heat_tcoef(:),     & ! in
+        fact_q_air(:), fact_qsat_srf(:),                 & ! in
+        fract_snow(:), heat_cap(:),                      & ! in
+        & s_star(:))                                       ! out
+
+      IF (model%config%use_tmx) THEN
+        DO iter=1,dsl4jsb_Config(SEB_)%niter_tmx
+          t_unfilt(:) = s_star(:) / t2s_conv(:)
+          CALL update_exchange_coefficients(tile, options)
+          heat_tcoef(:) = ch(:)
+          CALL surface_temp_implicit( nc,                    & ! in
+            MERGE(1._wp, tpfac1, model%config%use_tmx), & ! in
+            steplen,                                         & ! in
+            t2s_conv(:),                                     & ! in
+            t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:),  & ! in
+            s_old(:), qsat_srf_old(:), dQdT(:),              & ! in
+            rad_srf_net(:), forc_hflx(:), heat_tcoef(:),     & ! in
+            fact_q_air(:), fact_qsat_srf(:),                 & ! in
+            fract_snow(:), heat_cap(:),                      & ! in
+            & s_star(:))                                       ! out
+        END DO
+      END IF
     END IF
 
     ! Todo: Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
@@ -388,7 +412,7 @@ CONTAINS
     !$claw acc end data
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
       t_unfilt(:) = s_star(:) / t2s_conv(:)
     ELSE
@@ -466,9 +490,8 @@ CONTAINS
       qsat_star(:) = qsat_srf_old(:) + dQdT(:) * (s_star(:) - s_old(:)) / t2s_conv(:)
     END IF
 
-    ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
 #ifndef _OPENACC
-    IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp)) THEN
+    IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp .AND. tile%fract(:,iblk) > 0._wp)) THEN
        i = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
        WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',     &
             & '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t_star: ', t_star(i), 'K,  t_old: ' , t_old(i), 'K'
@@ -476,6 +499,8 @@ CONTAINS
        CALL message(TRIM(routine), message_text)
     END IF
 #endif
+
+    ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_10 tile_name=tile%name
     t_eff4(:) = (t_old(:)**3 * (4._wp * t_star(:) - 3._wp * t_old(:)))
 
@@ -485,7 +510,7 @@ CONTAINS
 
   END SUBROUTINE update_surface_energy_land 
 
-  SUBROUTINE surface_temp_implicit(klon, steplen,             &
+  SUBROUTINE surface_temp_implicit(klon, alpha, steplen,    &
     &            pcp,                                         &
     &            pescoe, pfscoe, peqcoe, pfqcoe,              &
     &            psold, pqsold, pdqsold,                      &
@@ -499,11 +524,10 @@ CONTAINS
       & zemiss_def, &
       & stbo, &
       & alv,  &
-      & als,  &
-      & cvdifts
-
+      & als
 
     INTEGER,  INTENT(in)    :: klon
+    REAL(wp), INTENT(in)    :: alpha
     REAL(wp), INTENT(in)    :: steplen
     REAL(wp), INTENT(in)    :: pcp(klon), pfscoe(klon), pescoe(klon), pfqcoe(klon), peqcoe(klon)
     REAL(wp), INTENT(in)    :: psold(klon), pqsold(klon), pdqsold(klon)
@@ -519,7 +543,7 @@ CONTAINS
 
     !$claw acc data & 
     !$claw acc create(zcolin,zcohfl,zcoind,zicp,zca,zcs)
-    pdt     = cvdifts * steplen
+    pdt     = alpha * steplen
     !pc16    = cpd * cpvd1
 
     !
@@ -591,7 +615,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
 
     dsl4jsb_Get_var2D_onChunk(SEB_,      t)              ! out
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       dsl4jsb_Get_var2D_onChunk(SEB_,    t_rad4)         ! out
     END IF
     dsl4jsb_Get_var2D_onChunk(SEB_,      t_filt)         ! out
@@ -610,7 +634,7 @@ CONTAINS
     END IF
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_2 tile_name=tile%name
     t(:) = t_filt(:)
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_land_update_asselin_land_expand_3 tile_name=tile%name
       t_rad4(:) = t(:)**4
     END IF
@@ -695,7 +719,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_,   sensible_hflx_lnd)   ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   latent_hflx_lnd)     ! out
 
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)                 ! in
     ELSE
@@ -712,7 +736,7 @@ CONTAINS
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
     ! Transfer coefficient
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       heat_tcoef(:) = ch(:)
     ELSE
       heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)

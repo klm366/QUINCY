@@ -67,7 +67,7 @@ CONTAINS
     dsl4jsb_Get_memory(SEB_)
 
 
-    IF (tile%contains_land .OR. model%config%use_new_turb) THEN
+    IF (tile%contains_land .OR. model%config%use_tmx) THEN
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
       dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
 

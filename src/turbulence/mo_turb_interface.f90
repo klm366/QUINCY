@@ -53,6 +53,7 @@ MODULE mo_turb_interface
   PRIVATE
 
   PUBLIC :: Register_turb_tasks !,t_turb_process
+  PUBLIC :: update_exchange_coefficients
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_turb_interface'
 
@@ -173,7 +174,7 @@ CONTAINS
   SUBROUTINE update_exchange_coefficients(tile, options)
 
     USE mo_aes_thermo,             ONLY: potential_temperature ! Todo: use from mo_util_jsbach
-    USE mo_phy_schemes,            ONLY: qsat, exchange_coefficients
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, exchange_coefficients
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -189,7 +190,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
 
     ! Declare pointers to variables in memory
-    dsl4jsb_Real2D_onChunk :: t
+    dsl4jsb_Real2D_onChunk :: t_unfilt
     dsl4jsb_Real2D_onChunk :: dz_srf
     dsl4jsb_Real2D_onChunk :: press_srf
     dsl4jsb_Real2D_onChunk :: rho_srf
@@ -199,6 +200,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: wind_air
     dsl4jsb_Real2D_onChunk :: rough_m
     dsl4jsb_Real2D_onChunk :: qsat_star
+    dsl4jsb_Real2D_onChunk :: fract_lice
     dsl4jsb_Real2D_onChunk :: kh
     dsl4jsb_Real2D_onChunk :: km
     dsl4jsb_Real2D_onChunk :: ch
@@ -208,7 +210,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice
     REAL(wp), DIMENSION(options%nc) :: &
-      & pot_temperature_srf, pot_temperature_air, qsat_srf
+      & pot_temperature_srf, pot_temperature_air, qsat_srf, qsat_lice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_exchange_coefficients'
 
@@ -242,21 +244,31 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_,   q_air)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   press_air)       ! in
     dsl4jsb_Get_var2D_onChunk(A2L_,   wind_air)        ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,   t)               ! in
-    dsl4jsb_Get_var2D_onChunk(SEB_,   qsat_star)       ! in
+    dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  kh)              ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  km)              ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
 
-    pot_temperature_srf(:) = potential_temperature(t(:), press_srf(:))
+    pot_temperature_srf(:) = potential_temperature(t_unfilt(:), press_srf(:))
     pot_temperature_air(:) = potential_temperature(t_air(:), press_air(:))
-    qsat_srf(:) = qsat(t(:), press_srf(:))
+
+    qsat_srf(:) = qsat_water(t_unfilt(:), press_srf(:))
+    IF (tile%is_lake .AND. dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice)        ! in
+        qsat_lice(:) = qsat_ice(t_unfilt(:), press_srf(:))
+        qsat_srf(:) = (1._wp - fract_lice(:)) * qsat_srf + fract_lice(:) * qsat_lice(:)
+    END IF
+
     CALL exchange_coefficients( &
       & dz_srf(:),                                                 &
       & q_air(:), pot_temperature_air(:), wind_air(:), rough_m(:), pot_temperature_srf(:), qsat_srf(:), &
       & km(:), kh(:)                                              &
       &)
+    ! km = MIN(km,0.1_wp)
+    ! kh = MIN(kh,0.1_wp)
+    km(:) = MERGE(km(:), 0._wp, tile%fract(ics:ice,iblk) > 0._wp)
+    kh(:) = MERGE(kh(:), 0._wp, tile%fract(ics:ice,iblk) > 0._wp)
     ch(:) = wind_air(:) * rho_srf(:) * kh(:)
 
   END SUBROUTINE update_exchange_coefficients
@@ -657,7 +669,7 @@ CONTAINS
     END IF
 
     ! Set pointers to variables in memory
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       dsl4jsb_Get_var2D_onChunk(TURB_, kh)                 ! in
       ch_tmp(:) = kh(:)
     ELSE

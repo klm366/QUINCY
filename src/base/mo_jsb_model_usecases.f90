@@ -50,7 +50,7 @@ CONTAINS
     SELECT CASE (TRIM(model%config%usecase))
 
     CASE ('jsbach_lite')
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         CALL init_usecase_lite_new(model)
       ELSE
         CALL init_usecase_lite(model)
@@ -167,12 +167,17 @@ CONTAINS
           glacier_tile => t_jsb_tile('glac', 'Glacier tile', &
             & lct=t_jsb_lct(GLACIER_TYPE), parent=land_tile, &
             & fract_varname='fract_glac')
-        END IF
 
           veg_tile => t_jsb_tile('veg', 'Veg tile', &
             & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg')
+        ELSE
+          veg_tile => t_jsb_tile('veg', 'Veg tile', &
+            & processes=(/PHENO_/), process_actions=(/ON_TILE_/), &
+            & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
+            & fract_varname='equal')
+        END IF
 
     ! Next 3 lines only to avoid compiler warnings about pointers not being dereferenced
     IF (ASSOCIATED(glacier_tile)) CONTINUE

@@ -473,14 +473,14 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)             ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)         ! out
-      IF (model%config%use_new_turb) dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)        ! out
+      IF (model%config%use_tmx) dsl4jsb_Get_var2D_onChunk(HYDRO_, q_snocpymlt)        ! out
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_0 tile_name=tile%name
       runoff  (:) = rain(:) + snow(:) + evapotrans(:)
       drainage(:) = 0._wp
       w_snow(:) = 0._wp
       evapo_snow(:) = evapopot(:)
-      IF (model%config%use_new_turb) q_snocpymlt(:) = 0._wp
+      IF (model%config%use_tmx) q_snocpymlt(:) = 0._wp
       !$claw end expand
 
       RETURN
@@ -1357,7 +1357,7 @@ CONTAINS
 
     ! Used variables
     USE mo_hydro_process, ONLY: get_canopy_conductance
-    USE mo_phy_schemes,   ONLY: qsat
+    USE mo_phy_schemes,   ONLY: qsat_water
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1411,7 +1411,7 @@ CONTAINS
     ALLOCATE(q_air_gt_qsat_tmp(nc))
     !$claw acc enter data create(q_air_gt_qsat_tmp)
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_canopy_cond_stressed_expand_0 tile_name=tile%name
-    q_air_gt_qsat_tmp(:) = q_air(:) > qsat(t(:),press_srf(:))
+    q_air_gt_qsat_tmp(:) = q_air(:) > qsat_water(t(:),press_srf(:))
     ! Compute (actual) canopy (stomatal) conductance under water stress.
     canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
                                                     water_stress(:),           & ! in, water stress factor
@@ -1560,45 +1560,48 @@ CONTAINS
 
     IF (tile%contains_lake) THEN
 
-      dsl4jsb_Get_var2D_onChunk(A2L_,     q_acoef_wtr)   ! in
-      dsl4jsb_Get_var2D_onChunk(A2L_,     q_bcoef_wtr)   ! in
-      dsl4jsb_Get_var2D_onChunk(A2L_,     drag_wtr)      ! in
-      dsl4jsb_Get_var2D_onChunk(SEB_,     qsat_lwtr)     ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)     ! out
-      IF (model%config%use_new_turb) THEN
+      dsl4jsb_Get_var2D_onChunk(SEB_,     qsat_lwtr)    ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)    ! out
+      IF (model%config%use_tmx) THEN
         dsl4jsb_Get_var2D_onChunk(TURB_, ch)
+        dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef)       ! in
+        dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef)       ! in
       ELSE
-        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_wtr)          ! in
-        IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-          dsl4jsb_Get_var2D_onChunk(A2L_,  drag_ice)        ! in
-        END IF
+        dsl4jsb_Get_var2D_onChunk(A2L_,  q_acoef_wtr)   ! in
+        dsl4jsb_Get_var2D_onChunk(A2L_,  q_bcoef_wtr)   ! in
+        dsl4jsb_Get_var2D_onChunk(A2L_,  drag_wtr)      ! in
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_1 tile_name=tile%name
-      q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
 
       ! Transfer coefficient
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
+        q_air(:) = q_bcoef(:) ! Old moisture at lowest atmospheric level
         heat_tcoef(:) = ch(:)  ! TODO: distinguish between wtr and ice?
       ELSE
+        q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
         heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
       END IF
       evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_lwtr(:)) ! Potential evaporation
       !$claw end expand
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-        dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef_ice)       ! in
-        dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef_ice)       ! in
+        IF (.NOT. model%config%use_tmx) THEN
+          dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef_ice)       ! in
+          dsl4jsb_Get_var2D_onChunk(A2L_,   q_bcoef_ice)       ! in
+          dsl4jsb_Get_var2D_onChunk(A2L_,   drag_ice)    ! in
+        END IF
         dsl4jsb_Get_var2D_onChunk(SEB_,   qsat_lice)         ! in
         dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! out
 
+        ! Transfer coefficient
         !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_2 tile_name=tile%name
-        q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:) ! New moisture at lowest atmospheric level by back-substitution
-      ! Transfer coefficient
-        IF (model%config%use_new_turb) THEN
+        IF (model%config%use_tmx) THEN
+          q_air(:) = q_bcoef(:)  ! Old moisture at lowest atmospheric level
           heat_tcoef(:) = ch(:)  ! TODO: distinguish between wtr and ice?
         ELSE
+          q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:) ! New moisture at lowest atmospheric level by back-substitution
           heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
         END IF
         evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:)) ! Potential evaporation
@@ -1620,7 +1623,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_srf)       ! in
       dsl4jsb_Get_var2D_onChunk(TURB_, fact_qsat_trans_srf) ! in
 
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
         dsl4jsb_Get_var2D_onChunk(TURB_, ch)
       ELSE
         dsl4jsb_Get_var2D_onChunk(A2L_,  drag_srf)          ! in
@@ -1632,12 +1635,13 @@ CONTAINS
       END IF
 
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
-      q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
 
       ! Transfer coefficient
-      IF (model%config%use_new_turb) THEN
+      IF (model%config%use_tmx) THEN
+        q_air(:) = q_bcoef(:) ! Old moisture at lowest atmospheric level
         heat_tcoef(:) = ch(:)
       ELSE
+        q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
         heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
       END IF
   
@@ -1883,7 +1887,7 @@ CONTAINS
     END IF
 
     ! Set pointers
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_var2D_onChunk(TURB_, ch)            ! in
     ELSE
@@ -1920,8 +1924,8 @@ CONTAINS
         i = MaxLOC(t(:), DIM=1)
       END IF
       WRITE (message_text,*) 'Temperature out of bounds on tile ', tile%name, ' at ', '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t: ', t(i)
-      CALL finish(TRIM(routine), message_text)
-      ! CALL message(TRIM(routine), message_text)
+      ! CALL finish(TRIM(routine), message_text)
+      CALL message(TRIM(routine), message_text)
     END IF
 #endif
 
@@ -1949,7 +1953,7 @@ CONTAINS
     END IF
 
     ! Transfer coefficient
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       heat_tcoef(:) = ch(:)  ! TODO: distinguish between wtr and ice?
     ELSE
       heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)

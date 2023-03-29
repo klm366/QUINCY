@@ -94,7 +94,7 @@ CONTAINS
       & prefix, suffix,                                                                  &
       & lrestart=.FALSE.,                                                                &
       & output_level=BASIC,                                                              &
-      & initval_r=5.0_wp )
+      & initval_r=0.01_wp )
 
     CALL mem%Add_var( 'km', mem%km,                                                      &
       & hgrid, surface,                                                                  &
@@ -103,7 +103,7 @@ CONTAINS
       & prefix, suffix,                                                                  &
       & lrestart=.FALSE.,                                                                &
       & output_level=BASIC,                                                              &
-      & initval_r=5.0_wp )
+      & initval_r=0.01_wp )
 
     CALL mem%Add_var( 'ch', mem%ch,                                                      &
       & hgrid, surface,                                                                  &
@@ -112,7 +112,7 @@ CONTAINS
       & prefix, suffix,                                                                  &
       & lrestart=.FALSE.,                                                                &
       & output_level=BASIC,                                                              &
-      & initval_r=0.0_wp )
+      & initval_r=0.01_wp )
 
     CALL mem%Add_var( 'rough_m', mem%rough_m,                                            &
       & hgrid, surface,                                                                  &

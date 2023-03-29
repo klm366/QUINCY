@@ -16,12 +16,13 @@ MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
-  USE mo_aes_thermo, ONLY: potential_temperature
+  USE mo_jsb_thermo_iface, ONLY: specific_humidity, sat_pres_water, sat_pres_ice, potential_temperature
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: qsat, q_effective, surface_dry_static_energy, heat_transfer_coef, &
+  PUBLIC :: specific_humidity, qsat_water, qsat_ice, sat_pres_water, &
+    & q_effective, surface_dry_static_energy, heat_transfer_coef, &
     & thermal_radiation, lwnet_from_lwdown, potential_temperature, &
     & register_exchange_coefficients_procedure, exchange_coefficients
 
@@ -50,7 +51,6 @@ MODULE mo_phy_schemes
   END INTERFACE
 
   PROCEDURE(i_exchange_coefficients_procedure), POINTER :: registered_exchange_coefficients_procedure => NULL()
-  ! PROCEDURE(i_exchange_coefficients_procedure), POINTER :: exchange_coefficients => NULL()
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_phy_schemes'
 
@@ -61,39 +61,9 @@ CONTAINS
     PROCEDURE(i_exchange_coefficients_procedure) :: exchange_coefficients_procedure
 
     registered_exchange_coefficients_procedure => exchange_coefficients_procedure
-    ! exchange_coefficients => exchange_coefficients_procedure
 
   END SUBROUTINE register_exchange_coefficients_procedure
 
-! #ifndef _OPENACC
-!   ELEMENTAL &
-! #endif
-!   SUBROUTINE exchange_coefficients(                         &
-!     & dz,                                                 &
-!     & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
-!     & km, kh                                              &
-!     & )
-
-!     REAL(wp), INTENT(in) :: &
-!       dz,        &
-!       thetam1,   &
-!       pqm1 ,     &
-!       mwind,     &
-!       rough_m,   &
-!       theta_sfc, &
-!       qsat_sfc
-!       !
-!     REAL(wp), INTENT(out) :: &
-!       kh,      &
-!       km
-
-!     CALL registered_exchange_coefficients_procedure(          &
-!       & dz,                                                 &
-!       & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
-!       & km, kh                                              &
-!       & )
-
-!   END SUBROUTINE exchange_coefficients
   SUBROUTINE exchange_coefficients(                         &
     & dz,                                                 &
     & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
@@ -122,41 +92,26 @@ CONTAINS
         & km(ic), kh(ic)                                              &
         & )
     END DO
-    ! print*,'AAA thetam1 ',MINVAL(thetam1),MAXVAL(thetam1)
-    ! print*,'BBB theta_sfc ',MINVAL(theta_sfc),MAXVAL(theta_sfc)
 
   END SUBROUTINE exchange_coefficients
-  !>
-  ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
-  ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
-  ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-  !
-  REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
 
-    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
-      &                                    jptlucu1, jptlucu2
-    USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
+  REAL(wp) ELEMENTAL FUNCTION qsat_water(temperature, pressure)
 
     REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
     REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
 
-    INTEGER :: it
-    REAL(wp) :: tluc
+    qsat_water = specific_humidity(sat_pres_water(temperature), pressure)
 
-    !$claw sca routine
+  END FUNCTION qsat_water
 
-    it = NINT(temperature*1000._wp)
-!!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
-    tluc = tlucua(it) !<- TODO catch seg fault for unplausible temperatures? (e.g. see mo_jsb4_forcing)
+  REAL(wp) ELEMENTAL FUNCTION qsat_ice(temperature, pressure)
 
-    IF (it >= jptlucu1 .AND. it <= jptlucu2) THEN
-      qsat = tluc / (pressure - rvd1*tluc)
-    ELSE
-      qsat = HUGE(1._wp)
-    END IF
+    REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
+    REAL(wp), INTENT(in) :: pressure         ! Pressure [Pa]
 
-  END FUNCTION qsat
+    qsat_ice = specific_humidity(sat_pres_ice(temperature), pressure)
 
+  END FUNCTION qsat_ice
 
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION q_effective
@@ -185,6 +140,7 @@ CONTAINS
   REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
 
     USE mo_jsb_physical_constants, ONLY: &
+      & cvd,       & !< Specific heat of dry air at constant volume
       & cpd,       & !< Specific heat of dry air at constant pressure
       & cpvd1        !< cpv/cpd-1
 
@@ -196,6 +152,7 @@ CONTAINS
 
       ! surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
       surface_dry_static_energy = t_srf * cpd
+      ! surface_dry_static_energy = t_srf * cvd
 
   END FUNCTION surface_dry_static_energy
 

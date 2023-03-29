@@ -163,7 +163,7 @@ CONTAINS
       & output_level=BASIC, &
       & initval_r=280.0_wp )
 
-    IF (model%config%use_new_turb) THEN
+    IF (model%config%use_tmx) THEN
       CALL mem%Add_var( 't_rad**4', mem%t_rad4,                                        &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp_rad**4', 'K', 'surface radiative temperature **4'),           &
@@ -241,7 +241,7 @@ CONTAINS
       & output_level=BASIC, &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-    IF (model%config%use_new_turb .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
+    IF (model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0) THEN
       CALL mem%Add_var( 't_eff**4', mem%t_eff4,                                              &
         & hgrid, surface,                                                                    &
         & t_cf('surface_temperature_eff**4', 'K', 'effective surface temperature**4'),       &
@@ -252,7 +252,7 @@ CONTAINS
     END IF
 
     ! Additional variables for LAND lct
-    IF ( model%config%use_new_turb .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
+    IF ( model%config%use_tmx .OR. One_of(LAND_TYPE, lct_ids(:)) > 0 ) THEN
 
       CALL mem%Add_var( 's_star', mem%s_star,                                                &
         & hgrid, surface,                                                                    &
