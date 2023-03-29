@@ -118,7 +118,7 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(SPQ_)           ! spq__mem => spq_memory
     model  => Get_model(tile%owner_model_id)
-    !lctlib => model%lctlib(tile%lcts%lib_id)
+    !lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
