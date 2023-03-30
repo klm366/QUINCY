@@ -134,12 +134,13 @@ CONTAINS
      & t_star,                          &
      & liquid_max,                      &
      & t_air_in_Celcius,                &
-     & frozen_fract                       !< Frozen surface fraction (snow and frozen surface water ponds
+     & frozen_fract                       !< Frozen surface fraction (snow and frozen surface water ponds)
 
     LOGICAL, DIMENSION(options%nc) :: &
      & is_glacier,                    &
      & tile_fract_zero,               &
-     & has_snow_layer
+     & has_snow_layer,                &
+     & has_pond_storage
 
     REAL(wp) ::    & ! Avoid compute in param
      & soil_depth_sl_vol_porosity_sl_tmp(size(liquid_max,dim=1))
@@ -340,7 +341,8 @@ CONTAINS
     t2s_conv(:) = s_old(:) / t_old(:)  !
 
 
-    ! Account for ice in ponds
+    ! Account for ice in ponds, assuming that for partially frozen surface water
+    ! the ice is always on top
     DO i=1, size(s_star,dim=1)
       IF (ice_pond(i) > EPSILON(1.0_wp)) THEN
         frozen_fract(i) = fract_snow(i) + (1._wp - fract_snow(i)) * fract_pond(i)
@@ -384,8 +386,9 @@ CONTAINS
       t_unfilt(:) = s_star(:) / t2s_conv(:)
     END IF
 
-    ! Correct new dry static energy for melting of snow on the surface and (if l_freeze=.TRUE.) melting/freezing of
-    ! ice/water in the top soil layer that will happen during this time step
+    ! Correct new dry static energy for melting of snow on the surface, melting/freezing of surface water
+    ! and (if l_freeze=.TRUE.) melting/freezing ofice/water in the top soil layer
+    ! that will happen during this time step
     ! @todo: shouldn't this also consider wether there is actually enough energy to melt water/ice or freeze water?
     t_star(:) = s_star(:) / t2s_conv(:)
     !$claw end expand
@@ -410,6 +413,23 @@ CONTAINS
     END DO
     !$claw acc end data
 
+    ! Actual pond freezing and thawing will be computed later in the hydrology process (update_surface_hydrology)
+    has_pond_storage(:) = .FALSE.
+    DO i=1,size(t_star, dim=1)
+      IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
+        ! Freezing of water in pond reservoir without snow layer
+        IF (wtr_pond(i) > w_soil_critical_tmp) THEN
+          t_star(i) = MAX(t_star(i), tmelt)
+          has_pond_storage(i) = .TRUE.
+        END IF
+        ! Melting of ice in pond reservoir without snow layer
+        IF (ice_pond(i) > w_soil_critical_tmp) THEN
+          t_star(i) = MIN(t_star(i), tmelt)
+          has_pond_storage(i) = .TRUE.
+        END IF
+      END IF
+    END DO
+
     IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
 
       IF (dsl4jsb_Config(SSE_)%l_supercool) THEN
@@ -428,19 +448,13 @@ CONTAINS
       !$claw acc data present(has_snow_layer,is_glacier,wtr_soil_sl,liquid_max,t_star,ice_soil_sl)
       !$claw acc parallel loop gang vector
       DO i=1,size(t_star, dim=1)
-        IF (.NOT. has_snow_layer(i) .AND. .NOT. is_glacier(i)) THEN
-          ! Freezing of water in pond reservoir
-          IF (wtr_pond(i) > w_soil_critical_tmp) THEN
-            t_star(i) = MAX(t_star(i), tmelt)
-          ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
-          ELSE IF (wtr_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
+        IF (.NOT. has_snow_layer(i) .AND. .NOT. has_pond_storage(i) .AND. .NOT. is_glacier(i)) THEN
+          IF (wtr_soil_sl(i,1) > MAX(liquid_max(i), w_soil_critical_tmp)) THEN
+            ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
             t_star(i) = MAX(t_star(i), tmelt)
           END IF
-          ! Melting of ice in pond reservoir
-          IF (ice_pond(i) > w_soil_critical_tmp) THEN
-            t_star(i) = MIN(t_star(i), tmelt)
-          ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
-          ELSE IF (ice_soil_sl(i,1) > w_soil_critical_tmp ) THEN
+          IF (ice_soil_sl(i,1) > w_soil_critical_tmp ) THEN
+            ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
             t_star(i) = MIN(t_star(i), tmelt)
           END IF
         END IF
@@ -701,7 +715,8 @@ CONTAINS
 
     ! Compute latent heat flux
     !
-    ! Account for ice in ponds
+    ! Account for ice in ponds, assuming that for partially frozen surface water
+    ! the ice is always on top
     WHERE (ice_pond(:) > 1.E-20_wp)
       frozen_fract(:) = fract_snow(:) + (1._wp - fract_snow(:)) * fract_pond(:)
     ELSEWHERE
