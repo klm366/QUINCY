@@ -191,7 +191,7 @@ CONTAINS
     dsl4jsb_Get_config(TURB_)
     dsl4jsb_Get_config(SEB_)
 
-    !$claw acc data create(rough_veg_star, rough_bare_star, rough_snow_star)
+    !$ACC DATA CREATE(rough_veg_star, rough_bare_star, rough_snow_star)
 
     ! Get process memories
     dsl4jsb_Get_memory(TURB_)
@@ -315,7 +315,7 @@ CONTAINS
     ! !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_17 tile_name=tile%name
     ! rough_h(:) = MIN(1._wp, blending_height * EXP(-1._wp / SQRT(rough_h(:))))
 
-    !$claw acc end data
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -465,8 +465,9 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
-    !$claw acc data create(fact_qsat_veg,fact_qsat_trans,fact_qsat_soil, & 
-    !$claw acc fact_qair_veg,fact_qair_soil,rel_hum,zfract_fpc,mask)
+    !$ACC DATA &
+    !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) & 
+    !$ACC   CREATE(fact_qair_veg, fact_qair_soil, rel_hum, zfract_fpc, mask)
 
     ! Get pointers to process configs and memory
     dsl4jsb_Get_memory(A2L_)
@@ -518,8 +519,7 @@ CONTAINS
         mask(:) = w_soil_column(:) > w_soil_wilt_fract_tmp * max_moist(:)
       END IF
 
-      !$claw acc data present(fract_snow,fract_water,pch,wind_air,canopy_cond_limited,fact_qsat_veg,fact_qsat_trans,mask)
-      !$claw acc parallel loop gang vector
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
       DO i = 1, size(mask, dim=1)
         IF (mask(i)) THEN
           fact_qsat_veg(i) = fract_snow(i) + (1._wp - fract_snow(i)) *   &
@@ -533,7 +533,7 @@ CONTAINS
           fact_qsat_trans(i) = 0._wp
         END IF
       END DO
-      !$claw acc end data
+      !$ACC END PARALLEL LOOP
 
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_2 tile_name=tile%name
       fact_qair_veg(:) = fact_qsat_veg(:)
@@ -552,8 +552,7 @@ CONTAINS
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_4 tile_name=tile%name
       rel_hum(:) = relative_humidity_soil(w_soil_sl(:,1), w_soil_fc_sl(:,1))
 
-      !$claw acc data present(fact_qsat_soil,fact_qair_soil,qsat_star,rel_hum,q_air,fract_snow,fract_water)
-      !$claw acc parallel loop gang vector
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
       DO i = 1, size(qsat_star,dim=1)
         IF (qsat_star(i) * rel_hum(i) > q_air(i) .AND. rel_hum(i) > 1.e-10_wp) THEN
           fact_qsat_soil(i) = fract_snow(i) + (1._wp - fract_snow(i)) * &
@@ -568,7 +567,7 @@ CONTAINS
           fact_qair_soil(i) = 1._wp
         END IF
       END DO
-      !$claw acc end data
+      !$ACC END PARALLEL LOOP
 
     ELSE IF (tile%contains_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_turb_update_humidity_scaling_expand_5 tile_name=tile%name
@@ -588,7 +587,7 @@ CONTAINS
     fact_qsat_trans_srf(:) = zfract_fpc(:) * fact_qsat_trans(:)
     !$claw end expand
 
-    !$claw acc end data
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

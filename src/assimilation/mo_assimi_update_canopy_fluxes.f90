@@ -80,8 +80,9 @@ CONTAINS
     INTEGER                               :: icanopy                          !  for looping across ncanopy layers
     INTEGER                               :: no_omp_thread                    !  number of open mp thread (for task options)
     LOGICAL, DIMENSION(options%nc)        :: l_day                            !  day/night
-    REAL(wp),DIMENSION(options%nc)        :: ga, hlp1, tmp_steplen_times_wind !  dummy variable
-    INTEGER                               :: iblk, ics, ice, nc
+    REAL(wp),DIMENSION(options%nc)        :: ga, hlp1                         !  dummy variables
+    REAL(wp)                              :: tmp_steplen_times_wind           !  dummy variable
+    INTEGER                               :: iblk, ics, ice, nc, ic
     REAL(wp)                              :: steplen
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ---------------------------
@@ -243,9 +244,16 @@ CONTAINS
     !!
     beta_air(:)     = calc_atm_moisture_stress(t_air(:), q_air(:), press_srf(:))
 
-    tmp_steplen_times_wind(:) = steplen * MAX(wind_10m(:), min_wind)
-    !$claw expand
-    ga(:) = heat_transfer_coef(drag_srf(:), tmp_steplen_times_wind(:)) 
+    !$ACC DATA PRESENT(ga(:), drag_srf(:))
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG VECTOR &
+    !$ACC   PRIVATE(tmp_steplen_times_wind)
+    DO ic=1,nc
+      tmp_steplen_times_wind = steplen * MAX(wind_10m(ic), min_wind)
+      ga(ic) = heat_transfer_coef(drag_srf(ic), tmp_steplen_times_wind) 
+    END DO
+    !$ACC END PARALLEL
+    !$ACC END DATA
 
     ! Calculate the state of acclimation, slowing photosynthesis in evergreen conifers in spring
     ! temporary set to 1.0 !
