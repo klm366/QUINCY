@@ -189,23 +189,23 @@ CONTAINS
     dsl4jsb_var3D_onChunk(SB_, mycorrhiza_uptake_norg_sl)        = zero
     dsl4jsb_var3D_onChunk(SB_, mycorrhiza_uptake_norg_n15_sl)    = zero
     dsl4jsb_var3D_onChunk(SB_, mycorrhiza_uptake_po4_sl)         = zero
-    dsl4jsb_var3D_onChunk(SB_, transport_nh4_solute)             = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_nh4_assoc)              = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_no3_solute)             = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_po4_solute)             = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_po4_assoc_fast)         = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_po4_assoc_slow)         = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_po4_occluded)           = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_po4_primary)            = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_nh4_n15_solute)         = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_nh4_n15_assoc)          = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_no3_n15_solute)         = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_noy)                    = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_n2o)                    = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_n2)                     = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_noy_n15)                = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_n2o_n15)                = zero 
-    dsl4jsb_var3D_onChunk(SB_, transport_n2_n15)                 = zero 
+    dsl4jsb_var3D_onChunk(SB_, transport_nh4_solute)             = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_nh4_assoc)              = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_no3_solute)             = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_po4_solute)             = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_po4_assoc_fast)         = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_po4_assoc_slow)         = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_po4_occluded)           = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_po4_primary)            = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_nh4_n15_solute)         = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_nh4_n15_assoc)          = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_no3_n15_solute)         = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_noy)                    = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_n2o)                    = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_n2)                     = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_noy_n15)                = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_n2o_n15)                = zero
+    dsl4jsb_var3D_onChunk(SB_, transport_n2_n15)                 = zero
     dsl4jsb_var3D_onChunk(SB_, volatilisation_nh4)               = zero
     dsl4jsb_var3D_onChunk(SB_, nitrification_no3)                = zero
     dsl4jsb_var3D_onChunk(SB_, nitrification_noy)                = zero
@@ -234,6 +234,8 @@ CONTAINS
     USE mo_jsb_tile_class,          ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,          ONLY: t_jsb_task_options
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
+    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
+    USE mo_jsb_grid,                ONLY: Get_vgrid
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_class,               ONLY: Get_model
     USE mo_time_averages            ! e.g. calc_time_mavg, mavg_period_tphen, mavg_period_weekly
@@ -251,6 +253,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER         :: model                !< instance of the model
     TYPE(t_lctlib_element), POINTER         :: lctlib               !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb        !< Vertical grid
+    INTEGER                                 :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_soilbiogeochemistry'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -293,6 +297,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
+    vgrid_soil_sb => Get_vgrid('soil_layer_sb')
+    nsoil_sb      =  vgrid_soil_sb%n_levels
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
 #ifdef __QUINCY_STANDALONE__
@@ -382,7 +388,7 @@ CONTAINS
     enzyme_frac_poly_p_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), &
                                                   mavg_period_tenzyme)
 
-! not needed, because veg_pool not modified:
+! not needed, because sb_mycorrhiza_export  not modified:
 ! #ifdef __QUINCY_STANDALONE__
 ! #define Passback_sb_mycorrhiza_export
 ! #include "slm_pools_a_incl.f90"

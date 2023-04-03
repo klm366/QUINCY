@@ -1313,9 +1313,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: daytime_counter
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -1364,9 +1364,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)               ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)    ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
     ! PHENO_
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
@@ -1407,10 +1407,6 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-
-    ! docu:
-    ! cos_zenith_angle tracing variables and daytime_counter are updated 
-    ! in update_atm2land() or directly in the ICON-Land standalone driver, respectively
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
@@ -1431,9 +1427,11 @@ CONTAINS
     !>    calculate the average of the previous day and pass this value to the according variable
     !> 
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
+    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
+    !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
-      IF ((cos_zenith_angle(ic) - prev_one_cos_zenith_angle(ic)) > eps8 .AND. &
-          (prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) <= eps8) THEN
+      IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
+          & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ppfd_sunlit_daytime_cl(ic,:) = ppfd_sunlit_daytime_dacc_cl(ic,:) / daytime_counter(ic)
