@@ -657,11 +657,11 @@ CONTAINS
         & t_air(:),                       & !< lowest layer atmosphere temperature [K]
         & skinres_canopy_max(:),          & !< Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
         & skinres_max(:),                 & !< Total capacity of the skin reservoirs, i.e. soil and canopy [m]
-        & weq_pond_max(:),                & !<
-        & fract_pond_max(:),              & !<
+        & weq_pond_max(:),                & !< Total capacity of pond reservoir (water + ice) [m]
+        & fract_pond_max(:),              & !< Maximum pond fraction [/]
         & fract_snow(:),                  & !< surface snow fraction []
         & fract_skin(:),                  & !< skin reservoir fraction []
-        & fract_pond(:),                  & !<
+        & fract_pond(:),                  & !< Actual pond fraction [/]
         & hcap_grnd(:),                   & !< heat capacity of the uppermost soil layer [J m-2 K-1]
         & evapotrans(:),                  & !< evapotranspiration (including sublimation) [kg m-2 s-1]
         & evapopot(:),                    & !< potential evaporation (if there was enough water/ice) [kg m-2 s-1]
@@ -676,18 +676,18 @@ CONTAINS
         & weq_snow_soil(:),               & !< snow depth at the ground [m water equivalent]
         & weq_snow_can(:),                & !< snow depth on the canopy [m water equivalent]
         & snow_soil_dens(:),              & !< snow density on soil at non-glacier points [m water equivalent]
-        & wtr_pond(:),                    & !<
-        & ice_pond(:),                    & !<
+        & wtr_pond(:),                    & !< pond reservoir water content [m]
+        & ice_pond(:),                    & !< pond reservoir ice content [m]
         ! out
         & q_snocpymlt(:),                 & !< Heating due to snow melt on canopy [W m-2]
         & snow_accum(:),                  & !< snow budget change within time step [m water equivalent]
         & snowmelt(:),                    & !< snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
-        & pond_freeze(:),                 & !<
-        & pond_melt(:),                   & !<
+        & pond_freeze(:),                 & !< Amount of water freezing within ponds [kg m-2 s-1]
+        & pond_melt(:),                   & !< Amount of ice melting within ponds [kg m-2 s-1]
         & evapotrans_soil(:),             & !< evapotranspiration from soil w/o skin, snow and pond reservoirs [kg m-2 s-1]
         & evapo_skin(:),                  & !< evaporation from skin reservoir [kg m-2 s-1]
         & evapo_snow(:),                  & !< evaporation from snow [kg m-2 s-1]
-        & evapo_pond(:),                  & !<
+        & evapo_pond(:),                  & !< evaporation from ponds [kg m-2 s-1]
         & water_to_soil(:),               & !< Water available for infiltration into the soil [m water equivalent]
         & evapo_deficit(:),               & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
         & infilt(:),                      & !< Infiltration flux into the soil [m water equivalent]
