@@ -245,7 +245,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    INTEGER :: iblk , ics, ice
+    INTEGER :: iblk , ics, ice, nc, ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
 
@@ -257,6 +257,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN
@@ -290,8 +291,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
-      !$claw acc data pcreate(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
-      !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_1 tile_name=tile%name
+      !$ACC DATA PCREATE(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
+
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
         & swnir_srf_down(:),           & ! in
@@ -311,7 +312,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
         dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
-        !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_2 tile_name=tile%name
         CALL calc_radiation_surface_net( &
           & swvis_srf_down(:),           & ! in
           & swnir_srf_down(:),           & ! in
@@ -324,20 +324,35 @@ CONTAINS
           & lw_net=lw_net_lice(:)        & ! out
           & )
 
-        !$claw expand parallel update savepoint=ser_jsb_rad_surface_radiation_expand_1 tile_name=tile%name
-        rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
-        sw_srf_net (:) = (1._wp - fract_lice(:)) * sw_net_lwtr(:)  + fract_lice(:) * sw_net_lice(:)
-        lw_srf_net (:) = (1._wp - fract_lice(:)) * lw_net_lwtr(:)  + fract_lice(:) * lw_net_lice(:)
-        !$claw end expand
+        !$ACC DATA &
+        !$ACC   PRESENT(rad_net_lwtr(:) ,rad_net_lice(:), lw_net_lwtr(:), lw_net_lice(:)) &
+        !$ACC   PRESENT(lw_srf_net(:), rad_srf_net(:), sw_srf_net(:), sw_net_lwtr(:), sw_net_lice(:)) &
+        !$ACC   PRESENT(fract_lice(:))
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+        !$ACC LOOP GANG VECTOR
+        DO ic=1,nc
+          rad_srf_net(ic) = (1._wp - fract_lice(ic)) * rad_net_lwtr(ic) + fract_lice(ic) * rad_net_lice(ic)
+          sw_srf_net (ic) = (1._wp - fract_lice(ic)) * sw_net_lwtr(ic)  + fract_lice(ic) * sw_net_lice(ic)
+          lw_srf_net (ic) = (1._wp - fract_lice(ic)) * lw_net_lwtr(ic)  + fract_lice(ic) * lw_net_lice(ic)
+        END DO
+        !$ACC END PARALLEL
+        !$ACC END DATA
       ELSE
-        !$claw expand parallel update savepoint=ser_jsb_rad_surface_radiation_expand_2 tile_name=tile%name
-        rad_srf_net(:) = rad_net_lwtr(:)
-        sw_srf_net (:) = sw_net_lwtr (:)
-        lw_srf_net (:) = lw_net_lwtr (:)
-        !$claw end expand
+        !$ACC DATA &
+        !$ACC   PRESENT(rad_net_lwtr(:), lw_net_lwtr(:), lw_srf_net(:), rad_srf_net(:),sw_srf_net(:)) &
+        !$ACC   PRESENT(sw_net_lwtr(:))
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+        !$ACC LOOP GANG VECTOR
+        DO ic=1,nc
+          rad_srf_net(ic) = rad_net_lwtr(ic)
+          sw_srf_net (ic) = sw_net_lwtr (ic)
+          lw_srf_net (ic) = lw_net_lwtr (ic)
+        END DO
+        !$ACC END PARALLEL
+        !$ACC END DATA
       END IF
 
-      !$claw acc end data
+      !$ACC END DATA
 
 
     !> 2.0 vegetation with use_quincy = .TRUE.
@@ -347,8 +362,14 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! in
 
       ! quincy calculates all (albedo & short wave) but long wave radiation
-      !$claw expand
-      lw_srf_net(:) = lwnet_from_lwdown(lw_srf_down(:), t(:))
+      !$ACC DATA PRESENT(lw_srf_net(:), lw_srf_down(:), t(:))
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
+      DO ic=1,nc
+        lw_srf_net(ic) = lwnet_from_lwdown(lw_srf_down(ic), t(ic))
+      END DO
+      !$ACC END PARALLEL
+      !$ACC END DATA
     
     
     !> 3.0 all but lakes 
@@ -362,21 +383,28 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      swvis_srf_net)  ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,      swnir_srf_net)  ! out
 
-      !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_3 tile_name=tile%name
-      CALL calc_radiation_surface_net( &
-        & swvis_srf_down(:),           & ! in
-        & swnir_srf_down(:),           & ! in
-        & alb_vis_lnd(:),              & ! in
-        & alb_nir_lnd(:),              & ! in
-        & lw_srf_down(:),              & ! in
-        & t(:),                        & ! in
-        & rad_srf_net(:),              & ! out
-        & swvis_srf_net(:),            & ! out
-        & swnir_srf_net(:),            & ! out
-        & sw_srf_net(:),               & ! out
-        & lw_srf_net(:)                & ! out
+      CALL calc_radiation_surface_net(  &
+        & swvis_srf_down(:),            & ! in
+        & swnir_srf_down(:),            & ! in
+        & alb_vis_lnd(:),               & ! in
+        & alb_nir_lnd(:),               & ! in
+        & lw_srf_down(:),               & ! in
+        & t(:),                         & ! in
+        & rad_srf_net(:),               & ! out
+        & swvis_net = swvis_srf_net(:), & ! out
+        & swnir_net = swnir_srf_net(:), & ! out
+        & sw_net    = sw_srf_net(:),    & ! out
+        & lw_net    = lw_srf_net(:)     & ! out
         & )
     END IF
+    ! !$ACC DATA PRESENT(rad_srf_net(:), lw_srf_net(:), sw_srf_net(:))
+    ! !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    ! !$ACC LOOP GANG VECTOR
+    ! DO ic=1,nc
+    !   rad_srf_net(ic) = lw_srf_net(ic) + sw_srf_net(ic)
+    ! END DO
+    ! !$ACC END PARALLEL
+    ! !$ACC END DATA
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -551,7 +579,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    !$claw acc data create(B4_layer_above)
+    !$ACC DATA CREATE(B4_layer_above)
 
     ! Initialize local variables
 
@@ -643,7 +671,7 @@ CONTAINS
 !           apar_nacc(:)                     = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
 !        END IF
 
-    !$claw acc end data
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -833,7 +861,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_bg_sum)  ! in
       ELSE
         ALLOCATE(c_bg_sum(nc))
-        !$claw acc enter data create(c_bg_sum)
+        !$ACC ENTER DATA CREATE(c_bg_sum)
         !$claw expand parallel
         c_bg_sum(:) = 0._wp                           ! dummy
       END IF
@@ -861,7 +889,7 @@ CONTAINS
     ! Go
 
     ALLOCATE(l_day(nc))
-    !$claw acc enter data create(l_day)
+    !$ACC ENTER DATA CREATE(l_day)
 
     !> 0.9  Set day-or-night-switch
     !! 
@@ -919,25 +947,25 @@ CONTAINS
           & albedo_lice(:)  & ! inout
           & )
 
-        !$claw acc data present(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
-        !$claw acc parallel loop gang vector
+        !$ACC DATA PRESENT(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
+        !$ACC PARALLEL LOOP GANG VECTOR
         DO i = 1, size(l_day)
           IF(l_day(i)) THEN
             alb_vis(i) = (1._wp - fract_lice(i)) * albedo_lwtr(i) + fract_lice(i) * albedo_lice(i)
             alb_nir(i) = alb_vis(i)  ! TODO
           END IF
         END DO
-        !$claw acc end data
+        !$ACC END DATA
       ELSE
-        !$claw acc data present(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
-        !$claw acc parallel loop gang vector
+        !$ACC DATA PRESENT(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
+        !$ACC PARALLEL LOOP GANG VECTOR
         DO i = 1, size(l_day)
           IF(l_day(i)) THEN
             alb_vis(i) = albedo_lwtr(i)
             alb_nir(i) = alb_vis(i)  ! TODO
           END IF
         END DO
-        !$claw acc end data
+        !$ACC END DATA
       END IF
 
     !> 3.0 glacier
@@ -1125,7 +1153,7 @@ CONTAINS
 
       END IF ! use_alb_veg_simple
     END IF   ! IF (tile%is_vegetation .AND. .NOT. model%config%use_quincy)
-
+    !$ACC WAIT
 
     !> 6.0 pass the "land albedo" to the "tile albedo" 
     !! this is needed because for lake tiles, the "tile albedo" is calculated directly, \n
@@ -1142,11 +1170,11 @@ CONTAINS
     !! 
     IF (TRIM(use_alb_soil_organic_C) == '') THEN
       IF (ASSOCIATED(c_bg_sum)) THEN
-        !$claw acc exit data delete(c_bg_sum)
+        !$ACC EXIT DATA DELETE(c_bg_sum)
         DEALLOCATE(c_bg_sum)
       END IF
     END IF
-    !$claw acc exit data delete(l_day)
+    !$ACC EXIT DATA DELETE(l_day)
     DEALLOCATE(l_day)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

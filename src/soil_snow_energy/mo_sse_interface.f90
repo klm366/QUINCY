@@ -260,7 +260,7 @@ CONTAINS
 
     lstart = is_time_experiment_start(options%current_datetime)
 
-    !$claw acc enter data create(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
+    !$ACC ENTER DATA CREATE(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
 
     ! Save old ground heat flux and heat capacity before updating
     ! The old flux and capacity (which have been used in the implicit calculation of the new surface temperature) are
@@ -282,7 +282,7 @@ CONTAINS
 
     IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
       ldglac(:) = SPREAD(tile%is_glacier, DIM=1, ncopies=nc)
-      !$claw acc update device(ldglac)
+      !$ACC UPDATE DEVICE(ldglac)
 
       CALL calc_soiltemp_old(                          &
         & nc,                                          &
@@ -305,7 +305,7 @@ CONTAINS
         & )
 
 
-      !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
+      !$ACC EXIT DATA DELETE(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
       RETURN
 
     END IF
@@ -324,12 +324,12 @@ CONTAINS
       END IF
 
       ! Calculate top snow layer for previous time step
-      !$claw acc data present(itop_old,snow_depth_sl)
-      !$claw acc parallel loop gang vector
+      !$ACC DATA PRESENT(itop_old,snow_depth_sl)
+      !$ACC PARALLEL LOOP GANG VECTOR
       DO i = 1,nc
         itop_old(i) = nsnow + 1 - COUNT(snow_depth_sl(i,:) > 0._wp)
       END DO
-      !$claw acc end data
+      !$ACC END DATA
 
       ! Calculate depths of snow layers
       !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_5 tile_name=tile%name
@@ -338,8 +338,8 @@ CONTAINS
       snow_fract(:) = fract_snow_soil(:)
 
 
-      !$claw acc data present(snow_depth,snow_fract)
-      !$claw acc parallel loop gang vector
+      !$ACC DATA PRESENT(snow_depth,snow_fract)
+      !$ACC PARALLEL LOOP GANG VECTOR
       DO i = 1, size(snow_depth, dim=1)
         IF (snow_depth(i) > snow_depth_min .AND. snow_fract(i) > EPSILON(1._wp)) THEN
           snow_depth(i) = snow_depth(i) / snow_fract(i)
@@ -348,13 +348,13 @@ CONTAINS
           snow_fract(i) = 0._wp
         END IF
       END DO
-      !$claw acc end data
+      !$ACC END DATA
 
-      !$claw acc data present(snow_depth,snow_depth_sl)
-      !$claw acc parallel
-      !$claw acc loop seq
+      !$ACC DATA PRESENT(snow_depth,snow_depth_sl)
+      !$ACC PARALLEL
+      !$ACC LOOP SEQ
       DO isnow=nsnow,1,-1
-        !$claw acc loop gang vector
+        !$ACC LOOP GANG VECTOR
         DO i = 1, size(snow_depth, dim=1)
           IF (snow_depth(i) > 0._wp) THEN
             snow_depth_sl(i,isnow) = MIN(snow_depth(i), snow_e%dz(isnow))
@@ -362,20 +362,20 @@ CONTAINS
           END IF
         END DO
       END DO
-      !$claw acc end parallel
-      !$claw acc end data
+      !$ACC END PARALLEL
+      !$ACC END DATA
 
       !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_temperature_expand_7 tile_name=tile%name
       snow_depth_sl(:,nsnow) = snow_depth_sl(:,nsnow) + snow_depth(:)
 
       ! Calculate top snow layer for current time step
 
-      !$claw acc data present(itop,snow_depth_sl)
-      !$claw acc parallel loop gang vector
+      !$ACC DATA PRESENT(itop,snow_depth_sl)
+      !$ACC PARALLEL LOOP GANG VECTOR
       DO i = 1,nc
         itop(i) = nsnow + 1 - COUNT(snow_depth_sl(i,:) > 0._wp)
       END DO
-      !$claw acc end data
+      !$ACC END DATA
 
       CALL calc_snow_temperature( &
         ! in
@@ -405,7 +405,7 @@ CONTAINS
         & grnd_hflx_snow     (:)  &
         & )
 
-      !$claw acc parallel loop default(present) present(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(snow_depth_sl,snow_fract,t_unfilt_corrected,t_soil_top)
       DO i = 1, nc
         IF (snow_depth_sl(i, nsnow) > 0._wp) THEN  ! At least one snow layer above soil
           t_soil_top(i) = snow_fract(i) * t_soil_top(i) + (1._wp - snow_fract(i)) * t_unfilt_corrected(i)
@@ -452,7 +452,7 @@ CONTAINS
         & )
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
-      !$claw acc enter data create(ws_max_sl)
+      !$ACC ENTER DATA CREATE(ws_max_sl)
       !$claw expand parallel update
       ws_max_sl(:,:) = soil_depth_sl(:,:) * vol_porosity_sl(:,:)
 
@@ -488,12 +488,12 @@ CONTAINS
         & w_soil_freeze_sl                    (:,:), &
         & w_ice_melt_sl                       (:,:)  &
         & )
-      !$claw acc exit data delete(ws_max_sl)
+      !$ACC EXIT DATA DELETE(ws_max_sl)
       DEALLOCATE(ws_max_sl)
     END IF
 
-    !$claw acc data present(grnd_hflx,hcap_grnd,snow_fract,grnd_hflx_snow,grnd_hflx_soil,hcap_grnd_snow,hcap_grnd_soil)
-    !$claw acc parallel loop gang vector
+    !$ACC DATA PRESENT(grnd_hflx,hcap_grnd,snow_fract,grnd_hflx_snow,grnd_hflx_soil,hcap_grnd_snow,hcap_grnd_soil)
+    !$ACC PARALLEL LOOP GANG VECTOR
     DO i = 1, size(snow_depth_sl, dim=1)
       IF (snow_depth_sl(i,nsnow) > 0._wp) THEN
         grnd_hflx(i) = snow_fract(i) * grnd_hflx_snow(i) + (1._wp - snow_fract(i)) * grnd_hflx_soil(i)
@@ -503,9 +503,9 @@ CONTAINS
         hcap_grnd(i) = hcap_grnd_soil(i)
       END IF
     END DO
-    !$claw acc end data
+    !$ACC END DATA
 
-    !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
+    !$ACC EXIT DATA DELETE(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -678,17 +678,17 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
-      !$claw acc enter data pcreate(fract_org_sl)
+      !$ACC ENTER DATA PCREATE(fract_org_sl)
       !$claw expand parallel
       fract_org_sl(:,:) = 0._wp
     END IF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
       ALLOCATE(fract_water(nc, nsoil), fract_ice(nc, nsoil))
-      !$claw acc enter data pcreate(fract_water, fract_ice)
+      !$ACC ENTER DATA PCREATE(fract_water, fract_ice)
 
-      !$claw acc data present(soil_depth_sl,fract_water,fract_ice,w_soil_sl,w_ice_sl)
-      !$claw acc parallel loop gang vector collapse(2)
+      !$ACC DATA PRESENT(soil_depth_sl,fract_water,fract_ice,w_soil_sl,w_ice_sl)
+      !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
       DO i = 1, size(soil_depth_sl, dim=1)
         DO j = 1, size(soil_depth_sl, dim=2)
           IF (soil_depth_sl(i,j) > 0._wp) THEN
@@ -700,14 +700,14 @@ CONTAINS
           END IF
         END DO
       END DO
-      !$claw acc end data
+      !$ACC END DATA
 
       ALLOCATE(vol_heat_cap_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
-      !$claw acc enter data pcreate(vol_heat_cap_tmp,soil_e_dz_tmp)
-      !$claw acc update host(vol_heat_cap(:))
+      !$ACC ENTER DATA CREATE(vol_heat_cap_tmp, soil_e_dz_tmp)
+      !$ACC UPDATE HOST(vol_heat_cap(:))
       vol_heat_cap_tmp(:,:) = SPREAD( vol_heat_cap(:), DIM=2, ncopies=nsoil)
       soil_e_dz_tmp(:,:) = SPREAD( soil_e%dz(:), DIM=1, ncopies=nc)
-      !$claw acc update device(vol_heat_cap_tmp,soil_e_dz_tmp)
+      !$ACC UPDATE DEVICE(vol_heat_cap_tmp,soil_e_dz_tmp)
  
       !$claw expand parallel update savepoint=ser_jsb_sse_calc_vol_heat_capacity_1 tile_name=tile%name
       vol_heat_cap_sl (:,:) = calc_vol_heat_capacity( &
@@ -722,27 +722,27 @@ CONTAINS
         &                                soil_e_dz_tmp(:,:)                                                   &
         & )
       
-      !$claw acc exit data delete(fract_water,fract_ice,vol_heat_cap_tmp,soil_e_dz_tmp)
+      !$ACC EXIT DATA DELETE(fract_water,fract_ice,vol_heat_cap_tmp,soil_e_dz_tmp)
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, soil_e_dz_tmp)
     ELSE
-      !$claw acc data present(vol_heat_cap_sl,vol_heat_cap)
-      !$claw acc parallel loop gang vector collapse(2)
+      !$ACC DATA PRESENT(vol_heat_cap_sl,vol_heat_cap)
+      !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
       DO i = 1, nc
         DO j = 1, nsoil
           vol_heat_cap_sl(i,j) = vol_heat_cap(i)
         END DO
       END DO
-      !$claw acc end data
+      !$ACC END DATA
     ENDIF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
       
       ALLOCATE(heat_cond_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
-      !$claw acc enter data pcreate(heat_cond_tmp,soil_e_dz_tmp)
-      !$claw acc update host(heat_cond(:))
+      !$ACC ENTER DATA PCREATE(heat_cond_tmp,soil_e_dz_tmp)
+      !$ACC UPDATE HOST(heat_cond(:))
       heat_cond_tmp(:,:) = SPREAD( heat_cond(:), DIM=2, ncopies=nsoil)
       soil_e_dz_tmp(:,:) = SPREAD( soil_e%dz(:), DIM=1, ncopies=nc)
-      !$claw acc update device(heat_cond_tmp, soil_e_dz_tmp)
+      !$ACC UPDATE DEVICE(heat_cond_tmp, soil_e_dz_tmp)
 
       !$claw expand parallel update savepoint=ser_jsb_sse_calc_thermal_conductivity_1 tile_name=tile%name
       heat_cond_sl (:,:) = calc_thermal_conductivity( &
@@ -758,21 +758,21 @@ CONTAINS
         !&                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc)                  &
         & )
 
-      !$claw acc exit data delete(heat_cond_tmp,soil_e_dz_tmp)
+      !$ACC EXIT DATA DELETE(heat_cond_tmp,soil_e_dz_tmp)
       DEALLOCATE(heat_cond_tmp, soil_e_dz_tmp)
     ELSE
-      !$claw acc data present(heat_cond_sl,heat_cond)
-      !$claw acc parallel loop gang vector collapse(2)
+      !$ACC DATA PRESENT(heat_cond_sl,heat_cond)
+      !$ACC PARALLEL LOOP GANG VECTOR COLLAPSE(2)
       DO i = 1, nc
         DO j = 1, nsoil
           heat_cond_sl(i,j) = heat_cond(i)
         END DO
       END DO
-      !$claw acc end data
+      !$ACC END DATA
     END IF
 
     IF (.NOT. (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil)) THEN
-      !$claw acc exit data delete(fract_org_sl)
+      !$ACC EXIT DATA DELETE(fract_org_sl)
       DEALLOCATE(fract_org_sl)
     END IF
 
@@ -785,8 +785,8 @@ CONTAINS
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN
         IF (dsl4jsb_Config(SSE_)%l_dynsnow) THEN
           dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)
-          !$claw acc data present(snow_soil_dens,vol_heat_cap_snow,heat_cond_snow)
-          !$claw acc parallel loop gang vector
+          !$ACC DATA PRESENT(snow_soil_dens,vol_heat_cap_snow,heat_cond_snow)
+          !$ACC PARALLEL LOOP GANG VECTOR
           DO i = 1, nc
             IF (snow_soil_dens(i) > dens_snow_min) THEN     ! "old" or mixture of old and fresh snow
               vol_heat_cap_snow(i) = ci * snow_soil_dens(i)                               ! Use specific heat of ice (Verseghy 1991)
@@ -801,7 +801,7 @@ CONTAINS
               vol_heat_cap_snow(i) = ci * dens_snow_min
             END IF
           END DO
-          !$claw acc end data
+          !$ACC END DATA
         ELSE
           !$claw expand parallel update savepoint=ser_jsb_sse_update_soil_and_snow_properties_expand_5  tile_name=tile%name
           vol_heat_cap_snow(:) = vol_hcap_snow                                     ! Use specific heat of snow (cs * dens_snow)

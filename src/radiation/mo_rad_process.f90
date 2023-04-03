@@ -38,7 +38,7 @@ MODULE mo_rad_process
 
 CONTAINS
 
-  PURE ELEMENTAL SUBROUTINE calc_radiation_surface_net( &
+  SUBROUTINE calc_radiation_surface_net( &
     & swvis_down,    & ! in
     & swnir_down,    & ! in
     & alb_vis,       & ! in
@@ -54,8 +54,7 @@ CONTAINS
 
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
-    !$claw model-data
-    REAL(wp),  INTENT(in) :: &
+    REAL(wp),  INTENT(in), DIMENSION(:) :: &
       & swvis_down,          &
       & swnir_down,          &
       & alb_vis,             &
@@ -64,33 +63,44 @@ CONTAINS
       & t
 
     REAL(wp),  INTENT(out) :: &
-      & rad_net
-    REAL(wp),  INTENT(out), OPTIONAL :: &
+      & rad_net(:)
+
+    REAL(wp),  INTENT(out), OPTIONAL, DIMENSION(:) :: &
       & swvis_net,                      & ! net shortwave radiation in visible range
       & swnir_net,                      & ! net shortwave radiation in near infrared range
       & sw_net,                         &
       & lw_net
-    !$claw end model-data
 
     REAL(wp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
 
-    !$claw sca
+    INTEGER :: nc, ic
 
-    ! Compute net SW radiation from downward SW and albedo
-    zswvis_net = swvis_down * (1._wp - alb_vis)
-    zswnir_net = swnir_down * (1._wp - alb_nir)
-    zsw_net    = zswvis_net + zswnir_net
+    nc = SIZE(swvis_down)
 
-    ! Compute LW net radiation from incoming and the thermal radiation from the surface
-    zlw_net = lwnet_from_lwdown(lw_down, t)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG VECTOR &
+    !$ACC   PRIVATE(zswvis_net, zswnir_net, zsw_net, zlw_net)
+    DO ic=1,nc
 
-    ! Compute net radiation
-    rad_net = zsw_net + zlw_net
+      ! Compute net SW radiation from downward SW and albedo
+      zswvis_net = swvis_down(ic) * (1._wp - alb_vis(ic))
+      zswnir_net = swnir_down(ic) * (1._wp - alb_nir(ic))
+      zsw_net    = zswvis_net + zswnir_net
 
-    IF (PRESENT(swvis_net)) swvis_net = zswvis_net
-    IF (PRESENT(swnir_net)) swnir_net = zswnir_net
-    IF (PRESENT(sw_net)) sw_net = zsw_net
-    IF (PRESENT(lw_net)) lw_net = zlw_net
+      ! Compute LW net radiation from incoming and the thermal radiation from the surface
+      zlw_net = lwnet_from_lwdown(lw_down(ic), t(ic))
+
+      ! Compute net radiation
+      rad_net(ic) = zsw_net + zlw_net
+
+      IF (PRESENT(swvis_net)) swvis_net(ic) = zswvis_net
+      IF (PRESENT(swnir_net)) swnir_net(ic) = zswnir_net
+      IF (PRESENT(sw_net))    sw_net(ic)    = zsw_net
+      IF (PRESENT(lw_net))    lw_net(ic)    = zlw_net
+
+    END DO
+    !$ACC END PARALLEL
+    !$ACC WAIT
 
   END SUBROUTINE calc_radiation_surface_net
 

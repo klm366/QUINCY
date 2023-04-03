@@ -391,9 +391,9 @@ CONTAINS
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(PHENO_)) RETURN
 
-    !$claw acc data create(w_soil_filling, t_air_in_Celcius)  & 
-    !$claw create(LaiMax_corrected, veg_fract_correction_old) &
-    !$claw create(old_c_state_sum_ta, dummy_flux)
+    !$ACC DATA &
+    !$ACC   CREATE(w_soil_filling, t_air_in_Celcius, LaiMax_corrected)  & 
+    !$ACC   CREATE(veg_fract_correction_old, old_c_state_sum_ta, dummy_flux)
     IF ( .NOT. tile%Is_process_active(ASSIMI_)) THEN
       CALL finish(routine, 'The LOGROP phenology model depends on the assimilation process being activated, too')
     ENDIF
@@ -619,15 +619,15 @@ CONTAINS
     ! Secure minimum Max-LAI
 
     LAI_negligible_tmp = PhenoParam%all%LAI_negligible
-    !$claw acc data present(LaiMax_corrected, lai)
-    !$claw acc parallel loop gang vector
+    !$ACC DATA PRESENT(LaiMax_corrected, lai)
+    !$ACC PARALLEL LOOP GANG VECTOR
     DO i = 1, SIZE(LaiMax_corrected)
       IF (LaiMax_corrected(i) < LAI_negligible_tmp) THEN
         LaiMax_corrected(i) = LAI_negligible_tmp
         lai(i) = LAI_negligible_tmp - EPSILON(1.0_wp)
       END IF
     END DO
-    !$claw acc end data
+    !$ACC END DATA
 
     ! R: The following PHENO_ process shall be calculated only on the lowest child tiles (=ON_LEAFS).
     !    This is set within the FUNCTION Construct_tile and makes further statements here unnecessary.
@@ -733,7 +733,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-    !$claw acc end data
+    !$ACC END DATA
 
    END SUBROUTINE update_phenology_logrop
 

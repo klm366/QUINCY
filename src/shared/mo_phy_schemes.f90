@@ -32,9 +32,11 @@ CONTAINS
   ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
   ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
   !
-  REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
+  REAL(wp) FUNCTION qsat(temperature, pressure)
 
-    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
+    !$ACC ROUTINE SEQ
+
+    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &        ! Table for water vapor pressure e_s multiplied by R_d/R_v
       &                                    jptlucu1, jptlucu2
     USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
 
@@ -43,8 +45,6 @@ CONTAINS
 
     INTEGER :: it
     REAL(wp) :: tluc
-
-    !$claw sca routine
 
     it = NINT(temperature*1000._wp)
 !!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
@@ -64,14 +64,14 @@ CONTAINS
   !! 
   !! out: q_effective
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION q_effective(qsat, qair, fsat, fair)
+  REAL(wp) FUNCTION q_effective(qsat, qair, fsat, fair)
+
+    !$ACC ROUTINE SEQ
 
     REAL(wp), INTENT(in) :: &
       & qsat,               & !< Surface saturation specific humidity
       & qair,               & !< Air specific humidity
       & fsat, fair            !< Weighing factors for qsat and qair accounting for only partially wet surface.
-
-    !$claw sca routine
 
     q_effective = fsat * qsat + (1._wp -fair) * qair
 
@@ -83,7 +83,9 @@ CONTAINS
   !! 
   !! out: surface_dry_static_energy
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
+  REAL(wp) FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: &
       & cpd,       & !< Specific heat of dry air at constant pressure
@@ -93,10 +95,8 @@ CONTAINS
       & t_srf,                      & !< Surface temperature
       & qsat_srf                      !< Surface saturation specific humidity
 
-      !$claw sca routine
-
-      ! surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
-      surface_dry_static_energy = t_srf * cpd
+    ! surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
+    surface_dry_static_energy = t_srf * cpd
 
   END FUNCTION surface_dry_static_energy
 
@@ -124,7 +124,9 @@ CONTAINS
   !! 
   !! out: lwnet_from_lwdown
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
+  REAL(wp) FUNCTION lwnet_from_lwdown(lwdown, t_srf)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
@@ -132,8 +134,6 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: lwdown   ! downward longwave radiation
     REAL(wp), INTENT(in) :: t_srf    ! surface temperature
-
-    !$claw sca routine
 
     lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
 
@@ -145,15 +145,15 @@ CONTAINS
   !! 
   !! out: heat_transfer_coef
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
+  REAL(wp) FUNCTION heat_transfer_coef(drag, steplen)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_jsb_physical_constants, ONLY: grav, cvdifts
 
     REAL(wp), INTENT(in) :: &
       & drag,      &
       & steplen
-
-    !$claw sca routine
 
     heat_transfer_coef = drag / (cvdifts * grav * steplen)
 
