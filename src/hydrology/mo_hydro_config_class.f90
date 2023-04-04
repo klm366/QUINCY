@@ -47,16 +47,18 @@ MODULE mo_hydro_config_class
       & max_pond_depth       !< prescribed maximum surface pond depth --> should later be computed dynamically
 
     CHARACTER(len=10)     :: &
-      & scheme_stom_cond       !< Scheme to use for computation of stomatal conductance (echam5 only for now)
-    LOGICAL               :: &
-      & l_organic,           & !< Use organic component of soil layers
-      & l_socmap,            & !< Replace computed organic layer with 3D map of soil carbon fraction
-      & l_glac_in_soil,      & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero        !< Allow infiltration at soil temperatures below 0degC
+      & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
+    LOGICAL               ::  &
+      & enforce_water_budget, & !< stop in case of water conservation problem
+      & l_organic,            & !< Use organic component of soil layers
+      & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
+      & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
+      & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
+      & l_ponds                !< Additional surface water storage
     INTEGER               :: &
       & runoff_scheme,       & !< Choice of runoff and infiltration scheme: 'ARNO' (default), 'QArctic' (only with hydrotiles)
       & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
-      & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean 
+      & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -84,7 +86,7 @@ CONTAINS
     REAL(wp)                    :: manning_n, dt_sat, max_slope, max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, runoff_scheme, soilhydmodel, interpol_mean
-    LOGICAL                     :: l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
+    LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -101,10 +103,12 @@ CONTAINS
       & max_slope,                  &
       & max_pond_depth,             &
       & scheme_stom_cond,           &
+      & enforce_water_budget,       &
       & l_organic,                  &
       & l_socmap,                   &
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
+      & l_ponds,                    &
       & runoff_scheme,              &
       & soilhydmodel,               &
       & interpol_mean
@@ -122,27 +126,29 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Starting hydro configuration')
 
     ! Set defaults
-    active            = .TRUE.
-    bc_filename       = 'bc_land_hydro.nc'  !R: gibts im Moment noch nicht
-    ic_filename       = 'ic_land_hydro.nc'  !R: gibts im Moment noch nicht
-    bc_sso_filename   = 'bc_land_sso.nc'
-    w_skin_max        = 2.E-4_wp            ! 0.2 mm corresponds to Roesch et al. 2001
-    w_soil_limit      = -1.0_wp
-    w_soil_crit_fract = 0.75_wp
-    w_soil_wilt_fract = 0.35_wp
-    snow_depth_max    = -1.0_wp             ! -1: no limitation
-    manning_n         = 0.075_wp
-    dt_sat            = 600._wp             ! [sec]
-    max_slope         = 0.45_wp             ! [m/m]
-    max_pond_depth    = 0.1_wp              ! [m]
-    scheme_stom_cond  = 'echam5'
-    l_organic         = .TRUE.
-    l_socmap          = .TRUE.
-    l_glac_in_soil    = .FALSE.
-    l_infil_subzero   = .TRUE.
-    runoff_scheme     = "Arno"
-    soilhydmodel      = "BrooksCorey"
-    interpol_mean     = "upstream"
+    active                 = .TRUE.
+    bc_filename            = 'bc_land_hydro.nc'  !R: gibts im Moment noch nicht
+    ic_filename            = 'ic_land_hydro.nc'  !R: gibts im Moment noch nicht
+    bc_sso_filename        = 'bc_land_sso.nc'
+    w_skin_max             = 2.E-4_wp            ! 0.2 mm corresponds to Roesch et al. 2001
+    w_soil_limit           = -1.0_wp
+    w_soil_crit_fract      = 0.75_wp
+    w_soil_wilt_fract      = 0.35_wp
+    snow_depth_max         = -1.0_wp             ! -1: no limitation
+    manning_n              = 0.075_wp
+    dt_sat                 = 600._wp             ! [sec]
+    max_slope              = 0.45_wp             ! [m/m]
+    max_pond_depth         = 0.1_wp              ! [m]
+    scheme_stom_cond       = 'echam5'
+    enforce_water_budget   = config%model_config%enforce_water_budget
+    l_organic              = .TRUE.
+    l_socmap               = .TRUE.
+    l_glac_in_soil         = .FALSE.
+    l_infil_subzero        = .TRUE.
+    l_ponds                = .FALSE.
+    runoff_scheme          = "Arno"
+    soilhydmodel           = "BrooksCorey"
+    interpol_mean          = "upstream"
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -184,9 +190,14 @@ CONTAINS
     config%max_pond_depth = max_pond_depth
     CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(max_pond_depth)))
 
-    config%scheme_stom_cond    = scheme_stom_cond
+    config%scheme_stom_cond       = scheme_stom_cond
 
-    config%l_organic           = l_organic
+    config%enforce_water_budget   = enforce_water_budget
+    IF (.NOT. enforce_water_budget) THEN
+      CALL message(TRIM(routine), 'WARNING: Model will not stop due to land surface water balance violation.')
+    END IF
+
+    config%l_organic              = l_organic
     IF (l_organic) THEN
       CALL message(TRIM(routine), 'Using organic component in soil hydrology')
     ELSE
@@ -201,6 +212,15 @@ CONTAINS
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
+
+    config%l_ponds = l_ponds
+    IF (l_ponds) THEN
+      CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not tested!!')
+      config%max_pond_depth = max_pond_depth
+    ELSE
+      config%max_pond_depth = 0._wp
+    END IF
+    CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(config%max_pond_depth)))
 
     SELECT CASE(TRIM(tolower(runoff_scheme)))
     CASE("arno")

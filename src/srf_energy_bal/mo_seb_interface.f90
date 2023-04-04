@@ -269,7 +269,8 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "snowmelt_correction"
-  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting
+  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting,
+  !! surface water freezing and thawing and soil moisture freezing and thawing.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     config  Vector of process configurations.

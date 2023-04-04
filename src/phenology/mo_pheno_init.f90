@@ -67,23 +67,20 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
-      CALL pheno_read_init_vars(tile)
-    END IF
-
-    ! select init routine depending on the model_scheme
+    ! select init routine depending on the model
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
-      CALL pheno_init_bc(tile)
-      CALL pheno_init_ic(tile)
+      IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
+        CALL pheno_read_init_vars(tile)
+      END IF
+      CALL pheno_init_bc_jsbach(tile)
+      CALL pheno_init_ic_jsbach(tile)
+      IF (tile%Is_last_process_tile(PHENO_)) THEN
+        CALL pheno_finalize_init_vars()
+      END IF
     CASE (MODEL_QUINCY)
-      CALL pheno_init_q_(tile)                 ! contains code parts of jsbach4 pheno init
+      CALL pheno_init_bc_quincy(tile)
     END SELECT
-
-    ! IF (tile%Is_last_process_tile(PHENO_)) THEN
-    !     CALL pheno_finalize_init_vars()
-    ! END IF
-
   END SUBROUTINE pheno_init
 
   SUBROUTINE pheno_finalize_init_vars
@@ -182,7 +179,7 @@ CONTAINS
 
   END SUBROUTINE pheno_read_init_vars
 
-  SUBROUTINE pheno_init_bc(tile)
+  SUBROUTINE pheno_init_bc_jsbach(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -191,7 +188,7 @@ CONTAINS
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_jsbach'
 
     model => get_model(tile%owner_model_id)
 
@@ -244,9 +241,9 @@ CONTAINS
       !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction))
     END IF
 
-  END SUBROUTINE pheno_init_bc
+  END SUBROUTINE pheno_init_bc_jsbach
 
-  SUBROUTINE pheno_init_ic(tile)
+  SUBROUTINE pheno_init_ic_jsbach(tile)
 
     USE mo_pheno_process, ONLY: get_foliage_projected_cover
     USE mo_jsb_time,      ONLY: get_time_interpolation_weights
@@ -261,7 +258,7 @@ CONTAINS
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic_jsbach'
 
     model => get_model(tile%owner_model_id)
 
@@ -271,7 +268,7 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of pheno memory (lai) for tile '// &
       &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
-    ! Set initial leaf area index from climatology (read in pheno_init_bc)
+    ! Set initial leaf area index from climatology (read in pheno_init_bc_jsbach)
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
     dsl4jsb_var2D_onDomain(PHENO_, lai) = &
       & wgt1 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw2)
@@ -282,7 +279,7 @@ CONTAINS
         & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), 2._wp)
       !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc))
     ELSE
-      IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
+      IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'climatology' &
           & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
         dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
           & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
@@ -303,19 +300,18 @@ CONTAINS
 
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
 
-  END SUBROUTINE pheno_init_ic
+  END SUBROUTINE pheno_init_ic_jsbach
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize pheno variables for boundary conditions (bc)
   !! 
   !! quincy
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE pheno_init_q_(tile)
+  SUBROUTINE pheno_init_bc_quincy(tile)
 
     ! see also the USE statements in the module header
     USE mo_pheno_constants,       ONLY: ievergreen
     USE mo_jsb_impl_constants,    ONLY: false, true
-    USE mo_pheno_process,         ONLY: get_foliage_projected_cover
     
     ! ---------------------------
     ! 0.1 InOut
@@ -324,7 +320,7 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),       POINTER  :: model
        
-    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_q_'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_quincy'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -375,7 +371,7 @@ CONTAINS
       growing_season(:,:) = false
     ENDIF
 
-  END SUBROUTINE pheno_init_q_
+  END SUBROUTINE pheno_init_bc_quincy
 
 #endif
 END MODULE mo_pheno_init

@@ -52,8 +52,9 @@ MODULE mo_hydro_memory_class
       & snowmelt,             & !< Snow melt                                                            [kg m-2 s-1]
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
-                                !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd
+                                !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
       & fract_pond,           & !< Fraction of tile assumed inundated at given water level              [/]
+      & fract_pond_max,       & !< Maximum fraction of tile assumed inundated at maximum water level    [/]
       & weq_pond,             & !< Water content of pond reservoir                                      [m water equivalent]
       & weq_pond_max,         & !< Maximum water content of pond reservoir                              [m water equivalent]
       & wtr_pond,             & !< Liquid water content of pond reservoir                               [m water equivalent]
@@ -110,7 +111,8 @@ MODULE mo_hydro_memory_class
       & hyd_cond_sat            !< Saturated hydraulic conductivity [m/s]
 
     TYPE(t_jsb_var_real2d) :: &
-      & fract_wet,            & !< Wet (skin reservoir) fraction of tile (soil and canopy)                  []
+      & fract_wet,            & !< Wet (skin and pond reservoir) fraction of tile (soil and canopy)         []
+      & fract_skin,           & !< Wet skin reservoir fraction of tile (soil and canopy)                    []
       & wtr_skin,             & !< Water content in skin reservoir (soil and canopy)                        [m]
       & snow_accum,           & !< Snow accumulation at non-glacier/non-lake land points                    [m water equivalent]
       & evapotrans_soil,      & !< Evapotranspiration from soil w/o snow and skin evaporation               [kg m-2 s-1]
@@ -286,13 +288,6 @@ CONTAINS
       & t_cf('fract_pond', '/', 'Inundated surface fraction'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-    CALL mem%Add_var( 'weq_pond_max', mem%weq_pond_max,                                 &
-      & hgrid, surface,                                                                 &
-      & t_cf('weq_pond_max', 'm (water equivalent)', 'Maximum surface pond reservoir'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
-      & prefix, suffix,                                                                 &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'weq_pond', mem%weq_pond,                                      &
@@ -512,6 +507,28 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
+    CALL mem%Add_var( 'steepness', mem%steepness,                                    &
+      & hgrid, surface,                                                              &
+      & t_cf('steepness', '/', 'subgrid slope distribution shape parameter'),        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
+      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+
+    CALL mem%Add_var( 'fract_pond_max', mem%fract_pond_max,                               &
+      & hgrid, surface,                                                                   &
+      & t_cf('fract_pond_max', '/', 'Maximum surface fraction available for inundation'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT  )
+
+    CALL mem%Add_var( 'weq_pond_max', mem%weq_pond_max,                                   &
+      & hgrid, surface,                                                                   &
+      & t_cf('weq_pond_max', 'm (water equivalent)', 'Maximum surface pond reservoir'),   &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+      & prefix, suffix,                                                                   &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT )
+
     CALL mem%Add_var( 'micro_slope', mem%micro_slope,                                &
       & hgrid, surface,                                                              &
       & t_cf('micro_slope', '/', 'Slope within micro-topography tiles'),             &
@@ -587,6 +604,13 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), grib2_desc,                            &
         & prefix, suffix,                                                        &
         & output_level=BASIC,                                                    &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'fract_skin', mem%fract_skin,                            &
+        & hgrid, surface,                                                        &
+        & t_cf('fract_skin', '-', 'Wet skin reservoir fraction'),                &
+        & t_grib1(table, 255, grib_bits), grib2_desc,                            &
+        & prefix, suffix,                                                        &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     END IF
@@ -745,14 +769,6 @@ CONTAINS
         & lrestart=.FALSE.,                                                         &
         & initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'steepness', mem%steepness,                                 &
-        & hgrid, surface,                                                           &
-        & t_cf('steepness', '/', 'subgrid slope distribution shape parameter'),     &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),        &
-        & prefix, suffix,                                                           &
-        & lrestart=.FALSE.,                                                         &
-        & initval_r=0.0_wp)
-
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
         grib2_desc = t_grib2(1,0,211, grib_bits)
       ELSE
@@ -809,11 +825,10 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      !Todo: is this variable of any interest?
       CALL mem%Add_var( 'evapo_deficit', mem%evapo_deficit,                    &
         & hgrid, surface,                                                      &
-        & t_cf('evapo_deficit', 'm',   'Water that would have been evaporated  &
-              & additionally, if there had been more snow or surface water'),  &
+        & t_cf('evapo_deficit', 'm', 'Water which evaporated from other sources&
+              &/soillayers then intented'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &

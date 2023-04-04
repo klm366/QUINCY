@@ -43,10 +43,10 @@ CONTAINS
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_rad_constants,       ONLY: init_rad_constants
     USE mo_atmland_constants,   ONLY: init_atmland_constants
-    USE mo_assimi_constants,    ONLY: init_assimi_constants
+    USE mo_assimi_parameters,   ONLY: init_assimi_parameters_quincy, init_assimi_parameters_jsbach
     USE mo_veg_constants,       ONLY: init_veg_constants
     USE mo_sb_constants,        ONLY: init_sb_constants
-    USE mo_pheno_constants,     ONLY: init_pheno_constants
+    USE mo_pheno_parameters,    ONLY: init_pheno_parameters_quincy, init_pheno_parameters_jsbach
     USE mo_spq_constants,       ONLY: init_spq_constants
 
     dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
@@ -145,6 +145,16 @@ CONTAINS
         model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
       END DO
 
+      ! point from each associated process%config to the model_config
+      DO iproc = 1,max_no_of_processes
+        IF (ASSOCIATED(model%processes(iproc)%p)) THEN
+          IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+            model%processes(iproc)%p%config%model_config => model%config
+          ENDIF
+        ENDIF
+      ENDDO
+
+      ! configure processes: run 'Init_PROC_config'
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(RAD_)
@@ -272,12 +282,15 @@ CONTAINS
     CASE (MODEL_QUINCY)
       CALL message(TRIM(routine), 'starting init of QUINCY process constants')
       CALL init_rad_constants      
-      CALL init_assimi_constants   
+      CALL init_assimi_parameters_quincy
       CALL init_veg_constants    
       CALL init_spq_constants
       CALL init_sb_constants
-      CALL init_pheno_constants    
+      CALL init_pheno_parameters_quincy
       CALL init_atmland_constants  
+    CASE (MODEL_JSBACH)
+      CALL init_pheno_parameters_jsbach
+      CALL init_assimi_parameters_jsbach
     END SELECT
 
     CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')

@@ -55,45 +55,38 @@ MODULE mo_pheno_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
 
-  !> Type definition for update_phenology task
+  ! ======================================================================================================= !
+  !> Type definition for the phenology task
+  !>  
+  !>   MODEL_JSBACH and MODEL_QUINCY
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_phenology
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_phenology    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_phenology !< Aggregates computed task variables
   END TYPE   tsk_phenology
-
   !> Constructor interface for update_phenology task
+  !>
   INTERFACE   tsk_phenology
     PROCEDURE Create_task_phenology         !< Constructor function for task
   END INTERFACE   tsk_phenology
 
+  ! ======================================================================================================= !
   !> Type definition for foliage_projected_cover task
+  !>  
+  !>   MODEL_JSBACH
+  !>  
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_foliage_projected_cover
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_fpc
     PROCEDURE, NOPASS :: Aggregate => aggregate_fpc
   END TYPE tsk_foliage_projected_cover
-
   !> Constructor interface for foliage_projected_cover task
   INTERFACE tsk_foliage_projected_cover
     PROCEDURE Create_task_foliage_projected_cover
   END INTERFACE tsk_foliage_projected_cover
 
-  !> Type definition for update_phenology_q_ QUINCY task
-  TYPE, EXTENDS(t_jsb_process_task) ::   tsk_phenology_q_
-  CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_phenology_q_    !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_phenology_q_ !< Aggregates computed task variables
-  END TYPE   tsk_phenology_q_
-
-  !> Constructor interface for update_phenology task
-  INTERFACE   tsk_phenology_q_
-    PROCEDURE Create_task_phenology_q_         !< Constructor function for task
-  END INTERFACE   tsk_phenology_q_
-
-
 CONTAINS
-
 
   ! ================================================================================================================================
   !! Constructors for tasks
@@ -129,54 +122,59 @@ CONTAINS
 
   END FUNCTION Create_task_foliage_projected_cover
 
-  !-----------------------------------------------------------------------------------------------------
-  !> Constructor: the QUINCY update_phenology_q_ task
-  !! 
-  !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_task_phenology_q_(model_id) RESULT(return_ptr)
-
-    INTEGER,                   INTENT(in) :: model_id
-    CLASS(t_jsb_process_task), POINTER    :: return_ptr
-
-    ALLOCATE(tsk_phenology_q_::return_ptr)
-    CALL return_ptr%Construct(name='phenology_q_', process_id=PHENO_, owner_model_id=model_id)
-
-  END FUNCTION Create_task_phenology_q_
-
-
-  ! =======================================================================================================
+  ! ======================================================================================================= !
   !> Register tasks for pheno process
-  !!
-  !! @param[in,out] this      Instance of pheno process class
-  !! @param[in]     model_id  Model id
-  !!
+  !>
   SUBROUTINE Register_pheno_tasks(this, model_id)
-
-    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH
     USE mo_jsb_class,         ONLY: Get_model
-
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_process), INTENT(inout) :: this
     INTEGER,              INTENT(in) :: model_id
-
-    ! local
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER :: model
-
-    ! get var / objects 
+    ! ----------------------------------------------------------------------------------------------------- !
     model   => Get_model(model_id)
 
-
-    ! different PHENO_ tasks depending on the model_scheme
+    CALL this%Register_task(tsk_phenology(model_id))
+    ! register "foliage_projected_cover" only for the JSBACH model
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
-      CALL this%Register_task(tsk_phenology(model_id))
       CALL this%Register_task(tsk_foliage_projected_cover(model_id))
-    CASE (MODEL_QUINCY)
-      CALL this%Register_task(tsk_phenology_q_(model_id))
     END SELECT
-
   END SUBROUTINE Register_pheno_tasks
 
-  ! ================================================================================================================================
+  ! ======================================================================================================= !
+  !>Implementation of "update" of the "phenology" task
+  !> 
+  !>  calls a model specific routine
+  !> 
+  SUBROUTINE update_phenology(tile, options)
+    USE mo_jsb_model_class,         ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
+    USE mo_jsb_class,               ONLY: Get_model
+    USE mo_pheno_update_phenology,  ONLY: update_phenology_quincy
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER             :: model
+    dsl4jsb_Def_config(PHENO_)
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+    model => Get_model(tile%owner_model_id)
+    dsl4jsb_Get_config(PHENO_)
+
+    ! call diffent routines depending on the model
+    SELECT CASE (model%config%model_scheme)
+    CASE (MODEL_JSBACH)
+      CALL update_phenology_jsbach(tile, options)
+    CASE (MODEL_QUINCY)
+      CALL update_phenology_quincy(tile, options)
+    END SELECT
+  END SUBROUTINE update_phenology
+
+  ! ======================================================================================================= !
   !>
   !! @brief Implementation to update the phenology state
   !! Task "phenology" calculates the phenology state of plants.
@@ -184,25 +182,25 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     options Additional run-time parameters.
   !
-  SUBROUTINE update_phenology(tile, options)
-
+  SUBROUTINE update_phenology_jsbach(tile, options)
+    USE mo_jsb_model_class,         ONLY: t_jsb_model
+    USE mo_jsb_class,               ONLY: Get_model
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
+    ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER             :: model
     dsl4jsb_Def_config(PHENO_)
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology'
-
-    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
-    model => Get_model(tile%owner_model_id)
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_jsbach'
+    ! ----------------------------------------------------------------------------------------------------- !
+    model        => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(PHENO_)
 
-    IF (tile%lcts(1)%lib_id == 0 .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme) /= 'climatology') THEN
+    IF (tile%lcts(1)%lib_id == 0 .AND. TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) /= 'climatology') THEN
       CALL message(TRIM(routine), 'Vegetation tile has no PFTs, using climatology for LAI')
       CALL update_phenology_climatology(tile, options)
     ELSE
-      SELECT CASE (TRIM(dsl4jsb_Config(PHENO_)%scheme))
+      SELECT CASE (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach))
       CASE ('logrop')
         CALL update_phenology_logrop(tile, options)
       CASE ('climatology')
@@ -211,30 +209,7 @@ CONTAINS
         CALL finish('Invalid scheme for phenology')
       END SELECT
     END IF
-
-  END SUBROUTINE update_phenology
-
-  ! ======================================================================================================= !
-  !>update phenology - QUINCY
-  !>
-  SUBROUTINE update_phenology_q_(tile, options)
-
-    USE mo_pheno_update_phenology,      ONLY: update_phenology_quincy
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    TYPE(t_jsb_model), POINTER             :: model
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':update_phenology_q_'
-
-    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
-    model => Get_model(tile%owner_model_id)
-
-    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! run task only if the present tile is a pft
-    CALL update_phenology_quincy(tile, options)
-
-  END SUBROUTINE update_phenology_q_
+  END SUBROUTINE update_phenology_jsbach
 
   ! ======================================================================================================= !
   !>
@@ -255,7 +230,7 @@ CONTAINS
       &                                   track_max_green_pool, derive_maxlai_according_to_allometric_relationships
     USE mo_jsb_time_iface,          ONLY: get_year_day
     USE mo_jsb_time,                ONLY: is_newyear, is_newday, timestep_in_days
-    USE mo_pheno_constants,         ONLY: PhenoParam
+    USE mo_pheno_parameters,        ONLY: pheno_param_jsbach
     USE mo_jsb_grid_class,          ONLY: t_jsb_grid
     USE mo_jsb_grid,                ONLY: Get_grid
     USE mo_jsb_physical_constants,  ONLY: tmelt
@@ -543,8 +518,8 @@ CONTAINS
     !       laiMax_stat(...) CALL update_maximum_lai(lat(...),laiMax_stat(...),lai(...)) )
     !
     !    Therefore I replaced laiMax_dyn with LaiMax_corrected, which is not dynamic and only used to secure that
-    !    the maximum lai is at least PhenoParam%all%LAI_negligible if lctlib%LaiMax < PhenoParam%all%LAI_negligible
-    !    However, as lctlib%LaiMax will always be higher than PhenoParam%all%LAI_negligible we could skip this part. But to remind
+    !    the maximum lai is at least pheno_param_jsbach%all%LAI_negligible if lctlib%LaiMax < pheno_param_jsbach%all%LAI_negligible
+    !    However, as lctlib%LaiMax will always be higher than pheno_param_jsbach%all%LAI_negligible we could skip this part. But to remind
     !    us that we should think about reimplementing a dynamic lai I keep this part in a way making reimplementation easy...
     !
     ! Set initially the dynamical maximum LAI to the static maximum LAI
@@ -579,7 +554,7 @@ CONTAINS
     ! R: wird jedes mal (d.h. fuer jedes Tile) aufgerufen, wobei automatisch der Tile spezifische Wert aus dem lctlib genommen wird:
     ! Secure minimum Max-LAI
 
-    LAI_negligible_tmp = PhenoParam%all%LAI_negligible
+    LAI_negligible_tmp = pheno_param_jsbach%all%LAI_negligible
     !$claw acc data present(LaiMax_corrected, lai)
     !$claw acc parallel loop gang vector
     DO i = 1, SIZE(LaiMax_corrected)
@@ -750,82 +725,26 @@ CONTAINS
 
   END SUBROUTINE update_phenology_climatology
 
-  ! -------------------------------------------------------------------------------------------------------
-  !>
-  !! Implementation of "aggregate" for task "phenology"
-  !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
-  SUBROUTINE aggregate_phenology(tile, options)
-
-    USE mo_jsb_time,             ONLY: is_newyear
-
-    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-    TYPE(t_jsb_task_options),   INTENT(in)    :: options
-
-    TYPE(t_jsb_model), POINTER             :: model
-    dsl4jsb_Def_config(PHENO_)
-    dsl4jsb_Def_memory(PHENO_)
-
-    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology'
-
-    ! Local variables
-    INTEGER  :: iblk, ics, ice
-
-    ! Get local variables from options argument
-    iblk = options%iblk
-    ics  = options%ics
-    ice  = options%ice
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-
-    model => Get_model(tile%owner_model_id)
-    dsl4jsb_Get_config(PHENO_)
-    dsl4jsb_Get_memory(PHENO_)
-
-    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
-
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai,           weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
-
-    IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
-      IF (is_newyear(options%current_datetime, options%dtime)) THEN
-        dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
-        dsl4jsb_Aggregate_onChunk(PHENO_, cconservation_allom,    weighted_by_fract)
-
-        !NOTE: despite changes, no aggregation of cpools necessary:
-        ! with l_forestRegrowth PHENO changes Cpools only once a year at the beginning of a timestep,
-        ! and other processes (NPP alloc of carbon) aggregate them
-      ENDIF
-    ENDIF
-
-    !X Implementation: Start your process scheme here...
-    !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob u. wie die einzeln. pheno Tasks aggregiert werden sollen.
-
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_phenology
-
   ! ======================================================================================================= !
-  !>Implementation of "aggregate": phenology_q_ task
+  !>Implementation of "aggregate" of the "phenology" task
   !> 
-  SUBROUTINE aggregate_phenology_q_(tile, options)
-
+  SUBROUTINE aggregate_phenology(tile, options)
+    USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
+    USE mo_jsb_class,         ONLY: Get_model
+    USE mo_jsb_time,          ONLY: is_newyear
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
     INTEGER                                   :: iblk, ics, ice
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology_q_'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_phenology'
     ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
@@ -836,21 +755,51 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
-    dsl4jsb_Get_memory(VEG_)
+    ! dsl4jsb_Get_memory(VEG_) <- get it in the QUINCY-specific code-part (as VEG_ is not available in JSBACH)
 
+    ! call aggregate for different variables depending on the model
+    SELECT CASE (model%config%model_scheme)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>JSBACH
+    !>
+    CASE (MODEL_JSBACH)
+      dsl4jsb_Aggregate_onChunk(PHENO_, lai,           weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta,        weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
 
-    ! PHENO_
-    dsl4jsb_Aggregate_onChunk(PHENO_, growing_season              ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, gdd                         ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(PHENO_, nd_dormance                 ,    weighted_by_fract)
-    ! VEG_
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_n_tlabile_mavg  ,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(VEG_, growth_req_p_tlabile_mavg  ,    weighted_by_fract)
+      IF (dsl4jsb_Config(PHENO_)%l_forestRegrowth) THEN
+        IF (is_newyear(options%current_datetime, options%dtime)) THEN
+          dsl4jsb_Aggregate_onChunk(PHENO_, maxLAI_allom,    weighted_by_fract)
+          dsl4jsb_Aggregate_onChunk(PHENO_, cconservation_allom,    weighted_by_fract)
+
+          !NOTE: despite changes, no aggregation of cpools necessary:
+          ! with l_forestRegrowth PHENO changes Cpools only once a year at the beginning of a timestep,
+          ! and other processes (NPP alloc of carbon) aggregate them
+        ENDIF
+      ENDIF
+
+      !X Implementation: Start your process scheme here...
+      !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob u. wie die einzeln. pheno Tasks aggregiert werden sollen.
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>QUINCY
+    !>
+    CASE (MODEL_QUINCY)
+      ! get VEG_ memory
+      dsl4jsb_Get_memory(VEG_)
+      ! PHENO_
+      dsl4jsb_Aggregate_onChunk(PHENO_, growing_season              ,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, gdd                         ,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(PHENO_, nd_dormance                 ,    weighted_by_fract)
+      ! VEG_
+      dsl4jsb_Aggregate_onChunk(VEG_,   growth_req_n_tlabile_mavg   ,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(VEG_,   growth_req_p_tlabile_mavg   ,    weighted_by_fract)
+    END SELECT
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-
-  END SUBROUTINE aggregate_phenology_q_
+  END SUBROUTINE aggregate_phenology
 
   ! ======================================================================================================= !
   !>update foliage projected cover
@@ -906,7 +855,7 @@ CONTAINS
 
     ! Update foliage projected cover
     !
-    IF (        TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
+    IF (TRIM(dsl4jsb_Config(PHENO_)%scheme_jsbach) == 'climatology' &
          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! General vegetation tile, no specific PFT
       IF (model%config%l_compat401) THEN
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_1 tile_name=tile%name

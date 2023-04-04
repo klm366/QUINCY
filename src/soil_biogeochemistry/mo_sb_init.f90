@@ -54,6 +54,16 @@ CONTAINS
     USE mo_jsb_grid,                    ONLY: Get_grid, Get_vgrid
     USE mo_jsb_process_class,           ONLY: SB_, VEG_, SPQ_
     ! USE mo_jsb_process_class,           ONLY: SB_, SSE_, VEG_, HYDRO_, SPQ_
+    ! ----------------------------------------------------------------------------------------------------- !
+    USE mo_lnd_bgcm_store,        ONLY: t_lnd_bgcm_store
+    USE mo_lnd_bgcm_store_class,  ONLY: SB_BGCM_POOL_ID
+    USE mo_lnd_bgcm_class,        ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
+      &                                 LAST_ELEM_ID
+    USE mo_sb_config_class,       ONLY: get_number_of_sb_compartments, &
+      &                                 SB_PART_DOM_IDX, SB_PART_DOM_ASSOC_IDX, SB_PART_SOLUBLE_LITTER_IDX, &
+      &                                 SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX, SB_PART_FUNGI_IDX, &
+      &                                 SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
+      &                                 SB_PART_RESIDUE_ASSOC_IDX
 
     USE mo_isotope_util,                ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C, &
       & calc_mixing_ratio_N15N14, calc_fractionation
@@ -68,7 +78,8 @@ CONTAINS
     USE mo_jsb_physical_constants,      ONLY: molar_mass_C, molar_mass_N, molar_mass_P
     USE mo_atmland_constants,           ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, &
       & def_co2_mixing_ratio_C14, def_co2_deltaC13, def_co2_deltaC14
-    USE mo_assimi_constants,            ONLY: CiCa_default_C3, CiCa_default_C4, ic3phot, ic4phot
+    USE mo_assimi_parameters,           ONLY: CiCa_default_C3, CiCa_default_C4
+    USE mo_assimi_constants,            ONLY: ic3phot, ic4phot
     USE mo_veg_constants,               ONLY: itree
     USE mo_sb_constants                 ! e.g., ONLY: nh4_solute_prescribe, no3_solute_prescribe
     ! ----------------------------------------------------------------------------------------------------- !
@@ -101,8 +112,12 @@ CONTAINS
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)       :: hlp2                           
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)       :: hlp3                           
     REAL(wp), ALLOCATABLE, DIMENSION(:,:,:)       :: hlp4                           
-    INTEGER                                       :: isoil, ic, iblk, nblks
-    INTEGER                                       :: nproma                   ! number of grid points per iblk
+    INTEGER                                       :: isoil, iblk, nblks
+    INTEGER                                       :: nproma               ! number of grid points per iblk
+    TYPE(t_lnd_bgcm_store), POINTER               :: bgcm_store                     !< the bgcm store of this tile
+    INTEGER                                       :: elem_idx_map(LAST_ELEM_ID - 1) !< elements ID -> IDX
+    INTEGER                                       :: nr_elems                       !< number of elements 
+    INTEGER                                       :: nr_sb_parts                    !< number of bgcm compartments
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
 #ifdef __QUINCY_STANDALONE__
     REAL(wp)                                     :: site_longitude
@@ -121,6 +136,7 @@ CONTAINS
 #else
     dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_pool
 #endif
+    REAL(wp), ALLOCATABLE                 :: sb_bgcm_pool_mt(:,:,:,:,:)   !< bgcm sb_pool matrix onDomain
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_
     dsl4jsb_Real3D_onDomain :: root_fraction_sl
@@ -220,10 +236,11 @@ CONTAINS
     nsoil_sb      =  vgrid_soil_sb%n_levels
     nblks         =  hgrid%nblks
     nproma        =  hgrid%nproma
+    bgcm_store    => tile%bgcm_store
 #ifdef __QUINCY_STANDALONE__
     site_longitude = model%config%lon
     flag_spp1685  = model%config%flag_spp1685
-#endif    
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(SB_)
     dsl4jsb_Get_memory(SB_)
@@ -240,6 +257,10 @@ CONTAINS
     dsl4jsb_Get_pool(SB_, sb_main_pool%sb_pool, sb_pool)
     CALL sb_pool%Associate_domain_var_ptr()
 #endif
+    elem_idx_map(:) = model%config%elements_index_map(:)
+    nr_elems        = model%config%nr_of_used_elements
+    nr_sb_parts     = get_number_of_sb_compartments()
+    ALLOCATE(sb_bgcm_pool_mt(nr_sb_parts, nr_elems, nproma, nsoil_sb, nblks))
     ! ----------------------------------------------------------------------------------------------------- !
     ! VEG_ 2D
     dsl4jsb_Get_var3D_onDomain(VEG_,   root_fraction_sl)           ! out
@@ -332,6 +353,12 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------------
     ! Go science
     ! -------------------------------------------------------------------------------------------------------
+
+    !> 0.9 init bgcm with zero
+    !>   note: reading the restart files is done after init
+    !>   note: not using a "Get" function in process init for bgcm
+    !> 
+    sb_bgcm_pool_mt = 0.0_wp
 
     !>1.0 all soil models (simple_1d & jsm)
     !> 
@@ -434,6 +461,10 @@ CONTAINS
       ! catch potential division by zero
       ! WHERE ((soil_lay_width_sl(:,1,:) > eps8) .AND. (root_fraction_sl(:,1,:) > eps8))
       WHERE (soil_lay_width_sl(:,1,:) > eps8)
+        sb_bgcm_pool_mt(SB_PART_SOLUBLE_LITTER_IDX, elem_idx_map(ELEM_C_ID), :, 1, :)           &
+          & = def_sb_pool_metabol_litter /  molar_mass_C / soil_lay_width_sl(:,1,:)            &
+          &   * (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1,:))
+
         sb_pool%soluable_litter%domain_c(:,1,:) = def_sb_pool_metabol_litter /  molar_mass_C / soil_lay_width_sl(:,1,:) * &
           & (frac_prod_not_root + (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,1,:)) 
         sb_pool%polymeric_litter%domain_c(:,1,:) = def_sb_pool_simple_struct_litter / molar_mass_C / soil_lay_width_sl(:,1,:) * &
@@ -456,6 +487,11 @@ CONTAINS
       DO isoil = 2,nsoil_sb
         ! catch potential division by zero
         WHERE (soil_lay_width_sl(:,isoil,:) > eps8)
+          ! example on how to initialise the bgcm via the matrix written back at the end of this init routine
+          sb_bgcm_pool_mt(SB_PART_SOLUBLE_LITTER_IDX, elem_idx_map(ELEM_C_ID), :, isoil, :)           &
+            & = def_sb_pool_metabol_litter /  molar_mass_C &
+            &   / soil_lay_width_sl(:,isoil,:) * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil,:)
+
           sb_pool%soluable_litter%domain_c(:,isoil,:) = def_sb_pool_metabol_litter /  molar_mass_C / &
             & soil_lay_width_sl(:,isoil,:) * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:,isoil,:) 
           sb_pool%polymeric_litter%domain_c(:,isoil,:) = def_sb_pool_simple_struct_litter / molar_mass_C / &
@@ -957,6 +993,13 @@ CONTAINS
 #include "slm_pools_a_incl.f90"
 #undef Passback_sb_pool
 #endif
+
+    ! write back data from bgcm_matrix to bgc_material, and de-allocate local bgcm_matrix
+    DO iblk = 1,nblks
+      CALL bgcm_store%Write_matrix_to_bgcm_2l( &
+        & SB_BGCM_POOL_ID, 1, nproma, iblk, tile%name, sb_bgcm_pool_mt(:,:,:,:,iblk))
+    ENDDO
+    DEALLOCATE(sb_bgcm_pool_mt)
 
   END SUBROUTINE sb_init
 

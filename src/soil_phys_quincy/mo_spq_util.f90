@@ -104,9 +104,6 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SPQ_)                          ! TYPE(t_spq_memory),      POINTER :: spq__mem
-    ! Declare pointers to variables in memory
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: transpiration
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -118,29 +115,15 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    ! Get process config
-!    dsl4jsb_Get_config(SPQ_)
     ! Get process memories
     dsl4jsb_Get_memory(SPQ_)           ! spq__mem => spq_memory
-    ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
-    !lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SPQ_, transpiration)
-
-
-
+    !lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-
-    ! flux variables
-    transpiration(:) = zero                  !< transpiration in kg m-2 s-1
-
-    ! other variables
-    ! ...
-
+    dsl4jsb_var2D_onChunk(SPQ_, transpiration) = zero                  !< transpiration in kg m-2 s-1
 
   END SUBROUTINE reset_spq_fluxes
 

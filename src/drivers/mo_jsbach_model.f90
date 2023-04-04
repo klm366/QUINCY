@@ -713,6 +713,7 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
+    USE mo_jsb_math_constants,        ONLY: eps8
 
     dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
@@ -759,6 +760,14 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: rough_h_lake_tile
     dsl4jsb_Real2D_onDomain :: rough_m_lake_tile
 
+    ! quincy
+    dsl4jsb_Real2D_onDomain :: swpar_srf_down
+    dsl4jsb_Real2D_onDomain :: prev_one_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: prev_three_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: daytime_counter
+
+
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
 
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
@@ -768,7 +777,7 @@ CONTAINS
     LOGICAL :: l_shift_one_timestep    = .TRUE.
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
-    INTEGER :: nc, nt, it
+    INTEGER :: nc, nt, it, ic
     INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':perform_jsbach_for_timestep'
@@ -971,9 +980,36 @@ CONTAINS
 
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
       dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) = dsl4jsb_var2D_onDomain(A2L_, CO2_air) * molarMassDryAir / molarMassCO2
+
+      ! Do QUINCY specific stuff
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
+        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
         dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
+
+        dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
+        dsl4jsb_Get_var2d_onDomain(A2L_, prev_one_cos_zenith_angle)
+        dsl4jsb_Get_var2d_onDomain(A2L_, prev_two_cos_zenith_angle)
+        dsl4jsb_Get_var2d_onDomain(A2L_, prev_three_cos_zenith_angle)
+
+        ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)7
+        WHERE(prev_one_cos_zenith_angle(:,:) - prev_two_cos_zenith_angle(:,:) > eps8 .AND. &
+            & prev_two_cos_zenith_angle(:,:) - prev_three_cos_zenith_angle(:,:) <= eps8) 
+          ! zero the counter for number of accumulated values per day
+          daytime_counter(:,:) = 0.0_wp
+        END WHERE
+
+        dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
+        WHERE(swpar_srf_down(:,:) > eps8)
+          ! count number of daytime values
+          daytime_counter(:,:) = daytime_counter(:,:) + 1.0_wp
+        END WHERE
+
+        ! shift for cos_zenith_angle tracing for midnight identification
+        prev_three_cos_zenith_angle = prev_two_cos_zenith_angle
+        prev_two_cos_zenith_angle = prev_one_cos_zenith_angle
+        prev_one_cos_zenith_angle = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle)
+
       END SELECT
 
       DEALLOCATE(evapo_act2pot)
@@ -1001,7 +1037,8 @@ CONTAINS
       IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
       ! Update options
-      CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
+      CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
+        &                    dtime=dtime, steplen=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
       CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
