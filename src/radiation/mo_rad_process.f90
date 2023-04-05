@@ -1108,7 +1108,9 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  ELEMENTAL FUNCTION Has_minimal_radiation_2(swvis, swnir) RESULT(l_day)
+  FUNCTION Has_minimal_radiation_2(swvis, swnir) RESULT(l_day)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
@@ -1117,21 +1119,19 @@ CONTAINS
       & swnir
     LOGICAL :: l_day
 
-    !$claw sca routine
-
     l_day = swvis + swnir > MinRadiation
 
   END FUNCTION Has_minimal_radiation_2
   !
-  ELEMENTAL FUNCTION Has_minimal_radiation_1(sw) RESULT(l_day)
+  FUNCTION Has_minimal_radiation_1(sw) RESULT(l_day)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
     REAL(wp), INTENT(in) :: &
       & sw
     LOGICAL :: l_day
-
-    !$claw sca routine
 
     l_day = sw > MinRadiation
 

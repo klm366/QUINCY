@@ -632,19 +632,20 @@ CONTAINS
                                                          dsl4jsb_var_ptr(HYDRO_,soil_depth_sl) (:,i,:)
       END DO
 
-      !$acc update device(dsl4jsb_var_ptr(HYDRO_,w_soil_sat_sl), &
-      !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_pwp_sl), &
-      !$acc dsl4jsb_var_ptr(HYDRO_,w_soil_fc_sl), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, vol_field_cap), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, vol_p_wilt), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, pore_size_index), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, bclapp), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, matrix_pot), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, max_moist), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) )
+      !$ACC UPDATE DEVICE &
+      !$ACC   (dsl4jsb_var_ptr       (HYDRO_,w_soil_sat_sl), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_,w_soil_pwp_sl), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_,w_soil_fc_sl), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_, vol_field_cap), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_, vol_p_wilt), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_, pore_size_index), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_, bclapp), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_, matrix_pot), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_, hyd_cond_sat), &
+      !$ACC    dsl4jsb_var_ptr       (HYDRO_, vol_porosity), &
+      !$ACC    dsl4jsb_var2D_onDomain(HYDRO_, max_moist), &
+      !$ACC    dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
+      !$ACC    dsl4jsb_var2D_onDomain(HYDRO_, soil_depth) )
 
     END IF
 

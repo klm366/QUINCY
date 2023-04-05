@@ -244,7 +244,6 @@ CONTAINS
     !!
     beta_air(:)     = calc_atm_moisture_stress(t_air(:), q_air(:), press_srf(:))
 
-    !$ACC DATA PRESENT(ga(:), drag_srf(:))
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR &
     !$ACC   PRIVATE(tmp_steplen_times_wind)
@@ -253,7 +252,6 @@ CONTAINS
       ga(ic) = heat_transfer_coef(drag_srf(ic), tmp_steplen_times_wind) 
     END DO
     !$ACC END PARALLEL
-    !$ACC END DATA
 
     ! Calculate the state of acclimation, slowing photosynthesis in evergreen conifers in spring
     ! temporary set to 1.0 !
@@ -262,8 +260,12 @@ CONTAINS
     !> 2.0 calculate photosynthesis per layer
     !!
     ! get information about day/nigth (same way as in RAD_)
-    !$claw expand
-    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    DO ic=1,nc
+      l_day(ic) = Has_minimal_radiation(swvis_srf_down(ic), swnir_srf_down(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
+
     ! calc PS
     DO icanopy = 1,ncanopy
       CALL calc_photosynthesis(  lctlib%gmin                           , & ! lctlib
