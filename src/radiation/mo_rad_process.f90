@@ -100,11 +100,10 @@ CONTAINS
 
     END DO
     !$ACC END PARALLEL
-    !$ACC WAIT
 
   END SUBROUTINE calc_radiation_surface_net
 
-  ELEMENTAL SUBROUTINE calc_par( &
+  SUBROUTINE calc_par( &
     & ncanopy,                  & ! in
     & icanopy,                  & ! in
     & use_alb_veg_simple,       & ! in
@@ -125,6 +124,8 @@ CONTAINS
                                   ! however I want it in the model output and thus it has to be updated by returning it
     & apar_per_lai_cl  )          ! output, used outside for assimilation
 
+    !$ACC ROUTINE SEQ
+
     ! Use declarations
     USE mo_rad_constants,  ONLY: &
       & Epar,                    & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1
@@ -141,7 +142,6 @@ CONTAINS
                                 canopy_bound_lai,      &
                                 canopy_bound_lai_delta
 
-    !$claw model-data
     REAL(wp),  INTENT(in)    ::                        &
                                 par,                   &
                                 alb_vis_soil,          &
@@ -156,7 +156,6 @@ CONTAINS
                                 faPAR_cl,              &
                                 lai_cl,                &
                                 apar_per_lai_cl
-    !$claw end model-data
 
     REAL(wp) :: ZH, K0, ZP1, Q0, Q1, B0, B1,    & ! These variables vary per grid cell
                 EKL, EHL, B4, FC, FSHD,         & ! These variables vary per grid cell, FC =fractional vegetation cover
@@ -166,8 +165,6 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-
-    !$claw sca
 
     ! Expresse radiation in  mol(photons)/(m^2 s)
     par_down_mol = par / Epar
@@ -457,23 +454,22 @@ CONTAINS
   END SUBROUTINE calc_par
 
   !
-  PURE ELEMENTAL SUBROUTINE calc_alb_lwtr( &
+  PURE SUBROUTINE calc_alb_lwtr( &
     & l_day,                               &
     & alb_lwtr                             &
     & )
+
+    !$ACC ROUTINE SEQ
 
     ! Use declarations
     USE mo_rad_constants,          ONLY: AlbedoLakeWater
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(inout) :: &
       & alb_lwtr
-    !$claw end model-data
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -486,19 +482,20 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE ELEMENTAL SUBROUTINE calc_alb_lice( &
+  PURE SUBROUTINE calc_alb_lice( &
     & l_day,       &
     & t,           &
     & w_snow_lice, &
     & alb_lice     &
     & )
 
+    !$ACC ROUTINE SEQ
+
     ! Use declarations
     USE mo_rad_constants,          ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax, AlbedoLakeSnowMin, AlbedoLakeSnowMax
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(in)    :: &
@@ -506,13 +503,11 @@ CONTAINS
       & w_snow_lice
     REAL(wp), INTENT(inout) :: &
       & alb_lice
-    !$claw end model-data
 
     ! Local variables
     REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
     REAL(wp) :: alb_min, alb_max ! Minimum and maximum snow albedo
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -543,12 +538,14 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE ELEMENTAL SUBROUTINE calc_glacier_albedo( &
+  PURE SUBROUTINE calc_glacier_albedo( &
     & l_day,   &
     & t,       &
     & alb_vis, &
     & alb_nir  &
     & )
+
+    !$ACC ROUTINE SEQ
 
     ! Use declarations
     USE mo_rad_constants, ONLY: AlbedoGlacierVisMin,  & ! Albedo of glacier in the visible range at the melting point
@@ -559,7 +556,6 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(in)    :: &
@@ -567,9 +563,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & alb_vis,               & ! Albedo of canopy in the VIS range without snow cover.
       & alb_nir                  ! Albedo of canopy in the NIR range without snow cover.
-    !$claw end model-data
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -613,7 +607,7 @@ CONTAINS
   ! covers less than its area available.) Only for the logarithmic case (albedo_options%UseSOC .eq. 'log') the soil albedo result
   ! of JSBACH4 differs from JSBACH3. In this case this "well separated" result is as reasonable as the "well mixed" result of JS3.
 
-  ELEMENTAL SUBROUTINE calc_soil_albedo( &
+  PURE SUBROUTINE calc_soil_albedo( &
     & l_day,                     &
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_int,  &
@@ -629,27 +623,24 @@ CONTAINS
     & alb_nir_soil               & ! InOut
     & )
 
+    !$ACC ROUTINE SEQ
+
     ! Use declarations
     USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for 
                                                                        ! alb_vis_mineralsoil
 
     ! Arguments
-    !$claw model-data
     LOGICAL,          INTENT(in)  :: l_day
-    !$claw end model-data
 
     LOGICAL,          INTENT(in)  :: use_alb_mineralsoil_const
     INTEGER,          INTENT(in)  :: use_alb_soil_organic_int
     LOGICAL,          INTENT(in)  :: use_alb_soil_litter
-    !$claw model-data
     REAL(wp),         INTENT(in)  :: &
       & c_ag_sum_1,         &
       & c_bg_sum
-    !$claw end model-data
     REAL(wp),         INTENT(in)  :: &
       & SpecificLeafArea_C, &
       & AlbedoLitterVIS
-    !$claw model-data
     REAL(wp),         INTENT(in)  :: &
       & alb_background
     REAL(wp),         INTENT(inout) :: &
@@ -658,7 +649,6 @@ CONTAINS
       & alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
       & alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
       & alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
-    !$claw end model-data
 
     ! Local variables
     REAL(wp), PARAMETER ::                                   &
@@ -750,7 +740,7 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  ELEMENTAL SUBROUTINE calc_snow_albedo( &
+  PURE SUBROUTINE calc_snow_albedo( &
     & l_day,             & ! in
     & fract_snow_soil,   & ! in
     & snow_age,          & ! in
@@ -760,6 +750,8 @@ CONTAINS
     & alb_vis_snow,      & ! inout
     & alb_nir_snow       & ! inout
     & )
+
+    !$ACC ROUTINE SEQ
 
     ! Declarations
     USE mo_rad_constants, ONLY: &
@@ -779,24 +771,20 @@ CONTAINS
     USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)  :: l_day
     REAL(wp), INTENT(in)  ::                    & !
                              fract_snow_soil,   & ! Fraction of snow covered ground
                              snow_age,          & ! non-dimensional age of snow
                              cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
                              t_srf
-    !$claw end model-data
 
     REAL(wp), INTENT(in)  ::                    & !
                              albedo_age_weight    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
                                                   !                            the snow albedo resulting from both age and
                                                   !                            temperature schemes
-    !$claw model-data
     REAL(wp), INTENT(inout) ::              &
                              alb_vis_snow,  & ! Albedo of canopy in the VIS range without snow cover.
                              alb_nir_snow     ! Albedo of canopy in the NIR range without snow cover.
-    !$claw end model-data
 
     ! Local variables
     REAL(wp)              ::                    &
@@ -806,8 +794,6 @@ CONTAINS
                              alb_nir_snow_temp, &
                              snow_age_factor,   &
                              snow_albedo_angle_factor
-
-    !$claw sca
 
     ! Initialize local variables
     alb_vis_snow_age  = 0.0_wp
@@ -870,7 +856,7 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  ELEMENTAL SUBROUTINE calc_sky_view_fractions( &
+  SUBROUTINE calc_sky_view_fractions( &
     & l_day,              & ! in
     & lai,                & ! in
     & fract_fpc_max,      & ! in
@@ -880,25 +866,22 @@ CONTAINS
     & sky_view_fract_stem & ! inout
     & )
 
+    !$ACC ROUTINE SEQ
+
     ! Use declarations
     USE mo_rad_constants,  ONLY: SkyViewFactor ! Constant in calculating the sky view fractions
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)  :: l_day
     REAL(wp), INTENT(in)  :: lai,              & ! leaf area index
                              fract_fpc_max,    & ! maximum foliage projected cover
                              cos_zenith_angle    ! cosinus of zenith angle of incoming radiationa
-    !$claw end model-data
     REAL(wp), INTENT(in)  :: StemArea
-    !$claw model-data
     REAL(wp), INTENT(inout) :: &
       & sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
                             ! (Falling with rising LAI.)
       & sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
-    !$claw end model-data
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -917,7 +900,7 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE ELEMENTAL SUBROUTINE Merge_albedos_of_vegtile( &
+  PURE SUBROUTINE Merge_albedos_of_vegtile( &
     & l_day,               & ! in
     & l_forest,            & ! in
     & sky_view_fract,      & ! in
@@ -935,20 +918,17 @@ CONTAINS
     & alb_nir              & ! inout
     & )
 
+    !$ACC ROUTINE SEQ
+
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
-    !$claw end model-data
     LOGICAL,  INTENT(in) :: l_forest
     
-    !$claw model-data
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
       sky_view_fract_stem
-    !$claw end model-data
     REAL(wp), INTENT(in) :: &
       AlbedoCanopySnow    
-    !$claw model-data
     REAL(wp), INTENT(in) :: &
       fract_snow_soil,      & ! Snow covered area fraction of soil
       fract_snow_can,       & ! Fraction of snow covered canopy (forest)
@@ -963,7 +943,6 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & alb_vis, &
       & alb_nir
-    !$claw end model-data
 
     ! Local variables
     REAL(wp) :: &
@@ -971,7 +950,6 @@ CONTAINS
                            ! when it is assumed that no stems (but only the canopy) cover the soil
       & alb_nir_nostems
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -1031,7 +1009,7 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   !
   ! This is the echam5 scheme
-  REAL(wp) PURE ELEMENTAL FUNCTION get_surface_albedo_simple( &
+  REAL(wp) PURE FUNCTION get_surface_albedo_simple( &
     & t_srf,             &
     & fract_forest,      &
     & grnd_snow_fract,   & ! R: fract_snow_soil umbenannt, da grnd_snow_fract nicht unbedingt dasselbe sein muss...
@@ -1039,6 +1017,8 @@ CONTAINS
     & lai,               &
     & alb_background     &
     & )
+
+    !$ACC ROUTINE SEQ
 
     !-----------------------------------------------------------------------
     ! Use declarations
@@ -1064,7 +1044,6 @@ CONTAINS
                             albedo_can               ! Albedo on canopy
 
 
-    !$claw sca routine
     ! ---------------------------
     ! Go
 

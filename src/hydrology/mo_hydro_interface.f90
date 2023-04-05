@@ -1000,9 +1000,9 @@ CONTAINS
     ELSE
       ALLOCATE(fract_org_sl(nc, nsoil))
       !$ACC ENTER DATA CREATE(fract_org_sl)
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
-      DO ic = 1, nc
-        DO is = 1, nsoil
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+      DO is = 1, nsoil
+        DO ic = 1, nc
           fract_org_sl(ic,is) = 0._wp
         END DO
       END DO
