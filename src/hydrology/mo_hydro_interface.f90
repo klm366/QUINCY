@@ -727,6 +727,7 @@ CONTAINS
         & water_to_soil(:),               & !< Water available for infiltration into the soil [m water equivalent]
         & evapo_deficit(:),               & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
         & infilt(:),                      & !< Infiltration flux into the soil [m water equivalent]
+        & runoff(:),                      & !< Total surface runoff [kg m-2 s-1]
         & runoff_horton(:)                & !< Surface runoff exceeding infiltration capacity [kg m-2 s-1]
         & )
 
@@ -1159,15 +1160,13 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max    ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
       ! out
@@ -1175,16 +1174,13 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
       & )
-
-    ! Accumulate runoff components
-    dsl4jsb_var2D_onChunk(HYDRO_, runoff) = dsl4jsb_var2D_onChunk(HYDRO_, runoff_horton) &
-      &                                   + dsl4jsb_var2D_onChunk(HYDRO_, runoff_dunne)
 
     ! Update weq_pond storage due to potential soil infiltration overflow
     dsl4jsb_var2D_onChunk(HYDRO_, weq_pond) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_pond) &

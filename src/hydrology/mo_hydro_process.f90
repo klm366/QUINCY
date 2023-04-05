@@ -90,7 +90,7 @@ CONTAINS
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
-    & water_to_soil, evapo_deficit, infilt, runoff_horton)
+    & water_to_soil, evapo_deficit, infilt, runoff, runoff_horton)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Arno_, QArctic_
@@ -117,7 +117,7 @@ CONTAINS
       & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
       & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
       & evapo_pond(:), water_to_soil(:), evapo_deficit(:),                  &
-      & infilt(:), runoff_horton(:)
+      & infilt(:), runoff(:), runoff_horton(:)
     !$claw end model-data
     !
     !  local variables
@@ -181,6 +181,8 @@ CONTAINS
     wtr_pond_outflow(:)  = 0._wp
     water_to_soil(:)     = 0._wp
     evapo_deficit(:)     = 0._wp
+    runoff(:)            = 0._wp
+    runoff_horton(:)     = 0._wp
 
     !-----------------------------------------------------------------
     ! Convert water fluxes to m water equivalent within the time step
@@ -361,8 +363,8 @@ CONTAINS
 
     IF (ltpe_closed) THEN
       ! Terra planet setup without runoff
-      runoff_horton(:) = 0._wp
-      infilt(:)        = water_to_soil(:)
+      runoff(:) = 0._wp
+      infilt(:) = water_to_soil(:)
 
     ELSE IF (runoff_scheme == QArctic_) THEN
       i_infil    = 1
@@ -375,6 +377,7 @@ CONTAINS
                           & wtr_soil_sl1(:), ice_soil_sl1(:), wtr_soil_pot_scool_sl1(:),     &
                           & water_to_soil(:), wtr_pond(:),                                      &
                           & runoff_horton(:), infilt(:))
+      runoff(:) = runoff_horton(:)
 
     ELSE IF (runoff_scheme == Arno_) THEN
       ! Lateral water flows from ponds are connected to the choice of the surface runoff
@@ -406,11 +409,13 @@ CONTAINS
       water_to_soil(:) = water_to_soil(:) - wtr_pond_inflow(:) + wtr_pond_outflow(:) &
         &              + wtr_pond_overflow(:)
 
-      ! Compute surface runoff and infiltration
+      ! Compute surface runoff and infiltration. The ARNO scheme computes a total surface runoff
+      ! and therefore no individual amount for infiltration capacity excess runoff (horten runoff)
+      ! can be given
       CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,        &
         &              water_to_soil(:), weq_rootzone(:),      &
         &              steepness(:), weq_rootzone_max(:),      &
-        &              runoff_horton(:), infilt(:))
+        &              runoff(:), infilt(:))
 
     END IF
 
@@ -424,6 +429,7 @@ CONTAINS
     evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
     evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
 
+    runoff(:)          = runoff(:)        * rhoh2o / dtime
     runoff_horton(:)   = runoff_horton(:) * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_land
@@ -572,13 +578,13 @@ CONTAINS
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
-    & fract_pond_max, evapotrans_soil, transpiration,                                    &
+    & evapotrans_soil, transpiration,                                    &
     ! inout
-    & infilt, runoff_dunne, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow,            &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow,                  &
     & evapo_deficit, &
     ! out
-    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
-      drain_lat, drain_lat_sl, wtr_soilhyd_res                                                         &
+    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, runoff_dunne, drainage, &
+    & drain_rock, drain_lat, drain_lat_sl, wtr_soilhyd_res                               &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -598,13 +604,13 @@ CONTAINS
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       & lat, lon,                                       &
-      & fract_pond_max, evapotrans_soil, transpiration
+      & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff_dunne, evapo_deficit, wtr_pond
+      & tpe_overflow, infilt, runoff, evapo_deficit
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
-    REAL(wp), INTENT(out), DIMENSION(:) :: &
-      & infilt_over, drainage,             &
+    REAL(wp), INTENT(out), DIMENSION(:) ::      &
+      & infilt_over, runoff_dunne, drainage,    &
       & drain_rock, drain_lat, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & drain_lat_sl, wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
@@ -617,8 +623,7 @@ CONTAINS
     REAL(wp) ::              &
       & weq_rootzone_max(nc),& ! maximum water holding capacity of the rootzone (liquid water + ice) [m]
       & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
-      & ice_rootzone(nc),    & ! amount of ice in the rootzone [m]
-      & manning(nc)            ! Manning roughness coefficient (0.15 for flowplain with trees)
+      & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
 
     REAL(wp) ::                     &
       & weq_wsat_sl(nc,nsoil),      & !< soil water (liquid + ice) content at saturation [m]
@@ -628,7 +633,7 @@ CONTAINS
     REAL(wp) ::              &
       & hlp_2d(nc,nsoil)       ! helper array needed with openacc
 
-    INTEGER :: i, i_infil
+    INTEGER :: i
 
     INTEGER, PARAMETER :: ilog = 0 ! Switch for debugging output
 
@@ -700,7 +705,7 @@ CONTAINS
       &     hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,           &
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
-      &     infilt, runoff_dunne, drain_rock, drain_lat_sl,                          &
+      &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
       &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
 
     ! Aggregate or distribute the different runoff flux components
@@ -714,7 +719,8 @@ CONTAINS
     !$claw acc parallel loop gang vector
     DO i = 1, nc
       infilt(i)        = infilt     (i)  * rhoh2o / dtime
-      runoff_dunne(i)  = runoff_dunne(i) * rhoh2o / dtime
+      infilt_over(i)   = infilt_over(i)  * rhoh2o / dtime
+      runoff_dunne(i)  = infilt_over(i)  * rhoh2o / dtime
       drainage(i)      = drainage   (i)  * rhoh2o / dtime
       drain_rock(i)    = drain_rock (i)  * rhoh2o / dtime
       drain_lat(i)     = drain_lat  (i)  * rhoh2o / dtime
@@ -722,6 +728,10 @@ CONTAINS
     END DO
     !$claw acc end data
     !$claw acc end data
+
+    ! Accumulate runoff components. Note that in the Arno Scheme saturation excess surface runoff
+    ! is already partly included and the diagnosed dunne runoff contains only part of it.
+    runoff(:) = runoff(:) + runoff_dunne(:)
 
   END SUBROUTINE calc_soil_hydrology
 
@@ -1130,6 +1140,7 @@ CONTAINS
     REAL(wp) :: wtr_transp_residual(nc)      ! numerical error caused by the vertical transport scheme [m]
     REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
     REAL(wp) :: wtr_exinfcap(nc)             ! surface runoff due to exceeding the soil infiltration capacity [m]
+                                             ! (currently zero, as process is not implemented)
     REAL(wp) :: wtr_exwsat(nc)               ! surface runoff due to exceeding the soil moisture saturation [m]
 
     !$claw acc data &
@@ -1384,14 +1395,14 @@ CONTAINS
       END DO
       !
       ! Lateral Drainage (i.e. drainage from upper soil layers)
-      ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to 
+      ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to
       !      move lateraly until it reaches the stream (or the neighbouring topo-tile).
       !      In this implementation all water above field capacity is added to the drainage. However,
       !      this is a very simplistic assumption. For e.g. high resolution simulations it might
       !      be worthwile to consider lateral drainage as a reservoir outflow with a predefined
       !      lagtime to allow for oversaturation of soils.
       ! @todo In the current model configuration lateral drainage seems to deteriorate river
-      !      discharge while it has little effect on evapotranspiration. Therefore it is 
+      !      discharge while it has little effect on evapotranspiration. Therefore it is
       !      disabled, but this should be revised, e.g. for high resolution simulations.
       DO j = nsoil, 1, -1
         ! If maximum moisture is exceeded, add the excess water to lateral drainage
