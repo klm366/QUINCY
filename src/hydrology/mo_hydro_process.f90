@@ -375,7 +375,7 @@ CONTAINS
                           & pore_size_index_sl1(:), bclapp_sl1(:), vol_porosity_sl1(:),        &
                           & vol_field_cap_sl1(:), vol_p_wilt_sl1(:), hyd_cond_sat_sl1(:),    &
                           & wtr_soil_sl1(:), ice_soil_sl1(:), wtr_soil_pot_scool_sl1(:),     &
-                          & water_to_soil(:), wtr_pond(:),                                      &
+                          & water_to_soil(:) + wtr_pond(:), wtr_pond(:),                                      &
                           & runoff_horton(:), infilt(:))
       runoff(:) = runoff_horton(:)
 
@@ -1023,7 +1023,7 @@ CONTAINS
       k_end(:) = k_start(:)
     END WHERE
 
-    ! Rescale final conductivity in case of short time steps
+    ! Rescale final conductivity in case of short time steps --> Lueckenfueller
     delta_k(:)      = k_end(:) - k_start(:)
     IF (dtime < dt_sat .AND. (i_infil == 1 .OR. i_infil == 2 .OR. i_infil == 4 )) THEN
       k_end(:)   = k_start(:) +  delta_k(:) * dtime / dt_sat
@@ -1033,14 +1033,18 @@ CONTAINS
     ! @todo why is pond water and water_to_soil separated? Shouldn't pond water be added to water_to_soil?
     infilt(:)       = MIN(water_to_soil(:), k_start(:) * dtime)
     water_excess(:) = MAX(0._wp, water_to_soil(:) - infilt(:) - wtr_pond_max(:))
-    pond_pot(:)     = water_excess(:) * dt_sat / dtime  ! Does this means ponds are filled by runoff?
+    pond_pot(:)     = water_excess(:) * MIN(1._wp, dt_sat / dtime)  ! Does this means ponds are filled by runoff?
 
     ! Compute lateral flow velocity for runoff
     v_max(:)       = pond_pot(:)**(2._wp/3._wp)*slope(:)**(1._wp/2._wp)*1._wp / manning(:)
     sro_max(:)     = pond_pot(:) * v_max(:)  ! get from outflux through crossection (side) to flux per grid-box area
 
-    fract_infilt(:) = MAX(0._wp, MIN(1._wp, delta_k(:) / (delta_k(:) + sro_max(:))))
-    infilt_pot(:)   = water_excess(:) * fract_infilt(:)
+    WHERE (delta_k(:) + sro_max(:) > 0._wp)
+      fract_infilt(:) = MAX(0._wp, MIN(1._wp, delta_k(:) / (delta_k(:) + sro_max(:))))
+      infilt_pot(:)   = water_excess(:) * fract_infilt(:)
+    ELSE WHERE
+      infilt_pot(:)   = water_excess(:)
+    END WHERE
 
     WHERE (water_excess(:) > (delta_k(:) + sro_max(:)) * dtime)
       infilt(:) = infilt(:) + delta_k(:) * dtime
