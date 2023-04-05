@@ -69,8 +69,9 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & infilt,               & !< infiltration
       & runoff,               & !< surface runoff
-      & runoff_horton,        & !< runoff -> excess of infiltration capcity 
+      & runoff_horton,        & !< runoff -> excess of infiltration capcity
       & runoff_dunne,         & !< runoff -> saturation excess
+      & infilt_over,          & !< overflow of top soil layer
       & drainage,             & !< total drainage
       & drain_rock,           & !< bottom drainage
       & drain_lat,            & !< subsurface lateral drainage
@@ -375,6 +376,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE., output_level=BASIC,                                        &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'infilt_over', mem%infilt_over,                                &
+      & hgrid, surface,                                                              &
+      & t_cf('infilt_over', 'kg m-2 s-1', 'Surface layer overflow'),                 &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'runoff', mem%runoff,                                          &

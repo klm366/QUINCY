@@ -429,12 +429,23 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: evapo_pond
     dsl4jsb_Real2D_onChunk :: snowmelt
     dsl4jsb_Real2D_onChunk :: infilt
+    dsl4jsb_Real2D_onChunk :: runoff_horton
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real2D_onChunk :: runoff_glac
     dsl4jsb_Real2D_onChunk :: water_to_soil
     dsl4jsb_Real2D_onChunk :: weq_glac
     dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+    dsl4jsb_Real3D_onChunk :: pore_size_index_sl
+    dsl4jsb_Real3D_onChunk :: bclapp_sl
+    dsl4jsb_Real3D_onChunk :: vol_porosity_sl
+    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
+    dsl4jsb_Real3D_onChunk :: vol_p_wilt_sl
+    dsl4jsb_Real3D_onChunk :: hyd_cond_sat_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_pot_scool_sl
 
     ! Locally allocated vectors
     !
@@ -540,6 +551,16 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_glac)     ! inout
     ELSE
       dsl4jsb_Get_var3D_onChunk(SSE_,      t_soil_sl)       ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)         ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    pore_size_index_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    bclapp_sl)             ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_porosity_sl)       ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_field_cap_sl)      ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_p_wilt_sl)         ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    hyd_cond_sat_sl)       ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)           ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)           ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_pot_scool_sl) ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil)   ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_skin)      ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)        ! inout
@@ -548,7 +569,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_skin)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)   ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    infilt)          ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)          ! out
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_horton)   ! out
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_snow_can)   ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration)  ! in
@@ -651,8 +672,22 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_dynsnow, & !< T: Compute density of snow dynamically
         & dsl4jsb_Config(HYDRO_)%l_infil_subzero, & !< T: Allow infiltration at soil temperatures below 0degC
         & dsl4jsb_Config(HYDRO_)%snow_depth_max,  & !< Snow depth limit [m water equivalent]; -1. for no limit
+        & dsl4jsb_Config(HYDRO_)%runoff_scheme,   & !< Scheme used to compute infiltration excess surface runoff
+        & dsl4jsb_Config(HYDRO_)%soilhydmodel,    & !< Scheme used to compute soil hydraulic conductivity and diffusivity
+        & dsl4jsb_Config(HYDRO_)%manning_n,       & !< Manning coefficient for surface roughness [m]
+        & dsl4jsb_Config(HYDRO_)%dt_sat,          & !< Time required for hydraulic conductivity to reach max [sec]
         & steepness,                      & !< Shape parameter describing orography    [/]
         & t_soil_sl(:,1),                 & !< Temperature of the uppermost soil layer [K]
+        & soil_depth_sl(:,1),             & !< Top layer soil depth [m]
+        & pore_size_index_sl(:,1),        & !< Top layer soil pore size index
+        & bclapp_sl(:,1),                 & !< Top layer soil bc exponent
+        & vol_porosity_sl(:,1),           & !< Top layer soil vol porosity
+        & vol_field_cap_sl(:,1),          & !< Top layer soil vol field capacity
+        & vol_p_wilt_sl(:,1),             & !< Top layer soil vol wilting point
+        & hyd_cond_sat_sl(:,1),           & !< Top layer soil hydraulic conductivity
+        & wtr_soil_sl(:,1),               & !< Top layer soil water content [m]
+        & ice_soil_sl(:,1),               & !< Top layer soil ice content [m]
+        & wtr_soil_pot_scool_sl(:,1),     & !< Top layer soil supercooled water content [m]
         & t_unfilt(:),                    & !< Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & !< wind speed at 10m height [m/s]
         & t_air(:),                       & !< lowest layer atmosphere temperature [K]
@@ -692,7 +727,7 @@ CONTAINS
         & water_to_soil(:),               & !< Water available for infiltration into the soil [m water equivalent]
         & evapo_deficit(:),               & !< Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
         & infilt(:),                      & !< Infiltration flux into the soil [m water equivalent]
-        & runoff(:)                       & !< Surface runoff [m water equivalent]
+        & runoff_horton(:)                & !< Surface runoff exceeding infiltration capacity [kg m-2 s-1]
         & )
 
       ! Update weq_pond storage
@@ -1097,21 +1132,6 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
 
-    ! @todo Temporary implementation of a surface pond reservoir to be used as target
-    !   for lateral flows from upland areas. Needs to be revised as soon as real ponding
-    !   is implemented in the model and moved to surface hydrology
-    dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) = dsl4jsb_var2D_onChunk (HYDRO_, water_to_soil) &
-      & + dsl4jsb_var2D_onChunk (HYDRO_, weq_pond)
-    dsl4jsb_var2D_onChunk (HYDRO_, weq_pond) = 0._wp
-    ALLOCATE(wtr_pond_max(nc))
-    IF (tile%contains_ridge) THEN
-      ! Only true for HydroTiles usecases
-      wtr_pond_max(:) = 0.0_wp
-    ELSE
-      wtr_pond_max(:) = MAX(0._wp, dsl4jsb_var2D_onChunk (HYDRO_,weq_pond_max) &
-        &             - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
-    END IF
-
     !$claw acc data create(tile, tile%fract, tile_fract)
     !$claw acc parallel loop gang vector
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
@@ -1144,7 +1164,7 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
       & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff_dunne      ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          ),     &
@@ -1158,8 +1178,13 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
       & )
+
+    ! Accumulate runoff components
+    dsl4jsb_var2D_onChunk(HYDRO_, runoff) = dsl4jsb_var2D_onChunk(HYDRO_, runoff_horton) &
+      &                                   + dsl4jsb_var2D_onChunk(HYDRO_, runoff_dunne)
 
     ! Update weq_pond storage due to potential soil infiltration overflow
     dsl4jsb_var2D_onChunk(HYDRO_, weq_pond) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_pond) &
@@ -1217,6 +1242,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
 

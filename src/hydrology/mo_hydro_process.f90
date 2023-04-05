@@ -77,7 +77,11 @@ CONTAINS
   !
   SUBROUTINE calc_surface_hydrology_land (                          &
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
-    & snow_depth_max, steepness, t_soil_sl1, t_unfilt, wind_10m,    &
+    & snow_depth_max, runoff_scheme, soilhydmodel, manning_n, dt_sat, steepness,  &
+    & t_soil_sl1, soil_depth_sl1, pore_size_index_sl1, bclapp_sl1,  &
+    & vol_porosity_sl1, vol_field_cap_sl1, vol_p_wilt_sl1,          &
+    & hyd_cond_sat_sl1, wtr_soil_sl1, ice_soil_sl1,                 &
+    & wtr_soil_pot_scool_sl1, t_unfilt, wind_10m,                   &
     & t_air, skinres_canopy_max, skinres_max, weq_pond_max,         &
     & fract_pond_max, fract_snow, fract_skin, fract_pond,           &
     & hcap_grnd, evapotrans, evapopot, transpiration, rain, snow,   &
@@ -86,18 +90,22 @@ CONTAINS
     & wtr_pond, ice_pond, q_snocpymlt,                              &
     & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
-    & water_to_soil, evapo_deficit, infilt, runoff)
+    & water_to_soil, evapo_deficit, infilt, runoff_horton)
 
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
-    USE mo_hydro_constants,        ONLY: InterceptionEfficiency
+    USE mo_hydro_constants,        ONLY: InterceptionEfficiency, Arno_, QArctic_
     USE mo_sse_constants,          ONLY: snow_depth_min
 
     INTEGER,  INTENT(in) :: nc
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
-    REAL(wp), INTENT(in) :: dtime, snow_depth_max
+    REAL(wp), INTENT(in) :: dtime, snow_depth_max, manning_n, dt_sat
+    INTEGER,  INTENT(in) :: runoff_scheme, soilhydmodel
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                 &
-      & steepness(:), t_soil_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
+      & steepness(:), t_soil_sl1(:), soil_depth_sl1(:), pore_size_index_sl1(:), &
+      & bclapp_sl1(:), vol_porosity_sl1(:), vol_field_cap_sl1(:), vol_p_wilt_sl1(:), &
+      & hyd_cond_sat_sl1(:), wtr_soil_sl1(:), ice_soil_sl1(:),                       &
+      & wtr_soil_pot_scool_sl1(:), t_unfilt(:), wind_10m(:), t_air(:),    &
       & skinres_canopy_max(:), skinres_max(:), weq_pond_max(:), fract_pond_max(:), &
       & fract_snow(:), fract_skin(:), fract_pond(:), hcap_grnd(:), evapotrans(:),  &
       & evapopot(:), transpiration(:), rain(:), snow(:), weq_rootzone(:),   &
@@ -109,11 +117,12 @@ CONTAINS
       & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
       & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
       & evapo_pond(:), water_to_soil(:), evapo_deficit(:),                  &
-      & infilt(:), runoff(:)
+      & infilt(:), runoff_horton(:)
     !$claw end model-data
     !
     !  local variables
     !
+    INTEGER  :: i_infil             !< type of infiltration scheme
     REAL(wp) ::                   &
       & rain_in_m(nc),            & !< amount of rainfall within time step [m]
       & new_snow(nc),             & !< amount of snowfall within time step [m]
@@ -138,6 +147,7 @@ CONTAINS
       & evapo_pond_pot_in_m(nc),  & !< potential evaporation from pond reservoir
       & rain_to_skinres(nc),      & !< amount of rain going into the skin reservoir
       & wtr_skin_pre_rain(nc),    & !< amount of water in the skin reservoir prior to the update [m]
+      & manning(nc),              & !< Manning coefficient for surface roughness [/]
       & t_pond(nc),               & !< surface pond water temperature [K]
       & wtr_pond_inflow(nc),      & !< pond inflow [m]
       & wtr_pond_outflow(nc),     & !< pond outflow [m]
@@ -346,15 +356,27 @@ CONTAINS
     !> Infiltration and surface runoff
     !---------------------
     !> Runoff is either set to zero for Terraplanet setup or is computed via the
-    !! ARNO Scheme (default). Note that both, infiltration and runoff, are further
+    !! QArctic or ARNO Scheme (default). Note that both, infiltration and runoff, are further
     !! modified in the soil hydrology routine.
 
     IF (ltpe_closed) THEN
       ! Terra planet setup without runoff
-      runoff(:) = 0._wp
-      infilt(:) = water_to_soil(:)
+      runoff_horton(:) = 0._wp
+      infilt(:)        = water_to_soil(:)
 
-    ELSE
+    ELSE IF (runoff_scheme == QArctic_) THEN
+      i_infil    = 1
+      manning(:) = manning_n
+      CALL infiltration_new(nc, dt_sat, dtime, MAX(0._wp, weq_pond_max(:) - ice_pond(:)),       &
+                          & i_infil, soilhydmodel,          &
+                          & steepness(:), manning(:), soil_depth_sl1(:),                       &
+                          & pore_size_index_sl1(:), bclapp_sl1(:), vol_porosity_sl1(:),        &
+                          & vol_field_cap_sl1(:), vol_p_wilt_sl1(:), hyd_cond_sat_sl1(:),    &
+                          & wtr_soil_sl1(:), ice_soil_sl1(:), wtr_soil_pot_scool_sl1(:),     &
+                          & water_to_soil(:), wtr_pond(:),                                      &
+                          & runoff_horton(:), infilt(:))
+
+    ELSE IF (runoff_scheme == Arno_) THEN
       ! Lateral water flows from ponds are connected to the choice of the surface runoff
       ! and infiltration scheme. The following pond flow scheme is based on the WEED
       ! scheme (cite) and designed to work with the ARNO runoff scheme.
@@ -388,7 +410,7 @@ CONTAINS
       CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,        &
         &              water_to_soil(:), weq_rootzone(:),      &
         &              steepness(:), weq_rootzone_max(:),      &
-        &              runoff(:), infilt(:))
+        &              runoff_horton(:), infilt(:))
 
     END IF
 
@@ -401,6 +423,8 @@ CONTAINS
     evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
     evapo_pond(:)      = evapo_pond_in_m(:)      * rhoh2o / dtime
     evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
+
+    runoff_horton(:)   = runoff_horton(:) * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -538,7 +562,7 @@ CONTAINS
   ! @param [out]     wsat_sl             Maximum possible amount of water in soil layer          [m]
   ! @param [out]     field_cap_sl        Water content at field capacity in soil layer           [m]
   ! @param [out]     p_wilt_sl           Water content at permanent wilting point in soil layers [m]
-  ! @param [out]     runoff              Runoff
+  ! @param [out]     runoff_dunne        Runoff due to soil saturation excess                    [m]
   ! @param [out]     drainage            Drainage
   !
   SUBROUTINE calc_soil_hydrology(                                                        &
@@ -550,22 +574,22 @@ CONTAINS
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
     & fract_pond_max, evapotrans_soil, transpiration,                                    &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow, evapo_deficit,   &
+    & infilt, runoff_dunne, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow,            &
+    & evapo_deficit, &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
-      drain_lat, wtr_soilhyd_res                                                         &
+      drain_lat, drain_lat_sl, wtr_soilhyd_res                                                         &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
-    USE mo_hydro_constants,        ONLY: Arno_, QArctic_
 
     INTEGER,  INTENT(in) :: &
       & nc, nsoil
     INTEGER, INTENT(in) :: &
-      & runoff_scheme, soilhydmodel, interpol_mean
+      & soilhydmodel, interpol_mean
     REAL(wp), INTENT(in) ::                             &
-      & dtime, w_soil_wilt_fract, manning_n, dt_sat
+      & dtime, w_soil_wilt_fract
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! Tile fraction > 0
@@ -576,14 +600,14 @@ CONTAINS
       & lat, lon,                                       &
       & fract_pond_max, evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond
+      & tpe_overflow, infilt, runoff_dunne, evapo_deficit, wtr_pond
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
       & infilt_over, drainage,             &
       & drain_rock, drain_lat, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
-      & latdrain_sl, wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
+      & drain_lat_sl, wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
 
     ! Local variables
     REAL(wp) ::                       &
@@ -600,9 +624,6 @@ CONTAINS
       & weq_wsat_sl(nc,nsoil),      & !< soil water (liquid + ice) content at saturation [m]
       & weq_field_cap_sl(nc,nsoil), & !< soil water (liquid + ice) content at field capacity [m]
       & weq_p_wilt_sl(nc,nsoil)       !< soil water (liquid + ice) content at wilting point [m] 
-
-    REAL(wp) ::                 &
-      & drain_lat_sl(nc,nsoil)
 
     REAL(wp) ::              &
       & hlp_2d(nc,nsoil)       ! helper array needed with openacc
@@ -644,40 +665,8 @@ CONTAINS
 
     ! Initialize diagnostic runoff and drainage variables
     runoff_dunne(:)   = 0._wp
-    runoff_horton(:)  = 0._wp
     drain_rock(:)     = 0._wp
     drain_lat_sl(:,:) = 0._wp
-
-    ! to be moved to surface hydrology
-    !---------------------
-    !> 1. Infiltration and Surface runoff
-    !---------------------
-    !> Runoff is either set to zero for Terraplanet setup, is computed via the
-    !! ARNO Scheme (default) or uses a new infiltration scheme (Hydrotiles usecase only)
-
-    IF (ltpe_closed) THEN
-      ! Terra planet setup without runoff
-      runoff(:) = 0._wp
-      infilt(:) = water_to_soil(:)
-
-    ELSE IF (runoff_scheme == Arno_) THEN
-      CALL arno_scheme(nc, l_infil_subzero, t_soil_sl1,                          &
-        &              water_to_soil(:), wtr_rootzone(:) + ice_rootzone(:),      &
-        &              steepness(:), weq_rootzone_max(:),                        &
-        &              runoff_horton(:), infilt(:))
-
-    ELSE IF (runoff_scheme == QArctic_) THEN
-      i_infil    = 1
-      manning(:) = manning_n
-      CALL infiltration_new(nc, dt_sat, dtime, wtr_pond_max(:), i_infil, soilhydmodel,          &
-                          & steepness(:), manning(:), soil_depth_sl(:,1),                       &
-                          & pore_size_index_sl(:,1), bclapp_sl(:,1), weq_wsat_sl(:,1),          &
-                          & weq_field_cap_sl(:,1), weq_p_wilt_sl(:,1), hyd_cond_sat_sl(:,1),    &
-                          & wtr_soil_sl(:,1), ice_soil_sl(:,1), wtr_soil_pot_scool_sl(:,1),     &
-                          & water_to_soil(:), wtr_pond(:),                                      &
-                          & runoff_horton(:), infilt(:))
-
-    END IF
 
     !
     !$claw acc data present(evapo_soil_in_m,evapotrans_soil,transpiration_in_m,transpiration)
@@ -699,7 +688,6 @@ CONTAINS
     !$claw acc loop gang
     DO i = 1, nc
       drainage(i) = 0._wp
-      latdrain_sl(i,:) = 0._wp
     END DO
     !$claw acc end parallel
     !$claw acc end data
@@ -713,13 +701,11 @@ CONTAINS
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
       &     infilt, runoff_dunne, drain_rock, drain_lat_sl,                          &
-      &     tpe_overflow, wtr_soilhyd_res, ltpe_closed, ltpe_open)
+      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
 
     ! Aggregate or distribute the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
     drainage(:)  = drainage(:) + drain_rock(:) + drain_lat(:)
-    runoff(:)    = runoff_horton(:) + runoff_dunne(:)
-
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
@@ -727,14 +713,12 @@ CONTAINS
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector
     DO i = 1, nc
-      infilt(i)        = infilt     (i) * rhoh2o / dtime
-      runoff(i)        = runoff     (i) * rhoh2o / dtime
-      runoff_horton(i) = runoff_horton(i) * rhoh2o / dtime
+      infilt(i)        = infilt     (i)  * rhoh2o / dtime
       runoff_dunne(i)  = runoff_dunne(i) * rhoh2o / dtime
-      drainage(i)      = drainage   (i) * rhoh2o / dtime
-      drain_rock(i)    = drain_rock (i) * rhoh2o / dtime
-      drain_lat(i)     = drain_lat  (i) * rhoh2o / dtime
-      latdrain_sl(i,:) = drain_lat_sl(i,:) * rhoh2o / dtime  ! Only temporary!
+      drainage(i)      = drainage   (i)  * rhoh2o / dtime
+      drain_rock(i)    = drain_rock (i)  * rhoh2o / dtime
+      drain_lat(i)     = drain_lat  (i)  * rhoh2o / dtime
+      drain_lat_sl(i,:) = drain_lat_sl(i,:) * rhoh2o / dtime  ! Only temporary!
     END DO
     !$claw acc end data
     !$claw acc end data
@@ -750,17 +734,17 @@ CONTAINS
   !!   ARNO Scheme infiltration routine and extented for HydroTiles usecase
 
   SUBROUTINE calc_orographic_features(nc, nlat, l_hydrotiles, l_upland, &
-    & oro_stddev, max_slope, steepness, micro_slope, macro_slope )
+    & max_slope, oro_stddev, steepness, micro_slope, macro_slope )
 
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
 
-    INTEGER,  INTETN(in)  :: nc
+    INTEGER,  INTENT(in)  :: nc                    !< Number of gridcells
     INTEGER,  INTENT(in)  :: nlat                  !< (Effective) number of latitudes for steepness parameter
     LOGICAL,  INTENT(in)  :: l_hydrotiles          !< use HydroTiles setup
     LOGICAL,  INTENT(in)  :: l_upland              !< Tile belongs to upland fraction
 
+    REAL(wp), INTENT(in)  :: max_slope             !< Maximum slope threshold                           [m/m]
     REAL(wp), INTENT(in)  :: oro_stddev(:)         !< standard deviation of orography                   [m]
-    REAL(wp), INTENT(in)  :: max_slope             !< Maximum slope threshold
     REAL(wp), INTENT(out) :: steepness(:)          !< parameter defining the subgrid slope distribution [/]
     REAL(wp), INTENT(out) :: micro_slope(:)        !< slope on microtopography tiles
     REAL(wp), INTENT(out) :: macro_slope(:)        !< slope on macrotopography tiles
@@ -892,11 +876,11 @@ CONTAINS
   !! @par Revision History
   !!   Developed by Philipp de Vrese (MPI-M) in September 2022
 
-  SUBROUTINE infiltration_new(nc, dt_sat, dtime, wtr_pond_max, i_infil,                  &
-                            & soilhydmodel, slope, manning, dsoil,                       &
-                            & pore_size_index, bclapp, ws_max, fc, pwp, hyd_cond_sat,    &
-                            & ws_soil, ice_soil, wtr_pot_scool, water_to_soil, wtr_pond, &
-                            & runoff, infilt)
+  SUBROUTINE infiltration_new(nc, dt_sat, dtime, wtr_pond_max, i_infil,                   &
+                            & soilhydmodel, slope, manning, dsoil,                        &
+                            & pore_size_index, bclapp, vol_porosity, vol_field_cap,       &
+                            & vol_p_wilt, hyd_cond_sat, ws_soil, ice_soil, wtr_pot_scool, &
+                            & water_to_soil, wtr_pond, runoff, infilt)
 
     INTEGER,  INTENT(in) :: nc
 
@@ -906,16 +890,16 @@ CONTAINS
 
     INTEGER,  INTENT(in) :: &
       & i_infil,            &
-      & soilhydmodel         !< Soil hydrology model for computation of K
+      & soilhydmodel          !< Soil hydrology model for computation of K
 
     REAL(wp), INTENT(in) :: &
       & wtr_pond_max(:),    &
-      & slope(nc),          &   ! Slope of the contributing areas ... for now use b
+      & slope(nc),          & !< Slope of the contributing areas ... for now use b
       & pore_size_index(:), &
       & bclapp(:),          &
-      & ws_max(:),          &
-      & fc(:),              &
-      & pwp(:),             &
+      & vol_porosity(:),    &
+      & vol_field_cap(:),   &
+      & vol_p_wilt(:),      &
       & hyd_cond_sat(:),    &
       & dsoil(:),           &
       & manning(:),         &
@@ -938,13 +922,16 @@ CONTAINS
       & zeros(nc),           &
       & wtr_scool(nc),       &
       & ws_incl_ice(nc),     &
+      & ws_max(nc),          &
+      & fc(nc),              &
+      & pwp(nc),             &
       & ice_impede(nc),      &   ! Inhibition of infiltration due to teh presence of ice
       & k_start(nc),         &   ! hydrualic conductivity at the beginning ...
       & k_end(nc),           &   ! ... and the end of the timestep (assuming all water to infiltrate)
-      & delta_k(nc),         &   ! ... additional infiltration capacity 
+      & delta_k(nc),         &   ! ... additional infiltration capacity
       & water_excess(nc),    &   ! Water that doesn infiltrte immediatly but ponds
       & pond_pot(nc),        &   ! Ponding depth reached during saturation time
-      & v_max(nc),           &   ! Avg. velocity of water; vertical crossection 
+      & v_max(nc),           &   ! Avg. velocity of water; vertical crossection
       & sro_max(nc),         &   ! velocity relative to m2 gridcell area
       & fract_infilt(nc),    &   ! fraction of ponding water that can infiltrate due to inicreasing k
       & infilt_pot(nc),      &   ! Additional infitration flux due to increasing k
@@ -961,6 +948,9 @@ CONTAINS
     wtr_scool(:)   = MIN(wtr_pot_scool(:), ws_soil(:))
     ws_incl_ice(:) = ws_soil(:) + ice_soil(:)
     zmvg(:)        = pore_size_index(:) / (pore_size_index(:) + 1._wp)
+    ws_max(:)      = MAX(0._wp, vol_porosity(:)  * dsoil(:))
+    fc(:)          = MAX(0._wp, vol_field_cap(:) * dsoil(:))
+    pwp(:)         = MAX(0._wp, vol_p_wilt(:)    * dsoil(:))
 
     !> Get ice impedance and hydraulic conductivity for the uppermost soil layer based
     !!   on the state prior to infiltration
@@ -993,7 +983,7 @@ CONTAINS
       !!---Assuming that by the end of the timestep k = precip*
       k_end(:) = MIN(ice_impede(:) * hyd_cond_sat(:), water_to_soil(:) / dtime)
     ELSE IF (i_infil == 3) THEN
-      !!---Assuming that pondig water is euqally distributed throughout the soil layer 
+      !!---Assuming that pondig water is euqally distributed throughout the soil layer
       CALL get_soilhyd_cond_properties(                               &
         & soilhydmodel, 1, dtime, nc, nlay,                           & ! nlay == nsoil and is now set to 1 (top soil layer)
         & SPREAD(1,                             DIM=1, ncopies=nc),   & ! active soil layer set to one

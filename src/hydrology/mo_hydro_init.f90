@@ -427,13 +427,18 @@ CONTAINS
 
     ! Compute steepness parameter for surface runoff
     DO i = 1, grid%Get_nblks()
-      CALL calc_orographic_features(                    &
+      CALL calc_orographic_features(                      &
         ! in
-        & grid%Get_nproma(),                            &
-        & grid%nlat_g,                                  & !< (Effective) number of latitudes for steepness parameter
-        & dsl4jsb_var_ptr(HYDRO_, oro_stddev ) (:,i),   &
+        & grid%Get_nproma(),                              & !< Number of gridcells
+        & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
+        & TRIM(model%config%usecase) == 'jsbach_qarctic', & !< T: HydroTiles setup is active
+        & tile%contains_upland,                           & !< T: Upland HydroTile
+        & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
+        & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),      & !< Standard deviation of orography [m]
         ! out
-        & dsl4jsb_var_ptr(HYDRO_, steepness  ) (:,i)    &
+        & dsl4jsb_var_ptr(HYDRO_, steepness  )(:,i),      & !< parameter defining the subgrid slope distribution [m/m]
+        & dsl4jsb_var_ptr(HYDRO_, micro_slope)(:,i),      & !< slope on microtopography tiles [m/m]
+        & dsl4jsb_var_ptr(HYDRO_, macro_slope)(:,i)       & !< slope on macrotopography tiles [m/m]
         & )
     END DO
 
