@@ -548,11 +548,11 @@ CONTAINS
     CarboxRate  = dsl4jsb_Lctlib_param(CarboxRate)
     ETransport  = dsl4jsb_Lctlib_param(ETransport)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG(STATIC: 1) VECTOR
-    DO ic=1,nc
-      !$ACC LOOP SEQ
-      DO icanopy=1,ncanopy
+    ! TODO: LOOP SEQ over icanopy would create "complex loop carried dependence ...", why?
+    DO icanopy=1,ncanopy
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
         canopy_cond_cl(ic,icanopy) = calc_assimilation_waterunlimited( &
         & C4Flag,                      &
         & CarboxRate,                  &
@@ -566,16 +566,16 @@ CONTAINS
         & )
       END DO
       !$ACC END LOOP
+      !$ACC END PARALLEL
     END DO
-    !$ACC END LOOP
-    !$ACC END PARALLEL
 
     ! Compute unlimited conductance for the whole canopy (all layers) considering the lai
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
     DO ic=1,nc
       canopy_cond_unlimited(ic) = MAX(1.e-20_wp,SUM(canopy_cond_cl(ic,:) * lai_cl(ic,:)))
     END DO
     !$ACC END PARALLEL LOOP
+
     !$ACC WAIT
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -701,6 +701,7 @@ CONTAINS
     ! Compute (actual) canopy (stomatal) conductance under water stress.
     !$ACC DATA CREATE(ratio_lim_over_unlim)
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+
     !$ACC LOOP GANG(STATIC: 1) VECTOR &
     !$ACC   PRIVATE(q_air_gt_qsat_tmp)
     DO ic = 1, nc
@@ -726,6 +727,7 @@ CONTAINS
       !$ACC END LOOP
     END DO
     !$ACC END LOOP
+
     !$ACC END PARALLEL
     !$ACC END DATA
     !$ACC WAIT
