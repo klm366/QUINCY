@@ -731,7 +731,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_lctlib_element), POINTER :: lctlib       !< land-cover-type library - parameter across pft's
-    INTEGER                         :: iblk, nc , ics, ice, i
+    INTEGER                         :: iblk, nc , ics, ice, ic
     LOGICAL, ALLOCATABLE            :: l_day(:)
 
     CHARACTER(len=*), PARAMETER     :: routine = modname//':update_albedo'
@@ -893,8 +893,11 @@ CONTAINS
 
     !> 0.9  Set day-or-night-switch
     !! 
-    !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
-    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    DO ic=1,nc
+      l_day(ic) = Has_minimal_radiation(swvis_srf_down(ic), swnir_srf_down(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !> 1.0 snow
     !!
@@ -947,25 +950,23 @@ CONTAINS
           & albedo_lice(:)  & ! inout
           & )
 
-        !$ACC DATA PRESENT(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
-        !$ACC PARALLEL LOOP GANG VECTOR
-        DO i = 1, size(l_day)
-          IF(l_day(i)) THEN
-            alb_vis(i) = (1._wp - fract_lice(i)) * albedo_lwtr(i) + fract_lice(i) * albedo_lice(i)
-            alb_nir(i) = alb_vis(i)  ! TODO
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+        DO ic = 1, nc
+          IF(l_day(ic)) THEN
+            alb_vis(ic) = (1._wp - fract_lice(ic)) * albedo_lwtr(ic) + fract_lice(ic) * albedo_lice(ic)
+            alb_nir(ic) = alb_vis(ic)  ! TODO
           END IF
         END DO
-        !$ACC END DATA
+        !$ACC END PARALLEL LOOP
       ELSE
-        !$ACC DATA PRESENT(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
-        !$ACC PARALLEL LOOP GANG VECTOR
-        DO i = 1, size(l_day)
-          IF(l_day(i)) THEN
-            alb_vis(i) = albedo_lwtr(i)
-            alb_nir(i) = alb_vis(i)  ! TODO
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+        DO ic = 1, nc
+          IF(l_day(ic)) THEN
+            alb_vis(ic) = albedo_lwtr(ic)
+            alb_nir(ic) = alb_vis(ic)  ! TODO
           END IF
         END DO
-        !$ACC END DATA
+        !$ACC END PARALLEL LOOP
       END IF
 
     !> 3.0 glacier
@@ -1301,7 +1302,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)        :: alb_nir_snow_soil   ! albedo of snow and soil combined 
     INTEGER                                :: ncanopy             ! number of canopy layers
     INTEGER                                :: icanopy             !< loop 1,ncanopy
-    INTEGER                                :: iblk, ics, ice, nc
+    INTEGER                                :: iblk, ics, ice, nc, ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sw_radiation_q_'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -1464,9 +1465,11 @@ CONTAINS
 
     !> 0.9  Set day-or-night-switch
     !! 
-    !$claw expand
-    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
-
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    DO ic=1,nc
+      l_day(ic) = Has_minimal_radiation(swvis_srf_down(ic), swnir_srf_down(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !> 1.0 snow albedo 
     !! 

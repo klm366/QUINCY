@@ -181,8 +181,6 @@ CONTAINS
     !! some of these var are added to memory anyway, as they are needed also for quincy, see below
     IF (.NOT. model%config%use_quincy) THEN
     
-    !! !$acc enter data pcreate(mem)
-
     IF ( (     One_of(LAND_TYPE, lct_ids(:)) > 0 &
       &   .OR. One_of(VEG_TYPE,  lct_ids(:)) > 0 &
       &  ) ) THEN
@@ -190,8 +188,8 @@ CONTAINS
       ! IF (TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology') THEN   ! TODO
         ALLOCATE(mem%lai_mon      (hgrid%nproma, hgrid%nblks, 0:13))
         ALLOCATE(mem%fract_fpc_mon(hgrid%nproma, hgrid%nblks, 0:13))
-        !$acc enter data pcreate(mem%lai_mon,mem%fract_fpc_mon)
-        !$acc enter data attach(mem%lai_mon,mem%fract_fpc_mon)
+        !$ACC ENTER DATA CREATE(mem%lai_mon, mem%fract_fpc_mon)
+        !$ACC ENTER DATA ATTACH(mem%lai_mon, mem%fract_fpc_mon)
       ! END IF
 
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
