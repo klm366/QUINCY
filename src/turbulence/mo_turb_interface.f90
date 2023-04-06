@@ -244,14 +244,14 @@ CONTAINS
               &                                         * TANH(lai(ic) * config_roughness_lai_saturation)) &
               &            )**2
           END DO
-          !$ACC END PARALLEL LOOP    
+          !$ACC END PARALLEL LOOP
         ELSE
           lctlib_VegRoughness = dsl4jsb_Lctlib_param(VegRoughness)
           !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
           DO ic = 1, nc
             rough_veg_star(ic) = 1._wp / LOG(config_blending_height / lctlib_VegRoughness)**2
           END DO
-          !$ACC END PARALLEL LOOP    
+          !$ACC END PARALLEL LOOP
         ENDIF
 
         lctlib_ForestFlag = dsl4jsb_Lctlib_param(ForestFlag)
@@ -270,7 +270,7 @@ CONTAINS
 
           rough_h_star(ic) = (1._wp - fract_fpc_max(ic)) * rough_bare_star(ic) + fract_fpc_max(ic) * rough_veg_star(ic)
         END DO
-        !$ACC END PARALLEL LOOP    
+        !$ACC END PARALLEL LOOP
 
       ELSE IF (tile%is_vegetation) THEN ! vegetated tile in a run without PFTs, e.g. jsbach_lite
 
@@ -282,7 +282,7 @@ CONTAINS
           rough_h_star(ic) = (1._wp - fract_snow_soil(ic)) * 1._wp / LOG(config_blending_height / MIN(1._wp, rough_m(ic)))**2 &
             &               +        fract_snow_soil(ic)  * rough_snow_star(ic)
         END DO
-        !$ACC END PARALLEL LOOP    
+        !$ACC END PARALLEL LOOP
   
       ELSE  ! bare or glacier tile
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
@@ -291,7 +291,7 @@ CONTAINS
           ! Modify roughness length heat for bare part by snow cover
           rough_h_star(ic) = (1._wp - fract_snow_soil(ic)) * rough_bare_star(ic) + fract_snow_soil(ic) * rough_snow_star(ic)
         END DO
-        !$ACC END PARALLEL LOOP    
+        !$ACC END PARALLEL LOOP
 
       END IF  ! vegetated or bare tile
 
@@ -300,14 +300,14 @@ CONTAINS
         DO ic = 1, nc
           rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
         END DO
-        !$ACC END PARALLEL LOOP    
+        !$ACC END PARALLEL LOOP
       END IF
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
         rough_h(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_h_star(ic))) / config_roughness_momentum_to_heat
       END DO
-      !$ACC END PARALLEL LOOP    
+      !$ACC END PARALLEL LOOP
 
     ELSE IF (tile%contains_lake) THEN
 
@@ -319,13 +319,13 @@ CONTAINS
           rough_m_star(ic) =            fract_lice(ic)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
             &               + (1._wp - fract_lice(ic)) / (LOG(config_blending_height / config_rough_water) ** 2)
         END DO
-        !$ACC END PARALLEL LOOP    
+        !$ACC END PARALLEL LOOP
       ELSE
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
         DO ic = 1, nc
           rough_m_star(ic) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
         END DO
-        !$ACC END PARALLEL LOOP    
+        !$ACC END PARALLEL LOOP
       END IF
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
@@ -333,7 +333,7 @@ CONTAINS
         rough_m(ic) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(ic)))
         rough_h(ic) = rough_m(ic)
       END DO
-      !$ACC END PARALLEL LOOP    
+      !$ACC END PARALLEL LOOP
 
     ELSE
       CALL finish(TRIM(routine), 'Don"t know what to do.')
@@ -501,7 +501,7 @@ CONTAINS
     dsl4jsb_Get_config(HYDRO_)
 
     !$ACC DATA &
-    !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) & 
+    !$ACC   CREATE(fact_qsat_veg, fact_qsat_trans, fact_qsat_soil) &
     !$ACC   CREATE(fact_qair_veg, fact_qair_soil, zfract_fpc, mask)
 
     ! Get pointers to process configs and memory

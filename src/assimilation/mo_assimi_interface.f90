@@ -930,7 +930,7 @@ CONTAINS
     !$ACC DATA &
     !$ACC   PRESENT(dark_respiration_ca(:), dark_respiration_cl(:,:), gross_assimilation_cl(:,:)) &
     !$ACC   PRESENT(lai_cl(:,:), veg_fract_correction(:), dark_respiration(:), gross_assimilation_ca(:)) &
-    !$ACC   PRESENT(fract_fpc_max(:),gross_assimilation(:))
+    !$ACC   PRESENT(fract_fpc_max(:), gross_assimilation(:))
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR
     DO ic=1,nc

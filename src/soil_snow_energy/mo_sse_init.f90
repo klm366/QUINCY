@@ -361,8 +361,8 @@ CONTAINS
       !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,thermal_diffusivity))
     END IF
 
-    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap), &
-    !$ACC               dsl4jsb_var2D_onDomain(SSE_,heat_cond))
+    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SSE_,vol_heat_cap)) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SSE_,heat_cond))
 
   END SUBROUTINE sse_init_bc
 
@@ -422,8 +422,8 @@ CONTAINS
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
-      !$ACC               dsl4jsb_var2D_onDomain(SEB_,t))
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(SEB_,t_unfilt)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(SEB_,t))
     END IF
 
     ! Note: called from model_init now
@@ -624,8 +624,8 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel) = 0._wp
       END WHERE
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel),    &
-      !$ACC               dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column))
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_rel)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, w_soil_column))
 
     END IF
 
@@ -650,7 +650,7 @@ CONTAINS
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cap_dyn) THEN
       ALLOCATE(fract_water(nproma, nsoil, nblks), fract_ice(nproma, nsoil, nblks))
-      !$ACC ENTER DATA CREATE(fract_water,fract_ice)
+      !$ACC ENTER DATA CREATE(fract_water, fract_ice)
 
       !$noACC UPDATE DEVICE(soil_depth_sl,w_soil_sl,w_ice_sl)
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
@@ -668,7 +668,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC UPDATE HOST(fract_water,fract_ice)
+      !$ACC UPDATE HOST(fract_water, fract_ice)
       
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
       DO is = 1, nsoil
@@ -686,7 +686,7 @@ CONTAINS
           END DO
         END DO
       END DO
-      !$ACC END PARALLEL LOOP  
+      !$ACC END PARALLEL LOOP
       !$ACC EXIT DATA DELETE(fract_water, fract_ice)
       DEALLOCATE(fract_water, fract_ice)
     ELSE

@@ -792,8 +792,8 @@ CONTAINS
         co2flux_herb_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_herb_2_atm_ta)
         co2flux_fire_all_2_atm_ta_ptr => dsl4jsb_var2D_onChunk(CARBON_,co2flux_fire_all_2_atm_ta)
 
-        !$ACC DATA PRESENT(CO2_flux, fact_land, co2flux_npp_2_atm_ta_ptr, co2flux_soilresp_2_atm_ta_ptr, &
-        !$ACC              co2flux_herb_2_atm_ta_ptr, co2flux_fire_all_2_atm_ta_ptr)
+        !$ACC DATA PRESENT(CO2_flux, fact_land, co2flux_npp_2_atm_ta_ptr, co2flux_soilresp_2_atm_ta_ptr) &
+        !$ACC   PRESENT(co2flux_herb_2_atm_ta_ptr, co2flux_fire_all_2_atm_ta_ptr)
         !$ACC PARALLEL LOOP
         DO i=1,nc
           CO2_flux(i) = fact_land(i) *              &
@@ -884,7 +884,7 @@ CONTAINS
         END DO
         !$ACC END DATA
       ELSE
-        !$ACC KERNELS DEFAULT(PRESENT) 
+        !$ACC KERNELS DEFAULT(PRESENT)
         latent_hflx_wtr(:) = 0._wp
         !$ACC END KERNELS
       END IF
