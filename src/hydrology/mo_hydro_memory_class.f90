@@ -953,6 +953,13 @@ CONTAINS
         & prefix, suffix,                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+      CALL mem%Add_var( 'wtr_diffus_sl', mem%wtr_diffus_sl,                   &
+        & hgrid, soil_w,                                                                      &
+        & t_cf('wtr_diffus_sl', 'kg m-2 s-1', 'Diffusion flux from neighbouring tile'),       &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
+        & prefix, suffix,                                                                     &
+        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
       CALL mem%Add_var('wtr_rootzone_rel', mem%wtr_rootzone_rel,                         &
         & hgrid, surface,                                                                &
         & t_cf('wtr_rootzone_rel', '-', 'Relative root zone moisture'),                  &
