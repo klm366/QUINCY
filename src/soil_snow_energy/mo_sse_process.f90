@@ -509,7 +509,7 @@ CONTAINS
       !$ACC PARALLEL DEFAULT(PRESENT)
 
       ! uppermost layer
-      !$ACC LOOP GANG VECTOR 
+      !$ACC LOOP GANG VECTOR
       DO jl=1,nidx
         t_soil_sl(jl,1) = t_srf_unfilt(jl)
       END DO

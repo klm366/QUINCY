@@ -511,7 +511,7 @@ CONTAINS
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
 
     !$ACC DATA CREATE(evapo_soil_in_m, transpiration_in_m, infilt, ws_max, ws_min_drain, ws_incl_ice) &
-    !$ACC      CREATE(ws_rel, ice_rootzone, vfc_times_sd_l)
+    !$ACC   CREATE(ws_rel, ice_rootzone, vfc_times_sd_l)
 
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -740,7 +740,7 @@ CONTAINS
 
 
     !$ACC DATA &
-    !$ACC   CREATE(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above)    &
+    !$ACC   CREATE(diffus_l, ws_min_drain, ws_rel, ws_crit, drain_crit, ws_tmp, drain_l, soil_above) &
     !$ACC   CREATE(soil_below, zda, zdb, zdc, ztri, diffusivity, zkredu, remoist, zmvg_l, percolation)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)

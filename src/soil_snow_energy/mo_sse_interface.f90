@@ -258,7 +258,7 @@ CONTAINS
 
     lstart = is_time_experiment_start(options%current_datetime)
 
-    !$ACC ENTER DATA CREATE(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
+    !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top, hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -303,7 +303,7 @@ CONTAINS
         & )
 
 
-      !$ACC EXIT DATA DELETE(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
+      !$ACC EXIT DATA DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top, hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
       RETURN
 
     END IF
@@ -527,8 +527,8 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !$ACC EXIT DATA DELETE(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow, &
-    !$ACC                  hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
+    !$ACC EXIT DATA DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top, hcap_grnd_snow) &
+    !$ACC   DELETE(hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -758,7 +758,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
         
-      !$ACC EXIT DATA DELETE(fract_water,fract_ice)
+      !$ACC EXIT DATA DELETE(fract_water, fract_ice)
       DEALLOCATE(fract_water, fract_ice)
     ELSE
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)

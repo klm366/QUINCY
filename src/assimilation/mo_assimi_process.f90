@@ -517,7 +517,7 @@ CONTAINS
     !$ACC DATA &
     !$ACC   PRESENT(t_air, press_srf, par_down_mol, apar_per_lai_cl, co2_mol_mixing_ratio, n_scaling_factors) &
     !$ACC   PRESENT(canopy_cond_cl, co2_conc_leaf_cl, gross_assimilation_cl, dark_respiration_cl, carbox_rate_max_cl) &
-    !$ACC   PRESENT(e_transport_rate_max_cl,carbox_rate_cl,e_transport_rate_cl)
+    !$ACC   PRESENT(e_transport_rate_max_cl, carbox_rate_cl, e_transport_rate_cl)
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR
 
