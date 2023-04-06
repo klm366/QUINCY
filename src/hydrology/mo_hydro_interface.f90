@@ -1434,8 +1434,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
 
-    INTEGER :: iblk, ics, ice, nc, ic, icq
-    LOGICAL, DIMENSION(options%nc) :: q_air_gt_qsat_tmp
+    INTEGER :: iblk, ics, ice, nc, ic
+    LOGICAL :: q_air_gt_qsat_tmp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
@@ -1463,18 +1463,16 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
     DO ic=1,nc
-      q_air_gt_qsat_tmp(ic) = q_air(ic) > qsat(t(ic),press_srf(ic))
+      q_air_gt_qsat_tmp = q_air(ic) > qsat(t(ic),press_srf(ic))
       ! Compute (actual) canopy (stomatal) conductance under water stress.
       canopy_cond_limited(ic) = get_canopy_conductance(canopy_cond_unlimited(ic), & ! in, unstressed canopy conductance
                                                        water_stress(ic),          & ! in, water stress factor
-                                                       q_air_gt_qsat_tmp(ic)      & ! in, atmosphere saturated?
+                                                       q_air_gt_qsat_tmp          & ! in, atmosphere saturated?
                                                       )
     END DO
-    !$ACC END LOOP
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
     !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
