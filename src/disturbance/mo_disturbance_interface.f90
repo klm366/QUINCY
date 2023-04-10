@@ -482,7 +482,6 @@ CONTAINS
     ! R: This may be later in a climbuf process for dynveg and disturbance.
     ! Maximum daily wind speed and relative air humidity smoothed in time
     persist = persist_rel_hum ** (1._wp/REAL(timesteps_per_day(options%dtime),wp))
-    print*, REAL(timesteps_per_day(options%dtime),wp)
     
     q_rel_air_climbuf(:) = q_rel_air_climbuf(:) * persist  +  MIN(q_rel_air(:),100._wp) * (1._wp - persist)
 
@@ -537,24 +536,24 @@ CONTAINS
 
         iteration  = 0
         is_training = 0
-        IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
-          is_training = 1
-          iteration = (iyr-2003)*5946*365 + (day_of_year-1)*5946 + iblk*600
-        ENDIF
+        !IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
+        !  is_training = 1
+        !  iteration = (iyr-2003)*5946*365 + (day_of_year-1)*5946 + iblk*600
+        !ENDIF
 
         is_saving   = 0
-        IF ((iyr .ge. 2001) .AND. (iyr .le. 2012)) THEN
-          is_saving = 1
-          IF (MOD(iyr,2) .eq. 1) THEN  
-            memory_idx = day_of_year
-          ELSE
-            memory_idx = 365+day_of_year
-          ENDIF
+        !IF ((iyr .ge. 2001) .AND. (iyr .le. 2012)) THEN
+        !  is_saving = 1
+        !  IF (MOD(iyr,2) .eq. 1) THEN  
+        !    memory_idx = day_of_year
+        !  ELSE
+        !    memory_idx = 365+day_of_year
+        !  ENDIF
 
-          IF (memory_idx .gt. 730) THEN
-            is_saving = 0
-          ENDIF
-        ENDIF
+        !  IF (memory_idx .gt. 730) THEN
+        !    is_saving = 0
+        !  ENDIF
+        !ENDIF
 
         IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
           t_air_ave(:) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
