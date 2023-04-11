@@ -143,7 +143,7 @@ CONTAINS
       & wtr_pond_outflow(nc),     & !< pond outflow [m]
       & wtr_pond_overflow(nc),    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
       & weq_pond(nc),             & !< total pond water storage (liquid + ice) [m]
-      & pond_change_pot(nc),      & !< ??
+      & pond_change_pot(nc),      & !< amount of water that could potentially be frozen or thawed [m]
       & pond_flowlag(nc)            !< Lateral water flow lag for ponds [timesteps]
 
     !
@@ -154,7 +154,7 @@ CONTAINS
     REAL(wp), PARAMETER :: zc3=1.56E5_wp       ! [m]
 
     ! These parameters are used for lateral pond flow in the WEED scheme and could
-    ! be become part of the namelist if needed
+    ! become part of the namelist if needed
     REAL(wp), PARAMETER :: baselag = 200.0_wp * 86400.0 !< Baselag for lateral outflow [s]
 
     !$claw sca
@@ -357,7 +357,8 @@ CONTAINS
     ELSE
       ! Lateral water flows from ponds are connected to the choice of the surface runoff
       ! and infiltration scheme. The following pond flow scheme is based on the WEED
-      ! scheme (cite) and designed to work with the ARNO runoff scheme.
+      ! scheme (see https://doi.org/10.5194/tc-15-1097-2021) and is modified to work
+      ! with the ARNO runoff scheme.
 
       ! Compute pond outflow lag based on a base lag of 200 days and the relative steepness
       ! These parameters could become part of the namelist if needed

@@ -650,7 +650,7 @@ CONTAINS
         & dsl4jsb_Config(SSE_)%l_dynsnow, & !< T: Compute density of snow dynamically
         & dsl4jsb_Config(HYDRO_)%l_infil_subzero, & !< T: Allow infiltration at soil temperatures below 0degC
         & dsl4jsb_Config(HYDRO_)%snow_depth_max,  & !< Snow depth limit [m water equivalent]; -1. for no limit
-        & steepness,                      & !< Shape parameter describing orography    [/]
+        & steepness,                      & !< Shape parameter describing orography    []
         & t_soil_sl(:,1),                 & !< Temperature of the uppermost soil layer [K]
         & t_unfilt(:),                    & !< Surface tempemperature [K] (unfiltered)
         & wind_10m(:),                    & !< wind speed at 10m height [m/s]
@@ -658,10 +658,10 @@ CONTAINS
         & skinres_canopy_max(:),          & !< Capacity of the canopy skin reservoir (also used to limit snow on canopy) [m]
         & skinres_max(:),                 & !< Total capacity of the skin reservoirs, i.e. soil and canopy [m]
         & weq_pond_max(:),                & !< Total capacity of pond reservoir (water + ice) [m]
-        & fract_pond_max(:),              & !< Maximum pond fraction [/]
+        & fract_pond_max(:),              & !< Maximum pond fraction []
         & fract_snow(:),                  & !< surface snow fraction []
         & fract_skin(:),                  & !< skin reservoir fraction []
-        & fract_pond(:),                  & !< Actual pond fraction [/]
+        & fract_pond(:),                  & !< Actual pond fraction []
         & hcap_grnd(:),                   & !< heat capacity of the uppermost soil layer [J m-2 K-1]
         & evapotrans(:),                  & !< evapotranspiration (including sublimation) [kg m-2 s-1]
         & evapopot(:),                    & !< potential evaporation (if there was enough water/ice) [kg m-2 s-1]
@@ -2014,9 +2014,9 @@ CONTAINS
 
     IF (tile%is_bare .OR. tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    oro_stddev)        ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_pond_max)    ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_skin)        ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_pond)        ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_pond_max)    ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)         ! out
     END IF
     IF (tile%is_vegetation .OR. tile%is_land) THEN
@@ -2027,8 +2027,8 @@ CONTAINS
 
     IF (tile%is_vegetation .OR. tile%is_land .OR. tile%is_bare) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)          ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)          ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond_max)      ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_pond)          ! out
     END IF
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow)       ! out

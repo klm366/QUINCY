@@ -53,8 +53,8 @@ MODULE mo_hydro_memory_class
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
       & evapotrans,           & !< Evapotranspiration independent of the type of tile                   [kg m-2 s-1]
                                 !< e.g. for the lake tile it is evapopot and for the land tile it is evapotrans_lnd.
-      & fract_pond,           & !< Fraction of tile assumed inundated at given water level              [/]
-      & fract_pond_max,       & !< Maximum fraction of tile assumed inundated at maximum water level    [/]
+      & fract_pond,           & !< Fraction of tile assumed inundated at given water level              []
+      & fract_pond_max,       & !< Maximum fraction of tile assumed inundated at maximum water level    []
       & weq_pond,             & !< Water content of pond reservoir                                      [m water equivalent]
       & weq_pond_max,         & !< Maximum water content of pond reservoir                              [m water equivalent]
       & wtr_pond,             & !< Liquid water content of pond reservoir                               [m water equivalent]
@@ -279,7 +279,7 @@ CONTAINS
 
     CALL mem%Add_var( 'fract_pond', mem%fract_pond,                                  &
       & hgrid, surface,                                                              &
-      & t_cf('fract_pond', '/', 'Inundated surface fraction'),                       &
+      & t_cf('fract_pond', '-', 'Inundated surface fraction'),                       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -293,14 +293,14 @@ CONTAINS
 
     CALL mem%Add_var( 'wtr_pond', mem%wtr_pond,                                      &
       & hgrid, surface,                                                              &
-      & t_cf('wtr_pond', 'm (water equivalent)', 'Liquid water in pond reservoir'),          &
+      & t_cf('wtr_pond', 'm (water equivalent)', 'Liquid water in pond reservoir'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'ice_pond', mem%ice_pond,                                      &
       & hgrid, surface,                                                              &
-      & t_cf('ice_pond', 'm (water equivalent)', 'Frozen water in pond reservoir'),          &
+      & t_cf('ice_pond', 'm (water equivalent)', 'Frozen water in pond reservoir'),  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
@@ -486,7 +486,7 @@ CONTAINS
 
     CALL mem%Add_var( 'fract_pond_max', mem%fract_pond_max,                               &
       & hgrid, surface,                                                                   &
-      & t_cf('fract_pond_max', '/', 'Maximum surface fraction available for inundation'), &
+      & t_cf('fract_pond_max', '-', 'Maximum surface fraction available for inundation'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
       & prefix, suffix,                                                                   &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT  )
