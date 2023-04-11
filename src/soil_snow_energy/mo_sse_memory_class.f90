@@ -110,8 +110,6 @@ CONTAINS
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
 
-    !! !$acc enter data pcreate(mem)
-
     CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
