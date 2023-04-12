@@ -721,7 +721,6 @@ CONTAINS
     DO i = 1, nc
       infilt(i)        = infilt     (i)  * rhoh2o / dtime
       infilt_over(i)   = infilt_over(i)  * rhoh2o / dtime
-      runoff_dunne(i)  = infilt_over(i)  * rhoh2o / dtime
       drainage(i)      = drainage   (i)  * rhoh2o / dtime
       drain_rock(i)    = drain_rock (i)  * rhoh2o / dtime
       drain_lat(i)     = drain_lat  (i)  * rhoh2o / dtime
@@ -731,8 +730,9 @@ CONTAINS
     !$claw acc end data
 
     ! Accumulate runoff components. Note that in the Arno Scheme saturation excess surface runoff
-    ! is already partly included and the diagnosed dunne runoff contains only part of it.
-    runoff(:) = runoff(:) + runoff_dunne(:)
+    ! is already partly included and the here diagnosed dunne runoff contains only part of it.
+    runoff_dunne(:) = infilt_over(:)
+    runoff(:)       = runoff(:) + runoff_dunne(:)
 
   END SUBROUTINE calc_soil_hydrology
 
