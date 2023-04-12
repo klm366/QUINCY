@@ -718,7 +718,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO j = 1, nsoil
         DO i = 1, nc
-          fract_org_sl(:,:) = 0._wp
+          fract_org_sl(i,j) = 0._wp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
