@@ -2354,16 +2354,20 @@ CONTAINS
     ! Formula from Stuurop 2021 (https://doi.org/10.1016/j.coldregions.2021.103456),
     ! adjusted from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
     IF (PRESENT(mpot_act)) THEN
-      IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
-        mpot_act(:,:) = mpot_sat(:,:) * (ws_rel_vol(:,:)**(-bclapp(:,:)))
-      ELSE
-        mpot_act(:,:) = mpot_sat(:,:) * (ws_rel_vol(:,:)**(-1._wp/mvgn(:,:)) - 1._wp)**(1._wp/nvgn(:,:))
-      END IF
-      WHERE (ws_rel_vol(:,:) > 0._wp)
-        mpot_act(:,:) = MAX(-100._wp, mpot_act(:,:) * ((1._wp + ck * ice_vol(:,:))**2._wp))
-      ELSEWHERE
-        mpot_act(:,:) = -100._wp
-      ENDWHERE
+      DO j = 1, nsoil
+        DO i = 1, nc
+          IF (ws_rel_vol(i,j) > 0._wp) THEN
+            IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+              mpot_act(i,j) = mpot_sat(i,j) * (ws_rel_vol(i,j)**(-bclapp(i,j)))
+            ELSE
+              mpot_act(i,j) = mpot_sat(i,j) * (ws_rel_vol(i,j)**(-1._wp/mvgn(i,j)) - 1._wp)**(1._wp/nvgn(i,j))
+            END IF
+            mpot_act(i,j) = MAX(-100._wp, mpot_act(i,j) * ((1._wp + ck * ice_vol(i,j))**2._wp))
+          ELSE
+            mpot_act(i,j) = -100._wp
+          END IF
+        END DO
+      END DO
     END IF
 
   END SUBROUTINE get_soilhyd_cond_properties
