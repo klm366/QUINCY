@@ -30,27 +30,32 @@ MODULE mo_hydro_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
-    REAL(wp)            :: &
-      & w_skin_max,        & !< Maximum water holding capacity of the soil and canopy skins, as well as
-                             !  maximum snow depth on leaves  [m water equivalent]
-      & w_soil_limit,      & !< Upper limit for maximum soil moisture content
-      & w_soil_crit_fract, & !< Fraction of field capacity at which soil starts to dry,
-                             !  i.e. at which water stress starts to be above zero
-      & w_soil_wilt_fract, & !< Fraction of field capacity at which soil is at wilting point,
-                             !  i.e. when no transpiration occurs anymore
-      & snow_depth_max       !< Limit for snow depth [m water equivalent] to avoid grid cells with
-                             !  infinitely growing snow depth; -1. for no limitation
-    CHARACTER(len=10)     :: &
-      & scheme_stom_cond          !< Scheme to use for computation of stomatal conductance (echam5 only for now)
+    REAL(wp)               :: &
+      & w_skin_max,           & !< Maximum water holding capacity of the soil and canopy skins, as well as
+                                !  maximum snow depth on leaves  [m water equivalent]
+      & w_soil_limit,         & !< Upper limit for maximum soil moisture content
+      & w_soil_crit_fract,    & !< Fraction of field capacity at which soil starts to dry,
+                                !  i.e. at which water stress starts to be above zero
+      & w_soil_wilt_fract,    & !< Fraction of field capacity at which soil is at wilting point,
+                                !  i.e. when no transpiration occurs anymore
+      & snow_depth_max,       & !< Limit for snow depth [m water equivalent] to avoid grid cells with
+                                !  infinitely growing snow depth; -1. for no limitation
+      & max_pond_depth          !< prescribed maximum surface pond depth
+
+    CHARACTER(len=10)     ::  &
+      & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               ::  &
       & enforce_water_budget, & !< stop in case of water conservation problem
       & l_organic,            & !< Use organic component of soil layers
       & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
-      & l_infil_subzero         !< Allow infiltration at soil temperatures below 0degC
-    INTEGER               :: &
-      & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
-      & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean 
+      & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
+      & l_ponds                 !< Additional surface water storage
+    INTEGER               ::  &
+      & soilhydmodel,         & !< Choice of soil hydrological model:
+                                !! 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
+      & interpol_mean           !< Interpolation scheme, to optain K & D at layer interface:
+                                !! 'upstream' (default) or 'arithmetic' mean
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -75,9 +80,10 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
+    REAL(wp)                    :: max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, soilhydmodel, interpol_mean
-    LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero
+    LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -89,12 +95,14 @@ CONTAINS
       & w_soil_crit_fract,          &
       & w_soil_wilt_fract,          &
       & snow_depth_max,             &
+      & max_pond_depth,             &
       & scheme_stom_cond,           &
       & enforce_water_budget,       &
       & l_organic,                  &
       & l_socmap,                   &
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
+      & l_ponds,                    &
       & soilhydmodel,               &
       & interpol_mean
 
@@ -120,12 +128,14 @@ CONTAINS
     w_soil_crit_fract      = 0.75_wp
     w_soil_wilt_fract      = 0.35_wp
     snow_depth_max         = -1.0_wp             ! -1: no limitation
+    max_pond_depth         = 0.1_wp              ! [m]
     scheme_stom_cond       = 'echam5'
     enforce_water_budget   = config%model_config%enforce_water_budget
     l_organic              = .TRUE.
     l_socmap               = .TRUE.
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
+    l_ponds                = .FALSE.
     soilhydmodel           = "BrooksCorey"
     interpol_mean          = "upstream"
 
@@ -178,6 +188,16 @@ CONTAINS
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
+
+    config%l_ponds = l_ponds
+    IF (l_ponds) THEN
+      CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not tested!!')
+      config%max_pond_depth = max_pond_depth
+      CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(config%max_pond_depth)))
+    ELSE
+      config%max_pond_depth = 0._wp
+      CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
+    END IF
 
     SELECT CASE(TRIM(tolower(soilhydmodel)))
     CASE("brookscorey")

@@ -704,8 +704,8 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_vgrid
     USE mo_rad_process,       ONLY: &
-      & get_surface_albedo_simple, calc_soil_albedo, calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, &
-      & calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
+      & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
+      & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation
     USE mo_jsb_time,          ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
     USE mo_jsb_control,       ONLY: jsbach_runs_standalone
@@ -762,6 +762,8 @@ CONTAINS
       & alb_nir_soil,          &
       & alb_vis_snow,          &
       & alb_nir_snow,          &
+      & alb_vis_pond,          &
+      & alb_nir_pond,          &
       & alb_background,        &
       & alb_vis_mineralsoil,   &
       & alb_nir_mineralsoil,   &
@@ -773,6 +775,9 @@ CONTAINS
       & fract_forest,          &
       & fract_snow_can,        &
       & fract_snow_soil,       &
+      & fract_pond,            &
+      & wtr_pond,              &
+      & ice_pond,              &
       & c_ag_sum_1,            &
       !CBAL & c_slow,           &
       & c_bg_sum,              &
@@ -869,6 +874,8 @@ CONTAINS
     IF (.NOT. tile%is_lake) THEN
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_lnd)           ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)           ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_pond)          ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_pond)          ! inout
     END IF
 
     ! ---------------------------
@@ -889,6 +896,9 @@ CONTAINS
     IF (tile%is_bare .OR. tile%is_vegetation) THEN
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)  ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)       ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
 
       !$claw sca forward update savepoint=ser_jsb_rad_calc_snow_albedo_1 tile_name=tile%name
@@ -902,6 +912,17 @@ CONTAINS
         & alb_vis_snow(:),     & ! inout
         & alb_nir_snow(:)      & ! inout
         & )
+
+      CALL calc_pond_albedo( &
+        & l_day(:),            & ! in
+        & cos_zenith_angle(:), & ! in
+        & t_unfilt(:),         & ! in
+        & wtr_pond(:),         & ! in
+        & ice_pond(:),         & ! in
+        & alb_vis_pond(:),     & ! inout
+        & alb_nir_pond(:)      & ! inout
+        & )
+
     END IF
 
     !> 2.0 lakes & lakes with ice
@@ -1007,8 +1028,14 @@ CONTAINS
 
       ! Merge the albedo of soil with the snow on it for the overall bare soil tile albedo
       !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_1 tile_name=tile%name
-      alb_vis_lnd(:) = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
-      alb_nir_lnd(:) = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
+      alb_vis_lnd(:) = fract_snow_soil(:)                                       * alb_vis_snow(:) &
+                   & + (1.0_wp - fract_snow_soil(:)) * fract_pond(:)            * alb_vis_pond(:) &
+                   & + (1.0_wp - fract_snow_soil(:)) * (1.0_wp - fract_pond(:)) * alb_vis_soil(:)
+
+      alb_nir_lnd(:) = fract_snow_soil(:)                                       * alb_nir_snow(:) &
+                   & + (1.0_wp - fract_snow_soil(:)) * fract_pond(:)            * alb_nir_pond(:) &
+                   & + (1.0_wp - fract_snow_soil(:)) * (1.0_wp - fract_pond(:)) * alb_nir_soil(:)
+
       !$claw end expand
 
 
@@ -1042,6 +1069,7 @@ CONTAINS
           & fract_forest(:),                        &
           & fract_snow_soil(:),                     &
           & fract_snow_can(:),                      &
+          & fract_pond(:),                          &
           & lai(:),                                 &
           & alb_background(:)                       & ! Note, alb_background <-- bc_land_phy.nc
                         )
@@ -1124,12 +1152,15 @@ CONTAINS
           & AlbedoCanopySnow,                 & ! in
           & fract_snow_soil(:),               & ! in
           & fract_snow_can(:),                & ! in
+          & fract_pond(:),                    & ! in
           & alb_vis_snow(:),                  & ! in
           & alb_nir_snow(:),                  & ! in
           & alb_vis_soil(:),                  & ! in
           & alb_nir_soil(:),                  & ! in
           & alb_vis_can(:),                   & ! in
           & alb_nir_can(:),                   & ! in
+          & alb_vis_pond(:),                  & ! in
+          & alb_nir_pond(:),                  & ! in
           & alb_vis_lnd(:),                   & ! inout
           & alb_nir_lnd(:)                    & ! inout
           & )
@@ -1211,6 +1242,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_pond,        weighted_by_fract)     
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_mineralsoil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)

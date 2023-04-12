@@ -24,7 +24,7 @@ MODULE mo_rad_process
     & calc_radiation_surface_net,  &
     & calc_par,                    &
     & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation,              &
-    & calc_soil_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
+    & calc_soil_albedo, calc_pond_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple
 
   INTERFACE Has_minimal_radiation
@@ -849,6 +849,87 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
+  ELEMENTAL SUBROUTINE calc_pond_albedo( &
+    & l_day,             & ! in
+    & cos_zenith_angle,  & ! in
+    & t,                 & ! in
+    & wtr_pond,          & ! in
+    & ice_pond,          & ! in
+    & alb_pond_vis,      & ! inout
+    & alb_pond_nir       & ! inout
+    & )
+
+    ! Declarations
+    USE mo_rad_constants,           ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax
+
+    USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
+
+    ! Arguments
+    !$claw model-data
+    LOGICAL,  INTENT(in)  :: l_day
+    REAL(wp), INTENT(in)  :: cos_zenith_angle,  & !< cosinus of zenith angle of incoming radiation
+                             t,                 &
+                             wtr_pond,          &
+                             ice_pond
+    !$claw end model-data
+
+    !$claw model-data
+    REAL(wp), INTENT(inout) ::              &
+                             alb_pond_vis,  & ! Albedo of canopy in the VIS range without snow cover.
+                             alb_pond_nir     ! Albedo of canopy in the NIR range without snow cover.
+    !$claw end model-data
+
+    ! Local variables
+
+    REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
+
+    REAL(wp)              :: alb_min,           &
+                             alb_max,           &
+                             alb_wtr_pond_vis,  &
+                             alb_wtr_pond_nir,  &
+                             alb_ice_pond_vis,  &
+                             alb_ice_pond_nir,  &
+                             fact_ice
+
+    ! ---------------------------
+    ! Go
+
+    IF (.NOT. l_day) RETURN
+
+    !!!! Albedo formulation for unfrozen ponds is taken from CLM
+    alb_wtr_pond_vis = 0.05_wp /(MAX(0.001_wp,cos_zenith_angle) + 0.15_wp)
+    alb_wtr_pond_nir = alb_pond_vis
+
+
+    ! Temperature-dependent ice albedo (taken from lake ice fomulation)
+    t_upper_limit     = tmelt - 1._wp
+    IF (t >= tmelt) THEN
+      alb_ice_pond_vis = AlbedoLakeIceMin
+    ELSE IF (t < t_upper_limit) THEN
+      alb_ice_pond_vis = AlbedoLakeIceMax
+    ELSE
+      alb_ice_pond_vis = AlbedoLakeIceMin + &
+        &      ( ((AlbedoLakeIceMax - AlbedoLakeIceMin) / (tmelt - t_upper_limit)) &  ! Change of snow albedo per deg C
+        &        * (tmelt - t))
+    END IF
+    ! Albedo nir from CLM
+    alb_ice_pond_nir = 0.4_wp
+
+    ! Agregation of albedo of ice and wtr under the assumption that ice is predominantly
+    ! near the surfce hence has a stronger influence on albedo
+    IF (ice_pond > 0._wp) THEN
+      fact_ice     = MAX(0._wp, MIN(1._wp, 1._wp - (wtr_pond/(wtr_pond+ice_pond))**2._wp))
+      alb_pond_vis = fact_ice * alb_ice_pond_vis + (1.0_wp - fact_ice) * alb_wtr_pond_vis
+      alb_pond_nir = fact_ice * alb_ice_pond_nir + (1.0_wp - fact_ice) * alb_wtr_pond_nir
+    ELSE
+      alb_pond_vis = alb_wtr_pond_vis
+      alb_pond_nir = alb_wtr_pond_nir
+    END IF
+
+  END SUBROUTINE calc_pond_albedo
+  !
+  !--------------------------------------------------------------------------------------------------------------------------------
+  !
   ELEMENTAL SUBROUTINE calc_sky_view_fractions( &
     & l_day,              & ! in
     & lai,                & ! in
@@ -904,12 +985,15 @@ CONTAINS
     & AlbedoCanopySnow,    & ! in
     & fract_snow_soil,     & ! in
     & fract_snow_can,      & ! in
+    & fract_pond,          & ! in
     & alb_vis_snow,        & ! in
     & alb_nir_snow,        & ! in
     & alb_vis_soil,        & ! in
     & alb_nir_soil,        & ! in
     & alb_vis_can,         & ! in
     & alb_nir_can,         & ! in
+    & alb_pond_vis,        & ! in
+    & alb_pond_nir,        & ! in
     & alb_vis,             & ! inout
     & alb_nir              & ! inout
     & )
@@ -919,25 +1003,28 @@ CONTAINS
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
     !$claw end model-data
     LOGICAL,  INTENT(in) :: l_forest
-    
+
     !$claw model-data
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
       sky_view_fract_stem
     !$claw end model-data
     REAL(wp), INTENT(in) :: &
-      AlbedoCanopySnow    
+      AlbedoCanopySnow
     !$claw model-data
     REAL(wp), INTENT(in) :: &
       fract_snow_soil,      & ! Snow covered area fraction of soil
       fract_snow_can,       & ! Fraction of snow covered canopy (forest)
+      fract_pond,           & ! Fraction of ponds
       alb_vis_snow,         & ! Note, this snow albedo is used only for snow on soil.
                               ! The albedo for snow on canopy (AlbedoCanopySnow) is not the same.
       alb_nir_snow,         & ! See comment above
       alb_vis_soil,         &
       alb_nir_soil,         &
       alb_vis_can,          & ! Albedo of canopy in the VIS range without snow cover.
-      alb_nir_can             ! Albedo of canopy in the NIR range without snow cover.
+      alb_nir_can,          & ! Albedo of canopy in the NIR range without snow cover.
+      alb_pond_vis,         & ! Albedo of ponds in the VIS range without snow cover.
+      alb_pond_nir            ! Albedo of ponds in the NIR range without snow cover.
 
     REAL(wp), INTENT(inout) :: &
       & alb_vis, &
@@ -948,7 +1035,9 @@ CONTAINS
     REAL(wp) :: &
       & alb_vis_nostems, & ! albedo vis of surface without considering the snow cover
                            ! when it is assumed that no stems (but only the canopy) cover the soil
-      & alb_nir_nostems
+      & alb_nir_nostems, &
+      & alb_vis_grnd,    &
+      & alb_nir_grnd
 
     !$claw sca
     ! ---------------------------
@@ -956,21 +1045,26 @@ CONTAINS
 
     IF (.NOT. l_day) RETURN
 
-    alb_vis_nostems = (1.0_wp - sky_view_fract) * alb_vis_can + sky_view_fract * alb_vis_soil
-    alb_nir_nostems = (1.0_wp - sky_view_fract) * alb_nir_can + sky_view_fract * alb_nir_soil
+    alb_vis_grnd    = fract_pond           * alb_pond_vis &
+                    + (1._wp - fract_pond) * alb_vis_soil
+    alb_nir_grnd    = fract_pond           * alb_pond_nir &
+                    + (1._wp - fract_pond) * alb_nir_soil
+
+    alb_vis_nostems = (1.0_wp - sky_view_fract) * alb_vis_can + sky_view_fract * alb_vis_grnd
+    alb_nir_nostems = (1.0_wp - sky_view_fract) * alb_nir_can + sky_view_fract * alb_nir_grnd
 
     ! albedo of forests = weighted mean of albedo of ground below canopy and albedo of canopy
     IF (l_forest) THEN
       alb_vis = MAX( &
           ! Albedo of the (snow covered and uncoverd) visible soil:
         & (sky_view_fract - sky_view_fract_stem)                                                  &
-        &   * (fract_snow_soil * alb_vis_snow        + (1.0_wp - fract_snow_soil) * alb_vis_soil) &
+        &   * (fract_snow_soil * alb_vis_snow        + (1.0_wp - fract_snow_soil) * alb_vis_grnd) &
         & +                                                                                       &
           ! Albedo of the visible canopy (snow covered and uncoverd) but only stems:
-          ! alb_vis_soil represents here the stem albedo (consistent with the input datasets
+          ! alb_vis_grnd represents here the stem albedo (consistent with the input datasets
           ! where the albedo soil represents the ground albedo for LAI=0 which includes stems)
         & sky_view_fract_stem                                                                     &
-        &   * (fract_snow_can * AlbedoCanopySnow     + (1.0_wp - fract_snow_can) * alb_vis_soil)  &
+        &   * (fract_snow_can * AlbedoCanopySnow     + (1.0_wp - fract_snow_can) * alb_vis_grnd)  &
         & +                                                                                       &
           ! Albedo of the visible canopy (snow covered and uncoverd) without stems:
         & (1.0_wp - sky_view_fract)                                                               &
@@ -982,11 +1076,11 @@ CONTAINS
       alb_nir =  MAX( &
           ! Albedo of the (snow covered and uncoverd) visible soil:
         & (sky_view_fract - sky_view_fract_stem)                                                   &
-        &   * (fract_snow_soil * alb_nir_snow        +  (1.0_wp - fract_snow_soil) * alb_nir_soil) &
+        &   * (fract_snow_soil * alb_nir_snow        +  (1.0_wp - fract_snow_soil) * alb_nir_grnd) &
         & +                                                                                        &
           ! Albedo of the visible canopy (snow covered and uncoverd) but only stems:
         & sky_view_fract_stem                                                                      &
-        &   * (fract_snow_can * AlbedoCanopySnow     +  (1.0_wp - fract_snow_can) * alb_nir_soil)  &
+        &   * (fract_snow_can * AlbedoCanopySnow     +  (1.0_wp - fract_snow_can) * alb_nir_grnd)  &
         & +                                                                                        &
           ! Albedo of the visible canopy (snow covered and uncoverd) without stems:
         & (1.0_wp - sky_view_fract)                                                                &
@@ -1015,6 +1109,7 @@ CONTAINS
     & fract_forest,      &
     & grnd_snow_fract,   & ! R: fract_snow_soil umbenannt, da grnd_snow_fract nicht unbedingt dasselbe sein muss...
     & fract_snow_can,    &
+    & fract_pond,        &
     & lai,               &
     & alb_background     &
     & )
@@ -1022,7 +1117,8 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! Use declarations
     USE mo_jsb_physical_constants,  ONLY: tmelt
-    USE mo_rad_constants,           ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple
+    USE mo_rad_constants,           ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple, &
+      &                                   AlbedoLakeWater, AlbedoLakeIceMin
 
     ! Arguments
     REAL(wp), INTENT(in) ::                  &
@@ -1030,6 +1126,7 @@ CONTAINS
                             fract_forest,    &
                             grnd_snow_fract, &
                             fract_snow_can,  &
+                            fract_pond,      &
                             lai,             &
                             alb_background
 
@@ -1040,7 +1137,8 @@ CONTAINS
                             albedo_snow_grnd,     &  ! Albedo of snow on ground
                             min_temp_snow_albedo, &  ! Temperature below which albedo of snow is at maximum
                             albedo_grnd,          &  ! Albedo on ground
-                            albedo_can               ! Albedo on canopy
+                            albedo_can,           &  ! Albedo on canopy
+                            albedo_pond              ! Albedo of ponds
 
 
     !$claw sca routine
@@ -1052,15 +1150,21 @@ CONTAINS
 
     IF (t_srf >= tmelt) THEN
       albedo_snow_grnd = AlbedoSnowMin_simple
+      albedo_pond      = AlbedoLakeWater
     ELSE IF (t_srf < min_temp_snow_albedo) THEN
       albedo_snow_grnd = AlbedoSnowMax_simple
+      albedo_pond      = AlbedoLakeIceMin
     ELSE
       albedo_snow_grnd = AlbedoSnowMin_simple &
                          + (tmelt - t_srf) * (AlbedoSnowMax_simple - AlbedoSnowMin_simple) / (tmelt - min_temp_snow_albedo)
+      albedo_pond      = AlbedoLakeIceMin &
+                         - (tmelt - t_srf) * (AlbedoLakeIceMin - AlbedoLakeWater) / (tmelt - min_temp_snow_albedo)
     END IF
 
     ! Calclulate albedo of ground incl. snowcover
-    albedo_grnd = grnd_snow_fract * albedo_snow_grnd + (1._wp - grnd_snow_fract) * alb_background
+    albedo_grnd = grnd_snow_fract                                   * albedo_snow_grnd &
+                + (1._wp - grnd_snow_fract) * fract_pond            * albedo_pond      &
+                + (1._wp - grnd_snow_fract) * (1.0_wp - fract_pond) * alb_background
 
     ! Calculate albedo_can incl. snowcover
     albedo_can = fract_snow_can * AlbedoCanopySnow_simple + (1._wp - fract_snow_can) * alb_background

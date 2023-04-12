@@ -269,7 +269,8 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "snowmelt_correction"
-  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting
+  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting,
+  !! surface water freezing and thawing and soil moisture freezing and thawing.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     config  Vector of process configurations.
@@ -293,6 +294,8 @@ CONTAINS
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
     dsl4jsb_Real2D_onChunk :: snowmelt
+    dsl4jsb_Real2D_onChunk :: pond_freeze
+    dsl4jsb_Real2D_onChunk :: pond_melt
     dsl4jsb_Real2D_onChunk :: hcap_grnd_old
     dsl4jsb_Real3D_onChunk :: snow_depth_sl
     dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
@@ -342,6 +345,9 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)      ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)        ! in
+
       dsl4jsb_Get_var2D_onChunk(SSE_,      hcap_grnd_old)    ! in
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN
         dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
@@ -353,9 +359,11 @@ CONTAINS
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
         !$claw acc data create(heat_cap)
 
-        ! Correction for snowmelt
+        ! Correction for snowmelt and pond melting/freezing
         !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_0 tile_name=tile%name
-        t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:)
+        t_unfilt(:) = t_unfilt(:) - snowmelt(:)    * dtime * alf / hcap_grnd_old(:)
+        t_unfilt(:) = t_unfilt(:) - pond_melt(:)   * dtime * alf / hcap_grnd_old(:)
+        t_unfilt(:) = t_unfilt(:) + pond_freeze(:) * dtime * alf / hcap_grnd_old(:)
 
         IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
           !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_1 tile_name=tile%name
@@ -386,8 +394,6 @@ CONTAINS
         END IF
         !$claw acc end data
       END IF
-
-      
 
     ELSE
 
