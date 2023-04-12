@@ -861,7 +861,7 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
       DO jl=1,nidx
         DO jk=1,nsnow
-          t_snow(:,:) = 0._wp
+          t_snow(jl,jk) = 0._wp
         END DO
       END DO
       !$ACC END PARALLEL LOOP
