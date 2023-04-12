@@ -1027,7 +1027,7 @@ CONTAINS
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
     !$claw end model-data
     LOGICAL,  INTENT(in) :: l_forest
-    
+
     !$claw model-data
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
