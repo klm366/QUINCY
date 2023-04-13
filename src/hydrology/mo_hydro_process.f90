@@ -630,7 +630,7 @@ CONTAINS
     REAL(wp) ::                     &
       & weq_wsat_sl(nc,nsoil),      & !< soil water (liquid + ice) content at saturation [m]
       & weq_field_cap_sl(nc,nsoil), & !< soil water (liquid + ice) content at field capacity [m]
-      & weq_p_wilt_sl(nc,nsoil)       !< soil water (liquid + ice) content at wilting point [m] 
+      & weq_p_wilt_sl(nc,nsoil)       !< soil water (liquid + ice) content at wilting point [m]
 
     REAL(wp) ::              &
       & hlp_2d(nc,nsoil)       ! helper array needed with openacc
@@ -2067,7 +2067,7 @@ CONTAINS
   INTEGER, INTENT(in) :: n                          ! number of active soil levels
   REAL(wp), Intent(in):: dt, alpha,            &    ! time step
                        & top_bound, bot_bound, &    ! fluxes at upper and lower boundary
-                       & dzf(n),               &    ! soil layer thickness 
+                       & dzf(n),               &    ! soil layer thickness
                        & C(n),                 &    ! heat capacity if used for heat transport,
                                                     ! set to 1 for water transport
                        & S(n),                 &    ! prescribed water/heat change flux per layer

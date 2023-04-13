@@ -45,7 +45,7 @@ MODULE mo_mix_interface
   dsl4jsb_Use_memory(HYDRO_)
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
+  ! Module variables
 
   IMPLICIT NONE
   PRIVATE
@@ -251,7 +251,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: drain_lat_sl
 
     dsl4jsb_Real2D_onChunk :: wtr_latflow
-    dsl4jsb_Real2D_onChunk :: fract_pond
     dsl4jsb_Real2D_onChunk :: weq_pond_max
     dsl4jsb_Real2D_onChunk :: weq_pond
     dsl4jsb_Real2D_onChunk :: wtr_pond
@@ -328,7 +327,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl) ! inout
-      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond_max)
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)
       dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)
@@ -449,7 +447,7 @@ CONTAINS
                 & target_fract(:),               & !< in
                 & wtr_soil_fc_sl(:,i),           & !< in
                 & wtr_soil_fc_sl_sibl_tile(:,i), & !< in
-                & drain_lat_sl(:,i),              & !< inout
+                & drain_lat_sl(:,i),             & !< inout
                 & drainage(:),                   & !< inout
                 & wtr_latflow(:),                & !< inout
                 & wtr_latflow_sibl_tile(:),      & !< inout
@@ -549,13 +547,6 @@ CONTAINS
 
       weq_pond(:) = dsl4jsb_var2D_onChunk (HYDRO_, ice_pond) + wtr_pond(:)
 
-      DO i = 1, nc
-        IF (weq_pond_max(i) > 1.E-20_wp .AND. weq_pond(i) > 1.E-20_wp) THEN
-          fract_pond(i) = MIN(1._wp, (weq_pond(i) / weq_pond_max(i))**0.5_wp)
-        ELSE
-          fract_pond(i) = 0._wp
-        END IF
-      END DO
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
