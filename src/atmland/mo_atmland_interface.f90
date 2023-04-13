@@ -493,7 +493,7 @@ CONTAINS
     & evapotrans, latent_hflx, sensible_hflx, grnd_hflx, grnd_hcap,                  &
     & rough_h_srf, rough_m_srf, q_snocpymlt,                                         &
     & alb_vis_dir, alb_nir_dir, alb_vis_dif, alb_nir_dif,                            &
-    & kh, km, CO2_flux,                                                              &
+    & kh, km, kh_neutral, km_neutral, CO2_flux,                                      &
     & t_lwtr, t_lice, qsat_lwtr, qsat_lice, s_lwtr, s_lice,                          &
     & evapo_wtr, latent_hflx_wtr, sensible_hflx_wtr,                                 &
     & evapo_ice, latent_hflx_ice, sensible_hflx_ice,                                 &
@@ -515,7 +515,7 @@ CONTAINS
       & alb_vis_dir_wtr(:), alb_vis_dif_wtr(:), alb_nir_dir_wtr(:),                  &
       & alb_nir_dif_wtr(:), albedo_lwtr(:), albedo_lice(:),                          &
       & alb_vis_dir(:), alb_nir_dir(:), alb_vis_dif(:), alb_nir_dif(:),              &
-      & CO2_flux(:), kh(:), km(:)
+      & CO2_flux(:), kh(:), km(:), kh_neutral(:), km_neutral(:)
 
     dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
@@ -555,6 +555,8 @@ CONTAINS
       & alb_nir_lnd_ptr, &
       & kh_ptr, &
       & km_ptr, &
+      & kh_neutral_ptr, &
+      & km_neutral_ptr, &
       & co2flux_npp_2_atm_ta_ptr, &
       & co2flux_soilresp_2_atm_ta_ptr, &
       & co2flux_herb_2_atm_ta_ptr, &
@@ -920,12 +922,30 @@ CONTAINS
       END DO
       !$acc end data
     END IF
-    IF (PRESENT(kh)) THEN
+    IF (PRESENT(km)) THEN
       km_ptr => dsl4jsb_var2D_onChunk(TURB_, km)
       !$acc data present(km, km_ptr)
       !$acc parallel loop
       DO i=1,nc
         km(i) = km_ptr(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(kh_neutral)) THEN
+      kh_neutral_ptr => dsl4jsb_var2D_onChunk(TURB_, kh_neutral)
+      !$acc data present(kh_neutral, kh_neutral_ptr)
+      !$acc parallel loop
+      DO i=1,nc
+        kh_neutral(i) = kh_neutral_ptr(i)
+      END DO
+      !$acc end data
+    END IF
+    IF (PRESENT(km_neutral)) THEN
+      km_neutral_ptr => dsl4jsb_var2D_onChunk(TURB_, km_neutral)
+      !$acc data present(km_neutral, km_neutral_ptr)
+      !$acc parallel loop
+      DO i=1,nc
+        km_neutral(i) = km_neutral_ptr(i)
       END DO
       !$acc end data
     END IF

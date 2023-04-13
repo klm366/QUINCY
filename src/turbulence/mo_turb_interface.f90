@@ -203,6 +203,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_lice
     dsl4jsb_Real2D_onChunk :: kh
     dsl4jsb_Real2D_onChunk :: km
+    dsl4jsb_Real2D_onChunk :: kh_neutral
+    dsl4jsb_Real2D_onChunk :: km_neutral
     dsl4jsb_Real2D_onChunk :: ch
 
     ! Local variables
@@ -248,6 +250,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  rough_m)         ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  kh)              ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  km)              ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  kh_neutral)      ! out
+    dsl4jsb_Get_var2D_onChunk(TURB_,  km_neutral)      ! out
     dsl4jsb_Get_var2D_onChunk(TURB_,  ch)              ! out
 
     pot_temperature_srf(:) = potential_temperature(t_unfilt(:), press_srf(:))
@@ -263,7 +267,7 @@ CONTAINS
     CALL exchange_coefficients( &
       & dz_srf(:),                                                 &
       & q_air(:), pot_temperature_air(:), wind_air(:), rough_m(:), pot_temperature_srf(:), qsat_srf(:), &
-      & km(:), kh(:)                                              &
+      & km(:), kh(:), km_neutral(:), kh_neutral(:)                                                      &
       &)
     ! km = MIN(km,0.1_wp)
     ! kh = MIN(kh,0.1_wp)
@@ -313,9 +317,11 @@ CONTAINS
 
     dsl4jsb_Get_memory(TURB_)
 
-    dsl4jsb_Aggregate_onChunk(TURB_, kh,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB_, km,   weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(TURB_, ch,   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, kh,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, km,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, kh_neutral, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, km_neutral, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(TURB_, ch,         weighted_by_fract)
 
   END SUBROUTINE aggregate_exchange_coefficients
 

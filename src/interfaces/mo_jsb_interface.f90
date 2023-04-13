@@ -381,7 +381,9 @@ CONTAINS
     & alb_vis_dif,      &
     & alb_nir_dif,      &
     & kh,               &
-    & km                &
+    & km,               &
+    & kh_neutral,       &
+    & km_neutral        &
     ! & qsat_srf,         &
     ! & s_srf,            &
     & )
@@ -439,7 +441,9 @@ CONTAINS
       & alb_vis_dif       (:), &
       & alb_nir_dif       (:), &
       & kh                (:), &
-      & km                (:)
+      & km                (:), &
+      & kh_neutral        (:), &
+      & km_neutral        (:)
       ! & qsat_srf          (:), &
       ! & s_srf             (:), &
 
@@ -520,7 +524,9 @@ CONTAINS
       & alb_vis_dif        = alb_vis_dif,        &
       & alb_nir_dif        = alb_nir_dif,        &
       & kh                 = kh,                 &
-      & km                 = km                  &
+      & km                 = km,                 &
+      & kh_neutral         = kh_neutral,         &
+      & km_neutral         = km_neutral          &
       ! & qsat_srf           = qsat_srf,           &
       ! & s_srf              = s_srf               &
       & )

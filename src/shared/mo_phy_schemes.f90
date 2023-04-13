@@ -30,7 +30,7 @@ MODULE mo_phy_schemes
     PURE SUBROUTINE i_exchange_coefficients_procedure(           &
       & dz,                                                 &
       & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
-      & km, kh                                              &
+      & km, kh, km_neutral, kh_neutral                      &
       & )
       IMPORT :: wp
 
@@ -44,8 +44,10 @@ MODULE mo_phy_schemes
         qsat_sfc
         !
       REAL(wp), INTENT(out) :: &
-        kh,      &
-        km
+        km,         &
+        kh,         &
+        km_neutral, &
+        kh_neutral
 
     END SUBROUTINE
   END INTERFACE
@@ -67,7 +69,7 @@ CONTAINS
   SUBROUTINE exchange_coefficients(                         &
     & dz,                                                 &
     & pqm1, thetam1, mwind, rough_m, theta_sfc, qsat_sfc, &
-    & km, kh                                              &
+    & km, kh, km_neutral, kh_neutral                      &
     & )
 
     REAL(wp), DIMENSION(:), INTENT(in) :: &
@@ -80,8 +82,10 @@ CONTAINS
       qsat_sfc
       !
     REAL(wp), DIMENSION(:), INTENT(out) :: &
-      kh,      &
-      km
+      km,         &
+      kh,         &
+      km_neutral, &
+      kh_neutral
 
     INTEGER :: ic
 
@@ -89,7 +93,7 @@ CONTAINS
       CALL registered_exchange_coefficients_procedure(          &
         & dz(ic),                                                 &
         & pqm1(ic), thetam1(ic), mwind(ic), rough_m(ic), theta_sfc(ic), qsat_sfc(ic), &
-        & km(ic), kh(ic)                                              &
+        & km(ic), kh(ic), km_neutral(ic), kh_neutral(ic)                              &
         & )
     END DO
 
