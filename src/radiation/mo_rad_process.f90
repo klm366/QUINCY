@@ -870,7 +870,7 @@ CONTAINS
     REAL(wp), INTENT(in)  :: cos_zenith_angle,  & !< cosinus of zenith angle of incoming radiation
                              t,                 &
                              wtr_pond,          &
-                             ice_pond           
+                             ice_pond
     !$claw end model-data
 
     !$claw model-data
@@ -890,19 +890,19 @@ CONTAINS
                              alb_ice_pond_vis,  &
                              alb_ice_pond_nir,  &
                              fact_ice
-    
+
     ! ---------------------------
     ! Go
 
     IF (.NOT. l_day) RETURN
-    
-    !!!! Albedo formulation for unfrozen ponds is taken from CLM   
+
+    !!!! Albedo formulation for unfrozen ponds is taken from CLM
     alb_wtr_pond_vis = 0.05_wp /(MAX(0.001_wp,cos_zenith_angle) + 0.15_wp)
     alb_wtr_pond_nir = alb_pond_vis
 
 
     ! Temperature-dependent ice albedo (taken from lake ice fomulation)
-    t_upper_limit     = tmelt - 1._wp     
+    t_upper_limit     = tmelt - 1._wp
     IF (t >= tmelt) THEN
       alb_ice_pond_vis = AlbedoLakeIceMin
     ELSE IF (t < t_upper_limit) THEN
@@ -916,15 +916,15 @@ CONTAINS
     alb_ice_pond_nir = 0.4_wp
 
     ! Agregation of albedo of ice and wtr under the assumption that ice is predominantly
-    ! near the surfce hence has a stronger influence on albedo   
+    ! near the surfce hence has a stronger influence on albedo
     IF (ice_pond > 0._wp) THEN
-      fact_ice     = MAX(0._wp, MIN(1._wp, 1._wp - (wtr_pond/(wtr_pond+ice_pond))**2._wp)) 
+      fact_ice     = MAX(0._wp, MIN(1._wp, 1._wp - (wtr_pond/(wtr_pond+ice_pond))**2._wp))
       alb_pond_vis = fact_ice * alb_ice_pond_vis + (1.0_wp - fact_ice) * alb_wtr_pond_vis
       alb_pond_nir = fact_ice * alb_ice_pond_nir + (1.0_wp - fact_ice) * alb_wtr_pond_nir
     ELSE
       alb_pond_vis = alb_wtr_pond_vis
       alb_pond_nir = alb_wtr_pond_nir
-    END IF  
+    END IF
 
   END SUBROUTINE calc_pond_albedo
   !
@@ -1003,14 +1003,14 @@ CONTAINS
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
     !$claw end model-data
     LOGICAL,  INTENT(in) :: l_forest
-    
+
     !$claw model-data
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
       sky_view_fract_stem
     !$claw end model-data
     REAL(wp), INTENT(in) :: &
-      AlbedoCanopySnow    
+      AlbedoCanopySnow
     !$claw model-data
     REAL(wp), INTENT(in) :: &
       fract_snow_soil,      & ! Snow covered area fraction of soil
@@ -1117,7 +1117,8 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! Use declarations
     USE mo_jsb_physical_constants,  ONLY: tmelt
-    USE mo_rad_constants,           ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple
+    USE mo_rad_constants,           ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple, &
+      &                                   AlbedoLakeWater, AlbedoLakeIceMin
 
     ! Arguments
     REAL(wp), INTENT(in) ::                  &
@@ -1149,15 +1150,15 @@ CONTAINS
 
     IF (t_srf >= tmelt) THEN
       albedo_snow_grnd = AlbedoSnowMin_simple
-      albedo_pond      = 0.07_wp
+      albedo_pond      = AlbedoLakeWater
     ELSE IF (t_srf < min_temp_snow_albedo) THEN
       albedo_snow_grnd = AlbedoSnowMax_simple
-      albedo_pond      = 0.6_wp
+      albedo_pond      = AlbedoLakeIceMin
     ELSE
       albedo_snow_grnd = AlbedoSnowMin_simple &
                          + (tmelt - t_srf) * (AlbedoSnowMax_simple - AlbedoSnowMin_simple) / (tmelt - min_temp_snow_albedo)
-      albedo_pond      = 0.6_wp &
-                         - (tmelt - t_srf) * (0.6_wp - 0.07_wp) / (tmelt - min_temp_snow_albedo)
+      albedo_pond      = AlbedoLakeIceMin &
+                         - (tmelt - t_srf) * (AlbedoLakeIceMin - AlbedoLakeWater) / (tmelt - min_temp_snow_albedo)
     END IF
 
     ! Calclulate albedo of ground incl. snowcover

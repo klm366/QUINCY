@@ -154,7 +154,7 @@ CONTAINS
       & wtr_pond_outflow(nc),     & !< pond outflow [m]
       & wtr_pond_overflow(nc),    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
       & weq_pond(nc),             & !< total pond water storage (liquid + ice) [m]
-      & pond_change_pot(nc),      & !< ??
+      & pond_change_pot(nc),      & !< amount of water that could potentially be frozen or thawed [m]
       & pond_flowlag(nc)            !< Lateral water flow lag for ponds [timesteps]
 
     !
@@ -165,7 +165,7 @@ CONTAINS
     REAL(wp), PARAMETER :: zc3=1.56E5_wp       ! [m]
 
     ! These parameters are used for lateral pond flow in the WEED scheme and could
-    ! be become part of the namelist if needed
+    ! become part of the namelist if needed
     REAL(wp), PARAMETER :: baselag = 200.0_wp * 86400.0 !< Baselag for lateral outflow [s]
 
     !$claw sca
@@ -383,7 +383,8 @@ CONTAINS
     ELSE IF (runoff_scheme == Arno_) THEN
       ! Lateral water flows from ponds are connected to the choice of the surface runoff
       ! and infiltration scheme. The following pond flow scheme is based on the WEED
-      ! scheme (cite) and designed to work with the ARNO runoff scheme.
+      ! scheme (see https://doi.org/10.5194/tc-15-1097-2021) and is modified to work
+      ! with the ARNO runoff scheme.
 
       ! Compute pond outflow lag based on a base lag of 200 days and the relative steepness
       ! These parameters could become part of the namelist if needed
@@ -579,9 +580,9 @@ CONTAINS
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
-    & evapotrans_soil, transpiration,                                    &
+    & fract_pond_max, evapotrans_soil, transpiration,                                    &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow,                  &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow,                  &
     & evapo_deficit, &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, runoff_dunne, drainage, &
@@ -595,7 +596,7 @@ CONTAINS
       & nc, nsoil
     INTEGER, INTENT(in) :: &
       & soilhydmodel, interpol_mean
-    REAL(wp), INTENT(in) ::                             &
+    REAL(wp), INTENT(in) :: &
       & dtime, w_soil_wilt_fract
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
@@ -605,9 +606,9 @@ CONTAINS
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
       & lat, lon,                                       &
-      & evapotrans_soil, transpiration
+      & fract_pond_max, evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff, evapo_deficit
+      & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) ::      &
@@ -712,6 +713,13 @@ CONTAINS
     ! Aggregate or distribute the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
     drainage(:)  = drainage(:) + drain_rock(:) + drain_lat(:)
+    WHERE (fract_pond_max(:) > EPSILON(1._wp))
+      ! Infiltration overflow goes into ponds water storage
+      wtr_pond(:) = wtr_pond(:) + infilt_over(:)
+    ELSEWHERE
+      ! Infitration overflow goes into surface runoff
+      runoff(:)    = runoff(:) + infilt_over(:)
+    END WHERE
 
     ! recalculate soil moisture from the soil moisture of the individual levels
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
@@ -725,6 +733,7 @@ CONTAINS
       drain_rock(i)    = drain_rock (i)  * rhoh2o / dtime
       drain_lat(i)     = drain_lat  (i)  * rhoh2o / dtime
       drain_lat_sl(i,:) = drain_lat_sl(i,:) * rhoh2o / dtime  ! Only temporary!
+      evapo_deficit(i) = evapo_deficit(i) * rhoh2o / dtime
     END DO
     !$claw acc end data
     !$claw acc end data

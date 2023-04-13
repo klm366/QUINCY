@@ -30,23 +30,23 @@ MODULE mo_hydro_config_class
 
   TYPE, EXTENDS(t_jsb_config) :: t_hydro_config
     CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation and oro_stddev
-    REAL(wp)            :: &
-      & w_skin_max,        & !< Maximum water holding capacity of the soil and canopy skins, as well as
-                             !  maximum snow depth on leaves  [m water equivalent]
-      & w_soil_limit,      & !< Upper limit for maximum soil moisture content
-      & w_soil_crit_fract, & !< Fraction of field capacity at which soil starts to dry,
-                             !  i.e. at which water stress starts to be above zero
-      & w_soil_wilt_fract, & !< Fraction of field capacity at which soil is at wilting point,
-                             !  i.e. when no transpiration occurs anymore
-      & snow_depth_max,    & !< Limit for snow depth [m water equivalent] to avoid grid cells with
-                             !  infinitely growing snow depth; -1. for no limitation
-      & manning_n,         & ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture,
-                             ! 0.05 -> floodplains - light brush, 0.075 -> floodplains - heavy brush, 0.15 -> floodplains - trees
-      & dt_sat,            & !< Time required for hydraulic conductivity to reach max [sec]
-      & max_slope,         & !< maximum slope considered for infiltration/runoff estimation
-      & max_pond_depth       !< prescribed maximum surface pond depth --> should later be computed dynamically
+    REAL(wp)               :: &
+      & w_skin_max,           & !< Maximum water holding capacity of the soil and canopy skins, as well as
+                                !  maximum snow depth on leaves  [m water equivalent]
+      & w_soil_limit,         & !< Upper limit for maximum soil moisture content
+      & w_soil_crit_fract,    & !< Fraction of field capacity at which soil starts to dry,
+                                !  i.e. at which water stress starts to be above zero
+      & w_soil_wilt_fract,    & !< Fraction of field capacity at which soil is at wilting point,
+                                !  i.e. when no transpiration occurs anymore
+      & snow_depth_max,       & !< Limit for snow depth [m water equivalent] to avoid grid cells with
+                                !  infinitely growing snow depth; -1. for no limitation
+      & manning_n,            & ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture,
+                                ! 0.05 -> floodplains - light brush, 0.075 -> floodplains - heavy brush, 0.15 -> floodplains - trees
+      & dt_sat,               & !< Time required for hydraulic conductivity to reach max [sec]
+      & max_slope,            & !< maximum slope considered for infiltration/runoff estimation
+      & max_pond_depth          !< prescribed maximum surface pond depth
 
-    CHARACTER(len=10)     :: &
+    CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
     LOGICAL               ::  &
       & enforce_water_budget, & !< stop in case of water conservation problem
@@ -54,11 +54,11 @@ MODULE mo_hydro_config_class
       & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
-      & l_ponds                !< Additional surface water storage
-    INTEGER               :: &
-      & runoff_scheme,       & !< Choice of runoff and infiltration scheme: 'ARNO' (default), 'QArctic' (only with hydrotiles)
-      & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
-      & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean
+      & l_ponds                 !< Additional surface water storage
+    INTEGER               ::  &
+      & runoff_scheme,        & !< Choice of runoff and infiltration scheme: 'ARNO' (default), 'QArctic' (only with hydrotiles)
+      & soilhydmodel,         & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
+      & interpol_mean           !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -217,10 +217,11 @@ CONTAINS
     IF (l_ponds) THEN
       CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not tested!!')
       config%max_pond_depth = max_pond_depth
+      CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(config%max_pond_depth)))
     ELSE
       config%max_pond_depth = 0._wp
+      CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
     END IF
-    CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(config%max_pond_depth)))
 
     SELECT CASE(TRIM(tolower(runoff_scheme)))
     CASE("arno")
