@@ -90,8 +90,8 @@ CONTAINS
       & t_cf('wtr_latflow', 'kg m-2 s-1', 'Lateral water flow between tiles'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp )
+      & output_level=BASIC,                                                          &
+      & lrestart=.FALSE., initval_r=0.0_wp )
 
   END SUBROUTINE Init_mix_memory
 
