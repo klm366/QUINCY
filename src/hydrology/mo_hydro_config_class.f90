@@ -155,6 +155,12 @@ CONTAINS
     nml_unit = position_nml('jsb_hydro_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_hydro_nml)
 
+    IF (TRIM(config%model_config%usecase) == 'jsbach_qarctic') THEN
+      ! Q-Arctic use case needs different defaults for some hydro parameters
+      l_ponds              = .TRUE.
+      runoff_scheme        = 'QArctic'
+    ENDIF
+
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
