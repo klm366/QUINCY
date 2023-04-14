@@ -43,7 +43,7 @@ MODULE mo_jsb4_forcing
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc2, rdv
-  USE mo_jsb_physical_constants, ONLY: cvdifts, grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
+  USE mo_jsb_physical_constants, ONLY: grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
     & tmelt, rd, amco2, amd, cpd, rvd1, cpvd1, ckap, zkappa
   USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_orbit_solar,            ONLY: inquire_declination
@@ -1625,7 +1625,7 @@ CONTAINS
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
     zcons9 = 3._wp * cb
     zcons11 = 3._wp * cb * cc
-    zcons12 = cvdifts * time_step_len * grav / rd
+    zcons12 = time_step_len * grav / rd
 
     ! Initializations needed for grid cells beyond icz
     drag_srf(:,:) = 0._wp

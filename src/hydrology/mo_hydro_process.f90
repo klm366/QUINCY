@@ -70,10 +70,10 @@ CONTAINS
   !! @param [out]    snow_accum            snow budget change within time step [m water equivalent]
   !! @param [out]    snowmelt_soil         snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
   !! @param [out]    evapotrans_soil       evapotranspiration from soil w/o skin and snow reservoirs [kg m-2 s-1]
-  !! @param [out]    evapo_skin             evaporation from skin reservoir [kg m-2 s-1]
-  !! @param [out]    evapo_snow             evaporation from snow [kg m-2 s-1]
+  !! @param [out]    evapo_skin            evaporation from skin reservoir [kg m-2 s-1]
+  !! @param [out]    evapo_snow            evaporation from snow [kg m-2 s-1]
   !! @param [out]    water_to_soil         Water available for infiltration into the soil [m water equivalent]
-  !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
+  !! @param [out]    evapo_deficit         amount of evaporation extracted from different storage then intented [m]
   !
   SUBROUTINE calc_surface_hydrology_land (                          &
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
@@ -89,7 +89,6 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
     USE mo_sse_constants,          ONLY: snow_depth_min
-    USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
     INTEGER,  INTENT(in) :: nc
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
@@ -299,8 +298,8 @@ CONTAINS
     snowmelt_soil(:)   = snowmelt_soil(:) * rhoh2o / dtime
 
     evapotrans_soil(:) = evapotrans_soil_in_m(:) * rhoh2o / dtime
-    evapo_skin(:)      = evapo_skin_in_m(:)  * rhoh2o / dtime
-    evapo_snow(:)      = fract_snow(:) * evapopot(:)
+    evapo_skin(:)      = evapo_skin_in_m(:)      * rhoh2o / dtime
+    evapo_snow(:)      = evapo_snow_in_m(:)      * rhoh2o / dtime
 
   END SUBROUTINE calc_surface_hydrology_land
 
@@ -444,16 +443,16 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
-    & soilhydmodel, interpol_mean,                                      &
+    & soilhydmodel, interpol_mean,                                                       &
     & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
-    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,     &
-    & evapotrans_soil, transpiration,                                     &
+    & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
+    & evapotrans_soil, transpiration,                                                    &
     ! inout
-    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, wtr_soilhyd_res,           &
+    & infilt, runoff, wtr_soil_sl, ice_soil_sl, tpe_overflow, evapo_deficit,             &
     ! out
-    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl,                                      &
-    & infilt_over, drainage, drain_rock, drain_lat                                       &
+    & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, drainage, drain_rock,   &
+      drain_lat, wtr_soilhyd_res                                                         &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -475,7 +474,7 @@ CONTAINS
       & lat, lon,                              &
       & evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
-      & tpe_overflow, infilt, runoff
+      & tpe_overflow, infilt, runoff, evapo_deficit
     REAL(wp), INTENT(inout), DIMENSION(:,:) :: &
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) :: &
@@ -545,25 +544,14 @@ CONTAINS
     drain_rock(:)     = 0._wp
     drain_lat_sl(:,:) = 0._wp
 
-    ! Check for unrealistic water to soil fluxes
-    DO i = 1, nc
-      IF (infilt(i) > 1.0e+3_wp .AND. l_fract(i)) THEN
-        WRITE (message_text,*) 'Infiltration flux is far outside of realistic bounds at ', &
-          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
-          & 'Infiltration: ', infilt(i)
-        CALL finish ('calc_soil_hydrology', message_text)
-      END IF
-    END DO
-
-    !
     !$claw acc data present(evapo_soil_in_m,evapotrans_soil,transpiration_in_m,transpiration)
     !$claw acc parallel
     !$claw acc loop gang
     DO i = 1, nc
-      transpiration_in_m(i) = transpiration(i)  * dtime / rhoh2o
-      ! Note: at this point ignoring the amount of dew that exceeds the skin reservoir
-      !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
-      evapo_soil_in_m(i) = evapotrans_soil(i) * dtime / rhoh2o - transpiration_in_m(i)
+      ! Note: any dew is removed from these fluxes, as dew is already applied
+      !       during the surface hydrology computation
+      evapo_soil_in_m(i)    = MIN(0._wp, evapotrans_soil(i) - transpiration(i)) * dtime / rhoh2o
+      transpiration_in_m(i) = MIN(0._wp, transpiration(i))  * dtime / rhoh2o
     END DO
     !$claw acc end parallel
 
@@ -588,7 +576,7 @@ CONTAINS
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
       &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
-      &     tpe_overflow, wtr_soilhyd_res, ltpe_closed, ltpe_open)
+      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
 
     ! Aggregate the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
@@ -602,12 +590,13 @@ CONTAINS
     !$claw acc data present(runoff,drainage)
     !$claw acc parallel loop gang vector
     DO i = 1, nc
-      infilt(i)      = infilt     (i) * rhoh2o / dtime
-      runoff(i)      = runoff     (i) * rhoh2o / dtime
-      infilt_over(i) = infilt_over(i) * rhoh2o / dtime
-      drainage(i)    = drainage   (i) * rhoh2o / dtime
-      drain_rock(i)  = drain_rock (i) * rhoh2o / dtime
-      drain_lat(i)   = drain_lat  (i) * rhoh2o / dtime
+      infilt(i)        = infilt       (i) * rhoh2o / dtime
+      runoff(i)        = runoff       (i) * rhoh2o / dtime
+      infilt_over(i)   = infilt_over  (i) * rhoh2o / dtime
+      drainage(i)      = drainage     (i) * rhoh2o / dtime
+      drain_rock(i)    = drain_rock   (i) * rhoh2o / dtime
+      drain_lat(i)     = drain_lat    (i) * rhoh2o / dtime
+      evapo_deficit(i) = evapo_deficit(i) * rhoh2o / dtime
     END DO
     !$claw acc end data
     !$claw acc end data
@@ -750,7 +739,7 @@ CONTAINS
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,             &
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,          &
     & infilt, infilt_over, drain_rock, drain_lat,                  &
-    & tpe_overflow, wtr_soilhyd_res,                               &
+    & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                &
     & ltpe_closed, ltpe_open)
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
@@ -783,6 +772,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! drainage from lowest soil layer [m]
     REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! overflow from subsurface soil layers [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
+    REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           ! Water evaporated from unintended sources [m]
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
 
     LOGICAL, INTENT(IN) :: ltpe_closed
@@ -791,6 +781,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: i, j                         ! looping index (cells index and soil layer))
     INTEGER  :: nsoil_act(nc)                ! deepest soil layer index (above the bedrock boundary)
+    CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
 
     REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice)
     REAL(wp) :: ws_inter_sl(nc,nsoil)        ! soil moisture with infiltration added to first layer
@@ -801,9 +792,11 @@ CONTAINS
     REAL(wp) :: hyd_cond_li(nc,nsoil)        ! hydraulic conductivity at upper layer interface
     REAL(wp) :: diffus_li(nc,nsoil)          ! diffusivity at upper layer interface
     REAL(wp) :: drain_sl(nc)                 ! drainage from the current layer
-    REAL(wp) :: evapo_soil_sl1(nc)           ! bare soil evaporation extracted from top layer
+    REAL(wp) :: evapo_soil_sl1(nc)           ! bare soil evaporation extracted from top layer (mobile part)
     REAL(wp) :: transpiration_sl(nc,nsoil)   ! transpiration extracted from every soil layer
     REAL(wp) :: deficit_evapotrans(nc)       ! water that could not be extracted from the soil [m]
+    REAL(wp) :: deficit_trans(nc)            ! transpiration that could not be extracted from the soil [m]
+    REAL(wp) :: deficit_sevap(nc)            ! soil evaporation that could not be extracted from the soil [m]
     REAL(wp) :: remoist(nc)                  ! for TPE
     REAL(wp) :: zmvg_sl(nc,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
     REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
@@ -879,8 +872,8 @@ CONTAINS
     !    mobile water
     CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, w_soil_wilt_fract, root_depth_sl, &
       &                      dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m,   &
-      &                      wtr_soil_sl - wtr_rsdl_sl, evapo_soil_sl1, transpiration_sl,    &
-      &                      deficit_evapotrans)
+      &                      wtr_soil_sl - wtr_rsdl_sl, evapo_deficit, evapo_soil_sl1,       &
+      &                      transpiration_sl, deficit_sevap, deficit_trans)
 
     DO i = 1, nc
       ! Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
@@ -899,7 +892,7 @@ CONTAINS
       ! Prescribe drainage from hydraulic conductivity of the lowest layer [m s-1] --> [m]
       drain_rock(i) = hyd_cond_sl(i,nsoil_act(i)) * dtime
 
-      !< store actual soil water state, infiltration (upper boundary condition) and evaporation 
+      !< store actual soil water state, infiltration (upper boundary condition) and evaporation
       !  to compute the residual transport error
       wtr_transp_residual(i) = SUM(wtr_soil_sl(i,:)) + infilt(i) + evapo_soil_sl1(i) + SUM(transpiration_sl(i,:))
 
@@ -945,22 +938,18 @@ CONTAINS
       IF (wtr_soil_sl(i, nsoil_act(i)) < 0._wp .AND. l_fract(i)) THEN
         DO j = nsoil_act(i), 1, -1
           IF (wtr_soil_sl(i,j) < 0._wp) THEN
-            WRITE (message_text,*) 'Soil moisture correction needed at ', &
-              &  lat(i),'N and ',lon(i),'E:'
-            CALL message('soilhyd', message_text, all_print=.TRUE.)
-            WRITE (message_text,*) '>  Soil moisture:   ', wtr_soil_sl(i,:)
-            CALL message('soilhyd', message_text, all_print=.TRUE.)
-            WRITE (message_text,*) '>  Bottom drainage: ', drain_rock(i)
-            CALL message('soilhyd', message_text, all_print=.TRUE.)
+            WRITE (message_text_long,*) 'Soil moisture correction needed at ',  &
+              &  lat(i),'N and ',lon(i),'E:' ,          NEW_LINE('a'),          &
+              &  'Soil moisture:   ', wtr_soil_sl(i,:), NEW_LINE('a'),          &
+              &  'Bottom drainage: ', drain_rock(i)
+            CALL message('soilhyd', message_text_long, all_print=.TRUE.)
             drain_rock(i) = MAX((drain_rock(i) + wtr_soil_sl(i,j)), 0._wp)
             wtr_soil_sl(i,j) = 0._wp
-            WRITE (message_text,*) 'After correction: wtr_soil_sl(i,:): ', &
-              & lat(i),'N and ',lon(i), 'E:'
-            CALL message('soilhyd', message_text, all_print=.TRUE.)
-            WRITE (message_text,*) '>  Soil moisture:   ', wtr_soil_sl(i,:)
-            CALL message('soilhyd', message_text, all_print=.TRUE.)
-            WRITE (message_text,*) '>  Bottom drainage: ', drain_rock(i)
-            CALL message('soilhyd', message_text, all_print=.TRUE.)
+            WRITE (message_text_long,*) 'After correction: wtr_soil_sl(i,:): ', &
+              &  lat(i),'N and ',lon(i),'E:' ,          NEW_LINE('a'),          &
+              &  'Soil moisture:   ', wtr_soil_sl(i,:), NEW_LINE('a'),          &
+              &  'Bottom drainage: ', drain_rock(i)
+            CALL message('soilhyd', message_text_long, all_print=.TRUE.)
           END IF
         END DO
       END IF
@@ -975,15 +964,15 @@ CONTAINS
     DO i = 1, nc
       !< 1. Complain if the overall transport error is too large
       IF (ABS(wtr_transp_residual(i)) > 1.0e-10_wp .AND. l_fract(i)) THEN
-        WRITE (message_text,*) 'Soil water transport residual too large at ', &
-          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+        WRITE (message_text_long,*) 'Soil water transport residual too large at ', &
+          & lat(i),'N and ',lon(i),'E:',                    NEW_LINE('a'), &
           & 'Transport residual: ', wtr_transp_residual(i), NEW_LINE('a'), &
-          & 'Infiltration:       ', infilt(i), NEW_LINE('a'), &
-          & 'Soil evaporation:   ', evapo_soil_sl1(i), NEW_LINE('a'), &
-          & 'Bottom drainage:    ', drain_rock(i), NEW_LINE('a'), &
-          & 'Transpiration:      ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'Infiltration:       ', infilt(i),              NEW_LINE('a'), &
+          & 'Soil evaporation:   ', evapo_soil_sl1(i),      NEW_LINE('a'), &
+          & 'Bottom drainage:    ', drain_rock(i),          NEW_LINE('a'), &
+          & 'Transpiration:      ', transpiration_sl(i,:),  NEW_LINE('a'), &
           & 'Soil moisture:      ', wtr_soil_sl(i,:)
-        CALL finish ('soilhyd', message_text)
+        CALL finish ('soilhyd', message_text_long)
       END IF
 
       !< 2. Modify lower boundary condition (drainage) as much as possible
@@ -1007,16 +996,32 @@ CONTAINS
 
       !> 4. Complain if correction is not sufficient
       IF (ABS(wtr_transp_residual(i)) > 1.0e-10_wp .AND. l_fract(i)) THEN
-        WRITE (message_text,*) 'Cannot correct soil water transport residual at ', &
-          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
+        WRITE (message_text_long,*) 'Cannot correct soil water transport residual at ', &
+          & lat(i),'N and ',lon(i),'E:',                    NEW_LINE('a'), &
           & 'Transport residual: ', wtr_transp_residual(i), NEW_LINE('a'), &
-          & 'Infiltration:       ', infilt(i), NEW_LINE('a'), &
-          & 'Soil evaporation:   ', evapo_soil_sl1(i), NEW_LINE('a'), &
-          & 'Bottom drainage:    ', drain_rock(i), NEW_LINE('a'), &
-          & 'Transpiration:      ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'Infiltration:       ', infilt(i),              NEW_LINE('a'), &
+          & 'Soil evaporation:   ', evapo_soil_sl1(i),      NEW_LINE('a'), &
+          & 'Bottom drainage:    ', drain_rock(i),          NEW_LINE('a'), &
+          & 'Transpiration:      ', transpiration_sl(i,:),  NEW_LINE('a'), &
           & 'Soil moisture:      ', wtr_soil_sl(i,:)
-        CALL finish ('soilhyd', message_text)
+        CALL finish ('soilhyd', message_text_long)
       END IF
+    END DO
+
+    ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water,
+    ! because this has to be consistent with the computation of the upper soil layer relative humidity
+    ! in sse_processes:relative_humidity_soil)
+    DO i = 1, nc
+      IF (deficit_sevap(i) < 0._wp) THEN                               ! remaining soil evaporation demand
+        wtr_soil_sl(i,1) = wtr_soil_sl(i,1) + deficit_sevap(i)         ! take water from uppermost soil layer
+        IF (wtr_soil_sl(i,1) < 0._wp) THEN                             ! if there is not enough liquid soil water
+          deficit_sevap(i) = wtr_soil_sl(i,1)                          ! this is the amount of water missing
+          wtr_soil_sl(i,1) = 0._wp                                     ! soil moisture cannot be negative
+        ELSE                                                           ! no deficit remains
+          deficit_sevap(i) = 0._wp
+        END IF
+      END IF
+      evapo_deficit(i) = evapo_deficit(i) + deficit_sevap(i)           ! remaining demand is added to deficit
     END DO
 
     ! Correct remaining evapotranspiration deficit
@@ -1025,7 +1030,12 @@ CONTAINS
     !       Changing the soil ice content here obviously violates the energy balance. A correction
     !       term is needed for this, if no better solution can be found to avoid the evaporation deficit.
     DO i = 1, nc
+      deficit_evapotrans(i) = deficit_sevap(i) + deficit_trans(i)
       weq_soil(i) = SUM(wtr_soil_sl(i,:)) + SUM(ice_soil_sl(i,:))  ! water and ice within the column
+      IF (weq_soil(i) + deficit_evapotrans(i) < -EPSILON(1.0_wp) .AND. l_fract(i)) THEN
+        WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
+        CALL message ('soilhyd', message_text, all_print=.TRUE.)
+      END IF
       DO j = 1, nsoil
         IF (deficit_evapotrans(i) < 0._wp .AND. weq_soil(i) > 0._wp) THEN
           ! reduce soil moisture and ice relative to the water content of each layer
@@ -1033,9 +1043,6 @@ CONTAINS
           ice_soil_sl(i,j) = MAX(0._wp, ice_soil_sl(i,j) + deficit_evapotrans(i) * ice_soil_sl(i,j) / weq_soil(i))
         END IF
       END DO
-      ! @todo even after the correction, there are still cells with zero soil moisture and a negative
-      !       deficit_evapotrans left. However, these do not seem to violate the overall water balance.
-      !       Are these cells which should not be included in the soil hydrology computation?
     END DO
 
     ! Additional corrections for excess soil moisture
@@ -1110,14 +1117,14 @@ CONTAINS
     ! Check value range for soil moisture
     DO i = 1, nc
       IF (ANY(wtr_soil_sl(i,:) < -EPSILON(1.0_wp)) .AND. l_fract(i)) THEN
-        WRITE (message_text,*) 'negative soil moisture (routine end) at ', &
-          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
-          & 'Infiltration:     ', infilt(i), NEW_LINE('a'), &
-          & 'Soil evaporation: ', evapo_soil_sl1(i), NEW_LINE('a'), &
-          & 'Bottom drainage:  ', drain_rock(i), NEW_LINE('a'), &
+        WRITE (message_text_long,*) 'negative soil moisture (routine end) at ', &
+          & lat(i),'N and ',lon(i),'E:',                 NEW_LINE('a'), &
+          & 'Infiltration:     ', infilt(i),             NEW_LINE('a'), &
+          & 'Soil evaporation: ', evapo_soil_sl1(i),     NEW_LINE('a'), &
+          & 'Bottom drainage:  ', drain_rock(i),         NEW_LINE('a'), &
           & 'Transpiration:    ', transpiration_sl(i,:), NEW_LINE('a'), &
           & 'Soil moisture:    ', wtr_soil_sl(i,:)
-        CALL finish ('soilhyd', message_text)
+        CALL finish ('soilhyd', message_text_long)
       ELSE IF (ANY(wtr_soil_sl(i,:) < 0.0_wp) .AND. l_fract(i)) THEN
         ! WRITE (message_text,*) 'setting negative soil moisture (routine end) to zero at ', &
         !   & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
@@ -1128,15 +1135,15 @@ CONTAINS
       END IF
 
       IF (ANY(wtr_soil_sl(i,:) > wtr_wsat_sl(i,:) + EPSILON(1.0_wp)) .AND. l_fract(i)) THEN
-        WRITE (message_text,*) 'soil moisture exceeds saturation capacity(routine end) at ', &
-          &  lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
-          & 'Infiltration:       ', infilt(i), NEW_LINE('a'), &
-          & 'Soil evaporation:   ', evapo_soil_sl1(i), NEW_LINE('a'), &
-          & 'Bottom drainage:    ', drain_rock(i), NEW_LINE('a'), &
+        WRITE (message_text_long,*) 'soil moisture exceeds saturation capacity(routine end) at ', &
+          &  lat(i),'N and ',lon(i),'E:',                  NEW_LINE('a'), &
+          & 'Infiltration:       ', infilt(i),             NEW_LINE('a'), &
+          & 'Soil evaporation:   ', evapo_soil_sl1(i),     NEW_LINE('a'), &
+          & 'Bottom drainage:    ', drain_rock(i),         NEW_LINE('a'), &
           & 'Transpiration:      ', transpiration_sl(i,:), NEW_LINE('a'), &
-          & 'Soil moisture:      ', wtr_soil_sl(i,:), NEW_LINE('a'), &
+          & 'Soil moisture:      ', wtr_soil_sl(i,:),      NEW_LINE('a'), &
           & 'Saturation capcity: ', wtr_wsat_sl(i,:)
-        CALL finish ('soilhyd', message_text)
+        CALL finish ('soilhyd', message_text_long)
       END IF
     END DO
 
@@ -1160,16 +1167,19 @@ CONTAINS
     & transpiration_in_m,         &
     & evapo_soil_in_m,            &
     & wtr_soil_sl,                &
+    & evapo_deficit,              &
     & evapo_soil_sl1,             &
     & transpiration_sl,           &
-    & deficit_evapotrans          &
+    & deficit_sevap,              &
+    & deficit_trans               &
     & )
 
     !----------------------------------------------------------------------------------------------
     !< This routine distributes the evaporative demand of soil evaporation and transpiration
-    !! between the soil layers of the root zone. Excess evaporation that cannot be satisfied
-    !! from the root zone is subtracted from deeper layers.
-    !! Note, that the routine only diagnoses the layered evaporation fluxes but the actual 
+    !! between the soil layers of the root zone. Transpiration that cannot be satisfied
+    !! from the root zone is subtracted from deeper layers. Also, only that part of soil evaporation
+    !! that can be satisfied with mobile soil water is considered here.
+    !! Note, that the routine only diagnoses the layered evaporation fluxes but the actual
     !! soil moisture update is done in the vertical transport routine. Also, it only consideres
     !! negative evapotranspiration fluxes (actual evapotranspiration) as positive fluxes (dew)
     !! are already considered in calc_surface_hydrology.
@@ -1189,31 +1199,30 @@ CONTAINS
     REAL(wp), INTENT(in)     :: wtr_field_cap_sl(:,:)   ! field capacity of the layer (reduced by ice)
     REAL(wp), INTENT(in)     :: transpiration_in_m(:)   ! transpiration [m]
     REAL(wp), INTENT(in)     :: evapo_soil_in_m(:)      ! bare soil evaporation [m]
-
     REAL(wp), INTENT(in)     :: wtr_soil_sl(:,:)        ! water content of the soil layer [m]
-
+    REAL(wp), INTENT(inout)  :: evapo_deficit(:)        ! evaporation from unintented sources [m]
     REAL(wp), INTENT(OUT)    :: evapo_soil_sl1(:)       ! Soil evaporation from the top soil layer [m]
     REAL(wp), INTENT(OUT)    :: transpiration_sl(:,:)   ! Transpiration from soil layers [m]
-    REAL(wp), INTENT(OUT)    :: deficit_evapotrans(:)   ! Water deficit due to evapotranspiration [m]
+    REAL(wp), INTENT(OUT)    :: deficit_trans(:)        ! Unaccounted transpiration [m]
+    REAL(wp), INTENT(OUT)    :: deficit_sevap(:)        ! Unaccounted soil evaporation [m]
 
     ! local variables
 
     INTEGER  :: i, j
-    REAL(wp) :: dummy_wtr_soil(nc, nsoil) ! dummy soil moisture storage [m]
-    REAL(wp) :: deficit_evapo(nc)         ! water deficit due to evaporation [m]
-    REAL(wp) :: deficit_trans(nc)         ! water deficit due to tranpiration [m]
-    REAL(wp) :: deficit(nc)               ! water deficit within the actual soil layer [m]
-    REAL(wp) :: remaining(nc)             ! water remaining in the soil layer [m]
-    REAL(wp) :: rootfract(nc)             ! fraction of the soil layer within the root zone [/]
-    REAL(wp) :: fixed(nc)                 ! amount of water below the wilting point, not available for plants [m]
-    REAL(wp) :: root_depth(nc)            ! Total depth of rootzone [m]
+    CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
+    REAL(wp) :: dummy_wtr_soil(nc, nsoil)    ! dummy soil moisture storage [m]
+    REAL(wp) :: deficit(nc)                  ! water deficit within the actual soil layer [m]
+    REAL(wp) :: remaining(nc)                ! water remaining in the soil layer [m]
+    REAL(wp) :: rootfract(nc)                ! fraction of the soil layer within the root zone [/]
+    REAL(wp) :: fixed(nc)                    ! amount of water below the wilting point, not available for plants [m]
+    REAL(wp) :: root_depth(nc)               ! Total depth of rootzone [m]
 
     !----------------------------------------------------------------------------------------------
     !  diagnose evaporation and transpiration fluxes
     !----------------------------------------------------------------------------------------------
 
     !$claw acc data present(droot, dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m, &
-    !$claw acc wtr_soil_sl, evapo_soil_sl1, transpiration_sl, deficit_evapotrans) pcreate(deficit_evapo, &
+    !$claw acc wtr_soil_sl, evapo_soil_sl1, transpiration_sl, deficit_evapotrans) pcreate(deficit_sevap, &
     !$claw acc deficit_trans, deficit_layer, remaining, rootfract, fixed, root_depth, dummy_wtr_soil)
 
     !  bare soil evaporation
@@ -1231,25 +1240,26 @@ CONTAINS
       END IF
     END DO
 
-    ! Initialize dummy soil moisture storage, because the real soil moisture storage
+    ! Use dummy soil moisture storage for diagnostics, because the real soil moisture storage
     !   is only to be changed during the vertical transport
     dummy_wtr_soil(:,:)   = wtr_soil_sl(:,:)
     evapo_soil_sl1(:)     = 0._wp
     transpiration_sl(:,:) = 0._wp
+    deficit_sevap(:)      = 0._wp     ! water missing for soil evaporation due to limited soil water
+    deficit_trans(:)      = 0._wp     ! water missing for transpiration due to limited soil water
 
     DO i = 1, nc
 
-      ! 1. Soil evaporation
+      ! 1. Soil evaporation (mobile water only)
       ! ---------------
 
-      deficit_evapo(i) = 0._wp                                         ! water missing for evaporation due to limited soil water
       IF (evapo_soil_in_m(i) < 0._wp) THEN                             ! actual evaporation flux (not dew)
         dummy_wtr_soil(i,1) = dummy_wtr_soil(i,1) + evapo_soil_in_m(i) ! take water from uppermost soil layer
-        IF (dummy_wtr_soil(i,1) < 0._wp) THEN                          ! if there is not enough soil water
-          deficit_evapo(i) = dummy_wtr_soil(i,1)                       ! this is the amount of water missing
+        IF (dummy_wtr_soil(i,1) < 0._wp) THEN                          ! if there is not enough mobile soil water
+          deficit_sevap(i) = dummy_wtr_soil(i,1)                       ! this is the amount of water missing
           dummy_wtr_soil(i,1) = 0._wp                                  ! soil moisture cannot be negative
         END IF
-        evapo_soil_sl1(i) = evapo_soil_in_m(i) - deficit_evapo(i)      ! reduce soil evaporation if top layer soil is too dry
+        evapo_soil_sl1(i) = evapo_soil_in_m(i) - deficit_sevap(i)      ! reduce soil evaporation if top layer soil is too dry
       END IF
 
       !  2. Transpiration
@@ -1257,13 +1267,11 @@ CONTAINS
 
       root_depth(i) = SUM(droot(i,:))
 
-      ! sealed grid cells (rooting_depth zero) and actual transpiration
+      ! sealed grid cells (rooting_depth zero) and actual transpiration (which should not happen)
       !    => no water reachable for transpiration, add flux to deficit term
       ! @todo what does rooting depth=zero for bare soil tile?
       IF(root_depth(i) <= 0._wp .AND. transpiration_in_m(i) < 0._wp) THEN
         deficit_trans(i) = transpiration_in_m(i)                       ! add transpiration to deficit term
-      ELSE
-        deficit_trans(i) = 0._wp
       END IF
 
       !$claw acc loop seq
@@ -1272,7 +1280,6 @@ CONTAINS
         deficit(i)            = 0._wp
         rootfract(i)          = 0._wp
         fixed(i)              = 0._wp
-        transpiration_sl(i,j) = 0._wp
         remaining(i)          = 0._wp
 
         ! grid cell not sealed and actual transpiration (not dew) takes place
@@ -1310,21 +1317,18 @@ CONTAINS
         END IF
       END DO
 
-      ! -----------------------------------------
-      !  Total deficit from evapotranspiration
-      ! -----------------------------------------
-      deficit_evapotrans(i) = deficit_evapo(i) + deficit_trans(i)
+      evapo_deficit(i) = evapo_deficit(i) + deficit_trans(i)
 
-      ! If the deficit can be reduced by redistributing transpiration extraction from different layers,
+      ! If the transpiration deficit can be reduced by redistributing transpiration extraction from different layers,
       !   it should be done already here. The deficit should be taken from layers starting at the
-      !   surface to accelerate the feedback on evapotranspiration
+      !   surface to accelerate the feedback on evapotranspiration.
       DO j = 1, nsoil
-        IF (deficit_evapotrans(i) < 0._wp .AND. dummy_wtr_soil(i,j) > wtr_field_cap_sl(i,j) * w_soil_wilt_fract) THEN
+        IF (deficit_trans(i) < 0._wp .AND. dummy_wtr_soil(i,j) > wtr_field_cap_sl(i,j) * w_soil_wilt_fract) THEN
           ! add water that can be still transpired to the transpiration to reduce the overall deficit
           remaining(i)          = dummy_wtr_soil(i,j) - &
-            & MAX(dummy_wtr_soil(i,j) + deficit_evapotrans(i), wtr_field_cap_sl(i,j) * w_soil_wilt_fract)
-          deficit_evapotrans(i) = deficit_evapotrans(i) + remaining(i)
-          dummy_wtr_soil(i,j)   = dummy_wtr_soil(i,j)  - remaining(i)
+            & MAX(dummy_wtr_soil(i,j) + deficit_trans(i), wtr_field_cap_sl(i,j) * w_soil_wilt_fract)
+          deficit_trans(i)      = deficit_trans(i)      + remaining(i)
+          dummy_wtr_soil(i,j)   = dummy_wtr_soil(i,j)   - remaining(i)
           transpiration_sl(i,j) = transpiration_sl(i,j) - remaining(i)
         END IF
       END DO
@@ -1335,16 +1339,33 @@ CONTAINS
     !$claw acc end data
 
 #ifndef _OPENACC
-    ! make sure there is no negative soil moisture after applying ET
     DO i = 1, nc
+      ! make sure there would be no negative soil moisture after applying ET
       IF (ANY(dummy_wtr_soil(i,:) < 0._wp) .AND. l_fract(i)) THEN
-        WRITE (message_text,*) 'negative soil moisture (routine end) at ', &
-          & lat(i),'N and ',lon(i),'E:', NEW_LINE('a'), &
-          & 'Soil evaporation: ', evapo_soil_sl1(i), NEW_LINE('a'), &
-          & 'Transpiration:    ', transpiration_sl(i,:), NEW_LINE('a'), &
-          & 'ET deficit:       ', deficit_evapotrans(i), NEW_LINE('a'), &
-          & 'Soil moisture:    ', dummy_wtr_soil(i,:)
-        CALL finish ('diagnose_evapotrans', message_text)
+        WRITE (message_text_long,*) 'negative soil moisture (routine end) at ', &
+          & lat(i),'N and ',lon(i),'E:',                         NEW_LINE('a'), &
+          & 'Soil evaporation:         ', evapo_soil_sl1(i),     NEW_LINE('a'), &
+          & 'Soil evaporation deficit: ', deficit_sevap(i),      NEW_LINE('a'), &
+          & 'Transpiration:            ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'Transpiration deficit:    ', deficit_trans(i),      NEW_LINE('a'), &
+          & 'Soil moisture:            ', dummy_wtr_soil(i,:)
+        CALL finish ('diagnose_evapotrans', message_text_long)
+      END IF
+      ! check that diagnosed ET and expected ET is still identical
+      IF ( ABS((evapo_soil_sl1(i) + deficit_sevap(i) + SUM(transpiration_sl(i,:)) + deficit_trans(i)) &
+        &    - (evapo_soil_in_m(i) + transpiration_in_m(i)) ) > 1.0e-13_wp &
+        &  .AND. l_fract(i)) THEN
+        WRITE (message_text_long,*) 'ET fluxes mismatch at ', &
+          & lat(i),'N and ',lon(i),'E:',                                   NEW_LINE('a'), &
+          & 'Initial mobile soil water:          ', wtr_soil_sl(i,:),      NEW_LINE('a'), &
+          & 'Expected soil evaporation:          ', evapo_soil_in_m(i),    NEW_LINE('a'), &
+          & 'Expected transpiration:             ', transpiration_in_m(i), NEW_LINE('a'), &
+          & 'Diagnosed soil evaporation :        ', evapo_soil_sl1(i),     NEW_LINE('a'), &
+          & 'Diagnosed transpiration:            ', transpiration_sl(i,:), NEW_LINE('a'), &
+          & 'Diagnosed soil moisture:            ', dummy_wtr_soil(i,:),   NEW_LINE('a'), &
+          & 'Remaining soil evaporation deficit: ', deficit_sevap(i),      NEW_LINE('a'), &
+          & 'Remaining transpiration deficit:    ', deficit_trans(i)
+        CALL finish ('diagnose_evapotrans', message_text_long)
       END IF
     END DO
 #endif
@@ -1376,6 +1397,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_wskin_fractions_veg( &
     & dtime,                                     & ! in
     & steplen,                                   & ! in
+    & alpha,                                     & ! in
     & skinres_max,                               & ! in
     & oro_stddev,                                & ! in
     & t_srf_old,                                 & ! in
@@ -1395,7 +1417,8 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
-      & steplen
+      & steplen,            &
+      & alpha
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
@@ -1440,7 +1463,7 @@ CONTAINS
 
     ! Potential evaporation using old values of air and surface humidity
     qsat_srf_old = qsat(t_srf_old, press_srf)
-    evapo_pot =  -1._wp * heat_transfer_coef(drag_srf, steplen) * (q_air - qsat_srf_old)  ! Positive upwards
+    evapo_pot =  -1._wp * heat_transfer_coef(drag_srf, steplen, alpha) * (q_air - qsat_srf_old)  ! Positive upwards
 
     ! Modify snow cover if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy; same for skin reservoir
@@ -1461,6 +1484,7 @@ CONTAINS
   ELEMENTAL SUBROUTINE calc_wskin_fractions_bare( &
     & dtime,                                      & ! in
     & steplen,                                    & ! in
+    & alpha,                                      & ! in
     & skinres_max,                                & ! in
     & oro_stddev,                                 & ! in
     & t_srf,                                      & ! in
@@ -1478,7 +1502,8 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: &
       & dtime,              &
-      & steplen
+      & steplen,            &
+      & alpha
 
     !$claw model-data
     REAL(wp), INTENT(in) :: &
@@ -1516,7 +1541,7 @@ CONTAINS
     ! Potential evaporation using old values of air and surface humidity
     t_srf_old = t_srf
     qsat_srf_old = qsat(t_srf_old, press_srf)
-    evapo_pot =  heat_transfer_coef(drag_srf, steplen) * (qsat_srf_old - q_air) ! Positive upwards
+    evapo_pot =  heat_transfer_coef(drag_srf, steplen, alpha) * (qsat_srf_old - q_air) ! Positive upwards
 
     ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than
     ! snow water content from soil and canopy together

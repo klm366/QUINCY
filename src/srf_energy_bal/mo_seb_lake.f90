@@ -580,7 +580,7 @@ CONTAINS
       & heat_tcoef (:)     !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -591,6 +591,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
@@ -644,7 +645,7 @@ CONTAINS
     s_air(:) = t_acoef_wtr(:) * s_lwtr  (:) + t_bcoef_wtr(:)
 
     ! Transfer coefficient
-    heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
+    heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen, alpha)
 
     ! Compute sensible heat flux
     !
@@ -666,7 +667,7 @@ CONTAINS
       s_air(:) = t_acoef_ice(:) * s_lice  (:) + t_bcoef_ice(:)
 
       ! Transfer coefficient
-      heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
+      heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen, alpha)
 
       ! Compute sensible heat flux
       !

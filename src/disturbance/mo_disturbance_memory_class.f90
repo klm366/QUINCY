@@ -47,6 +47,7 @@ MODULE mo_disturb_memory_class
     max_wind_10m,             & ! for windbreak
     max_wind_10m_act,         & ! for windbreak
 
+    burned_fract_infer,       & ! for Fire <Rackhun Son>
     t_air_ave,                & ! for Fire <Rackhun Son>
     q_ave,                    & ! for Fire <Rackhun Son>
     q_rel_ave,                & ! for Fire <Rackhun Son>
@@ -745,6 +746,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var( 'burned_fract_infer', mem%burned_fract_infer,                     &
+      & hgrid, surface,                                                                 &
+      & t_cf('burned_fract_infer', 'frac', 'Fraction of tile that is burned.'),         &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
+      & prefix, suffix,                                                                 &
+      & output_level=BASIC,                                                             &
+      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp ) ! initval taken from JSBACH3
 
 
     !CALL mem%Add_var('lstm_hidden', mem%lstm_hidden,                        &

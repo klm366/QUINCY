@@ -693,11 +693,10 @@ CONTAINS
         & lrestart=.FALSE.,                                                    &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      !Todo: is this variable of any interest?
       CALL mem%Add_var( 'evapo_deficit', mem%evapo_deficit,                    &
         & hgrid, surface,                                                      &
-        & t_cf('evapo_deficit', 'm',   'Water that would have been evaporated  &
-              & additionally, if there had been more snow or surface water'),  &
+        & t_cf('evapo_deficit', 'm', 'Water which evaporated from other sources&
+              &/soillayers then intented'),  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & lrestart=.FALSE.,                                                    &
@@ -1008,9 +1007,9 @@ CONTAINS
       &   .OR. One_of(LAND_TYPE,    lct_ids(:)) > 0 &
       &  ) ) THEN
 
-      CALL mem%Add_var('pfts_fract', mem%pfts_fract,                          &
+      CALL mem%Add_var('pfts_fract', mem%pfts_fract,                            &
         & hgrid, pft_layer,                                                     &
-        & t_cf('pfts_fract', 'PFT cover fractions', 'pfts fract'),            &
+        & t_cf('pfts_fract', 'PFT cover fractions', 'pfts fract'),              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                       &
         !& output_level=BASIC,                                                   &

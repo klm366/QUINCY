@@ -8,6 +8,7 @@ project_dir: .
 src_dir: ./src
 include: ./doc/include
 exclude: cdipio.inc
+         jsb4_driver_echam.f90
 page_dir: ./doc/guide
 media_dir: ./doc/media
 output_dir: ./doc/html
@@ -20,11 +21,16 @@ summary: <img src="media/MPIM.png" width="100%" alt="MPI/M Logo">
 display: public
          protected
          private
+css: ./doc/resources/user.css
+max_frontpage_items: 0
 source: true
+incl_src: false
 proc_internals: true
 search: true
 warn: false
 graph: false
+graph_maxdepth: 2
+graph_dir: ./doc/graphs
 coloured_edges: true
 md_extensions: markdown.extensions.toc
                markdown.extensions.extra
@@ -37,11 +43,11 @@ creation_date: %Y-%m-%d %H:%M %z
 
 @warning This documentation is work in progress!
 
-------------------------------
-
 @note
 Use the navigation bar at the top of the screen to browse the guide as well as inline source
-code documentation (source files, modules, procedures, interfaces, derived types and programs).
+code documentation (modules, procedures, interfaces and derived types). Source files are not
+listed as a whole but the views of subroutines and functions in the modules show their source
+at the bottom of the page.
 
 ------------------------------
 
@@ -55,6 +61,4 @@ To get startet, visit the guide from the top navigation, or jump directly to
 ------------------------------
 
 {!LICENSE.md!}
-
-<div><hr style="width:100%;height:4px;border-width:2;color:gray;background-color:gray"></div>
 

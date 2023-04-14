@@ -288,6 +288,7 @@ CONTAINS
     !dsl4jsb_Real3D_onChunk :: lstm_cell      ! LSTM hidden/cell <Rackhun>
 
     dsl4jsb_Real2D_onChunk :: burned_fract
+    dsl4jsb_Real2D_onChunk :: burned_fract_infer
     dsl4jsb_Real2D_onChunk :: damaged_fract
 
     dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm
@@ -463,6 +464,7 @@ CONTAINS
     !dsl4jsb_Get_var3D_onChunk(DISTURB_,   lstm_cell)                ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract_infer)       ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm)   ! out
@@ -535,25 +537,29 @@ CONTAINS
         diff_year = FLOAT(iyr-time_config%tc_exp_startdate%date%year) +1._wp
 
         iteration  = 0
-        is_training = 0
-        !IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
-        !  is_training = 1
-        !  iteration = (iyr-2003)*5946*365 + (day_of_year-1)*5946 + iblk*600
-        !ENDIF
+        IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
+          is_training = 1
+          iteration = (iyr-2003)*5946*365 + (day_of_year-1)*5946 + iblk*600
+        ELSE
+          is_training = 0
+        ENDIF
+        !is_training = 0
 
-        is_saving   = 0
-        !IF ((iyr .ge. 2001) .AND. (iyr .le. 2012)) THEN
-        !  is_saving = 1
-        !  IF (MOD(iyr,2) .eq. 1) THEN  
-        !    memory_idx = day_of_year
-        !  ELSE
-        !    memory_idx = 365+day_of_year
-        !  ENDIF
+        IF ((iyr .ge. 2001) .AND. (iyr .le. 2012)) THEN
+          is_saving = 1
+          IF (MOD(iyr,2) .eq. 1) THEN  
+            memory_idx = day_of_year
+          ELSE
+            memory_idx = 365+day_of_year
+          ENDIF
 
-        !  IF (memory_idx .gt. 730) THEN
-        !    is_saving = 0
-        !  ENDIF
-        !ENDIF
+          IF (memory_idx .gt. 730) THEN
+            is_saving = 0
+          ENDIF
+        ELSE
+          is_saving   = 0
+        ENDIF
+        !is_saving   = 0
 
         IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
           t_air_ave(:) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
@@ -751,6 +757,19 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%layer6_weight,                   &
               & dsl4jsb_Config(DISTURB_)%layer6_bias,                     &
 
+              & dsl4jsb_Config(DISTURB_)%layer1_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer1_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer2_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer2_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer3_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer3_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer4_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer4_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer5_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer5_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer6_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer6_bias_update,              &
+
               & dsl4jsb_Config(DISTURB_)%mW1,                             &
               & dsl4jsb_Config(DISTURB_)%mb1,                             &
               & dsl4jsb_Config(DISTURB_)%mW2,                             &
@@ -821,63 +840,65 @@ CONTAINS
               
               !& lstm_hidden(:,:),                                         & ! inout
               !& lstm_cell(:,:),                                           & ! inout
-              & burned_fract(:)                                           & ! inout
+              & burned_fract(:),                                           & ! inout
+              & burned_fract_infer(:)                                      & ! inout
               & )
 
               ! save training results
               if (iyr == 2015) then
+              !if (iyr == 9999) then
 
-                open(1001,file='/work/mj0143/b301058/saved_parameters/W1.bin', &
+                open(1001,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/W1.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_input*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1002,file='/work/mj0143/b301058/saved_parameters/W2.bin', &
+                open(1002,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/W2.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1003,file='/work/mj0143/b301058/saved_parameters/W3.bin', &
+                open(1003,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/W3.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1004,file='/work/mj0143/b301058/saved_parameters/W4.bin', &
+                open(1004,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/W4.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1005,file='/work/mj0143/b301058/saved_parameters/W5.bin', &
+                open(1005,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/W5.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1006,file='/work/mj0143/b301058/saved_parameters/W6.bin', &
+                open(1006,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/W6.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output*4)
 
-                open(2001,file='/work/mj0143/b301058/saved_parameters/b1.bin', &
+                open(2001,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/b1.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2002,file='/work/mj0143/b301058/saved_parameters/b2.bin', &
+                open(2002,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/b2.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2003,file='/work/mj0143/b301058/saved_parameters/b3.bin', &
+                open(2003,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/b3.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2004,file='/work/mj0143/b301058/saved_parameters/b4.bin', &
+                open(2004,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/b4.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2005,file='/work/mj0143/b301058/saved_parameters/b5.bin', &
+                open(2005,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/b5.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2006,file='/work/mj0143/b301058/saved_parameters/b6.bin', &
+                open(2006,file='/work/mj0143/b301058/fire_online_0_base/saved_parameters/b6.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_output*4)
 
-                write(1001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_weight
-                write(1002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_weight
-                write(1003,rec=1) dsl4jsb_Config(DISTURB_)%layer3_weight
-                write(1004,rec=1) dsl4jsb_Config(DISTURB_)%layer4_weight
-                write(1005,rec=1) dsl4jsb_Config(DISTURB_)%layer5_weight
-                write(1006,rec=1) dsl4jsb_Config(DISTURB_)%layer6_weight
+                write(1001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_weight_update
+                write(1002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_weight_update
+                write(1003,rec=1) dsl4jsb_Config(DISTURB_)%layer3_weight_update
+                write(1004,rec=1) dsl4jsb_Config(DISTURB_)%layer4_weight_update
+                write(1005,rec=1) dsl4jsb_Config(DISTURB_)%layer5_weight_update
+                write(1006,rec=1) dsl4jsb_Config(DISTURB_)%layer6_weight_update
 
-                write(2001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_bias
-                write(2002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_bias
-                write(2003,rec=1) dsl4jsb_Config(DISTURB_)%layer3_bias
-                write(2004,rec=1) dsl4jsb_Config(DISTURB_)%layer4_bias
-                write(2005,rec=1) dsl4jsb_Config(DISTURB_)%layer5_bias
-                write(2006,rec=1) dsl4jsb_Config(DISTURB_)%layer6_bias
+                write(2001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_bias_update
+                write(2002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_bias_update
+                write(2003,rec=1) dsl4jsb_Config(DISTURB_)%layer3_bias_update
+                write(2004,rec=1) dsl4jsb_Config(DISTURB_)%layer4_bias_update
+                write(2005,rec=1) dsl4jsb_Config(DISTURB_)%layer5_bias_update
+                write(2006,rec=1) dsl4jsb_Config(DISTURB_)%layer6_bias_update
 
                 !close(1001)
                 !close(1002)

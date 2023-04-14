@@ -75,6 +75,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)       :: tmp_steplen_times_wind           !< dummy variable
     INTEGER                               :: iblk, ics, ice, nc               !< dimensions
     REAL(wp)                              :: steplen                          !< step length
+    REAL(wp)                              :: alpha                            !< implicitness factor
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_canopy_fluxes'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(ASSIMI_)
@@ -147,6 +148,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(ASSIMI_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -253,7 +255,7 @@ CONTAINS
     !  and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
     WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
 
-    ga(:) = heat_transfer_coef(drag_srf(:), steplen) * MIN( MAX(wind_10m(:), min_wind), max_wind)
+    ga(:) = heat_transfer_coef(drag_srf(:), steplen, alpha) * MIN( MAX(wind_10m(:), min_wind), max_wind)
 
     ! calc scaling factor to account for the 'state of acclimation' of evergreen conifers in spring
     beta_soa(:) = calc_beta_soa(soa_tsoa_mavg(:),lctlib%phenology_type)

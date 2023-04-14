@@ -57,6 +57,13 @@ MODULE mo_disturb_config_class
     REAL(wp), ALLOCATABLE :: layer5_weight(:,:), layer5_bias(:) ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: layer6_weight(:,:), layer6_bias(:) ! dl fire model parameters <Rackhun Son>
 
+    REAL(wp), ALLOCATABLE :: layer1_weight_update(:,:), layer1_bias_update(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer2_weight_update(:,:), layer2_bias_update(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer3_weight_update(:,:), layer3_bias_update(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer4_weight_update(:,:), layer4_bias_update(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer5_weight_update(:,:), layer5_bias_update(:) ! dl fire model parameters <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer6_weight_update(:,:), layer6_bias_update(:) ! dl fire model parameters <Rackhun Son>
+
     REAL(wp), ALLOCATABLE :: mW1(:,:),           mb1(:)         ! dl fire model 1st momentum <Rackhun Son>
     REAL(wp), ALLOCATABLE :: mW2(:,:),           mb2(:)         ! dl fire model 1st momentum <Rackhun Son>
     REAL(wp), ALLOCATABLE :: mW3(:,:),           mb3(:)         ! dl fire model 1st momentum <Rackhun Son>
@@ -168,6 +175,13 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: layer4_weight(:,:), layer4_bias(:) ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: layer5_weight(:,:), layer5_bias(:) ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: layer6_weight(:,:), layer6_bias(:) ! <Rackhun Son>
+
+    REAL(wp), ALLOCATABLE :: layer1_weight_update(:,:), layer1_bias_update(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer2_weight_update(:,:), layer2_bias_update(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer3_weight_update(:,:), layer3_bias_update(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer4_weight_update(:,:), layer4_bias_update(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer5_weight_update(:,:), layer5_bias_update(:) ! <Rackhun Son>
+    REAL(wp), ALLOCATABLE :: layer6_weight_update(:,:), layer6_bias_update(:) ! <Rackhun Son>
 
     REAL(wp), ALLOCATABLE :: mW1(:,:),           mb1(:)         ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: mW2(:,:),           mb2(:)         ! <Rackhun Son>
@@ -292,6 +306,45 @@ CONTAINS
     ptr_1D => input_file%Read_1d(variable_name='layer6_bias')
     layer6_bias = ptr_1D
     DEALLOCATE(ptr_1D)
+
+    ptr_1D => input_file%Read_1d(variable_name='layer1_weight_update')
+    layer1_weight_update = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer1_bias_update')
+    layer1_bias_update = ptr_1D
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer2_weight_update')
+    layer2_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer2_bias_update')
+    layer2_bias_update = ptr_1D
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer3_weight_update')
+    layer3_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer3_bias_update')
+    layer3_bias_update = ptr_1D
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer4_weight_update')
+    layer4_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer4_bias_update')
+    layer4_bias_update = ptr_1D
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer5_weight_update')
+    layer5_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer5_bias_update')
+    layer5_bias_update = ptr_1D
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer6_weight_update')
+    layer6_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_output/), order=(/2, 1/))
+    DEALLOCATE(ptr_1D)
+    ptr_1D => input_file%Read_1d(variable_name='layer6_bias_update')
+    layer6_bias_update = ptr_1D
+    DEALLOCATE(ptr_1D)
+
+    
 
     ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w_init')
     mW1 = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
@@ -470,6 +523,19 @@ CONTAINS
     config%layer6_weight          = layer6_weight    ! <Rackhun Son> 
     config%layer6_bias            = layer6_bias      ! <Rackhun Son>
 
+    config%layer1_weight_update   = layer1_weight_update    ! <Rackhun Son> 
+    config%layer1_bias_update     = layer1_bias_update      ! <Rackhun Son>
+    config%layer2_weight_update   = layer2_weight_update    ! <Rackhun Son> 
+    config%layer2_bias_update     = layer2_bias_update      ! <Rackhun Son>
+    config%layer3_weight_update   = layer3_weight_update    ! <Rackhun Son> 
+    config%layer3_bias_update     = layer3_bias_update      ! <Rackhun Son>
+    config%layer4_weight_update   = layer4_weight_update    ! <Rackhun Son> 
+    config%layer4_bias_update     = layer4_bias_update      ! <Rackhun Son>
+    config%layer5_weight_update   = layer5_weight_update    ! <Rackhun Son> 
+    config%layer5_bias_update     = layer5_bias_update      ! <Rackhun Son>
+    config%layer6_weight_update   = layer6_weight_update    ! <Rackhun Son> 
+    config%layer6_bias_update     = layer6_bias_update      ! <Rackhun Son>
+
     config%mW1                    = mW1              ! <Rackhun Son> 
     config%mb1                    = mb1              ! <Rackhun Son>
     config%mW2                    = mW2              ! <Rackhun Son> 
@@ -522,7 +588,7 @@ CONTAINS
     daily => new_vgrid('daily', ZAXIS_GENERIC, 366, units='day')
     CALL Register_vgrid(daily)
 
-    memory => new_vgrid('memory', ZAXIS_GENERIC, 730, units='day')
+    memory => new_vgrid('memory', ZAXIS_GENERIC, 365*2, units='day')
     CALL Register_vgrid(memory)
 
     ! New axis for LSTM <Rackhun Son>

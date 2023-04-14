@@ -128,6 +128,13 @@ CONTAINS
     & layer5_weight, layer5_bias,            & ! in
     & layer6_weight, layer6_bias,            & ! in
 
+    & layer1_weight_update, layer1_bias_update,   & ! in
+    & layer2_weight_update, layer2_bias_update,   & ! in
+    & layer3_weight_update, layer3_bias_update,   & ! in
+    & layer4_weight_update, layer4_bias_update,   & ! in
+    & layer5_weight_update, layer5_bias_update,   & ! in
+    & layer6_weight_update, layer6_bias_update,   & ! in
+
     & mW1,           mb1,                    & ! in
     & mW2,           mb2,                    & ! in
     & mW3,           mb3,                    & ! in
@@ -177,7 +184,8 @@ CONTAINS
 
     !& lstm_hidden,                          & ! inout
     !& lstm_cell,                            & ! inout
-    & burned_fract                          & ! inout
+    & burned_fract,                         & ! inout
+    & burned_fract_infer                    & ! inout
     & )
 
     ! Input Arguments
@@ -223,12 +231,12 @@ CONTAINS
 
       & fba_smooth(:),                              &
 
-      !& layer1_weight(:,:),    layer1_bias(:),      &
-      !& layer2_weight(:,:),    layer2_bias(:),      &
-      !& layer3_weight(:,:),    layer3_bias(:),      &
-      !& layer4_weight(:,:),    layer4_bias(:),      &
-      !& layer5_weight(:,:),    layer5_bias(:),      &
-      !& layer6_weight(:,:),    layer6_bias(:),      &
+      & layer1_weight(:,:),    layer1_bias(:),      &
+      & layer2_weight(:,:),    layer2_bias(:),      &
+      & layer3_weight(:,:),    layer3_bias(:),      &
+      & layer4_weight(:,:),    layer4_bias(:),      &
+      & layer5_weight(:,:),    layer5_bias(:),      &
+      & layer6_weight(:,:),    layer6_bias(:),      &
       
       !& i2i_weight(:,:),       i2i_bias(:),         &
       !& h2i_weight(:,:),       h2i_bias(:),         &
@@ -258,12 +266,19 @@ CONTAINS
     REAL(wp), INTENT(inout) ::                      &
       !& lstm_hidden(:,:),                           & ! inout
       !& lstm_cell(:,:),                             & ! inout
-      & layer1_weight(:,:),    layer1_bias(:),      &  ! inout (training)
-      & layer2_weight(:,:),    layer2_bias(:),      &  ! inout (training)
-      & layer3_weight(:,:),    layer3_bias(:),      &  ! inout (training)
-      & layer4_weight(:,:),    layer4_bias(:),      &  ! inout (training)
-      & layer5_weight(:,:),    layer5_bias(:),      &  ! inout (training)
-      & layer6_weight(:,:),    layer6_bias(:),      &  ! inout (training)
+      !& layer1_weight(:,:),    layer1_bias(:),      &  ! inout (training)
+      !& layer2_weight(:,:),    layer2_bias(:),      &  ! inout (training)
+      !& layer3_weight(:,:),    layer3_bias(:),      &  ! inout (training)
+      !& layer4_weight(:,:),    layer4_bias(:),      &  ! inout (training)
+      !& layer5_weight(:,:),    layer5_bias(:),      &  ! inout (training)
+      !& layer6_weight(:,:),    layer6_bias(:),      &  ! inout (training)
+
+      & layer1_weight_update(:,:),    layer1_bias_update(:),      &  ! inout (training)
+      & layer2_weight_update(:,:),    layer2_bias_update(:),      &  ! inout (training)
+      & layer3_weight_update(:,:),    layer3_bias_update(:),      &  ! inout (training)
+      & layer4_weight_update(:,:),    layer4_bias_update(:),      &  ! inout (training)
+      & layer5_weight_update(:,:),    layer5_bias_update(:),      &  ! inout (training)
+      & layer6_weight_update(:,:),    layer6_bias_update(:),      &  ! inout (training)
 
       & mW1(:,:),              mb1(:),              &  ! inout (training)
       & mW2(:,:),              mb2(:),              &  ! inout (training)
@@ -294,7 +309,8 @@ CONTAINS
       & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),    & ! inout (training)
       & RHC_memory(:,:), Y_memory(:,:),                       & ! inout (training)
 
-      & burned_fract(:)                               ! inout
+      & burned_fract(:),                                      & ! inout
+      & burned_fract_infer(:)                                   ! inout
 
     ! Locals
     !INTEGER, PARAMETER :: bs = 1024
@@ -451,9 +467,11 @@ CONTAINS
       nc, d_input, d_hidden, d_output, keep_prob,    &
       q_rel_air_constraint)
 
-    burned_fract = nn_outputs(:,1)/100.
-    WHERE (burned_fract < 0.) burned_fract = 0.
-    WHERE (burned_fract > 1.) burned_fract = 1.
+    burned_fract(:) = fba_smooth(:)
+    burned_fract_infer = nn_outputs(:,1)/100.
+    WHERE (burned_fract_infer < 0.) burned_fract_infer = 0.
+    WHERE (burned_fract_infer > 1.) burned_fract_infer = 1.
+
 
     ! saving in memory
     IF (is_saving .eq. 1) THEN
@@ -509,7 +527,7 @@ CONTAINS
       DO j = 1,INT(bs/nc)
         k = k+1
 
-        IF (k .eq. 1) THEN
+        IF (j .eq. 1) THEN
           idx = memory_idx
         ELSE
           call RANDOM_NUMBER(u)
@@ -572,17 +590,17 @@ CONTAINS
       ! Forward propagation
       CALL forward(                                    &
         tr_inputs,     tr_outputs,                     & 
-        layer1_weight, layer1_bias, 'leaky_relu',      & 
+        layer1_weight_update, layer1_bias_update, 'leaky_relu',      & 
         tr_layer1_out, tr_layer1_act, tr_layer1_mask,  &
-        layer2_weight, layer2_bias, 'leaky_relu',      &
+        layer2_weight_update, layer2_bias_update, 'leaky_relu',      &
         tr_layer2_out, tr_layer2_act, tr_layer2_mask,  &
-        layer3_weight, layer3_bias, 'leaky_relu',      &
+        layer3_weight_update, layer3_bias_update, 'leaky_relu',      &
         tr_layer3_out, tr_layer3_act, tr_layer3_mask,  &
-        layer4_weight, layer4_bias, 'leaky_relu',      &
+        layer4_weight_update, layer4_bias_update, 'leaky_relu',      &
         tr_layer4_out, tr_layer4_act, tr_layer4_mask,  &
-        layer5_weight, layer5_bias, 'leaky_relu',      &
+        layer5_weight_update, layer5_bias_update, 'leaky_relu',      &
         tr_layer5_out, tr_layer5_act, tr_layer5_mask,  &
-        layer6_weight, layer6_bias, 'linear',          &
+        layer6_weight_update, layer6_bias_update, 'linear',          &
         tr_layer6_out, tr_layer6_act, tr_layer6_mask,  &
         bs, d_input, d_hidden, d_output, keep_prob,    &
         tr_q_rel_air_constraint)
@@ -598,12 +616,12 @@ CONTAINS
       ! Backward propagation
       CALL backward(                                                               &
         tr_inputs, tr_outputs, tr_target,                                          &
-        layer1_weight, 'leaky_relu', tr_layer1_out, tr_layer1_act, tr_layer1_mask, &
-        layer2_weight, 'leaky_relu', tr_layer2_out, tr_layer2_act, tr_layer2_mask, &
-        layer3_weight, 'leaky_relu', tr_layer3_out, tr_layer3_act, tr_layer3_mask, &
-        layer4_weight, 'leaky_relu', tr_layer4_out, tr_layer4_act, tr_layer4_mask, &
-        layer5_weight, 'leaky_relu', tr_layer5_out, tr_layer5_act, tr_layer5_mask, &
-        layer6_weight, 'linear',     tr_layer6_out, tr_layer6_act, tr_layer6_mask, &
+        layer1_weight_update, 'leaky_relu', tr_layer1_out, tr_layer1_act, tr_layer1_mask, &
+        layer2_weight_update, 'leaky_relu', tr_layer2_out, tr_layer2_act, tr_layer2_mask, &
+        layer3_weight_update, 'leaky_relu', tr_layer3_out, tr_layer3_act, tr_layer3_mask, &
+        layer4_weight_update, 'leaky_relu', tr_layer4_out, tr_layer4_act, tr_layer4_mask, &
+        layer5_weight_update, 'leaky_relu', tr_layer5_out, tr_layer5_act, tr_layer5_mask, &
+        layer6_weight_update, 'linear',     tr_layer6_out, tr_layer6_act, tr_layer6_mask, &
         dW1, dW2, dW3, dW4, dW5, dW6,                                              &
         db1, db2, db3, db4, db5, db6,                                              &
         bs, d_input, d_hidden, d_output, keep_prob,                                &
@@ -617,10 +635,10 @@ CONTAINS
         mb1, mb2, mb3, mb4, mb5, mb6,                  &
         vW1, vW2, vW3, vW4, vW5, vW6,                  &
         vb1, vb2, vb3, vb4, vb5, vb6,                  &
-        layer1_weight,  layer2_weight,  layer3_weight, &
-        layer4_weight,  layer5_weight,  layer6_weight, &
-        layer1_bias,    layer2_bias,    layer3_bias,   &
-        layer4_bias,    layer5_bias,    layer6_bias,   &
+        layer1_weight_update,  layer2_weight_update,  layer3_weight_update, &
+        layer4_weight_update,  layer5_weight_update,  layer6_weight_update, &
+        layer1_bias_update,    layer2_bias_update,    layer3_bias_update,   &
+        layer4_bias_update,    layer5_bias_update,    layer6_bias_update,   &
         lr_rate, iteration, d_input, d_hidden, d_output)
 
         !loss = sum((tr_outputs(:,1) - tr_target)**2)/float(bs)

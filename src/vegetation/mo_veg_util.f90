@@ -49,11 +49,10 @@ MODULE mo_veg_util
 CONTAINS
 
 
-  !-----------------------------------------------------------------------------------------------------
-  !> init/reset vegetation fluxes (with/to zero)
-  !! 
-  !! called prior to all Tasks
-  !-----------------------------------------------------------------------------------------------------
+  ! ====================================================================================================== !
+  !
+  !> init/reset vegetation fluxes (with/to zero) - called prior to other veg tasks
+  !
   SUBROUTINE reset_veg_fluxes(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
@@ -70,21 +69,15 @@ CONTAINS
 #else
     dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool, t_veg_elements_pool
 #endif
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
-    ! ---------------------------
-    ! 0.2 Local 
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),        POINTER       :: model
     INTEGER                                 :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration, process memory and pools
-    dsl4jsb_Def_memory(VEG_)                          ! TYPE(t_veg_memory),      POINTER :: veg__mem
+
+    dsl4jsb_Def_memory(VEG_)
 #ifdef __QUINCY_STANDALONE__
 #else
     dsl4jsb_Def_pool(t_veg_tissues_pool)  :: veg_growth
@@ -98,12 +91,10 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
+
     IF (.NOT. tile%Is_process_calculated(VEG_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    ! ---------------------------
-    ! 0.5 Get Memory
+
     model  => Get_model(tile%owner_model_id)
     ! Get process config
     ! Get process memories
@@ -217,7 +208,7 @@ CONTAINS
     dsl4jsb_Use_memory(SPQ_)
 #ifdef __QUINCY_STANDALONE__
     dsl4slm_Use_memory_a_veg
-    USE mo_veg_memory_class,    ONLY: veg_pool
+    USE mo_veg_memory_class,    ONLY: veg_pool, veg_exudation
 #else
     dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool, t_veg_elements_pool
 #endif
@@ -260,9 +251,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: daytime_counter
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: gross_assimilation
@@ -275,7 +266,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: n_fixation 
     dsl4jsb_Real2D_onChunk      :: press_srf_daytime
     dsl4jsb_Real2D_onChunk      :: t_air_daytime
-    dsl4jsb_Real2D_onChunk      :: cost_n_fixation
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation !QS-NOTE: this variable does not exist anymore in QS #34 (#29?)
     dsl4jsb_Real2D_onChunk      :: f_p_demand
     dsl4jsb_Real2D_onChunk      :: f_n_demand
     dsl4jsb_Real2D_onChunk      :: npp
@@ -329,7 +320,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: npp_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: demand_uptake_p_tuptake_mavg
-    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_talloc_mavg
+    dsl4jsb_Real2D_onChunk      :: cost_n_fixation_talloc_mavg !QS-NOTE: this variable does not exist anymore in QS #34 (#29?)
     dsl4jsb_Real2D_onChunk      :: growth_req_n_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: growth_req_p_tuptake_mavg
     dsl4jsb_Real2D_onChunk      :: t_air_tfrac_mavg
@@ -337,7 +328,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: press_srf_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: ga_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg
+    dsl4jsb_Real2D_onChunk      :: beta_sinklim_ps_tcnl_mavg !QS-NOTE: this variable does not exist anymore in QS #26 !17 !18
     dsl4jsb_Real2D_onChunk      :: uptake_n_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_np_tcnl_mavg
@@ -374,12 +365,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_cl
     dsl4jsb_Real3D_onChunk      :: fleaf_sunlit_daytime_dacc_cl
-    ! ! HYDRO_ 2D
-    ! dsl4jsb_Real2D_onChunk      :: transpiration
-    ! dsl4jsb_Real2D_onChunk      :: w_soil_root
-    ! dsl4jsb_Real2D_onChunk      :: w_soil_root_fc
-    ! ! SSE_ 2D
-    ! dsl4jsb_Real2D_onChunk      :: t_soil_root
     ! SPQ_ 2D
     dsl4jsb_Real2D_onChunk      :: transpiration
     dsl4jsb_Real2D_onChunk      :: w_soil_root
@@ -397,11 +382,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-#ifdef __QUINCY_STANDALONE__
     vgrid_canopy  => Get_vgrid('canopy_layer')
-#else
-    vgrid_canopy  => Get_vgrid('canopy_layer')
-#endif
     ncanopy       =  vgrid_canopy%n_levels
     dsl4jsb_Get_config(ASSIMI_)
     dsl4jsb_Get_config(VEG_)
@@ -409,8 +390,6 @@ CONTAINS
     dsl4jsb_Get_memory(ASSIMI_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
-    ! dsl4jsb_Get_memory(HYDRO_)
-    ! dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SPQ_)
 #ifdef __QUINCY_STANDALONE__
 #else
@@ -429,9 +408,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)
     ! ASSIMI_
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)
@@ -581,10 +560,6 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-
-    ! docu:
-    ! cos_zenith_angle tracing variables and daytime_counter are updated 
-    ! in update_atm2land() or directly in the ICON-Land standalone driver, respectively
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
@@ -610,9 +585,11 @@ CONTAINS
     !>    calculate the average of the previous day and pass this value to the according variable
     !> 
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
+    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
+    !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
-      IF ((cos_zenith_angle(ic) - prev_one_cos_zenith_angle(ic)) > eps8 .AND. &
-          (prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) <= eps8) THEN
+      IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
+        & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ! 1D
@@ -717,15 +694,15 @@ CONTAINS
     fmaint_rate_tcnl_mavg            = calc_time_mavg(fmaint_rate_tcnl_mavg, fmaint_rate_root(:), &
                                                       mavg_period_tgrowth, do_calc=l_growing_season(:))
     WHERE (growth_req_n(:) > 0._wp)
-       hlp(:) = 1._wp / growth_req_n(:)
+      hlp(:) = 1._wp / growth_req_n(:)
     ELSEWHERE
-       hlp(:) = 0._wp
+      hlp(:) = 0._wp
     ENDWHERE
     growth_cn_tcnl_mavg(:)  = calc_time_mavg(growth_cn_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
     WHERE (growth_req_p(:) > 0._wp)
-       hlp(:) = 1._wp / growth_req_p(:)
+      hlp(:) = 1._wp / growth_req_p(:)
     ELSEWHERE
-       hlp(:) = 0._wp
+      hlp(:) = 0._wp
     ENDWHERE
     growth_np_tcnl_mavg(:)  = calc_time_mavg(growth_np_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
     hlp(:)                  = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - & 
@@ -776,9 +753,9 @@ CONTAINS
     !> 
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme))
     CASE ("optimal", "fixed")
-       mavg_period_hlp = mavg_period_talloc
+      mavg_period_hlp = mavg_period_talloc
     CASE ("dynamic")
-       mavg_period_hlp = mavg_period_talloc_dynamic
+      mavg_period_hlp = mavg_period_talloc_dynamic
     END SELECT
     labile_carbon_talloc_mavg(:)        = calc_time_mavg(labile_carbon_talloc_mavg(:), veg_pool%labile%carbon(:), &
                                                          mavg_period_hlp, do_calc=l_growing_season(:))
@@ -795,9 +772,9 @@ CONTAINS
     ! avoid division by zero
     DO ic = 1, nc
       IF (w_soil_root_fc(ic) > eps8) THEN
-         hlp(ic) = w_soil_root(ic) / w_soil_root_fc(ic)
+        hlp(ic) = w_soil_root(ic) / w_soil_root_fc(ic)
       ELSE
-         hlp(ic) = 0._wp
+        hlp(ic) = 0._wp
       END IF
     END DO
     w_root_lim_talloc_mavg(:)           = calc_time_mavg(w_root_lim_talloc_mavg(:), hlp(:), &
@@ -807,26 +784,26 @@ CONTAINS
     !>
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme))
     CASE ("optimal", "fixed")
-       mavg_period_hlp = mavg_period_tgrowth
+      mavg_period_hlp = mavg_period_tgrowth
     CASE ("dynamic")
-       mavg_period_hlp = mavg_period_talloc_dynamic
+      mavg_period_hlp = mavg_period_talloc_dynamic
     END SELECT
     WHERE(growth_req_n(:) > 0._wp)
-       hlp(:) = 1._wp / growth_req_n(:)
+      hlp(:) = 1._wp / growth_req_n(:)
     ELSEWHERE
-       hlp(:) = 0._wp
+      hlp(:) = 0._wp
     END WHERE
     growth_cn_talloc_mavg(:) = calc_time_mavg(growth_cn_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
     WHERE(growth_req_n(:) > 0._wp .AND. growth_req_p(:) > 0._wp)
-       hlp(:) = 1._wp / (growth_req_n(:) * growth_req_p(:))
+      hlp(:) = 1._wp / (growth_req_n(:) * growth_req_p(:))
     ELSEWHERE
-       hlp(:) = 0._wp
+      hlp(:) = 0._wp
     END WHERE
     growth_cp_talloc_mavg(:) = calc_time_mavg(growth_cp_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
     WHERE(growth_req_p(:) > 0._wp)
-       hlp(:) = 1._wp / growth_req_p(:)
+      hlp(:) = 1._wp / growth_req_p(:)
     ELSEWHERE
-       hlp(:) = 0._wp
+      hlp(:) = 0._wp
     END WHERE
     growth_np_talloc_mavg(:) = calc_time_mavg(growth_np_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
 
@@ -836,9 +813,9 @@ CONTAINS
  	                                            lctlib%tau_mycorrhiza, avg_period_unit='year')
     DO ic = 1, nc
       IF (veg_pool%fine_root%carbon(ic) > eps8) THEN
-         hlp(ic)   = veg_pool%leaf%carbon(ic) / veg_pool%fine_root%carbon(ic)
+        hlp(ic)   = veg_pool%leaf%carbon(ic) / veg_pool%fine_root%carbon(ic)
       ELSE
-         hlp(ic)   = 0._wp
+        hlp(ic)   = 0._wp
       END IF
       IF ((veg_pool%leaf%carbon(ic) > eps8) .AND. (veg_pool%fine_root%carbon(ic) > eps8)) THEN
         l_hlp(ic) = .TRUE.

@@ -25,7 +25,7 @@ MODULE mo_seb_land
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
   USE mo_jsb_lct_class,      ONLY: GLACIER_TYPE, Contains_lct
-  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
   USE mo_jsb_time,           ONLY: is_time_experiment_start
 
   dsl4jsb_Use_processes SEB_, RAD_, TURB_, A2L_, SSE_, HYDRO_
@@ -142,7 +142,7 @@ CONTAINS
     REAL(wp) :: w_soil_critical_tmp
 
     INTEGER  :: iblk, ics, ice, nc, i
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
     INTEGER  :: ilct
@@ -157,6 +157,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -325,7 +326,7 @@ CONTAINS
       & t_old(:), &
       & q_effective(qsat_srf_old(:), q_air(:), fact_qsat_srf(:), fact_q_air(:)))
 
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)
     !$claw end expand
 
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2_1 tile_name=tile%name
@@ -337,7 +338,7 @@ CONTAINS
       s_star(:) = s_old(:)
     ELSE
       !$claw sca forward update savepoint=ser_jsb_seb_land_surface_temp_implicit_1 tile_name=tile%name
-      CALL surface_temp_implicit( nc, steplen, & ! in
+      CALL surface_temp_implicit( nc, steplen, alpha, & ! in
         t2s_conv(:),                           & ! in
         t_acoef(:), t_bcoef(:), q_acoef(:), q_bcoef(:), &  ! in
         s_old(:), qsat_srf_old(:), dQdT(:),    & ! in
@@ -359,8 +360,12 @@ CONTAINS
     !$claw acc end data
 
     ! New unfiltered surface temperature (\tilde(X)^(t+1)) (see below Eq. 3.3.1.5 in ECHAM3 manual, alpha = 1/tpfac2)
-    !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
-    t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
+    IF (.NOT. jsbach_runs_standalone()) THEN
+      !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_4 tile_name=tile%name
+      t_unfilt(:) = ( tpfac2 * s_star(:) + tpfac3 * s_old(:) ) / t2s_conv(:)
+    ELSE
+      t_unfilt(:) = s_star(:) / t2s_conv(:)
+    END IF
 
     ! Correct new dry static energy for melting of snow on the surface and (if l_freeze=.TRUE.) melting/freezing of
     ! ice/water in the top soil layer that will happen during this time step
@@ -450,7 +455,7 @@ CONTAINS
 
   END SUBROUTINE update_surface_energy_land 
 
-  SUBROUTINE surface_temp_implicit(klon, steplen,             &
+  SUBROUTINE surface_temp_implicit(klon, steplen, alpha,      &
     &            pcp,                                         &
     &            pescoe, pfscoe, peqcoe, pfqcoe,              &
     &            psold, pqsold, pdqsold,                      &
@@ -464,12 +469,11 @@ CONTAINS
       & zemiss_def, &
       & stbo, &
       & alv,  &
-      & als,  &
-      & cvdifts
+      & als
 
 
     INTEGER,  INTENT(in)    :: klon
-    REAL(wp), INTENT(in)    :: steplen
+    REAL(wp), INTENT(in)    :: steplen, alpha
     REAL(wp), INTENT(in)    :: pcp(klon), pfscoe(klon), pescoe(klon), pfqcoe(klon), peqcoe(klon)
     REAL(wp), INTENT(in)    :: psold(klon), pqsold(klon), pdqsold(klon)
     REAL(wp), INTENT(in)    :: pnetrad(klon), pgrdfl(klon)
@@ -484,7 +488,7 @@ CONTAINS
 
     !$claw acc data & 
     !$claw acc create(zcolin,zcohfl,zcoind,zicp,zca,zcs)
-    pdt     = cvdifts * steplen
+    pdt     = alpha * steplen
     !pc16    = cpd * cpvd1
 
     !
@@ -613,7 +617,7 @@ CONTAINS
       & heat_tcoef     (:)     !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
 
     !TYPE(t_jsb_model), POINTER :: model
 
@@ -624,6 +628,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
@@ -661,7 +666,7 @@ CONTAINS
     s_air(:) = t_acoef(:) * s_star   (:) + t_bcoef(:)
 
     ! Transfer coefficient
-    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)
+    heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen, alpha)
 
     ! Compute sensible heat flux
     !

@@ -153,7 +153,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: co2_mixing_ratio
     dsl4jsb_Real2D_onChunk      :: ga
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: swpar_fdiffuse
+    dsl4jsb_Real2D_onChunk      :: fract_par_diffuse
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_air
     dsl4jsb_Real2D_onChunk      :: beta_soa
@@ -366,7 +366,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, co2_mixing_ratio)                   ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, ga)                                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                     ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_fdiffuse)                     ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)                  ! in
     ! ASSIMI_ 
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_air)                        ! in
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, beta_soa)                        ! in
@@ -635,12 +635,6 @@ CONTAINS
 
 
     !> 2.0 Calculate target C:N:P for each tissue type
-    !! 
-    !! this function loops over:                    \n
-    !!   points:          DO ipoint=1,nc            \n
-    !!   direction:       DO dd = 1,3               \n
-    !!   canopy layers:   DO icanopy =1, ncanopy
-    !! 
     IF (TRIM(dsl4jsb_Config(VEG_)%leaf_stoichom_scheme) == "optimal") THEN
       CALL calc_dir_optimal_cn_leaf(    nc                                                        , & ! dimension
                                         ncanopy                                                   , &
@@ -775,7 +769,7 @@ CONTAINS
                                               ppfd_sunlit_cl(:,:)                                     , &
                                               ppfd_shaded_cl(:,:)                                     , &
                                               swpar_srf_down(:)                                       , &
-                                              swpar_fdiffuse(:)                                       , & ! in
+                                              fract_par_diffuse(:)                                    , & ! in
                                               unit_npp(:)                                             , & ! out
                                               unit_transpiration(:)                                   )   ! out 
     

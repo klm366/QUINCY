@@ -144,17 +144,18 @@ CONTAINS
   !! 
   !! out: heat_transfer_coef
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
+  REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen, alpha)
 
-    USE mo_jsb_physical_constants, ONLY: grav, cvdifts
+    USE mo_jsb_physical_constants, ONLY: grav
 
     REAL(wp), INTENT(in) :: &
       & drag,      &
-      & steplen
+      & steplen,   &
+      & alpha
 
     !$claw sca routine
 
-    heat_transfer_coef = drag / (cvdifts * grav * steplen)
+    heat_transfer_coef = drag / (alpha * grav * steplen)
 
   END FUNCTION heat_transfer_coef
 
