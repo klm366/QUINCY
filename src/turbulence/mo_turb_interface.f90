@@ -213,7 +213,7 @@ CONTAINS
 
       config_rough_bare                 = dsl4jsb_Config(TURB_)%roughness_bare
       config_roughness_momentum_to_heat = dsl4jsb_Config(TURB_)%roughness_momentum_to_heat
-  
+
       !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_0 tile_name=tile%name
       rough_bare_star(:) = 1._wp  / LOG(config_blending_height / config_rough_bare)**2
       rough_snow_star(:) = 1._wp  / LOG(config_blending_height / config_rough_snow)**2
@@ -248,7 +248,7 @@ CONTAINS
 
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_3 tile_name=tile%name
         rough_m_star(:) = (1._wp - fract_fpc_max(:)) * rough_bare_star(:) + fract_fpc_max(:) * rough_veg_star(:)
-  
+
         ! Modify roughness length heat for non-vegetated part by snow cover
         ! TODO Note by TR from JSBACH3: lower z0 for snow covered surfaces should be discussed again,
         !      if a multi-layer snow model is implemented.
@@ -262,7 +262,7 @@ CONTAINS
 
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_6 tile_name=tile%name
         rough_h_star(:) = (1._wp - fract_fpc_max(:)) * rough_bare_star(:) + fract_fpc_max(:) * rough_veg_star(:)
-  
+
       ELSE IF (tile%is_vegetation) THEN ! vegetated tile in a run without PFTs, e.g. jsbach_lite
 
         ! rough_m and rough_m_star are taken from values from init
@@ -271,7 +271,7 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_7 tile_name=tile%name
         rough_h_star(:) = (1._wp - fract_snow_soil(:)) * 1._wp / LOG(config_blending_height / MIN(1._wp, rough_m(:)))**2 &
           &               +        fract_snow_soil(:)  * rough_snow_star(:)
-  
+
       ELSE  ! bare or glacier tile
         !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_8 tile_name=tile%name
         rough_m_star(:) = rough_bare_star(:)

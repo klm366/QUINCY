@@ -25,11 +25,10 @@ MODULE mo_assimi_util
 CONTAINS
 
 
-  !-----------------------------------------------------------------------------------------------------
-  !> init/reset assimilation fluxes (with/to zero)
-  !! 
-  !! called prior to all Tasks (assimi_interface)
-  !-----------------------------------------------------------------------------------------------------
+  ! ====================================================================================================== !
+  !
+  !> init/reset assimilation fluxes (with/to zero) - called prior to other assimi tasks
+  !
   SUBROUTINE reset_assimi_fluxes(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
@@ -37,19 +36,19 @@ CONTAINS
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_math_constants,    ONLY: zero
+
     dsl4jsb_Use_processes ASSIMI_
     dsl4jsb_Use_memory(ASSIMI_)
-    
+    ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
-
-    ! Locals
+    ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model),      POINTER       :: model
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_assimi_fluxes'
 
     dsl4jsb_Def_memory(ASSIMI_) 
-
+    ! -------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -58,13 +57,14 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(ASSIMI_)) RETURN
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     ! Get process memories
-    dsl4jsb_Get_memory(ASSIMI_) 
+    dsl4jsb_Get_memory(ASSIMI_)
 
     ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
+
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
@@ -82,7 +82,7 @@ CONTAINS
     dsl4jsb_var3D_onChunk(ASSIMI_, net_assimilation_cl)        = zero
     dsl4jsb_var3D_onChunk(ASSIMI_, maint_respiration_leaf_cl)  = zero
 
-    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+    IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE reset_assimi_fluxes
 
@@ -110,7 +110,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
     REAl(wp), DIMENSION(options%nc)         :: hlp                  !< helper
-    INTEGER                                 :: ipoint               !< looping
+    INTEGER                                 :: ic                   !< looping
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_assimilation'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -121,9 +121,9 @@ CONTAINS
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: t_air
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: daytime_counter
     ! ASSIMI_
     dsl4jsb_Real2D_onChunk      :: beta_air
@@ -164,8 +164,8 @@ CONTAINS
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)                            ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                   ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)                 ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)        ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                  ! in
     ! ASSIMI_
@@ -194,11 +194,11 @@ CONTAINS
 
     !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
     !>
-    DO ipoint = 1, nc
-      IF (growing_season(ipoint) > test_false_true) THEN
-        l_growing_season(ipoint) = .TRUE.
+    DO ic = 1, nc
+      IF (growing_season(ic) > test_false_true) THEN
+        l_growing_season(ic) = .TRUE.
       ELSE
-        l_growing_season(ipoint) = .FALSE.
+        l_growing_season(ic) = .FALSE.
       END IF
     END DO
 
@@ -206,19 +206,15 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-
-    ! docu:
-    ! cos_zenith_angle tracing variables and daytime_counter are updated 
-    ! in update_atm2land() or directly in the ICON-Land standalone driver, respectively
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
-    DO ipoint = 1, nc
-      IF (swpar_srf_down(ipoint) > eps8) THEN
+    DO ic = 1, nc
+      IF (swpar_srf_down(ic) > eps8) THEN
         ! add values
-        beta_air_daytime_dacc(ipoint)       = beta_air_daytime_dacc(ipoint)     + beta_air(ipoint)
-        beta_soil_ps_daytime_dacc(ipoint)   = beta_soil_ps_daytime_dacc(ipoint) + beta_soil_ps(ipoint)
-        beta_soil_gs_daytime_dacc(ipoint)   = beta_soil_gs_daytime_dacc(ipoint) + beta_soil_gs(ipoint)
+        beta_air_daytime_dacc(ic)       = beta_air_daytime_dacc(ic)     + beta_air(ic)
+        beta_soil_ps_daytime_dacc(ic)   = beta_soil_ps_daytime_dacc(ic) + beta_soil_ps(ic)
+        beta_soil_gs_daytime_dacc(ic)   = beta_soil_gs_daytime_dacc(ic) + beta_soil_gs(ic)
       END IF
     END DO
 
@@ -227,19 +223,21 @@ CONTAINS
     !>    calculate the average of the previous day and pass this value to the according variable
     !> 
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    DO ipoint = 1, nc
-      IF ((cos_zenith_angle(ipoint) - prev_one_cos_zenith_angle(ipoint)) > eps8 .AND. &
-          (prev_one_cos_zenith_angle(ipoint) - prev_two_cos_zenith_angle(ipoint)) <= eps8) THEN
+    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
+    !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
+    DO ic = 1, nc
+      IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
+          & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
-        IF (daytime_counter(ipoint) > eps8) THEN
-          beta_air_daytime(ipoint)     = beta_air_daytime_dacc(ipoint)     / daytime_counter(ipoint)
-          beta_soil_ps_daytime(ipoint) = beta_soil_ps_daytime_dacc(ipoint) / daytime_counter(ipoint)
-          beta_soil_gs_daytime(ipoint) = beta_soil_gs_daytime_dacc(ipoint) / daytime_counter(ipoint)
+        IF (daytime_counter(ic) > eps8) THEN
+          beta_air_daytime(ic)     = beta_air_daytime_dacc(ic)     / daytime_counter(ic)
+          beta_soil_ps_daytime(ic) = beta_soil_ps_daytime_dacc(ic) / daytime_counter(ic)
+          beta_soil_gs_daytime(ic) = beta_soil_gs_daytime_dacc(ic) / daytime_counter(ic)
         END IF
         ! zero the accumulation variables after daily average has been calculated
-        beta_air_daytime_dacc(ipoint)     = 0.0_wp
-        beta_soil_ps_daytime_dacc(ipoint) = 0.0_wp
-        beta_soil_gs_daytime_dacc(ipoint) = 0.0_wp
+        beta_air_daytime_dacc(ic)     = 0.0_wp
+        beta_soil_ps_daytime_dacc(ic) = 0.0_wp
+        beta_soil_gs_daytime_dacc(ic) = 0.0_wp
       END IF
     END DO
 

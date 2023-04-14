@@ -155,7 +155,7 @@ CONTAINS
     REAL(wp)                        :: jmax2vcmax                                    ! jmax to vcmax ratio
     REAL(wp)                        :: f_pepc                                        ! fraction of N in PEP Carboxylase
     LOGICAL                         :: optimise_n_fractions
-    INTEGER                         :: icanopy, ipoint                               ! looping over ncanopy and nc
+    INTEGER                         :: icanopy                                       ! looping over ncanopy and nc
     ! REAL(wp),DIMENSION(nc,ncanopy)  :: hlp1, hlp2, hlp3, hlp4
     REAL(wp),DIMENSION(nc,ncanopy)  :: mid_point_lai_cl
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_canopy_layers'
@@ -896,7 +896,7 @@ CONTAINS
                                                   ppfd_sunlit_cl          , &
                                                   ppfd_shaded_cl          , &
                                                   swpar_srf_down          , &
-                                                  swpar_fdiffuse          , &
+                                                  fract_par_diffuse       , &
                                                   unit_npp                , &
                                                   unit_transpiration )
 
@@ -954,7 +954,7 @@ CONTAINS
                                                           ppfd_sunlit_cl          , &   !< ..
                                                           ppfd_shaded_cl                !< ..
     REAl(wp),DIMENSION(nc),                 INTENT(in) :: swpar_srf_down          , &   !< ..
-                                                          swpar_fdiffuse                !< ..
+                                                          fract_par_diffuse             !< ..
     REAL(wp),DIMENSION(nc),                 INTENT(out):: unit_npp                , &   !< unit change of NPP per ??
                                                           unit_transpiration            !< unit change of NPP per ??
     ! ---------------------------
@@ -1061,7 +1061,8 @@ CONTAINS
     ! In case of no leaves set top layer PAR to SW value
     WHERE (lai(:) < eps8)
        loc_ppfd_sunlit_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_srf_down(:) * rad2ppfd
-       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib_sigma_vis) * swpar_fdiffuse(:) * swpar_srf_down(:) * rad2ppfd
+       loc_ppfd_shaded_cl(:,1)  = (1._wp - lctlib_sigma_vis) &
+         &                         * fract_par_diffuse(:) * swpar_srf_down(:) * rad2ppfd
        loc_fleaf_sunlit_cl(:,1) = exp(-kbl0_vis * cumm_lai_new_cl(:,1))
     END WHERE
 
@@ -1271,7 +1272,7 @@ CONTAINS
     REAL(wp)                                              :: hlp00, hlp0, hlp1, hlp2, hlp3       ! calc_photosynthesis dummy output
     REAL(wp)                                              :: direction
     REAL(wp), DIMENSION(nc)                               :: beta_sinklim_ps_local
-    INTEGER                                               :: icanopy, dd, ipoint    ! looping
+    INTEGER                                               :: icanopy, dd, ic       ! looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_dir_optimal_cn_leaf'
 
 
@@ -1295,17 +1296,17 @@ CONTAINS
 
     !> 1.0 ...
     !!
-    DO ipoint=1,nc
+    DO ic=1,nc
        ! Only change leaf N during the growing season
-       IF(growing_season(ipoint) > test_false_true)THEN
+       IF(growing_season(ic) > test_false_true)THEN
           ! Only change leaf N if leaves present
-          IF(veg_pool_leaf_nitrogen(ipoint) > eps4)THEN
+          IF(veg_pool_leaf_nitrogen(ic) > eps4)THEN
              !> Check the N status of the plant. If there is not enough N for growth, decrease leaf N
-             IF ((uptake_n(ipoint) *  mavg_period_tgrowth * one_day * 1e-6_wp + &
-                   resorp_fract_leaf * veg_pool_leaf_nitrogen(ipoint) * 1._wp / (lctlib_tau_leaf * one_year * one_day) * &
-                   mavg_period_tgrowth * one_day * 1e-6_wp + labile_nitrogen(ipoint)) * growth_cn(ipoint) < &
-                 (npp(ipoint)*  mavg_period_tgrowth * 1e-6_wp * one_day + labile_carbon(ipoint))) THEN
-                leaf_cn_direction(ipoint) = -1._wp
+             IF ((uptake_n(ic) *  mavg_period_tgrowth * one_day * 1e-6_wp + &
+                   resorp_fract_leaf * veg_pool_leaf_nitrogen(ic) * 1._wp / (lctlib_tau_leaf * one_year * one_day) * &
+                   mavg_period_tgrowth * one_day * 1e-6_wp + labile_nitrogen(ic)) * growth_cn(ic) < &
+                 (npp(ic)*  mavg_period_tgrowth * 1e-6_wp * one_day + labile_carbon(ic))) THEN
+                leaf_cn_direction(ic) = -1._wp
                 
              ELSE
                 !> Check for C optimality i.e. if increasing leaf N increases NPP
@@ -1313,112 +1314,112 @@ CONTAINS
                 npp_direction(:) = 0.0_wp
                 DO dd = 1,3
                    direction                 = REAL(dd,KIND=wp) - 2.0_wp
-                   leaf_nitrogen_new(ipoint) = veg_pool_leaf_carbon(ipoint) / target_cn_leaf(ipoint) * &
+                   leaf_nitrogen_new(ic) = veg_pool_leaf_carbon(ic) / target_cn_leaf(ic) * &
                         (1.0_wp + direction * delta_n_leaf * dtime/one_day)
-                   root_nitrogen_new(ipoint) = veg_pool_root_carbon(ipoint) / target_cn_fine_root(ipoint) * &
+                   root_nitrogen_new(ic) = veg_pool_root_carbon(ic) / target_cn_fine_root(ic) * &
                         (1.0_wp + direction * delta_n_leaf * dtime/one_day)
                    
                 ! update N distribution in the canopy
                 CALL calc_canopy_layers( &
-                          nc                      = nc                                      , & ! in
-                          ncanopy                 = ncanopy                                 , &
-                          dz                      = dz(:)                                   , &
-                          lbounds                 = lbounds(:)                              , &
-                          ubounds                 = ubounds(:)                              , &
-                          lctlib_ps_pathway       = lctlib_ps_pathway                       , &
-                          lctlib_k0_fn_struc      = lctlib_k0_fn_struc                      , &
-                          lctlib_fn_oth_min       = lctlib_fn_oth_min                       , &
-                          lctlib_sla              = lctlib_sla                              , &
-                          lctlib_np_leaf          = lctlib_np_leaf                          , &
-                          lctlib_gmin             = lctlib_gmin                             , &
-                          lctlib_g0               = lctlib_g0                               , &
-                          lctlib_g1               = lctlib_g1                               , &
-                          lctlib_t_jmax_omega     = lctlib_t_jmax_omega                     , &
-                          flag_optimal_Nfraction  = flag_optimal_Nfraction                  , &
-                          canopy_cond_scheme      = canopy_cond_scheme                      , & ! ASSIMI_ config
-                          canopy_layer_depth      = canopy_layer_depth(:)                   , &
-                          leaf_nitrogen           = leaf_nitrogen_new(ipoint)               , &
-                          lai                     = lai(ipoint)                             , &
-                          ppfd_sunlit_cl          = loc_ppfd_sunlit_cl(ipoint,:)            , &
-                          ppfd_shaded_cl          = loc_ppfd_shaded_cl(ipoint,:)            , &
-                          fleaf_sunlit_cl         = loc_fleaf_sunlit_cl(ipoint,:)           , &
-                          lai_cl                  = lai_new_cl(ipoint,:)                    , &
-                          cumm_lai_cl             = cumm_lai_new_cl(ipoint,:)               , &
-                          leaf_nitrogen_cl        = leaf_nitrogen_new_cl(ipoint,:)          , &
-                          fn_rub_cl               = fn_rub_new_cl(ipoint,:)                 , &
-                          fn_et_cl                = fn_et_new_cl(ipoint,:)                  , &
-                          fn_pepc_cl              = fn_pepc_new_cl(ipoint,:)                , &
-                          fn_chl_cl               = fn_chl_new_cl(ipoint,:)                 , &
-                          fn_oth_cl               = fn_oth_new_cl(ipoint,:)                 , &
-                          inquire_n_fractions     = .TRUE.                                    )
+                          nc                      = nc                                  , & ! in
+                          ncanopy                 = ncanopy                             , &
+                          dz                      = dz(:)                               , &
+                          lbounds                 = lbounds(:)                          , &
+                          ubounds                 = ubounds(:)                          , &
+                          lctlib_ps_pathway       = lctlib_ps_pathway                   , &
+                          lctlib_k0_fn_struc      = lctlib_k0_fn_struc                  , &
+                          lctlib_fn_oth_min       = lctlib_fn_oth_min                   , &
+                          lctlib_sla              = lctlib_sla                          , &
+                          lctlib_np_leaf          = lctlib_np_leaf                      , &
+                          lctlib_gmin             = lctlib_gmin                         , &
+                          lctlib_g0               = lctlib_g0                           , &
+                          lctlib_g1               = lctlib_g1                           , &
+                          lctlib_t_jmax_omega     = lctlib_t_jmax_omega                 , &
+                          flag_optimal_Nfraction  = flag_optimal_Nfraction              , &
+                          canopy_cond_scheme      = canopy_cond_scheme                  , & ! ASSIMI_ config
+                          canopy_layer_depth      = canopy_layer_depth(:)               , &
+                          leaf_nitrogen           = leaf_nitrogen_new(ic)               , &
+                          lai                     = lai(ic)                             , &
+                          ppfd_sunlit_cl          = loc_ppfd_sunlit_cl(ic,:)            , &
+                          ppfd_shaded_cl          = loc_ppfd_shaded_cl(ic,:)            , &
+                          fleaf_sunlit_cl         = loc_fleaf_sunlit_cl(ic,:)           , &
+                          lai_cl                  = lai_new_cl(ic,:)                    , &
+                          cumm_lai_cl             = cumm_lai_new_cl(ic,:)               , &
+                          leaf_nitrogen_cl        = leaf_nitrogen_new_cl(ic,:)          , &
+                          fn_rub_cl               = fn_rub_new_cl(ic,:)                 , &
+                          fn_et_cl                = fn_et_new_cl(ic,:)                  , &
+                          fn_pepc_cl              = fn_pepc_new_cl(ic,:)                , &
+                          fn_chl_cl               = fn_chl_new_cl(ic,:)                 , &
+                          fn_oth_cl               = fn_oth_new_cl(ic,:)                 , &
+                          inquire_n_fractions     = .TRUE.                                 )
 
                 ! adjust N fractions for any changes in canopy N distribtuion
                 ! for optimal fractions this is only a aproximation
-                IF (lai(ipoint) > eps8) THEN
+                IF (lai(ic) > eps8) THEN
                    ! avoid division by zero for plants that have no leaf nitrogen
-                   WHERE (leaf_nitrogen_new_cl(ipoint,:) > eps8 .AND. fn_oth_cl(ipoint,:) < 1._wp)
-                      fn_rub_new_cl(ipoint,:)  = fn_rub_cl(ipoint,:)  * &
-                                                   (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-                      fn_et_new_cl(ipoint,:)   = fn_et_cl(ipoint,:)   * &
-                                                   (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-                      fn_pepc_new_cl(ipoint,:) = fn_pepc_cl(ipoint,:) * &
-                                                   (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
-                      fn_chl_new_cl(ipoint,:)  = fn_chl_cl(ipoint,:)  * &
-                                                   (1._wp - fn_oth_new_cl(ipoint,:)) / (1._wp - fn_oth_cl(ipoint,:))
+                   WHERE (leaf_nitrogen_new_cl(ic,:) > eps8 .AND. fn_oth_cl(ic,:) < 1._wp)
+                      fn_rub_new_cl(ic,:)  = fn_rub_cl(ic,:)  * &
+                                                   (1._wp - fn_oth_new_cl(ic,:)) / (1._wp - fn_oth_cl(ic,:))
+                      fn_et_new_cl(ic,:)   = fn_et_cl(ic,:)   * &
+                                                   (1._wp - fn_oth_new_cl(ic,:)) / (1._wp - fn_oth_cl(ic,:))
+                      fn_pepc_new_cl(ic,:) = fn_pepc_cl(ic,:) * &
+                                                   (1._wp - fn_oth_new_cl(ic,:)) / (1._wp - fn_oth_cl(ic,:))
+                      fn_chl_new_cl(ic,:)  = fn_chl_cl(ic,:)  * &
+                                                   (1._wp - fn_oth_new_cl(ic,:)) / (1._wp - fn_oth_cl(ic,:))
                    END WHERE
                 END IF
 
                 ! ! calculate photosynthesis for each layer
                 ! DO icanopy =1, ncanopy
                 !    CALL calc_photosynthesis( &
-                !        lctlib_gmin                                   , & ! lctlib
-                !        lctlib_g0                                     , &
-                !        lctlib_g1                                     , &
-                !        lctlib_t_jmax_omega                           , &
-                !        lctlib_ps_pathway                             , &
-                !        canopy_cond_scheme                            , &  ! ASSIMI_ config (medlyn/ballberry)
-                !        t_air_tcnl_mavg(ipoint)                       , &  ! in
-                !        press_srf_tcnl_mavg(ipoint)                   , &
-                !        co2_mixing_ratio_tcnl_mavg(ipoint)            , &
-                !        ga_tcnl_mavg(ipoint)                          , &
-                !        t_air_tacclim_mavg(ipoint)                    , &
-                !        ppfd_sunlit_tcnl_mavg_cl(ipoint,icanopy)      , &
-                !        ppfd_shaded_tcnl_mavg_cl(ipoint,icanopy)      , &
-                !        fleaf_sunlit_tcnl_mavg_cl(ipoint,icanopy)     , &
-                !        beta_air_tcnl_mavg(ipoint)                    , &
-                !        beta_soa_tphen_mavg(ipoint)                   , &
-                !        beta_soil_ps_tcnl_mavg(ipoint)                , &
-                !        beta_sinklim_ps_local(ipoint)                 , &
-                !        beta_soil_gs_tcnl_mavg(ipoint)                , &
-                !        fn_chl_new_cl(ipoint,icanopy)                 , &
-                !        fn_et_new_cl(ipoint,icanopy)                  , &
-                !        fn_rub_new_cl(ipoint,icanopy)                 , &
-                !        fn_pepc_new_cl(ipoint,icanopy)                , &
-                !        lai_new_cl(ipoint,icanopy)                    , &   ! used for: IF statement whether this routine may run or not
-                !        leaf_nitrogen_new_cl(ipoint,icanopy)          , &
-                !        t_jmax_opt_mavg(ipoint)                       , &
-                !        agl                                           , &
-                !        anl                                           , &
-                !        rl                                            , &
-                !        hlp00, hlp0, hlp1, hlp2, hlp3                 )
+                !        lctlib_gmin                               , & ! lctlib
+                !        lctlib_g0                                 , &
+                !        lctlib_g1                                 , &
+                !        lctlib_t_jmax_omega                       , &
+                !        lctlib_ps_pathway                         , &
+                !        canopy_cond_scheme                        , &  ! ASSIMI_ config (medlyn/ballberry)
+                !        t_air_tcnl_mavg(ic)                       , &  ! in
+                !        press_srf_tcnl_mavg(ic)                   , &
+                !        co2_mixing_ratio_tcnl_mavg(ic)            , &
+                !        ga_tcnl_mavg(ic)                          , &
+                !        t_air_tacclim_mavg(ic)                    , &
+                !        ppfd_sunlit_tcnl_mavg_cl(ic,icanopy)      , &
+                !        ppfd_shaded_tcnl_mavg_cl(ic,icanopy)      , &
+                !        fleaf_sunlit_tcnl_mavg_cl(ic,icanopy)     , &
+                !        beta_air_tcnl_mavg(ic)                    , &
+                !        beta_soa_tphen_mavg(ic)                   , &
+                !        beta_soil_ps_tcnl_mavg(ic)                , &
+                !        beta_sinklim_ps_local(ic)                 , &
+                !        beta_soil_gs_tcnl_mavg(ic)                , &
+                !        fn_chl_new_cl(ic,icanopy)                 , &
+                !        fn_et_new_cl(ic,icanopy)                  , &
+                !        fn_rub_new_cl(ic,icanopy)                 , &
+                !        fn_pepc_new_cl(ic,icanopy)                , &
+                !        lai_new_cl(ic,icanopy)                    , &   ! used for: IF statement whether this routine may run or not
+                !        leaf_nitrogen_new_cl(ic,icanopy)          , &
+                !        t_jmax_opt_mavg(ic)                       , &
+                !        agl                                       , &
+                !        anl                                       , &
+                !        rl                                        , &
+                !        hlp00, hlp0, hlp1, hlp2, hlp3                )
                 ! 
-                ! npp_direction(dd) = npp_direction(dd) + anl * lai_new_cl(ipoint,icanopy)
+                ! npp_direction(dd) = npp_direction(dd) + anl * lai_new_cl(ic,icanopy)
                 ! ENDDO  ! icanopy =1, ncanopy
                 
                 ! adjust for change in fine root respiration
-                npp_direction(dd) = npp_direction(dd) - root_nitrogen_new(ipoint) * fmaint_rate(ipoint)
+                npp_direction(dd) = npp_direction(dd) - root_nitrogen_new(ic) * fmaint_rate(ic)
                 ENDDO  ! dd = 1,3
 
                 ! Direction of change in leaf N. Actual leaf N is modified in interfacte routine
                 !! @todo:veg_canopy:calc_dir_optimal_cn_leaf:potentially dangerous use of MAXLOC - ascertain functioning in 4D
-                leaf_cn_direction(ipoint) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
+                leaf_cn_direction(ic) = (REAL(MAXLOC(npp_direction, 1),KIND=wp) - 2.0_wp)
              ENDIF  ! if enough N available
       
-          ELSE    ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
-             leaf_cn_direction(ipoint) = 0.0_wp
-          END IF  ! IF(veg_pool_leaf_nitrogen(ipoint) > eps4)
-       END IF  ! IF(growing_season(ipoint) > test_false_true)
-    END DO  ! ipoint=1,nc
+          ELSE    ! IF(veg_pool_leaf_nitrogen(ic) > eps4)
+             leaf_cn_direction(ic) = 0.0_wp
+          END IF  ! IF(veg_pool_leaf_nitrogen(ic) > eps4)
+       END IF  ! IF(growing_season(ic) > test_false_true)
+    END DO  ! ic=1,nc
 
   END SUBROUTINE calc_dir_optimal_cn_leaf
 

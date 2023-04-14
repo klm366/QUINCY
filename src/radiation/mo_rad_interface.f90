@@ -704,8 +704,8 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_vgrid
     USE mo_rad_process,       ONLY: &
-      & get_surface_albedo_simple, calc_soil_albedo, calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, &
-      & calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
+      & get_surface_albedo_simple, calc_soil_albedo, calc_pond_albedo, calc_alb_lwtr, calc_alb_lice, &
+      & calc_glacier_albedo, calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
       & Has_minimal_radiation
     USE mo_jsb_time,          ONLY: is_time_experiment_start, is_time_ltrig_rad_m1
     USE mo_jsb_control,       ONLY: jsbach_runs_standalone
@@ -762,6 +762,8 @@ CONTAINS
       & alb_nir_soil,          &
       & alb_vis_snow,          &
       & alb_nir_snow,          &
+      & alb_vis_pond,          &
+      & alb_nir_pond,          &
       & alb_background,        &
       & alb_vis_mineralsoil,   &
       & alb_nir_mineralsoil,   &
@@ -773,6 +775,9 @@ CONTAINS
       & fract_forest,          &
       & fract_snow_can,        &
       & fract_snow_soil,       &
+      & fract_pond,            &
+      & wtr_pond,              &
+      & ice_pond,              &
       & c_ag_sum_1,            &
       !CBAL & c_slow,           &
       & c_bg_sum,              &
@@ -869,6 +874,8 @@ CONTAINS
     IF (.NOT. tile%is_lake) THEN
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_lnd)           ! inout
       dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_lnd)           ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_pond)          ! inout
+      dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_pond)          ! inout
     END IF
 
     ! ---------------------------
@@ -889,6 +896,9 @@ CONTAINS
     IF (tile%is_bare .OR. tile%is_vegetation) THEN
 
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)  ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_pond)       ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_, ice_pond)         ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
 
       !$claw sca forward update savepoint=ser_jsb_rad_calc_snow_albedo_1 tile_name=tile%name
@@ -902,6 +912,17 @@ CONTAINS
         & alb_vis_snow(:),     & ! inout
         & alb_nir_snow(:)      & ! inout
         & )
+
+      CALL calc_pond_albedo( &
+        & l_day(:),            & ! in
+        & cos_zenith_angle(:), & ! in
+        & t_unfilt(:),         & ! in
+        & wtr_pond(:),         & ! in
+        & ice_pond(:),         & ! in
+        & alb_vis_pond(:),     & ! inout
+        & alb_nir_pond(:)      & ! inout
+        & )
+
     END IF
 
     !> 2.0 lakes & lakes with ice
@@ -1007,8 +1028,14 @@ CONTAINS
 
       ! Merge the albedo of soil with the snow on it for the overall bare soil tile albedo
       !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_1 tile_name=tile%name
-      alb_vis_lnd(:) = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
-      alb_nir_lnd(:) = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
+      alb_vis_lnd(:) = fract_snow_soil(:)                                       * alb_vis_snow(:) &
+                   & + (1.0_wp - fract_snow_soil(:)) * fract_pond(:)            * alb_vis_pond(:) &
+                   & + (1.0_wp - fract_snow_soil(:)) * (1.0_wp - fract_pond(:)) * alb_vis_soil(:)
+
+      alb_nir_lnd(:) = fract_snow_soil(:)                                       * alb_nir_snow(:) &
+                   & + (1.0_wp - fract_snow_soil(:)) * fract_pond(:)            * alb_nir_pond(:) &
+                   & + (1.0_wp - fract_snow_soil(:)) * (1.0_wp - fract_pond(:)) * alb_nir_soil(:)
+
       !$claw end expand
 
 
@@ -1042,6 +1069,7 @@ CONTAINS
           & fract_forest(:),                        &
           & fract_snow_soil(:),                     &
           & fract_snow_can(:),                      &
+          & fract_pond(:),                          &
           & lai(:),                                 &
           & alb_background(:)                       & ! Note, alb_background <-- bc_land_phy.nc
                         )
@@ -1124,12 +1152,15 @@ CONTAINS
           & AlbedoCanopySnow,                 & ! in
           & fract_snow_soil(:),               & ! in
           & fract_snow_can(:),                & ! in
+          & fract_pond(:),                    & ! in
           & alb_vis_snow(:),                  & ! in
           & alb_nir_snow(:),                  & ! in
           & alb_vis_soil(:),                  & ! in
           & alb_nir_soil(:),                  & ! in
           & alb_vis_can(:),                   & ! in
           & alb_nir_can(:),                   & ! in
+          & alb_vis_pond(:),                  & ! in
+          & alb_nir_pond(:),                  & ! in
           & alb_vis_lnd(:),                   & ! inout
           & alb_nir_lnd(:)                    & ! inout
           & )
@@ -1211,6 +1242,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_lnd,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_pond,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_pond,        weighted_by_fract)     
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_mineralsoil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)
@@ -1280,9 +1313,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
-    dsl4jsb_Real2D_onChunk      :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_one_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onChunk      :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onChunk      :: daytime_counter
     ! PHENO_
     dsl4jsb_Real2D_onChunk      :: growing_season
@@ -1331,9 +1364,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)               ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)    ! in 
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
     ! PHENO_
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
@@ -1374,10 +1407,6 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-
-    ! docu:
-    ! cos_zenith_angle tracing variables and daytime_counter are updated 
-    ! in update_atm2land() or directly in the ICON-Land standalone driver, respectively
     
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
@@ -1398,9 +1427,11 @@ CONTAINS
     !>    calculate the average of the previous day and pass this value to the according variable
     !> 
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
+    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
+    !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
-      IF ((cos_zenith_angle(ic) - prev_one_cos_zenith_angle(ic)) > eps8 .AND. &
-          (prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) <= eps8) THEN
+      IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
+          & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
         ! check if at least one value had been assigned at the current day, avoiding division by zero
         IF (daytime_counter(ic) > eps8) THEN
           ppfd_sunlit_daytime_cl(ic,:) = ppfd_sunlit_daytime_dacc_cl(ic,:) / daytime_counter(ic)

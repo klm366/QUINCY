@@ -19,7 +19,7 @@ MODULE mo_jsb_interface
   USE mo_exception,           ONLY: message, finish !,message_text
   ! USE mo_util_string,         ONLY: int2string
 
-  USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach
+  USE mo_jsb_control,         ONLY: debug_on, timer_on, l_timer_host, timer_jsbach, jsbach_runs_standalone
   USE mo_timer,               ONLY: timer_start, timer_stop
   USE mo_jsb_class,           ONLY: Get_model
   USE mo_jsb_model_class,     ONLY: t_jsb_model
@@ -29,6 +29,7 @@ MODULE mo_jsb_interface
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
   USE mo_jsb_time,            ONLY: t_datetime, is_newyear
+  USE mo_jsb_physical_constants, ONLY: cvdifts
 
   USE mo_anthro2l_interface,  ONLY: update_anthro2l  ! <Rackhun Son>
 
@@ -286,7 +287,8 @@ CONTAINS
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
     ! Update options
-    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, dtime=dtime, steplen=steplen)
+    CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
+      & dtime=dtime, steplen=steplen, alpha=MERGE(1._wp, cvdifts, jsbach_runs_standalone()))
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
     CALL model%Associate_var_pointers(ics, ice, iblk, iblk)

@@ -1041,11 +1041,6 @@ CONTAINS
         dsl4jsb_Get_var2d_onDomain(A2L_, prev_two_cos_zenith_angle)
         dsl4jsb_Get_var2d_onDomain(A2L_, prev_three_cos_zenith_angle)
 
-        ! shift for cos_zenith_angle tracing for midnight identification
-        prev_three_cos_zenith_angle = prev_two_cos_zenith_angle
-        prev_two_cos_zenith_angle = prev_one_cos_zenith_angle
-        prev_one_cos_zenith_angle = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle)
-
         ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)7
         WHERE(prev_one_cos_zenith_angle(:,:) - prev_two_cos_zenith_angle(:,:) > eps8 .AND. &
             & prev_two_cos_zenith_angle(:,:) - prev_three_cos_zenith_angle(:,:) <= eps8) 
@@ -1058,6 +1053,12 @@ CONTAINS
           ! count number of daytime values
           daytime_counter(:,:) = daytime_counter(:,:) + 1.0_wp
         END WHERE
+
+        ! shift for cos_zenith_angle tracing for midnight identification
+        prev_three_cos_zenith_angle = prev_two_cos_zenith_angle
+        prev_two_cos_zenith_angle = prev_one_cos_zenith_angle
+        prev_one_cos_zenith_angle = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle)
+
       END SELECT
 
       DEALLOCATE(evapo_act2pot)
@@ -1085,7 +1086,8 @@ CONTAINS
       IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
       ! Update options
-      CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
+      CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
+        &                    dtime=dtime, steplen=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
       CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 

@@ -321,8 +321,8 @@ CONTAINS
     CALL assert_matrix_shape(this, bgcm_idx, nc, SHAPE(bgcm_matrix), tile_name, routine)
     CALL assert_wrote_back_to_store(this, bgcm_idx, Get_omp_thread(), tile_name, routine)
 
-    ! 1level 3D -> fill matrix (elems, nc, var_dim3)
-    DO i_elem = 1,this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+    ! 1level 2D -> fill matrix (elems, nc, var_dim2)
+    DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
       bgcm_matrix(i_elem,:) = &
         & this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk)
     ENDDO
@@ -473,10 +473,11 @@ CONTAINS
     bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
 
     ! Check that this bgc material complies with the expectations
+    nc = ice - ics + 1
     CALL assert_matrix_shape(this, bgcm_idx, nc, SHAPE(bgcm_matrix), tile_name, routine)
 
-    ! 1level 3D -> write matrix back (elems, nc, var_dim3)
-    DO i_elem = 1,this%store_1l_3d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
+    ! 1level 2D -> write matrix back (elems, nc, var_dim2)
+    DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
       this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk) &
         & = bgcm_matrix(i_elem,:)
     ENDDO

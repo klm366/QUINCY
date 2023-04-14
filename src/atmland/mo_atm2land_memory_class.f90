@@ -89,10 +89,6 @@ MODULE mo_a2l_memory_class
     !>3.0 quincy
     !>
 
-    TYPE(t_jsb_var_real2d) :: &
-      & swpar_fdiffuse            !< fraction of shortwave surface downward flux that is diffuse [fraction]
-                                  !< in jsbach4 this variable is named: fract_par_diffuse
-
     ! CO2
     TYPE(t_jsb_var_real2d) :: &
       ! jsbach4 variables, in quincy routines replaced by co2_mixing_ratio  _c13  _c14
@@ -173,7 +169,7 @@ CONTAINS
                 swvis_srf_down_init, &
                 swnir_srf_down_init, &
                 swpar_srf_down_init, &
-                swpar_fdiffuse_init, &
+                fract_par_diffuse_init, &
                 cos_zenith_angle_init, &
                 co2_mixing_ratio_init, &
                 co2_mixing_ratio_c13_init, &
@@ -200,7 +196,7 @@ CONTAINS
       swvis_srf_down_init         = def_swdown * frac_vis_swtot_srf
       swnir_srf_down_init         = def_swdown * (1._wp - frac_vis_swtot_srf)
       swpar_srf_down_init         = swvis_srf_down_init * frac_par_swvis_srf
-      swpar_fdiffuse_init         = def_fdiffuse
+      fract_par_diffuse_init      = def_fdiffuse !TODO: is this still required? Probably for QS?!
       cos_zenith_angle_init       = def_cos_angle
       co2_mixing_ratio_init       = def_co2_mixing_ratio
       co2_mixing_ratio_c13_init   = co2_mixing_ratio_init / (1._wp + 1._wp / C13C12_mixing_ratio)
@@ -809,16 +805,6 @@ CONTAINS
       ! ------------------------------------------------------------------------------------------------- !
       ! variables used only with quincy  
       ! 
-      CALL mem%Add_var('swpar_fdiffuse', mem%swpar_fdiffuse, &
-        & hgrid, surface, &
-        & t_cf('swpar_fdiffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = swpar_fdiffuse_init)
-  
       CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
         & hgrid, surface, &
         & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
