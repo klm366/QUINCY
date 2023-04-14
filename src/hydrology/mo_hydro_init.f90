@@ -504,7 +504,7 @@ CONTAINS
       END IF
 
       ! Maximum depth and extent of surface water ponds
-      IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN ! .AND. .NOT. tile%contains_ridge) THEN
+      IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%contains_ridge) THEN
         ! @todo Ponds now restricted to Q-Arctic usecase --> additional switch, or fine like this?
         IF (MAXVAL(hydro_init_vars%fract_pond_max(:,:)) < 0._wp) THEN
           ! No maximum pond fraction found in init file --> estimate from steepness

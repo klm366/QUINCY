@@ -718,7 +718,7 @@ CONTAINS
       wtr_pond(:) = wtr_pond(:) + infilt_over(:)
     ELSEWHERE
       ! Infitration overflow goes into surface runoff
-      runoff(:)    = runoff(:) + infilt_over(:)
+      runoff_dunne(:) = infilt_over(:)
     END WHERE
 
     ! recalculate soil moisture from the soil moisture of the individual levels
@@ -729,6 +729,7 @@ CONTAINS
     DO i = 1, nc
       infilt(i)        = infilt     (i)  * rhoh2o / dtime
       infilt_over(i)   = infilt_over(i)  * rhoh2o / dtime
+      runoff_dunne(i)  = runoff_dunne(i) * rhoh2o / dtime
       drainage(i)      = drainage   (i)  * rhoh2o / dtime
       drain_rock(i)    = drain_rock (i)  * rhoh2o / dtime
       drain_lat(i)     = drain_lat  (i)  * rhoh2o / dtime
@@ -740,7 +741,6 @@ CONTAINS
 
     ! Accumulate runoff components. Note that in the Arno Scheme saturation excess surface runoff
     ! is already partly included and the here diagnosed dunne runoff contains only part of it.
-    runoff_dunne(:) = infilt_over(:)
     runoff(:)       = runoff(:) + runoff_dunne(:)
 
   END SUBROUTINE calc_soil_hydrology
@@ -1088,7 +1088,7 @@ CONTAINS
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl,                 &
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,              &
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,           &
-    & infilt, infilt_over, drain_rock, drain_lat,                   &
+    & infilt, infilt_over, drain_rock, drain_lat_sl,                &
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                 &
     & ltpe_closed, ltpe_open)
 
@@ -1120,7 +1120,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
     REAL(wp), INTENT(INOUT)         :: infilt_over(:)             ! amount of infiltration overflow (Horton + Dunne) [m]
     REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! drainage from lowest soil layer [m]
-    REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! overflow from subsurface soil layers [m]
+    REAL(wp), INTENT(INOUT)         :: drain_lat_sl(:,:)          ! overflow from subsurface soil layers [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
     REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           ! Water evaporated from unintended sources [m]
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
@@ -1422,7 +1422,7 @@ CONTAINS
           wtr_soil_sl(i,j) = wtr_soil_sl(i,j) - drain_sl(i)           ! remove lateral drainage of the layer from soil moisture
           IF (.NOT. ltpe_closed) THEN
             ! Add excess water to lateral drainage
-            drain_lat(i,j)   = drain_lat(i,j)  + drain_sl(i)
+            drain_lat_sl(i,j)   = drain_lat_sl(i,j)  + drain_sl(i)
           ELSE
             ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
             tpe_overflow(i) = tpe_overflow(i) + drain_sl(i)

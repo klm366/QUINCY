@@ -431,7 +431,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,  weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
