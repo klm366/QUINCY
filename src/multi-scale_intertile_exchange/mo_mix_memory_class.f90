@@ -38,7 +38,8 @@ MODULE mo_mix_memory_class
 
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & wtr_latflow             !< Lateral water flow between tiles               [kg m-2 s-1]
+      & wtr_latflow,          & !< Lateral water flow between tiles               [kg m-2 s-1]
+      & runoff_retention        !< Runoff retention reservoir                     [m water equivalent]
 
   CONTAINS
     PROCEDURE :: Init => Init_mix_memory
@@ -92,6 +93,15 @@ CONTAINS
       & prefix, suffix,                                                              &
       & output_level=BASIC,                                                          &
       & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'runoff_retention', mem%runoff_retention,                      &
+      & hgrid, surface,                                                              &
+      & t_cf('runoff_retention', 'm (water equivalent)',                             &
+      &      'Lateral overland flow retention reservoir'),                           &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix, lrestart=.TRUE.,                                             &
+      & output_level=BASIC,                                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
   END SUBROUTINE Init_mix_memory
 

@@ -6,6 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Tobias Stacke (2022-07-22)
+!! Tobias Stacke: Lateral transport physics revision based on input from Philipp de Vrese, MPI-M (2023-04)
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
@@ -44,7 +45,7 @@ MODULE mo_mix_interface
   dsl4jsb_Use_memory(HYDRO_)
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
+  ! Module variables
 
   IMPLICIT NONE
   PRIVATE
@@ -217,6 +218,10 @@ CONTAINS
     INTEGER  :: nsibl, ic              !< Counter variables for sibling tiles
     INTEGER  :: nsoil, i               !< Counter variables for soil layers
     REAL(wp) :: dtime
+    LOGICAL  :: l_lag                  !< T: Apply lag time to lateral flow
+    LOGICAL  :: l_latflow              !< T: Allow for lateral flow between sibling tiles
+
+    REAL(wp) :: retention_time         !< retention time for lateral water flow, @todo: needs validation
 
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_vgrid), POINTER          :: soil_w
@@ -234,7 +239,9 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: wtr_latflow
+    dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: runoff
+    dsl4jsb_Real2D_onChunk :: runoff_retention
     dsl4jsb_Real2D_onChunk :: drainage
     dsl4jsb_Real3D_onChunk :: drain_lat_sl
     dsl4jsb_Real3D_onChunk :: wtr_soil_sl
@@ -246,6 +253,7 @@ CONTAINS
 
     REAL(wp), DIMENSION(options%nc) :: source_fract    !< Fractions of water source tile
     REAL(wp), DIMENSION(options%nc) :: target_fract    !< Fractions of water target tile
+    REAL(wp), DIMENSION(options%nc) :: wtr_pond_max    !< Maximum pond water depth [m]
 
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -271,12 +279,14 @@ CONTAINS
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(MIX_,   wtr_latflow)      ! inout
+    dsl4jsb_Get_var2D_onChunk(MIX_,   runoff_retention) ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)         ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl)     ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)         ! inout
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! inout
-      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl) ! inout
+      dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_fc_sl) ! in
     END IF
 
     ! Transport water from between tiles
@@ -286,6 +296,9 @@ CONTAINS
       IF (tile%process_action(HYDRO_) /= ON_TILE_) THEN
         CALL finish(routine, 'MIX_ processes must be activate on the same tiles as HYDRO_')
       END IF
+
+      wtr_pond_max(:) = MAX(0._wp, dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max) &
+        &                        - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
 
       ! Downhill routing of surface runoff from ridges to depressions as well as from
       !   upland depressions to lowland depressions
@@ -302,13 +315,16 @@ CONTAINS
           ELSE
             sibl_tile => sibl_tile%Get_next_sibling_tile()
           END IF
-          ! Identify correct downhill target sibling
-          IF ( (tile%contains_upland .AND. tile%contains_ridge .AND.                 &
-            &   sibl_tile%contains_upland .AND. sibl_tile%contains_depression) .OR.  &
-            &  (tile%contains_upland .AND. tile%contains_depression .AND.            &
-            &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. &
-            &  (tile%contains_lowland .AND. tile%contains_ridge .AND.                &
-            &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) ) THEN
+
+          ! Identify correct downhill target sibling for runoff
+          l_latflow = (tile%contains_upland       .AND. tile%contains_ridge           .AND. &
+            &          sibl_tile%contains_upland  .AND. sibl_tile%contains_depression) .OR. & ! upland ridge      --> upland depression
+            &         (tile%contains_upland       .AND. tile%contains_depression      .AND. &
+            &          sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. & ! upland depression --> lowland depression
+            &         (tile%contains_lowland      .AND. tile%contains_ridge           .AND. &
+            &          sibl_tile%contains_lowland .AND. sibl_tile%contains_depression)        ! lowland ridge     --> lowland depression
+
+          IF (l_latflow) THEN
             ! Get target tile area fraction
             CALL sibl_tile%Get_fraction(ics, ice, iblk, fract=target_fract(:))
             ! Get memory MIX_ and HYDRO_ memory for target tile
@@ -316,15 +332,26 @@ CONTAINS
             dsl4jsb_Get_memory_tile(HYDRO_, sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow, sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, wtr_pond,    sibl_tile)
+
+            l_lag = tile%contains_upland .AND. sibl_tile%contains_lowland
+            retention_time = 36000._wp   ! Ten hours retention time (
+                                         ! outflow = h_re * dt/retention_time)
             ! Move surface runoff from source to target tile
             CALL calc_runoff_transport(   &
-              & dtime,                    & !< in
-              & source_fract(:),          & !< in
-              & target_fract(:),          & !< in
-              & runoff(:),                & !< inout
-              & wtr_latflow(:),           & !< inout
-              & wtr_latflow_sibl_tile(:), & !< inout
-              & wtr_pond_sibl_tile(:)     & !< inout
+              ! in
+              & l_lag,                    & !< T: Apply lag
+              & dtime,                    & !< model time step              [s]
+              & retention_time,           & !< lagged flow retention time   [s]
+              & wtr_pond_max(:),          & !< maximum pond water content   [m]
+              & source_fract(:),          & !< area fraction of source tile []
+              & target_fract(:),          & !< area fraction of target tile []
+              ! inout
+              & runoff(:),                & !< surface runoff               [kg m-2 s-1]
+              & wtr_latflow(:),           & !< lateral flow at source tile  [kg m-2 s-1]
+              & wtr_latflow_sibl_tile(:), & !< lateral flow at target tile  [kg m-2 s-1]
+              & wtr_pond(:),              & !< pond storage at source tile  [m]
+              & wtr_pond_sibl_tile(:),    & !< pond storage at target tile  [m]
+              & runoff_retention(:)       & !< runoff retention storage     [m]
               & )
             ! Move lateral drainage from source to target tile
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,    sibl_tile)
@@ -427,12 +454,13 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    dsl4jsb_Aggregate_onChunk(MIX_,   wtr_latflow,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl, weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_,   wtr_latflow,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_,   runoff_retention, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl,     weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,      weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

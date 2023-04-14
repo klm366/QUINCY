@@ -2246,6 +2246,7 @@ CONTAINS
       & weq_snow, &
       & wtr_pond, &
       & ice_pond, &
+      & retention_storage, &
       & weq_fluxes, &    ! [m3 s-1]
       & weq_land, &      ! [m3]
       & weq_balance_err  ! [m3/(time step)]
@@ -2288,6 +2289,10 @@ CONTAINS
     lat  => grid%lat(ics:ice, iblk)
     lon  => grid%lon(ics:ice, iblk)
 
+    ALLOCATE(wtr_latflow(nc), retention_storage(nc))
+    wtr_latflow(:)       = 0._wp
+    retention_storage(:) = 0._wp
+
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(A2L_)
@@ -2301,12 +2306,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    drainage)            ! in
     IF (tile%is_process_active(MIX_)) THEN
-      dsl4jsb_Get_var2D_onChunk(MIX_,      wtr_latflow)       ! in
-    ELSE
-      !$claw acc enter data create(wtr_latflow)
-      !$claw expand parallel update
-      ALLOCATE(wtr_latflow(nc))
-      wtr_latflow(:) = 0._wp
+      wtr_latflow(:)       = dsl4jsb_var2D_onChunk(MIX_, wtr_latflow)      ! in
+      retention_storage(:) = dsl4jsb_var2D_onChunk(MIX_, runoff_retention) ! in
     END IF
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)         ! in
@@ -2337,7 +2338,7 @@ CONTAINS
 
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_1 tile_name=tile%name
-      weq_land_new(:) = (  wtr_skin(:) + weq_snow(:) + wtr_pond(:) + ice_pond(:)        &
+      weq_land_new(:) = (  wtr_skin(:) + weq_snow(:) + wtr_pond(:) + ice_pond(:) + retention_storage(:) &
         &                + SUM(wtr_soil_sl(:,:), DIM=2) + SUM(ice_soil_sl(:,:), DIM=2)  &
         &               ) * tile_fract(:) * area(:)  ! m -> m^3
     ELSE
@@ -2371,6 +2372,7 @@ CONTAINS
             & 'Snow reservoir:       ', weq_snow(i)           * tile_area(i),          NEW_LINE('a'), &
             & 'Pond water reservoir: ', wtr_pond(i)           * tile_area(i),          NEW_LINE('a'), &
             & 'Pond ice reservoir:   ', ice_pond(i)           * tile_area(i),          NEW_LINE('a'), &
+            & 'Flow retention res.:  ', retention_storage(i)  * tile_area(i),          NEW_LINE('a'), &
             & 'Soil water:           ', SUM(wtr_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
             & 'Soil ice:             ', SUM(ice_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
             & 'Old reservoirs:       ', weq_land(i),                                   NEW_LINE('a'), &
@@ -2385,7 +2387,8 @@ CONTAINS
             & 'Runoff:               ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Drainage:             ', drainage(i)   * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Pond water reservoir: ', wtr_pond(i)   * tile_area(i),                  NEW_LINE('a'), &
-            & 'Pond ice reservoir:   ', ice_pond(i)   * tile_area(i)
+            & 'Pond ice reservoir:   ', ice_pond(i)   * tile_area(i),                  NEW_LINE('a'), &
+            & 'Flow retention res.:  ', retention_storage(i) * tile_area(i)
         END IF
         IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget) THEN
           CALL finish (TRIM(routine), message_text_long)
@@ -2398,10 +2401,7 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
     weq_land(:) = weq_land_new(:)
 
-    IF (.NOT. tile%is_process_active(MIX_)) THEN
-      !$claw acc exit data delete(wtr_latflow)
-      DEALLOCATE(wtr_latflow)
-    END IF
+    DEALLOCATE(wtr_latflow, retention_storage)
 
     !$claw acc end data
 
