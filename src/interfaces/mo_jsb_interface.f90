@@ -376,6 +376,7 @@ CONTAINS
     & t_srf_rad,        &
     & t_srf_eff,        &
     & q_snocpymlt,      &
+    & qsat_srf,         &
     & alb_vis_dir,      &
     & alb_nir_dir,      &
     & alb_vis_dif,      &
@@ -384,15 +385,11 @@ CONTAINS
     & km,               &
     & kh_neutral,       &
     & km_neutral        &
-    ! & qsat_srf,         &
-    ! & s_srf,            &
     & )
 
 #ifndef __ICON__
     USE mo_jsb_test,          ONLY: write_interface_vars, write_interface_variables
 #endif
-
-    ! INTEGER :: p_pe
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':interface_new_trb'
 
@@ -431,11 +428,12 @@ CONTAINS
       ! & pch               (:), &
       & cos_zenith_angle  (:), &
       & CO2_air           (:)
-    REAL(wp), INTENT(out) ::   &
+    REAL(wp), INTENT(out), OPTIONAL ::   &
       & t_srf             (:), &
       & t_srf_rad         (:), &
       & t_srf_eff         (:), &
       & q_snocpymlt       (:), &
+      & qsat_srf          (:), &
       & alb_vis_dir       (:), &
       & alb_nir_dir       (:), &
       & alb_vis_dif       (:), &
@@ -444,8 +442,6 @@ CONTAINS
       & km                (:), &
       & kh_neutral        (:), &
       & km_neutral        (:)
-      ! & qsat_srf          (:), &
-      ! & s_srf             (:), &
 
     ! Local variables
     CLASS(t_jsb_model),          POINTER :: model
@@ -495,12 +491,10 @@ CONTAINS
       & dz_srf             = dz_srf(:),             &
       & press_srf          = press_srf(:),          &
       & rho_srf            = rho_srf(:),            &
-      ! & drag_srf           = drag_srf(:),           &
       & t_acoef            = t_acoef(:),            &
       & t_bcoef            = t_bcoef(:),            &
       & q_acoef            = q_acoef(:),            &
       & q_bcoef            = q_bcoef(:),            &
-      ! & pch                = pch(:),                &
       & cos_zenith_angle   = cos_zenith_angle(:),   &
       & CO2_air            = CO2_air(:)             &
       & )
@@ -519,6 +513,7 @@ CONTAINS
       & t_srf_rad          = t_srf_rad,          &
       & t_eff_srf          = t_srf_eff,          &
       & q_snocpymlt        = q_snocpymlt,        &
+      & qsat_srf           = qsat_srf,           &
       & alb_vis_dir        = alb_vis_dir,        &
       & alb_nir_dir        = alb_nir_dir,        &
       & alb_vis_dif        = alb_vis_dif,        &
@@ -527,8 +522,6 @@ CONTAINS
       & km                 = km,                 &
       & kh_neutral         = kh_neutral,         &
       & km_neutral         = km_neutral          &
-      ! & qsat_srf           = qsat_srf,           &
-      ! & s_srf              = s_srf               &
       & )
     NULLIFY(tile)
 

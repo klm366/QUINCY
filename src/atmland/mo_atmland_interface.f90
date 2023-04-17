@@ -591,7 +591,7 @@ CONTAINS
     ice  = options%ice
     nc   = options%nc
 
-    IF (nc /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
+    ! IF (nc /= SIZE(t_srf,1)) CALL finish(TRIM(routine), 'Wrong dimensions')
 
     model => Get_model(tile%owner_model_id)
 
