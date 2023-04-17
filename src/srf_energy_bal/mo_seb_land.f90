@@ -54,7 +54,7 @@ CONTAINS
 
     !USE mo_seb_process,            ONLY: calc_previous_day_variables, calc_pseudo_soil_temp
     USE mo_sse_process,            ONLY: Get_liquid_max
-    USE mo_phy_schemes,            ONLY: qsat_water, q_effective, surface_dry_static_energy, heat_transfer_coef
+    USE mo_phy_schemes,            ONLY: qsat_water, qsat_ice, q_effective, surface_dry_static_energy, heat_transfer_coef
     USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, tpfac1, tpfac2, tpfac3, cpd, cvd
     USE mo_sse_constants,          ONLY: snow_depth_min
     USE mo_jsb_time,               ONLY: is_newday, timesteps_per_day ! get_asselin_coef, timeStep_in_days
@@ -330,7 +330,13 @@ CONTAINS
     ! t_unfilt_old(:) = MAX(MIN(t_unfilt(:), 380._wp), 100._wp)
     ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_1_1 tile_name=tile%name
-    qsat_srf_old(:) = qsat_water(t_old(:), press_srf(:))
+    IF (tile%is_glacier .AND. model%config%use_tmx) THEN
+      qsat_srf_old(:) = qsat_ice(t_old(:), press_srf(:))
+      dQdT(:) = ( qsat_ice(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
+    ELSE
+      qsat_srf_old(:) = qsat_water(t_old(:), press_srf(:))
+      dQdT(:) = ( qsat_water(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
+    END IF
 
     ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
     heat_cap(:) = hcap_grnd(:)
@@ -343,7 +349,7 @@ CONTAINS
     !
     ! 1. Compute sensitivity of surface saturation specific humidity to temperature
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_2 tile_name=tile%name
-    dQdT(:) = ( qsat_water(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
+    ! dQdT(:) = ( qsat_water(t(:) + 0.001_wp, press_srf(:)) - qsat_srf_old(:) ) * 1000._wp
 
     ! 2. Old dry static energy
     s_old(:) = surface_dry_static_energy( &
