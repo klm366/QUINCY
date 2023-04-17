@@ -193,7 +193,7 @@ CONTAINS
       & t_cf('sfc_qsat', 'm2 s-2', 'surface specific humidity at saturation'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
       & prefix, suffix,                                                                    &
-      & lrestart=.FALSE.,                                                                  &
+      & lrestart=.TRUE.,                                                                   &
       & output_level=BASIC, &
       & initval_r=0.0075_wp )
 
