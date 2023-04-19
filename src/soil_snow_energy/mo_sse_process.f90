@@ -619,34 +619,31 @@ CONTAINS
     !------------------------------------------------------------------------------------------------
     !  Computation of the Richtmyer and Morton A and B coefficients for the next time step
     !------------------------------------------------------------------------------------------------
-    !$ACC PARALLEL DEFAULT(PRESENT)
-    !$ACC LOOP GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
     DO jk = 1, nsoil
       DO jl=1,nidx
         zdz2(jl,jk) = heat_cap(jl,jk) / delta_time
         z1(jl,jk)   = 0._wp
       END DO
     END DO
-    !$ACC END LOOP
+    !$ACC END PARALLEL LOOP
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
-    !$ACC LOOP GANG VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
     DO jk = 1, nsoil-1
       DO jl=1,nidx
         zdz1(jl,jk) = zd1(jk) * heat_cond(jl,jk)
       END DO
     END DO
-    !$ACC END LOOP
+    !$ACC END PARALLEL LOOP
 
     ! lowest soil layer
-    !$ACC LOOP GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
     DO jl=1,nidx
       z1(jl,nsoil-1) = zdz2(jl,nsoil) + zdz1(jl,nsoil-1)
       t_soil_acoef(jl,nsoil-1) = zdz2(jl,nsoil) * t_soil_sl(jl,nsoil) / z1(jl,nsoil-1)
       t_soil_bcoef(jl,nsoil-1) = zdz1(jl,nsoil-1) / z1(jl,nsoil-1)
       END DO
-    !$ACC END LOOP
-    !$ACC END PARALLEL
+    !$ACC END PARALLEL LOOP
 
     ! soil layers above
     !$ACC PARALLEL DEFAULT(PRESENT)

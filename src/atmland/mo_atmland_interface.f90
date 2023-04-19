@@ -596,6 +596,7 @@ CONTAINS
           fact_land(i) = 1._wp
         END IF
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
       !$ACC END DATA
 
@@ -607,6 +608,7 @@ CONTAINS
         fact_land(i) = 1._wp
         fact_lake(i) = 0._wp
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
 
     END IF
@@ -621,6 +623,7 @@ CONTAINS
       DO i=1,nc
         t_srf(i) = t_filt_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(t_eff_srf)) THEN
@@ -630,6 +633,7 @@ CONTAINS
       DO i=1,nc
         t_eff_srf(i) = t_eff_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(qsat_srf)) THEN
@@ -639,6 +643,7 @@ CONTAINS
       DO i=1,nc
         qsat_srf(i) = qsat_star_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(s_srf)) THEN
@@ -648,6 +653,7 @@ CONTAINS
       DO i=1,nc
         s_srf(i) = s_star_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(fact_q_air)) THEN
@@ -657,6 +663,7 @@ CONTAINS
       DO i=1,nc
         fact_q_air(i) = fact_q_air_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(fact_qsat_srf)) THEN
@@ -666,6 +673,7 @@ CONTAINS
       DO i=1,nc
         fact_qsat_srf(i) = fact_qsat_srf_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(evapopot)) THEN
@@ -675,6 +683,7 @@ CONTAINS
       DO i=1,nc
         evapopot(i) = evapopot_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(evapotrans)) THEN
@@ -684,6 +693,7 @@ CONTAINS
       DO i=1,nc
         evapotrans(i) = fact_land(i) * evapotrans_lnd_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(latent_hflx)) THEN
@@ -693,6 +703,7 @@ CONTAINS
       DO i=1,nc
         latent_hflx(i) = fact_land(i) * latent_hflx_lnd_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(sensible_hflx)) THEN
@@ -702,6 +713,7 @@ CONTAINS
       DO i=1,nc
         sensible_hflx(i) = fact_land(i) * sensible_hflx_lnd_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(grnd_hflx)) THEN
@@ -711,6 +723,7 @@ CONTAINS
       DO i=1,nc
         grnd_hflx(i) = forc_hflx_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(grnd_hcap)) THEN
@@ -720,6 +733,7 @@ CONTAINS
       DO i=1,nc
         grnd_hcap(i) = heat_cap_old_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(rough_h_srf)) THEN
@@ -729,6 +743,7 @@ CONTAINS
       DO i=1,nc
         rough_h_srf(i) = rough_h_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(rough_m_srf)) THEN
@@ -738,6 +753,7 @@ CONTAINS
       DO i=1,nc
         rough_m_srf(i) = rough_m_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(q_snocpymlt)) THEN
@@ -747,6 +763,7 @@ CONTAINS
       DO i=1,nc
         q_snocpymlt(i) = fact_land(i) * q_snocpymlt_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(alb_vis_dir)) THEN
@@ -756,6 +773,7 @@ CONTAINS
       DO i=1,nc
         alb_vis_dir(i) = alb_vis_lnd_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(alb_vis_dif)) THEN
@@ -765,6 +783,7 @@ CONTAINS
       DO i=1,nc
         alb_vis_dif(i) = alb_vis_lnd_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(alb_nir_dir)) THEN
@@ -774,6 +793,7 @@ CONTAINS
       DO i=1,nc
         alb_nir_dir(i) = alb_nir_lnd_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(alb_nir_dif)) THEN
@@ -783,6 +803,7 @@ CONTAINS
       DO i=1,nc
         alb_nir_dif(i) = alb_nir_lnd_ptr(i)
       END DO
+      !$ACC END PARALLEL LOOP
       !$ACC END DATA
     END IF
     IF (PRESENT(CO2_flux)) THEN
@@ -803,6 +824,7 @@ CONTAINS
             &   + co2flux_fire_all_2_atm_ta_ptr(i)  &
             & )
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -822,7 +844,8 @@ CONTAINS
         DO i=1,nc
           t_lwtr(i) = t_lwtr_ptr(i)
         END DO
-        !$ACC END DATA
+        !$ACC END PARALLEL LOOP
+      !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
         t_lwtr(:) = 0._wp
@@ -837,6 +860,7 @@ CONTAINS
         DO i=1,nc
           qsat_lwtr(i) = qsat_lwtr_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -852,6 +876,7 @@ CONTAINS
         DO i=1,nc
           s_lwtr(i) = s_lwtr_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -867,6 +892,7 @@ CONTAINS
         DO i=1,nc
           evapo_wtr(i) = fact_lake(i) * evapo_wtr_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -882,6 +908,7 @@ CONTAINS
         DO i=1,nc
           latent_hflx_wtr(i) = fact_lake(i) * latent_hflx_wtr_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -897,6 +924,7 @@ CONTAINS
         DO i=1,nc
           sensible_hflx_wtr(i) = fact_lake(i) * sensible_hflx_wtr_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -912,6 +940,7 @@ CONTAINS
         DO i=1,nc
           albedo_lwtr(i) = albedo_lwtr_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -931,6 +960,7 @@ CONTAINS
         DO i=1,nc
           ice_fract_lake(i) = fract_lice_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -947,6 +977,7 @@ CONTAINS
         DO i=1,nc
           t_lice(i) = t_lice_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -962,6 +993,7 @@ CONTAINS
         DO i=1,nc
           qsat_lice(i) = qsat_lice_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -977,6 +1009,7 @@ CONTAINS
         DO i=1,nc
           s_lice(i) = s_lice_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -992,6 +1025,7 @@ CONTAINS
         DO i=1,nc
           evapo_ice(i) = fact_lake(i) * evapo_ice_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -1007,6 +1041,7 @@ CONTAINS
         DO i=1,nc
           latent_hflx_ice(i) = fact_lake(i) * latent_hflx_ice_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -1022,6 +1057,7 @@ CONTAINS
         DO i=1,nc
           sensible_hflx_ice(i) = fact_lake(i) * sensible_hflx_ice_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
@@ -1037,6 +1073,7 @@ CONTAINS
         DO i=1,nc
           albedo_lice(i) = albedo_lice_ptr(i)
         END DO
+        !$ACC END PARALLEL LOOP
         !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)

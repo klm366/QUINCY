@@ -946,7 +946,7 @@ CONTAINS
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model%id))
 
     END DO
-!$OMP END PARALLEL DO 
+!$OMP END PARALLEL DO
 
     CALL jsbach_finish_timestep(1, datetime_old, dtime)
 

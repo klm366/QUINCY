@@ -749,6 +749,7 @@ CONTAINS
         ws_rel(j,i) = 0._wp
       END DO
     END DO
+    !$ACC END PARALLEL LOOP
 
     ! define reduction factor of hydraulic conductivity with depth (for percolation)
     IF (iredu == 1) THEN
@@ -765,6 +766,7 @@ CONTAINS
         ! conductivity is constant with depth
         zkredu(i) = 1._wp
       END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
@@ -773,6 +775,7 @@ CONTAINS
         zmvg_l(j,i)           = pore_size_index_l(j,i) / (pore_size_index_l(j,i)+1._wp)
       END DO
     END DO
+    !$ACC END PARALLEL LOOP
     !----------------------------------------------------------------------------------------------
     ! Percolation = Gravitational drainage
     !

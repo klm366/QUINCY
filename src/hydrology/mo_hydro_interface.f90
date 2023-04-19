@@ -1343,6 +1343,7 @@ CONTAINS
         !   become zero, and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
         beta_soil_ps(ic) = MAX(beta_soil_ps(ic), eps8)
       END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
