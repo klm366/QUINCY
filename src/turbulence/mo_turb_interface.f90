@@ -264,7 +264,7 @@ CONTAINS
           !      if a multi-layer snow model is implemented.
           rough_bare_star(ic) = (1._wp - fract_snow_soil(ic)) * rough_bare_star(ic) + fract_snow_soil(ic) * rough_snow_star(ic)
           ! Modify roughness length heat for vegetation by snow cover if not forest or if standalone
-          IF (.NOT. lctlib_ForestFlag .OR. jsbach_runs_standalone()) THEN
+          IF (.NOT. lctlib_ForestFlag) THEN
             rough_veg_star(ic) = (1._wp - fract_snow_soil(ic)) * rough_veg_star(ic) + fract_snow_soil(ic) * rough_snow_star(ic)
           END IF
 
