@@ -624,8 +624,16 @@ CONTAINS
     DO jk = 1, nsoil
       DO jl=1,nidx
         zdz2(jl,jk) = heat_cap(jl,jk) / delta_time
-        zdz1(jl,jk) = zd1(jk) * heat_cond(jl,jk)
         z1(jl,jk)   = 0._wp
+      END DO
+    END DO
+    !$ACC END LOOP
+
+    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC LOOP GANG VECTOR COLLAPSE(2)
+    DO jk = 1, nsoil-1
+      DO jl=1,nidx
+        zdz1(jl,jk) = zd1(jk) * heat_cond(jl,jk)
       END DO
     END DO
     !$ACC END LOOP
