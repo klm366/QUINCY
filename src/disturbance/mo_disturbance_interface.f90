@@ -151,6 +151,8 @@ CONTAINS
 
     USE mo_jsb_time_iface,        ONLY: get_year_day    ! <Rackhun Son>
     USE mo_time_config,           ONLY: time_config     ! <Rackhun Son>
+    !USE global_parameters,        ONLY: initialize_trainable_parameters, update_trainable_parameters ! <Rackhun Son>
+    USE mo_global_variable                               ! <Rackhun Son>
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -284,10 +286,9 @@ CONTAINS
     !dsl4jsb_Real2D_onChunk :: land_use_c3per         ! daily land_use_c3per <Rackhun Son>
     !dsl4jsb_Real2D_onChunk :: land_use_secmb         ! daily land_use_secmb <Rackhun Son> 
 
-    !dsl4jsb_Real3D_onChunk :: lstm_hidden    ! LSTM hidden/cell <Rackhun>
-    !dsl4jsb_Real3D_onChunk :: lstm_cell      ! LSTM hidden/cell <Rackhun>
-
     dsl4jsb_Real2D_onChunk :: burned_fract
+    dsl4jsb_Real2D_onChunk :: burned_fract_infer
+    dsl4jsb_Real2D_onChunk :: burned_fract_test
     dsl4jsb_Real2D_onChunk :: damaged_fract
 
     dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm
@@ -311,7 +312,7 @@ CONTAINS
     REAL(wp), POINTER      :: road_density(:)
     REAL(wp), POINTER      :: gfed_region(:)
 
-    INTEGER :: iteration, is_training, is_saving, memory_idx
+    INTEGER :: iteration, is_training, is_saving, is_infer, memory_idx
 
     !LOGICAL  :: pft_mask ! True for pfts to which the disturbance should be applied.
     REAL(wp) :: persist ! Factor (as fraction) determining the persistance of q_rel_air_climbuf
@@ -457,12 +458,10 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   V39_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   RHC_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   Y_memory  )               ! in <Rackhun Son>
-
-
-    !dsl4jsb_Get_var3D_onChunk(DISTURB_,   lstm_hidden)              ! in <Rackhun Son>
-    !dsl4jsb_Get_var3D_onChunk(DISTURB_,   lstm_cell)                ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract_infer)       ! out
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract_test)        ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm)   ! out
@@ -535,25 +534,41 @@ CONTAINS
         diff_year = FLOAT(iyr-time_config%tc_exp_startdate%date%year) +1._wp
 
         iteration  = 0
-        is_training = 0
-        !IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
-        !  is_training = 1
-        !  iteration = (iyr-2003)*5946*365 + (day_of_year-1)*5946 + iblk*600
-        !ENDIF
+        IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
+          is_training = 1
+          iteration = (iyr-2003)*5946*365 + (day_of_year-1)*5946 + iblk*600
 
-        is_saving   = 0
-        !IF ((iyr .ge. 2001) .AND. (iyr .le. 2012)) THEN
-        !  is_saving = 1
-        !  IF (MOD(iyr,2) .eq. 1) THEN  
-        !    memory_idx = day_of_year
-        !  ELSE
-        !    memory_idx = 365+day_of_year
-        !  ENDIF
+          !IF ((imo .eq. 1) .AND. (idy .eq. 1) .AND. (iblk .eq. 1)) THEN
+          !  print*, ics
+          !  is_updating = 1
+          !ENDIF
+        ELSE
+          is_training = 0
+        ENDIF
 
-        !  IF (memory_idx .gt. 730) THEN
-        !    is_saving = 0
-        !  ENDIF
-        !ENDIF
+        IF ((iyr .ge. 2001) .AND. (iyr .le. 2012)) THEN
+          is_saving = 1
+          !IF (MOD(iyr,2) .eq. 1) THEN  
+          !  memory_idx = day_of_year
+          !ELSE
+          !  memory_idx = 365+day_of_year
+          !ENDIF
+          memory_idx = day_of_year + MOD(iyr,2)*365
+
+          IF (memory_idx .gt. 730) THEN
+          !IF (memory_idx .gt. 1095) THEN
+            is_saving = 0
+          ENDIF
+        ELSE
+          is_saving = 0
+        ENDIF
+
+        IF (iyr .ge. 2013) THEN
+          is_infer = 1
+        ELSE
+          is_infer = 0
+        ENDIF
+
 
         IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
           t_air_ave(:) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
@@ -577,6 +592,20 @@ CONTAINS
           swl4_clim(:,day_of_year)  = swl4_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
           swl5_clim(:,day_of_year)  = swl5_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
           lai_clim(:,day_of_year)   = lai_ave(:)   !/(options%dtime/60._wp/60._wp/24._wp)
+
+          CALL initialize_trainable_parameters(                         &
+            & dsl4jsb_Config(DISTURB_)%layer1_weight,                   &
+            & dsl4jsb_Config(DISTURB_)%layer1_bias,                     &
+            & dsl4jsb_Config(DISTURB_)%layer2_weight,                   &
+            & dsl4jsb_Config(DISTURB_)%layer2_bias,                     &
+            & dsl4jsb_Config(DISTURB_)%layer3_weight,                   &
+            & dsl4jsb_Config(DISTURB_)%layer3_bias,                     &
+            & dsl4jsb_Config(DISTURB_)%layer4_weight,                   &
+            & dsl4jsb_Config(DISTURB_)%layer4_bias,                     &
+            & dsl4jsb_Config(DISTURB_)%layer5_weight,                   &
+            & dsl4jsb_Config(DISTURB_)%layer5_bias,                     &
+            & dsl4jsb_Config(DISTURB_)%layer6_weight,                   &
+            & dsl4jsb_Config(DISTURB_)%layer6_bias                      )
 
         !ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
         ELSE
@@ -634,6 +663,40 @@ CONTAINS
             swl5_clim(:,day_of_year)  = swl5_clim(:,day_of_year)  + swl5_ave(:)
             lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)   + lai_ave(:)
           ENDIF
+
+          ! restart 1999
+          IF ((iyr .eq. 1999) .AND. (imo .eq. 1) .AND. (idy .eq. 1)) THEN
+            CALL initialize_trainable_parameters(                       &
+              & dsl4jsb_Config(DISTURB_)%layer1_weight,                   &
+              & dsl4jsb_Config(DISTURB_)%layer1_bias,                     &
+              & dsl4jsb_Config(DISTURB_)%layer2_weight,                   &
+              & dsl4jsb_Config(DISTURB_)%layer2_bias,                     &
+              & dsl4jsb_Config(DISTURB_)%layer3_weight,                   &
+              & dsl4jsb_Config(DISTURB_)%layer3_bias,                     &
+              & dsl4jsb_Config(DISTURB_)%layer4_weight,                   &
+              & dsl4jsb_Config(DISTURB_)%layer4_bias,                     &
+              & dsl4jsb_Config(DISTURB_)%layer5_weight,                   &
+              & dsl4jsb_Config(DISTURB_)%layer5_bias,                     &
+              & dsl4jsb_Config(DISTURB_)%layer6_weight,                   &
+              & dsl4jsb_Config(DISTURB_)%layer6_bias                      )
+          ENDIF
+
+          IF ((iyr .ge. 2003) .AND. (iyr .le. 2013)) THEN
+            CALL prior_trainable_parameters(                              &
+              & dsl4jsb_Config(DISTURB_)%layer1_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer1_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer2_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer2_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer3_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer3_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer4_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer4_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer5_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer5_bias_update,              &
+              & dsl4jsb_Config(DISTURB_)%layer6_weight_update,            &
+              & dsl4jsb_Config(DISTURB_)%layer6_bias_update               )
+          ENDIF
+
         ENDIF
 
         ! modify pft fractions for Fire
@@ -751,6 +814,19 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%layer6_weight,                   &
               & dsl4jsb_Config(DISTURB_)%layer6_bias,                     &
 
+              & dsl4jsb_Config(DISTURB_)%layer1_weight_update,                   &
+              & dsl4jsb_Config(DISTURB_)%layer1_bias_update,                     &
+              & dsl4jsb_Config(DISTURB_)%layer2_weight_update,                   &
+              & dsl4jsb_Config(DISTURB_)%layer2_bias_update,                     &
+              & dsl4jsb_Config(DISTURB_)%layer3_weight_update,                   &
+              & dsl4jsb_Config(DISTURB_)%layer3_bias_update,                     &
+              & dsl4jsb_Config(DISTURB_)%layer4_weight_update,                   &
+              & dsl4jsb_Config(DISTURB_)%layer4_bias_update,                     &
+              & dsl4jsb_Config(DISTURB_)%layer5_weight_update,                   &
+              & dsl4jsb_Config(DISTURB_)%layer5_bias_update,                     &
+              & dsl4jsb_Config(DISTURB_)%layer6_weight_update,                   &
+              & dsl4jsb_Config(DISTURB_)%layer6_bias_update,                     &
+
               & dsl4jsb_Config(DISTURB_)%mW1,                             &
               & dsl4jsb_Config(DISTURB_)%mb1,                             &
               & dsl4jsb_Config(DISTURB_)%mW2,                             &
@@ -780,6 +856,7 @@ CONTAINS
               & iteration,                                                &
               & is_training,                                              &
               & is_saving,                                                &
+              & is_infer,                                                 &
               & memory_idx,                                               &
 
               & V1_memory(:,:),  V2_memory(:,:),  V3_memory(:,:),         &
@@ -797,101 +874,102 @@ CONTAINS
               & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),        &
               & RHC_memory(:,:), Y_memory(:,:),                           &
 
-              !& dsl4jsb_Config(DISTURB_)%i2i_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%i2i_bias,                        &
-              !& dsl4jsb_Config(DISTURB_)%h2i_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%h2i_bias,                        &
-              !& dsl4jsb_Config(DISTURB_)%i2f_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%i2f_bias,                        &
-              !& dsl4jsb_Config(DISTURB_)%h2f_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%h2f_bias,                        &
-              !& dsl4jsb_Config(DISTURB_)%i2g_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%i2g_bias,                        &
-              !& dsl4jsb_Config(DISTURB_)%h2g_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%h2g_bias,                        &
-              !& dsl4jsb_Config(DISTURB_)%i2o_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%i2o_bias,                        &
-              !& dsl4jsb_Config(DISTURB_)%h2o_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%h2o_bias,                        &
-              !& dsl4jsb_Config(DISTURB_)%out_weight,                      &
-              !& dsl4jsb_Config(DISTURB_)%out_bias,                        &
-
               & dsl4jsb_Config(DISTURB_)%min_max,                         &
               & gfed_region(:),                                           &
               
-              !& lstm_hidden(:,:),                                         & ! inout
-              !& lstm_cell(:,:),                                           & ! inout
-              & burned_fract(:)                                           & ! inout
+              & burned_fract(:),                                          & ! inout
+              & burned_fract_infer(:),                                    & ! inout
+              & burned_fract_test(:)                                      & ! inout
               & )
 
-              ! save training results
-              if (iyr == 2015) then
 
-                open(1001,file='/work/mj0143/b301058/saved_parameters/W1.bin', &
+              ! save training results
+              IF (iyr == 2015) then
+
+                open(1001,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W1.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_input*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1002,file='/work/mj0143/b301058/saved_parameters/W2.bin', &
+                open(1002,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W2.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1003,file='/work/mj0143/b301058/saved_parameters/W3.bin', &
+                open(1003,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W3.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1004,file='/work/mj0143/b301058/saved_parameters/W4.bin', &
+                open(1004,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W4.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1005,file='/work/mj0143/b301058/saved_parameters/W5.bin', &
+                open(1005,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W5.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1006,file='/work/mj0143/b301058/saved_parameters/W6.bin', &
+                open(1006,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W6.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output*4)
 
-                open(2001,file='/work/mj0143/b301058/saved_parameters/b1.bin', &
+                open(2001,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b1.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2002,file='/work/mj0143/b301058/saved_parameters/b2.bin', &
+                open(2002,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b2.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2003,file='/work/mj0143/b301058/saved_parameters/b3.bin', &
+                open(2003,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b3.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2004,file='/work/mj0143/b301058/saved_parameters/b4.bin', &
+                open(2004,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b4.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2005,file='/work/mj0143/b301058/saved_parameters/b5.bin', &
+                open(2005,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b5.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2006,file='/work/mj0143/b301058/saved_parameters/b6.bin', &
+                open(2006,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b6.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_output*4)
 
-                write(1001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_weight
-                write(1002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_weight
-                write(1003,rec=1) dsl4jsb_Config(DISTURB_)%layer3_weight
-                write(1004,rec=1) dsl4jsb_Config(DISTURB_)%layer4_weight
-                write(1005,rec=1) dsl4jsb_Config(DISTURB_)%layer5_weight
-                write(1006,rec=1) dsl4jsb_Config(DISTURB_)%layer6_weight
+                !write(1001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_weight_update
+                !write(1002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_weight_update
+                !write(1003,rec=1) dsl4jsb_Config(DISTURB_)%layer3_weight_update
+                !write(1004,rec=1) dsl4jsb_Config(DISTURB_)%layer4_weight_update
+                !write(1005,rec=1) dsl4jsb_Config(DISTURB_)%layer5_weight_update
+                !write(1006,rec=1) dsl4jsb_Config(DISTURB_)%layer6_weight_update
 
-                write(2001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_bias
-                write(2002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_bias
-                write(2003,rec=1) dsl4jsb_Config(DISTURB_)%layer3_bias
-                write(2004,rec=1) dsl4jsb_Config(DISTURB_)%layer4_bias
-                write(2005,rec=1) dsl4jsb_Config(DISTURB_)%layer5_bias
-                write(2006,rec=1) dsl4jsb_Config(DISTURB_)%layer6_bias
+                !write(2001,rec=1) dsl4jsb_Config(DISTURB_)%layer1_bias_update
+                !write(2002,rec=1) dsl4jsb_Config(DISTURB_)%layer2_bias_update
+                !write(2003,rec=1) dsl4jsb_Config(DISTURB_)%layer3_bias_update
+                !write(2004,rec=1) dsl4jsb_Config(DISTURB_)%layer4_bias_update
+                !write(2005,rec=1) dsl4jsb_Config(DISTURB_)%layer5_bias_update
+                !write(2006,rec=1) dsl4jsb_Config(DISTURB_)%layer6_bias_update
 
-                !close(1001)
-                !close(1002)
-                !close(1003)
-                !close(1004)
-                !close(1005)
-                !close(1006)
+                write(1001,rec=1) layer1_weight_global
+                write(1002,rec=1) layer2_weight_global
+                write(1003,rec=1) layer3_weight_global
+                write(1004,rec=1) layer4_weight_global
+                write(1005,rec=1) layer5_weight_global
+                write(1006,rec=1) layer6_weight_global
 
-                !close(2001)
-                !close(2002)
-                !close(2003)
-                !close(2004)
-                !close(2005)
-                !close(2006)
+                write(2001,rec=1) layer1_bias_global
+                write(2002,rec=1) layer2_bias_global
+                write(2003,rec=1) layer3_bias_global
+                write(2004,rec=1) layer4_bias_global
+                write(2005,rec=1) layer5_bias_global
+                write(2006,rec=1) layer6_bias_global
+
+                print*,layer1_weight_global(10,20)
+
+              ENDIF
+
+              IF (is_training .eq. 1) THEN
+                CALL update_trainable_parameters(                          &
+                   & dsl4jsb_Config(DISTURB_)%layer1_weight_update,        &
+                   & dsl4jsb_Config(DISTURB_)%layer1_bias_update,          &
+                   & dsl4jsb_Config(DISTURB_)%layer2_weight_update,        &
+                   & dsl4jsb_Config(DISTURB_)%layer2_bias_update,          &
+                   & dsl4jsb_Config(DISTURB_)%layer3_weight_update,        &
+                   & dsl4jsb_Config(DISTURB_)%layer3_bias_update,          &
+                   & dsl4jsb_Config(DISTURB_)%layer4_weight_update,        &
+                   & dsl4jsb_Config(DISTURB_)%layer4_bias_update,          &
+                   & dsl4jsb_Config(DISTURB_)%layer5_weight_update,        &
+                   & dsl4jsb_Config(DISTURB_)%layer5_bias_update,          &
+                   & dsl4jsb_Config(DISTURB_)%layer6_weight_update,        &
+                   & dsl4jsb_Config(DISTURB_)%layer6_bias_update           )
               ENDIF
 
           CASE DEFAULT
@@ -975,6 +1053,8 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract_infer,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract_test,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, damaged_fract,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf_yDay,  weighted_by_fract)

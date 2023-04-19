@@ -12,6 +12,9 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+
+
+
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
@@ -128,6 +131,13 @@ CONTAINS
     & layer5_weight, layer5_bias,            & ! in
     & layer6_weight, layer6_bias,            & ! in
 
+    & layer1_weight_update, layer1_bias_update,            & ! in
+    & layer2_weight_update, layer2_bias_update,            & ! in
+    & layer3_weight_update, layer3_bias_update,            & ! in
+    & layer4_weight_update, layer4_bias_update,            & ! in
+    & layer5_weight_update, layer5_bias_update,            & ! in
+    & layer6_weight_update, layer6_bias_update,            & ! in
+
     & mW1,           mb1,                    & ! in
     & mW2,           mb2,                    & ! in
     & mW3,           mb3,                    & ! in
@@ -145,6 +155,7 @@ CONTAINS
     & iteration,                             & ! in
     & is_training,                           & ! in
     & is_saving,                             & ! in
+    & is_infer,                              & ! in
     & memory_idx,                            & ! in
 
     & V1_memory,  V2_memory,  V3_memory,     & ! inout
@@ -162,23 +173,15 @@ CONTAINS
     & V37_memory, V38_memory, V39_memory,    & ! inout
     & RHC_memory, Y_memory,                  & ! inout
 
-    !& i2i_weight,    i2i_bias,              & ! in
-    !& h2i_weight,    h2i_bias,              & ! in
-    !& i2f_weight,    i2f_bias,              & ! in
-    !& h2f_weight,    h2f_bias,              & ! in
-    !& i2g_weight,    i2g_bias,              & ! in
-    !& h2g_weight,    h2g_bias,              & ! in
-    !& i2o_weight,    i2o_bias,              & ! in
-    !& h2o_weight,    h2o_bias,              & ! in
-    !& out_weight,    out_bias,              & ! in
-
     & minmax,                               & ! in 
     & gfed_region,                          & ! in
 
-    !& lstm_hidden,                          & ! inout
-    !& lstm_cell,                            & ! inout
-    & burned_fract                          & ! inout
+    & burned_fract,                         & ! inout
+    & burned_fract_infer,                   & ! inout
+    & burned_fract_test                     & ! inout
     & )
+
+    !USE mo_global_variable
 
     ! Input Arguments
     REAL(wp), INTENT(in) ::                         &
@@ -221,25 +224,14 @@ CONTAINS
       !& land_use_secmb(:),                          &
       !& land_use_urban(:),                          &
 
+      & layer1_weight(:,:),    layer1_bias(:),      &
+      & layer2_weight(:,:),    layer2_bias(:),      &
+      & layer3_weight(:,:),    layer3_bias(:),      &
+      & layer4_weight(:,:),    layer4_bias(:),      &
+      & layer5_weight(:,:),    layer5_bias(:),      &
+      & layer6_weight(:,:),    layer6_bias(:),      &
+
       & fba_smooth(:),                              &
-
-      !& layer1_weight(:,:),    layer1_bias(:),      &
-      !& layer2_weight(:,:),    layer2_bias(:),      &
-      !& layer3_weight(:,:),    layer3_bias(:),      &
-      !& layer4_weight(:,:),    layer4_bias(:),      &
-      !& layer5_weight(:,:),    layer5_bias(:),      &
-      !& layer6_weight(:,:),    layer6_bias(:),      &
-      
-      !& i2i_weight(:,:),       i2i_bias(:),         &
-      !& h2i_weight(:,:),       h2i_bias(:),         &
-      !& i2f_weight(:,:),       i2f_bias(:),         &
-      !& h2f_weight(:,:),       h2f_bias(:),         &
-      !& i2g_weight(:,:),       i2g_bias(:),         &
-      !& h2g_weight(:,:),       h2g_bias(:),         &
-      !& i2o_weight(:,:),       i2o_bias(:),         &
-      !& h2o_weight(:,:),       h2o_bias(:),         &
-      !& out_weight(:,:),       out_bias(:),         &
-
       & minmax(:,:),                                &
       & gfed_region(:)
       
@@ -249,21 +241,20 @@ CONTAINS
       & d_input,             d_hidden,              & ! in
       & d_output,            d_region,              & ! in
       & iteration,           is_training,           & ! in
-      & is_saving,           memory_idx
+      & is_saving,           is_infer,              & ! in
+      & memory_idx                                    ! in
 
     CHARACTER(len=*), INTENT(in)::                  &
       & tilename                                      ! in
 
     ! Output Arguments
     REAL(wp), INTENT(inout) ::                      &
-      !& lstm_hidden(:,:),                           & ! inout
-      !& lstm_cell(:,:),                             & ! inout
-      & layer1_weight(:,:),    layer1_bias(:),      &  ! inout (training)
-      & layer2_weight(:,:),    layer2_bias(:),      &  ! inout (training)
-      & layer3_weight(:,:),    layer3_bias(:),      &  ! inout (training)
-      & layer4_weight(:,:),    layer4_bias(:),      &  ! inout (training)
-      & layer5_weight(:,:),    layer5_bias(:),      &  ! inout (training)
-      & layer6_weight(:,:),    layer6_bias(:),      &  ! inout (training)
+      & layer1_weight_update(:,:),    layer1_bias_update(:),      &  ! inout (training)
+      & layer2_weight_update(:,:),    layer2_bias_update(:),      &  ! inout (training)
+      & layer3_weight_update(:,:),    layer3_bias_update(:),      &  ! inout (training)
+      & layer4_weight_update(:,:),    layer4_bias_update(:),      &  ! inout (training)
+      & layer5_weight_update(:,:),    layer5_bias_update(:),      &  ! inout (training)
+      & layer6_weight_update(:,:),    layer6_bias_update(:),      &  ! inout (training)
 
       & mW1(:,:),              mb1(:),              &  ! inout (training)
       & mW2(:,:),              mb2(:),              &  ! inout (training)
@@ -294,11 +285,13 @@ CONTAINS
       & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),    & ! inout (training)
       & RHC_memory(:,:), Y_memory(:,:),                       & ! inout (training)
 
-      & burned_fract(:)                               ! inout
+      & burned_fract(:),                                      & ! inout
+      & burned_fract_infer(:),                                & ! inout
+      & burned_fract_test(:)                                    ! inout
 
     ! Locals
-    !INTEGER, PARAMETER :: bs = 1024
-    INTEGER, PARAMETER :: bs = 128
+    INTEGER, PARAMETER :: bs = 1024
+    !INTEGER, PARAMETER :: bs = 512
     REAL(wp) ::                                                   &
       & nn_inputs    (nc, d_input),                               &
       & nn_layer1_out(nc, d_hidden), nn_layer1_act(nc, d_hidden), &
@@ -338,15 +331,8 @@ CONTAINS
       & dW4(d_hidden, d_hidden),     db4(d_hidden),               &
       & dW5(d_hidden, d_hidden),     db5(d_hidden),               &
       & dW6(d_hidden, d_output),     db6(d_output)
-                 
 
-      !inputs(nc, d_land_input_n_pft),                   &
-      !lstm_i(nc, d_land_hidden),                        &
-      !lstm_f(nc, d_land_hidden),                        &
-      !lstm_g(nc, d_land_hidden),                        &
-      !lstm_o(nc, d_land_hidden),                        &
-      !lstm_outputs(nc, d_output),                       &
-      !lstm_outputs_sum(nc, d_output),                   &
+                 
     INTEGER  :: i, j, k, idx
     real(wp) :: lr_rate, keep_prob, loss, u
     real(wp) :: q_rel_air_constraint(nc)
@@ -407,19 +393,7 @@ CONTAINS
     nn_inputs(:,26)= (elevation(:)                 - minmax(26,1))      &
                    / (minmax(26,2)                 - minmax(26,1)+1e-8) 
 
-    nn_inputs(:,27)= pfts_fract(:,1)
-    nn_inputs(:,28)= pfts_fract(:,2)
-    nn_inputs(:,29)= pfts_fract(:,3)
-    nn_inputs(:,30)= pfts_fract(:,4)
-    nn_inputs(:,31)= pfts_fract(:,5)
-    nn_inputs(:,32)= pfts_fract(:,6)
-    nn_inputs(:,33)= pfts_fract(:,7)
-    nn_inputs(:,34)= pfts_fract(:,8)
-    nn_inputs(:,35)= pfts_fract(:,9)
-    nn_inputs(:,36)= pfts_fract(:,10)
-    nn_inputs(:,37)= pfts_fract(:,11)
-    nn_inputs(:,38)= pfts_fract(:,12)
-    nn_inputs(:,39)= pfts_fract(:,13)
+    nn_inputs(:,27:39)= pfts_fract(:,1:13)
      
     ! calculate FBA
     keep_prob = 1.
@@ -451,9 +425,36 @@ CONTAINS
       nc, d_input, d_hidden, d_output, keep_prob,    &
       q_rel_air_constraint)
 
-    burned_fract = nn_outputs(:,1)/100.
-    WHERE (burned_fract < 0.) burned_fract = 0.
-    WHERE (burned_fract > 1.) burned_fract = 1.
+    burned_fract_infer = nn_outputs(:,1)/100.
+    WHERE (burned_fract_infer < 0.) burned_fract_infer = 0.
+    WHERE (burned_fract_infer > 1.) burned_fract_infer = 1.
+
+    CALL forward(                                    &
+      nn_inputs,     nn_outputs,                     & 
+      layer1_weight_update, layer1_bias_update, 'leaky_relu',      & 
+      nn_layer1_out, nn_layer1_act, nn_layer1_mask,  &
+      layer2_weight_update, layer2_bias_update, 'leaky_relu',      &
+      nn_layer2_out, nn_layer2_act, nn_layer2_mask,  &
+      layer3_weight_update, layer3_bias_update, 'leaky_relu',      &
+      nn_layer3_out, nn_layer3_act, nn_layer3_mask,  &
+      layer4_weight_update, layer4_bias_update, 'leaky_relu',      &
+      nn_layer4_out, nn_layer4_act, nn_layer4_mask,  &
+      layer5_weight_update, layer5_bias_update, 'leaky_relu',      &
+      nn_layer5_out, nn_layer5_act, nn_layer5_mask,  &
+      layer6_weight_update, layer6_bias_update, 'linear',          &
+      nn_layer6_out, nn_layer6_act, nn_layer6_mask,  &
+      nc, d_input, d_hidden, d_output, keep_prob,    &
+      q_rel_air_constraint)
+
+    burned_fract_test = nn_outputs(:,1)/100.
+    WHERE (burned_fract_test < 0.) burned_fract_test = 0.
+    WHERE (burned_fract_test > 1.) burned_fract_test = 1.
+
+    IF (is_infer .eq. 0) THEN
+      burned_fract(:) = fba_smooth(:)
+    ELSE
+      burned_fract(:) = burned_fract_test(:)
+    ENDIF
 
     ! saving in memory
     IF (is_saving .eq. 1) THEN
@@ -509,12 +510,13 @@ CONTAINS
       DO j = 1,INT(bs/nc)
         k = k+1
 
-        IF (k .eq. 1) THEN
-          idx = memory_idx
-        ELSE
-          call RANDOM_NUMBER(u)
-          idx = 1 + INT(FLOOR((730)*u))
-        ENDIF
+        !IF (k .eq. 1) THEN
+        !  idx = memory_idx
+        !ELSE
+        call RANDOM_NUMBER(u)
+        idx = 1 + INT(FLOOR((730)*u))
+        !idx = 1 + INT(FLOOR((1095)*u))
+        !ENDIF
         
         tr_inputs(k,1)  = V1_memory(i,idx)
         tr_inputs(k,2)  = V2_memory(i,idx)
@@ -569,20 +571,21 @@ CONTAINS
       CALL generate_dropout_mask(tr_layer5_mask, keep_prob, bs, d_hidden)
       tr_layer6_mask(:,:) = 1.
 
+
       ! Forward propagation
       CALL forward(                                    &
         tr_inputs,     tr_outputs,                     & 
-        layer1_weight, layer1_bias, 'leaky_relu',      & 
+        layer1_weight_update, layer1_bias_update, 'leaky_relu',      & 
         tr_layer1_out, tr_layer1_act, tr_layer1_mask,  &
-        layer2_weight, layer2_bias, 'leaky_relu',      &
+        layer2_weight_update, layer2_bias_update, 'leaky_relu',      &
         tr_layer2_out, tr_layer2_act, tr_layer2_mask,  &
-        layer3_weight, layer3_bias, 'leaky_relu',      &
+        layer3_weight_update, layer3_bias_update, 'leaky_relu',      &
         tr_layer3_out, tr_layer3_act, tr_layer3_mask,  &
-        layer4_weight, layer4_bias, 'leaky_relu',      &
+        layer4_weight_update, layer4_bias_update, 'leaky_relu',      &
         tr_layer4_out, tr_layer4_act, tr_layer4_mask,  &
-        layer5_weight, layer5_bias, 'leaky_relu',      &
+        layer5_weight_update, layer5_bias_update, 'leaky_relu',      &
         tr_layer5_out, tr_layer5_act, tr_layer5_mask,  &
-        layer6_weight, layer6_bias, 'linear',          &
+        layer6_weight_update, layer6_bias_update, 'linear',          &
         tr_layer6_out, tr_layer6_act, tr_layer6_mask,  &
         bs, d_input, d_hidden, d_output, keep_prob,    &
         tr_q_rel_air_constraint)
@@ -598,12 +601,12 @@ CONTAINS
       ! Backward propagation
       CALL backward(                                                               &
         tr_inputs, tr_outputs, tr_target,                                          &
-        layer1_weight, 'leaky_relu', tr_layer1_out, tr_layer1_act, tr_layer1_mask, &
-        layer2_weight, 'leaky_relu', tr_layer2_out, tr_layer2_act, tr_layer2_mask, &
-        layer3_weight, 'leaky_relu', tr_layer3_out, tr_layer3_act, tr_layer3_mask, &
-        layer4_weight, 'leaky_relu', tr_layer4_out, tr_layer4_act, tr_layer4_mask, &
-        layer5_weight, 'leaky_relu', tr_layer5_out, tr_layer5_act, tr_layer5_mask, &
-        layer6_weight, 'linear',     tr_layer6_out, tr_layer6_act, tr_layer6_mask, &
+        layer1_weight_update, 'leaky_relu', tr_layer1_out, tr_layer1_act, tr_layer1_mask, &
+        layer2_weight_update, 'leaky_relu', tr_layer2_out, tr_layer2_act, tr_layer2_mask, &
+        layer3_weight_update, 'leaky_relu', tr_layer3_out, tr_layer3_act, tr_layer3_mask, &
+        layer4_weight_update, 'leaky_relu', tr_layer4_out, tr_layer4_act, tr_layer4_mask, &
+        layer5_weight_update, 'leaky_relu', tr_layer5_out, tr_layer5_act, tr_layer5_mask, &
+        layer6_weight_update, 'linear',     tr_layer6_out, tr_layer6_act, tr_layer6_mask, &
         dW1, dW2, dW3, dW4, dW5, dW6,                                              &
         db1, db2, db3, db4, db5, db6,                                              &
         bs, d_input, d_hidden, d_output, keep_prob,                                &
@@ -617,239 +620,36 @@ CONTAINS
         mb1, mb2, mb3, mb4, mb5, mb6,                  &
         vW1, vW2, vW3, vW4, vW5, vW6,                  &
         vb1, vb2, vb3, vb4, vb5, vb6,                  &
-        layer1_weight,  layer2_weight,  layer3_weight, &
-        layer4_weight,  layer5_weight,  layer6_weight, &
-        layer1_bias,    layer2_bias,    layer3_bias,   &
-        layer4_bias,    layer5_bias,    layer6_bias,   &
+        layer1_weight_update,  layer2_weight_update,  layer3_weight_update, &
+        layer4_weight_update,  layer5_weight_update,  layer6_weight_update, &
+        layer1_bias_update,    layer2_bias_update,    layer3_bias_update,   &
+        layer4_bias_update,    layer5_bias_update,    layer6_bias_update,   &
         lr_rate, iteration, d_input, d_hidden, d_output)
 
-        !loss = sum((tr_outputs(:,1) - tr_target)**2)/float(bs)
+      !layer1_weight_global(:,:) = layer1_weight_global(:,:)+1
+      !layer1_weight_global(:,:) = layer1_weight_update(:,:)
+      !layer2_weight_global(:,:) = layer2_weight_update(:,:)
+      !layer3_weight_global(:,:) = layer3_weight_update(:,:)
+      !layer4_weight_global(:,:) = layer4_weight_update(:,:)
+      !layer5_weight_global(:,:) = layer5_weight_update(:,:)
+      !layer6_weight_global(:,:) = layer6_weight_update(:,:)
+
+      !layer1_bias_global(:) = layer1_bias_update(:)
+      !layer2_bias_global(:) = layer2_bias_update(:)
+      !layer3_bias_global(:) = layer3_bias_update(:)
+      !layer4_bias_global(:) = layer4_bias_update(:)
+      !layer5_bias_global(:) = layer5_bias_update(:)
+      !layer6_bias_global(:) = layer6_bias_update(:)
+
+      ! control tower
+      !layer1_weight(10,20) = layer1_weight_global(10,20)
+      !layer1_weight(10,20) = layer1_weight(10,20) + 1._wp
+      !layer1_weight_global(10,20) = layer1_weight(10,20)
+      !print*, layer1_weight_global(10,20)
+
+
     ENDIF
 
-
-    ! generate dropout mask
-    !IF (is_training .eq. 1) THEN
-    !  keep_prob = 0.9
-    !  CALL generate_dropout_mask(nn_layer1_mask, keep_prob, nc, d_hidden)
-    !  CALL generate_dropout_mask(nn_layer2_mask, keep_prob, nc, d_hidden)
-    !  CALL generate_dropout_mask(nn_layer3_mask, keep_prob, nc, d_hidden)
-    !  CALL generate_dropout_mask(nn_layer4_mask, keep_prob, nc, d_hidden)
-    !  CALL generate_dropout_mask(nn_layer5_mask, keep_prob, nc, d_hidden)
-    !ELSE
-    !  keep_prob = 1.
-    !  nn_layer1_mask(:,:) = 1.
-    !  nn_layer2_mask(:,:) = 1.
-    !  nn_layer3_mask(:,:) = 1.
-    !  nn_layer4_mask(:,:) = 1.
-    !  nn_layer5_mask(:,:) = 1.  
-    !ENDIF
-    !nn_layer6_mask(:,:) = 1.
-
-    ! RH constraint
-    !q_rel_air_constraint(:) = q_rel_air(:)
-    !CALL modified_sigmoid(q_rel_air_constraint, nc)
-
-
-    ! Forward propagation
-    !CALL forward(                                    &
-    !  nn_inputs,     nn_outputs,                     & 
-    !  layer1_weight, layer1_bias, 'leaky_relu',      & 
-    !  nn_layer1_out, nn_layer1_act, nn_layer1_mask,  &
-    !  layer2_weight, layer2_bias, 'leaky_relu',      &
-    !  nn_layer2_out, nn_layer2_act, nn_layer2_mask,  &
-    !  layer3_weight, layer3_bias, 'leaky_relu',      &
-    !  nn_layer3_out, nn_layer3_act, nn_layer3_mask,  &
-    !  layer4_weight, layer4_bias, 'leaky_relu',      &
-    !  nn_layer4_out, nn_layer4_act, nn_layer4_mask,  &
-    !  layer5_weight, layer5_bias, 'leaky_relu',      &
-    !  nn_layer5_out, nn_layer5_act, nn_layer5_mask,  &
-    !  layer6_weight, layer6_bias, 'linear',          &
-    !  nn_layer6_out, nn_layer6_act, nn_layer6_mask,  &
-    !  nc, d_input, d_hidden, d_output, keep_prob,    &
-    !  q_rel_air_constraint)
-
-    ! 1st layer
-    !nn_layer1_out(:,1:128) = matmul(nn_inputs, layer1_weight(:,1:128)) + spread(layer1_bias(1:128),1,nc)
-    !nn_layer1_act(:,:) = nn_layer1_out(:,:) 
-    !where (nn_layer1_out < 0.) nn_layer1_act = 0.01*nn_layer1_act
-    ! 2nd layer
-    !nn_layer2_out(:,1:128) = matmul(nn_layer1_act(:,1:128), layer2_weight(1:128,1:128)) + spread(layer2_bias(1:128),1,nc)
-    !nn_layer2_act(:,:) = nn_layer2_out(:,:)
-    !where (nn_layer2_out < 0.) nn_layer2_act = 0.01*nn_layer2_act
-    ! 3rd layer
-    !nn_layer3_out(:,1:128) = matmul(nn_layer2_act(:,1:128), layer3_weight(1:128,1:128)) + spread(layer3_bias(1:128),1,nc)
-    !nn_layer3_act(:,:) = nn_layer3_out(:,:)
-    !where (nn_layer3_out > 0) nn_layer3_act = 0.01*nn_layer3_act
-    ! 4th layer
-    !nn_layer4_out(:,1:128) = matmul(nn_layer3_act(:,1:128), layer4_weight(1:128,1:128)) + spread(layer4_bias(1:128),1,nc)
-    !nn_layer4_act(:,:) = nn_layer4_out(:,:)
-    !where (nn_layer4_out > 0) nn_layer4_act = 0.01*nn_layer4_act
-    ! 5th layer
-    !nn_layer5_out(:,1:128) = matmul(nn_layer4_act(:,1:128), layer5_weight(1:128,1:128)) + spread(layer5_bias(1:128),1,nc)
-    !nn_layer5_act(:,:) = nn_layer5_out(:,:)
-    !where (nn_layer5_out > 0) nn_layer5_act = 0.01*nn_layer5_act
-    ! 6th layer
-    !call LoopMatrixMultiply(nn_layer5_act, layer6_weight, nn_layer6_out)
-    !nn_layer6_out = nn_layer6_out + spread(layer6_bias,1,nc)
-    !nn_layer6_out(:,1:128) = matmul(nn_layer5_act(:,1:128), layer6_weight(1:128,1:128)) + spread(layer6_bias(1:128),1,nc)
-    !nn_layer6_act(:,:) = nn_layer6_out(:,:) 
-
-    ! clear gradients
-    !dW1(:,:) = 0.;  db1(:) = 0.
-    !dW2(:,:) = 0.;  db2(:) = 0.
-    !dW3(:,:) = 0.;  db3(:) = 0.
-    !dW4(:,:) = 0.;  db4(:) = 0.
-    !dW5(:,:) = 0.;  db5(:) = 0.
-    !dW6(:,:) = 0.;  db6(:) = 0.
-
-    ! Backward propagation
-    !call backward(                                         &
-    !  nn_inputs, nn_outputs, fba_smooth,                   &
-    !  layer1_weight, 'relu', nn_layer1_out, nn_layer1_act, &
-    !  layer2_weight, 'relu', nn_layer2_out, nn_layer2_act, &
-    !  layer3_weight, 'relu', nn_layer3_out, nn_layer3_act, &
-    !  layer4_weight, 'relu', nn_layer4_out, nn_layer4_act, &
-    !  layer5_weight, 'relu', nn_layer5_out, nn_layer5_act, &
-    !  layer6_weight, 'none', nn_layer6_out, nn_layer6_act, &
-    !  dW1, dW2, dW3, dW4, dW5, dW6,                        &
-    !  db1, db2, db3, db4, db5, db6,                        &
-    !  nc, d_input, d_hidden, d_output)
-
-    !IF (is_training .eq. 1) then
-    !  call backward(                                               &
-    !    nn_inputs, nn_outputs, fba_smooth,                         &
-    !    layer1_weight(:,1:128), 'leaky_relu', nn_layer1_out(:,1:128), nn_layer1_act(:,1:128), &
-    !    layer2_weight(1:128,1:128), 'leaky_relu', nn_layer2_out(:,1:128), nn_layer2_act(:,1:128), &
-    !    layer3_weight(1:128,1:128), 'leaky_relu', nn_layer3_out(:,1:128), nn_layer3_act(:,1:128), &
-    !    layer4_weight(1:128,1:128), 'leaky_relu', nn_layer4_out(:,1:128), nn_layer4_act(:,1:128), &
-    !    layer5_weight(1:128,1:128), 'leaky_relu', nn_layer5_out(:,1:128), nn_layer5_act(:,1:128), &
-    !    layer6_weight(1:128,1:128), 'linear',     nn_layer6_out, nn_layer6_act, &
-    !    dW1(:,1:128), dW2(1:128,1:128), dW3(1:128,1:128), dW4(1:128,1:128), dW5(1:128,1:128), dW6(1:128,:), &
-    !    db1(1:128), db2(1:128), db3(1:128), db4(1:128), db5(1:128), db6, &
-    !    !nc, d_input, d_hidden, d_output)
-    !    nc, d_input, 128, d_output)
-
-    !  lr_rate = 1e-4
-    !  call update(                                     &
-    !    dW1(:,1:128), dW2(1:128,1:128), dW3(1:128,1:128), dW4(1:128,1:128), dW5(1:128,1:128), dW6(1:128,:), &
-    !    db1(1:128), db2(1:128), db3(1:128), db4(1:128), db5(1:128), db6,                  &
-    !    mW1(:,1:128), mW2(1:128,1:128), mW3(1:128,1:128), mW4(1:128,1:128), mW5(1:128,1:128), mW6(1:128,:), &
-    !    mb1(1:128), mb2(1:128), mb3(1:128), mb4(1:128), mb5(1:128), mb6,                  &
-    !    vW1(:,1:128), vW2(1:128,1:128), vW3(1:128,1:128), vW4(1:128,1:128), vW5(1:128,1:128), vW6(1:128,:), &
-    !    vb1(1:128), vb2(1:128), vb3(1:128), vb4(1:128), vb5(1:128), vb6,                  &
-    !    layer1_weight(:,1:128),  layer2_weight(1:128,1:128),  layer3_weight(1:128,1:128), &
-    !    layer4_weight(1:128,1:128),  layer5_weight(1:128,1:128),  layer6_weight(1:128,:), &
-    !    layer1_bias(1:128),    layer2_bias(1:128),    layer3_bias(1:128),   &
-    !    layer4_bias(1:128),    layer5_bias(1:128),    layer6_bias,   &
-        !lr_rate, iteration, d_input, d_hidden, d_output)
-    !    lr_rate, iteration, d_input, 128, d_output)
-    !ENDIF
-
-    !IF (is_training .eq. 1) then
-    !  CALL backward(                                                               &
-    !    nn_inputs, nn_outputs, fba_smooth,                                         &
-    !    layer1_weight, 'leaky_relu', nn_layer1_out, nn_layer1_act, nn_layer1_mask, &
-    !    layer2_weight, 'leaky_relu', nn_layer2_out, nn_layer2_act, nn_layer2_mask, &
-    !    layer3_weight, 'leaky_relu', nn_layer3_out, nn_layer3_act, nn_layer3_mask, &
-    !    layer4_weight, 'leaky_relu', nn_layer4_out, nn_layer4_act, nn_layer4_mask, &
-    !    layer5_weight, 'leaky_relu', nn_layer5_out, nn_layer5_act, nn_layer5_mask, &
-    !    layer6_weight, 'linear',     nn_layer6_out, nn_layer6_act, nn_layer6_mask, &
-    !    dW1, dW2, dW3, dW4, dW5, dW6,                                              &
-    !    db1, db2, db3, db4, db5, db6,                                              &
-    !    nc, d_input, d_hidden, d_output, keep_prob,                                &
-    !    q_rel_air_constraint)
-
-    !  lr_rate = 5e-7
-    !  CALL update(                                     &
-    !    dW1, dW2, dW3, dW4, dW5, dW6,                  &
-    !    db1, db2, db3, db4, db5, db6,                  &
-    !    mW1, mW2, mW3, mW4, mW5, mW6,                  &
-    !    mb1, mb2, mb3, mb4, mb5, mb6,                  &
-    !    vW1, vW2, vW3, vW4, vW5, vW6,                  &
-    !    vb1, vb2, vb3, vb4, vb5, vb6,                  &
-    !    layer1_weight,  layer2_weight,  layer3_weight, &
-    !    layer4_weight,  layer5_weight,  layer6_weight, &
-    !    layer1_bias,    layer2_bias,    layer3_bias,   &
-    !    layer4_bias,    layer5_bias,    layer6_bias,   &
-    !    lr_rate, iteration, d_input, d_hidden, d_output)
-
-    !    loss = sum((nn_outputs(:,1) - fba_smooth)**2)/float(nc)
-    !    print*, loss
-    !ENDIF
-
-
-    !if (sum(dW6) .gt. 0) then
-    !  print*, sum(dW6), sum(dW3), sum(dW1)
-    !endif
-
-    !if (sum(fba_smooth) .gt. 0) then
-    !  print*, sum(nn_outputs), sum(fba_smooth)
-    !endif
-
-    ! 1st layer
-    !nn_layer1_out = matmul(nn_inputs, layer1_weight) + spread(layer1_bias,1,nc)
-    !nn_layer1_act(:,:) = 0.
-    !where (nn_layer1_out > 0) nn_layer1_act = nn_layer1_out
-    ! 2nd layer
-    !nn_layer2_out = matmul(nn_layer1_act, layer2_weight) + spread(layer2_bias,1,nc)
-    !nn_layer2_act(:,:) = 0.
-    !where (nn_layer2_out > 0) nn_layer2_act = nn_layer2_out
-    ! 3rd layer
-    !nn_layer3_out = matmul(nn_layer2_act, layer3_weight) + spread(layer3_bias,1,nc)
-    !nn_layer3_act(:,:) = 0.
-    !where (nn_layer3_out > 0) nn_layer3_act = nn_layer3_out
-    ! 4th layer
-    !nn_layer4_out = matmul(nn_layer3_act, layer4_weight) + spread(layer4_bias,1,nc)
-    !nn_layer4_act(:,:) = 0.
-    !where (nn_layer4_out > 0) nn_layer4_act = nn_layer4_out
-    ! 5th layer
-    !nn_layer5_out = matmul(nn_layer4_act, layer5_weight) + spread(layer5_bias,1,nc)
-    !nn_layer5_act(:,:) = 0.
-    !where (nn_layer5_out > 0) nn_layer5_act = nn_layer5_out
-    ! 6th layer
-    !nn_layer6_out = matmul(nn_layer5_act, layer6_weight) + spread(layer6_bias,1,nc)
-    !nn_layer6_act = nn_layer6_out 
-
-
-    ! LSTM model
-    !lstm_i = matmul(inputs, i2i_weight) + spread(i2i_bias,1,nc) &
-    !  + matmul(lstm_hidden, h2i_weight) + spread(h2i_bias,1,nc)
-    !lstm_f = matmul(inputs, i2f_weight) + spread(i2f_bias,1,nc) &
-    !  + matmul(lstm_hidden, h2f_weight) + spread(h2f_bias,1,nc)
-    !lstm_g = matmul(inputs, i2g_weight) + spread(i2g_bias,1,nc) &
-    !  + matmul(lstm_hidden, h2g_weight) + spread(h2g_bias,1,nc)
-    !lstm_o = matmul(inputs, i2o_weight) + spread(i2o_bias,1,nc) &
-    !  + matmul(lstm_hidden, h2o_weight) + spread(h2o_bias,1,nc)
-
-    !lstm_i = 1/(1+exp(-lstm_i))
-    !lstm_f = 1/(1+exp(-lstm_f))
-    !lstm_g = tanh(lstm_g)
-    !lstm_o = 1/(1+exp(-lstm_o))
-
-    !lstm_cell = lstm_f * lstm_cell &
-    !          + lstm_i * lstm_g
-    !lstm_hidden = lstm_o * tanh(lstm_cell)
-    !lstm_outputs = matmul(lstm_hidden, out_weight) &
-    !             + spread(out_bias,1,nc)
-
-    !if (maxval(nn_outputs(:,1)) .gt. 0) then
-    !  print*, maxval(nn_outputs(:,1))
-    !endif
-    !burned_fract = nn_outputs(:,1)/100.
-
-    ! constrants
-    !burned_fract = burned_fract*(1-pfts_fract(:,1)-pfts_fract(:,9))
-    !burned_fract = burned_fract*nn_inputs(:,19)
-
-    !q_rel_air_constraint = q_rel_air/100.
-    !where (q_rel_air_constraint < 0) q_rel_air_constraint = 0.
-    !where (q_rel_air_constraint > 1) q_rel_air_constraint = 1.
-    !q_rel_air_constraint = 1/(1+exp(-20*(q_rel_air_constraint-0.5)))
-    !burned_fract = burned_fract*(1-q_rel_air_constraint)
-    
-
-    !WHERE (burned_fract < 0.) burned_fract = 0.
-    !WHERE (burned_fract > 1.) burned_fract = 1.
     
   END SUBROUTINE burned_fract_dl
 
@@ -1050,28 +850,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT) :: Z     (batch_size,d_out)
     REAL(wp), INTENT(INOUT) :: output(batch_size,d_out)
 
-    !real(wp) ::  ALPHA, BETA
-    !ALPHA = 1.0
-    !BETA = 0.0
-
     Z = matmul(input, weight) + spread(bias,1,batch_size)
-
-    ! LAPACK routine for matrix multiplication:
-    !  ! C := alpha*op(A)*op(B) + beta*C  -----  (1)
-    !  call DGEMM( 'N',                & !'N' or 'n': op(A)=A, 'T' or 't': op(A)=A**T, 'C' or 'c': op(A)=A**T
-    !    &         'N',                & !'N' or 'n': op(B)=B, 'T' or 't': op(B)=B**T, 'C' or 'c': op(B)=B**T
-    !    &         batch_size,         & ! the number of rows of the matrix op(A)
-    !    &         d_out,              & ! the number of columns of the matrix op(B)
-    !    &         d_in,               & ! the number of columns of the matrix op(A) and the number of rows of the matrix op(B)
-    !    &         ALPHA,              & ! the scalar alpha at equation (1)
-    !    &         input,              & ! A array at equation (1)
-    !    &         batch_size,         & ! the first dimension of A
-    !    &         weight,             & ! B array at equation (1)
-    !    &         d_in,               & ! the first dimension of B
-    !    &         BETA,               & ! the scalar beta at equation (1)
-    !    &         Z,                  & ! C array (output) at equation (1)
-    !    &         batch_size          ) ! the first dimension of C
-    !Z = Z + spread(bias,1,batch_size)
 
     IF (activation_func .eq. 'relu') THEN
       CALL ReLU(Z, output, batch_size, d_out)
@@ -1157,8 +936,6 @@ CONTAINS
     output(:,:) = layer6_act(:,:)
 
     ! constraints
-    !output(:,1) = output(:,1)*(1._wp-input(:,25)-input(:,33))
-    !output(:,1) = output(:,1)*input(:,19)
     output(:,1) = output(:,1)*(1._wp-input(:,27)-input(:,39))
     output(:,1) = output(:,1)*input(:,21)
     output(:,1) = output(:,1)*(1._wp-rh_constraint)
@@ -1217,9 +994,6 @@ CONTAINS
       REAL(wp) :: derivative_b_(d_out)
       REAL(wp) :: derivative_Z_(batch_size,d_out)
 
-      !REAL(wp) ::  ALPHA, BETA
-      !ALPHA = 1.0
-      !BETA = 0.0
 
       derivative_Y_ = derivative_Y*mask/keep_prob   ! dropout backprop
 
@@ -1233,22 +1007,6 @@ CONTAINS
 
       derivative_W_      = matmul(transpose(X), derivative_Z_)
 
-      ! LAPACK routine for matrix multiplication:
-      ! C := alpha*op(A)*op(B) + beta*C  -----  (1)
-      !call DGEMM( 'N',                & !'N' or 'n': op(A)=A, 'T' or 't': op(A)=A**T, 'C' or 'c': op(A)=A**T
-      !  &         'N',                & !'N' or 'n': op(B)=B, 'T' or 't': op(B)=B**T, 'C' or 'c': op(B)=B**T
-      !  &         d_in,               & ! the number of rows of the matrix op(A)
-      !  &         d_out,              & ! the number of columns of the matrix op(B)
-      !  &         batch_size,         & ! the number of columns of the matrix op(A) and the number of rows of the matrix op(B)
-      !  &         ALPHA,              & ! the scalar alpha at equation (1)
-      !  &         transpose(X),       & ! A array at equation (1)
-      !  &         d_in,               & ! the first dimension of A
-      !  &         derivative_Z_,      & ! B array at equation (1)
-      !  &         batch_size,         & ! the first dimension of B
-      !  &         BETA,               & ! the scalar beta at equation (1)
-      !  &         derivative_W_,      & ! C array (output) at equation (1)
-      !  &         d_in                ) ! the first dimension of C
-
       derivative_W_(:,:) = derivative_W_(:,:)/float(batch_size)
       derivative_W (:,:) = derivative_W(:,:)+derivative_W_(:,:)
       WHERE(derivative_W >  1e-1) derivative_W =  1e-1
@@ -1261,22 +1019,6 @@ CONTAINS
       WHERE(derivative_b < -1e-1) derivative_b = -1e-1
 
       derivative_X_ = matmul(derivative_Z_, transpose(weight))
-
-      ! LAPACK routine for matrix multiplication:
-      ! C := alpha*op(A)*op(B) + beta*C  -----  (1)
-      !call DGEMM( 'N',                & !'N' or 'n': op(A)=A, 'T' or 't': op(A)=A**T, 'C' or 'c': op(A)=A**T
-      !  &         'N',                & !'N' or 'n': op(B)=B, 'T' or 't': op(B)=B**T, 'C' or 'c': op(B)=B**T
-      !  &         batch_size,         & ! the number of rows of the matrix op(A)
-      !  &         d_in,               & ! the number of columns of the matrix op(B)
-      !  &         d_out,              & ! the number of columns of the matrix op(A) and the number of rows of the matrix op(B)
-      !  &         ALPHA,              & ! the scalar alpha at equation (1)
-      !  &         derivative_Z_,      & ! A array at equation (1)
-      !  &         batch_size,         & ! the first dimension of A
-      !  &         transpose(weight),  & ! B array at equation (1)
-      !  &         d_out,              & ! the first dimension of B
-      !  &         BETA,               & ! the scalar beta at equation (1)
-      !  &         derivative_X_,      & ! C array (output) at equation (1)
-      !  &         batch_size          ) ! the first dimension of C
 
       derivative_X(:,:) = derivative_X_(:,:)
 
@@ -1352,9 +1094,6 @@ CONTAINS
       dlayer6_act_(:,1) = 2.*(output(:,1)-target_y(:)*100)    ! MSE
 
       ! constraints
-      !dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-input(:,25)-input(:,33))
-      !dlayer6_act_(:,1) = dlayer6_act_(:,1)*input(:,19)
-      !dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-rh_constraint(:))
       dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-input(:,27)-input(:,39))
       dlayer6_act_(:,1) = dlayer6_act_(:,1)*input(:,21)
       dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-rh_constraint(:))

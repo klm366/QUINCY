@@ -11,6 +11,7 @@
 !! Where software is supplied by third parties, it is indicated in the
 !! headers of the routines.
 !!
+
 MODULE mo_jsbach_model
 
 #ifdef __ICON__
@@ -138,6 +139,8 @@ CONTAINS
     USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
+
+    USE mo_global_variable,         ONLY: merge_trainable_parameters  ! <Rackhun Son>
 
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
@@ -561,6 +564,11 @@ CONTAINS
               &             mtime_current%time%minute, ':', mtime_current%time%second,   '.',    &
               &             mtime_current%time%ms
         CALL message('',message_text)
+      ENDIF
+
+      !IF (jstep .ne. 1) THEN
+      IF (jstep .ne. 350641) THEN  ! restart 1999~
+        CALL merge_trainable_parameters()  ! <Rackhun Son>
       ENDIF
   
       ! set namelist output flag
