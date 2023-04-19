@@ -274,8 +274,11 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
 
     model => get_model(tile%owner_model_id)
-    ClumpinessFactor_param = dsl4jsb_Lctlib_param(ClumpinessFactor)
-    MaxLai_param           = dsl4jsb_Lctlib_param(MaxLai)
+
+    IF (tile%lcts(1)%lib_id /= 0) THEN
+      ClumpinessFactor_param = dsl4jsb_Lctlib_param(ClumpinessFactor)
+      MaxLai_param           = dsl4jsb_Lctlib_param(MaxLai)
+    END IF
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
@@ -314,7 +317,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
     ELSE
       IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
-          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
+          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: general vegetation tile, no specific PFT
         !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
         DO ib=1,nblks
           DO ic=1,nc
