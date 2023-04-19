@@ -48,7 +48,7 @@ MODULE mo_hd_memory_class
       nres_overlflow  , &  !< number of overland flow reservoirs
       nres_baseflow   , &  !< number of baseflow reservoirs
       nres_riverflow  , &  !< number of riverflow reservoirs
-      nsplit          , &  !< number of channels river splits into 
+      nsplit          , &  !< number of channels river splits into
       outflow_runoff  , &  !< grid cell outflow due to runoff
       outflow_drainage, &  !< grid cell outflow due to drainage
       outflow_rivers  , &  !< grid cell outflow due to rivers
@@ -123,7 +123,7 @@ CONTAINS
     CALL mem%Add_var( 'hd_mask', mem%hd_mask,                                                   &
       & hgrid, surface,                                                                         &
       & t_cf('hd_mask', '', 'HD_ mask: -1 ocean, 0 ocean inflow, 1 land, 2 internal drainage'), &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                      & 
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                      &
       & prefix, suffix,                                                                         &
       & lrestart=.FALSE.,                                                                       &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
@@ -301,7 +301,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                                &
         & initval_r=0.0_wp )
     ENDIF
-#endif  
+#endif
 
   END SUBROUTINE Init_hd_memory
 

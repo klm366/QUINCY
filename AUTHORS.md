@@ -12,6 +12,6 @@ title: Authors
 - Christian Reick  (1)
 - and all JSBACH3 developers
 
-(1) Max Planck Institute for Meteorology, Hamburg, Germany  
+(1) Max Planck Institute for Meteorology, Hamburg, Germany
 (2) Max Planck Institute for Biogeochemistry, Jena, Germany
 

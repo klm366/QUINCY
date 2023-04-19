@@ -38,7 +38,7 @@ MODULE mo_jsb_memory_class
 
 #ifdef _OPENACC
   use openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#define __acc_attach(ptr) CALL acc_attach(ptr)
 #else
 #define __acc_attach(ptr)
 #endif
@@ -165,7 +165,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r1d'
 
     name_loc = TRIM(name)
@@ -316,7 +316,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r2d'
 
     name_loc = TRIM(name)
@@ -393,7 +393,7 @@ CONTAINS
     var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
-  
+
     IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
     IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
 
@@ -466,7 +466,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r3d'
 
@@ -790,7 +790,7 @@ CONTAINS
       var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
       IF (PRESENT(lrestart)) var%is_in_restart = lrestart
       ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
-    
+
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
 

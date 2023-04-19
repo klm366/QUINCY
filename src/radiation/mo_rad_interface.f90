@@ -88,7 +88,7 @@ MODULE mo_rad_interface
   INTERFACE tsk_albedo
     PROCEDURE Create_task_albedo
   END INTERFACE tsk_albedo
-  
+
   !! quincy
   ! ======================================================================================================= !
   !>Type definition: time_average_radiation task
@@ -133,7 +133,7 @@ CONTAINS
   ! ------------------------------------------------------------------------------------------------------- !
   !>Constructors for tasks
   !>
-  
+
   ! ======================================================================================================= !
   !>Constructor for surface_radiation task
   !>
@@ -183,7 +183,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Constructor: tsk_time_average_radiation task
-  !> 
+  !>
   FUNCTION Create_task_update_time_average_radiation(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -191,7 +191,7 @@ CONTAINS
 
     ALLOCATE(tsk_time_average_radiation::return_ptr)
     CALL return_ptr%Construct(name='tavrg_radiation', process_id=RAD_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_time_average_radiation
 
   ! ======================================================================================================= !
@@ -371,8 +371,8 @@ CONTAINS
       !$claw acc end data
 
 
-    !>2.0 all but lakes 
-    !> 
+    !>2.0 all but lakes
+    !>
     !>
     ELSE
 
@@ -578,7 +578,7 @@ CONTAINS
     !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_1 tile_name=tile%name
     par_down_mol(:)          = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
     soil_reflectivity_par(:) = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
-    
+
     par(:) = swpar_srf_down(:)
 
     ! Compute direct fraction of PAR.
@@ -590,7 +590,7 @@ CONTAINS
     !$claw end expand
 
     DO icanopy=1,ncanopy
-       ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and 
+       ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and
        !         lai_cl (leaf area index for each canopy layer)
        canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
        !$claw sca forward update savepoint=ser_jsb_rad_calc_par_1 tile_name=tile%name canopy_lvl=icanopy
@@ -840,7 +840,7 @@ CONTAINS
     ELSE IF(use_alb_soil_organic_C .eq. 'log') THEN
        use_alb_soil_organic_int = 2
     END IF
-  
+
     c_bg_sum => NULL()
     IF (tile%is_bare .OR. tile%is_vegetation) THEN
       IF (TRIM(use_alb_soil_organic_C) /= '' .AND. .NOT. tile%Has_process_memory(CARBON_)) THEN
@@ -885,7 +885,7 @@ CONTAINS
     !$claw acc enter data create(l_day)
 
     !> 0.9  Set day-or-night-switch
-    !! 
+    !!
     !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
     l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
 
@@ -1040,13 +1040,13 @@ CONTAINS
 
 
     !> 5.0 vegetation / canopy
-    !! 
+    !!
     !!
     ELSE IF (tile%is_vegetation) THEN
 
       dsl4jsb_Get_var2D_onChunk(PHENO_,    lai)                   ! in
       dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_fpc_max)         ! in
-      IF (use_alb_veg_simple) THEN 
+      IF (use_alb_veg_simple) THEN
         dsl4jsb_Get_var2D_onChunk(PHENO_,    fract_forest)          ! in
       ENDIF
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_can)        ! in
@@ -1078,7 +1078,7 @@ CONTAINS
 
 
       !> 5.2  detailed calculation of alb_vis_lnd & alb_nir_lnd
-      !!      
+      !!
       !! merging albedo of snow, soil and canopy
       ELSE
 
@@ -1129,7 +1129,7 @@ CONTAINS
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
         !> 5.2.2 calc sky-view fractions
-        !! 
+        !!
         !$claw sca forward update savepoint=ser_jsb_rad_calc_sky_view_fractions_1 tile_name=tile%name
         CALL calc_sky_view_fractions(       &
           & l_day(:),                       & ! in
@@ -1142,7 +1142,7 @@ CONTAINS
           & )
 
         !> 5.2.3 merge albedos of snow, soil and canopy into land
-        !! 
+        !!
         !$claw sca forward update savepoint=ser_jsb_rad_merge_albedos_of_vegtile_1 tile_name=tile%name
         CALL Merge_albedos_of_vegtile(        &
           & l_day(:),                         & ! in
@@ -1169,7 +1169,7 @@ CONTAINS
     END IF   ! IF (tile%is_vegetation)
 
 
-    !>6.0 pass the "land albedo" to the "tile albedo" 
+    !>6.0 pass the "land albedo" to the "tile albedo"
     !!  this is needed because for lake tiles, the "tile albedo" is calculated directly
     !!
     !!  but for vegetation, bare and glacier, the "land albedo" is calculated
@@ -1182,7 +1182,7 @@ CONTAINS
     END IF
 
     !> 7.0 deallocate a pointer
-    !! 
+    !!
     IF (TRIM(use_alb_soil_organic_C) == '') THEN
       IF (ASSOCIATED(c_bg_sum)) THEN
         !$claw acc exit data delete(c_bg_sum)
@@ -1243,7 +1243,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_pond,        weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_pond,        weighted_by_fract)     
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_pond,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_mineralsoil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_mineralsoil, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow,        weighted_by_fract)
@@ -1254,7 +1254,7 @@ CONTAINS
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_lwtr,         weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(RAD_, albedo_lice,         weighted_by_fract)
     ENDIF
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_albedo
@@ -1321,11 +1321,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! 2D RAD_
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
-    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! 3D RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_dacc_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_dacc_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl    
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -1363,27 +1363,27 @@ CONTAINS
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)    ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)    ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
     ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
     ! 2D RAD_
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)                  ! in 
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout 
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)                  ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout
     ! 3D RAD_
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)    ! inout
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)    ! inout
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)         ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)         ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)       ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)       ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)         ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)         ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
 #define Get_veg_pool
@@ -1407,7 +1407,7 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-    
+
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
@@ -1425,9 +1425,9 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !> 
+    !>
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
+    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver
     !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
       IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
@@ -1456,9 +1456,9 @@ CONTAINS
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
-    
+
     !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
-    !> 
+    !>
     ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
                                                     mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
     ppfd_shaded_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
@@ -1472,7 +1472,7 @@ CONTAINS
                                                     mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
 
     !>  2.3 tvegdyn (averages at the vegetation dynamics time-scale)
-    !! 
+    !!
     rfr_ratio_boc_tvegdyn_mavg(:) = calc_time_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
                                                     mavg_period_tvegdyn, do_calc=(veg_pool%leaf%carbon(:) > eps8))
 

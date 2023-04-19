@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,11 +16,11 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains the routines for the Task update_canopy_fluxes (photosynthesis related processes)
 !!
 !! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
 !! First version by Soenke Zaehle (2015-12-04)
@@ -46,11 +46,11 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Main Task
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
   !> update vegetation pools
-  !! 
-  !! 
+  !!
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_veg_pools(tile, options)
 
@@ -68,7 +68,7 @@ CONTAINS
     USE mo_jsb_physical_constants,          ONLY: lambda_C14, rhoh2o, grav
     USE mo_jsb_math_constants,              ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
-    USE mo_rad_constants,                   ONLY: rfr_ratio_toc 
+    USE mo_rad_constants,                   ONLY: rfr_ratio_toc
     USE mo_veg_canopy,                      ONLY: calc_canopy_layers
     USE mo_veg_growth,                      ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
     USE mo_veg_constants,                   ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, fresp_growth
@@ -80,8 +80,8 @@ CONTAINS
     USE mo_pheno_constants,                 ONLY: ievergreen
 
     ! Use of process configurations (t_PROC_config)
-    dsl4jsb_Use_config(ASSIMI_)    
-    dsl4jsb_Use_config(SB_)        
+    dsl4jsb_Use_config(ASSIMI_)
+    dsl4jsb_Use_config(SB_)
     ! Use of process memories
     dsl4jsb_Use_memory(ASSIMI_)     !  USE mo_assimi_memory_class,   ONLY: t_assimi_memory
     dsl4jsb_Use_memory(PHENO_)      !  USE mo_pheno_memory_class,    ONLY: t_pheno_memory
@@ -154,7 +154,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: beta_soil_ps_tfrac_mavg
     dsl4jsb_Real2D_onChunk      :: beta_soil_gs_tfrac_mavg
     ! PHENO_ 2D
-    dsl4jsb_Real2D_onChunk      :: growing_season 
+    dsl4jsb_Real2D_onChunk      :: growing_season
     dsl4jsb_Real2D_onChunk      :: lai_max
     dsl4jsb_Real2D_onChunk      :: lai
     ! PHENO_ 3D
@@ -401,7 +401,7 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
     !> 0.9 set g1 according to canopy_conductance_scheme
-    !! 
+    !!
     SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
       CASE ("medlyn")
         lctlib_g1 = lctlib%g1_medlyn
@@ -410,93 +410,93 @@ CONTAINS
     END SELECT
 
     !> 1.0 for plant and land model, update vegetation pools with fluxes
-    !! 
+    !!
     !!
     SELECT CASE(TRIM(model%config%quincy_model))
     CASE('plant','land')
-   
+
        !> 1.1 net balance of the labile carbon pool due to photosynthesis and respiration
-       !! 
-       !! 
-       npp(:)        = gross_assimilation(:)     - & 
-                       growth_respiration(:)     - maint_respiration(:)     - n_processing_respiration(:) 
+       !!
+       !!
+       npp(:)        = gross_assimilation(:)     - &
+                       growth_respiration(:)     - maint_respiration(:)     - n_processing_respiration(:)
        npp_c13(:)    = gross_assimilation_C13(:) - &
-                       growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:) 
-       npp_c14(:)    = gross_assimilation_C14(:) - & 
+                       growth_respiration_c13(:) - maint_respiration_c13(:) - n_processing_respiration_c13(:)
+       npp_c14(:)    = gross_assimilation_C14(:) - &
                        growth_respiration_c14(:) - maint_respiration_c14(:) - n_processing_respiration_c14(:)
        net_growth(:) = net_growth(:) + npp(:)
 
        veg_growth%labile%carbon(:)   = veg_growth%labile%carbon(:)   + npp(:)     * dtime / 1000000.0_wp
        veg_growth%labile%carbon13(:) = veg_growth%labile%carbon13(:) + npp_c13(:) * dtime / 1000000.0_wp
        veg_growth%labile%carbon14(:) = veg_growth%labile%carbon14(:) + npp_c14(:) * dtime / 1000000.0_wp
-  
+
        !> 1.2 Add nutrients from uptake calculations
-       !! 
-       !! 
+       !!
+       !!
        n_fixation_n15(:)               = n_fixation(:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
-       veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + & 
+       veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + &
                                           ( uptake_nh4(:) + uptake_no3(:) + n_fixation(:)) * dtime / 1000000.0_wp
-       veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + & 
+       veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + &
                                           ( uptake_nh4_n15(:) + uptake_no3_n15(:) + n_fixation_n15(:)) * dtime / 1000000.0_wp
-       veg_growth%labile%phosphorus(:) = veg_growth%labile%phosphorus(:) + & 
+       veg_growth%labile%phosphorus(:) = veg_growth%labile%phosphorus(:) + &
                                             uptake_po4(:) * dtime / 1000000.0_wp
 
        !> 1.2a Add mycorrhiza export
        !!
-       veg_growth%labile%carbon(:)     = veg_growth%labile%carbon(:)   + & 
+       veg_growth%labile%carbon(:)     = veg_growth%labile%carbon(:)   + &
                                          SUM(sb_mycorrhiza_export%carbon(:,:)     * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%carbon13(:)   = veg_growth%labile%carbon13(:) + & 
+       veg_growth%labile%carbon13(:)   = veg_growth%labile%carbon13(:) + &
                                          SUM(sb_mycorrhiza_export%carbon13(:,:)   * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%carbon14(:)   = veg_growth%labile%carbon14(:) + & 
+       veg_growth%labile%carbon14(:)   = veg_growth%labile%carbon14(:) + &
                                          SUM(sb_mycorrhiza_export%carbon14(:,:)   * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + & 
+       veg_growth%labile%nitrogen(:)   = veg_growth%labile%nitrogen(:) + &
                                          SUM(sb_mycorrhiza_export%nitrogen(:,:)   * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + & 
+       veg_growth%labile%nitrogen15(:) = veg_growth%labile%nitrogen15(:) + &
                                          SUM(sb_mycorrhiza_export%nitrogen15(:,:) * soil_depth_sl(:,:),DIM=2)
-       veg_growth%labile%phosphorus(:) = veg_growth%labile%phosphorus(:) + & 
+       veg_growth%labile%phosphorus(:) = veg_growth%labile%phosphorus(:) + &
                                          SUM(sb_mycorrhiza_export%phosphorus(:,:) * soil_depth_sl(:,:),DIM=2)
 
-       !> 1.3 update labile pool and reserve 
-       !! 
+       !> 1.3 update labile pool and reserve
+       !!
        veg_pool%labile  = veg_pool%labile  + veg_reserve_use
        veg_pool%reserve = veg_pool%reserve - veg_reserve_use
-   
-       !> 1.4 update fluxes from continuous nutrient turnover and resorption 
+
+       !> 1.4 update fluxes from continuous nutrient turnover and resorption
        !!
-       veg_pool%labile%nitrogen(:)       = veg_pool%labile%nitrogen(:)       + recycling_leaf_n(:) + & 
+       veg_pool%labile%nitrogen(:)       = veg_pool%labile%nitrogen(:)       + recycling_leaf_n(:) + &
                                            recycling_fine_root_n(:)          + recycling_heart_wood_n(:)
        veg_pool%leaf%nitrogen(:)         = veg_pool%leaf%nitrogen(:)         - recycling_leaf_n(:)
        veg_pool%fine_root%nitrogen(:)    = veg_pool%fine_root%nitrogen(:)    - recycling_fine_root_n(:)
        veg_pool%heart_wood%nitrogen(:)   = veg_pool%heart_wood%nitrogen(:)   - recycling_heart_wood_n(:)
-   
-       veg_pool%labile%phosphorus(:)     = veg_pool%labile%phosphorus(:)     + recycling_leaf_p(:) + & 
+
+       veg_pool%labile%phosphorus(:)     = veg_pool%labile%phosphorus(:)     + recycling_leaf_p(:) + &
                                            recycling_fine_root_p(:)          + recycling_heart_wood_p(:)
        veg_pool%leaf%phosphorus(:)       = veg_pool%leaf%phosphorus(:)       - recycling_leaf_p(:)
        veg_pool%fine_root%phosphorus(:)  = veg_pool%fine_root%phosphorus(:)  - recycling_fine_root_p(:)
        veg_pool%heart_wood%phosphorus(:) = veg_pool%heart_wood%phosphorus(:) - recycling_heart_wood_p(:)
-   
-       veg_pool%labile%nitrogen15(:)     = veg_pool%labile%nitrogen15(:)     + recycling_leaf_n15(:) + & 
+
+       veg_pool%labile%nitrogen15(:)     = veg_pool%labile%nitrogen15(:)     + recycling_leaf_n15(:) + &
                                            recycling_fine_root_n15(:)        + recycling_heart_wood_n15(:)
        veg_pool%leaf%nitrogen15(:)       = veg_pool%leaf%nitrogen15(:)       - recycling_leaf_n15(:)
        veg_pool%fine_root%nitrogen15(:)  = veg_pool%fine_root%nitrogen15(:)  - recycling_fine_root_n15(:)
        veg_pool%heart_wood%nitrogen15(:) = veg_pool%heart_wood%nitrogen15(:) - recycling_heart_wood_n15(:)
 
        !> 1.5 update labile pool with fluxes to mycorrhiza
-       veg_pool%labile%carbon(:)     = veg_pool%labile%carbon(:)       - veg_exudation%carbon(:) 
-       veg_pool%labile%nitrogen(:)   = veg_pool%labile%nitrogen(:)     - veg_exudation%nitrogen(:) 
-       veg_pool%labile%phosphorus(:) = veg_pool%labile%phosphorus(:)   - veg_exudation%phosphorus(:) 
-       veg_pool%labile%carbon13(:)   = veg_pool%labile%carbon13(:)     - veg_exudation%carbon13(:) 
-       veg_pool%labile%carbon14(:)   = veg_pool%labile%carbon14(:)     - veg_exudation%carbon14(:) 
-       veg_pool%labile%nitrogen15(:) = veg_pool%labile%nitrogen15(:)   - veg_exudation%nitrogen15(:) 
+       veg_pool%labile%carbon(:)     = veg_pool%labile%carbon(:)       - veg_exudation%carbon(:)
+       veg_pool%labile%nitrogen(:)   = veg_pool%labile%nitrogen(:)     - veg_exudation%nitrogen(:)
+       veg_pool%labile%phosphorus(:) = veg_pool%labile%phosphorus(:)   - veg_exudation%phosphorus(:)
+       veg_pool%labile%carbon13(:)   = veg_pool%labile%carbon13(:)     - veg_exudation%carbon13(:)
+       veg_pool%labile%carbon14(:)   = veg_pool%labile%carbon14(:)     - veg_exudation%carbon14(:)
+       veg_pool%labile%nitrogen15(:) = veg_pool%labile%nitrogen15(:)   - veg_exudation%nitrogen15(:)
 
-   
+
        !> 1.5 Update plant biogeochemical pools with growth, litterfall and establishment
-       !! 
+       !!
        veg_pool           = veg_pool          - veg_litterfall
        veg_pool           = veg_pool          + veg_growth
        veg_pool%labile    = veg_pool%labile   + veg_establishment
        veg_pool%seed_bed  = veg_pool%seed_bed - veg_establishment
-   
+
        !> 1.6 Radioactive decay of C14 in living plant tissue
        !!
        veg_pool%leaf%carbon14(:)         = veg_pool%leaf%carbon14(:)        * (1._wp - lambda_C14 * dtime )
@@ -508,38 +508,38 @@ CONTAINS
        veg_pool%labile%carbon14(:)       = veg_pool%labile%carbon14(:)      * (1._wp - lambda_C14 * dtime )
        veg_pool%reserve%carbon14(:)      = veg_pool%reserve%carbon14(:)     * (1._wp - lambda_C14 * dtime )
        veg_pool%seed_bed%carbon14(:)     = veg_pool%seed_bed%carbon14(:)    * (1._wp - lambda_C14 * dtime )
-   
+
     CASE ('canopy')
-   
+
        ! diagnose required change in leaf C given phenology to attain prescribed LAI max
        WHERE(growing_season(:) > test_false_true)
           veg_growth%leaf%carbon(:) = lai_max(:) / lctlib%sla * &
                                       (1._wp - exp(-k_leafon_canopy * &
                                        (lai_max(:) - lai(:)) / lai_max(:))) * &
-                                      dtime / one_day 
+                                      dtime / one_day
        ELSEWHERE
-          veg_litterfall%leaf%carbon(:) = MIN(veg_pool%leaf%carbon(:), & 
-                                              lai(:)/lctlib%sla * max_leaf_shedding_rate * dtime / one_day * & 
+          veg_litterfall%leaf%carbon(:) = MIN(veg_pool%leaf%carbon(:), &
+                                              lai(:)/lctlib%sla * max_leaf_shedding_rate * dtime / one_day * &
                                               lai_max(:) / &
                                               MAX(eps4, lai(:)))
        ENDWHERE
-       
+
        ! calc leaf turnover for evergreen trees (needed, for e.g. mean_leaf_age, as evergreens are always within growing_season)
        IF(lctlib%phenology_type == ievergreen) THEN
          veg_litterfall%leaf%carbon(:) = veg_pool%leaf%carbon(:) / lctlib%tau_leaf / one_day / one_year * dtime
        ENDIF
- 
-       ! update leaf C:N:P pools 
-       veg_pool%leaf%carbon(:)     = veg_pool%leaf%carbon(:)   + veg_growth%leaf%carbon(:) - veg_litterfall%leaf%carbon(:) 
-       veg_pool%leaf%nitrogen(:)   = veg_pool%leaf%carbon(:)   / lctlib%cn_leaf 
-       veg_pool%leaf%phosphorus(:) = veg_pool%leaf%nitrogen(:) / lctlib%np_leaf 
+
+       ! update leaf C:N:P pools
+       veg_pool%leaf%carbon(:)     = veg_pool%leaf%carbon(:)   + veg_growth%leaf%carbon(:) - veg_litterfall%leaf%carbon(:)
+       veg_pool%leaf%nitrogen(:)   = veg_pool%leaf%carbon(:)   / lctlib%cn_leaf
+       veg_pool%leaf%phosphorus(:) = veg_pool%leaf%nitrogen(:) / lctlib%np_leaf
 
     END SELECT
 
 
     !> 2.0 Update plant diagnostics given the above fluxes
     !!
-    !! 
+    !!
     lai(:)      = veg_pool%leaf%carbon(:) * lctlib%sla
     dens_ind(:) = dens_ind(:) + delta_dens_ind(:)
     WHERE(dens_ind(:) > eps8 .AND. lctlib%growthform == itree)
@@ -549,7 +549,7 @@ CONTAINS
                                                        veg_pool%sap_wood%carbon(:)   , &
                                                        veg_pool%heart_wood%carbon(:) , &
                                                        dens_ind(:))
-       height(:)    = calc_height_from_diameter(lctlib%allom_k1, lctlib%allom_k2, diameter(:)) 
+       height(:)    = calc_height_from_diameter(lctlib%allom_k1, lctlib%allom_k2, diameter(:))
     END WHERE
 
     WHERE(veg_pool%leaf%carbon(:) > eps8)
@@ -566,7 +566,7 @@ CONTAINS
     !!
     !! in case of complete harvest, set all pools to zero
     !! (to account for wood extraction, which would otherwise leave some wood, and reset the key plant diagnostics)
-    IF(model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(ics) > test_false_true) THEN 
+    IF(model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(ics) > test_false_true) THEN
       !! differ between cohort & population scheme
       IF (do_cohort_harvest(ics) > test_false_true) THEN    ! -> cohort scheme
         dens_ind(:)                    = 1.0_wp
@@ -593,8 +593,8 @@ CONTAINS
       lai(:)                         = 0.0_wp
       mean_leaf_age(:)               = 0.0_wp
       !! init
-      dphi(:)                        = w_soil_root_pot(:) - lctlib%phi_leaf_min 
-      rfr_ratio_boc_tvegdyn_mavg(:)  = rfr_ratio_toc 
+      dphi(:)                        = w_soil_root_pot(:) - lctlib%phi_leaf_min
+      rfr_ratio_boc_tvegdyn_mavg(:)  = rfr_ratio_toc
       ! pool%reserve% C N P
       veg_pool%reserve%nitrogen(:)   = veg_pool%reserve%carbon(:)    / (1._wp + fresp_growth) / lctlib%cn_leaf
       veg_pool%reserve%phosphorus(:) = veg_pool%reserve%nitrogen(:)  / lctlib%np_leaf
@@ -612,14 +612,14 @@ CONTAINS
       ELSE
          hlp1(:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
       ENDIF
-      veg_pool%reserve%carbon14(:)   = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * & 
+      veg_pool%reserve%carbon14(:)   = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:)) * &
                                        veg_pool%reserve%carbon(:)
       ! pool%reserve%nitrogen15
       veg_pool%reserve%nitrogen15(:) = veg_pool%reserve%nitrogen(:) / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ENDIF
 
 
-    !> 4.0 Given current vegetation pools, update canopy layers 
+    !> 4.0 Given current vegetation pools, update canopy layers
     !!
     !!
     CALL calc_canopy_layers( nc                                                     , & ! in
@@ -642,7 +642,7 @@ CONTAINS
                              veg_pool%leaf%nitrogen(:)                              , &
                              lai(:)                                                 , & ! in
                              ppfd_sunlit_tfrac_mavg_cl(:,:)                         , & ! inout
-                             ppfd_shaded_tfrac_mavg_cl(:,:)                         , & ! inout 
+                             ppfd_shaded_tfrac_mavg_cl(:,:)                         , & ! inout
                              fleaf_sunlit_tfrac_mavg_cl(:,:)                        , & ! inout
                              t_air_tfrac_mavg(:)                                    , & ! OPTIONAL in
                              t_air_tacclim_mavg(:)                                  , & ! OPTIONAL in
@@ -653,7 +653,7 @@ CONTAINS
                              beta_soa_tphen_mavg(:)                                 , & ! OPTIONAL in
                              beta_soil_ps_tfrac_mavg(:)                             , & ! OPTIONAL in
                              beta_sinklim_ps_tfrac_mavg(:)                          , & ! OPTIONAL in
-                             beta_soil_gs_tfrac_mavg(:)                             , & ! OPTIONAL in 
+                             beta_soil_gs_tfrac_mavg(:)                             , & ! OPTIONAL in
                              t_jmax_opt_mavg(:)                                     , & ! OPTIONAL in
                              lai_cl(:,:)                                            , & ! out
                              cumm_lai_cl(:,:)                                       , & ! out
@@ -682,27 +682,27 @@ CONTAINS
     !>
     veg_pool_total_c(:) = &
       & veg_pool%leaf%carbon(:) + veg_pool%fine_root%carbon(:) + veg_pool%coarse_root%carbon(:) + &
-      & veg_pool%sap_wood%carbon(:) + veg_pool%heart_wood%carbon(:) + veg_pool%labile%carbon(:) + & 
+      & veg_pool%sap_wood%carbon(:) + veg_pool%heart_wood%carbon(:) + veg_pool%labile%carbon(:) + &
       & veg_pool%reserve%carbon(:) + veg_pool%fruit%carbon(:) + veg_pool%seed_bed%carbon(:)
     veg_pool_total_n(:) = &
       & veg_pool%leaf%nitrogen(:) + veg_pool%fine_root%nitrogen(:) + veg_pool%coarse_root%nitrogen(:) + &
-      & veg_pool%sap_wood%nitrogen(:) + veg_pool%heart_wood%nitrogen(:) + veg_pool%labile%nitrogen(:) + & 
+      & veg_pool%sap_wood%nitrogen(:) + veg_pool%heart_wood%nitrogen(:) + veg_pool%labile%nitrogen(:) + &
       & veg_pool%reserve%nitrogen(:) + veg_pool%fruit%nitrogen(:) + veg_pool%seed_bed%nitrogen(:)
     veg_pool_total_p(:) = &
       & veg_pool%leaf%phosphorus(:) + veg_pool%fine_root%phosphorus(:) + veg_pool%coarse_root%phosphorus(:) + &
-      & veg_pool%sap_wood%phosphorus(:) + veg_pool%heart_wood%phosphorus(:) + veg_pool%labile%phosphorus(:) + & 
+      & veg_pool%sap_wood%phosphorus(:) + veg_pool%heart_wood%phosphorus(:) + veg_pool%labile%phosphorus(:) + &
       & veg_pool%reserve%phosphorus(:) + veg_pool%fruit%phosphorus(:) + veg_pool%seed_bed%phosphorus(:)
     veg_pool_total_c13(:) = &
       & veg_pool%leaf%carbon13(:) + veg_pool%fine_root%carbon13(:) + veg_pool%coarse_root%carbon13(:) + &
-      & veg_pool%sap_wood%carbon13(:) + veg_pool%heart_wood%carbon13(:) + veg_pool%labile%carbon13(:) + & 
+      & veg_pool%sap_wood%carbon13(:) + veg_pool%heart_wood%carbon13(:) + veg_pool%labile%carbon13(:) + &
       & veg_pool%reserve%carbon13(:) + veg_pool%fruit%carbon13(:) + veg_pool%seed_bed%carbon13(:)
     veg_pool_total_c14(:) = &
       & veg_pool%leaf%carbon14(:) + veg_pool%fine_root%carbon14(:) + veg_pool%coarse_root%carbon14(:) + &
-      & veg_pool%sap_wood%carbon14(:) + veg_pool%heart_wood%carbon14(:) + veg_pool%labile%carbon14(:) + & 
+      & veg_pool%sap_wood%carbon14(:) + veg_pool%heart_wood%carbon14(:) + veg_pool%labile%carbon14(:) + &
       & veg_pool%reserve%carbon14(:) + veg_pool%fruit%carbon14(:) + veg_pool%seed_bed%carbon14(:)
     veg_pool_total_n15(:) = &
       & veg_pool%leaf%nitrogen15(:) + veg_pool%fine_root%nitrogen15(:) + veg_pool%coarse_root%nitrogen15(:) + &
-      & veg_pool%sap_wood%nitrogen15(:) + veg_pool%heart_wood%nitrogen15(:) + veg_pool%labile%nitrogen15(:) + & 
+      & veg_pool%sap_wood%nitrogen15(:) + veg_pool%heart_wood%nitrogen15(:) + veg_pool%labile%nitrogen15(:) + &
       & veg_pool%reserve%nitrogen15(:) + veg_pool%fruit%nitrogen15(:) + veg_pool%seed_bed%nitrogen15(:)
 
 #ifdef __QUINCY_STANDALONE__

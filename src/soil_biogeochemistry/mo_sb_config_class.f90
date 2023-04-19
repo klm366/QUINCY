@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains structures and methods for soil_biogeochemistry config
 !!
 !! @author
@@ -46,18 +46,18 @@ MODULE mo_sb_config_class
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil_biogeochemistry process, derived from t_jsb_config
-  !! 
+  !!
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_sb_config
     !> options
-    !! 
+    !!
     CHARACTER(15)         :: sb_model_scheme
     CHARACTER(15)         :: sb_nloss_scheme
     CHARACTER(15)         :: sb_bnf_scheme
     CHARACTER(15)         :: sb_adsorp_scheme
     !> flags
-    !! 
+    !!
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
@@ -72,7 +72,7 @@ MODULE mo_sb_config_class
     ! P sorpion
     LOGICAL               :: flag_sb_double_langmuir
     !> parameter
-    !! 
+    !!
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
     INTEGER               :: lithology_class
@@ -83,7 +83,7 @@ MODULE mo_sb_config_class
     REAL(wp)              :: soil_p_occluded
     REAL(wp)              :: soil_p_primary
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
-    
+
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
   END type t_sb_config
@@ -110,7 +110,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration routine of t_sb_config
-  !! 
+  !!
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_config(config)
@@ -152,7 +152,7 @@ CONTAINS
                                    soil_p_primary
     REAL(wp)                    :: qmax_org_fine_particle
 
-    NAMELIST /jsb_sb_nml/       & 
+    NAMELIST /jsb_sb_nml/       &
                       active                    , &
                       bc_filename               , &
                       ic_filename               , &
@@ -165,7 +165,7 @@ CONTAINS
                       flag_sb_prescribe_po4     , &
                       flag_mycorrhiza           , &
                       flag_mycorrhiza_org       , &
-                      flag_mycorrhiza_prim      , & 
+                      flag_mycorrhiza_prim      , &
                       flag_sb_jsm_transport     , &
                       flag_sb_jsm_litter_input  , &
                       flag_sb_jsm_OM_sorption   , &
@@ -191,8 +191,8 @@ CONTAINS
     bc_filename                 = 'bc_land_sb.nc'
     ic_filename                 = 'ic_land_sb.nc'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
-    sb_nloss_scheme             = "dynamic"         ! none fixed dynamic 
-    sb_bnf_scheme               = "standard"        ! none standard unlimited 
+    sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
+    sb_bnf_scheme               = "standard"        ! none standard unlimited
     sb_adsorp_scheme            = "eca_full"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
     flag_sb_prescribe_nh4       = .TRUE.
     flag_sb_prescribe_no3       = .TRUE.
@@ -208,7 +208,7 @@ CONTAINS
     nwrb_taxonomy_class         = 1
     lithology_class             = 1
     soil_ph                     = 6.5_wp        ! soil ph
-    soil_p_depth                = 0.5_wp        ! 0.5 m is the default for all sites, unless there is a specific measurement for this value 
+    soil_p_depth                = 0.5_wp        ! 0.5 m is the default for all sites, unless there is a specific measurement for this value
     soil_p_labile               = 50._wp        ! content of P* in soil until soil_p_depth from global P input data (Labile_Inorganic_P) [gP/m2]
     soil_p_slow                 = 70._wp        ! content of P* in soil until soil_p_depth from global P input data (Seconday_Mineral__P) [gP/m2]
     soil_p_occluded             = 150._wp       ! content of P* in soil until soil_p_depth from global P input data (Occluded_P) [gP/m2]
@@ -245,12 +245,12 @@ CONTAINS
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
     config%lithology_class                 = lithology_class
-    config%soil_ph                         = soil_ph 
+    config%soil_ph                         = soil_ph
     config%soil_p_depth                    = soil_p_depth
-    config%soil_p_labile                   = soil_p_labile 
-    config%soil_p_slow                     = soil_p_slow 
-    config%soil_p_occluded                 = soil_p_occluded 
-    config%soil_p_primary                  = soil_p_primary    
+    config%soil_p_labile                   = soil_p_labile
+    config%soil_p_slow                     = soil_p_slow
+    config%soil_p_occluded                 = soil_p_occluded
+    config%soil_p_primary                  = soil_p_primary
     config%qmax_org_fine_particle          = qmax_org_fine_particle
 
   END SUBROUTINE Init_sb_config

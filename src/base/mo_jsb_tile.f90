@@ -31,7 +31,7 @@ MODULE mo_jsb_tile
 
 #ifdef _OPENACC
   USE openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#define __acc_attach(ptr) CALL acc_attach(ptr)
 #else
 #define __acc_attach(ptr)
 #endif
@@ -76,7 +76,7 @@ MODULE mo_jsb_tile
 CONTAINS
 
   ! ======================================================================================================= !
-  !> 
+  !>
   !> Constructs the tile object, as part of the tile tree, and returns the pointer to the tile
   !>
   FUNCTION Construct_tile(name, description, processes, lct, &
@@ -241,9 +241,9 @@ CONTAINS
           ELSE IF (iproc == L2A_) THEN
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ! if there is no process action defined, then we assume that the parent tile has defined it as on_leaves
-          !   otherwise the process would 
+          !   otherwise the process would
           ! after finish contructing the tiles we know how the tile tree is structured -> ON_LEAFS_ is not needed anymore then
-          !   then, after tile tree construction (with init tile), 
+          !   then, after tile tree construction (with init tile),
           !      the AGGREGATE ON_TILE INHERIT SKIP are the process actions used for the tiles
           !   i.e., the SKIP and ON_LEAFS_ process actions are transformed in one of the above for four process actions
           ELSE
@@ -252,9 +252,9 @@ CONTAINS
         END IF
       ! the i-process was NOT explicitly defined for this tile
       ! "ASSOCIATED(return_ptr%parent_tile)" asks whether we are at the box tile or not
-      ! then look at the process action of the parent tile, and by default INHERIT 
+      ! then look at the process action of the parent tile, and by default INHERIT
       !   the tile would use the memory of the parent tile
-      ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN  
+      ELSE IF (ASSOCIATED(return_ptr%parent_tile)) THEN
         !IF (return_ptr%parent_tile%process_action(i) > AGGREGATE_) THEN
           iproc = i
           SELECT CASE (return_ptr%parent_tile%process_action(iproc))
@@ -279,7 +279,7 @@ CONTAINS
   END FUNCTION Construct_tile
 
   ! ======================================================================================================= !
-  !> 
+  !>
   !> Init tile - in particular initialise memory for processes on the tile
   !>
   ! Note: It is important that Init_tile is only called for the tiles after the hierarchical tile tree has
@@ -371,7 +371,7 @@ CONTAINS
           varlist_name_loc = TRIM(varlist_name)//'_'//TRIM(process_name)
         END IF
         this%mem(iproc)%p%varlist_name = TRIM(varlist_name_loc)
-  
+
         ! Also the memory of the parent tile is available on the current tile (if it has a parent).
         IF (ASSOCIATED(parent_tile)) this%mem(iproc)%p%parent => parent_tile%mem(iproc)%p
 
@@ -417,8 +417,8 @@ CONTAINS
   END SUBROUTINE Init_tile
 
   ! ======================================================================================================= !
-  !> 
-  !> Add and initialise fraction variables for this tile - either from a file or according to specification 
+  !>
+  !> Add and initialise fraction variables for this tile - either from a file or according to specification
   !>
   SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
 
@@ -464,7 +464,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     ! Add fraction(s) of this tile to varlist
 
-    ! isteptype us used in the add_var below 
+    ! isteptype us used in the add_var below
     ! - if constant cdi knows that its not per timestep / i.e. not instantaneous
     IF (l_fixed_fractions) THEN
       isteptype = TSTEP_CONSTANT
@@ -512,7 +512,7 @@ CONTAINS
 
     ! -------------------------------------------------------------------------------------------------- !
     ! Initialize fraction(s) of this tile from input file
-  
+
     ! **** here we continue next time ****
     ALLOCATE(this%l_fract_children_changed(hgrid%nproma, hgrid%nblks))
     this%l_fract_children_changed(:,:) = .TRUE.
@@ -557,7 +557,7 @@ CONTAINS
         !   return_pointer(:,:) = MERGE(0._wp, return_pointer(:,:), return_pointer(:,:) <         10._wp*EPSILON(1._wp))
         ! END IF
         !
-        ! TODO: For security, as a workaround, set lake fractions in coastal points that are 
+        ! TODO: For security, as a workaround, set lake fractions in coastal points that are
         ! partially land and partially ocean to zero, and corresponding land fraction to one.
         ! IF (TRIM(this%name) == 'lake') THEN
         !   CALL this%parent_tile%Get_fraction(fract=tmp_fract(:,:))
@@ -624,7 +624,7 @@ CONTAINS
   END SUBROUTINE Init_fractions_on_tile
 
   ! ======================================================================================================= !
-  !> 
+  !>
   !> Init variabls on nodes (not-leave tiles); called during initialization from model_init
   !>
   SUBROUTINE Init_vars_on_tile(this)
@@ -677,8 +677,8 @@ CONTAINS
   END SUBROUTINE Init_vars_on_tile
 
   ! ====================================================================================================== !
-  !> 
-  !> Check if a given process is to be integrated on the tile: 
+  !>
+  !> Check if a given process is to be integrated on the tile:
   !>  i.e. if the process action on this tile is one of ON_TILE_ or ON_SUBTREE_
   !>
   LOGICAL FUNCTION Is_process_calculated_on_tile(this, iproc)
@@ -693,12 +693,12 @@ CONTAINS
     ! Note: It's not necessary to test for ON_LEAFS_ because, after the tile tree has been completely
     !       set up, ON_LEAFS_ on a tile has been replaced by AGGREGATE_ and ON_TILE_ on the sub-tree.
     Is_process_calculated_on_tile = (one_of(this%process_action(iproc), (/ON_TILE_, ON_SUBTREE_/)) > 0)
-    
+
   END FUNCTION Is_process_calculated_on_tile
 
   ! ====================================================================================================== !
   !>
-  !> Check if a given process is to be active (integrated or aggregated) on the tile: 
+  !> Check if a given process is to be active (integrated or aggregated) on the tile:
   !>  i.e. if the process action on this tile is not SKIP_ or INHERIT_
   !>
   LOGICAL FUNCTION Is_process_active_on_tile(this, iproc)
@@ -711,7 +711,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Is_process_active_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     Is_process_active_on_tile = (one_of(this%process_action(iproc), (/SKIP_, INHERIT_/)) < 0)
-    
+
   END FUNCTION Is_process_active_on_tile
 
   ! ====================================================================================================== !
@@ -725,13 +725,13 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':Has_process_memory_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
-    Has_process_memory_on_tile = (.NOT. this%process_action(iproc) == SKIP_) 
+    Has_process_memory_on_tile = (.NOT. this%process_action(iproc) == SKIP_)
   END FUNCTION Has_process_memory_on_tile
 
   ! ======================================================================================================= !
   !>
   !> Identifies the number and types of bgc materials on this tile
-  !> NOTE: Currently we are not really generic here but only expect 1l or 2l bgcms! 
+  !> NOTE: Currently we are not really generic here but only expect 1l or 2l bgcms!
   !>       If something more generic is required in the future it'll need to be implemented then
   !>       or alternatively if the bgcm stores as required for quincy are not required but "deeper" bgcm
   !>       structures are, the collection of the pointers in the bgcm store might be surpressed if using
@@ -756,7 +756,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Count_and_classify_bgc_materials_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
-    
+
     ! Loop over all processes
     DO i_proc = 1, max_no_of_processes
 
@@ -795,7 +795,7 @@ CONTAINS
             ENDIF
           ELSE
             ! i.e. no elements but one layer of compartments which are then expected to have elements
-            ! but no further compartments! 
+            ! but no further compartments!
             nr_of_compartments = SIZE(bgcm%pool_list)
             common_dim = -1
             DO i_compartment = 1, nr_of_compartments
@@ -903,7 +903,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Count_conserved_quantities_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
-    
+
     ! Loop over all processes
     DO iproc=1,max_no_of_processes
 
@@ -928,7 +928,7 @@ CONTAINS
           DO ind=1,this%nr_of_cqts
             IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
               consQuanTypeInUse = .TRUE.
-              this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1             
+              this%conserved_quantities(ind)%p%no_of_vars = this%conserved_quantities(ind)%p%no_of_vars + 1
               EXIT
             END IF
           END DO
@@ -972,7 +972,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_conserved_variables_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
-    
+
     ! Loop over all processes
     DO iproc=1,max_no_of_processes
 
@@ -993,13 +993,13 @@ CONTAINS
           id = mem%vars(i)%p%cons_quan_type_id
           consQuanTypeInUse = .FALSE.
 
-          ! find container for this type 
+          ! find container for this type
           DO ind=1,this%nr_of_cqts
             IF (this%conserved_quantities(ind)%p%type_id .EQ. id) THEN
               consQuanTypeInUse = .TRUE.
               nrOfConsQuans = this%conserved_quantities(ind)%p%no_of_vars
 
-              ! If this is the first collected variable: allocate collector for var pointers 
+              ! If this is the first collected variable: allocate collector for var pointers
               IF (.NOT. (ALLOCATED(this%conserved_quantities(ind)%p%cq_vars_2D))) THEN
                 ALLOCATE(this%conserved_quantities(ind)%p%associated_process(nrOfConsQuans))
                 ALLOCATE(this%conserved_quantities(ind)%p%cq_vars_2D(nrOfConsQuans))

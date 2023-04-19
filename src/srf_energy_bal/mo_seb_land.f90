@@ -233,7 +233,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   hcap_grnd)      ! IN
 
     !$claw acc data create(fract,qsat_srf_old,s_old,dQdT,t2s_conv,heat_tcoef, &
-    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,tile_fract_zero, 
+    !$claw acc t_star,liquid_max,t_air_in_Celcius,is_glacier,tile_fract_zero,
     !$claw acc has_snow_layer,soil_depth_sl_vol_porosity_sl_tmp)
 
     ! @todo: currently, fraction of glacier has to be either zero or one!
@@ -248,7 +248,7 @@ CONTAINS
     ELSE
       is_glacier(:) = .FALSE.
     END IF
-    !$claw acc update device(is_glacier) ! 
+    !$claw acc update device(is_glacier) !
     !$claw acc end data
 
     ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
@@ -272,7 +272,7 @@ CONTAINS
     ! necessary for the phenology process
     !$claw expand parallel update savepoint=ser_jsb_seb_land_update_surface_energy_land_expand_0 tile_name=tile%name
     t_air_in_Celcius(:) = t_air(:) - tmelt  ! convert Kelvin in Celcius
-    
+
     ! Sum up of the previous day temperatures
     !$claw sca forward update savepoint=ser_jsb_seb_land_calc_previous_day_variables_1 tile_name=tile%name
     CALL calc_previous_day_variables(l_is_newday,               & ! Input
@@ -490,7 +490,7 @@ CONTAINS
 
     !$claw acc end data
 
-  END SUBROUTINE update_surface_energy_land 
+  END SUBROUTINE update_surface_energy_land
 
   SUBROUTINE surface_temp_implicit(klon, steplen, alpha,      &
     &            pcp,                                         &
@@ -522,7 +522,7 @@ CONTAINS
     REAL(wp) :: pdt
     !REAL(wp) :: pc16
 
-    !$claw acc data & 
+    !$claw acc data &
     !$claw acc create(zcolin,zcohfl,zcoind,zicp,zca,zcs)
     pdt     = alpha * steplen
     !pc16    = cpd * cpvd1
@@ -790,7 +790,7 @@ CONTAINS
     ! Note that updating is done globally at the same time step, i.e. for different longitudes the updating happens at different
     ! local times.
 
-    !$claw sca                            
+    !$claw sca
 
     IF (.NOT. l_start .AND. is_newday) THEN  ! day has changed --> recompute mean, min, max day temperature of previous day
                                              ! and reinitialize day_temp_sum(), day_temp_min(), day_temp_max()

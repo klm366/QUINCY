@@ -588,7 +588,7 @@ CONTAINS
   ! the albedo calculation could be done only on the highest parent tile (the grid cell). The childs would not have a meaningful
   ! albedo. Thus in JSBACH4 the albedo calculations are done only on the lowest child tiles and are then accumulated on the parent
   ! tiles. This represents a "well separated" assumption in contrast of the "well mixed" assumtion in JSBACH3. In the result it
-  ! does not matter for linear relations between carbon (in and on the soil) and soil albedo. (Exception: the litter for any 
+  ! does not matter for linear relations between carbon (in and on the soil) and soil albedo. (Exception: the litter for any
   ! vegetation tile in JSBACH4 would cover more area than available for this tile and the litter of any other vegetation tile
   ! covers less than its area available.) Only for the logarithmic case (albedo_options%UseSOC .eq. 'log') the soil albedo result
   ! of JSBACH4 differs from JSBACH3. In this case this "well separated" result is as reasonable as the "well mixed" result of JS3.
@@ -610,7 +610,7 @@ CONTAINS
     & )
 
     ! Use declarations
-    USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for 
+    USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for
                                                                        ! alb_vis_mineralsoil
 
     ! Arguments
@@ -716,7 +716,7 @@ CONTAINS
                                                               !    smaller here as it is calcul. for each single tile but the sum
                                                               !    of tiles will give a much higher "litter_view_fract" or - to
                                                               !    name it better - a higher contribution of the litter part to
-                                                              !    alb_soil_vis However, therefore it meight be necessary to 
+                                                              !    alb_soil_vis However, therefore it meight be necessary to
                                                               !    rescale this funktion ...
 
       alb_vis_soil = (1.0_wp - litter_view_fract) * alb_vis_soil_nolitter + litter_view_fract * alb_vis_litter

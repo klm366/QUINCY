@@ -121,7 +121,7 @@ MODULE mo_pheno_process
        &                        heat_sum_SG,        &
        &                        growth_phase_SG,    &
        &                        lai                   ! Total LAI.
-     !$claw end model-data                                
+     !$claw end model-data
 
 
      !-----------------------------------------------------------------------
@@ -367,7 +367,7 @@ MODULE mo_pheno_process
         END IF
         IF(lai > pheno_param_jsbach%all%LAI_negligible) THEN
            ! otherwise nothing to do
-           grRate = pheno_param_jsbach%EG%growthRate ! R: xtmp zu grRate geaendert um Konsistent zu bleiben mit anderen Aufrufen wie 
+           grRate = pheno_param_jsbach%EG%growthRate ! R: xtmp zu grRate geaendert um Konsistent zu bleiben mit anderen Aufrufen wie
                                              !    z.B. bei crops....
            lai = get_letItGrow(timeStep_in_days,lai, grRate, 0.0_wp, LaiMax_corrected)
         END IF
@@ -545,7 +545,7 @@ MODULE mo_pheno_process
             ! If there are winter crops and summer crops would have been harvested already twice
             ! --> crop phase is SET TO REST PHASE OF SUMMER CROPS
             IF (ABS(growth_phase_CRP) > 1.5_wp .AND. &                                 ! winter crops in growth phase..
-               heat_sum_CRP > 2.0_wp * pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested 
+               heat_sum_CRP > 2.0_wp * pheno_param_jsbach%CRP%heat_sum_harvest) THEN   ! and summer crops would have been harvested
                                                                                        ! already twice..
                   growth_phase_CRP = -1._wp                                            ! => rest phase of summer crops
             END IF

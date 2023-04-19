@@ -50,7 +50,7 @@ CONTAINS
 
     REAL(wp), INTENT(out) :: &
       & scaling_fact_cl
-    !$claw end model-data  
+    !$claw end model-data
 
     ! Local variables
     REAL(wp) ::         &
@@ -201,7 +201,7 @@ CONTAINS
       KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air**(-1))  ! Division "/T1 /t_air" are expressed strange here (and in the
                                                                 ! following) because if this subroutine is not used as elemental
                                                                 ! (e.g. for tests) it makes accuracy of calculation much better!
-                                                                ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14. 
+                                                                ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14.
                                                                 !    Stelle nach dem Komma, obwohl Inputs (R_gas, T0, T1, t_air)
                                                                 !    genau gleich. Ursache: epsilon ist 2.22E-16 (JSBACH3
                                                                 !    und JSBACH4) und EXP verstaerkt Fehler.
@@ -767,7 +767,7 @@ CONTAINS
 
     REAL(wp),  INTENT(out) :: &
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
-    !$claw end model-data  
+    !$claw end model-data
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
@@ -784,7 +784,7 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-    
+
     hlp =  (cCost -1._wp) / cCost
     maintenanceRespiration = dark_respiration_ca / f_aut_leaf
     growthRespiration = max(0._wp,hlp * (gross_assimilation_ca - maintenanceRespiration))
@@ -811,7 +811,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
     REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
     REAL(wp), INTENT(inout) :: seconds_year       ! sum of seconds till new_year
-    REAL(wp), INTENT(inout) :: NPP_sum_year       ! 
+    REAL(wp), INTENT(inout) :: NPP_sum_year       !
     REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
 
 !   local variables

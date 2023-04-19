@@ -70,7 +70,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
-    
+
     model => Get_model(tile%owner_model_id)
 
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
@@ -100,7 +100,7 @@ CONTAINS
     IF (ASSOCIATED(sse_init_vars%ifs_tskin)) DEALLOCATE(sse_init_vars%ifs_tskin)
 
   END SUBROUTINE sse_finalize_init_vars
-      
+
   SUBROUTINE sse_read_init_vars(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -316,9 +316,9 @@ CONTAINS
       dsl4jsb_var2D_onDomain(SEB_,t)        = dsl4jsb_var_ptr(SSE_,t_soil_sl)(:,1,:)
       dsl4jsb_var2D_onDomain(SEB_,t_unfilt) = dsl4jsb_var2D_onDomain(SEB_,t)
 
-      !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
+      !$acc data present(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), &
       !$acc              dsl4jsb_var2D_onDomain(SEB_,t))
-      !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), & 
+      !$acc update device(dsl4jsb_var2D_onDomain(SEB_,t_unfilt), &
       !$acc               dsl4jsb_var2D_onDomain(SEB_,t))
       !$acc end data
     END IF
@@ -330,7 +330,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize soil properties - jsbach4
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_soil_properties(tile)
 
@@ -371,19 +371,19 @@ CONTAINS
       & vol_field_cap_sl
 
     ! Locally allocated vectors
-    ! 
+    !
     dsl4jsb_Real3D_onDomain :: &
       & ws_max_sl,             &
       & liquid_max,            &
       & heat_cap_sl,           &
       & fract_water,           &
       & fract_ice,             &
-      & soil_e_dz_tmp,         & 
+      & soil_e_dz_tmp,         &
       & vol_heat_cap_tmp,      &
       & vol_heat_cap_org_tmp,  &
       & heat_cond_tmp,         &
-      & vol_porosity_org_tmp,  & 
-      & hcond_org_tmp,         & 
+      & vol_porosity_org_tmp,  &
+      & hcond_org_tmp,         &
       & hcond_dry_org_tmp
 
     TYPE(t_jsb_model), POINTER :: model
@@ -440,7 +440,7 @@ CONTAINS
       dsl4jsb_Get_var3D_onDomain(SSE_,   t_soil_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_, matrix_pot_sl)
       dsl4jsb_Get_var3D_onDomain(HYDRO_, bclapp_sl)
-  
+
       ALLOCATE( &
         & liquid_max (nproma, nsoil, nblks), &
         & ws_max_sl  (nproma, nsoil, nblks), &
@@ -511,7 +511,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
     nproma = SIZE(heat_cond,1)
     nblks  = SIZE(heat_cond,2)
-    
+
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
     ELSE
@@ -554,7 +554,7 @@ CONTAINS
       END DO
       !$claw acc update host(fract_water,fract_ice)
       !$claw acc end data
-      
+
       !$claw expand parallel update savepoint=ser_jsb_sse_init_calc_vol_heat_capacity_1 tile_name=tile%name
       vol_heat_cap_sl (:,:,:) = calc_vol_heat_capacity( &
         !&                         SPREAD( vol_heat_cap     (:,:),   DIM=2, ncopies=nsoil)                        , &

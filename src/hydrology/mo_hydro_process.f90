@@ -1173,14 +1173,14 @@ CONTAINS
       END DO
       !
       ! Lateral Drainage (i.e. drainage from upper soil layers)
-      ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to 
+      ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to
       !      move lateraly until it reaches the stream (or the neighbouring topo-tile).
       !      In this implementation all water above field capacity is added to the drainage. However,
       !      this is a very simplistic assumption. For e.g. high resolution simulations it might
       !      be worthwile to consider lateral drainage as a reservoir outflow with a predefined
       !      lagtime to allow for oversaturation of soils.
       ! @todo In the current model configuration lateral drainage seems to deteriorate river
-      !      discharge while it has little effect on evapotranspiration. Therefore it is 
+      !      discharge while it has little effect on evapotranspiration. Therefore it is
       !      disabled, but this should be revised, e.g. for high resolution simulations.
       ! DO j = nsoil, 1, -1
       !   ! If maximum moisture is exceeded, add the excess water to lateral drainage
@@ -1834,7 +1834,7 @@ CONTAINS
   INTEGER, INTENT(in) :: n                          ! number of active soil levels
   REAL(wp), Intent(in):: dt, alpha,            &    ! time step
                        & top_bound, bot_bound, &    ! fluxes at upper and lower boundary
-                       & dzf(n),               &    ! soil layer thickness 
+                       & dzf(n),               &    ! soil layer thickness
                        & C(n),                 &    ! heat capacity if used for heat transport,
                                                     ! set to 1 for water transport
                        & S(n),                 &    ! prescribed water/heat change flux per layer

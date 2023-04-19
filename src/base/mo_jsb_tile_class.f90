@@ -33,7 +33,7 @@ MODULE mo_jsb_tile_class
 
 #ifdef _OPENACC
   USE openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#define __acc_attach(ptr) CALL acc_attach(ptr)
 #else
 #define __acc_attach(ptr)
 #endif
@@ -98,7 +98,7 @@ MODULE mo_jsb_tile_class
     LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed
     TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
 
-    INTEGER                                :: nr_of_cqts = 0          !< number of conserved quantity types in use on the tile 
+    INTEGER                                :: nr_of_cqts = 0          !< number of conserved quantity types in use on the tile
     TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) !< list of conserved quantities sort by type
     TYPE(t_jsb_lcc_proc_p), ALLOCATABLE    :: lcc_processes(:)        !< list of lcc structures indexed by proc id
     TYPE(t_lnd_bgcm_store), POINTER        :: bgcm_store => NULL()    !< the bgcm store collecting pools and their elements on this tile
@@ -421,7 +421,7 @@ CONTAINS
     REAL(wp), OPTIONAL,         INTENT(in)    :: &
       & fract(:),        &
       & fract_old(:)
-      
+
 
     INTEGER :: ilct
 
@@ -568,10 +568,10 @@ CONTAINS
   END SUBROUTINE Get_fraction_2d
 
   ! ======================================================================================================= !
-  !> 
+  !>
   !> Sets the pointer on the tile to the passed pointer AND also updates the GPU pointer address
   !>
-  ! this is an example why the encapsulation within the setter is important: not only the fract 
+  ! this is an example why the encapsulation within the setter is important: not only the fract
   ! on the tile needs to be set but also the GPU pointer
   SUBROUTINE Set_fract_ptr(this, ptr)
     ! -------------------------------------------------------------------------------------------------- !
@@ -996,7 +996,7 @@ CONTAINS
             !$acc loop gang vector
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) &
-                & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
+                & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk)
             END DO
           END IF
         END DO
@@ -1116,7 +1116,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Returns the previous sibling of this tile, if it has a previous sibling 
+  !> Returns the previous sibling of this tile, if it has a previous sibling
   !
   FUNCTION Get_prev_sibling_tile(this) RESULT(return_ptr)
     ! -------------------------------------------------------------------------------------------------- !
@@ -1152,7 +1152,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Collect the names of the children of this tile 
+  !> Collect the names of the children of this tile
   !
   SUBROUTINE Get_children_names(this, children_names)
     ! -------------------------------------------------------------------------------------------------- !
@@ -1210,7 +1210,7 @@ CONTAINS
 
   ! Cache pointers to variables for aggregation (in order to get it to work on GPUs).
   ! Note: This is called during initialization from model_init for each tile that is not a leaf. If var
-  !       pointers get reallocated from time to time, the second part of this routine must be called from 
+  !       pointers get reallocated from time to time, the second part of this routine must be called from
   !       within the time loop. But be mindful of OpenMP threads ... do this only once on each processor!
   !
   SUBROUTINE Cache_GPU_pointers(this)

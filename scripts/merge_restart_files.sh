@@ -1,17 +1,17 @@
 #!/bin/sh
 #-------------------------------------------------------------------------------
-# Skript to manipulate an ICON restart file, to importe the land carbon and 
+# Skript to manipulate an ICON restart file, to importe the land carbon and
 # nlcc states of another experiment.
-# All variables of the CARBON, DISTURB, ASSIMI and PPLCC processes, as well as 
+# All variables of the CARBON, DISTURB, ASSIMI and PPLCC processes, as well as
 # all fraction variables will be replaced.
 #
-#  (Preliminary method to replace read_cpools and read_fpc of jsbach3) 
+#  (Preliminary method to replace read_cpools and read_fpc of jsbach3)
 #
 # Based on proceeding of Susanne Fuchs, MPI-M    August 2022
-#------------------------------------------------------------------------------- 
+#-------------------------------------------------------------------------------
 set -e
 
-# Restart file with equilibrated nlcc and carbon pools 
+# Restart file with equilibrated nlcc and carbon pools
 src_restart=/work/mh0287/m300879/restart_files_for_exp_with_les/tra0308_restart_atm_26500101_renamed_dynveg.nc
 # Restart file you want to modify
 dst_restart=/work/mj0060/m220053/icon-esm/esm-merge-icon-2.4.6.1-dev/experiments/vga0403/restart/vga0403_restart_atm_18710101.nc
@@ -40,7 +40,7 @@ cdo ifthenelse non_glacier_land.nc \
 cdo delete,name=$TRAVARS ${dst_restart} ${dst_restart_name}_without_vars_to_replace.nc
 
 cdo merge ${dst_restart_name}_without_vars_to_replace.nc \
-    ${src_restart_name}_selected_vars_on_dst_land.nc ${new_restart} 
+    ${src_restart_name}_selected_vars_on_dst_land.nc ${new_restart}
 
 echo ""
 echo " Manipulated restart file: ${new_restart}"

@@ -18,7 +18,7 @@
 !>
 MODULE mo_alcc_config_class
 #ifndef __NO_JSBACH__
-  
+
   USE mo_exception,          ONLY: message, finish
   USE mo_io_units,           ONLY: filename_max
   USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
@@ -31,9 +31,9 @@ MODULE mo_alcc_config_class
 
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
      INTEGER                       :: nr_of_pfts
-     CHARACTER(len=filename_max-7) :: alcc_filename_prefix 
+     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
      CHARACTER(len=SHORT_NAME_LEN) :: scheme
-     !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc) 
+     !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc)
    CONTAINS
      PROCEDURE :: Init => Init_alcc_config
   END type t_alcc_config

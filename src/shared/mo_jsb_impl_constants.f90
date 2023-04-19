@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,19 +16,19 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief
 !!  Contains parameter for implementation of some specific model code
 !!
 !! @author
-!!  Jan Engel, MPI-BGC Jena 
+!!  Jan Engel, MPI-BGC Jena
 !!
 !! @par Revision History
 !!  First version by Jan Engel (20190114)
 !!
 MODULE mo_jsb_impl_constants
 #ifndef __NO_JSBACH__
- 
+
   USE mo_kind,                  ONLY: wp
 
   IMPLICIT NONE

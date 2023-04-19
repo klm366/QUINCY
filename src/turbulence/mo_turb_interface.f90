@@ -465,7 +465,7 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
-    !$claw acc data create(fact_qsat_veg,fact_qsat_trans,fact_qsat_soil, & 
+    !$claw acc data create(fact_qsat_veg,fact_qsat_trans,fact_qsat_soil, &
     !$claw acc fact_qair_veg,fact_qair_soil,rel_hum,zfract_fpc,mask)
 
     ! Get pointers to process configs and memory
@@ -528,7 +528,7 @@ CONTAINS
           fact_qsat_trans(i) = (1._wp - fract_snow(i)) * &
             & (1._wp - fract_wet(i)) /                   &
             & (1._wp + pch(i) * MAX(1._wp, wind_air(i)) / MAX(1.E-20_wp, canopy_cond_limited(i)))
-        ELSE 
+        ELSE
           fact_qsat_veg(i)   = fract_snow(i) + (1._wp - fract_snow(i)) * fract_wet(i)
           fact_qsat_trans(i) = 0._wp
         END IF

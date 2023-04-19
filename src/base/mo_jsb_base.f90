@@ -97,7 +97,7 @@ CONTAINS
     jsbach%no_of_models = no_of_models
 
     ALLOCATE(jsbach_subsets(no_of_models))
-  
+
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(model)
@@ -254,7 +254,7 @@ CONTAINS
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
 
-        IF(model%Is_process_enabled(FAGE_) & 
+        IF(model%Is_process_enabled(FAGE_) &
             & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
           CALL finish(routine, &
             & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
@@ -281,13 +281,13 @@ CONTAINS
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
       CALL message(TRIM(routine), 'starting init of QUINCY process constants')
-      CALL init_rad_constants      
+      CALL init_rad_constants
       CALL init_assimi_parameters_quincy
-      CALL init_veg_constants    
+      CALL init_veg_constants
       CALL init_spq_constants
       CALL init_sb_constants
       CALL init_pheno_parameters_quincy
-      CALL init_atmland_constants  
+      CALL init_atmland_constants
     CASE (MODEL_JSBACH)
       CALL init_pheno_parameters_jsbach
       CALL init_assimi_parameters_jsbach
@@ -322,10 +322,10 @@ CONTAINS
     CASE DEFAULT
       lctlib_filename = 'lctlib_nlct21.def'
     END SELECT
-    
+
     ! import lctlib
     ! use model_scheme_char, instead of the ENUM model_scheme, to differentiate between model schemes
-    !  because mo_jsb_model_class is not used in this function 
+    !  because mo_jsb_model_class is not used in this function
     model%lctlib => Read_lctlib(TRIM(lctlib_filename), &
       &                         TRIM(model%config%model_scheme_char), &
       &                         TRIM(model%config%usecase))

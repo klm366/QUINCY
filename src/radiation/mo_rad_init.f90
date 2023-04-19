@@ -94,7 +94,7 @@ CONTAINS
       & rad_init_vars%alb_vis_can,    &
       & rad_init_vars%alb_nir_can     &
       & )
-      
+
   END SUBROUTINE rad_finalize_init_vars
 
   SUBROUTINE rad_read_init_vars(tile)
@@ -125,7 +125,7 @@ CONTAINS
       & rad_init_vars%alb_vis_can   (nproma, nblks), &
       & rad_init_vars%alb_nir_can   (nproma, nblks)  &
       & )
-      
+
     rad_init_vars%alb_background(:,:) = missval
     rad_init_vars%alb_vis_soil  (:,:) = missval
     rad_init_vars%alb_nir_soil  (:,:) = missval
@@ -309,7 +309,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize radiation process (after memory has been set up)
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE rad_init_ic_q_(tile)
 
@@ -350,17 +350,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)
-    
+
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
     rfr_ratio_boc(:,:)                  = rfr_ratio_toc
-    rfr_ratio_boc_tvegdyn_mavg(:,:)     = rfr_ratio_boc(:,:) 
+    rfr_ratio_boc_tvegdyn_mavg(:,:)     = rfr_ratio_boc(:,:)
 
     ppfd_sunlit_tfrac_mavg_cl(:,:,:)    = 150.0_wp
     ppfd_sunlit_tcnl_mavg_cl(:,:,:)     = 150.0_wp
-    
+
     ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
     ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
 
