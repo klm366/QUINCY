@@ -263,9 +263,9 @@ CONTAINS
           ELSE IF (iproc == L2A_) THEN
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ! if there is no process action defined, then we assume that the parent tile has defined it as on_leaves
-          !   otherwise the process would 
+          !   otherwise the process would
           ! after finish contructing the tiles we know how the tile tree is structured -> ON_LEAFS_ is not needed anymore then
-          !   then, after tile tree construction (with init tile), 
+          !   then, after tile tree construction (with init tile),
           !      the AGGREGATE ON_TILE INHERIT SKIP are the process actions used for the tiles
           !   i.e., the SKIP and ON_LEAFS_ process actions are transformed in one of the above for four process actions
           ELSE
@@ -478,8 +478,8 @@ CONTAINS
   END SUBROUTINE Init_tile
 
   ! ======================================================================================================= !
-  !> 
-  !> Add and initialise fraction variables for this tile - either from a file or according to specification 
+  !>
+  !> Add and initialise fraction variables for this tile - either from a file or according to specification
   !>
   SUBROUTINE Init_fractions_on_tile(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
 
@@ -985,7 +985,7 @@ CONTAINS
   ! ======================================================================================================= !
   !>
   !> Identifies the number and types of bgc materials on this tile
-  !> NOTE: Currently we are not really generic here but only expect 1l or 2l bgcms! 
+  !> NOTE: Currently we are not really generic here but only expect 1l or 2l bgcms!
   !>       If something more generic is required in the future it'll need to be implemented then
   !>       or alternatively if the bgcm stores as required for quincy are not required but "deeper" bgcm
   !>       structures are, the collection of the pointers in the bgcm store might be surpressed if using
@@ -1010,7 +1010,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Count_and_classify_bgc_materials_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
     IF (debug_on())     CALL message(TRIM(routine), TRIM(this%name))
-    
+
     ! Loop over all processes
     DO i_proc = 1, max_no_of_processes
 
@@ -1049,7 +1049,7 @@ CONTAINS
             ENDIF
           ELSE
             ! i.e. no elements but one layer of compartments which are then expected to have elements
-            ! but no further compartments! 
+            ! but no further compartments!
             nr_of_compartments = SIZE(bgcm%pool_list)
             common_dim = -1
             DO i_compartment = 1, nr_of_compartments

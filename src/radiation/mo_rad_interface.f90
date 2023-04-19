@@ -93,7 +93,7 @@ MODULE mo_rad_interface
   INTERFACE tsk_albedo
     PROCEDURE Create_task_albedo
   END INTERFACE tsk_albedo
-  
+
   !! quincy
   ! ======================================================================================================= !
   !>Type definition: time_average_radiation task
@@ -1373,11 +1373,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growing_season
     ! 2D RAD_
     dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc
-    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg 
+    dsl4jsb_Real2D_onChunk      :: rfr_ratio_boc_tvegdyn_mavg
     ! 3D RAD_
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_dacc_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_dacc_cl
-    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl    
+    dsl4jsb_Real3D_onChunk      :: ppfd_shaded_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_daytime_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_shaded_cl
     dsl4jsb_Real3D_onChunk      :: ppfd_sunlit_cl
@@ -1415,27 +1415,27 @@ CONTAINS
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
-    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_one_cos_zenith_angle)      ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, prev_two_cos_zenith_angle)      ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)    ! in 
+    dsl4jsb_Get_var2D_onChunk(A2L_, prev_three_cos_zenith_angle)    ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, daytime_counter)                ! in
     ! PHENO_
-    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in 
+    dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)               ! in
     ! 2D RAD_
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)                  ! in 
-    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout 
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc)                  ! in
+    dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg)     ! inout
     ! 3D RAD_
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_dacc_cl)    ! inout
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_dacc_cl)    ! inout
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)         ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)         ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)       ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)       ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout 
-    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout 
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_daytime_cl)         ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_daytime_cl)         ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_cl)                 ! in
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tcnl_mavg_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tcnl_mavg_cl)       ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout
+    dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout
     ! ----------------------------------------------------------------------------------------------------- !
 #ifdef __QUINCY_STANDALONE__
 #define Get_veg_pool
@@ -1459,7 +1459,7 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-    
+
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
@@ -1477,9 +1477,9 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !> 
+    !>
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
+    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver
     !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
       IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
@@ -1508,9 +1508,9 @@ CONTAINS
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
-    
+
     !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
-    !> 
+    !>
     ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
                                                     mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
     ppfd_shaded_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
@@ -1524,7 +1524,7 @@ CONTAINS
                                                     mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
 
     !>  2.3 tvegdyn (averages at the vegetation dynamics time-scale)
-    !! 
+    !!
     rfr_ratio_boc_tvegdyn_mavg(:) = calc_time_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
                                                     mavg_period_tvegdyn, do_calc=(veg_pool%leaf%carbon(:) > eps8))
 

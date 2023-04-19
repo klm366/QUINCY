@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief diverse subroutines and functions for the plant-model
 !!
 !! @author
@@ -61,7 +61,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: VEG_
     USE mo_jsb_math_constants,    ONLY: zero
-    
+
     ! Use of process memories
     dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class,      ONLY: t_veg_memory
     ! Use of pools
@@ -154,7 +154,7 @@ CONTAINS
     dsl4jsb_var2D_onChunk(VEG_, npp_c13) = zero                        !< net primary production (micro-mol 13CO2 m-2 s-1)
     dsl4jsb_var2D_onChunk(VEG_, npp_c14) = zero                        !< net primary production (micro-mol 14CO2 m-2 s-1)
     dsl4jsb_var2D_onChunk(VEG_, net_growth) = zero                     !< net growth (micro-mol CO2 m-2 s-1)
-    dsl4jsb_var2D_onChunk(VEG_, uptake_nh4) = zero                     !< NH4 uptake (micro-mol N m-2 s-1) 
+    dsl4jsb_var2D_onChunk(VEG_, uptake_nh4) = zero                     !< NH4 uptake (micro-mol N m-2 s-1)
     dsl4jsb_var2D_onChunk(VEG_, uptake_nh4_n15) = zero                 !< 15NH4 uptake (micro-mol N m-2 s-1)
     dsl4jsb_var2D_onChunk(VEG_, uptake_no3) = zero                     !< NO3 uptake (micro-mol N m-2 s-1)
     dsl4jsb_var2D_onChunk(VEG_, uptake_no3_n15) = zero                 !< 15NO3 uptake (micro-mol N m-2 s-1)
@@ -162,13 +162,13 @@ CONTAINS
     dsl4jsb_var2D_onChunk(VEG_, n_fixation_n15) = zero                 !< ??
     dsl4jsb_var2D_onChunk(VEG_, uptake_po4) = zero                     !< ??
     dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_n) = zero               !< net flux of N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_n15) = zero             !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_n15) = zero             !< net flux of 15N from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
     dsl4jsb_var2D_onChunk(VEG_, recycling_leaf_p) = zero               !< net flux of P from leaf to labile (senescence and maintenance) (mol m-2 timestep-1)
     dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_n) = zero          !< net flux of N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_n15) = zero        !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_n15) = zero        !< net flux of 15N from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
     dsl4jsb_var2D_onChunk(VEG_, recycling_fine_root_p) = zero          !< net flux of P from fine roots to labile (senescence and maintenance) (mol m-2 timestep-1)
     dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n) = zero         !< net flux of N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
-    dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n15) = zero       !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1) 
+    dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_n15) = zero       !< net flux of 15N from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
     dsl4jsb_var2D_onChunk(VEG_, recycling_heart_wood_p) = zero         !< net flux of P from heart wood to labile (senescence and maintenance) (mol m-2 timestep-1)
 
     ! ! other variables
@@ -261,16 +261,16 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: t_jmax_opt
     ! PHENO_ 2D
     dsl4jsb_Real2D_onChunk      :: growing_season
-    dsl4jsb_Real2D_onChunk      :: lai 
+    dsl4jsb_Real2D_onChunk      :: lai
     ! VEG_ 2D
-    dsl4jsb_Real2D_onChunk      :: n_fixation 
+    dsl4jsb_Real2D_onChunk      :: n_fixation
     dsl4jsb_Real2D_onChunk      :: press_srf_daytime
     dsl4jsb_Real2D_onChunk      :: t_air_daytime
     dsl4jsb_Real2D_onChunk      :: cost_n_fixation !QS-NOTE: this variable does not exist anymore in QS #34 (#29?)
     dsl4jsb_Real2D_onChunk      :: f_p_demand
     dsl4jsb_Real2D_onChunk      :: f_n_demand
     dsl4jsb_Real2D_onChunk      :: npp
-    dsl4jsb_Real2D_onChunk      :: net_growth 
+    dsl4jsb_Real2D_onChunk      :: net_growth
     dsl4jsb_Real2D_onChunk      :: maint_respiration_pot
     dsl4jsb_Real2D_onChunk      :: growth_req_n
     dsl4jsb_Real2D_onChunk      :: growth_req_p
@@ -333,7 +333,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk      :: growth_cn_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: growth_np_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: npp_tcnl_mavg
-    dsl4jsb_Real2D_onChunk      :: fmaint_rate_tcnl_mavg    
+    dsl4jsb_Real2D_onChunk      :: fmaint_rate_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_carbon_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_nitrogen_tcnl_mavg
     dsl4jsb_Real2D_onChunk      :: labile_phosphorus_tcnl_mavg
@@ -560,7 +560,7 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-    
+
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
@@ -583,9 +583,9 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !> 
+    !>
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
+    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver
     !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
       IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
@@ -603,7 +603,7 @@ CONTAINS
           fleaf_sunlit_daytime_cl(ic,:) = fleaf_sunlit_daytime_dacc_cl(ic,:)  / daytime_counter(ic)
         ELSE
           ! if there was no daylight during the previous day, just leave previous values for most variables
-          fleaf_sunlit_daytime_cl(ic,:) = 0.0_wp          
+          fleaf_sunlit_daytime_cl(ic,:) = 0.0_wp
         END IF
         ! zero the accumulation variables after daily average has been calculated
         ! 1D
@@ -629,9 +629,9 @@ CONTAINS
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
-    
+
     !>  2.1 tlabile (averages at the timescale of the labile pool)
-    !> 
+    !>
     gpp_tlabile_mavg(:)                = calc_time_mavg(gpp_tlabile_mavg(:), gross_assimilation(:), &
                                                         mavg_period_tlabile)
     maint_respiration_tlabile_mavg(:)  = calc_time_mavg(maint_respiration_tlabile_mavg(:), maint_respiration_pot(:), &
@@ -642,12 +642,12 @@ CONTAINS
                                                         mavg_period_tlabile, do_calc=(growth_req_p(:) > eps8))
 
     !>  2.2 tphen (averages at the time-scale of phenology)
-    !> 
+    !>
     t_air_tphen_mavg(:)                = calc_time_mavg(t_air_tphen_mavg(:), t_air(:), mavg_period_tphen)
 
 
     !>  2.3 tuptake (averages at the nutrient-uptake demand time-scale)
-    !> 
+    !>
     npp_tuptake_mavg(:)                 = calc_time_mavg(npp_tuptake_mavg(:), npp(:), mavg_period_tuptake, &
                                                          do_calc=(veg_pool%fine_root%carbon > eps8))
     demand_uptake_n_tuptake_mavg(:)     = calc_time_mavg(demand_uptake_n_tuptake_mavg(:), f_n_demand(:), &
@@ -660,7 +660,7 @@ CONTAINS
                                                          mavg_period_tuptake, do_calc=(growth_req_p(:) > eps8))
 
     !>  2.4 tfrac (averages at the time-scale of within-leaf N allocation fractions)
-    !> 
+    !>
     fleaf_sunlit_tfrac_mavg_cl(:,:)   = calc_time_mavg(fleaf_sunlit_tfrac_mavg_cl(:,:), fleaf_sunlit_daytime_cl(:,:), &
                                                        mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
     t_air_tfrac_mavg(:)               = calc_time_mavg(t_air_tfrac_mavg(:), t_air_daytime(:), &
@@ -705,23 +705,23 @@ CONTAINS
       hlp(:) = 0._wp
     ENDWHERE
     growth_np_tcnl_mavg(:)  = calc_time_mavg(growth_np_tcnl_mavg(:), hlp(:), mavg_period_tcnl,  do_calc=l_growing_season(:))
-    hlp(:)                  = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - & 
-                              growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
+    hlp(:)                  = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - &
+                              growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:)
     npp_tcnl_mavg(:)        = calc_time_mavg(npp_tcnl_mavg(:), hlp(:), mavg_period_tcnl, do_calc=l_growing_season(:))
-   
+
     labile_carbon_tcnl_mavg(:)        = calc_time_mavg(labile_carbon_tcnl_mavg(:), veg_pool%labile%carbon(:), &
                                                        mavg_period_tcnl, do_calc=l_growing_season(:))
     labile_nitrogen_tcnl_mavg(:)      = calc_time_mavg(labile_nitrogen_tcnl_mavg(:), veg_pool%labile%nitrogen(:), &
                                                        mavg_period_tcnl, do_calc=l_growing_season(:))
     labile_phosphorus_tcnl_mavg(:)    = calc_time_mavg(labile_phosphorus_tcnl_mavg(:), veg_pool%labile%phosphorus(:), &
                                                        mavg_period_tcnl, do_calc=l_growing_season(:))
-    
+
     !>  2.6 talloc (time-scale of plant allocation calculation (veg process))
     !>
     cost_n_fixation_talloc_mavg(:)      = calc_time_mavg(cost_n_fixation_talloc_mavg(:), cost_n_fixation(:), &
                                                          mavg_period_talloc, do_calc=l_growing_season(:))
-    hlp(:)              = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - & 
-                          growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:) 
+    hlp(:)              = gross_assimilation(:) / MAX(eps8, beta_sinklim_ps(:)) - &
+                          growth_respiration(:) - maint_respiration(:) - n_processing_respiration(:)
     npp_talloc_mavg(:)  = calc_time_mavg(npp_talloc_mavg(:), hlp(:), mavg_period_talloc, do_calc=l_growing_season(:))
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%bnf_scheme))
     CASE("optimal")
@@ -750,7 +750,7 @@ CONTAINS
                                                          mavg_period_talloc, do_calc=l_growing_season(:))
 
     !>  2.7 talloc / talloc_dynamic
-    !> 
+    !>
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%biomass_alloc_scheme))
     CASE ("optimal", "fixed")
       mavg_period_hlp = mavg_period_talloc
@@ -808,8 +808,8 @@ CONTAINS
     growth_np_talloc_mavg(:) = calc_time_mavg(growth_np_talloc_mavg(:), hlp(:), mavg_period_hlp, do_calc=l_growing_season(:))
 
     !>  2.9 various lctlib tau
-    !> 
-    exudation_c_tmyc_mavg(:) = calc_time_mavg(exudation_c_tmyc_mavg(:), veg_exudation%carbon(:), & 
+    !>
+    exudation_c_tmyc_mavg(:) = calc_time_mavg(exudation_c_tmyc_mavg(:), veg_exudation%carbon(:), &
  	                                            lctlib%tau_mycorrhiza, avg_period_unit='year')
     DO ic = 1, nc
       IF (veg_pool%fine_root%carbon(ic) > eps8) THEN
@@ -838,7 +838,7 @@ CONTAINS
     !>
     an_boc_tvegdyn_mavg(:)     = calc_time_mavg(an_boc_tvegdyn_mavg(:), net_assimilation_boc(:), mavg_period_monthly, &
                                                 do_calc=(veg_pool%leaf%carbon(:) > eps8))
-    net_growth_tvegdyn_mavg(:) = calc_time_mavg(net_growth_tvegdyn_mavg(:), net_growth(:), mavg_period_tvegdyn) 
+    net_growth_tvegdyn_mavg(:) = calc_time_mavg(net_growth_tvegdyn_mavg(:), net_growth(:), mavg_period_tvegdyn)
     DO ic = 1, nc
       IF (lai(ic) > 0.1_wp) THEN
         l_hlp(ic) = .TRUE.
@@ -847,7 +847,7 @@ CONTAINS
       END IF
     END DO
     lai_tvegdyn_mavg(:) = calc_time_mavg(lai_tvegdyn_mavg(:), lai(:), mavg_period_tvegdyn, do_calc=l_hlp(:))
-                                              
+
     !>  2.11 tacclim (averages at the respiration acclimation time-scale)
     !>    t_air_tacclim_mavg(:) is init with 283.15 and only updated if flag_t_resp_acclimation is true
     !>    this IF statement has a direct impact on mo_veg_respiration:temperature_response_respiration
@@ -856,7 +856,7 @@ CONTAINS
       t_air_tacclim_mavg(:)       = calc_time_mavg(t_air_tacclim_mavg(:), t_air(:), mavg_period_tacclim)
       t_soil_root_tacclim_mavg(:) = calc_time_mavg(t_soil_root_tacclim_mavg(:), t_soil_root(:), mavg_period_tacclim)
     END IF
-    
+
     !>  2.12 averages with a weekly, monthly timescale
     !>
     t_air_week_mavg(:)  = calc_time_mavg(t_air_week_mavg(:), t_air(:), mavg_period_weekly)

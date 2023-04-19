@@ -747,7 +747,7 @@ CONTAINS
 
     REAL(wp),  INTENT(out), DIMENSION(:) :: &
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
-    !$claw end model-data  
+    !$claw end model-data
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'

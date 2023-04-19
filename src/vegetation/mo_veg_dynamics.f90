@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,8 +16,8 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief module to calculate vegetation dynamics 
+!!
+!! @brief module to calculate vegetation dynamics
 !!
 !! @author
 !!  Soenke Zaehle, MPI-BGC Jena
@@ -47,9 +47,9 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Main Task
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
-  !> Calculate establishment and mortality of a population (currently static mortality rate only) 
+  !> Calculate establishment and mortality of a population (currently static mortality rate only)
   !!
   !! a background_mort_rate exists for each trees and grasses, defined as mortality rate per year
   !!
@@ -92,7 +92,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
-    ! 0.2 Local 
+    ! 0.2 Local
     TYPE(t_jsb_model),      POINTER         :: model
     TYPE(t_lctlib_element), POINTER         :: lctlib           !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)         :: fpc              !< current foliage projective cover
@@ -126,8 +126,8 @@ CONTAINS
     ! VEG_
     dsl4jsb_Real2D_onChunk      :: do_cohort_harvest
     dsl4jsb_Real2D_onChunk      :: dens_ind
-    dsl4jsb_Real2D_onChunk      :: diameter 
-    dsl4jsb_Real2D_onChunk      :: height 
+    dsl4jsb_Real2D_onChunk      :: diameter
+    dsl4jsb_Real2D_onChunk      :: height
     dsl4jsb_Real2D_onChunk      :: cohort_age
     dsl4jsb_Real2D_onChunk      :: mortality_rate
     dsl4jsb_Real2D_onChunk      :: delta_dens_ind
@@ -205,18 +205,18 @@ CONTAINS
 
 
     !> 1.0 Calculate foliage projective cover if vegetation dynamics are simulated, i.e., not needed for constant mortality
-    !! 
+    !!
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
       CASE ("population","cohort")
         fpc(:) = calc_foliage_projective_cover_tile(nc, &
                                                     lctlib%growthform, lctlib%wood_density, lctlib%k_latosa, &
-                                                    veg_pool%sap_wood%carbon(:), & 
+                                                    veg_pool%sap_wood%carbon(:), &
                                                     dens_ind(:), height(:), diameter(:))
     ENDSELECT
 
 
     !> 1.1 check stand harvest year (if this functionality is enabled: model%config\%flag_stand_harvest)
-    !! 
+    !!
     !! but enable harvesting only after transient spinup, i.e., when l_transient_spinup=FALSE
 #ifdef __QUINCY_STANDALONE__
     IF (model%config%flag_stand_harvest .AND. .NOT. model%config%l_transient_spinup) THEN
@@ -225,13 +225,13 @@ CONTAINS
       IF (forcing_options%forcing_year .EQ. model%config%stand_replacing_year .AND. &
           forcing_options%forcing_doy  .EQ. 1                                .AND. &
           forcing_options%forcing_hour .LT. eps4                                    ) THEN
-        model%config%l_do_stand_replacing_harvest = .TRUE. 
+        model%config%l_do_stand_replacing_harvest = .TRUE.
       END IF
     END IF
 #endif
 
     !> 1.2 Increase age of the cohort [years] & check if cohort harvest is reached
-    !! 
+    !!
     !! apply this only after spinup of transient mode has finished
     IF (.NOT. model%config%l_transient_spinup) THEN
       SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
@@ -247,11 +247,11 @@ CONTAINS
 
 
     !> 2.0 Calculate mortality rate and veg\%litterfall
-    !! 
+    !!
     !! retruns constant mortality_rate if veg_dynamics_scheme == none \n
     !! but calcs mortality_rate dynamically if veg_dynamics_scheme == population or cohort
     CALL calc_veg_mortality(nc                                              , & ! in
-                            lctlib%growthform                               , & 
+                            lctlib%growthform                               , &
                             TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)  , &
                             an_boc_tvegdyn_mavg(:)                          , &
                             net_growth_tvegdyn_mavg(:)                      , &
@@ -262,7 +262,7 @@ CONTAINS
                             mortality_rate(:)                               )   ! out
 
     !> 2.1 Calculate stand harvest_rate and veg\%litterfall
-    !! 
+    !!
     !! if either logical is true
     !! @todo update_veg_dynamics() do_cohort_harvest dimension should be used as nc
     IF (model%config%l_do_stand_replacing_harvest .OR. do_cohort_harvest(ics) > test_false_true) THEN
@@ -274,16 +274,16 @@ CONTAINS
 
 
     !> 3.0 Calculate establishment_rate and veg\%establishment
-    !! 
+    !!
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
       !CASE ("cohort")
-        !> no establishment in cohort mode, but after cohort harvesting \n 
-        !!  the dens_ind is set to 1.0 and veg_pool%reserve gets some amount of CNP same as during the veg_init \n 
+        !> no establishment in cohort mode, but after cohort harvesting \n
+        !!  the dens_ind is set to 1.0 and veg_pool%reserve gets some amount of CNP same as during the veg_init \n
         !!  in the routine update_veg_pools section 3.0
       CASE ("population")
-        IF(.NOT. model%config%l_do_stand_replacing_harvest) THEN 
+        IF(.NOT. model%config%l_do_stand_replacing_harvest) THEN
           CALL calc_veg_establishment(nc                              , & ! in
-                                      lctlib%tau_seed_est             , & 
+                                      lctlib%tau_seed_est             , &
                                       w_soil_root_theta(:)            , &
                                       growing_season(:)               , &
                                       t_air_week_mavg(:)              , &
@@ -296,18 +296,18 @@ CONTAINS
 
 
     !> 4.0 Calculate change in individual density from mortality and establishment
-    !! 
+    !!
     !! only if no stand/cohort harvesting is done
     SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
     CASE ("population","cohort")
       !! @todo update_veg_dynamics() do_cohort_harvest dimension should be used as nc
-      IF(.NOT. model%config%l_do_stand_replacing_harvest .AND. do_cohort_harvest(ics) < test_false_true) THEN 
+      IF(.NOT. model%config%l_do_stand_replacing_harvest .AND. do_cohort_harvest(ics) < test_false_true) THEN
         IF(lctlib%growthform == itree) THEN
-           delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size           , & 
+           delta_dens_ind(:) = calc_delta_dens_ind(lctlib%seed_size           , &
                                                    dens_ind(:)                , &
                                                    mortality_rate(:)          , &
-                                                   veg_establishment%carbon(:)) 
-        ELSE 
+                                                   veg_establishment%carbon(:))
+        ELSE
            delta_dens_ind(:) = 0.0_wp
         ENDIF
       ENDIF
@@ -329,9 +329,9 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
-  !> calculates current foliage projective cover for a tile 
+  !> calculates current foliage projective cover for a tile
   !!
   !! Follows Sitch et al. 2003, eq 8)
   !-----------------------------------------------------------------------------------------------------
@@ -342,7 +342,7 @@ CONTAINS
                                               veg_pool_sap_wood_carbon, &
                                               dens_ind                , &
                                               height                  , &
-                                              diameter) RESULT(fpc) 
+                                              diameter) RESULT(fpc)
 
     USE mo_veg_constants,         ONLY: max_crown_area, min_diameter, k_crown_area, k_rp, k_fpc, itree
     USE mo_jsb_math_constants,    ONLY: eps4
@@ -362,32 +362,32 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     REAL(wp), DIMENSION(nc)                     :: crown_area, &
-                                                   lai_ind 
+                                                   lai_ind
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_foliage_projective_cover_tile'
 
 
     !> 1.0
-    !! 
+    !!
     WHERE(lctlib_growthform == itree .AND. dens_ind(:) .GT. eps4 .AND. height(:) .GT. eps4)
       ! crown area derived from diameter following Sitch et al. 2003; eq 4
       crown_area(:) = MIN(max_crown_area, k_crown_area * MAX(min_diameter,diameter(:)) ** k_rp)
-      ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by 
-      ! its crown area 
-      lai_ind(:)    = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib_wood_density / height(:) * lctlib_k_latosa / & 
+      ! maximum annual, individual LAI, derived from the sapwood area of an individual tree, devided by
+      ! its crown area
+      lai_ind(:)    = veg_pool_sap_wood_carbon(:) / dens_ind(:) / lctlib_wood_density / height(:) * lctlib_k_latosa / &
                       crown_area(:)
       ! foliage projective cover is then the product of density and individual crown area
       fpc(:)        = crown_area(:) * dens_ind(:) * (1._wp - exp(-k_fpc * lai_ind(:)))
     ELSEWHERE
-      lai_ind(:) = 0.0_wp 
+      lai_ind(:) = 0.0_wp
       fpc(:)     = 0.0_wp
     ENDWHERE
-   
+
   END FUNCTION calc_foliage_projective_cover_tile
 
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
   !> calculate vegetation mortality
   !!
@@ -420,7 +420,7 @@ CONTAINS
     INTEGER,                         INTENT(in)    :: lctlib_growthform          !< lctlib paramter
     CHARACTER(len=*),                INTENT(in)    :: veg_dynamics_scheme        !< vegetation dynamics: none population cohort
     REAL(wp), DIMENSION(nc),         INTENT(in)    :: an_boc_tvegdyn_mavg    , & !< long-term net C balance at the bottom of the canopy (micro-mol / m2 / s)
-                                                      net_growth_tvegdyn_mavg, & !< long-term net growth of the plant (micro-mol / m2 / s) 
+                                                      net_growth_tvegdyn_mavg, & !< long-term net growth of the plant (micro-mol / m2 / s)
                                                       lai_tvegdyn_mavg,        & !< long-term LAI of the plant
                                                       fpc                        !< foliage projective cover
 #ifdef __QUINCY_STANDALONE__
@@ -438,28 +438,28 @@ CONTAINS
     REAL(wp), DIMENSION(nc)                        :: fscal
     REAL(wp), DIMENSION(nc)                        :: greff_mortality_rate, &
                                                       self_thinning_mortality_rate, &
-                                                      bg_mortality_rate 
+                                                      bg_mortality_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_mortality'
 
 
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
-    ! ------------------------------------------------------------------------------------------------------------    
-    
+    ! ------------------------------------------------------------------------------------------------------------
+
 
     !> differ between veg_dynamics_schemes
     !! population/cohort & none
-    !! 
+    !!
     SELECT CASE (veg_dynamics_scheme)
       CASE ("population","cohort")
-        !> 1.0 mortality related to growth efficiency mortality 
-        !! 
+        !> 1.0 mortality related to growth efficiency mortality
+        !!
         WHERE(lai_tvegdyn_mavg(:) > eps8)
           !> growth efficiency per unit leaf area in mol C / m2 LAI / yr
           !!  the application of 'MAX()' avoids negative values of greff_mortality_rate(:) and mortality_rate(:)
           greff(:) = MAX(net_growth_tvegdyn_mavg(:) / lai_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp, 0.0_wp)
-          !> 1.1 deduce mortality from asymptoptic mortality rate given growth efficiency, 
+          !> 1.1 deduce mortality from asymptoptic mortality rate given growth efficiency,
           !!     below a minimum threshold mortality rises to 100%
           !!
           WHERE(greff(:) > min_greff)
@@ -467,19 +467,19 @@ CONTAINS
           ELSEWHERE
             greff_mortality_rate(:) = 1.0_wp / (k3_mort_greff * greff(:) + 1.0_wp)
           ENDWHERE
-        ENDWHERE 
+        ENDWHERE
 
         !> 1.2 self-thinning related mortality
-        !! 
+        !!
         self_thinning_mortality_rate(:) = MAX(fpc(:) - fpc_max,0.0_wp)
 
 !!       !! depends on the carbon balance of lowest canopy layer, i.e. net photosynthesis minus average construction cost \n
 !!       !! in mol / m2 LAI / year \n
 !!       !! transformed to a mortality estimate using a Weibull function
-!!       boc_cbalance(:) = an_boc_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp &  
+!!       boc_cbalance(:) = an_boc_tvegdyn_mavg(:) * one_day * one_year / 1.e6_wp &
 !!                         - ( 1._wp + fresp_growth ) * 1.0_wp/lctlib_tau_leaf/lctlib_sla
 !!       WHERE(boc_cbalance(:) < (-eps4))
-!!          mortality_rate(:) = mortality_rate(:) & 
+!!          mortality_rate(:) = mortality_rate(:) &
 !!                              + ( 1._wp - exp ( - ( - lambda_mort_light * boc_cbalance(:) ) ** k_mort_light))
 !!       END WHERE
 
@@ -491,11 +491,11 @@ CONTAINS
           CASE (igrass)
             bg_mortality_rate(:) = background_mort_rate_grass
         ENDSELECT
- 
+
         !> 1.4 total mortality is the sum of all mortality terms, and limited to one
-        !! 
-        mortality_rate(:) = MIN(greff_mortality_rate(:)+self_thinning_mortality_rate(:)+bg_mortality_rate(:),1.0_wp) & 
-                           / one_year / one_day * dtime 
+        !!
+        mortality_rate(:) = MIN(greff_mortality_rate(:)+self_thinning_mortality_rate(:)+bg_mortality_rate(:),1.0_wp) &
+                           / one_year / one_day * dtime
 
       CASE ("none")
         SELECT CASE (lctlib_growthform)
@@ -513,11 +513,11 @@ CONTAINS
     WHERE(veg_pool%leaf%carbon(:) > eps8)
        fscal(:) = (veg_pool%leaf%carbon(:) - veg_litterfall%leaf%carbon(:)) / veg_pool%leaf%carbon(:)
     ELSEWHERE
-       fscal(:) = 0.0_wp 
+       fscal(:) = 0.0_wp
     ENDWHERE
     WHERE(mortality_rate(:) < fscal(:))
        fscal(:) = mortality_rate(:)
-    ENDWHERE 
+    ENDWHERE
     veg_litterfall%leaf         = veg_litterfall%leaf         + veg_pool%leaf         * fscal(:)
     veg_litterfall%fine_root    = veg_litterfall%fine_root    + veg_pool%fine_root    * mortality_rate(:)
     veg_litterfall%coarse_root  = veg_litterfall%coarse_root  + veg_pool%coarse_root  * mortality_rate(:)
@@ -532,9 +532,9 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
-  !> calculate vegetation harvest 
+  !> calculate vegetation harvest
   !!
   !! veg\%litterfall
   !-----------------------------------------------------------------------------------------------------
@@ -564,7 +564,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),          INTENT(inout) :: mortality_rate           !< background_mort_rate_tree/grass converted to 1/timestep
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp), DIMENSION(nc)                         :: rest_mortality_rate 
+    REAL(wp), DIMENSION(nc)                         :: rest_mortality_rate
     REAL(wp)                                        :: export_rate
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_veg_harvest'
 
@@ -594,9 +594,9 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
-  !> calculate vegetation establishment 
+  !> calculate vegetation establishment
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
@@ -605,13 +605,13 @@ CONTAINS
                                     w_soil_root_theta           , &
                                     growing_season              , &
                                     t_air_week_mavg             , &
-                                    fpc                         , & 
+                                    fpc                         , &
                                     rfr_ratio_boc_tvegdyn_mavg  , &
                                     veg_pool_seed_bed           , &
                                     veg_establishment           )
 
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year, eps8
-    USE mo_rad_constants,           ONLY: rfr_ratio_toc 
+    USE mo_rad_constants,           ONLY: rfr_ratio_toc
     USE mo_veg_constants,           ONLY: fpc_max, lambda_est_temp, k_est_temp, lambda_est_moist, k_est_moist
     USE mo_jsb_physical_constants,  ONLY: Tzero
 #ifdef __QUINCY_STANDALONE__
@@ -625,11 +625,11 @@ CONTAINS
     ! 0.1 InOut
     INTEGER,                          INTENT(in)    :: nc                           !< dimensions
     REAL(wp),                         INTENT(in)    :: lctlib_tau_seed_est          !< lctlib paramter
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum] 
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season               !< growing season 
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K] 
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: w_soil_root_theta            !< plant available water [fraction of maximum]
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: growing_season               !< growing season
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: t_air_week_mavg              !< weekly air temperature [K]
     REAL(wp), DIMENSION(nc),          INTENT(in)    :: fpc                          !<  ...
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy 
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: rfr_ratio_boc_tvegdyn_mavg   !< red-farred ratio at the bottom of the canopy
 #ifdef __QUINCY_STANDALONE__
     TYPE(t_veg_element_a),            INTENT(in)    :: veg_pool_seed_bed            !< seed_bed in vegetation pool
     TYPE(t_veg_element_a),            INTENT(inout) :: veg_establishment            !< vegetation establishment
@@ -653,32 +653,32 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
-    
+
 
     !> 1.0 establishment rate
     !!
 
-    !> 1.1 light limitation, 
+    !> 1.1 light limitation,
     !!
     flim_light(:) = MAX(fpc_max - fpc(:),0.0_wp)
 
 !!    !! depending on the red to far-red ratio of the light at the bottom of the canopy
-!!    flim_light(:) = exp(-(lctlib_lambda_est_light * & 
+!!    flim_light(:) = exp(-(lctlib_lambda_est_light * &
 !!                          (rfr_ratio_toc-rfr_ratio_boc_tvegdyn_mavg(:)))**lctlib_k_est_light)
 
-    !> 1.2 temperature and soil moisture limitation 
-    !! 
+    !> 1.2 temperature and soil moisture limitation
+    !!
     !! OBS: should be top soil moisture!
     WHERE((t_air_week_mavg(:) - Tzero) < 0.0_wp .OR. growing_season(:) < test_false_true)
       flim_temp(:) = 0.0_wp
     ELSEWHERE
       flim_temp(:) = 1.0_wp - exp(-(lambda_est_temp * (t_air_week_mavg(:) - Tzero))**k_est_temp)
     END WHERE
-    flim_moist(:)  = 1.0_wp - exp(-(lambda_est_moist * w_soil_root_theta(:))**k_est_moist) 
-   
+    flim_moist(:)  = 1.0_wp - exp(-(lambda_est_moist * w_soil_root_theta(:))**k_est_moist)
+
     !> 1.3 actual establishment rate and associated matter flux from seed bed to reserve pool
     !!
-    establishment_rate(:) = flim_light(:) * flim_temp(:) * flim_moist(:) * & 
+    establishment_rate(:) = flim_light(:) * flim_temp(:) * flim_moist(:) * &
                             1.0_wp/lctlib_tau_seed_est/one_day/one_year * dtime
     WHERE(establishment_rate(:) < eps8)
        establishment_rate(:) = 0.0_wp
@@ -691,9 +691,9 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   ! Sub Task of update_veg_dynamics
-  ! 
+  !
   !-----------------------------------------------------------------------------------------------------
-  !> calculate change in tree density 
+  !> calculate change in tree density
   !!
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_dens_ind(lctlib_seed_size         , &
@@ -706,7 +706,7 @@ CONTAINS
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: lctlib_seed_size         , & !< seed size to convert C into individuals, lctlib parameter
-                            dens_ind                 , & !< current individuum density (#/m2) 
+                            dens_ind                 , & !< current individuum density (#/m2)
                             mortality_rate           , & !< mortality per timestep
                             veg_establishment_carbon     !< vegetation establishment measured in C
     REAL(wp)             :: delta_dens_ind               !< change in individual density

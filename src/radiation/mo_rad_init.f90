@@ -311,7 +311,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize radiation process (after memory has been set up)
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE rad_init_ic_q_(tile)
 
@@ -352,17 +352,17 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_sunlit_tcnl_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tfrac_mavg_cl)
     dsl4jsb_Get_var3D_onDomain(RAD_, ppfd_shaded_tcnl_mavg_cl)
-    
+
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
     rfr_ratio_boc(:,:)                  = rfr_ratio_toc
-    rfr_ratio_boc_tvegdyn_mavg(:,:)     = rfr_ratio_boc(:,:) 
+    rfr_ratio_boc_tvegdyn_mavg(:,:)     = rfr_ratio_boc(:,:)
 
     ppfd_sunlit_tfrac_mavg_cl(:,:,:)    = 150.0_wp
     ppfd_sunlit_tcnl_mavg_cl(:,:,:)     = 150.0_wp
-    
+
     ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
     ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
 

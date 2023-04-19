@@ -30,7 +30,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION calc_qmax_texture
   !!
-  !! Output: sorption capacity for organic material 
+  !! Output: sorption capacity for organic material
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_qmax_texture(qmax_fine_particle, silt_sl, clay_sl) RESULT(qmax_texture)
 

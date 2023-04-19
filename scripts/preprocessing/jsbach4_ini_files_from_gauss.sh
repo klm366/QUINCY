@@ -100,9 +100,9 @@ year=1976
 
 # Note: glac must be at beginning of varlist
 varlist="glac lake init_moist snow roughness_length albedo elevation
-fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max 
+fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max
 albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
-soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity 
+soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity
 moisture_pot hyd_cond_sat wilting_point bclapp fract_org_sl root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
@@ -204,8 +204,8 @@ function generate_gauss_data {
       echo "----------"
       echo " WARNING: LUH2v2h landuse data as used for CMIP6 is not yet available in 0.5 deg resolution."
       echo "----------"
-      echo "          We use LUH crop and pasture fractions as in CMIP5, here." 
-      echo "          Switch to source grid resolution T127, T63 or T31 if you want LUH2v2h data." 
+      echo "          We use LUH crop and pasture fractions as in CMIP5, here."
+      echo "          Switch to source grid resolution T127, T63 or T31 if you want LUH2v2h data."
   fi
   
   rm -f ../jsbach_*.nc
@@ -477,7 +477,7 @@ function pseudo_remap_var {
   if [[ ${var} == oro* ]]; then
   	VAR=$(echo ${var} | tr -s 'a-z' 'A-Z')
 	  ${cdo} -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
-  else 
+  else
 	  ln -s gauss_${grid_name}_${var}.nc ${grid_name}_${var}_remap.nc
   fi
 
@@ -527,7 +527,7 @@ function generate_fractions {
         then
           ${cdo} setrtoc,1,1.1,0 pft${ipft}.nc zpft && mv zpft pft${ipft}.nc
         fi
-        ncwa -a ntiles pft${ipft}.nc zpft 
+        ncwa -a ntiles pft${ipft}.nc zpft
         ${cdo} setmisstoc,0 zpft pft${ipft}.nc && rm zpft
         (( i = i + 1 ))
       done
@@ -541,7 +541,7 @@ function generate_fractions {
         ${cdo} setname,fract_pft${ipft} pft${ipft}.nc ${grid_name}_fract_pft${ipft}_remap.nc && rm pft${ipft}.nc
         ncatted -a long_name,fract_pft${ipft},m,c,"Fraction of pft${ipft} tile rel. to veg tile" ${grid_name}_fract_pft${ipft}_remap.nc
         debug_file ${grid_name}_fract_pft${ipft}_remap.nc
-      done        
+      done
     fi
   done
 }
@@ -899,7 +899,7 @@ do
     case ${source_res} in
 	  T* )
 	    source_grid=${source_res}grid
-	    ;;	 
+	    ;;
 	  05 )
 	    ${cdo} griddes ${pool_prepare}/05/ECHAM6/05_jan_surf.nc > 0.5grid
 	    source_grid=0.5grid
@@ -937,7 +937,7 @@ do
   generate_gauss_data
 
   cd ..
-  
+
   shopt -s extglob
   #[[ $npfts -gt 0 ]] && \
   #    input_file=`ls ${input_root}/r0*/${source_res}/jsbach_${source_res}+(GR|TP)*_fractional_${npts}tiles_5layers_${year}.nc | tail -1` || \
@@ -962,7 +962,7 @@ do
 
     for var in $varlist
     do
-      extrapolate_var $var 
+      extrapolate_var $var
     done
 
     for var in $varlist
@@ -1018,7 +1018,7 @@ do
   # -------------------------------------------------------
   # now we generate bc_land_frac files for additional years
   # -------------------------------------------------------
-  
+
   for ((year=${start_year}+1;year<=${end_year};year++))
   do
     echo "now processing bc_land_fact for year " ${year}

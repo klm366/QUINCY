@@ -63,21 +63,21 @@ CONTAINS
       END WHERE
       bottom_m1 = bottom_m1 + dz(i)
     END DO
-  
+
   END FUNCTION soil_depth_to_layers_2d
 
 
   !-----------------------------------------------------------------------------------------------------
   !> conversion: uppercase -> lowercase
-  !! 
+  !!
   !! implemented based on mo_util:toupper in jsbach4.1
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION tolower(string) RESULT(stringlower)
 
     IMPLICIT NONE
     ! ---------------------------
-    ! 0.1 InOut    
+    ! 0.1 InOut
     CHARACTER(len=*), INTENT(in) :: string
     CHARACTER(len=LEN_TRIM(string)) :: stringlower
     ! ---------------------------
@@ -97,9 +97,9 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> conversion: lowercase -> uppercase
-  !! 
+  !!
   !! Copied from ICON module shared/mo_util_string
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
 

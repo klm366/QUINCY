@@ -51,7 +51,7 @@ CONTAINS
     USE mo_phy_schemes
     USE mo_assimi_parameters,        ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
     USE mo_rad_process,             ONLY: Has_minimal_radiation
-    dsl4jsb_Use_config(ASSIMI_)    
+    dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
     dsl4jsb_Use_memory(RAD_)
@@ -236,7 +236,7 @@ CONTAINS
     co2_conc_leaf(:)          = 0.0_wp
 
     !>  0.9.2 set g1 according to canopy_conductance_scheme
-    !> 
+    !>
     SELECT CASE(TRIM(dsl4jsb_Config(ASSIMI_)%canopy_conductance_scheme))
       CASE ("medlyn")
         lctlib_g1 = lctlib%g1_medlyn
@@ -251,7 +251,7 @@ CONTAINS
     beta_soil_ps(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
     beta_soil_gs(:) = calc_soil_moisture_stress(w_soil_root_pot(:), lctlib%phi_leaf_min)
     ! catch beta_soil_ps getting zero
-    !  with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 become zero, 
+    !  with "beta_soil_ps=0" calc_photosynthesis() does get a runtime error, because n1 & n2 become zero,
     !  and then msat & nco become zero, resulting in an error with the log() operation "nlim = -log(nco/..."
     WHERE(beta_soil_ps(:) < eps8) beta_soil_ps(:) = eps8
 
@@ -323,7 +323,7 @@ CONTAINS
                                                       lctlib%ps_pathway)
         gross_assimilation_C14(:) = gross_assimilation_C14(:) + &
                                     gross_assimilation_cl(:,icanopy) * &
-                                    lai_cl(:,icanopy) * & 
+                                    lai_cl(:,icanopy) * &
                                     calc_fractionation(co2_mixing_ratio(:), co2_mixing_ratio_C14(:), &
                                                        hlp1(:), co2_mixing_ratio_C13(:))
       END WHERE
@@ -340,9 +340,9 @@ CONTAINS
 
       ! diagnose jmax and vcmax
       !> N specific rate of electron transport rate
-      jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * & 
+      jmax_cl(:,icanopy) = jmax2n * fn_et_cl(:,icanopy) * &
                            EXP(-(((t_air(:) - Tzero - t_jmax_opt_mavg(:)) / lctlib%t_jmax_omega) ** 2.0_wp)) * &
-                           beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *& 
+                           beta_soil_ps(:) * beta_sinklim_ps(:) * beta_soa(:) *&
                            leaf_nitrogen_cl(:,icanopy)
 
 
@@ -356,7 +356,7 @@ CONTAINS
     !>3.0 update mean canopy CO2 concentration in the leaf
     !>  was accumulated from the CO2 concentration per canopy layer above ('co2_conc_leaf_cl(:,icanopy) * lai_cl(:,icanopy)')
     !>
-    WHERE(lai(:) > eps8) 
+    WHERE(lai(:) > eps8)
       co2_conc_leaf(:) = co2_conc_leaf(:) / lai(:)
     END WHERE
 
@@ -412,7 +412,7 @@ CONTAINS
                                             m_et                , &
                                             m_pepc)
 
-  USE mo_veg_constants,             ONLY: fmaint_rate_base  
+  USE mo_veg_constants,             ONLY: fmaint_rate_base
   USE mo_jsb_physical_constants,    ONLY: r_gas, Tzero
   USE mo_assimi_parameters,         ONLY: E0kc, E1kc, E0ko, E1ko, E0pcp, E1pcp, E0v, E1v, CiCa_default_C3, CiCa_default_C4, &
                                           ps_it_max, ci_max, alpha_i, Tref_pepc, Tbase_pepc, pO2, jmax2n, vcmax2n, ka, pepc2n, &
@@ -493,7 +493,7 @@ CONTAINS
 
 
     !> @par IF: initialise output for no-light condition
-    !! use l_day(:) for consistency with RAD_ 
+    !! use l_day(:) for consistency with RAD_
     !! (prev.in quincy it was used: "IF(ppfd_sunlit_cl + ppfd_shaded_cl <= eps8) THEN")
     IF (.NOT. l_day) THEN
       ag_cl    = 0.0_wp
@@ -572,7 +572,7 @@ CONTAINS
 
           !> N-specific light saturated carboxylation (umol[CO2]/mmol[N]/s)
           msat = MIN(MIN(m1 * n1, m2 * n2), m3 * n3)
-          
+
           !> nlim factor (part of equation 12 (Kull and Kruijt 1998))
           nco = msat/(alpha_i * ka * m1)
 
@@ -721,15 +721,15 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_atm_moisture_stress'
 
     !>1.0 saturating specific humidity [kg kg-1]
-    !> 
+    !>
     q_sat = calc_spec_humidity_sat(t_air, press_srf)
 
     !>  1.1 vapour pressure deficit [kPa]
-    !> 
+    !>
     vpd = MAX(q_sat - q_air, 0.0_wp) * press_srf / eps_vpd / 1000._wp
 
     !>  1.2 scalar for atmospheric humidity as relative humidity (fractions)
-    !> 
+    !>
     SELECT CASE(canopy_cond_scheme)
       CASE ("medlyn")
         !following Medlyn et al. 2011 [default]
@@ -744,7 +744,7 @@ CONTAINS
   !>calculate soil moisture stress on photosynthesis or conductance given current soil moisture
   !>
   PURE ELEMENTAL FUNCTION calc_soil_moisture_stress(phi, phi_leaf_min) RESULT(beta)
-  
+
     REAL(wp),INTENT(in) :: phi               !< soil plant available water potential
     REAL(wp),INTENT(in) :: phi_leaf_min      !< minimum leaf water potential from lctlib
     REAL(wp)            :: beta              !< veg\%beta_soil_ps / veg\%beta_soil_gs
@@ -759,7 +759,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Calculate spring recovery period for evergreen conifers
-  !> 
+  !>
   !>  Based on Maekelae et al. (2004) https://doi.org/10.1093/treephys/24.4.369
   !>  returns beta_soa with a value [0.01,1.0]
   !>
@@ -796,7 +796,7 @@ CONTAINS
   !>  Output: Discrimination (per mill)
   !>
   PURE ELEMENTAL FUNCTION discrimination_ps(ci, ca, isotope_name, ps_pathway) RESULT(discrimination)
-  
+
     USE mo_assimi_parameters,      ONLY: discr_ps_a_C13, discr_ps_b_C13, discr_ps_c_C13, &
                                          discr_ps_a_C14, discr_ps_b_C14, discr_ps_c_C14, &
                                          discr_ps_phi
@@ -809,7 +809,7 @@ CONTAINS
     REAL(wp)                 :: discrimination         !< isotopic discrimination (per mill)
     !------------------------------------------------------------------------------------------------------ !
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':discrimination_ps'
-  
+
     ! SELECT PS pathway C3 C4
     SELECT CASE(ps_pathway)
     CASE (ic3phot)
@@ -829,7 +829,7 @@ CONTAINS
           discrimination = discr_ps_a_C14 + (discr_ps_c_C14 + discr_ps_phi * discr_ps_b_C14 - discr_ps_a_C14) * ci / ca
       END SELECT
     END SELECT
-  
+
   END FUNCTION discrimination_ps
 
 #endif

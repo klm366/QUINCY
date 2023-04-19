@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains the memory class for the spq processes
 !!
 !! @author
@@ -46,7 +46,7 @@ MODULE mo_spq_memory_class
   PRIVATE
   PUBLIC :: t_spq_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars      = 60 
+  INTEGER, PARAMETER :: max_no_of_vars      = 60
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ MODULE mo_spq_memory_class
   !!
   !! @par includes: \n
   !!    spq variables spq\%VAR
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_memory) :: t_spq_memory
 
@@ -80,7 +80,7 @@ MODULE mo_spq_memory_class
                                     evaporation,      & !< surface evaporation  [kg m-2 s-1]
                                     runoff,           & !< surface runoff  [kg m-2 s-1]
                                     drainage,         & !< drainage        [kg m-2 s-1]
-                                    drainage_fraction   !< water mass fraction lost from the soil column by drainage [1 s-1] 
+                                    drainage_fraction   !< water mass fraction lost from the soil column by drainage [1 s-1]
 
     ! Additional variables for spq
     TYPE(t_jsb_var_real2d)          :: &
@@ -94,7 +94,7 @@ MODULE mo_spq_memory_class
                                     percolation_sl,   & !< fraction of mass transferred to below layer                              [fraction s-1]
                                     drainage_sl,      & !< drainage of soil layers                                                  [kg m-2 s-1]
                                     w_soil_sl,        & !< Water content in soil layers                                             [m]
-                                    w_soil_sat_sl,    & !< Water content of soil layers at saturation 
+                                    w_soil_sat_sl,    & !< Water content of soil layers at saturation
                                                         !! (derived from volumetric capacity at saturation)                         [m]
                                     w_soil_fc_sl,     & !< Water content of soil layers at field capacity
                                                         !! (derived from volumetric field capacity)                                 [m]
@@ -106,7 +106,7 @@ MODULE mo_spq_memory_class
                                     kdiff_sat_sl        !< saturated hydraulic conductivity                                         [m s-1]
 
     ! heat fluxes
-    TYPE(t_jsb_var_real2d)          :: &                              
+    TYPE(t_jsb_var_real2d)          :: &
                                     sensible_heat_flx     , &  !< sensible heat flux [W m-2]
                                     latent_heat_flx       , &  !< latent heat flux [W m-2]
                                     ground_heat_flx       , &  !< ground heat flux [W m-2]
@@ -118,22 +118,22 @@ MODULE mo_spq_memory_class
 
     !Soil Water addons for SLM in HYDRO
     TYPE(t_jsb_var_real2d)          :: &
-                                    w_soil_root_theta, & !< root zone integrated plant available water, fraction of maximum 
+                                    w_soil_root_theta, & !< root zone integrated plant available water, fraction of maximum
                                     w_soil_root_pot      !< soil water potential [MPa]
 
     TYPE(t_jsb_var_real3d)          :: &
                                     w_soil_pot_sl        !< soil water potential per layer [MPa]
 
-    ! soil energy 
+    ! soil energy
     TYPE(t_jsb_var_real3d)          :: &
-                                    t_soil_sl            !< soil temperature [K] 
+                                    t_soil_sl            !< soil temperature [K]
 
     ! soil physical properties (not sure where they should belong to, but they are needed in the long-term)
-    TYPE(t_jsb_var_real3d)          :: & 
+    TYPE(t_jsb_var_real3d)          :: &
                                     heat_capa_sl,         &  !< soil heat capacity [J kg-1]
                                     bulk_dens_sl,         &  !< soil bulk density [kg m-3]
                                     therm_cond_sl            !< soil thermal conductivity [W m-2 K-1]
-    TYPE(t_jsb_var_real3d)          :: & 
+    TYPE(t_jsb_var_real3d)          :: &
                                     sand_sl             , &  !< soil sand proportion of mineral soil
                                     silt_sl             , &  !< soil silt proportion of mineral soil
                                     clay_sl             , &  !< soil clay proportion of mineral soil(re-calculated as: clay = 1.0 -sand -silt)
@@ -160,7 +160,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the SPQ_ process
   !!
-  !!  
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_spq_memory(mem, prefix, suffix, lct_ids, model_id)
 
@@ -196,7 +196,7 @@ CONTAINS
     ! add memory only for LAND & PFT tiles
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
        & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
-    
+
         CALL mem%Add_var('soil_depth', mem%soil_depth, &
           & hgrid, surface, &
           & t_cf('soil_depth', 'm', 'Soil depth derived from textures (bedrock), for hydrology'), &
@@ -207,7 +207,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('root_depth', mem%root_depth, &
           & hgrid, surface, &
           & t_cf('root_depth', 'm', 'actual rooting depth'), &
@@ -218,7 +218,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('t_srf_old', mem%t_srf_old, &
           & hgrid, surface, &
           & t_cf('t_srf_old', 'K', 'previous surface temperature'), &
@@ -229,7 +229,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('zril_old', mem%zril_old, &
           & hgrid, surface, &
           & t_cf('zril_old', '', 'previous timesteps Reynolds number'), &
@@ -240,7 +240,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('soil_depth_sl', mem%soil_depth_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('soil_depth_sl', 'm', 'Width of each soil layer that can be saturated with water, until bedrock'), &
@@ -251,7 +251,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('soil_lay_width_sl', mem%soil_lay_width_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('soil_lay_width_sl', 'm', 'Width of each soil layer that can be saturated with water, until bedrock'), &
@@ -262,7 +262,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('soil_lay_depth_center_sl', mem%soil_lay_depth_center_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('soil_lay_depth_center_sl', 'm', 'Depth at the center of each soil layer, until bedrock'), &
@@ -273,7 +273,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('soil_lay_depth_ubound_sl', mem%soil_lay_depth_ubound_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('soil_lay_depth_ubound_sl', 'm', 'Depth at the upper boundary of each soil layer, until bedrock'), &
@@ -284,7 +284,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('soil_lay_depth_lbound_sl', mem%soil_lay_depth_lbound_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('soil_lay_depth_lbound_sl', 'm', 'Depth at the lower boundary of each soil layer, until bedrock'), &
@@ -295,7 +295,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('interception', mem%interception, &
           & hgrid, surface, &
           & t_cf('interception', 'kg m-2 s-1', 'surface interception evaporation'), &
@@ -306,7 +306,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('pet', mem%pet, &
           & hgrid, surface, &
           & t_cf('pet', 'kg m-2 s-1', 'potential evaporation'), &
@@ -317,7 +317,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('evaporation', mem%evaporation, &
           & hgrid, surface, &
           & t_cf('evaporation', 'kg m-2 s-1', 'surface evaporation'), &
@@ -328,7 +328,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('runoff', mem%runoff, &
           & hgrid, surface, &
           & t_cf('runoff', 'kg m-2 s-1', 'surface runoff'), &
@@ -339,7 +339,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('drainage', mem%drainage, &
           & hgrid, surface, &
           & t_cf('drainage', 'kg m-2 s-1', 'drainage'), &
@@ -350,7 +350,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('drainage_fraction', mem%drainage_fraction, &
           & hgrid, surface, &
           & t_cf('drainage_fraction', '1 s-1', 'water mass fraction lost from the soil column by drainage'), &
@@ -361,7 +361,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('w_skin', mem%w_skin, &
           & hgrid, surface, &
           & t_cf('w_skin', 'm', 'Water content in skin reservoir'), &
@@ -372,7 +372,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('w_soil_root', mem%w_soil_root, &
           & hgrid, surface, &
           & t_cf('w_soil_root', 'm', 'Water content in root zone of the soil'), &
@@ -383,7 +383,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('w_soil_root_fc', mem%w_soil_root_fc, &
           & hgrid, surface, &
           & t_cf('w_soil_root_fc', 'm', 'Water content at field capacity in root zone of the soil'), &
@@ -394,7 +394,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('w_soil_root_pwp', mem%w_soil_root_pwp, &
           & hgrid, surface, &
           & t_cf('w_soil_root_pwp', 'm', 'Water content at permanent wilting point in root zone of the soil'), &
@@ -405,7 +405,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('t_soil_root', mem%t_soil_root, &
           & hgrid, surface, &
           & t_cf('t_soil_root', 'K', 'Temperature of fine roots in the soil'), &
@@ -416,7 +416,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('percolation_sl', mem%percolation_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('percolation_sl', 'fraction s-1', 'fraction of mass transferred to below layer'), &
@@ -427,7 +427,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('drainage_sl', mem%drainage_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('drainage_sl', 'kg m-2 s-1', 'drainage of soil layers'), &
@@ -438,7 +438,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('w_soil_sl', mem%w_soil_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('w_soil_sl', 'm', 'Water content in soil layers'), &
@@ -449,7 +449,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('w_soil_sat_sl', mem%w_soil_sat_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('w_soil_sat_sl', 'm', 'Water content of soil layers at saturation'), &
@@ -460,7 +460,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('w_soil_fc_sl', mem%w_soil_fc_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('w_soil_fc_sl', 'm', 'Water content of soil layers at field capacity'), &
@@ -471,7 +471,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('w_soil_pwp_sl', mem%w_soil_pwp_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('w_soil_pwp_sl', 'm', 'Water content of soil layers at permanent wilting point'), &
@@ -482,7 +482,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('saxtonA', mem%saxtonA, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('saxtonA', '', 'coefficient in moisture-tension relationship'), &
@@ -493,7 +493,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('saxtonB', mem%saxtonB, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('saxtonB', '', 'coefficient in moisture-tension relationship'), &
@@ -504,7 +504,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('saxtonC', mem%saxtonC, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('saxtonC', '', 'exponent of moisture-conductivity relationship'), &
@@ -515,7 +515,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('kdiff_sat_sl', mem%kdiff_sat_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('kdiff_sat_sl', 'm s-1', 'saturated hydraulic conductivity'), &
@@ -526,7 +526,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('sensible_heat_flx', mem%sensible_heat_flx, &
           & hgrid, surface, &
           & t_cf('sensible_heat_flx', 'W m-2', 'sensible heat flux'), &
@@ -537,7 +537,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('latent_heat_flx', mem%latent_heat_flx, &
           & hgrid, surface, &
           & t_cf('latent_heat_flx', 'W m-2', 'latent heat flux'), &
@@ -548,7 +548,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('ground_heat_flx', mem%ground_heat_flx, &
           & hgrid, surface, &
           & t_cf('ground_heat_flx', 'W m-2', 'ground heat flux'), &
@@ -559,7 +559,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('ground_heat_flx_old', mem%ground_heat_flx_old, &
           & hgrid, surface, &
           & t_cf('ground_heat_flx_old', 'W m-2', 'ground heat flux of previous timestep'), &
@@ -570,7 +570,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('transpiration', mem%transpiration, &
           & hgrid, surface, &
           & t_cf('transpiration', 'kg m-2 s-1', 'transpiration in'), &
@@ -581,7 +581,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('w_soil_root_theta', mem%w_soil_root_theta, &
           & hgrid, surface, &
           & t_cf('w_soil_root_theta', '', 'root zone integrated plant available water, fraction of maximum '), &
@@ -592,7 +592,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('w_soil_root_pot', mem%w_soil_root_pot, &
           & hgrid, surface, &
           & t_cf('w_soil_root_pot', 'MPa', 'soil water potential'), &
@@ -603,7 +603,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('w_soil_pot_sl', mem%w_soil_pot_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('w_soil_pot_sl', 'MPa', 'soil water potential per layer'), &
@@ -614,7 +614,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('t_soil_sl', mem%t_soil_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('t_soil_sl', 'K', 'soil temperature'), &
@@ -625,7 +625,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('heat_capa_sl', mem%heat_capa_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('heat_capa_sl', 'J kg-1', 'soil heat capacity'), &
@@ -636,7 +636,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('bulk_dens_sl', mem%bulk_dens_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('bulk_dens_sl', 'kg m-3', 'soil bulk density'), &
@@ -647,7 +647,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('therm_cond_sl', mem%therm_cond_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('therm_cond_sl', 'W m-2 K-1', 'soil thermal conductivity'), &
@@ -658,7 +658,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('sand_sl', mem%sand_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('sand_sl', '', 'soil sand proportion'), &
@@ -669,7 +669,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-              
+
         CALL mem%Add_var('silt_sl', mem%silt_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('silt_sl', '', 'soil silt proportion'), &
@@ -680,7 +680,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-              
+
         CALL mem%Add_var('clay_sl', mem%clay_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('clay_sl', '', 'soil clay proportion'), &
@@ -691,7 +691,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('volume_min_sl', mem%volume_min_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('volume_min_sl', '', 'soil mineral volumetric proportion'), &
@@ -702,7 +702,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('qmax_org_min_sl', mem%qmax_org_min_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('qmax_org_min_sl', 'mol C kg-1 mineral soil', 'maximum OM sorption capacity of mineral soil'), &
@@ -713,7 +713,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('qmax_po4_min_sl', mem%qmax_po4_min_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('qmax_po4_min_sl', 'mol P kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
@@ -724,7 +724,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('qmax_nh4_min_sl', mem%qmax_nh4_min_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('qmax_nh4_min_sl', 'mol N kg-1 mineral soil', 'maximum po4 sorption capacity of mineral soil'), &
@@ -735,7 +735,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('qmax_po4_om_sl', mem%qmax_po4_om_sl, &
           & hgrid, vgrid_soil_sb, &
           & t_cf('qmax_po4_om_sl', 'mol P kg-1 SOM', 'maximum po4 sorption capacity of SOM'), &
@@ -757,7 +757,7 @@ CONTAINS
           & loutput = .FALSE., &
           & lrestart = .FALSE., &
           & initval_r = 0.0_wp)
-    
+
         CALL mem%Add_var('fact_qsat_srf', mem%fact_qsat_srf, &
           & hgrid, surface, &
           & t_cf('fact_qsat_srf', 'unitless', 'factor representing air at saturating water content'), &

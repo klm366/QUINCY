@@ -33,15 +33,15 @@ MODULE mo_assimi_config_class
     INTEGER                 :: ncanopy            !< number of canopy layers
     ! ----------------------------------------------------------------------------------------------------- !
     !> MODEL_JSBACH
-    !> 
+    !>
     LOGICAL                 :: init_running_means ! initialize npp buffer for NLCC process
     REAL(wp), ALLOCATABLE   :: canopy_bound_lai(:)
     ! ----------------------------------------------------------------------------------------------------- !
     !> MODEL_QUINCY
-    !> 
+    !>
     LOGICAL                 :: flag_optimal_Nfraction     !< optimise leaf internal N allocation
     LOGICAL                 :: flag_t_resp_acclimation    !< whether or not to use the respiration temperature acclimation factor
-    LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax 
+    LOGICAL                 :: flag_t_jmax_acclimation    !< acclimation of optimum temperature for Jmax
     CHARACTER(15)           :: canopy_layer_scheme        !< select scheme to calculate canopy layer thicknesses [standard|fapar]
     CHARACTER(15)           :: canopy_conductance_scheme  !< select scheme to calculate canopy conductance [medlyn|ballberry]
    CONTAINS
@@ -136,7 +136,7 @@ CONTAINS
       & longname = 'Canopy layers from ASSIMI_ JSBACH', &
       & levels = (/ (REAL(i, kind=wp), i=1, config%ncanopy) /), units = '')
     CALL register_vgrid(vgrid_canopy)
-    
+
     ! Prepare canopy boundaries of lai_cl
     ALLOCATE(config%canopy_bound_lai(0:config%ncanopy))
     DO icanopy = 0,config%ncanopy
@@ -148,9 +148,9 @@ CONTAINS
     !! 
     !! here the thickness of each canopy layer is calculated (saved in the vgrid as dz(:)) \n
     !! this thickness is not directly given (by e.g. using the unit meter), but represented by the leaf mass in this layer \n
-    !! this leaf mass is measured as LAI [m2 m-2], that is, the actual thickness (in m) of canopy layer 2 depends on how much 
+    !! this leaf mass is measured as LAI [m2 m-2], that is, the actual thickness (in m) of canopy layer 2 depends on how much
     !!   vertical space (hight) needs to be covered to get the LAI specific to canopy layer 2
-    !! 
+    !!
     !! layer 1 is the top canopy layer (reversed order of vgrid axis) \n
     !! and the value of the upper bound of a layer is larger than the value of the lower bound of the same layer
     !!
@@ -167,7 +167,7 @@ CONTAINS
       END DO
     CASE DEFAULT
       WRITE(message_text,'(2a)') 'invalid canopy_layer_scheme', config%canopy_layer_scheme
-      CALL finish(routine, message_text) 
+      CALL finish(routine, message_text)
     END SELECT
 
     !> check validity of canopy-conductance scheme
@@ -181,24 +181,24 @@ CONTAINS
         &                         ' the local lctlib_g1 variable is set to lctlib%g1_bberry')
     CASE DEFAULT
       WRITE(message_text,'(2a)') 'invalid canopy_conductance_scheme: ', TRIM(config%canopy_conductance_scheme)
-      CALL finish(routine, message_text) 
+      CALL finish(routine, message_text)
     END SELECT
 
     !> Create vertical axis - canopy layers
-    !> 
+    !>
     !! these are "infrastructure" values, constant across PFTs and sites, and they do not interfere with tree height \n
     !! vgrid_canopy% lbounds, ubounds, and levels is calculated by 'new_vgrid()'
-    !! 
+    !!
     !! note: the axis of the canopy_layer vgrid is used as "reversed", i.e., layer 1 is the top canopy layer \n
     !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
     vgrid_canopy  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
       & longname = 'Canopy layers (leaf mass per layer as LAI) from ASSIMI_ QUINCY', &
       & units = 'm2 m-2 LAI', &
       ! levels=   , &
-      ! lbounds=  , & 
+      ! lbounds=  , &
       ! ubounds=  , &
       & dz = canopy_layer_thickness_profile(:))
-    CALL register_vgrid(vgrid_canopy)    
+    CALL register_vgrid(vgrid_canopy)
   END SUBROUTINE Init_assimi_config_quincy
 
 #endif

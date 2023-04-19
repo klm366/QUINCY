@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains the interface to the soil_biogeochemistry processes
 !!
 !! @author
@@ -59,7 +59,7 @@ MODULE mo_sb_interface
 
   ! ======================================================================================================= !
   !>Type definition: reset_sb_fluxes task
-  !> 
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_sb_fluxes
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_reset_sb_fluxes  !< Advances task computation for one timestep
@@ -68,25 +68,25 @@ MODULE mo_sb_interface
 
   ! ======================================================================================================= !
   !>Type definition: sb_rate_modifier task
-  !> 
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_sb_rate_modifier
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_sb_rate_modifier       !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_sb_rate_modifier    !< Aggregates computed task variables
   END TYPE tsk_sb_rate_modifier
-  
+
   ! ======================================================================================================= !
   !>Type definition: sb_simple_model task
-  !> 
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_sb_simple_model
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_sb_simple_model        !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_sb_simple_model     !< Aggregates computed task variables
   END TYPE tsk_sb_simple_model
-  
+
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Type definition: update_sb_jsm task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! TYPE, EXTENDS(t_jsb_process_task) :: tsk_update_sb_jsm
   ! CONTAINS
@@ -96,12 +96,12 @@ MODULE mo_sb_interface
 
   ! ======================================================================================================= !
   !>Type definition: sb_pools task
-  !> 
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_sb_pools
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_sb_pools         !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_sb_pools      !< Aggregates computed task variables
-  END TYPE tsk_sb_pools  
+  END TYPE tsk_sb_pools
 
   ! ======================================================================================================= !
   !>Type definition: time_average_soilbiogeochemistry task
@@ -111,9 +111,9 @@ MODULE mo_sb_interface
     PROCEDURE, NOPASS :: Integrate => update_time_average_soilbiogeochemistry    !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_time_average_soilbiogeochemistry !< Aggregates computed task variables
   END TYPE tsk_time_average_soilbiogeochemistry
-  
+
     ! ======================================================================================================= !
-    !>Type definition: copy_pool_to_bgcm_test task 
+    !>Type definition: copy_pool_to_bgcm_test task
     !>
     !> for testing only !!!
     !>
@@ -122,9 +122,9 @@ MODULE mo_sb_interface
       PROCEDURE, NOPASS :: Integrate => update_copy_pool_to_bgcm_test    !< Advances task computation for one timestep
       PROCEDURE, NOPASS :: Aggregate => aggregate_copy_pool_to_bgcm_test !< Aggregates computed task variables
     END TYPE tsk_copy_pool_to_bgcm_test
-    
+
     ! ======================================================================================================= !
-    !>Type definition: sb_pool_test task 
+    !>Type definition: sb_pool_test task
     !>
     !> for testing only !!!
     !>
@@ -133,9 +133,9 @@ MODULE mo_sb_interface
       PROCEDURE, NOPASS :: Integrate => update_sb_pool_test    !< Advances task computation for one timestep
       PROCEDURE, NOPASS :: Aggregate => aggregate_sb_pool_test !< Aggregates computed task variables
     END TYPE tsk_sb_pool_test
-    
+
     ! ======================================================================================================= !
-    !>Type definition: sb_bgcm_pool_test task 
+    !>Type definition: sb_bgcm_pool_test task
     !>
     !> for testing only !!!
     !>
@@ -147,28 +147,28 @@ MODULE mo_sb_interface
 
   ! ======================================================================================================= !
   !>Constructor interface: reset_sb_fluxes task
-  !> 
+  !>
   INTERFACE tsk_reset_sb_fluxes
     PROCEDURE Create_task_reset_sb_fluxes         !< Constructor function for task
   END INTERFACE tsk_reset_sb_fluxes
 
   ! ======================================================================================================= !
   !>Constructor interface: sb_rate_modifier task
-  !> 
+  !>
   INTERFACE tsk_sb_rate_modifier
     PROCEDURE Create_task_sb_rate_modifier         !< Constructor function for task
   END INTERFACE tsk_sb_rate_modifier
-  
+
   ! ======================================================================================================= !
   !>Constructor interface: sb_simple_model task
-  !> 
+  !>
   INTERFACE tsk_sb_simple_model
     PROCEDURE Create_task_sb_simple_model         !< Constructor function for task
   END INTERFACE tsk_sb_simple_model
-  
+
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor interface: update_sb_jsm task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! INTERFACE tsk_update_sb_jsm
   !   PROCEDURE Create_task_update_sb_jsm         !< Constructor function for task
@@ -176,7 +176,7 @@ MODULE mo_sb_interface
 
   ! ======================================================================================================= !
   !>Constructor interface: sb_pools task
-  !> 
+  !>
   INTERFACE tsk_sb_pools
     PROCEDURE Create_task_sb_pools         !< Constructor function for task
   END INTERFACE tsk_sb_pools
@@ -190,21 +190,21 @@ MODULE mo_sb_interface
 
     ! ======================================================================================================= !
     !>Constructor interface: copy_pool_to_bgcm_test task
-    !> 
+    !>
     INTERFACE tsk_copy_pool_to_bgcm_test
       PROCEDURE Create_task_copy_pool_to_bgcm_test         !< Constructor function for task
     END INTERFACE tsk_copy_pool_to_bgcm_test
-    
+
     ! ======================================================================================================= !
     !>Constructor interface: sb_pool_test task
-    !> 
+    !>
     INTERFACE tsk_sb_pool_test
       PROCEDURE Create_task_sb_pool_test         !< Constructor function for task
     END INTERFACE tsk_sb_pool_test
-    
+
     ! ======================================================================================================= !
     !>Constructor interface: sb_bgcm_pool_test task
-    !> 
+    !>
     INTERFACE tsk_sb_bgcm_pool_test
       PROCEDURE Create_task_sb_bgcm_pool_test         !< Constructor function for task
     END INTERFACE tsk_sb_bgcm_pool_test
@@ -215,7 +215,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Register tasks: SB_ process
-  !> 
+  !>
   SUBROUTINE Register_sb_tasks(this, model_id)
 
     CLASS(t_jsb_process), INTENT(inout) :: this
@@ -227,7 +227,7 @@ CONTAINS
     ! CALL this%Register_task(tsk_update_sb_jsm(model_id))
     CALL this%Register_task(tsk_sb_pools(model_id))
     CALL this%Register_task(tsk_time_average_soilbiogeochemistry(model_id))
-    
+
     ! testing
     CALL this%Register_task(tsk_copy_pool_to_bgcm_test(model_id))
     CALL this%Register_task(tsk_sb_pool_test(model_id))
@@ -250,51 +250,51 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Constructor: sb_rate_modifier task
-  !> 
+  !>
   FUNCTION Create_task_sb_rate_modifier(model_id) RESULT(return_ptr)
-  
+
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  
+
     ALLOCATE(tsk_sb_rate_modifier::return_ptr)
     CALL return_ptr%Construct(name='sb_rate_modifier', process_id=SB_, owner_model_id=model_id)
-  
+
   END FUNCTION Create_task_sb_rate_modifier
-  
+
   ! ======================================================================================================= !
   !>Constructor: sb_simple_model task
-  !> 
+  !>
   FUNCTION Create_task_sb_simple_model(model_id) RESULT(return_ptr)
-  
+
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  
+
     ALLOCATE(tsk_sb_simple_model::return_ptr)
     CALL return_ptr%Construct(name='sb_simple_model', process_id=SB_, owner_model_id=model_id)
-  
+
   END FUNCTION Create_task_sb_simple_model
-  
+
   ! !-----------------------------------------------------------------------------------------------------
   ! !> Constructor: update_sb_jsm task
-  ! !! 
+  ! !!
   ! !-----------------------------------------------------------------------------------------------------
   ! FUNCTION Create_task_update_sb_jsm(model_id) RESULT(return_ptr)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
   !   INTEGER,                   INTENT(in) :: model_id
   !   CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  ! 
-  ! 
+  !
+  !
   !   ALLOCATE(tsk_update_sb_jsm::return_ptr)
   !   CALL return_ptr%Construct(name='update_sb_jsm', process_id=SB_, owner_model_id=model_id)
-  ! 
+  !
   ! END FUNCTION Create_task_update_sb_jsm
 
   ! ======================================================================================================= !
   !>Constructor: sb_pools task
-  !> 
+  !>
   FUNCTION Create_task_sb_pools(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -302,12 +302,12 @@ CONTAINS
 
     ALLOCATE(tsk_sb_pools::return_ptr)
     CALL return_ptr%Construct(name='sb_pools', process_id=SB_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_sb_pools
 
   ! ======================================================================================================= !
   !>Constructor: tsk_time_average_soilbiogeochemistry task
-  !> 
+  !>
   FUNCTION Create_task_update_time_average_soilbiogeochemistry(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
@@ -315,38 +315,38 @@ CONTAINS
 
     ALLOCATE(tsk_time_average_soilbiogeochemistry::return_ptr)
     CALL return_ptr%Construct(name='tavrg_soilbiogeochemistry', process_id=SB_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_time_average_soilbiogeochemistry
-  
+
     ! ======================================================================================================= !
     !>Constructor: tsk_copy_pool_to_bgcm_test task
-    !> 
+    !>
     FUNCTION Create_task_copy_pool_to_bgcm_test(model_id) RESULT(return_ptr)
       INTEGER,                   INTENT(in) :: model_id
       CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  
+
       ALLOCATE(tsk_copy_pool_to_bgcm_test::return_ptr)
       CALL return_ptr%Construct(name='copy_pool_to_bgcm_test', process_id=SB_, owner_model_id=model_id)
     END FUNCTION Create_task_copy_pool_to_bgcm_test
-    
+
     ! ======================================================================================================= !
     !>Constructor: tsk_sb_pool_test task
-    !> 
+    !>
     FUNCTION Create_task_sb_pool_test(model_id) RESULT(return_ptr)
       INTEGER,                   INTENT(in) :: model_id
       CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  
+
       ALLOCATE(tsk_sb_pool_test::return_ptr)
       CALL return_ptr%Construct(name='sb_pool_test', process_id=SB_, owner_model_id=model_id)
     END FUNCTION Create_task_sb_pool_test
-    
+
     ! ======================================================================================================= !
     !>Constructor: tsk_sb_bgcm_pool_test task
-    !> 
+    !>
     FUNCTION Create_task_sb_bgcm_pool_test(model_id) RESULT(return_ptr)
       INTEGER,                   INTENT(in) :: model_id
       CLASS(t_jsb_process_task), POINTER    :: return_ptr
-  
+
       ALLOCATE(tsk_sb_bgcm_pool_test::return_ptr)
       CALL return_ptr%Construct(name='sb_bgcm_pool_test', process_id=SB_, owner_model_id=model_id)
     END FUNCTION Create_task_sb_bgcm_pool_test
@@ -401,7 +401,7 @@ CONTAINS
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     CALL calculate_time_average_soilbiogeochemistry(tile, options)
-    
+
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE update_time_average_soilbiogeochemistry
@@ -522,15 +522,15 @@ CONTAINS
     CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_bgcm_pool_mt)
     !------------------------------------------------------------------------------------------------------ !
     ! ! SB_ 2D
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute) 
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute) 
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute) 
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute) 
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute) 
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_n15_solute)
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_po4_solute)
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_n15_solute)
     ! ! SB_ 3D
-    ! dsl4jsb_Get_var3D_onChunk(SB_,       noy) 
-    ! dsl4jsb_Get_var3D_onChunk(SB_,       n2o) 
-    ! dsl4jsb_Get_var3D_onChunk(SB_,       n2) 
+    ! dsl4jsb_Get_var3D_onChunk(SB_,       noy)
+    ! dsl4jsb_Get_var3D_onChunk(SB_,       n2o)
+    ! dsl4jsb_Get_var3D_onChunk(SB_,       n2)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -568,7 +568,7 @@ CONTAINS
     !  both these pools are used for additional testing in the tasks:
     !   sb_pool_test
     !   sb_bgcm_pool_test
-    !  
+    !
     !  same for VEG_ veg_pool -> veg_bgcm_pool
     !
     ! SB_
@@ -764,11 +764,11 @@ CONTAINS
     CALL veg_pool%Associate_chunk_var_ptr(ics, ice, iblk)
     !------------------------------------------------------------------------------------------------------ !
     ! ! SB_ 2D
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute) 
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute) 
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)
     ! ! SB_ 3D
-    ! dsl4jsb_Get_var3D_onChunk(SB_,       noy) 
-    ! dsl4jsb_Get_var3D_onChunk(SB_,       n2) 
+    ! dsl4jsb_Get_var3D_onChunk(SB_,       noy)
+    ! dsl4jsb_Get_var3D_onChunk(SB_,       n2)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -776,7 +776,7 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     !> some test calculations for runtime testing
-    !> 
+    !>
     ! sb_pool
     sb_pool = sb_pool * 2.0_wp
     sb_pool = sb_pool * 3.0_wp
@@ -901,11 +901,11 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! ! SB_ 2D
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute) 
-    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute) 
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_nh4_solute)
+    ! dsl4jsb_Get_var2D_onChunk(SB_,       leaching_no3_solute)
     ! ! SB_ 3D
-    ! dsl4jsb_Get_var3D_onChunk(SB_,       noy) 
-    ! dsl4jsb_Get_var3D_onChunk(SB_,       n2) 
+    ! dsl4jsb_Get_var3D_onChunk(SB_,       noy)
+    ! dsl4jsb_Get_var3D_onChunk(SB_,       n2)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -914,7 +914,7 @@ CONTAINS
     !------------------------------------------------------------------------------------------------------ !
     !> some test calculations for runtime testing
     !> the same operations as with the "old pools" in update_sb_pool_test()
-    !> 
+    !>
     ! sb_pool
     ! some calculations, no changes
     sb_bgcm_pool_mt(:,:,:,:) = sb_bgcm_pool_mt(:,:,:,:) * 2.0_wp
@@ -925,7 +925,7 @@ CONTAINS
     sb_bgcm_pool_mt(:,:,:,:) = sb_bgcm_pool_mt(:,:,:,:) - 20.0_wp
     sb_bgcm_pool_mt(:,:,:,:) = sb_bgcm_pool_mt(:,:,:,:) / 3.0_wp
     sb_bgcm_pool_mt(:,:,:,:) = sb_bgcm_pool_mt(:,:,:,:) / 2.0_wp
-    ! calc only with: 
+    ! calc only with:
     !   SB_  woody litter, Carbon, sl 1
     !   VEG_ coarse roots, Carbon
     sb_bgcm_pool_mt(ixWooLit, ixC, :, 1) = sb_bgcm_pool_mt(ixWooLit, ixC, :, 1) + &
@@ -993,7 +993,7 @@ CONTAINS
   !>Implementation of "aggregate": sb_rate_modifier task
   !>
   SUBROUTINE aggregate_sb_rate_modifier(tile, options)
-  
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1038,14 +1038,14 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SB_, anaerobic_volume_fraction_sl   , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  
+
   END SUBROUTINE aggregate_sb_rate_modifier
-  
+
   ! ======================================================================================================= !
   !>Implementation of "aggregate": sb_simple_model task
   !>
   SUBROUTINE aggregate_sb_simple_model(tile, options)
-  
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
@@ -1085,7 +1085,7 @@ CONTAINS
     ! dsl4jsb_Aggregate_onChunk(SB_,    , weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  
+
   END SUBROUTINE aggregate_sb_simple_model
 
   ! !-----------------------------------------------------------------------------------------------------
@@ -1093,7 +1093,7 @@ CONTAINS
   ! !!  actually NOT using this routine, i.e., no var is aggregated here
   ! !-----------------------------------------------------------------------------------------------------
   ! SUBROUTINE aggr_update_sb_jsm(tile, options)
-  ! 
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
   !   ! 0.1 InOut
@@ -1129,28 +1129,28 @@ CONTAINS
   !   dsl4jsb_Get_config(SB_)
   !   ! Get process memories
   !   dsl4jsb_Get_memory(SB_)
-  ! 
-  ! 
+  !
+  !
   !   ! ------------------------------------------------------------------------------------------------------------
   !   ! Go aggregate
   !   ! ------------------------------------------------------------------------------------------------------------
-  ! 
-  ! 
+  !
+  !
   !   IF (tile%Has_children()) THEN
   !     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
   !     ! do not aggregate after this routine, only after update_sb_pools()
   !   END IF
-  ! 
+  !
   !   !X Implementation: Start your process scheme here...
   !   !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob und wie die einzelnen Tasks aggregiert werden sollen.
-  ! 
+  !
   !   IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-  ! 
+  !
   ! END SUBROUTINE aggr_update_sb_jsm
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": sb_pools task
-  !> 
+  !>
   SUBROUTINE aggregate_sb_pools(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1241,7 +1241,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_time_average_soilbiogeochemistry
-  
+
   ! ======================================================================================================= !
   !> Implementation of "aggregate": copy_pool_to_bgcm_test task
   !>
@@ -1274,7 +1274,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_copy_pool_to_bgcm_test
-  
+
   ! ======================================================================================================= !
   !> Implementation of "aggregate": sb_pool_test task
   !>
@@ -1307,7 +1307,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
   END SUBROUTINE aggregate_sb_pool_test
-  
+
   ! ======================================================================================================= !
   !> Implementation of "aggregate": sb_pool_test task
   !>

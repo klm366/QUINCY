@@ -514,7 +514,7 @@ CONTAINS
           IF (model%processes(WLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
           END IF
-          
+
           IF (model%processes(NLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
@@ -629,7 +629,7 @@ CONTAINS
     !   |---------------...------------------------...---
     !   |                           |       |           |
     !  pft01                       pft04   pft05        pft11
-    !   |                           | 
+    !   |                           |
     !   |---------------...         |---------------...
     !   |           |               |           |
     !  pft01_fc01  pft01_fc02 ...  pft04_fc01  pft04_fc02 ...
@@ -643,8 +643,8 @@ CONTAINS
 
     dsl4jsb_Get_config(FAGE_)
 
-    ! FAGE_ is the process that organises ageing in the age classes. 
-    ! It does not make sense to run age classes without FAGE_ and vice versa! 
+    ! FAGE_ is the process that organises ageing in the age classes.
+    ! It does not make sense to run age classes without FAGE_ and vice versa!
     IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
       CALL finish(TRIM(routine), "It does not make sense to use age classes without FAGE_ and vice versa!")
     END IF
@@ -737,7 +737,7 @@ CONTAINS
                   CALL pft_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
                 END IF
 
-              IF (model%lctlib(pft_ids(i))%ForestFlag) THEN 
+              IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
 
                 CALL pft_tile%Set_process_action(FAGE_, ON_TILE_, AGGREGATE_)
 
@@ -754,7 +754,7 @@ CONTAINS
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
     ! IF (ASSOCIATED(lake_tile)) CONTINUE
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
-        
+
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile, fage_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)

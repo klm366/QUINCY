@@ -302,7 +302,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
     END IF
-    !$claw acc update device(is_glacier) ! 
+    !$claw acc update device(is_glacier) !
     !$claw acc end data
 
     ! Grid cells without a real land fraction lead to numerical problems. As the land tile is
@@ -677,7 +677,7 @@ CONTAINS
 
     !$claw acc end data
 
-  END SUBROUTINE update_surface_energy_land 
+  END SUBROUTINE update_surface_energy_land
 
   SUBROUTINE surface_temp_implicit(alpha, steplen,     &
     &            pcp,                                  &

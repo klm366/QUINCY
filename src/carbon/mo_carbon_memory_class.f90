@@ -296,7 +296,7 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
-    
+
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(CARBON_)
 

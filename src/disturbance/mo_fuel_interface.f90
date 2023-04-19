@@ -189,7 +189,7 @@ CONTAINS
 
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
         CASE (1) !! jsbach algorithm
-  
+
           CALL calc_fuel_jsbach(       &
             & c_acid_ag1_ta(:),        & ! in
             & c_water_ag1_ta(:),       & ! in

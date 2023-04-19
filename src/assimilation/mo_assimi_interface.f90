@@ -63,9 +63,9 @@ MODULE mo_assimi_interface
 
   ! ======================================================================================================= !
   !> Type definition for assimilation_scaling_factors task
-  !>  
+  !>
   !>   MODEL_JSBACH
-  !>  
+  !>
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_assimilation_scaling_factors
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation_scaling_factors    !< Advances task computation for one timestep
@@ -79,9 +79,9 @@ MODULE mo_assimi_interface
 
   ! ======================================================================================================= !
   !> Type definition for canopy_cond_unstressed task
-  !>  
+  !>
   !>   MODEL_JSBACH
-  !>  
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_unstressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_unstressed    !< Advances task computation for one timestep
@@ -95,9 +95,9 @@ MODULE mo_assimi_interface
 
   ! ======================================================================================================= !
   !> Type definition for canopy_cond_stressed task
-  !>  
+  !>
   !>   MODEL_JSBACH
-  !>  
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_canopy_cond_stressed
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_canopy_cond_stressed    !< Advances task computation for one timestep
@@ -111,9 +111,9 @@ MODULE mo_assimi_interface
 
   ! ======================================================================================================= !
   !> Type definition for assimilation task
-  !>  
+  !>
   !>   MODEL_JSBACH
-  !>  
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_assimilation
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_assimilation    !< Advances task computation for one timestep
@@ -127,9 +127,9 @@ MODULE mo_assimi_interface
 
   ! ======================================================================================================= !
   !> Type definition for NPP buffer task
-  !>  
+  !>
   !>   MODEL_JSBACH
-  !>  
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_npp_buffer
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_npp_buffer    !< Advances task computation for one timestep
@@ -228,7 +228,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_assimi_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_reset_assimi_fluxes(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
@@ -240,7 +240,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_canopy_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_canopy_fluxes(model_id) RESULT(return_ptr)
     INTEGER,                   INTENT(in) :: model_id
@@ -1417,7 +1417,7 @@ CONTAINS
 
     USE mo_assimi_util, ONLY: real_reset_assimi_fluxes => reset_assimi_fluxes
     dsl4jsb_Use_processes ASSIMI_
-  
+
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
@@ -1439,7 +1439,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": reset_assimi_fluxes task
-  !> 
+  !>
   SUBROUTINE aggregate_reset_assimi_fluxes(tile, options)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -1479,7 +1479,7 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_reset_assimi_fluxes
-  
+
   ! ======================================================================================================= !
   !>Implementation of "update": canopy_fluxes task - QUINCY
   !>
@@ -1589,7 +1589,7 @@ CONTAINS
       & CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     CALL calculate_time_average_assimilation(tile, options)
-    
+
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
 
   END SUBROUTINE update_time_average_assimilation
@@ -1622,7 +1622,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(ASSIMI_)
 
-    ! ASSIMI_ 
+    ! ASSIMI_
     dsl4jsb_Aggregate_onChunk(ASSIMI_, soa_tsoa_mavg               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soa_tphen_mavg         , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(ASSIMI_, beta_soil_gs_tphen_mavg     , weighted_by_fract)

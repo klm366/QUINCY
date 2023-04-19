@@ -36,19 +36,19 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':assimi_init'
     ! ----------------------------------------------------------------------------------------------------- !
     model => Get_model(tile%owner_model_id)
-  
+
     ! select init routine depending on the model
     SELECT CASE (model%config%model_scheme)
     ! CASE (MODEL_JSBACH)
-    ! 
+    !
     CASE (MODEL_QUINCY)
       CALL assimi_init_quincy(tile)
     END SELECT
   END SUBROUTINE assimi_init
-  
+
   ! ======================================================================================================= !
   !> Run assimilation init specific to MODEL_QUINCY
-  !>  
+  !>
   SUBROUTINE assimi_init_quincy(tile)
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_class,             ONLY: Get_model
@@ -124,14 +124,14 @@ CONTAINS
     beta_soa_tphen_mavg(:,:)          = 1.0_wp
     beta_soil_ps(:,:)                 = 1.0_wp
     beta_soil_gs(:,:)                 = 1.0_wp
-    
+
     beta_air_daytime(:,:)             = 1.0_wp
     beta_air_daytime_dacc(:,:)        = 1.0_wp
     beta_soil_ps_daytime(:,:)         = 1.0_wp
     beta_soil_ps_daytime_dacc(:,:)    = 1.0_wp
     beta_soil_gs_daytime(:,:)         = 1.0_wp
     beta_soil_gs_daytime_dacc(:,:)    = 1.0_wp
-    
+
     beta_air_tfrac_mavg(:,:)          = 1.0_wp
     beta_air_tcnl_mavg(:,:)           = 1.0_wp
     beta_soil_ps_tfrac_mavg(:,:)      = 1.0_wp
@@ -140,7 +140,7 @@ CONTAINS
     beta_soil_gs_tfrac_mavg(:,:)      = 1.0_wp
     beta_soil_gs_tcnl_mavg(:,:)       = 1.0_wp
 
-    t_jmax_opt(:,:)                   = t_jmax_opt_min 
+    t_jmax_opt(:,:)                   = t_jmax_opt_min
   END SUBROUTINE assimi_init_quincy
 
 #endif

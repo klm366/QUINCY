@@ -87,7 +87,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER  :: model
     CHARACTER(len=*), PARAMETER :: routine = modname//':sse_init'
-    
+
     model => Get_model(tile%owner_model_id)
 
     IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
@@ -417,7 +417,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize soil properties - jsbach4
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_soil_properties(tile)
 
@@ -457,7 +457,7 @@ CONTAINS
       & vol_porosity_sl
 
     ! Locally allocated vectors
-    ! 
+    !
     dsl4jsb_Real3D_onDomain :: &
       & liquid_max,            &
       & fract_water,           &
@@ -605,7 +605,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(SSE_,   heat_cond)
     nproma = SIZE(heat_cond,1)
     nblks  = SIZE(heat_cond,2)
-    
+
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onDomain(HYDRO_, fract_org_sl)
     ELSE

@@ -45,7 +45,7 @@ MODULE mo_assimi_memory_class
     TYPE(t_jsb_var_real2d) ::     &
       & gross_assimilation          !< jsbach4: Gross photosynthesis on tile area at each time step
                                     !<          [mol(co2) / ( m^2(canopy ground) * s) ]  (mean value)
-                                    !< quincy: canopy-integrated gross assimilation rate [micro-mol CO2 m-2 s-1] 
+                                    !< quincy: canopy-integrated gross assimilation rate [micro-mol CO2 m-2 s-1]
 
     TYPE(t_jsb_var_real3d) ::     &
       & gross_assimilation_cl,    & !< jsbach4: Gross photosynthesis [ mol(co2) / (m^2(leaf area) * s) ]
@@ -144,15 +144,15 @@ MODULE mo_assimi_memory_class
     TYPE(t_jsb_var_real2d)    :: &
       & gross_assimilation_C13    , &  !< canopy-integrated gross assimilation rate [micro-mol 13CO2 m-2 s-1]
       & gross_assimilation_C14    , &  !< canopy-integrated gross assimilation rate [micro-mol 14CO2 m-2 s-1]
-      & net_assimilation          , &  !< canopy-integrated net assimilation rate [micro-mol CO2 m-2 s-1] 
-      & net_assimilation_boc      , &  !< net assimilation rate at the bottom of the canopy [micro-mol CO2 m-2 s-1] 
+      & net_assimilation          , &  !< canopy-integrated net assimilation rate [micro-mol CO2 m-2 s-1]
+      & net_assimilation_boc      , &  !< net assimilation rate at the bottom of the canopy [micro-mol CO2 m-2 s-1]
       & maint_respiration_leaf         !< canopy-integrated foliar respiration rate [micro-mol CO2 m-2 s-1]
 
     TYPE(t_jsb_var_real3d)    :: &
       & net_assimilation_cl       , &  !< net assimilation rate per canopy layer [micro-mol CO2 m-2 s-1]
       & maint_respiration_leaf_cl      !< foliar respiration rate per canopy layer [micro-mol CO2 m-2 s-1]
 
-    ! other 
+    ! other
     TYPE(t_jsb_var_real2d)    :: &
       & beta_air       , &  !< scaling factor to account for air humidity effects on conductance [unitless]
       & beta_soa       , &  !< scaling factor to account for the 'state of acclimation' of evergreen conifers in spring, calculated from soa_tsoa_mavg [unitless]
@@ -232,7 +232,7 @@ CONTAINS
     !>
     CASE DEFAULT
       WRITE(message_text,'(2a)') 'invalid model_scheme', model%config%model_scheme
-      CALL finish(routine, message_text) 
+      CALL finish(routine, message_text)
     END SELECT
   END SUBROUTINE Init_assimi_memory
 

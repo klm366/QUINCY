@@ -47,7 +47,7 @@ CONTAINS
     INTEGER                               :: iblk, ics, ice, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_assimi_fluxes'
 
-    dsl4jsb_Def_memory(ASSIMI_) 
+    dsl4jsb_Def_memory(ASSIMI_)
     ! -------------------------------------------------------------------------------------------------- !
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -206,7 +206,7 @@ CONTAINS
     !>1.0 daytime averages
     !>
     !>
-    
+
     !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
@@ -221,9 +221,9 @@ CONTAINS
     !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
-    !> 
+    !>
     !>    the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver 
+    !>    these are traced (and shifted) in update_a2l/update_atm2land() or directly in the ICON-Land standalone driver
     !>    Thus the current cos_zenith_angle is actually stored in prev_one_cos_zenith_angle
     DO ic = 1, nc
       IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
@@ -252,19 +252,19 @@ CONTAINS
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
-    
+
     !>  2.1 tphen (averages at the time-scale of phenology)
-    !> 
+    !>
     beta_soil_gs_tphen_mavg(:) = calc_time_mavg(beta_soil_gs_tphen_mavg(:), beta_soil_gs(:), mavg_period_tphen)
     beta_soa_tphen_mavg(:)     = calc_time_mavg(beta_soa_tphen_mavg(:), beta_soa(:), mavg_period_tphen)
 
     !>  2.2 soa time-scale
-    !> 
+    !>
     hlp(:)                     = t_air(:) - Tzero     ! convert from Kelvin to deg Celsius
     soa_tsoa_mavg(:)           = calc_time_mavg(soa_tsoa_mavg(:), hlp(:), mavg_period_tsoa)
 
     !>  2.3 tfrac (averages at the time-scale of within-leaf N allocation fractions)
-    !> 
+    !>
     beta_soil_ps_tfrac_mavg(:) = calc_time_mavg(beta_soil_ps_tfrac_mavg(:), beta_soil_ps_daytime(:), &
                                                 mavg_period_tfrac)
     beta_soil_gs_tfrac_mavg(:) = calc_time_mavg(beta_soil_gs_tfrac_mavg(:), beta_soil_gs_daytime(:), &

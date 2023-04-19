@@ -110,7 +110,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: SSE_ process
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_sse_tasks(process, model_id)
 
@@ -121,7 +121,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     TYPE(t_jsb_model), POINTER :: model
-    
+
     model   => Get_model(model_id)
 
     CALL process%Register_task(tsk_soil_and_snow_temp(model_id))
@@ -131,7 +131,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> update_soil_and_snow_temperature
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
@@ -688,7 +688,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> update_soil_and_snow_properties
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_and_snow_properties(tile, options)
 

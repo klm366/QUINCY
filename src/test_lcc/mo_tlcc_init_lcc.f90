@@ -29,8 +29,8 @@ MODULE mo_tlcc_init_lcc
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_tlcc_init_lcc_class'
   CHARACTER(len=*), PARAMETER :: procname = 'tlcc'
-  
-  INTEGER, PARAMETER :: nr_of_active_cqts = 1 
+
+  INTEGER, PARAMETER :: nr_of_active_cqts = 1
   INTEGER, PARAMETER :: nr_of_passive_cqts = 2
   INTEGER, PARAMETER :: nr_of_involved_descendant_tiles = 3
 
@@ -49,14 +49,14 @@ CONTAINS
     INTEGER :: passive_cqts(nr_of_passive_cqts)
     CHARACTER(len=SHORT_NAME_LEN) :: involved_child_tiles(nr_of_involved_descendant_tiles)
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     ! JN-TODO: reconsider what to define here and how
     IF (.NOT. tile%name .EQ. 'veg') RETURN
 
     active_cqts = (/ LIVE_CARBON_CQ_TYPE /)
     passive_cqts = (/ AG_DEAD_C_CQ_TYPE, BG_DEAD_C_CQ_TYPE /)
 
-    ! ... pfts selected in a way to not interfere with age classes usecase ... 
+    ! ... pfts selected in a way to not interfere with age classes usecase ...
     involved_child_tiles = [character(len=SHORT_NAME_LEN) :: 'pft05', 'pft06', 'pft11' ]
 
     CALL init_lcc(procname, tile, active_cqts, passive_cqts, involved_child_tiles)

@@ -565,7 +565,7 @@ CONTAINS
     REAL(wp) :: delta_hs
     REAL(wp) :: delta_t_lice
 
-    !$claw sca 
+    !$claw sca
 
     hcap_ice = rhoi * ci * hi_min + rhoh2o * cs * hs
 

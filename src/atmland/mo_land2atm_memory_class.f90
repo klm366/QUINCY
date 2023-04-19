@@ -281,13 +281,13 @@ CONTAINS
         & prefix, suffix,                                                                          &
         & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
         & initval_r=0.0_wp )
-        
+
     END IF
 #endif
 
-    ! lake 
+    ! lake
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
-      
+
       CALL mem%Add_var('latent_hflx_wtr', mem%latent_hflx_wtr, &
         & hgrid, surface, &
         & t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over water'), &

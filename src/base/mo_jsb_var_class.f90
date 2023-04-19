@@ -2267,15 +2267,15 @@ CONTAINS
     REAL(wp),                INTENT(in) :: scalar
     CLASS(t_jsb_var_real2d), INTENT(in) :: var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
-  
+
     TYPE(t_subset) :: sub
     INTEGER        :: ics, ice, iblk, nb, nc
-  
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_real2d'
-  
+
     sub = var2%Get_subset()
     ics = sub%ics ; ice = sub%ice ; iblk = sub%iblk ; nb = sub%nb ; nc = sub%nc
-  
+
     var3%name             = var2%name
     var3%full_name        = var2%full_name
     var3%owner_proc_id    = var2%owner_proc_id
@@ -2283,15 +2283,15 @@ CONTAINS
     var3%owner_tile_path  = var2%owner_tile_path
     var3%missval          = var2%missval
     ALLOCATE(var3%ptr2d, source=var2%ptr2d)
-  
+
     IF (sub%type == ON_CHUNK) THEN
       var3%ptr2d(ics:ice,iblk) = scalar + var2%ptr2d(ics:ice,iblk)
     ELSE
       var3%ptr2d(:,:)          = scalar + var2%ptr2d(:,:)
     END IF
-  
+
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Add_scalar_and_real2d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,iblk) = var_real2d(:,iblk) + field1d
@@ -2326,7 +2326,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Add_real2d_and_field1d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,iblk) = field1d + var_real2d(:,iblk)
@@ -2361,7 +2361,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Add_field1d_and_real2d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d + field2d
@@ -2398,13 +2398,13 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Add_real2d_and_field2d
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d + var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Add_real2d_and_real2d(var1, var2) RESULT(var3)
-  
+
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
@@ -2431,7 +2431,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Add_real2d_and_real2d
 
   !-----------------------------------------------------------------------------------------------------
@@ -2724,7 +2724,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Subtract_real2d_minus_field1d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d - field2d
@@ -2761,13 +2761,13 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Subtract_real2d_minus_field2d
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d - var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Subtract_real2d_minus_real2d(var1, var2) RESULT(var3)
-  
+
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
@@ -2794,7 +2794,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Subtract_real2d_minus_real2d
 
   !-----------------------------------------------------------------------------------------------------
@@ -3050,7 +3050,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Multiply_real2d_with_field1d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,iblk) = field1d * var_real2d(:,iblk)
@@ -3085,7 +3085,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Multiply_field1d_with_real2d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d * field2d
@@ -3122,7 +3122,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Multiply_real2d_with_field2d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = field2d * var_real2d
@@ -3159,13 +3159,13 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Multiply_field2d_with_real2d
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d * var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Multiply_real2d_with_real2d(var1, var2) RESULT(var3)
-  
+
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
@@ -3192,7 +3192,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Multiply_real2d_with_real2d
 
   !-----------------------------------------------------------------------------------------------------
@@ -3525,7 +3525,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Div_real2d_by_field1d
   ! -----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d / field2d
@@ -3562,13 +3562,13 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-    
+
   END FUNCTION Div_real2d_by_field2d
   !-----------------------------------------------------------------------------------------------------
   ! var_real2d(:,:) = var_real2d / var_real2d | ON_CHUNK & ON_DOMAIN
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Div_real2d_by_real2d(var1, var2) RESULT(var3)
-  
+
     CLASS(t_jsb_var_real2d), INTENT(in) :: var1, var2
     TYPE(t_jsb_var_real2d),  TARGET     :: var3
 
@@ -3595,7 +3595,7 @@ CONTAINS
     END IF
 
     var3%ptr => var3%ptr2d(:,:)
-  
+
   END FUNCTION Div_real2d_by_real2d
 
   !-----------------------------------------------------------------------------------------------------
@@ -3744,5 +3744,5 @@ CONTAINS
     var3%ptr => var3%ptr3d(:,:,:)
 
   END FUNCTION Div_real3d_by_real3d
-  
+
 #endif

@@ -189,7 +189,7 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-      
+
       CALL mem%Add_var( 'fract_fpc', mem%fract_fpc,                            &
         & hgrid, surface,                                                      &
         & t_cf('foliage_projected_cover', '', ''),                             &
@@ -367,7 +367,7 @@ CONTAINS
 
         END IF ! l_forestRegrowth
       END IF ! logrop
-      
+
       ! grib setting for: lai differentiation box tile and other tiles
       ! this is done because ... TODO
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -375,7 +375,7 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-    
+
       CALL mem%Add_var( 'lai', mem%lai,                                        &
         & hgrid, surface,                                                      &
         & t_cf('leaf_area_index', '', ''),                                     &
@@ -383,14 +383,14 @@ CONTAINS
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp )
-        
+
       CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
         & hgrid, vgrid_canopy,                                               &
         & t_cf('LAI for each canopy layer', '', ''),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=.FALSE., initval_r=0.0_wp )
-        
+
 #ifdef __ICON__
       ! --------------------------------------------------------------------------------------------------- !
       ! Diagnostic global carbon sums for experiment monitoring

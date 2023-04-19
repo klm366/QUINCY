@@ -163,7 +163,7 @@ CONTAINS
     !>
     dsl4jsb_Get_lcc_relocations(WLCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
-    
+
 
     ! Allocate area vectors
     ALLOCATE(initial_area(nc, nr_of_tiles))
