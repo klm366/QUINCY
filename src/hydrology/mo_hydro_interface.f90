@@ -436,10 +436,18 @@ CONTAINS
       & weq_rootzone_max,   &
       & trans_tmp
 
-    LOGICAL  :: lstart
-    LOGICAL  :: ltpe_closed
-    INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: dtime, w_skin_max_config
+    INTEGER  :: iblk, ics, ice, nc, ic
+    REAL(wp) :: dtime
+    ! Variables from configs
+    REAL(wp) :: &
+      & w_skin_max_config, &
+      & snow_depth_max_config
+    LOGICAL  :: &
+      & is_experiment_start,    &
+      & l_compat401_config,     &
+      & l_dynsnow_config,       &
+      & l_infil_subzero_config, &
+      & ltpe_closed
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -450,18 +458,23 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
+    is_experiment_start = is_time_experiment_start(options%current_datetime)
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    l_compat401_config = model%config%l_compat401
 
     dsl4jsb_Get_config(HYDRO_)
-    dsl4jsb_Get_config(SSE_)
+    w_skin_max_config      = dsl4jsb_Config(HYDRO_)%w_skin_max ! Maximum capacity of skin reservoir (soil + canopy)
+    snow_depth_max_config  = dsl4jsb_Config(HYDRO_)%snow_depth_max
+    l_infil_subzero_config = dsl4jsb_Config(HYDRO_)%l_infil_subzero
 
-    ! Get reference to variables for current block
-    !
+    dsl4jsb_Get_config(SSE_)
+    l_dynsnow_config = dsl4jsb_Config(SSE_)%l_dynsnow
+
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_memory(SEB_)
@@ -484,18 +497,19 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)           ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)         ! out
 
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_0 tile_name=tile%name
-      runoff  (:) = rain(:) + snow(:) + evapotrans(:)
-      infilt(:)   = 0._wp
-      drainage(:) = 0._wp
-      weq_snow(:) = 0._wp
-      evapo_snow(:) = evapopot(:)
-      !$claw end expand
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
+      DO ic=1,nc
+        runoff  (ic) = rain(ic) + snow(ic) + evapotrans(ic)
+        infilt(ic)   = 0._wp
+        drainage(ic) = 0._wp
+        weq_snow(ic) = 0._wp
+        evapo_snow(ic) = evapopot(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+      !$ACC WAIT(1)
 
       RETURN
     END IF
-
-    !$claw acc data pcreate(skinres_max, skinres_canopy_max, trans_tmp)
 
     dsl4jsb_Get_memory(SSE_)
     IF (tile%contains_vegetation) THEN
@@ -546,63 +560,51 @@ CONTAINS
       END IF
     END IF
 
-    IF (is_time_experiment_start(options%current_datetime)) THEN          ! Start of experiment
-      lstart = .TRUE.
-      weq_snow(:) = 0._wp
-    ELSE
-      lstart = .FALSE.
+    IF (is_experiment_start) THEN ! Start of experiment
+      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        weq_snow(ic) = 0._wp
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
     END IF
 
-    ! Maximum capacity of skin reservoir (soil + canopy)
-    w_skin_max_config = dsl4jsb_Config(HYDRO_)%w_skin_max
-    IF (tile%is_vegetation .OR. tile%is_land) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_1 tile_name=tile%name
-      skinres_canopy_max(:) = w_skin_max_config * lai(:) * fract_fpc_max(:)
-    ELSE
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_2 tile_name=tile%name
-      skinres_canopy_max(:) = 0._wp
-    END IF
-    IF (tile%contains_soil) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_3 tile_name=tile%name
-      skinres_max(:) =  w_skin_max_config + skinres_canopy_max(:)
-    ELSE
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_4 tile_name=tile%name
-      skinres_max(:) = 0._wp
-    END IF
-
-    ! weq_snow_soil_old(:) = weq_snow_soil(:) ! Remember old snow on ground for use in snow model
+    !$ACC DATA CREATE(w_skin_max, w_skin_canopy_max, trans_tmp)
 
     IF (tile%is_glacier) THEN
-      !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_hydrology_glacier_1 tile_name=tile%name
-      CALL calc_surface_hydrology_glacier( &
-        & lstart,                          & !< in
-        & dtime,                           & !< in
-        & t_unfilt(:),                     & !< in
-        & fract_snow(:),                   & !< in
-        & hcap_grnd(:),                    & !< in
-        & evapotrans(:),                   & !< in
-        & evapopot(:),                     & !< in
-        & rain(:),                         & !< in
-        & snow(:),                         & !< in
-        & weq_glac(:),                     & !< inout
-        & q_snocpymlt(:),                  & !< out
-        & snowmelt(:),                     & !< out
-        & runoff_glac(:),                  & !< out
-        & pme_glacier = runoff(:)          & !< out, P-E ... used as runoff for HD model
-        & )
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_5 tile_name=tile%name
-      infilt(:)   = 0._wp
-      drainage(:) = 0._wp
-      weq_snow_soil(:) = 0._wp
-      evapo_snow(:) = evapopot(:)
-      !$claw end expand
-      IF (model%config%l_compat401) THEN
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_6 tile_name=tile%name
-        snow_soil_dens(:) = 330._wp
-      ELSE
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_7 tile_name=tile%name
-        snow_soil_dens(:) = dens_snow
-      END IF
+      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+
+        CALL calc_surface_hydrology_glacier( &
+          & is_experiment_start,             & !< in
+          & dtime,                           & !< in
+          & t_unfilt(ic),                    & !< in
+          & fract_snow(ic),                  & !< in
+          & hcap_grnd(ic),                   & !< in
+          & evapotrans(ic),                  & !< in
+          & evapopot(ic),                    & !< in
+          & rain(ic),                        & !< in
+          & snow(ic),                        & !< in
+          & weq_glac(ic),                    & !< inout
+          & q_snocpymlt(ic),                 & !< out
+          & snowmelt(ic),                    & !< out
+          & runoff_glac(ic),                 & !< out
+          & pme_glacier = runoff(ic)         & !< out, P-E ... used as runoff for HD model
+          & )
+        infilt(ic)   = 0._wp
+        drainage(ic) = 0._wp
+        weq_snow_soil(ic) = 0._wp
+        evapo_snow(ic) = evapopot(ic)
+        IF (model%config%l_compat401) THEN
+          snow_soil_dens(ic) = 330._wp
+        ELSE
+          snow_soil_dens(ic) = dens_snow
+        END IF
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
     ELSE
       ! Compute actual and maximum total rootzone moisture (liquid + ice)
       CALL get_amount_in_rootzone( &
@@ -613,23 +615,37 @@ CONTAINS
         &  dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl) * dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl),    &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone_max)
-      IF (tile%is_vegetation) THEN
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_8 tile_name=tile%name
-        trans_tmp(:) = transpiration(:)
-      ELSE
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_9 tile_name=tile%name
-        trans_tmp(:) = 0._wp
-      END IF
-      !$claw sca forward update savepoint=ser_jsb_hydro_calc_surface_hydrology_land_1 tile_name=tile%name
+
+      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        IF (tile%is_vegetation .OR. tile%is_land) THEN
+          skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fpc_max(ic)
+        ELSE
+          skinres_canopy_max(ic) = 0._wp
+        END IF
+        IF (tile%contains_soil) THEN
+          skinres_max(ic) =  w_skin_max_config + skinres_canopy_max(ic)
+        ELSE
+          skinres_max(ic) = 0._wp
+        END IF
+        IF (tile%is_vegetation) THEN
+          trans_tmp(ic) = transpiration(ic)
+        ELSE
+          trans_tmp(ic) = 0._wp
+        END IF
+      END DO
+      !$ACC END PARALLEL
+
       CALL calc_surface_hydrology_land(   &
         ! in
-        & nc,                             & !< Number of grid cells
-        & lstart,                         & !< T: Start of experiment
-        & dtime,                          & !< time step length [s]
-        & ltpe_closed,                    & !< T: terra planet setup without runoff
-        & dsl4jsb_Config(SSE_)%l_dynsnow, & !< T: Compute density of snow dynamically
-        & dsl4jsb_Config(HYDRO_)%l_infil_subzero, & !< T: Allow infiltration at soil temperatures below 0degC
-        & dsl4jsb_Config(HYDRO_)%snow_depth_max,  & !< Snow depth limit [m water equivalent]; -1. for no limit
+        & nc,                             & !< in
+        & is_experiment_start,            & !< in
+        & dtime,                          & !< in
+        & ltpe_closed     ,               & !< in
+        & l_dynsnow_config,               & !< in
+        & l_infil_subzero_config,         & !< in
+        & snow_depth_max_config,          & !< in
         & steepness,                      & !< Shape parameter describing orography    [/]
         & t_soil_sl(:,1),                 & !< Temperature of the uppermost soil layer [K]
         & t_unfilt(:),                    & !< Surface tempemperature [K] (unfiltered)
@@ -665,25 +681,40 @@ CONTAINS
         & runoff(:)                       & !< Surface runoff [m water equivalent]
         & )
 
-      IF (model%config%l_compat401) THEN
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_10 tile_name=tile%name
-        snow_soil_dens(:) = 330._wp
+      IF (l_compat401_config) THEN
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        DO ic=1,nc
+          snow_soil_dens(ic) = 330._wp
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
 
     END IF
 
+    !$ACC PARALLEL DEFAULT(PRESENT)
     IF (tile%is_glacier) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_11 tile_name=tile%name
-      weq_snow(:) = 0._wp
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        weq_snow(ic) = 0._wp
+      END DO
+      !$ACC END LOOP
     ELSE IF (tile%is_bare) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_12 tile_name=tile%name
-      weq_snow(:) = weq_snow_soil(:)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        weq_snow(ic) = weq_snow_soil(ic)
+      END DO
+      !$ACC END LOOP
     ELSE IF (tile%is_vegetation .OR. tile%is_land) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_surface_hydrology_expand_13 tile_name=tile%name
-      weq_snow(:) = weq_snow_soil(:) + weq_snow_can(:)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
+      DO ic=1,nc
+        weq_snow(ic) = weq_snow_soil(ic) + weq_snow_can(ic)
+      END DO
+      !$ACC END LOOP
     END IF
+    !$ACC END PARALLEL
 
-    !$claw acc end data
+    !$ACC END DATA
+
 
   END SUBROUTINE update_surface_hydrology
   !
@@ -786,8 +817,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_w
 
-    INTEGER  :: iblk, ics, ice, i
-    INTEGER  :: nsoil
+    INTEGER  :: iblk, ics, ice, nc, ic
+    INTEGER  :: nsoil, is
 
     REAL(wp) :: N_perc
     REAL(wp), ALLOCATABLE ::  fract_perc(:,:)          ! fraction of the soil with connected organic pathways
@@ -807,6 +838,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -842,17 +874,20 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)   ! out
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_p_wilt_sl)      ! out
 
-    DO i=1,nsoil
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_0 tile_name=tile%name soil=i
-      hyd_cond_sat_sl   (:,i) = hyd_cond_sat(:)
-      vol_porosity_sl   (:,i) = vol_porosity(:)
-      bclapp_sl         (:,i) = bclapp(:)
-      matrix_pot_sl     (:,i) = matrix_pot(:)
-      pore_size_index_sl(:,i) = pore_size_index(:)
-      vol_field_cap_sl  (:,i) = vol_field_cap(:)
-      vol_p_wilt_sl     (:,i) = vol_p_wilt(:)
-      !$claw end expand
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+    DO is=1,nsoil
+      DO ic=1,nc
+        hyd_cond_sat_sl   (ic,is) = hyd_cond_sat(ic)
+        vol_porosity_sl   (ic,is) = vol_porosity(ic)
+        bclapp_sl         (ic,is) = bclapp(ic)
+        matrix_pot_sl     (ic,is) = matrix_pot(ic)
+        pore_size_index_sl(ic,is) = pore_size_index(ic)
+        vol_field_cap_sl  (ic,is) = vol_field_cap(ic)
+        vol_p_wilt_sl     (ic,is) = vol_p_wilt(ic)
+      END DO
     END DO
+    !$ACC END PARALLEL
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic) THEN
       ALLOCATE(hyd_cond_sat_org(SIZE(hyd_cond_sat),nsoil))
@@ -863,70 +898,83 @@ CONTAINS
       ALLOCATE(vol_field_cap_org(SIZE(hyd_cond_sat),nsoil))
       ALLOCATE(vol_p_wilt_org(SIZE(hyd_cond_sat),nsoil))
 
-      ! Use different parameters for top layer and deeper layers
-      hyd_cond_sat_org(:,1) = hyd_cond_sat_org_top
-      vol_porosity_org(:,1) = vol_porosity_org_top
-      bclapp_org(:,1) = bclapp_org_top
-      matrix_pot_org(:,1) = matrix_pot_org_top
-      pore_size_index_org(:,1) = pore_size_index_org_top
-      vol_field_cap_org(:,1) = vol_field_cap_org_top
-      vol_p_wilt_org(:,1) = vol_p_wilt_org_top
-
-      DO i=2,nsoil
-        hyd_cond_sat_org(:,i) = hyd_cond_sat_org_below
-        vol_porosity_org(:,i) = vol_porosity_org_below
-        bclapp_org(:,i) = bclapp_org_below
-        matrix_pot_org(:,i) = matrix_pot_org_below
-        pore_size_index_org(:,i) = pore_size_index_org_below
-        vol_field_cap_org(:,i) = vol_field_cap_org_below
-        vol_p_wilt_org(:,i) = vol_p_wilt_org_below
-      END DO
-
-      ! Saturated hydraulic conductivity following percolation theory 
-      ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
-      ! @todo: add CLAW directives
-
-      N_perc = (1._wp - thresh_org)**(-beta_perc)
-
       ALLOCATE(fract_perc(SIZE(hyd_cond_sat),nsoil))          ! fraction of the soil with connected organic pathways
       ALLOCATE(fract_uncon(SIZE(hyd_cond_sat),nsoil))         ! fraction of the soil with unconnected organic matter
       ALLOCATE(hyd_cond_sat_uncon(SIZE(hyd_cond_sat),nsoil))  ! saturated hydraulic conductivity of 'unconnected' fraction
 
-      WHERE(fract_org_sl(:,:) > thresh_org)
-        ! Connected flow pathways consisting of organic material only exist
-        fract_perc(:,:)  = MIN(1._wp, N_perc * fract_org_sl(:,:) * (fract_org_sl(:,:)-thresh_org)**beta_perc)
-        fract_uncon(:,:) = 1._wp - fract_perc(:,:)
-      ELSEWHERE
-        ! No connected organic matter pathways exist, and flow passes mineral and organic soil components in series
-        fract_perc(:,:)  = 0._wp
-        fract_uncon(:,:) = 1._wp
-      END WHERE
+      ! Use different parameters for top layer and deeper layers
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1)
+      DO ic=1,nc
+        hyd_cond_sat_org(ic,1) = hyd_cond_sat_org_top
+        vol_porosity_org(ic,1) = vol_porosity_org_top
+        bclapp_org(ic,1) = bclapp_org_top
+        matrix_pot_org(ic,1) = matrix_pot_org_top
+        pore_size_index_org(ic,1) = pore_size_index_org_top
+        vol_field_cap_org(ic,1) = vol_field_cap_org_top
+        vol_p_wilt_org(ic,1) = vol_p_wilt_org_top
+      END DO
+      !$ACC END LOOP
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      DO is=2,nsoil
+        DO ic=1,nc
+          hyd_cond_sat_org(ic,is) = hyd_cond_sat_org_below
+          vol_porosity_org(ic,is) = vol_porosity_org_below
+          bclapp_org(ic,is) = bclapp_org_below
+          matrix_pot_org(ic,is) = matrix_pot_org_below
+          pore_size_index_org(ic,is) = pore_size_index_org_below
+          vol_field_cap_org(ic,is) = vol_field_cap_org_below
+          vol_p_wilt_org(ic,is) = vol_p_wilt_org_below
+        END DO
+      END DO
+      !$ACC END LOOP
 
-      WHERE(fract_org_sl(:,:) > 0._wp)
-        hyd_cond_sat_uncon(:,:) = fract_uncon(:,:)                                           &
-          &                       * ( (1._wp - fract_org_sl(:,:)) / hyd_cond_sat_sl(:,:)     &
-          &                            + (fract_org_sl(:,:) - fract_perc(:,:)) / hyd_cond_sat_org(:,:) )**(-1._wp)
-        hyd_cond_sat_sl(:,:)    = fract_uncon(:,:) * hyd_cond_sat_uncon(:,:)  &
-          &                       + fract_perc(:,:) * hyd_cond_sat_org(:,:)
-      END WHERE
+      ! Saturated hydraulic conductivity following percolation theory 
+      ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
 
-      DEALLOCATE(fract_perc)
-      DEALLOCATE(fract_uncon)
-      DEALLOCATE(hyd_cond_sat_uncon)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      DO is=2,nsoil
+        DO ic=1,nc
+          IF (fract_org_sl(ic,is) > thresh_org) THEN
+            ! Connected flow pathways consisting of organic material only exist
+            N_perc = (1._wp - thresh_org)**(-beta_perc)
+            fract_perc(ic,is)  = MIN(1._wp, N_perc * fract_org_sl(ic,is) * (fract_org_sl(ic,is)-thresh_org)**beta_perc)
+            fract_uncon(ic,is) = 1._wp - fract_perc(ic,is)
+          ELSE
+            ! No connected organic matter pathways exist, and flow passes mineral and organic soil components in series
+            fract_perc(ic,is)  = 0._wp
+            fract_uncon(ic,is) = 1._wp
+          END IF
 
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_soil_properties_expand_2 tile_name=tile%name soil=i
-      vol_porosity_sl   (:,:) = (1._wp - fract_org_sl(:,:)) * vol_porosity_sl   (:,:) &
-        &                       + fract_org_sl(:,:) * vol_porosity_org(:,:)
-      bclapp_sl         (:,:) = (1._wp - fract_org_sl(:,:)) * bclapp_sl         (:,:) &
-        &                       + fract_org_sl(:,:) * bclapp_org(:,:)
-      matrix_pot_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * matrix_pot_sl     (:,:) &
-        &                       + fract_org_sl(:,:) * matrix_pot_org(:,:)
-      pore_size_index_sl(:,:) = (1._wp - fract_org_sl(:,:)) * pore_size_index_sl(:,:) &
-        &                       + fract_org_sl(:,:) * pore_size_index_org(:,:)
-      vol_field_cap_sl  (:,:) = (1._wp - fract_org_sl(:,:)) * vol_field_cap_sl  (:,:) &
-        &                       + fract_org_sl(:,:) * vol_field_cap_org(:,:)
-      vol_p_wilt_sl     (:,:) = (1._wp - fract_org_sl(:,:)) * vol_p_wilt_sl     (:,:) &
-        &                       + fract_org_sl(:,:) * vol_p_wilt_org(:,:)
+          IF (fract_org_sl(ic,is) > 0._wp) THEN
+            hyd_cond_sat_uncon(ic,is) = fract_uncon(ic,is)                                           &
+              &                       * ( (1._wp - fract_org_sl(ic,is)) / hyd_cond_sat_sl(ic,is)     &
+              &                            + (fract_org_sl(ic,is) - fract_perc(ic,is)) / hyd_cond_sat_org(ic,is) )**(-1._wp)
+            hyd_cond_sat_sl(ic,is)    = fract_uncon(ic,is) * hyd_cond_sat_uncon(ic,is)  &
+              &                       + fract_perc(ic,is) * hyd_cond_sat_org(ic,is)
+          END IF
+        END DO
+      END DO
+      !$ACC END LOOP
+
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      DO is=1,nsoil
+        DO ic=1,nc
+          vol_porosity_sl   (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_porosity_sl   (ic,is) &
+            &                       + fract_org_sl(ic,is) * vol_porosity_org(ic,is)
+          bclapp_sl         (ic,is) = (1._wp - fract_org_sl(ic,is)) * bclapp_sl         (ic,is) &
+            &                       + fract_org_sl(ic,is) * bclapp_org(ic,is)
+          matrix_pot_sl     (ic,is) = (1._wp - fract_org_sl(ic,is)) * matrix_pot_sl     (ic,is) &
+            &                       + fract_org_sl(ic,is) * matrix_pot_org(ic,is)
+          pore_size_index_sl(ic,is) = (1._wp - fract_org_sl(ic,is)) * pore_size_index_sl(ic,is) &
+            &                       + fract_org_sl(ic,is) * pore_size_index_org(ic,is)
+          vol_field_cap_sl  (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_field_cap_sl  (ic,is) &
+            &                       + fract_org_sl(ic,is) * vol_field_cap_org(ic,is)
+          vol_p_wilt_sl     (ic,is) = (1._wp - fract_org_sl(ic,is)) * vol_p_wilt_sl     (ic,is) &
+            &                       + fract_org_sl(ic,is) * vol_p_wilt_org(ic,is)
+        END DO
+      END DO
+      !$ACC END PARALLEL
 
       DEALLOCATE(hyd_cond_sat_org)
       DEALLOCATE(vol_porosity_org)
@@ -936,7 +984,9 @@ CONTAINS
       DEALLOCATE(vol_field_cap_org)
       DEALLOCATE(vol_p_wilt_org)
 
-      !$claw end expand
+      DEALLOCATE(fract_perc)
+      DEALLOCATE(fract_uncon)
+      DEALLOCATE(hyd_cond_sat_uncon)
     END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1004,6 +1054,9 @@ CONTAINS
     !
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
+    
+    ! Pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: wtr_soilhyd_res
 
     ! Locally allocated vectors
 
@@ -1014,7 +1067,7 @@ CONTAINS
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
@@ -1057,12 +1110,10 @@ CONTAINS
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
-
-    !$claw acc data create(tile, tile%fract, tile_fract)
-    !$claw acc parallel loop gang vector
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)
+    
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
-    !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
@@ -1106,8 +1157,10 @@ CONTAINS
       & )
 
     ! Convert soil hydrology balance error to volume
-    dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_res) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_soilhyd_res) &
-      & * tile_fract(:) * area(:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    DO ic = 1, nc
+      wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
+    END DO
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1188,13 +1241,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: swpar_srf_down
     dsl4jsb_Real2D_onChunk :: canopy_cond_unlimited
 
-    INTEGER :: iblk, ics, ice
+    INTEGER :: iblk, ics, ice, nc, ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_unstressed'
 
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
@@ -1211,8 +1265,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! OUT
 
     ! Compute (max) canopy (stomatal) conductance with no water stress
-    !$claw expand parallel
-    canopy_cond_unlimited(:) = get_canopy_conductance( lai(:), swpar_srf_down(:) )
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      canopy_cond_unlimited(ic) = get_canopy_conductance( lai(ic), swpar_srf_down(ic) )
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE update_canopy_cond_unstressed
   !
@@ -1273,6 +1330,8 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_vgrid), POINTER :: soil_w
+
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_config(SSE_)
 
@@ -1294,8 +1353,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
 
-    INTEGER :: iblk, ics, ice, ic, nc
-
+    INTEGER :: iblk, ics, ice, nc, ic
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
@@ -1310,6 +1368,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    soil_w => Get_vgrid('soil_depth_water')
 
     dsl4jsb_Get_config(HYDRO_)
     dsl4jsb_Get_config(SSE_)
@@ -1357,10 +1416,18 @@ CONTAINS
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_pot(:))
       CALL get_amount_in_rootzone(MIN(wtr_soil_pot_scool_sl(:,:), wtr_soil_sl(:,:)),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
-      wtr_rootzone_avail(:) = MAX(wtr_rootzone(:) - wtr_rootzone_scool_act(:), 0._wp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      DO ic=1,nc
+        wtr_rootzone_avail(ic) = MAX(wtr_rootzone(ic) - wtr_rootzone_scool_act(ic), 0._wp)
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
       ! Available liquid water in the root zone
-      wtr_rootzone_avail(:) = wtr_rootzone(:)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      DO ic=1,nc
+        wtr_rootzone_avail(ic) = wtr_rootzone(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     ! Calculate maximum plant available water
@@ -1368,24 +1435,42 @@ CONTAINS
     !   subtracted.
     ! pdv: Here also the question is how to treat the potential rootzone soil moisture
     !   Definitly ice should be removed - otherwise plants suffer constant waterstress in permafrost-regions:
-    !   If supercooled water is asssumed to be unavailable for plants then this should also be accounted for in wtr_rootzone_avail_max
+    !   If supercooled water is asssumed to be unavailable for plants then this should also be accounted for
+    !   in wtr_rootzone_avail_max
 
     IF (dsl4jsb_Config(SSE_)%l_freeze .AND. dsl4jsb_Config(SSE_)%l_supercool) THEN
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-      wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:) - wtr_rootzone_scool_pot(:), 0._wp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      DO ic=1,nc
+        wtr_rootzone_avail_max(ic) = MAX(weq_rootzone_max(ic) - ice_rootzone(ic) - wtr_rootzone_scool_pot(ic), 0._wp)
+      END DO
+      !$ACC END PARALLEL LOOP
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
     ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
-      wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:), 0._wp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      DO ic=1,nc
+        wtr_rootzone_avail_max(ic) = MAX(weq_rootzone_max(ic) - ice_rootzone(ic), 0._wp)
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
-      wtr_rootzone_avail_max(:) = weq_rootzone_max(:)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      DO ic=1,nc
+        wtr_rootzone_avail_max(ic) = weq_rootzone_max(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     ! Calculate water stress
     ! @todo: maybe use the distributed permanent wilting point/field cap from above and change get_water_stress_factor function
-    water_stress(:) = get_water_stress_factor(wtr_rootzone_avail(:), wtr_rootzone_avail_max(:), &
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    DO ic=1,nc
+      water_stress(ic) = &
+        & get_water_stress_factor(wtr_rootzone_avail(ic), wtr_rootzone_avail_max(ic), &
             &                 config_w_soil_crit_fract, config_w_soil_wilt_fract)
+    END DO
+    !$ACC END PARALLEL LOOP
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
     !$claw acc data present(wtr_rootzone_avail, wtr_rootzone_avail_max, soil_depth_sl, root_depth_sl, wtr_rootzone_rel)
@@ -1482,10 +1567,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: q_air
     dsl4jsb_Real2D_onChunk :: press_srf
 
-    INTEGER :: iblk, ics, ice, nc
-    ! LOGICAL, DIMENSION(options%nc) :: q_air_gt_qsat_tmp
-    LOGICAL, ALLOCATABLE :: q_air_gt_qsat_tmp(:)
-
+    INTEGER :: iblk, ics, ice, nc, ic
+    LOGICAL :: q_air_gt_qsat_tmp
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_canopy_cond_stressed'
 
@@ -1513,20 +1596,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_unlimited) ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    canopy_cond_limited) ! out
 
-    !$cla$w acc data create(q_air_gt_qsat_tmp)
-    ALLOCATE(q_air_gt_qsat_tmp(nc))
-    !$claw acc enter data create(q_air_gt_qsat_tmp)
-    !$claw expand parallel update savepoint=ser_jsb_hydro_update_canopy_cond_stressed_expand_0 tile_name=tile%name
-    q_air_gt_qsat_tmp(:) = q_air(:) > qsat(t(:),press_srf(:))
-    ! Compute (actual) canopy (stomatal) conductance under water stress.
-    canopy_cond_limited(:) = get_canopy_conductance(canopy_cond_unlimited(:),  & ! in, unstressed canopy conductance
-                                                    water_stress(:),           & ! in, water stress factor
-                                                    q_air_gt_qsat_tmp(:)       & ! in, atmosphere saturated?
-                                                    )
-    !$claw end expand
-    !$cla$w acc end data
-    !$claw acc exit data delete(q_air_gt_qsat_tmp)
-    DEALLOCATE(q_air_gt_qsat_tmp)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    DO ic=1,nc
+      q_air_gt_qsat_tmp = q_air(ic) > qsat(t(ic),press_srf(ic))
+      ! Compute (actual) canopy (stomatal) conductance under water stress.
+      canopy_cond_limited(ic) = get_canopy_conductance(canopy_cond_unlimited(ic), & ! in, unstressed canopy conductance
+                                                       water_stress(ic),          & ! in, water stress factor
+                                                       q_air_gt_qsat_tmp          & ! in, atmosphere saturated?
+                                                      )
+    END DO
+    !$ACC END PARALLEL LOOP
+    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1617,18 +1697,13 @@ CONTAINS
 
     ! Locally allocated vectors
     !
-    ! REAL(wp) ::                  &
-    !   & q_air        (options%nc), &  !< Humidity at lowest atmospheric level [kg kg-1]
-    !   & q_air_eff    (options%nc), &  !< Effective humidity at lowest atmospheric level
-    !   & qsat_srf_eff (options%nc), &  !< Effective surface saturation specific humidity
-    !   & heat_tcoef   (options%nc)     !< Heat transfer coefficient (rho*C_h*|v|)
-    REAL(wp), ALLOCATABLE ::                  &
-      & q_air        (:), &  !< Humidity at lowest atmospheric level [kg kg-1]
-      & q_air_eff    (:), &  !< Effective humidity at lowest atmospheric level
-      & qsat_srf_eff (:), &  !< Effective surface saturation specific humidity
-      & heat_tcoef   (:)     !< Heat transfer coefficient (rho*C_h*|v|)
+    REAL(wp), DIMENSION(options%nc) ::                  &
+      & q_air        , &  !< Humidity at lowest atmospheric level [kg kg-1]
+      & q_air_eff    , &  !< Effective humidity at lowest atmospheric level
+      & qsat_srf_eff , &  !< Effective surface saturation specific humidity
+      & heat_tcoef        !< Heat transfer coefficient (rho*C_h*|v|)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: steplen
 
     TYPE(t_jsb_model), POINTER :: model
@@ -1647,9 +1722,7 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
 
-    !$cla$w acc data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
-    ALLOCATE(q_air(nc),q_air_eff(nc),qsat_srf_eff(nc),heat_tcoef(nc))
-    !$claw acc enter data create(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
+    !$ACC DATA CREATE(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
 
     ! Get reference to variables for current block
     !
@@ -1671,11 +1744,15 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_,     qsat_lwtr)     ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,   evapo_wtr)     ! out
 
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_1 tile_name=tile%name
-      q_air(:) = q_acoef_wtr(:) * qsat_lwtr(:) + q_bcoef_wtr(:) ! New moisture at lowest atmospheric level by back-substitution
-      heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)  ! Transfer coefficient
-      evapo_wtr (:) = heat_tcoef(:) * (q_air(:) - qsat_lwtr(:)) ! Potential evaporation
-      !$claw end expand
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
+      DO ic=1,nc
+        q_air(ic) = q_acoef_wtr(ic) * qsat_lwtr(ic) + q_bcoef_wtr(ic) ! New moisture at lowest atmospheric level by back-substitution
+        heat_tcoef(ic) = heat_transfer_coef(drag_wtr(ic), steplen)    ! Transfer coefficient
+        evapo_wtr (ic) = heat_tcoef(ic) * (q_air(ic) - qsat_lwtr(ic)) ! Potential evaporation
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(A2L_,   q_acoef_ice)       ! in
@@ -1685,18 +1762,33 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)        ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)         ! out
 
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_2 tile_name=tile%name
-        q_air(:) = q_acoef_ice(:) * qsat_lice(:) + q_bcoef_ice(:) ! New moisture at lowest atmospheric level by back-substitution
-        heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)  ! Transfer coefficient
-        evapo_ice (:) = heat_tcoef(:) * (q_air(:) - qsat_lice(:)) ! Potential evaporation
-        evapopot  (:) = (1._wp - fract_lice(:)) * evapo_wtr   (:) + fract_lice(:) * evapo_ice   (:)
-        !$claw end expand
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+        !$ACC LOOP GANG VECTOR
+        DO ic=1,nc
+          ! New moisture at lowest atmospheric level by back-substitution
+          q_air(ic) = q_acoef_ice(ic) * qsat_lice(ic) + q_bcoef_ice(ic)
+          heat_tcoef(ic) = heat_transfer_coef(drag_ice(ic), steplen)    ! Transfer coefficient
+          evapo_ice (ic) = heat_tcoef(ic) * (q_air(ic) - qsat_lice(ic)) ! Potential evaporation
+          evapopot  (ic) = (1._wp - fract_lice(ic)) * evapo_wtr(ic) + fract_lice(ic) * evapo_ice(ic)
+        END DO
+        !$ACC END LOOP
+        !$ACC END PARALLEL
       ELSE
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_3 tile_name=tile%name
-        evapopot  (:) = evapo_wtr(:)
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+        !$ACC LOOP GANG VECTOR
+        DO ic=1,nc
+          evapopot(ic) = evapo_wtr(ic)
+        END DO
+        !$ACC END LOOP
+        !$ACC END PARALLEL
       END IF
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_4 tile_name=tile%name
-      evapotrans(:) = evapopot(:)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
+      DO ic=1,nc
+        evapotrans(ic) = evapopot(ic)
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
 
     ELSE IF (tile%contains_soil .OR. tile%contains_glacier) THEN
 
@@ -1713,31 +1805,31 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    transpiration)          ! out
       END IF
 
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_5 tile_name=tile%name
-      q_air(:) = q_acoef(:) * qsat_star(:) + q_bcoef(:) ! New moisture at lowest atmospheric level by back-substitution
-      heat_tcoef(:) = heat_transfer_coef(drag_srf(:), steplen)  ! Transfer coefficient
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC LOOP GANG VECTOR
+      DO ic=1,nc
+        q_air(ic) = q_acoef(ic) * qsat_star(ic) + q_bcoef(ic)       ! New moisture at lowest atmospheric level by back-substitution
+        heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen)  ! Transfer coefficient
 
-      ! Compute effective air moisture and surface saturation humidity
-      q_air_eff(:) = q_effective( SPREAD(0._wp, NCOPIES=nc, DIM=1), q_air(:), &
-                              & SPREAD(1._wp, NCOPIES=nc, DIM=1), SPREAD(0._wp, NCOPIES=nc, DIM=1))
-      qsat_srf_eff(:) = q_effective(qsat_star(:), q_air(:), fact_qsat_srf(:), fact_q_air(:))
-
-      evapotrans_lnd(:)          = heat_tcoef(:) * (q_air_eff(:) - qsat_srf_eff(:)) ! Evapotranspiration
-      evapotrans(:) = evapotrans_lnd(:)
-      evapopot(:)           = heat_tcoef(:) * (q_air    (:) - qsat_star   (:)) ! Potential evaporation
-      !$claw end expand
-      IF (tile%contains_vegetation) THEN
-        !$claw expand parallel update savepoint=ser_jsb_hydro_update_evaporation_expand_6 tile_name=tile%name
-        transpiration(:)    = fact_qsat_trans_srf(:) * evapopot(:)             ! Transpiration
-      END IF
+        ! Compute effective air moisture and surface saturation humidity
+        q_air_eff(ic)      = q_effective( 0._wp, q_air(ic), 1._wp, 0._wp)
+        qsat_srf_eff(ic)   = q_effective(qsat_star(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic))
+        evapotrans_lnd(ic) = heat_tcoef(ic) * (q_air_eff(ic) - qsat_srf_eff(ic)) ! Evapotranspiration
+        evapotrans(ic)     = evapotrans_lnd(ic)
+        evapopot(ic)       = heat_tcoef(ic) * (q_air    (ic) - qsat_star   (ic)) ! Potential evaporation
+        IF (tile%contains_vegetation) THEN
+          transpiration(ic) = fact_qsat_trans_srf(ic) * evapopot(ic)          ! Transpiration
+        END IF
+      END DO
+      !$ACC END LOOP
+      !$ACC END PARALLEL
 
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
 
-    !$cla$w acc end data
-    !$claw acc exit data delete(q_air, q_air_eff, qsat_srf_eff, heat_tcoef)
-    DEALLOCATE(q_air,q_air_eff,qsat_srf_eff,heat_tcoef)
+    !$ACC END DATA
+    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1873,9 +1965,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snow_and_skin_fraction'
 
-    INTEGER  :: iblk, ics, ice, i
+    INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime, steplen, config_w_skin_max
-    !$claw verbatim INTEGER, SAVE :: task_counter = 1
 
     ! Declare pointers for process configuration and memory
     dsl4jsb_Def_config(SEB_)
@@ -1909,6 +2000,7 @@ CONTAINS
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
+    nc      = options%nc
     dtime   = options%dtime
     steplen = options%steplen
 
@@ -1925,11 +2017,13 @@ CONTAINS
 
     ! Use simple scalar for GPU
     config_w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
-
-    !$claw acc enter data pcreate(skinres_max, skinres_canopy_max)
-    !$claw expand parallel update
-    skinres_max(:) = config_w_skin_max
-
+    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC LOOP GANG VECTOR
+    DO ic=1,nc
+      skinres_max(ic) = config_w_skin_max
+    END DO
+    !$ACC END PARALLEL
+ 
     dsl4jsb_Get_memory(HYDRO_)
 
     ! First handle LAKE_TYPE lct
@@ -1937,14 +2031,16 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow_lice)    ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
-        !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_lice_1   &
-        !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-        CALL calc_wskin_fractions_lice( &
-          & weq_snow_lice(:),           & ! in
-          & fract_snow_lice(:)          & ! out
-          & )
+        !$ACC PARALLEL DEFAULT(PRESENT)
+        !$ACC LOOP GANG VECTOR
+        DO ic=1,nc
+          CALL calc_wskin_fractions_lice( &
+            & weq_snow_lice(ic),          & ! in
+            & fract_snow_lice(ic)         & ! out
+            & )
+        END DO
+        !$ACC END PARALLEL
       END IF
-      !$claw acc exit data delete(skinres_max, skinres_canopy_max)
       RETURN
     END IF
 
@@ -1982,48 +2078,42 @@ CONTAINS
 #ifndef _OPENACC
     IF (ANY(t(:) < 50._wp .OR. t(:) > 400._wp)) THEN
       IF (ANY(t(:) < 50._wp)) THEN
-        i = MINLOC(t(:), DIM=1)
+        ic = MINLOC(t(:), DIM=1)
       ELSE
-        i = MaxLOC(t(:), DIM=1)
+        ic = MaxLOC(t(:), DIM=1)
       END IF
-      WRITE (message_text,*) 'Temperature out of bounds on tile ', tile%name, &
-        &  ' at ', '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t: ', t(i)
+      WRITE (message_text,*) 'Temperature out of bounds on tile ', tile%name,     &
+        &  ' at ', '(', grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t: ', t(ic)
       CALL finish(TRIM(routine), message_text)
     END IF
 #endif
 
-    ! Maximum capacity of skin reservoir (soil + canopy)
-    IF (tile%is_vegetation .OR. tile%is_land) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_0 &
-      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      skinres_canopy_max(:) = config_w_skin_max * lai(:) * fract_fpc_max(:)
-    ELSE
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_1 &
-      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      skinres_canopy_max(:) = 0._wp
-    END IF
-    IF (tile%contains_soil) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_2 &
-      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      skinres_max(:) = config_w_skin_max + skinres_canopy_max(:)
-    ELSE
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_3 &
-      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      skinres_max(:) = 0._wp
-    END IF
+    !$ACC DATA CREATE(w_skin_max, w_skin_canopy_max)
 
-    IF (tile%is_glacier) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_snow_and_skin_fraction_expand_4 &
-      !$claw tile_name=tile%name dtime=dtime steplen=steplen task_counter=task_counter
-      fract_snow(:)      = 1._wp
-      fract_snow_soil(:) = 1._wp
-      !$claw end expand
-    END IF
+    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC LOOP GANG VECTOR
+    DO ic=1,nc
+      ! Maximum capacity of skin reservoir (soil + canopy)
+      IF (tile%is_vegetation .OR. tile%is_land) THEN
+        skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fpc_max(ic)
+      ELSE
+        skinres_canopy_max(ic) = 0._wp
+      END IF
+      IF (tile%contains_soil) THEN
+        skinres_max(ic) = config_w_skin_max + skinres_canopy_max(ic)
+      ELSE
+        skinres_max(ic) = 0._wp
+      END IF
+
+      IF (tile%is_glacier) THEN
+        fract_snow(ic)      = 1._wp
+        fract_snow_soil(ic) = 1._wp
+      END IF
+    END DO
+    !$ACC END PARALLEL
 
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_can)       ! in
-      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_veg_1 tile_name=tile%name &
-      !$claw dtime=dtime steplen=steplen task_counter=task_counter
       CALL calc_wskin_fractions_veg( &
         & dtime,                     & ! in
         & steplen,                   & ! in
@@ -2040,14 +2130,15 @@ CONTAINS
         & fract_wet(:),              & ! out
         & fract_snow_soil(:)         & ! out
         & )
-      !$claw expand parallel update
-      fract_snow(:) = fract_snow_soil(:)
+      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC LOOP GANG VECTOR
+      DO ic=1,nc
+        fract_snow(ic) = fract_snow_soil(ic)
+      END DO
+      !$ACC END PARALLEL
     END IF
 
-
     IF (tile%is_bare) THEN
-      !$claw sca forward update savepoint=ser_jsb_hydro_calc_wskin_fractions_bare_1 tile_name=tile%name &
-      !$claw dtime=dtime steplen=steplen  task_counter=task_counter
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in
         & steplen,                    & ! in
@@ -2062,12 +2153,16 @@ CONTAINS
         & fract_wet(:),               & ! out
         & fract_snow_soil(:)          & ! out
         & )
-      !$claw expand parallel update
-      fract_snow(:)  = fract_snow_soil(:)
-   END IF
+      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC LOOP GANG VECTOR
+      DO ic=1,nc
+        fract_snow(ic) = fract_snow_soil(ic)
+      END DO
+      !$ACC END PARALLEL
+    END IF
 
-   !$claw acc exit data delete(skinres_max, skinres_canopy_max)
-   !$claw verbatim  task_counter = task_counter + 1
+    !$ACC END DATA
+
   END SUBROUTINE update_snow_and_skin_fraction
 
   ! -------------------------------------------------------------------------------------------------------
@@ -2156,12 +2251,12 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp) :: &
-      & tile_fract (options%nc),  &
-      & weq_land_new(options%nc), &
+      & tile_fract(options%nc),   &
       & tile_area(options%nc),    &
-      & wb_threshold(options%nc)
+      & wb_threshold(options%nc), &
+      & weq_land_new
 
-    INTEGER  :: iblk, ics, ice, nc, i
+    INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
@@ -2205,65 +2300,55 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
 
-    !$claw acc data create(tile, tile%fract, tile_fract, weq_land_new)
+    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC LOOP GANG VECTOR PRIVATE(weq_land_new)
+    DO ic=1,nc
+      tile_fract(ic) = tile%fract(ics-1+ic,iblk)
+      tile_area(ic)  = tile_fract(ic) * area(ic)
 
-    !$claw acc parallel loop gang vector
-    DO i=1,nc
-      tile_fract(i) = tile%fract(ics-1+i,iblk)
-      tile_area(i)  = tile_fract(i) * area(i)
-    END DO
+      weq_fluxes(ic) = rain(ic) + snow(ic) + evapotrans(ic) - runoff(ic) - drainage(ic)
+      weq_fluxes(ic) = weq_fluxes(ic) * tile_fract(ic) * area(ic) / rhoh2o               ! kg m-2 s-1 -> m3/s
 
-    !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
-    weq_fluxes(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:)
-    weq_fluxes(:) = weq_fluxes(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
-    !$claw end expand
+      IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
+        weq_land_new = (wtr_skin(ic) + weq_snow(ic) + SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:)))  &
+          &              * tile_fract(ic) * area(ic)          ! m -> m^3
+      ELSE
+        weq_land_new = 0._wp
+      END IF
 
-    IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_1 tile_name=tile%name
-      weq_land_new(:) = (  wtr_skin(:) + weq_snow(:)                                       &
-        &                + SUM(wtr_soil_sl(:,:), DIM=2) + SUM(ice_soil_sl(:,:), DIM=2)  &
-        &               ) * tile_fract(:) * area(:)  ! m -> m^3
-    ELSE
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_2 tile_name=tile%name
-      weq_land_new(:) = 0._wp
-    END IF
+      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
+        weq_balance_err(ic) = weq_land(ic) + weq_fluxes(ic) * dtime - weq_land_new
+      END IF
 
-    IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-      !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_3 tile_name=tile%name
-      weq_balance_err(:) = weq_land(:) + weq_fluxes(:) * dtime - weq_land_new(:)
-    END IF
+      ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
+      ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
+      wb_threshold(ic) = 1.0e-11_wp * tile_area(ic) / dtime
 
-    ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
-    ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
-    wb_threshold(:) = 1.0e-11_wp * tile_area(:) / dtime
-
-    !$claw acc parallel loop gang vector
-    DO i=1,nc
-      IF (ABS(weq_balance_err(i)) > wb_threshold(i)) THEN
+      IF (ABS(weq_balance_err(ic)) > wb_threshold(ic)) THEN
         IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
-          WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',           NEW_LINE('a'), &
-            & 'on ',TRIM(tile%name),' tile at', lat(i),'N and ',lon(i),'E:',         NEW_LINE('a'), &
-            & 'WB Error:           ', weq_balance_err(i),                            NEW_LINE('a'), &
-            & 'Rainfall:           ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Snowfall:           ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Evapotranspiration: ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Runoff:             ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Drainage:           ', drainage(i)   * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Skin reservoir:     ', wtr_skin(i)           * tile_area(i),          NEW_LINE('a'), &
-            & 'Snow reservoir:     ', weq_snow(i)           * tile_area(i),          NEW_LINE('a'), &
-            & 'Soil water:         ', SUM(wtr_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
-            & 'Soil ice:           ', SUM(ice_soil_sl(i,:)) * tile_area(i),          NEW_LINE('a'), &
-            & 'Old reservoirs:     ', weq_land(i),                                   NEW_LINE('a'), &
-            & 'ET deficit:         ', evapo_deficit(i) * tile_area(i) / rhoh2o * dtime
+          WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',             NEW_LINE('a'), &
+            & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E:',         NEW_LINE('a'), &
+            & 'WB Error:           ', weq_balance_err(ic),                             NEW_LINE('a'), &
+            & 'Rainfall:           ', rain(ic)       * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Snowfall:           ', snow(ic)       * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Evapotranspiration: ', evapotrans(ic) * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Runoff:             ', runoff(ic)     * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Drainage:           ', drainage(ic)   * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Skin reservoir:     ', wtr_skin(ic)           * tile_area(ic),          NEW_LINE('a'), &
+            & 'Snow reservoir:     ', weq_snow(ic)           * tile_area(ic),          NEW_LINE('a'), &
+            & 'Soil water:         ', SUM(wtr_soil_sl(ic,:)) * tile_area(ic),          NEW_LINE('a'), &
+            & 'Soil ice:           ', SUM(ice_soil_sl(ic,:)) * tile_area(ic),          NEW_LINE('a'), &
+            & 'Old reservoirs:     ', weq_land(ic),                                    NEW_LINE('a'), &
+            & 'ET deficit:         ', evapo_deficit(ic) * tile_area(ic) / rhoh2o * dtime
         ELSE
-          WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',           NEW_LINE('a'), &
-            & 'on ',TRIM(tile%name),' tile at', lat(i),'N and ',lon(i),'E:',         NEW_LINE('a'), &
-            & 'WB Error:           ', weq_balance_err(i),                            NEW_LINE('a'), &
-            & 'Rainfall:           ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Snowfall:           ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Evapotranspiration: ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Runoff:             ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
-            & 'Drainage:           ', drainage(i)   * tile_area(i) / rhoh2o * dtime
+          WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',             NEW_LINE('a'), &
+            & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E:',         NEW_LINE('a'), &
+            & 'WB Error:           ', weq_balance_err(ic),                             NEW_LINE('a'), &
+            & 'Rainfall:           ', rain(ic)       * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Snowfall:           ', snow(ic)       * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Evapotranspiration: ', evapotrans(ic) * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Runoff:             ', runoff(ic)     * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Drainage:           ', drainage(ic)   * tile_area(ic) / rhoh2o * dtime
         END IF
         IF (dsl4jsb_Config(HYDRO_)%enforce_water_budget) THEN
           CALL finish (TRIM(routine), message_text_long)
@@ -2271,12 +2356,11 @@ CONTAINS
           CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
         END IF
       END IF
+      
+      weq_land(ic) = weq_land_new
     END DO
-
-    !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_4 tile_name=tile%name
-    weq_land(:) = weq_land_new(:)
-
-    !$claw acc end data
+    !$ACC END LOOP
+    !$ACC END PARALLEL
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

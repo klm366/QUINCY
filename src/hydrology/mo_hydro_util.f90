@@ -24,7 +24,7 @@ MODULE mo_hydro_util
   PUBLIC :: get_amount_in_rootzone
 
   INTERFACE get_amount_in_rootzone
-    !MODULE PROCEDURE get_amount_in_rootzone_1d
+    ! MODULE PROCEDURE get_amount_in_rootzone_1d
     MODULE PROCEDURE get_amount_in_rootzone_2d
   END INTERFACE
 
@@ -45,33 +45,35 @@ CONTAINS
       & bottom_m1  , &  !< Cumulative depth of soil down to previous layer
       & root_depth      !< Total depth of root zone
 
-    INTEGER :: n, i
+    INTEGER :: nsoil, is
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_d'
 
-    !$claw acc routine seq
+    !$ACC ROUTINE SEQ
 
-    n  = SIZE(dz)       ! Number of soil layers
+    nsoil  = SIZE(dz)       ! Number of soil layers
     bottom    = SUM(dz (:))
     root_depth = SUM(dz_root(:))
+#ifndef _OPENACC
     IF (root_depth > bottom + EPSILON(1._wp)) THEN
-      !$claw remove
       CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-      !$claw end remove
     ELSE
+#endif
       bottom    = 0._wp
       bottom_m1 = 0._wp
       ws_root   = 0._wp
-      DO i=1,n
-        bottom    = bottom + dz(i)
+      DO is = 1, nsoil
+        bottom    = bottom + dz(is)
         IF (root_depth >= bottom) THEN                ! Root zone extends to below current layer
-          ws_root = ws_root + ws(i)
+          ws_root = ws_root + ws(is)
         ELSE IF (root_depth > bottom_m1) THEN         ! Root zone above current layer but below previous layer, i.e.
-          ws_root = ws_root + ws(i) * (root_depth - bottom_m1) / dz(i) ! Root z. partially extends into current layer
+          ws_root = ws_root + ws(is) * (root_depth - bottom_m1) / dz(is) ! Root z. partially extends into current layer
         END IF
-        bottom_m1 = bottom_m1 + dz(i)
+        bottom_m1 = bottom_m1 + dz(is)
       END DO
+#ifndef _OPENACC
     END IF
+#endif
 
   END SUBROUTINE get_amount_in_rootzone_1d
 
@@ -91,43 +93,50 @@ CONTAINS
       & bottom_m1  (SIZE(ws_root,1)), & !< Cumulative depth of soil down to previous layer
       & root_depth (SIZE(ws,1))         !< Total depth of root zone
 
-    INTEGER :: n, i, j
+    INTEGER :: nc, ic, nsoil, is
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_amount_in_rootzone_2d'
 
-    n  = SIZE(dz,2)       ! Number of soil layers
+    nc     = SIZE(ws,1)
+    nsoil  = SIZE(dz,2)       ! Number of soil layers
 
-    !$claw acc data present(ws, dz, dz_root, ws_root) create(bottom, bottom_m1, root_depth)
-    !$claw acc parallel default(present)
-    !$claw acc loop gang vector
-    ws_root(:) = 0._wp
-
-    DO j = 1, SIZE(ws, 1)
-      bottom (j)    = SUM(dz (j,:))
-      root_depth(j) = SUM(dz_root(j,:))
-      IF (root_depth(j) > bottom(j) + EPSILON(1._wp)) THEN
-        !$claw remove
-        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-        !$claw end remove
-      ELSE
-        bottom(j)    = 0._wp
-        bottom_m1(j) = 0._wp
-        ws_root  (j) = 0._wp
-
-        !$claw acc loop seq
-        DO i=1,n
-          bottom(j)    = bottom(j) + dz(j,i)
-          IF (root_depth(j) >= bottom(j)) THEN                ! Root zone extends to below current layer
-            ws_root(j) = ws_root(j) + ws(j,i)
-          ELSE IF (root_depth(j) > bottom_m1(j)) THEN         ! Root zone above current layer but below previous layer, i.e.
-            ws_root(j) = ws_root(j) + ws(j,i) * (root_depth(j) - bottom_m1(j)) / dz(j,i) ! Root z. partially extends into current layer
-          END IF
-          bottom_m1(j) = bottom_m1(j) + dz(j,i)
-        END DO
-      END IF
+    !$ACC PARALLEL LOOP VECTOR COLLAPS(1)
+    DO ic = 1, nc
+      ws_root(ic) = 0._wp
     END DO
-    !$claw acc end parallel
-    !$claw acc end data
+
+    !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
+    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC LOOP GANG VECTOR
+    DO ic = 1, nc
+      bottom(ic)    = SUM(dz (ic,:))
+      root_depth(ic) = SUM(dz_root(ic,:))
+#ifndef _OPENACC
+      IF (root_depth(ic) > bottom(ic) + EPSILON(1._wp)) THEN
+        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
+      ELSE
+#endif
+        bottom(ic)    = 0._wp
+        bottom_m1(ic) = 0._wp
+        ws_root  (ic) = 0._wp
+
+        !$ACC LOOP SEQ
+        DO is = 1, nsoil
+          bottom(ic)    = bottom(ic) + dz(ic,is)
+          IF (root_depth(ic) >= bottom(ic)) THEN              ! Root zone extends to below current layer
+            ws_root(ic) = ws_root(ic) + ws(ic,is)
+          ELSE IF (root_depth(ic) > bottom_m1(ic)) THEN       ! Root zone above current layer but below previous layer, i.e.
+            ! Root zone partially extends into current layer
+            ws_root(ic) = ws_root(ic) + ws(ic,is) * (root_depth(ic) - bottom_m1(ic)) / dz(ic,is)
+          END IF
+          bottom_m1(ic) = bottom_m1(ic) + dz(ic,is)
+        END DO
+#ifndef _OPENACC
+      END IF
+#endif
+    END DO
+    !$ACC END PARALLEL
+    !$ACC END DATA
 
   END SUBROUTINE get_amount_in_rootzone_2d
 

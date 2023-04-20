@@ -216,8 +216,6 @@ CONTAINS
     vgrid_canopy => Get_vgrid('canopy_layer_q_')  !! quincy
     model   => Get_model(model_id)
 
-    ! !$acc enter data pcreate(mem)
-
     IF (.NOT. model%config%use_quincy) THEN
 
       CALL mem%Add_var('gross_assimilation_ca', mem%gross_assimilation_ca,           &

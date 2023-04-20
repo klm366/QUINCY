@@ -145,7 +145,7 @@ CONTAINS
     ! Declare local variables
     TYPE(t_jsb_model), POINTER   :: model
     LOGICAL                      :: lstart, new_day, new_year
-    INTEGER                      :: iblk, ics, ice
+    INTEGER                      :: iblk, ics, ice, nc, ic
     REAL(wp)                     :: dtime
     REAL(wp), allocatable        :: precip_total(:)
     REAL(wp), DIMENSION(options%nc) :: MaxLai
@@ -296,6 +296,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -437,7 +438,7 @@ CONTAINS
     ! Compute net primary production rate
     ! R: In JS4 ist fogende Zeile jetzt im assimi_process.f90: calc_NPP_pot_rate
     !    cbalance%NPP_pot_rate(kidx0:kidx1,:) = NPP_pot_rate_bethy(grossAssimilation(1:nidx,:),darkRespiration(1:nidx,:))
-    ! R: NPP_pot_Rate_acc unterscheidet sich in JS3 von NPP_pot_sum darin, daß NPP_pot_rate_acc zu jedem Zeitschritt eine
+    ! R: NPP_pot_Rate_acc unterscheidet sich in JS3 von NPP_pot_sum darin, dass NPP_pot_rate_acc zu jedem Zeitschritt eine
     !    momentane Aufaddierung vom NPP ist aber NPP_pot_sum immer eine Tagessumme ist.
     !    NPP_pot_Rate_acc wurde nur in den Output geschrieben aber nie weiter verwendet, daher habe ich es raus genommen.
     !    Wenn man es doch drin haben will:
@@ -605,24 +606,24 @@ CONTAINS
       ENDIF
 
 
-      ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
-      !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
-      !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
-      !    konsistent auf dieselbe Fläche zu beziehen. Sonst machen wir den Code unnötig unübersichtlich.
-      !    Dadurch würde z.B. die Variablen-Verdopplung vermieden.
-      !    Ich habe die Assimilation zwar schon auf tile Fläche umgerechnet und könnte daher prinzipiell
-      !    die Cpools und Fluxe alle über das NPP-auf-Tile-Fläche rechnen.
-      !    ABER: in update_Cpools sind eine ganze Reihe von Berechnungen und Konstanten, die dazu ebenfalls angepaßt
-      !    werden müßten. Z.B: "Decomposition of slow soil pool" und evtl. "decomposition rate of green litter" und
+      ! R: In JSBACH3 wurden alle C-pools auf canopy Flaeche gezogen gerechnet. Ebenso die C Fluxe.
+      !    Fuer den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
+      !    Besser waere fuer JSBACH4 eigentlich auf Tile Flaeche bezogen zu rechnen um alle variablen von JS4
+      !    konsistent auf dieselbe Flaeche zu beziehen. Sonst machen wir den Code unnoetig unuebersichtlich.
+      !    Dadurch wuerde z.B. die Variablen-Verdopplung vermieden.
+      !    Ich habe die Assimilation zwar schon auf tile Flaeche umgerechnet und koennte daher prinzipiell
+      !    die Cpools und Fluxe alle ueber das NPP-auf-Tile-Flaeche rechnen.
+      !    ABER: in update_Cpools sind eine ganze Reihe von Berechnungen und Konstanten, die dazu ebenfalls angepasst
+      !    werden muessten. Z.B: "Decomposition of slow soil pool" und evtl. "decomposition rate of green litter" und
       !    specific_leaf_area_C  (=> c_green_max und c_reserve_optimal), Max_C_content_woods. usw.
-      !    Dazu kommt, daß Yasso aufgerufen wird und auch hier alle Parametrisierungen durchgeschaut werden müssten.
-      !    Wie auch immer wenn später etwas wie "cbalone" verwendet werden soll, dann ist es besser auf canopy
-      !    Fläche zu bleiben.
-      !    => daher habe ich das doppelte Flächenkonzept von JSBACH3 übernommen.
+      !    Dazu kommt, dass Yasso aufgerufen wird und auch hier alle Parametrisierungen durchgeschaut werden muessten.
+      !    Wie auch immer wenn spaeter etwas wie "cbalone" verwendet werden soll, dann ist es besser auf canopy
+      !    Flaeche zu bleiben.
+      !    => daher habe ich das doppelte Flaechenkonzept von JSBACH3 uebernommen.
       !
-      !    Um die Benennungen wenigstens richtig zu machen müsste ich jede dieser 30 Variablen in allen
+      !    Um die Benennungen wenigstens richtig zu machen muesste ich jede dieser 30 Variablen in allen
       !    Files (Konsistenz!) mit _ca versehen. Da der Code hier aber ein Provisorium ist:
-      !    => C Pools und Fluxe sind ohne _ca benannt und bekommen stattdessen _ta wenn sie auf Tile Fläche bezogen sind.
+      !    => C Pools und Fluxe sind ohne _ca benannt und bekommen stattdessen _ta wenn sie auf Tile Flaeche bezogen sind.
 
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------
@@ -821,7 +822,7 @@ CONTAINS
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':rescale_carbon_upon_reference_area_change'
-    INTEGER                     :: ics, ice, iblk
+    INTEGER                     :: nc, ic, ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_green
     dsl4jsb_Real2D_onChunk ::  c_reserve
@@ -854,6 +855,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  c_into_humus_2_sum
 
     ! Assertion: 0 < oldRedArea <= 1 and 0 < newRefArea <= 1
+    ! TODO on GPU
+#ifndef _OPENACC
     IF ( ANY(oldRefArea .LE. 0) .OR. ANY(oldRefArea .GT. 1) ) THEN
       CALL finish(TRIM(routine), &
         & 'Violation of assertion: Reference areas (here old) need to be >0 and <=1 - min: '&
@@ -864,12 +867,14 @@ CONTAINS
         & 'Violation of assertion: Reference areas (here new) need to be >0 and <=1 - min: '&
         & //real2string(MINVAL(newRefArea)) //'; max: '//real2string(MAXVAL(newRefArea))  )
     ENDIF
+#endif
 
     dsl4jsb_Get_memory(CARBON_)
 
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green )               ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve )             ! inout
@@ -1235,9 +1240,9 @@ CONTAINS
     dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
-    CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
-    INTEGER                     :: ics, ice, iblk
+    INTEGER :: nc, ic, ics, ice, iblk
 
+    CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ta_state_sum'
 
     dsl4jsb_Real2D_onChunk ::  c_green_ta
     dsl4jsb_Real2D_onChunk ::  c_reserve_ta
@@ -1269,6 +1274,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_green_ta )               ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_reserve_ta )             ! in
@@ -1295,24 +1301,53 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    !$claw expand parallel update 
-    current_c_state_sum_ta(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:) + c_crop_harvest_ta(:) + &
-        & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
-        & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:) + &
-        & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
-        & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:) + &
-        & c_humus_1_ta(:)  + c_humus_2_ta(:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      current_c_state_sum_ta(ic) = c_green_ta(ic) + c_woods_ta(ic) + c_reserve_ta(ic) + c_crop_harvest_ta(ic) + &
+        & c_acid_ag1_ta(ic) + c_water_ag1_ta(ic) + c_ethanol_ag1_ta(ic) + c_nonsoluble_ag1_ta(ic) + &
+        & c_acid_ag2_ta(ic) + c_water_ag2_ta(ic) + c_ethanol_ag2_ta(ic) + c_nonsoluble_ag2_ta(ic) + &
+        & c_acid_bg1_ta(ic) + c_water_bg1_ta(ic) + c_ethanol_bg1_ta(ic) + c_nonsoluble_bg1_ta(ic) + &
+        & c_acid_bg2_ta(ic) + c_water_bg2_ta(ic) + c_ethanol_bg2_ta(ic) + c_nonsoluble_bg2_ta(ic) + &
+        & c_humus_1_ta(ic)  + c_humus_2_ta(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
-    IF (PRESENT(c_sum_veg_ta)) c_sum_veg_ta(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:)
+    IF (PRESENT(c_sum_veg_ta)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        c_sum_veg_ta(ic) = c_green_ta(ic) + c_woods_ta(ic) + c_reserve_ta(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
 
-    IF (PRESENT(c_sum_litter_ag_ta)) c_sum_litter_ag_ta(ics:ice) =                                    &
-        & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
-        & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:)
-    IF (PRESENT(c_sum_litter_bg_ta)) c_sum_litter_bg_ta(ics:ice) =                                    &
-        & c_acid_bg1_ta(:) + c_water_bg1_ta(:) + c_ethanol_bg1_ta(:) + c_nonsoluble_bg1_ta(:) + &
-        & c_acid_bg2_ta(:) + c_water_bg2_ta(:) + c_ethanol_bg2_ta(:) + c_nonsoluble_bg2_ta(:)
-    IF (PRESENT(c_sum_humus_ta)) c_sum_humus_ta(ics:ice) = c_humus_1_ta(:)  + c_humus_2_ta(:)
+    IF (PRESENT(c_sum_litter_ag_ta)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        c_sum_litter_ag_ta(ic) = &
+          & c_acid_ag1_ta(ic) + c_water_ag1_ta(ic) + c_ethanol_ag1_ta(ic) + c_nonsoluble_ag1_ta(ic) + &
+          & c_acid_ag2_ta(ic) + c_water_ag2_ta(ic) + c_ethanol_ag2_ta(ic) + c_nonsoluble_ag2_ta(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    ENDIF
 
+    IF (PRESENT(c_sum_litter_bg_ta)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        c_sum_litter_bg_ta(ic) = &
+          & c_acid_bg1_ta(ic) + c_water_bg1_ta(ic) + c_ethanol_bg1_ta(ic) + c_nonsoluble_bg1_ta(ic) + &
+          & c_acid_bg2_ta(ic) + c_water_bg2_ta(ic) + c_ethanol_bg2_ta(ic) + c_nonsoluble_bg2_ta(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+
+    IF (PRESENT(c_sum_humus_ta)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+      DO ic = 1, nc
+        c_sum_humus_ta(ic) = c_humus_1_ta(ic)  + c_humus_2_ta(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
+    END IF
+      
   END SUBROUTINE calculate_current_c_ta_state_sum
 
 
@@ -1337,7 +1372,7 @@ CONTAINS
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calculate_current_c_ag_1_and_bg_sums'
-    INTEGER                     :: ics, ice, iblk
+    INTEGER                     :: nc, ic, ics, ice, iblk
 
     dsl4jsb_Real2D_onChunk ::  c_bg_sum
     dsl4jsb_Real2D_onChunk ::  c_ag_sum_1
@@ -1364,6 +1399,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_bg_sum )             ! out
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ag_sum_1 )           ! out
@@ -1386,13 +1422,17 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2)             ! in
 
     !TODO-JN-COHORTS: could be done in mo_carbon_process
-    !$claw expand parallel update
-    c_bg_sum(:) = c_acid_bg1(:) + c_water_bg1(:) + c_ethanol_bg1(:) + c_nonsoluble_bg1(:) + &
-             & c_acid_bg2(:) + c_water_bg2(:) + c_ethanol_bg2(:) + c_nonsoluble_bg2(:) + &
-             & c_humus_1(:)  + c_humus_2(:)
 
-    c_ag_sum_1(:) =  c_acid_ag1(:) + c_water_ag1(:) + c_ethanol_ag1(:) + c_nonsoluble_ag1(:) + c_humus_1(:)
-    !$claw end expand
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, nc
+      c_bg_sum(ic) = c_acid_bg1(ic) + c_water_bg1(ic) + c_ethanol_bg1(ic) + c_nonsoluble_bg1(ic) + &
+              & c_acid_bg2(ic) + c_water_bg2(ic) + c_ethanol_bg2(ic) + c_nonsoluble_bg2(ic) + &
+              & c_humus_1(ic)  + c_humus_2(ic)
+
+      c_ag_sum_1(ic) =  c_acid_ag1(ic) + c_water_ag1(ic) + c_ethanol_ag1(ic) + c_nonsoluble_ag1(ic) + c_humus_1(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
+
   END SUBROUTINE calculate_current_c_ag_1_and_bg_sums
 
 
@@ -1513,13 +1553,17 @@ CONTAINS
     !dsl4jsb_Def_memory(CARBON_)
 
     ! Local variables
+    INTEGER :: ic
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':check_carbon_conservation'
-    !INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
     
-    !$claw expand parallel update
-    Cconserve(:) = Cconserve(:) - old_c_state_sum_ta(:) - cflux_ta(:)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, SIZE(cflux_ta)
+      Cconserve(ic) = Cconserve(ic) - old_c_state_sum_ta(ic) - cflux_ta(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE check_carbon_conservation
 

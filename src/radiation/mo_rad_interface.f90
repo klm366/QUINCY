@@ -203,9 +203,6 @@ CONTAINS
 
     USE mo_rad_process, ONLY: calc_radiation_surface_net
     USE mo_phy_schemes, ONLY: lwnet_from_lwdown
-#ifdef SERIALIZE
-    !$claw verbatim USE mo_ser_common, ONLY: init
-#endif
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options), INTENT(in) :: options
@@ -245,18 +242,15 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
 
-    INTEGER :: iblk , ics, ice
+    INTEGER :: iblk , ics, ice, nc, ic
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_radiation'
-
-#ifdef SERIALIZE
-    !$claw verbatim call init('jsb_ser')
-#endif
 
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
+    nc   = options%nc
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN
@@ -290,8 +284,8 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lwtr) ! out
 
-      !$claw acc data pcreate(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
-      !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_1 tile_name=tile%name
+      !$ACC DATA CREATE(sw_net_lwtr, lw_net_lwtr, sw_net_lice, lw_net_lice)
+
       CALL calc_radiation_surface_net( &
         & swvis_srf_down(:),           & ! in
         & swnir_srf_down(:),           & ! in
@@ -311,7 +305,6 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)  ! in
         dsl4jsb_Get_var2D_onChunk(RAD_, rad_net_lice) ! out
 
-        !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_2 tile_name=tile%name
         CALL calc_radiation_surface_net( &
           & swvis_srf_down(:),           & ! in
           & swnir_srf_down(:),           & ! in
@@ -324,20 +317,24 @@ CONTAINS
           & lw_net=lw_net_lice(:)        & ! out
           & )
 
-        !$claw expand parallel update savepoint=ser_jsb_rad_surface_radiation_expand_1 tile_name=tile%name
-        rad_srf_net(:) = (1._wp - fract_lice(:)) * rad_net_lwtr(:) + fract_lice(:) * rad_net_lice(:)
-        sw_srf_net (:) = (1._wp - fract_lice(:)) * sw_net_lwtr(:)  + fract_lice(:) * sw_net_lice(:)
-        lw_srf_net (:) = (1._wp - fract_lice(:)) * lw_net_lwtr(:)  + fract_lice(:) * lw_net_lice(:)
-        !$claw end expand
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO ic=1,nc
+          rad_srf_net(ic) = (1._wp - fract_lice(ic)) * rad_net_lwtr(ic) + fract_lice(ic) * rad_net_lice(ic)
+          sw_srf_net (ic) = (1._wp - fract_lice(ic)) * sw_net_lwtr(ic)  + fract_lice(ic) * sw_net_lice(ic)
+          lw_srf_net (ic) = (1._wp - fract_lice(ic)) * lw_net_lwtr(ic)  + fract_lice(ic) * lw_net_lice(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
       ELSE
-        !$claw expand parallel update savepoint=ser_jsb_rad_surface_radiation_expand_2 tile_name=tile%name
-        rad_srf_net(:) = rad_net_lwtr(:)
-        sw_srf_net (:) = sw_net_lwtr (:)
-        lw_srf_net (:) = lw_net_lwtr (:)
-        !$claw end expand
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO ic=1,nc
+          rad_srf_net(ic) = rad_net_lwtr(ic)
+          sw_srf_net (ic) = sw_net_lwtr (ic)
+          lw_srf_net (ic) = lw_net_lwtr (ic)
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
 
-      !$claw acc end data
+      !$ACC END DATA
 
 
     !> 2.0 vegetation with use_quincy = .TRUE.
@@ -347,9 +344,11 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_, t)              ! in
 
       ! quincy calculates all (albedo & short wave) but long wave radiation
-      !$claw expand
-      lw_srf_net(:) = lwnet_from_lwdown(lw_srf_down(:), t(:))
-    
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO ic=1,nc
+        lw_srf_net(ic) = lwnet_from_lwdown(lw_srf_down(ic), t(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
     
     !> 3.0 all but lakes 
     !! 
@@ -362,21 +361,22 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(RAD_,      swvis_srf_net)  ! out
       dsl4jsb_Get_var2D_onChunk(RAD_,      swnir_srf_net)  ! out
 
-      !$claw sca forward update savepoint=ser_jsb_rad_calc_radiation_surface_net_3 tile_name=tile%name
-      CALL calc_radiation_surface_net( &
-        & swvis_srf_down(:),           & ! in
-        & swnir_srf_down(:),           & ! in
-        & alb_vis_lnd(:),              & ! in
-        & alb_nir_lnd(:),              & ! in
-        & lw_srf_down(:),              & ! in
-        & t(:),                        & ! in
-        & rad_srf_net(:),              & ! out
-        & swvis_srf_net(:),            & ! out
-        & swnir_srf_net(:),            & ! out
-        & sw_srf_net(:),               & ! out
-        & lw_srf_net(:)                & ! out
+      CALL calc_radiation_surface_net(  &
+        & swvis_srf_down(:),            & ! in
+        & swnir_srf_down(:),            & ! in
+        & alb_vis_lnd(:),               & ! in
+        & alb_nir_lnd(:),               & ! in
+        & lw_srf_down(:),               & ! in
+        & t(:),                         & ! in
+        & rad_srf_net(:),               & ! out
+        & swvis_net = swvis_srf_net(:), & ! out
+        & swnir_net = swnir_srf_net(:), & ! out
+        & sw_net    = sw_srf_net(:),    & ! out
+        & lw_net    = lw_srf_net(:)     & ! out
         & )
     END IF
+
+    !$ACC WAIT
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -455,10 +455,11 @@ CONTAINS
     ! Local variables
     INTEGER                           :: icanopy
 
-    INTEGER                           :: iblk , ics, ice
+    INTEGER                           :: iblk , ics, ice, nc, ic
     REAL(wp)                          :: dtime
 
-    REAL(wp)                          :: canopy_bound_lai_delta
+    REAL(wp)                          :: canopy_bound_lai_tmp, canopy_bound_lai_delta
+    REAL(wp), POINTER :: canopy_bound_lai(:)
 
     REAL(wp), DIMENSION(options%nc)   :: B4_layer_above ! R: cannot be scalar as it will be used as inout argum. for elemen. proce.
                                                         !    and thus has to have the same dimensions as the other out arguments.
@@ -486,7 +487,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle      ! Angle of incoming radiation [-]
     dsl4jsb_Real2D_onChunk :: fract_par_direct      ! Fraction of direct (in contrast to diffuse) PAR [-]
     dsl4jsb_Real2D_onChunk :: fract_par_diffuse     ! Fraction of diffuse (in contrast to direct) PAR [-]
-    dsl4jsb_Real2D_onChunk :: canopy_bound_lai
     ! dsl4jsb_Real2D_onChunk :: apar_nacc
     dsl4jsb_Real2D_onChunk :: faPAR
 
@@ -502,6 +502,7 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime ! time step in seconds e.g. for one day=86400
 
     IF (.NOT. tile%is_vegetation) RETURN
@@ -551,81 +552,92 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    !$claw acc data create(B4_layer_above)
+    !$ACC DATA CREATE(B4_layer_above)
 
-    ! Initialize local variables
-
-    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_0 tile_name=tile%name
-    apar_per_lai_cl(:,:)     = 0._wp
-
-    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_1 tile_name=tile%name
-    par_down_mol(:)          = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
-    soil_reflectivity_par(:) = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
-    
-    par(:) = swpar_srf_down(:)
-
-    ! Compute direct fraction of PAR.
-    ! R:  fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
-    fract_par_direct(:) = 1._wp - fract_par_diffuse(:)
-
-    B4_layer_above(:) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate
-                                    ! first layer
-    !$claw end expand
-
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1) COLLAPSE(2)
     DO icanopy=1,ncanopy
-       ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and lai_cl (leaf area index for each
-       ! canopy layer)
-       canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
-       !$claw sca forward update savepoint=ser_jsb_rad_calc_par_1 tile_name=tile%name canopy_lvl=icanopy
-       CALL calc_par(                 &
-         & ncanopy,                   & ! in
-         & icanopy,                   & ! in
-         & use_alb_veg_simple,        & ! in
-         & par(:),                    & ! in
-         & alb_vis_soil(:),           & ! in
-         & lai(:),                    & ! in
-         & cos_zenith_angle(:),       & ! in
-         & fract_par_direct(:),       & ! in
-         & canopy_bound_lai(icanopy), & ! in
-         & canopy_bound_lai_delta,    & ! in
-         & B4_layer_above(:),         & ! inout
-         & par_down_mol(:),           & ! out, used outside for assimilation
-         & soil_reflectivity_par(:),  & ! out, R: could also be local as it is not used outside in the moment,
-                                        ! however I want it in the model output and thus it has to be updated by returning it
-         & faPAR_cl(:,icanopy),       & ! out, R: could also be local as it is not used outside in the moment,
-                                        ! however I want it in the model output and thus it has to be updated by returning it
-         & lai_cl(:,icanopy),         & ! out, R: could also be local as it is not used outside in the moment,
-                                        ! however I want it in the model output and thus it has to be updated by returning it
-         & apar_per_lai_cl(:,icanopy) ) ! out, used outside for assimilation
+      DO ic=1,nc
+        apar_per_lai_cl(ic,icanopy) = 0._wp
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    DO ic=1,nc
+      par_down_mol(ic)          = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
+      soil_reflectivity_par(ic) = 0._wp ! for now also in the memory but is only for current time step/"delta_time"
+      
+      par(ic) = swpar_srf_down(ic)
+
+      ! Compute direct fraction of PAR.
+      ! R: fract_par_direct = in ECHAM jsswdifpar, which is zsw_par_fract_diffuse = fract_diffuse_par  =sw_par_fract_direct
+      fract_par_direct(ic) = 1._wp - fract_par_diffuse(ic)
+
+      B4_layer_above(ic) = 7777777._wp ! Used to transfer variable B4 from one canopy layer to the next. Startvalue only to indicate
+                                      ! first layer
+      fapar(ic) = 0._wp
+    END DO
+    !$ACC END PARALLEL LOOP
+
+    !$ACC WAIT
+
+    ! Compute faPAR_cl (absorbed photsynthetic active radiation for each canopy layer) and
+    ! lai_cl (leaf area index for each canopy layer)
+    DO icanopy=1,ncanopy
+        canopy_bound_lai_tmp = canopy_bound_lai(icanopy)
+        canopy_bound_lai_delta = canopy_bound_lai(icanopy) - canopy_bound_lai(icanopy-1)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        DO ic=1,nc
+          CALL calc_par(                 &
+            & ncanopy,                   & ! in
+            & icanopy,                   & ! in
+            & use_alb_veg_simple,        & ! in
+            & par(ic),                    & ! in
+            & alb_vis_soil(ic),           & ! in
+            & lai(ic),                    & ! in
+            & cos_zenith_angle(ic),       & ! in
+            & fract_par_direct(ic),       & ! in
+            & canopy_bound_lai_tmp,       & ! in
+            & canopy_bound_lai_delta,    & ! in
+            & B4_layer_above(ic),         & ! inout
+            & par_down_mol(ic),           & ! out, used outside for assimilation
+            & soil_reflectivity_par(ic),  & ! out, R could also be local as it is not used outside in the moment,
+                                            ! however I want it in the model output and thus it has to be updated by returning it
+            & faPAR_cl(ic,icanopy),       & ! out, R could also be local as it is not used outside in the moment,
+                                            ! however I want it in the model output and thus it has to be updated by returning it
+            & lai_cl(ic,icanopy),         & ! out, R could also be local as it is not used outside in the moment,
+                                            ! however I want it in the model output and thus it has to be updated by returning it
+            & apar_per_lai_cl(ic,icanopy) ) ! out, used outside for assimilation
+      END DO
+      !$ACC END PARALLEL LOOP
     END DO
 
     ! R: Note, the following code is preliminary and should be replaced later by an laccu-procedure.
     !    For the correct integration over time as it is done now, this task must be called only once per timestep.
     ! Accumulate incoming par in mol(photons)/(m^2) over time
-    !! !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_2 tile_name=tile%name
     ! par_down_mol_nacc(:) = par_down_mol_nacc(:) + par_down_mol(:) * dtime
 
     ! R: This whole workaround should get abitary soon...
     !acc_counter = acc_counter + 1
     !par_down_mol_tavg = par_down_mol_nacc / dtime / acc_counter
-    !! !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_3 tile_name=tile%name
     ! apar_per_lai_cl_nacc(:,:)  = apar_per_lai_cl_nacc(:,:) + apar_per_lai_cl(:,:) * dtime
 
     ! R: This whole workaround (acc_counter) should get abitary soon...
     !apar_per_lai_cl_tavg(:,icanopy)  = apar_per_lai_cl_nacc(:,icanopy) / dtime / acc_counter
     ! DO icanopy=1,ncanopy
-      !! !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_4 tile_name=tile%name canopy_lvl=icanopy
       ! apar_nacc(:) = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
     ! END DO
 
     ! Create faPAR
-    !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_2 tile_name=tile%name
-    faPAR(:) = 0._wp
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
     DO icanopy=1,ncanopy
-      !$claw expand parallel update savepoint=ser_jsb_rad_update_radiation_par_expand_3 tile_name=tile%name canopy_lvl=icanopy
-      faPAR(:) = faPAR(:) + faPAR_cl(:,icanopy) ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the
-                                                ! whole canopy
+      !$ACC LOOP SEQ
+      DO ic=1,nc
+        ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the whole canopy
+        faPAR(ic) = faPAR(ic) + faPAR_cl(ic,icanopy)
+      END DO
     END DO
+    !$ACC END PARALLEL LOOP
 
 
 !        ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
@@ -643,7 +655,9 @@ CONTAINS
 !           apar_nacc(:)                     = apar_nacc(:) + par_down_mol(:) * faPAR_cl(:,icanopy) * dtime
 !        END IF
 
-    !$claw acc end data
+    !$ACC END DATA
+
+    !$ACC WAIT
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -703,7 +717,7 @@ CONTAINS
     ! Local variables
     TYPE(t_jsb_model), POINTER      :: model
     TYPE(t_lctlib_element), POINTER :: lctlib       !< land-cover-type library - parameter across pft's
-    INTEGER                         :: iblk, nc , ics, ice, i
+    INTEGER                         :: iblk, ics, ice, nc, ic
     LOGICAL, ALLOCATABLE            :: l_day(:)
 
     CHARACTER(len=*), PARAMETER     :: routine = modname//':update_albedo'
@@ -772,6 +786,12 @@ CONTAINS
       & weq_snow_lice,         &
       & albedo_lice
 
+    REAL(wp) :: &
+      & specificLeafArea_C_param, &
+      & AlbedoLitterVIS_param,    &
+      & StemArea_param
+    LOGICAL :: ForestFlag_param
+
     ! Set local variables from options argument
     iblk  = options%iblk
     ics   = options%ics
@@ -833,9 +853,12 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_bg_sum)  ! in
       ELSE
         ALLOCATE(c_bg_sum(nc))
-        !$claw acc enter data create(c_bg_sum)
-        !$claw expand parallel
-        c_bg_sum(:) = 0._wp                           ! dummy
+        !$ACC ENTER DATA CREATE(c_bg_sum)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO ic=1,nc
+          c_bg_sum(ic) = 0._wp                           ! dummy
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
     END IF
 
@@ -861,12 +884,15 @@ CONTAINS
     ! Go
 
     ALLOCATE(l_day(nc))
-    !$claw acc enter data create(l_day)
+    !$ACC ENTER DATA CREATE(l_day)
 
     !> 0.9  Set day-or-night-switch
     !! 
-    !$claw expand parallel update savepoint=ser_jsb_rad_has_minimal_radiation_1 tile_name=tile%name
-    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      l_day(ic) = Has_minimal_radiation(swvis_srf_down(ic), swnir_srf_down(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !> 1.0 snow
     !!
@@ -877,17 +903,21 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow_soil)  ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   snow_age)         ! in
 
-      !$claw sca forward update savepoint=ser_jsb_rad_calc_snow_albedo_1 tile_name=tile%name
-      CALL calc_snow_albedo(   &
-        & l_day(:),            & ! in
-        & fract_snow_soil(:),  & ! in
-        & snow_age(:),         & ! in
-        & cos_zenith_angle(:), & ! in
-        & albedo_age_weight,   & ! in
-        & t_unfilt(:),         & ! in
-        & alb_vis_snow(:),     & ! inout
-        & alb_nir_snow(:)      & ! inout
-        & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO ic=1,nc
+        CALL calc_snow_albedo(    &
+          & l_day(ic),            & ! in
+          & fract_snow_soil(ic),  & ! in
+          & snow_age(ic),         & ! in
+          & cos_zenith_angle(ic), & ! in
+          & albedo_age_weight,    & ! in
+          & t_unfilt(ic),         & ! in
+          & alb_vis_snow(ic),     & ! inout
+          & alb_nir_snow(ic)      & ! inout
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
+  
     END IF
 
     ! TODO Compute alb_vis and alb_nir separately!
@@ -900,56 +930,63 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(SEB_,   t_lice)       ! in
       dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lwtr)  ! inout
 
-      !$claw sca forward update savepoint=ser_jsb_rad_calc_alb_lwtr_1 tile_name=tile%name
-      CALL calc_alb_lwtr( &
-        & l_day(:),       & ! in
-        & albedo_lwtr(:)  & ! inout
-        & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO ic=1,nc
+        CALL calc_alb_lwtr( &
+          & l_day(ic),       & ! in
+          & albedo_lwtr(ic)  & ! inout
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
 
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(SEB_,   fract_lice)     ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_lice)  ! in
         dsl4jsb_Get_var2D_onChunk(RAD_,   albedo_lice)    ! inout
 
-        !$claw sca forward update savepoint=ser_jsb_rad_calc_alb_lice_1 tile_name=tile%name
-        CALL calc_alb_lice( &
-          & l_day(:),         & ! in
-          & t_lice(:),        & ! in
-          & weq_snow_lice(:), & ! in
-          & albedo_lice(:)    & ! inout
-          & )
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO ic=1,nc
+          CALL calc_alb_lice(    &
+            & l_day(ic),         & ! in
+            & t_lice(ic),        & ! in
+            & weq_snow_lice(ic), & ! in
+            & albedo_lice(ic)    & ! inout
+            & )
+        END DO
+        !$ACC END PARALLEL LOOP
 
-        !$claw acc data present(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
-        !$claw acc parallel loop gang vector
-        DO i = 1, size(l_day)
-          IF(l_day(i)) THEN
-            alb_vis(i) = (1._wp - fract_lice(i)) * albedo_lwtr(i) + fract_lice(i) * albedo_lice(i)
-            alb_nir(i) = alb_vis(i)  ! TODO
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          IF(l_day(ic)) THEN
+            alb_vis(ic) = (1._wp - fract_lice(ic)) * albedo_lwtr(ic) + fract_lice(ic) * albedo_lice(ic)
+            alb_nir(ic) = alb_vis(ic)  ! TODO
           END IF
         END DO
-        !$claw acc end data
+        !$ACC END PARALLEL LOOP
       ELSE
-        !$claw acc data present(l_day,alb_vis,alb_nir,fract_lice,albedo_lwtr,albedo_lice)
-        !$claw acc parallel loop gang vector
-        DO i = 1, size(l_day)
-          IF(l_day(i)) THEN
-            alb_vis(i) = albedo_lwtr(i)
-            alb_nir(i) = alb_vis(i)  ! TODO
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        DO ic = 1, nc
+          IF(l_day(ic)) THEN
+            alb_vis(ic) = albedo_lwtr(ic)
+            alb_nir(ic) = alb_vis(ic)  ! TODO
           END IF
         END DO
-        !$claw acc end data
+        !$ACC END PARALLEL LOOP
       END IF
 
     !> 3.0 glacier
     !!
     ELSE IF (tile%is_glacier) THEN
-      !$claw sca forward update savepoint=ser_jsb_rad_calc_glacier_albedo_1 tile_name=tile%name
-      CALL calc_glacier_albedo( &
-        & l_day(:),             & ! in
-        & t_unfilt(:),          & ! in
-        & alb_vis_lnd(:),       & ! inout
-        & alb_nir_lnd(:)        & ! inout
-        & )
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO ic=1,nc
+        CALL calc_glacier_albedo(  &
+          & l_day(ic),             & ! in
+          & t_unfilt(ic),          & ! in
+          & alb_vis_lnd(ic),       & ! inout
+          & alb_nir_lnd(ic)        & ! inout
+          & )
+      END DO
+      !$ACC END PARALLEL LOOP
 
     !> 4.0 soil
     !! currently jsbach4 does not consider "bare tiles"
@@ -967,24 +1004,27 @@ CONTAINS
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
         dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in
-        !$claw sca forward update savepoint=ser_jsb_rad_calc_soil_albedo_1 tile_name=tile%name
-        CALL calc_soil_albedo(                        &
-          & l_day(:),                                 & ! in
-          & use_alb_mineralsoil_const,                & ! in
-          & use_alb_soil_organic_int,                 & ! in
-          & use_alb_soil_litter,                      & ! in
-          & c_ag_sum_1(:),                            & ! in
-          !CBAL & c_slow(:),                           & ! in
-          & c_bg_sum(:),                              & ! in
-          ! @todo: on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
-          & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
-          & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
-          & alb_background(:),                        & ! in
-          & alb_vis_mineralsoil(:),                   & ! inout
-          & alb_nir_mineralsoil(:),                   & ! inout
-          & alb_vis_soil(:),                          & ! inout
-          & alb_nir_soil(:)                           & ! inout
-          & )
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO ic=1,nc
+          CALL calc_soil_albedo(                        &
+            & l_day(ic),                                & ! in
+            & use_alb_mineralsoil_const,                & ! in
+            & use_alb_soil_organic_int,                 & ! in
+            & use_alb_soil_litter,                      & ! in
+            & c_ag_sum_1(ic),                           & ! in
+            !CBAL & c_slow(ic),                           & ! in
+            & c_bg_sum(ic),                             & ! in
+            ! @todo: on a bare soil tile, there is no vegetation and therefore also no lctlib entry!?
+            & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
+            & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
+            & alb_background(ic),                       & ! in
+            & alb_vis_mineralsoil(ic),                  & ! inout
+            & alb_nir_mineralsoil(ic),                  & ! inout
+            & alb_vis_soil(ic),                         & ! inout
+            & alb_nir_soil(ic)                          & ! inout
+            & )
+        END DO
+        !$ACC END PARALLEL LOOP
       ELSE
         ! Do nothing: alb_vis_soil and alb_nir_soil are already in memory initialited from bc_land_phy.nc file
         ! and represent the soil albedo including carbon in the soil as well as litter on the soil, but without
@@ -995,11 +1035,12 @@ CONTAINS
       END IF
 
       ! Merge the albedo of soil with the snow on it for the overall bare soil tile albedo
-      !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_1 tile_name=tile%name
-      alb_vis_lnd(:) = (fract_snow_soil(:) * alb_vis_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_vis_soil(:))
-      alb_nir_lnd(:) = (fract_snow_soil(:) * alb_nir_snow(:)  + (1.0_wp - fract_snow_soil(:)) * alb_nir_soil(:))
-      !$claw end expand
-
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO ic=1,nc
+        alb_vis_lnd(ic) = (fract_snow_soil(ic) * alb_vis_snow(ic)  + (1.0_wp - fract_snow_soil(ic)) * alb_vis_soil(ic))
+        alb_nir_lnd(ic) = (fract_snow_soil(ic) * alb_nir_snow(ic)  + (1.0_wp - fract_snow_soil(ic)) * alb_nir_soil(ic))
+      END DO
+      !$ACC END PARALLEL LOOP
 
     !> 5.0 vegetation / canopy
     !!  jsbach4 routines
@@ -1025,18 +1066,19 @@ CONTAINS
       !!
       !! TRUE for jsbach_lite, FALSE for jsbach_pfts
       IF (use_alb_veg_simple) THEN
-        !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_2 tile_name=tile%name
-        alb_vis_lnd(:) = get_surface_albedo_simple( &
-          & t_unfilt(:),                            &
-          & fract_forest(:),                        &
-          & fract_snow_soil(:),                     &
-          & fract_snow_can(:),                      &
-          & lai(:),                                 &
-          & alb_background(:)                       & ! Note, alb_background <-- bc_land_phy.nc
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO ic=1,nc
+          alb_vis_lnd(ic) = get_surface_albedo_simple( &
+            & t_unfilt(ic),                            &
+            & fract_forest(ic),                        &
+            & fract_snow_soil(ic),                     &
+            & fract_snow_can(ic),                      &
+            & lai(ic),                                 &
+            & alb_background(ic)                       & ! Note, alb_background <-- bc_land_phy.nc
                         )
-        alb_nir_lnd(:) = alb_vis_lnd(:)
-        !$claw end expand
-
+          alb_nir_lnd(ic) = alb_vis_lnd(ic)
+        END DO
+        !$ACC END PARALLEL LOOP
 
       !> 5.2  detailed calculation of alb_vis_lnd & alb_nir_lnd
       !!      
@@ -1054,23 +1096,28 @@ CONTAINS
 
           dsl4jsb_Get_var2D_onChunk(CARBON_, c_ag_sum_1) ! in (Note: c_humus_1 is part of green litter.)
 
-          !$claw sca forward update savepoint=ser_jsb_rad_calc_soil_albedo_2 tile_name=tile%name
-          CALL calc_soil_albedo(                        &
-            & l_day(:),                                 & ! in
-            & use_alb_mineralsoil_const,                & ! in
-            & use_alb_soil_organic_int,                 & ! in
-            & use_alb_soil_litter,                      & ! in
-            & c_ag_sum_1(:),                            & ! in
-            !CBAL & c_slow(:),                           & ! in
-            & c_bg_sum(:),                              & ! in
-            & dsl4jsb_Lctlib_param(specificLeafArea_C), & ! in
-            & dsl4jsb_Lctlib_param(AlbedoLitterVIS),    & ! in
-            & alb_background(:),                        & ! in
-            & alb_vis_mineralsoil(:),                   & ! inout
-            & alb_nir_mineralsoil(:),                   & ! inout
-            & alb_vis_soil(:),                          & ! inout
-            & alb_nir_soil(:)                           & ! inout
-            & )
+          specificLeafArea_C_param = dsl4jsb_Lctlib_param(specificLeafArea_C)
+          AlbedoLitterVIS_param    = dsl4jsb_Lctlib_param(AlbedoLitterVIS)
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+          DO ic=1,nc
+            CALL calc_soil_albedo(                        &
+              & l_day(ic),                                & ! in
+              & use_alb_mineralsoil_const,                & ! in
+              & use_alb_soil_organic_int,                 & ! in
+              & use_alb_soil_litter,                      & ! in
+              & c_ag_sum_1(ic),                           & ! in
+              !CBAL & c_slow(ic),                          & ! in
+              & c_bg_sum(ic),                             & ! in
+              & specificLeafArea_C_param,                 & ! in
+              & AlbedoLitterVIS_param,                    & ! in
+              & alb_background(ic),                       & ! in
+              & alb_vis_mineralsoil(ic),                  & ! inout
+              & alb_nir_mineralsoil(ic),                  & ! inout
+              & alb_vis_soil(ic),                         & ! inout
+              & alb_nir_soil(ic)                          & ! inout
+              & )
+          END DO
+          !$ACC END PARALLEL LOOP
         ELSE
           ! Do nothing: alb_vis_soil and alb_nir_soil are already in memory initialited from the bc_land_phy.nc file
           ! and represent the soil albedo including carbon in the soil as well as litter on the soil, but without
@@ -1081,6 +1128,8 @@ CONTAINS
           END IF
         END IF
 
+        !$ACC WAIT
+
         ! Get the fractions of the vegetation tile that is bare soil from the sky point of view
         ! Needed later for merging the contributing snow-, bare soil- and canopy-albedos for this vegetation tile
         dsl4jsb_Get_var2D_onChunk(RAD_, sky_view_fract)       ! inout
@@ -1090,63 +1139,74 @@ CONTAINS
         IF (tile%lcts(1)%lib_id == 0) CALL finish(TRIM(routine), 'lctlib not available on tile')
 
         !> 5.2.2 calc sky-view fractions
-        !! 
-        !$claw sca forward update savepoint=ser_jsb_rad_calc_sky_view_fractions_1 tile_name=tile%name
-        CALL calc_sky_view_fractions(       &
-          & l_day(:),                       & ! in
-          & lai(:),                         & ! in
-          & fract_fpc_max(:),               & ! in
-          & cos_zenith_angle(:),            & ! in
-          & dsl4jsb_Lctlib_param(StemArea), & ! in (Area of stems and branches of woody plants.)
-          & sky_view_fract(:),              & ! inout
-          & sky_view_fract_stem(:)          & ! inout
-          & )
+        !!
+        StemArea_param = dsl4jsb_Lctlib_param(StemArea)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO ic=1,nc
+          CALL calc_sky_view_fractions(       &
+            & l_day(ic),                      & ! in
+            & lai(ic),                        & ! in
+            & fract_fpc_max(ic),              & ! in
+            & cos_zenith_angle(ic),           & ! in
+            & StemArea_param,                 & ! in (Area of stems and branches of woody plants.)
+            & sky_view_fract(ic),             & ! inout
+            & sky_view_fract_stem(ic)         & ! inout
+            & )
+        END DO
+        !$ACC END PARALLEL LOOP
 
         !> 5.2.3 merge albedos of snow, soil and canopy into land
         !! 
-        !$claw sca forward update savepoint=ser_jsb_rad_merge_albedos_of_vegtile_1 tile_name=tile%name
-        CALL Merge_albedos_of_vegtile(        &
-          & l_day(:),                         & ! in
-          & dsl4jsb_Lctlib_param(ForestFlag), & ! in  ("true" for forest landcover types)
-          & sky_view_fract(:),                & ! in
-          & sky_view_fract_stem(:),           & ! in
-          & AlbedoCanopySnow,                 & ! in
-          & fract_snow_soil(:),               & ! in
-          & fract_snow_can(:),                & ! in
-          & alb_vis_snow(:),                  & ! in
-          & alb_nir_snow(:),                  & ! in
-          & alb_vis_soil(:),                  & ! in
-          & alb_nir_soil(:),                  & ! in
-          & alb_vis_can(:),                   & ! in
-          & alb_nir_can(:),                   & ! in
-          & alb_vis_lnd(:),                   & ! inout
-          & alb_nir_lnd(:)                    & ! inout
-          & )
+        ForestFlag_param = dsl4jsb_Lctlib_param(ForestFlag)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+        DO ic=1,nc
+          CALL Merge_albedos_of_vegtile(        &
+            & l_day(ic),                        & ! in
+            & ForestFlag_param,                 & ! in  ("true" for forest landcover types)
+            & sky_view_fract(ic),               & ! in
+            & sky_view_fract_stem(ic),          & ! in
+            & AlbedoCanopySnow,                 & ! in
+            & fract_snow_soil(ic),              & ! in
+            & fract_snow_can(ic),               & ! in
+            & alb_vis_snow(ic),                 & ! in
+            & alb_nir_snow(ic),                 & ! in
+            & alb_vis_soil(ic),                 & ! in
+            & alb_nir_soil(ic),                 & ! in
+            & alb_vis_can(ic),                  & ! in
+            & alb_nir_can(ic),                  & ! in
+            & alb_vis_lnd(ic),                  & ! inout
+            & alb_nir_lnd(ic)                   & ! inout
+            & )
+        END DO
+        !$ACC END PARALLEL LOOP
 
       END IF ! use_alb_veg_simple
-    END IF   ! IF (tile%is_vegetation .AND. .NOT. model%config%use_quincy)
 
+    END IF   ! IF (tile%is_vegetation .AND. .NOT. model%config%use_quincy)
+    !$ACC WAIT
 
     !> 6.0 pass the "land albedo" to the "tile albedo" 
     !! this is needed because for lake tiles, the "tile albedo" is calculated directly, \n
     !! but for vegetation, bare and glacier, the "land albedo" is calculated \n
     !! with "use_quincy = T", for vegetation tiles the "tile albedo" (alb_vis & alb_nir) is calculated directly
     IF (tile%is_bare .OR. tile%is_glacier .OR. (tile%is_vegetation .AND. .NOT. model%config%use_quincy)) THEN
-      !$claw expand parallel update savepoint=ser_jsb_rad_update_albedo_expand_3 tile_name=tile%name
-      alb_vis(:) = alb_vis_lnd(:)
-      alb_nir(:) = alb_nir_lnd(:)
-      !$claw end expand
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      DO ic=1,nc
+        alb_vis(ic) = alb_vis_lnd(ic)
+        alb_nir(ic) = alb_nir_lnd(ic)
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
 
     !> 7.0 deallocate a pointer
     !! 
     IF (TRIM(use_alb_soil_organic_C) == '') THEN
       IF (ASSOCIATED(c_bg_sum)) THEN
-        !$claw acc exit data delete(c_bg_sum)
+        !$ACC EXIT DATA DELETE(c_bg_sum)
         DEALLOCATE(c_bg_sum)
       END IF
     END IF
-    !$claw acc exit data delete(l_day)
+    !$ACC EXIT DATA DELETE(l_day)
     DEALLOCATE(l_day)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1273,7 +1333,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)        :: alb_nir_snow_soil   ! albedo of snow and soil combined 
     INTEGER                                :: ncanopy             ! number of canopy layers
     INTEGER                                :: icanopy             !< loop 1,ncanopy
-    INTEGER                                :: iblk, ics, ice, nc
+    INTEGER                                :: iblk, ics, ice, nc, ic
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sw_radiation_q_'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -1436,22 +1496,28 @@ CONTAINS
 
     !> 0.9  Set day-or-night-switch
     !! 
-    !$claw expand
-    l_day(:) = Has_minimal_radiation(swvis_srf_down(:), swnir_srf_down(:))
-
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      l_day(ic) = Has_minimal_radiation(swvis_srf_down(ic), swnir_srf_down(ic))
+    END DO
+    !$ACC END PARALLEL LOOP
 
     !> 1.0 snow albedo 
     !! 
-    !! (original jsbach4 routine)
-    CALL calc_snow_albedo(l_day(:),                                 & ! in
-                          fract_snow_soil(:),                       & ! in
-                          snow_age(:),                              & ! in
-                          cos_zenith_angle(:),                      & ! in
-                          dsl4jsb_Config(RAD_)%albedo_age_weight,   & ! in
-                          t_unfilt(:),                              & ! in
-                          alb_vis_snow(:),                          & ! inout
-                          alb_nir_snow(:)                           & ! inout
-                          )
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+    DO ic=1,nc
+      !! (original jsbach4 routine)
+      CALL calc_snow_albedo(l_day(ic),                                 & ! in
+                            fract_snow_soil(ic),                       & ! in
+                            snow_age(ic),                              & ! in
+                            cos_zenith_angle(ic),                      & ! in
+                            dsl4jsb_Config(RAD_)%albedo_age_weight,    & ! in
+                            t_unfilt(ic),                              & ! in
+                            alb_vis_snow(ic),                          & ! inout
+                            alb_nir_snow(ic)                           & ! inout
+                            )
+    END DO
+    !$ACC END PARALLEL LOOP
 
 
     !> 2.0 soil albedo 

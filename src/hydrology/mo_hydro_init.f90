@@ -422,7 +422,6 @@ CONTAINS
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
         ! calculate volumetric soil porosity of mineral soil
-        !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_0 tile_name=tile%name
         CALL soil_init_from_texture( &
            porosity_sand, porosity_silt, porosity_clay, porosity_oc,                                                &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -430,7 +429,6 @@ CONTAINS
            hydro_init_vars%vol_porosity(:,:))
 
         ! calculate saturated hydraulic conductivity of mineral soil
-        !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_1 tile_name=tile%name
         CALL soil_init_from_texture( &
            hyd_cond_sand, hyd_cond_silt, hyd_cond_clay, hyd_cond_oc,                                                &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -439,7 +437,6 @@ CONTAINS
         hydro_init_vars%hyd_cond_sat(:,:) = hydro_init_vars%hyd_cond_sat(:,:) * hyd_cond_sat_profile
 
         ! calculate volumetric field capacity [m/m] of mineral soil
-        !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_2 tile_name=tile%name
         CALL soil_init_from_texture( &
            field_cap_sand, field_cap_silt, field_cap_clay, field_cap_oc,                                            &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -447,7 +444,6 @@ CONTAINS
            hydro_init_vars%vol_field_cap(:,:))
 
         ! calculate plant wilting point of mineral soil
-        !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_3 tile_name=tile%name
         CALL soil_init_from_texture( &
            wilt_sand, wilt_silt, wilt_clay, wilt_oc,                                                                &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -455,7 +451,6 @@ CONTAINS
            hydro_init_vars%vol_p_wilt(:,:))
 
         ! calculate matrix potential of mineral soil
-        !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_4 tile_name=tile%name
         CALL soil_init_from_texture( &
            matrix_pot_sand, matrix_pot_silt, matrix_pot_clay, matrix_pot_oc,                                        &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -463,7 +458,6 @@ CONTAINS
            hydro_init_vars%matrix_pot(:,:))
 
         ! calculate pore_size_index of mineral soil
-        !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_5 tile_name=tile%name
         CALL soil_init_from_texture( &
            pore_size_index_sand, pore_size_index_silt, pore_size_index_clay, pore_size_index_oc,                    &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -471,7 +465,6 @@ CONTAINS
            hydro_init_vars%pore_size_index(:,:))
 
         ! calculate exponent b in Clapp & Hornberger of mineral soil
-        !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_6 tile_name=tile%name
         CALL soil_init_from_texture( &
            bclapp_sand, bclapp_silt, bclapp_clay, bclapp_oc,                                                        &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
@@ -579,8 +572,8 @@ CONTAINS
 
     dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev) = hydro_init_vars%oro_stddev
 
-    !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_,elevation), &
-    !$acc dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
+    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,elevation)) &
+    !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev))
 
     ! Compute steepness parameter for surface runoff
     DO i = 1, grid%Get_nblks()
@@ -655,20 +648,20 @@ CONTAINS
         dsl4jsb_var_ptr(HYDRO_, fract_org_sl) = hydro_init_vars%fract_org_sl
       END IF
 
-      !$acc update device(dsl4jsb_var_ptr(HYDRO_,wtr_soil_sat_sl), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, wtr_soil_pwp_sl), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, wtr_soil_fc_sl), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, vol_field_cap), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, vol_p_wilt), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, pore_size_index), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, bclapp), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, matrix_pot), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, hyd_cond_sat), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, vol_porosity), &
-      !$acc dsl4jsb_var_ptr(HYDRO_, fract_org_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, soil_depth), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) )
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr  (HYDRO_, wtr_soil_sat_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_pwp_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, wtr_soil_fc_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_field_cap)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_p_wilt)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, pore_size_index)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, bclapp)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, matrix_pot)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, hyd_cond_sat)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, vol_porosity)) &
+      !$ACC   DEVICE(dsl4jsb_var_ptr       (HYDRO_, fract_org_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, soil_depth_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, soil_depth)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl))
 
     END IF
 
@@ -691,9 +684,9 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
 
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, root_depth), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl), &
-      !$acc dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, root_depth)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, root_depth_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
     END IF
 
   END SUBROUTINE hydro_init_bc
@@ -783,9 +776,10 @@ CONTAINS
       ! Initial soil water overflow (used in terra planet experiments)
       dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow) = 0._wp
 
-      !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow),       &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil),  &
-      !$acc               dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow))
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, wtr_soil_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow))
       ! avoid compiler warnings about pointers not being dereferenced
 
     END IF
@@ -813,7 +807,7 @@ CONTAINS
         WHERE (dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl) <= 1.0e-10_wp)
           dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl) = 0._wp
         ENDWHERE
-        !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl))
+        !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, fract_org_sl))
       END IF
 
       ! update soil properties with organic layer fractions
@@ -838,10 +832,10 @@ CONTAINS
       dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = MAX(0._wp, &
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)))
 
-      !$acc update device(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl), &
-      !$acc dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
+      !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl), &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl), &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
     END IF
 
     IF (tile%contains_vegetation) THEN   ! Assuming there is also soil and roots
@@ -892,8 +886,9 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE
 
-      !$acc update host(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone),     &
-      !$acc             dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel))
+      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max)) &
+      !$ACC   HOST(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) &
+      !$ACC   HOST(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel))
 
     END IF ! Tile with vegetation
 
@@ -1025,9 +1020,9 @@ CONTAINS
       END DO
     END IF
 
-    !$acc update device(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl, &
-    !$acc matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl, &
-    !$acc vol_p_wilt_sl)
+    !$ACC UPDATE DEVICE(hyd_cond_sat_sl, vol_porosity_sl, bclapp_sl) &
+    !$ACC   DEVICE(matrix_pot_sl, pore_size_index_sl, vol_field_cap_sl) &
+    !$ACC   DEVICE(vol_p_wilt_sl)
 
   END SUBROUTINE init_soil_properties
 
@@ -1103,7 +1098,7 @@ CONTAINS
         ice_soil_sl(:,:,:) = MAX(0._wp, MIN(ice_soil_sl(:,:,:), &
           &                             MAX(vol_porosity_sl (:,:,:) * soil_depth_sl(:,:,:), 0._wp) - wtr_soil_sl(:,:,:)))
 
-        !$acc update device(wtr_soil_sl, ice_soil_sl)
+        !$ACC UPDATE DEVICE(wtr_soil_sl, ice_soil_sl)
       END IF
     END IF
 
@@ -1114,7 +1109,7 @@ CONTAINS
       root_depth(:,:) = MIN(root_depth(:,:), soil_depth(:,:))
       root_depth_sl(:,:,:) = soil_depth_to_layers_2d(root_depth(:,:), soil_w%dz(:))
 
-      !$acc update device(root_depth, root_depth_sl)
+      !$ACC UPDATE DEVICE(root_depth, root_depth_sl)
     END IF
 
   END SUBROUTINE hydro_sanitize_state

@@ -156,14 +156,10 @@ CONTAINS
     & parameter_from_texture)
 
     REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
-    !$noclaw model-data
     REAL(wp), INTENT(in)  ::                                      &
       fraction_sand, fraction_silt, fraction_clay,                &
       fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
     REAL(wp), INTENT(out)  ::  parameter_from_texture
-    !$noclaw end model-data
-
-    !$noclaw sca
 
     parameter_from_texture = MAX(((fraction_sand + fraction_sand_deep)     &
                              * 0.5_wp * parameter_sand) +                  &

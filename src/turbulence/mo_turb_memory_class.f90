@@ -82,8 +82,6 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    !! !$acc enter data pcreate(mem)
-
     CALL mem%Add_var( 'rough_m', mem%rough_m,                                            &
       & hgrid, surface,                                                                  &
       & t_cf('roughness_length_momentum', 'm', 'surface roughness length for momentum'), &
