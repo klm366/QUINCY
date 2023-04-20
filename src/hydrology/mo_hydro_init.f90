@@ -106,11 +106,9 @@ MODULE mo_hydro_init
       & fr_sand          (:,:) => NULL(), &
       & fr_silt          (:,:) => NULL(), &
       & fr_clay          (:,:) => NULL(), &
-      & fr_oc            (:,:) => NULL(), &
       & fr_sand_deep     (:,:) => NULL(), &
       & fr_silt_deep     (:,:) => NULL(), &
       & fr_clay_deep     (:,:) => NULL(), &
-      & fr_oc_deep       (:,:) => NULL(), &
       & ifs_smi_sl     (:,:,:) => NULL(), &
       & ifs_weq_snow     (:,:) => NULL()
   END TYPE t_hydro_init_vars
@@ -168,11 +166,9 @@ CONTAINS
     IF (ASSOCIATED(hydro_init_vars%fr_sand))      DEALLOCATE(hydro_init_vars%fr_sand)
     IF (ASSOCIATED(hydro_init_vars%fr_silt))      DEALLOCATE(hydro_init_vars%fr_silt)
     IF (ASSOCIATED(hydro_init_vars%fr_clay))      DEALLOCATE(hydro_init_vars%fr_clay)
-    IF (ASSOCIATED(hydro_init_vars%fr_oc))        DEALLOCATE(hydro_init_vars%fr_oc)
     IF (ASSOCIATED(hydro_init_vars%fr_sand_deep)) DEALLOCATE(hydro_init_vars%fr_sand_deep)
     IF (ASSOCIATED(hydro_init_vars%fr_silt_deep)) DEALLOCATE(hydro_init_vars%fr_silt_deep)
     IF (ASSOCIATED(hydro_init_vars%fr_clay_deep)) DEALLOCATE(hydro_init_vars%fr_clay_deep)
-    IF (ASSOCIATED(hydro_init_vars%fr_oc_deep))   DEALLOCATE(hydro_init_vars%fr_oc_deep)
     IF (ASSOCIATED(hydro_init_vars%wtr_soil_sl))  DEALLOCATE(hydro_init_vars%wtr_soil_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl))   DEALLOCATE(hydro_init_vars%ifs_smi_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_weq_snow)) DEALLOCATE(hydro_init_vars%ifs_weq_snow)
@@ -266,20 +262,16 @@ CONTAINS
         & hydro_init_vars%fr_sand         (nproma, nblks),       &
         & hydro_init_vars%fr_silt         (nproma, nblks),       &
         & hydro_init_vars%fr_clay         (nproma, nblks),       &
-        & hydro_init_vars%fr_oc           (nproma, nblks),       &
         & hydro_init_vars%fr_sand_deep    (nproma, nblks),       &
         & hydro_init_vars%fr_silt_deep    (nproma, nblks),       &
-        & hydro_init_vars%fr_clay_deep    (nproma, nblks),       &
-        & hydro_init_vars%fr_oc_deep      (nproma, nblks)        &
+        & hydro_init_vars%fr_clay_deep    (nproma, nblks)        &
         & )
       hydro_init_vars%fr_sand        (:,:)   = missval
       hydro_init_vars%fr_silt        (:,:)   = missval
       hydro_init_vars%fr_clay        (:,:)   = missval
-      hydro_init_vars%fr_oc          (:,:)   = missval
       hydro_init_vars%fr_sand_deep   (:,:)   = missval
       hydro_init_vars%fr_silt_deep   (:,:)   = missval
       hydro_init_vars%fr_clay_deep   (:,:)   = missval
-      hydro_init_vars%fr_oc_deep     (:,:)   = missval
     END IF ! l_soil_texture
 
     !----------
@@ -389,16 +381,6 @@ CONTAINS
           & fill_array = hydro_init_vars%pore_size_index)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0._wp)
 
-        ! Read soil organic carbon fractions for each soil layer
-        IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
-          DO isoil=1,nsoil
-            ptr_3D => input_file%Read_2d_extdim( &
-              & variable_name='fract_org_sl',     &
-              & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
-            hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
-          END DO
-        END IF
-        
       ELSE   ! l_soil_texture
       
         ! Soil texture information
@@ -421,12 +403,6 @@ CONTAINS
           & fill_array=hydro_init_vars%fr_clay)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-        ! fraction of organic upper soil
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='FR_OC',                     &
-          & fill_array=hydro_init_vars%fr_oc)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-
         ! fraction of sand deep soil
         ptr_2D => input_file%Read_2d(                  &
           & variable_name='SUB_FR_SAND',               &
@@ -445,77 +421,74 @@ CONTAINS
           & fill_array=hydro_init_vars%fr_clay_deep)
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
 
-        ! fraction of organic deep soil
-        ptr_2D => input_file%Read_2d(                  &
-          & variable_name='SUB_FR_OC',                 &
-          & fill_array=hydro_init_vars%fr_oc_deep)
-        ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-
-        ! calculate volumetric soil porosity incl. organic fraction
+        ! calculate volumetric soil porosity of mineral soil
         !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_0 tile_name=tile%name
         CALL soil_init_from_texture( &
            porosity_sand, porosity_silt, porosity_clay, porosity_oc,                                                &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%vol_porosity(:,:))
 
-        ! calculate saturated hydraulic conductivity incl. organic fraction
+        ! calculate saturated hydraulic conductivity of mineral soil
         !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_1 tile_name=tile%name
         CALL soil_init_from_texture( &
            hyd_cond_sand, hyd_cond_silt, hyd_cond_clay, hyd_cond_oc,                                                &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%hyd_cond_sat(:,:))
         hydro_init_vars%hyd_cond_sat(:,:) = hydro_init_vars%hyd_cond_sat(:,:) * hyd_cond_sat_profile
 
-        ! calculate volumetric field capacity [m/m] incl. organic fraction
+        ! calculate volumetric field capacity [m/m] of mineral soil
         !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_2 tile_name=tile%name
         CALL soil_init_from_texture( &
            field_cap_sand, field_cap_silt, field_cap_clay, field_cap_oc,                                            &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%vol_field_cap(:,:))
 
-        ! calculate plant wilting point incl. organic fraction
+        ! calculate plant wilting point of mineral soil
         !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_3 tile_name=tile%name
         CALL soil_init_from_texture( &
            wilt_sand, wilt_silt, wilt_clay, wilt_oc,                                                                &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%vol_p_wilt(:,:))
 
-        ! calculate matrix potential incl. organic fraction
+        ! calculate matrix potential of mineral soil
         !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_4 tile_name=tile%name
         CALL soil_init_from_texture( &
            matrix_pot_sand, matrix_pot_silt, matrix_pot_clay, matrix_pot_oc,                                        &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%matrix_pot(:,:))
 
-        ! calculate pore_size_index incl. organic fraction
+        ! calculate pore_size_index of mineral soil
         !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_5 tile_name=tile%name
         CALL soil_init_from_texture( &
            pore_size_index_sand, pore_size_index_silt, pore_size_index_clay, pore_size_index_oc,                    &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%pore_size_index(:,:))
 
-        ! calculate exponent b in Clapp & Hornberger incl. organic fraction
+        ! calculate exponent b in Clapp & Hornberger of mineral soil
         !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_6 tile_name=tile%name
         CALL soil_init_from_texture( &
            bclapp_sand, bclapp_silt, bclapp_clay, bclapp_oc,                                                        &
            hydro_init_vars%fr_sand(:,:), hydro_init_vars%fr_silt(:,:), hydro_init_vars%fr_clay(:,:),                &
            hydro_init_vars%fr_sand_deep(:,:), hydro_init_vars%fr_silt_deep(:,:), hydro_init_vars%fr_clay_deep(:,:), &
-           hydro_init_vars%fr_oc(:,:), hydro_init_vars%fr_oc_deep(:,:),                                             &
            hydro_init_vars%bclapp(:,:))
 
       END IF ! l_soil_texture
+
+      ! Read soil organic carbon fractions for each soil layer
+      IF (dsl4jsb_Config(HYDRO_)%l_socmap) THEN
+        DO isoil=1,nsoil
+          ptr_3D => input_file%Read_2d_extdim( &
+            & variable_name='fract_org_sl',     &
+            & start_extdim=isoil, end_extdim=isoil, extdim_name='soillev')
+          hydro_init_vars%fract_org_sl(:,isoil,:) = MERGE(ptr_3D(:,:,1), 0._wp, ptr_3D(:,:,1) >= 0._wp)
+        END DO
+      END IF
 
       CALL input_file%Close()
 

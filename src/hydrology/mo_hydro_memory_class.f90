@@ -116,7 +116,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real3d) :: &
       & vol_field_cap_sl,     & !< Volumetric soil field capacity                                           [m/m]
       & vol_p_wilt_sl,        & !< Volumetric permanent wilting point                                       [m/m]
-      & vol_porosity_sl,      & !< Volumetric porosity of mineral                                           [m/m]
+      & vol_porosity_sl,      & !< Volumetric porosity of mineral soil                                      [m/m]
       & pore_size_index_sl,   & !< Soil pore size distribution index                                        []
       & bclapp_sl,            & !< Exponent B in Clapp and Hornberger
       & matrix_pot_sl,        & !< Matrix potential                                                         [m]

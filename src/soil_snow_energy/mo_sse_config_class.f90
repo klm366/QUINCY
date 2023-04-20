@@ -40,7 +40,7 @@ MODULE mo_sse_config_class
     !
     LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
     LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
-    LOGICAL  :: l_soil_texture  !< T: Deduce soil thermal parameters from soil texture
+    LOGICAL  :: l_soil_texture  !< T: Deduce mineral soil thermal parameters from soil texture
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface

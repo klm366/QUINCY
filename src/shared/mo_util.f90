@@ -141,42 +141,37 @@ CONTAINS
 
   END SUBROUTINE ifs2soil
 
-  !> Calculate soil parameters fom soil texture.
+  !> Calculate mineral soil parameters fom soil texture.
   !!
   !! Input to this routine should conform:
   !! fraction_sand + fraction_silt + fraction_clay = 1
   !! fraction_sand_deep + fraction_silt_deep + fraction_clay_deep = 1
-  !! Properties of upper soil and deep soil are identical. Their composition is averaged.
-  !! The organic fraction of the soil is the non-mineral fraction of the soil.
+  !! The calculated mineral soil parameters do not have a vertical dimension,
+  !! as calculations are based on averages of the upper and lower soil textures.
+  !! TODO: Calculate layer dependant parameters
   PURE ELEMENTAL SUBROUTINE soil_init_from_texture(                 &
     & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &
     & fraction_sand, fraction_silt, fraction_clay,                  &
     & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
-    & fraction_oc, fraction_oc_deep,                                &
     & parameter_from_texture)
 
     REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
     !$noclaw model-data
     REAL(wp), INTENT(in)  ::                                      &
       fraction_sand, fraction_silt, fraction_clay,                &
-      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep, &
-      fraction_oc, fraction_oc_deep
+      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
     REAL(wp), INTENT(out)  ::  parameter_from_texture
     !$noclaw end model-data
 
     !$noclaw sca
 
-    parameter_from_texture = MAX(1._wp - ((fraction_oc + fraction_oc_deep) &
-                             * 0.5_wp),0._wp) *                            &
-                             MAX(((fraction_sand + fraction_sand_deep)     &
+    parameter_from_texture = MAX(((fraction_sand + fraction_sand_deep)     &
                              * 0.5_wp * parameter_sand) +                  &
                              ((fraction_silt + fraction_silt_deep)         &
                              * 0.5_wp * parameter_silt) +                  &
                              ((fraction_clay + fraction_clay_deep)         &
                              * 0.5_wp * parameter_clay),                   &
-                             MIN(parameter_sand,parameter_silt,parameter_clay)) &
-                             + ((fraction_oc + fraction_oc_deep)           &
-                             * 0.5_wp) * parameter_oc
+                             MIN(parameter_sand,parameter_silt,parameter_clay))
 
   END SUBROUTINE soil_init_from_texture
 

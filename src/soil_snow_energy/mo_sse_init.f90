@@ -65,11 +65,9 @@ MODULE mo_sse_init
       & fr_sand     (:,:  ) => Null(), &
       & fr_silt     (:,:  ) => Null(), &
       & fr_clay     (:,:  ) => Null(), &
-      & fr_oc       (:,:  ) => Null(), &
       & fr_sand_deep(:,:  ) => Null(), &
       & fr_silt_deep(:,:  ) => Null(), &
       & fr_clay_deep(:,:  ) => Null(), &
-      & fr_oc_deep  (:,:  ) => Null(), &
       & t_srf_mon   (:,:,:) => NULL(), &
       & ifs_tsoil   (:,:,:) => NULL(), &
       & ifs_tskin   (:,:  ) => NULL()
@@ -114,11 +112,9 @@ CONTAINS
     IF (ASSOCIATED(sse_init_vars%fr_sand))      DEALLOCATE(sse_init_vars%fr_sand)
     IF (ASSOCIATED(sse_init_vars%fr_silt))      DEALLOCATE(sse_init_vars%fr_silt)
     IF (ASSOCIATED(sse_init_vars%fr_clay))      DEALLOCATE(sse_init_vars%fr_clay)
-    IF (ASSOCIATED(sse_init_vars%fr_oc))        DEALLOCATE(sse_init_vars%fr_oc)
     IF (ASSOCIATED(sse_init_vars%fr_sand_deep)) DEALLOCATE(sse_init_vars%fr_sand_deep)
     IF (ASSOCIATED(sse_init_vars%fr_silt_deep)) DEALLOCATE(sse_init_vars%fr_silt_deep)
     IF (ASSOCIATED(sse_init_vars%fr_clay_deep)) DEALLOCATE(sse_init_vars%fr_clay_deep)
-    IF (ASSOCIATED(sse_init_vars%fr_oc_deep))   DEALLOCATE(sse_init_vars%fr_oc_deep)
 
     IF (ASSOCIATED(sse_init_vars%t_srf_mon))    DEALLOCATE(sse_init_vars%t_srf_mon)
 
@@ -176,21 +172,17 @@ CONTAINS
         & sse_init_vars%fr_sand     (nproma, nblks    ), &
         & sse_init_vars%fr_silt     (nproma, nblks    ), &
         & sse_init_vars%fr_clay     (nproma, nblks    ), &
-        & sse_init_vars%fr_oc       (nproma, nblks    ), &
         & sse_init_vars%fr_sand_deep(nproma, nblks    ), &
         & sse_init_vars%fr_silt_deep(nproma, nblks    ), &
-        & sse_init_vars%fr_clay_deep(nproma, nblks    ), &
-        & sse_init_vars%fr_oc_deep  (nproma, nblks    )  &
+        & sse_init_vars%fr_clay_deep(nproma, nblks    )  &
         & )
 
       sse_init_vars%fr_sand     (:,:)   = missval
       sse_init_vars%fr_silt     (:,:)   = missval
       sse_init_vars%fr_clay     (:,:)   = missval
-      sse_init_vars%fr_oc       (:,:)   = missval
       sse_init_vars%fr_sand_deep(:,:)   = missval
       sse_init_vars%fr_silt_deep(:,:)   = missval
       sse_init_vars%fr_clay_deep(:,:)   = missval
-      sse_init_vars%fr_oc_deep  (:,:)   = missval
     END IF ! l_soil_texture
 
     input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SSE_)%bc_filename), model%grid_id)
@@ -213,11 +205,6 @@ CONTAINS
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
       ptr_2D => input_file%Read_2d(             &
-        & variable_name='FR_OC',                &
-        & fill_array = sse_init_vars%fr_oc)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
-
-      ptr_2D => input_file%Read_2d(             &
         & variable_name='SUB_FR_SAND',              &
         & fill_array = sse_init_vars%fr_sand_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
@@ -232,18 +219,12 @@ CONTAINS
         & fill_array = sse_init_vars%fr_clay_deep)
       ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
 
-      ptr_2D => input_file%Read_2d(             &
-        & variable_name='SUB_FR_OC',                &
-        & fill_array = sse_init_vars%fr_oc_deep)
-      ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) > 0._wp)
-
       ! calculate soil heat capacity [J/(m^3*K)] incl. organic fraction
       !$noclaw sca forward update savepoint=ser_jsb_soil_init_from_texture_0 tile_name=tile%name
       CALL soil_init_from_texture( &
          heat_cap_sand, heat_cap_silt, heat_cap_clay, heat_cap_oc,                                          &
          sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
          sse_init_vars%fr_sand_deep(:,:), sse_init_vars%fr_silt_deep(:,:), sse_init_vars%fr_clay_deep(:,:), &
-         sse_init_vars%fr_oc(:,:), sse_init_vars%fr_oc_deep(:,:),                                           &
          sse_init_vars%vol_heat_cap(:,:))
 
       ! calculate soil heat conductivity incl. organic fraction
@@ -252,7 +233,6 @@ CONTAINS
          heat_cond_sand, heat_cond_silt, heat_cond_clay, heat_cond_oc,                                      &
          sse_init_vars%fr_sand(:,:), sse_init_vars%fr_silt(:,:), sse_init_vars%fr_clay(:,:),                &
          sse_init_vars%fr_sand_deep(:,:), sse_init_vars%fr_silt_deep(:,:), sse_init_vars%fr_clay_deep(:,:), &
-         sse_init_vars%fr_oc(:,:), sse_init_vars%fr_oc_deep(:,:),                                           &
          sse_init_vars%heat_cond(:,:))
     ELSE
       IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_cap_map .OR. .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map) THEN
