@@ -671,14 +671,14 @@ CONTAINS
       DO ic=1,nc
         w_snow(ic) = w_snow_soil(ic)
       END DO
-    !$ACC END LOOP
+      !$ACC END LOOP
     ELSE IF (tile%is_vegetation .OR. tile%is_land) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         w_snow(ic) = w_snow_soil(ic) + w_snow_can(ic)
       END DO
+      !$ACC END LOOP
     END IF
-    !$ACC END LOOP
     !$ACC END PARALLEL
 
     !$ACC END DATA
