@@ -2306,8 +2306,9 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)              ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    drainage)            ! in
     IF (tile%is_process_active(MIX_)) THEN
-      wtr_latflow(:)       = dsl4jsb_var2D_onChunk(MIX_, wtr_latflow)      ! in
-      retention_storage(:) = dsl4jsb_var2D_onChunk(MIX_, runoff_retention) ! in
+      wtr_latflow(:)       = dsl4jsb_var2D_onChunk(MIX_, wtr_latflow)                        ! in
+      retention_storage(:) = dsl4jsb_var2D_onChunk(MIX_, runoff_retention) &                 ! in
+        &                  + SUM(dsl4jsb_var3D_onChunk(MIX_, drain_lat_retention_sl), DIM=2) ! in
     END IF
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)         ! in

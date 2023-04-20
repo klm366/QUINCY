@@ -40,6 +40,8 @@ MODULE mo_mix_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & wtr_latflow,          & !< Lateral water flow between tiles               [kg m-2 s-1]
       & runoff_retention        !< Runoff retention reservoir                     [m water equivalent]
+    TYPE(t_jsb_var_real3d) :: &
+      & drain_lat_retention_sl  !< Lateral drainage retention reservoir           [m water equivalent]
 
   CONTAINS
     PROCEDURE :: Init => Init_mix_memory
@@ -63,7 +65,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: surface, soil_w              ! Vertical grids
 
     INTEGER :: table
     TYPE(t_grib2) :: grib2_desc
@@ -76,6 +78,7 @@ CONTAINS
 
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
+    soil_w  => Get_vgrid('soil_depth_water')
 
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
       grib2_desc = t_grib2(1,0,202, grib_bits)
@@ -102,6 +105,16 @@ CONTAINS
       & prefix, suffix, lrestart=.TRUE.,                                             &
       & output_level=BASIC,                                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'drain_lat_retention_sl', mem%drain_lat_retention_sl,          &
+      & hgrid, soil_w,                                                               &
+      & t_cf('drain_lat_retention_sl', 'm (water equivalent)',                       &
+      &      'Retention reservoir for lateral drainage'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,                                                          &
+      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
 
   END SUBROUTINE Init_mix_memory
 

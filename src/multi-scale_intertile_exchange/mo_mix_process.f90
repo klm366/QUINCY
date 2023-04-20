@@ -91,53 +91,75 @@ CONTAINS
   !>
   !! @brief   Compute intertile exchange of lateral drainage
   !!
-  PURE ELEMENTAL SUBROUTINE calc_drainage_transport(            &
-    & dtime, source_fract, target_fract, field_cap_target,      &
-    & latdrain_source, drainage_source, wtr_latflow_source,     &
-    & wtr_latflow_target, wtr_soil_target &
+  PURE ELEMENTAL SUBROUTINE calc_drainage_transport(        &
+    & l_lag, dtime, retention_time, field_cap_source,       &
+    & source_fract, target_fract, drainlat_source,          &
+    & drainage_source, wtr_latflow_source,                  &
+    & wtr_latflow_target, wtr_soil_source, wtr_soil_target, &
+    & drainlat_retention_source                             &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
-    REAL(wp), INTENT(in)    :: dtime,              & !< timestep length
-      &                        source_fract,       & !< area fraction of water source tile
-      &                        target_fract,       & !< area fraction of water target tile
-      &                        field_cap_target      !< soil field capacity of target tile
-    REAL(wp), INTENT(inout) :: latdrain_source,    & !< lateral drainage on source tile
-      &                        drainage_source,    & !< bottom drainage on source tile
-      &                        wtr_latflow_source, & !< lateral water flow from source tile
-      &                        wtr_latflow_target, & !< lateral water flow towards target tile
-      &                        wtr_soil_target       !< soil water storage on target tile
+    LOGICAL,  INTENT(in)    :: l_lag                       !< T: apply lag to overland flow
+    REAL(wp), INTENT(in)    :: dtime,                    & !< timestep length                        [s]
+      &                        retention_time,           & !< retention time for lateral transport   [s]
+      &                        field_cap_source,         & !< soil field capacity of source tile     [m]
+      &                        source_fract,             & !< area fraction of water source tile     []
+      &                        target_fract                !< area fraction of water target tile     []
+    REAL(wp), INTENT(inout) :: drainlat_source,          & !< lateral drainage on source tile        [kg m-2 s-1]
+      &                        drainage_source,          & !< bottom drainage on source tile         [kg m-2 s-1]
+      &                        wtr_latflow_source,       & !< lateral water flow from source tile    [kg m-2 s-1]
+      &                        wtr_latflow_target,       & !< lateral water flow towards target tile [kg m-2 s-1]
+      &                        wtr_soil_source,          & !< soil water storage on source tile      [m]
+      &                        wtr_soil_target,          & !< soil water storage on target tile      [m]
+      &                        drainlat_retention_source   !< lateral drainage retention storage     [m]
 
     ! Local variables
-    REAL(wp)                :: latflow_act           !< Actual lateral flow during time step
-                                                     !! considering the target storage limits
+    REAL(wp)                :: drainlat_flx_source,      & !< lateral drainage flux leaving source tile                        [m]
+      &                        drainlat_flx_target,      & !< lateral drainage flux arriving at target tile                    [m]
+      &                        wtr_remoist_source          !< water from retention storage re-entering the soil at source tile [m]
 
     !> Update target soil with lateral drainage from source tile
-    !!   *** DUMMY implementation which later on will be replaced with a physics based process ***
     !!   Lateral drainage is scaled with the tile fractions and moved into the target tile's
     !!   soil storage. It flows into the same layer as it originates from on the source tile.
     !!   Excess drainage is added to the total drainage of the source tile.
-    !! @todo If a flow lag is required it needs to be implemented here, probably with an
-    !!   temporary storage on the source tile, which then also needs to be part of the global
-    !!   water balance
+    !!   In case of long transport routes (upland to lowland) a retention storage is used.
+    !!   This reservoir can remoist the soil water storage in the source tile in later time steps.
+    !! @todo the retention store lag time needs to be physics based, not fixed to some arbitrary value
+    !! @todo where does the retention storage reside physically? On the hillslope? Doesn't this concept
+    !!       bypass the upper limit for soil moisture storage
 
+    ! Water within the retention storage is allowed to remoist the soil layer water storage
+    IF (drainlat_retention_source > 1.0e-10_wp .AND. wtr_soil_source < field_cap_source) THEN
+      wtr_remoist_source        = MIN(drainlat_retention_source, field_cap_source - wtr_soil_source)
+      wtr_soil_source           = wtr_soil_source + wtr_remoist_source
+      drainlat_retention_source = MAX(0._wp, drainlat_retention_source - wtr_remoist_source)
+    END IF
+
+    ! Compute lateral flow
     IF (target_fract > 1.0e-10_wp) THEN
-      ! Substract diagnosed lateral drainage from total drainage
-      drainage_source    = drainage_source - latdrain_source
-      ! Scale and add all lateral drainage to target tile soil layer
-      latflow_act        = latdrain_source * (source_fract / target_fract)
-      wtr_soil_target    = wtr_soil_target + latflow_act * dtime / rhoh2o
-      ! Reduce lateral flow by upper soil water limit and correct for any excess soil moisture
-      latflow_act        = latflow_act - MAX(wtr_soil_target - field_cap_target, 0._wp) * rhoh2o / dtime
-      wtr_soil_target    = MIN(wtr_soil_target, field_cap_target)
-      wtr_latflow_target = wtr_latflow_target + latflow_act
-      ! Rescale the actually transported water back to the source tile
-      latflow_act        = latflow_act * (target_fract / source_fract)
-      wtr_latflow_source = wtr_latflow_source - latflow_act
-      ! Add any residual lateral flow to the total drainage of the source tile
-      drainage_source    = drainage_source + MAX(latdrain_source - latflow_act, 0._wp)
-      latdrain_source    = 0._wp
+      ! Compute lateral drainage on source tile and update total drainage and total lateral water flow
+      drainlat_flx_source = drainlat_source    * dtime / rhoh2o
+      drainage_source     = drainage_source    - drainlat_source
+      ! Set source tile lateral drainage to zero as it left the tile
+      drainlat_source     = 0._wp
+
+      ! Compute flows for and update drainage retention storage (only macro scale flow)
+      IF (l_lag) THEN
+        drainlat_retention_source = drainlat_retention_source + drainlat_flx_source
+        drainlat_flx_source       = drainlat_retention_source * MIN(1.0_wp, dtime / retention_time)
+        drainlat_retention_source = MAX(0._wp, drainlat_retention_source - drainlat_flx_source)
+      END IF
+
+      ! Scale lateral drainage flow to account for tile fraction differences
+      drainlat_flx_target = drainlat_flx_source * (source_fract / target_fract)
+      ! Update target soil layer water content
+      wtr_soil_target    = wtr_soil_target + drainlat_flx_target
+      ! Update lateral flows
+      wtr_latflow_source  = wtr_latflow_source - drainlat_flx_source * rhoh2o / dtime
+      wtr_latflow_target  = wtr_latflow_target + drainlat_flx_target * rhoh2o / dtime
+
     END IF
 
   END SUBROUTINE calc_drainage_transport
