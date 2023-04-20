@@ -250,8 +250,8 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr1d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr1d)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -401,8 +401,8 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr2d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr2d)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -567,8 +567,8 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr3d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr3d)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 

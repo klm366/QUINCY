@@ -420,7 +420,7 @@ CONTAINS
 
       this%fract_old(ics:ice, iblk) = this%fract(ics:ice, iblk)
       this%fract    (ics:ice, iblk) = fract(:)
-      !$acc update device(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract(ics:ice,iblk), this%fract_old(ics:ice,iblk))
 
       IF (ASSOCIATED(this%parent)) THEN
         SELECT TYPE (parent=>this%parent)
@@ -449,7 +449,7 @@ CONTAINS
 
       this%fract_max_old(ics:ice, iblk) = this%fract_max(ics:ice, iblk)
       this%fract_max    (ics:ice, iblk) = fract_max(:)
-      !$acc update device(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_max(ics:ice,iblk), this%fract_max_old(ics:ice,iblk))
     END IF
 
     IF (PRESENT(fract_old)) THEN
@@ -457,7 +457,7 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_old(ics:ice, iblk) = fract_old(:)
-      !$acc update device(this%fract_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_old(ics:ice,iblk))
     END IF
 
     IF (PRESENT(fract_max_old)) THEN
@@ -465,7 +465,7 @@ CONTAINS
        & CALL finish(TRIM(routine), 'Dimension mismatch')
 
       this%fract_max_old(ics:ice, iblk) = fract_max_old(:)
-      !$acc update device(this%fract_max_old(ics:ice,iblk))
+      !$ACC UPDATE DEVICE(this%fract_max_old(ics:ice,iblk))
     END IF
 
   END SUBROUTINE Set_fraction_1d
@@ -491,7 +491,7 @@ CONTAINS
 
         this%fract_old(:,:) = this%fract(:,:)
         this%fract    (:,:) = fract(:,:)
-        !$acc update device(this%fract, this%fract_old)
+        !$ACC UPDATE DEVICE(this%fract, this%fract_old)
 
         IF (ASSOCIATED(this%parent)) THEN
           SELECT TYPE (parent=>this%parent)
@@ -522,7 +522,7 @@ CONTAINS
       IF (ANY(fract_max(:,:) /= this%fract_max(:,:))) THEN
         this%fract_max_old(:,:) = this%fract_max(:,:)
         this%fract_max    (:,:) = fract_max(:,:)
-        !$acc update device(this%fract_max, this%fract_max_old)
+        !$ACC UPDATE DEVICE(this%fract_max, this%fract_max_old)
       END IF
 
     END IF
@@ -533,7 +533,7 @@ CONTAINS
 
       IF (ANY(fract_old(:,:) /= this%fract_old(:,:))) THEN
         this%fract_old(:,:) = fract_old(:,:)
-        !$acc update device(this%fract_old)
+        !$ACC UPDATE DEVICE(this%fract_old)
       END IF
 
     END IF
@@ -544,7 +544,7 @@ CONTAINS
 
       IF (ANY(fract_max_old(:,:) /= this%fract_max_old(:,:))) THEN
         this%fract_max_old(:,:) = fract_max_old(:,:)
-        !$acc update device(this%fract_max_old)
+        !$ACC UPDATE DEVICE(this%fract_max_old)
       END IF
 
     END IF
@@ -739,7 +739,7 @@ CONTAINS
     ALLOCATE(aggregator%fractions(grid%nproma, grid%nblks, no_of_children))
     ALLOCATE(aggregator%data_sum (grid%nproma, grid%nblks))
     ALLOCATE(aggregator%fract_sum(grid%nproma, grid%nblks))
-    !$acc enter data create(aggregator, aggregator%fractions, aggregator%data_sum, aggregator%fract_sum)
+    !$ACC ENTER DATA CREATE(aggregator, aggregator%fractions, aggregator%data_sum, aggregator%fract_sum)
   END FUNCTION Create_aggregator_weighted_by_fract
 
   SUBROUTINE Finalize_aggregator_weighted_by_fract(aggregator)
@@ -751,15 +751,15 @@ CONTAINS
     !CALL message(TRIM(routine), 'Finalizing aggregator '//TRIM(aggregator%name))
 
     IF (ALLOCATED(aggregator%fractions)) THEN
-      !$acc exit data delete(aggregator%fractions)
+      !$ACC EXIT DATA DELETE(aggregator%fractions)
       DEALLOCATE(aggregator%fractions)
     END IF
     IF (ALLOCATED(aggregator%data_sum)) THEN
-      !$acc exit data delete(aggregator%data_sum)
+      !$ACC EXIT DATA DELETE(aggregator%data_sum)
       DEALLOCATE(aggregator%data_sum)
     END IF
     IF (ALLOCATED(aggregator%fract_sum)) THEN
-      !$acc exit data delete(aggregator%fract_sum)
+      !$ACC EXIT DATA DELETE(aggregator%fract_sum)
       DEALLOCATE(aggregator%fract_sum)
     END IF
 
@@ -787,7 +787,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$acc update device( this%fractions(ics:ice,iblk,:) )
+      !$ACC UPDATE DEVICE(this%fractions(ics:ice,iblk,:))
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
@@ -828,7 +828,7 @@ CONTAINS
         current => current%next_sibling_tile
       END DO
 
-      !$acc update device( this%fractions(:,:,:) )
+      !$ACC UPDATE DEVICE(this%fractions(:,:,:))
 
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
@@ -890,15 +890,15 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
-    !$acc parallel default(present) present(this, tile_ptrs2d_cache, var) private(icount, ichild)
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs2d_cache, var) PRIVATE(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
-      !$acc loop gang vector
+      !$ACC LOOP GANG VECTOR
       DO j = ics, ice
         var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
     ELSE IF (no_children > 1) THEN
-      !$acc loop gang vector
+      !$ACC LOOP GANG VECTOR
       DO j = ics, ice
         this%data_sum (j,iblk) = 0._wp
         this%fract_sum(j,iblk) = 0._wp
@@ -906,10 +906,10 @@ CONTAINS
 
       icount = 0
       ichild = 0
-      !$acc loop seq
+      !$ACC LOOP SEQ
       DO i=1,no_children
         IF ( var%child_idx(i) > 0 ) THEN
-          !$acc loop gang vector
+          !$ACC LOOP GANG VECTOR
           DO j = ics, ice
             this%data_sum(j,iblk) = this%data_sum(j,iblk) &
               & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk) 
@@ -918,7 +918,7 @@ CONTAINS
           icount = icount + 1
           ichild = i
         ELSE IF (var%l_aggregate_all) THEN
-          !$acc loop gang vector
+          !$ACC LOOP GANG VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
@@ -939,14 +939,14 @@ CONTAINS
       ! END IF
 
       IF (icount == 1) THEN
-        !$acc loop gang vector
+        !$ACC LOOP GANG VECTOR
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
           END IF
         END DO
       ELSE IF (icount > 1) THEN
-        !$acc loop gang vector
+        !$ACC LOOP GANG VECTOR
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
             var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -960,7 +960,7 @@ CONTAINS
 
     END IF
 
-    !$acc end parallel
+    !$ACC END PARALLEL
 
     IF (var%l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
@@ -1013,13 +1013,13 @@ CONTAINS
 
     ! print*, routine//": working on var ", var%full_name
 
-    !$acc parallel default(present) present(this, tile_ptrs3d_cache, var) private(icount, ichild)
+    !$ACC PARALLEL DEFAULT(PRESENT) PRESENT(this, tile_ptrs3d_cache, var) PRIVATE(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
 
-      !$acc loop seq
+      !$ACC LOOP SEQ
       DO ilev=1,SIZE(var%ptr,2)
-        !$acc loop gang vector
+        !$ACC LOOP GANG VECTOR
         DO j = ics, ice
           var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
         END DO
@@ -1027,23 +1027,23 @@ CONTAINS
 
     ELSE IF (no_children > 1) THEN
 
-      !$acc loop gang vector
+      !$ACC LOOP GANG VECTOR
       DO j = ics, ice
         this%fract_sum(j,iblk) = 0._wp
       END DO
       icount = 0
       ichild = 0
-      !$acc loop seq
+      !$ACC LOOP SEQ
       DO i=1,no_children
         IF (var%child_idx(i) > 0) THEN
-          !$acc loop gang vector
+          !$ACC LOOP GANG VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
           icount = icount + 1
           ichild = i
         ELSE IF (var%l_aggregate_all) THEN
-          !$acc loop gang vector
+          !$ACC LOOP GANG VECTOR
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
@@ -1052,17 +1052,17 @@ CONTAINS
         END IF
       END DO
 
-      !$acc loop seq
+      !$ACC LOOP SEQ
       DO ilev=1,SIZE(var%ptr,2)
-        !$acc loop gang vector
+        !$ACC LOOP GANG VECTOR
         DO j = ics, ice
           this%data_sum (j,iblk) = 0._wp
         END DO
 
-        !$acc loop seq
+        !$ACC LOOP SEQ
         DO i=1,no_children
           IF (var%child_idx(i) > 0) THEN
-            !$acc loop gang vector
+            !$ACC LOOP GANG VECTOR
             DO j = ics, ice
               this%data_sum(j,iblk) = this%data_sum(j,iblk) &
                 & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
@@ -1071,14 +1071,14 @@ CONTAINS
         END DO
 
         IF (icount == 1) THEN
-          !$acc loop gang vector
+          !$ACC LOOP GANG VECTOR
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
             END IF
           END DO
         ELSE IF (icount > 1) THEN
-          !$acc loop gang vector
+          !$ACC LOOP GANG VECTOR
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
               var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
@@ -1091,7 +1091,7 @@ CONTAINS
 
     END IF
 
-    !$acc end parallel
+    !$ACC END PARALLEL
 
     ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
     !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
@@ -1250,7 +1250,7 @@ CONTAINS
 
     ALLOCATE( this%ptrs2d_cache(no_children,maxsize,nproc), &
               this%ptrs3d_cache(no_children,maxsize,nproc)  )
-    !$acc enter data create(this%ptrs2d_cache, this%ptrs3d_cache)
+    !$ACC ENTER DATA CREATE(this%ptrs2d_cache, this%ptrs3d_cache)
 
     DO iproc=1,nproc
       IF (this%process_action(iproc) == 2) THEN
