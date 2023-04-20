@@ -417,7 +417,7 @@ CONTAINS
       t_eff(ic) = (t_old(ic)**3 * (4._wp * t_star(ic) - 3._wp * t_old(ic))) ** 0.25_wp
 
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     !$ACC END DATA
 
@@ -581,7 +581,7 @@ CONTAINS
       END IF
       t(ic) = t_filt(ic)
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END PARALLEL
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
