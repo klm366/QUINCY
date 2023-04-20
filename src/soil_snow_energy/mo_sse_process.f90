@@ -42,7 +42,10 @@ CONTAINS
   !
   ! @return     The volumetric heat capacity of soil.
   !!
-  PURE FUNCTION calc_vol_heat_capacity( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  FUNCTION calc_vol_heat_capacity( &
     & vol_heat_cap_soil_dry_mineral,              &
     & porosity,                                   &
     & fract_organic,                              &
@@ -90,7 +93,10 @@ CONTAINS
   !
   ! @return     The thermal conductivity.
   !!
-  PURE FUNCTION calc_thermal_conductivity( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  FUNCTION calc_thermal_conductivity( &
     & heat_cond_soil_mineral,                        &
     & water, ice,                                    &
     & porosity, vol_field_cap,                       &
@@ -1263,9 +1269,9 @@ CONTAINS
   END SUBROUTINE calc_soiltemp_old
 
 #ifndef _OPENACC
-  ELEMENTAL &
+  ELEMENTAL PURE &
 #endif
-  PURE FUNCTION Get_liquid_max( &
+  FUNCTION Get_liquid_max( &
     & temp, w_max, matrix_pot, bclapp     &
     & ) RESULT(liquid_max)
 

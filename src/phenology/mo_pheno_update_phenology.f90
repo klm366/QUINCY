@@ -358,7 +358,10 @@ CONTAINS
   !!
   !!
   !-----------------------------------------------------------------------------------------------------
-  ELEMENTAL SUBROUTINE calc_phenology(phenology_type                  , &  ! lctlib
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  SUBROUTINE calc_phenology(phenology_type                  , &  ! lctlib
                                       beta_soil_flush                 , &
                                       cn_leaf                         , &
                                       np_leaf                         , &

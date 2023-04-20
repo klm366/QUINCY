@@ -454,7 +454,10 @@ CONTAINS
   END SUBROUTINE calc_par
 
   !
-  PURE SUBROUTINE calc_alb_lwtr( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_alb_lwtr( &
     & l_day,                               &
     & alb_lwtr                             &
     & )
@@ -482,7 +485,10 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE SUBROUTINE calc_alb_lice( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_alb_lice( &
     & l_day,       &
     & t,           &
     & w_snow_lice, &
@@ -538,7 +544,10 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE SUBROUTINE calc_glacier_albedo( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_glacier_albedo( &
     & l_day,   &
     & t,       &
     & alb_vis, &
@@ -607,7 +616,10 @@ CONTAINS
   ! covers less than its area available.) Only for the logarithmic case (albedo_options%UseSOC .eq. 'log') the soil albedo result
   ! of JSBACH4 differs from JSBACH3. In this case this "well separated" result is as reasonable as the "well mixed" result of JS3.
 
-  PURE SUBROUTINE calc_soil_albedo( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_soil_albedo( &
     & l_day,                     &
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_int,  &
@@ -740,7 +752,10 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE SUBROUTINE calc_snow_albedo( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_snow_albedo( &
     & l_day,             & ! in
     & fract_snow_soil,   & ! in
     & snow_age,          & ! in
@@ -900,7 +915,10 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE SUBROUTINE Merge_albedos_of_vegtile( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE Merge_albedos_of_vegtile( &
     & l_day,               & ! in
     & l_forest,            & ! in
     & sky_view_fract,      & ! in
@@ -1009,7 +1027,10 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   !
   ! This is the echam5 scheme
-  REAL(wp) PURE FUNCTION get_surface_albedo_simple( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  REAL(wp) FUNCTION get_surface_albedo_simple( &
     & t_srf,             &
     & fract_forest,      &
     & grnd_snow_fract,   & ! R: fract_snow_soil umbenannt, da grnd_snow_fract nicht unbedingt dasselbe sein muss...

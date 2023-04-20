@@ -83,7 +83,10 @@ CONTAINS
   !! @param [out]    water_to_soil         Water available for infiltration into the soil [m water equivalent]
   !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
   !
-  PURE SUBROUTINE calc_surface_hydrology_land (          &
+#ifndef _OPENACC
+  PURE &
+#endif
+  SUBROUTINE calc_surface_hydrology_land (          &
     & lstart, delta_time, l_dynsnow, snow_depth_max,               &
     & t_srf_unfilt, wind_10m, t_air,                               &
     & skinres_canopy_max, skinres_max, sfract_srf, wfract_srf,     &
@@ -315,9 +318,9 @@ CONTAINS
   !! @param [out]    pme_glacier           precipitation minus sublimation on glacier [kg m-2 s-1]
   !
 #ifndef _OPENACC
-  ELEMENTAL &
+  ELEMENTAL PURE &
 #endif
-  PURE SUBROUTINE calc_surface_hydrology_glacier ( &
+  SUBROUTINE calc_surface_hydrology_glacier ( &
     & lstart, delta_time,                                    &
     & t_srf_unfilt,                                          &
     & sfract_srf, hcap_grnd,                                 &
@@ -1453,7 +1456,10 @@ CONTAINS
   ! @param [in]     w_snow_lice      Snow depth on lake ice [m water equivalent]
   ! @param [out]    fract_snow_lice  Fraction of snow on lake ice
   !!
-  ELEMENTAL SUBROUTINE calc_wskin_fractions_lice( &
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  SUBROUTINE calc_wskin_fractions_lice( &
     & w_snow_lice,                                & ! in
     & fract_snow_lice                             & ! out
     & )
@@ -1642,7 +1648,10 @@ CONTAINS
 
   !< Roesch et al. 2002, Climate Dynamics
   !
-  REAL(wp) ELEMENTAL FUNCTION Get_snow_fract_noforest(snow, orodev)
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  REAL(wp) FUNCTION Get_snow_fract_noforest(snow, orodev)
 
     !$ACC ROUTINE SEQ
 
@@ -1729,7 +1738,10 @@ CONTAINS
   !
   ! @return     The water stress factor. !
   !
-  ELEMENTAL FUNCTION get_water_stress_factor ( &
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  FUNCTION get_water_stress_factor ( &
     & w_soil, w_soil_max, w_soil_crit_fract, w_soil_wilt_fract) RESULT(water_stress_factor)
 
     !$ACC ROUTINE SEQ

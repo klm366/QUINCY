@@ -347,7 +347,10 @@ CONTAINS
   END SUBROUTINE update_surface_energy_lake
 
   ! Calculate new surface water temperature
-  PURE SUBROUTINE calc_lake_wtr_temp(t_lwtr, hflx, hflx_resid, hcap, l_ice_formation, l_ice_melting, &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_lake_wtr_temp(t_lwtr, hflx, hflx_resid, hcap, l_ice_formation, l_ice_melting, &
     &                                          l_ice, dtime, ml_depth, min_ice_depth)
 
     !$ACC ROUTINE SEQ
@@ -413,7 +416,10 @@ CONTAINS
   END SUBROUTINE calc_lake_wtr_temp
 
   ! Calculate new ice temperature, snow depth and heat fluxes
-  PURE SUBROUTINE calc_lake_ice_temp(t_lice, hcap_ice, hflx_cond_ice, hflx_melt_snow, hflx_melt_lice, &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_lake_ice_temp(t_lice, hcap_ice, hflx_cond_ice, hflx_melt_snow, hflx_melt_lice, &
     &                                          hflx, lhflx, snowfall, hi, hs, fs, hi_min, dtime)
 
     !$ACC ROUTINE SEQ
@@ -490,7 +496,10 @@ CONTAINS
   END SUBROUTINE calc_lake_ice_temp
 
   ! Calculation of ice depth and fraction
-  PURE SUBROUTINE calc_lice_thickness( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_lice_thickness( &
     & hi,                                        &
     & fi,                                        &
     & hflx_form_ice,                             &

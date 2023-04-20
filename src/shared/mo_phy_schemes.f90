@@ -106,7 +106,10 @@ CONTAINS
   !! 
   !! out: thermal_radiation
   !-----------------------------------------------------------------------------------------------------
-  REAL(wp) ELEMENTAL FUNCTION thermal_radiation(t_srf)
+#ifndef _OPENACC
+  ELEMENTAL &
+#endif
+  REAL(wp) FUNCTION thermal_radiation(t_srf)
 
     USE mo_jsb_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant

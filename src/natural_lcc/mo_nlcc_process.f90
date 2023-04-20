@@ -50,7 +50,10 @@ CONTAINS
   !!   Adapted for JSBACH4 in July 2020 by T. Raddatz
   !!
 
-  PURE ELEMENTAL SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, delta_time, t_air, &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_climbuf (lstart, init_running_means, new_day, new_month, new_year, delta_time, t_air, &
                                           seconds_day, seconds_month, temp_sum_day, temp_sum_month, &
                                           min_mmtemp_of_yr, max_mmtemp_of_yr, min_mmtemp20, max_mmtemp20, &
                                           gdd_sum_year, gdd_prev_year)
@@ -125,7 +128,10 @@ CONTAINS
 
 ! --- bioclim_limits ---------------------------------------------------------------------------------------
 
-  PURE ELEMENTAL SUBROUTINE bioclim_limits (is_dynamic, lct_tcmin, lct_tcmax, lct_twmax, lct_min_temprange, lct_gddmin, &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE bioclim_limits (is_dynamic, lct_tcmin, lct_tcmax, lct_twmax, lct_min_temprange, lct_gddmin, &
                                             min_mmtemp20, max_mmtemp20, gdd_prev_year, bio_exist)
 
 !
