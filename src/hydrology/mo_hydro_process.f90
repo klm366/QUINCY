@@ -976,8 +976,7 @@ CONTAINS
     !    The interpolation scheme is set to 1 as it is not used in this case
     !    All soil fields are spread onto 2D variables with only one index (top layer soil)
     CALL get_soilhyd_cond_properties(                    &
-      & soilhydmodel, 1, dtime, nc, nlay,                & ! nlay == nsoil and is now set to 1 (top soil layer)
-      & SPREAD(1,                  DIM=1, ncopies=nc),   & ! active soil layer set to one
+      & soilhydmodel, 1, nc, nlay,                       & ! nlay == nsoil and is now set to 1 (top soil layer)
       & SPREAD(dsoil(:),           DIM=2, ncopies=nlay), & ! soil depth of top layer
       & SPREAD(ws_soil(:),         DIM=2, ncopies=nlay), &
       & SPREAD(ice_soil(:),        DIM=2, ncopies=nlay), &
@@ -989,8 +988,8 @@ CONTAINS
       & SPREAD(zeros(:),           DIM=2, ncopies=nlay), &
       & SPREAD(bclapp(:),          DIM=2, ncopies=nlay), &
       & SPREAD(pore_size_index(:), DIM=2, ncopies=nlay), &
-      & ice_impeda_s1(:,:),                              &
-      & hyd_cond_s1(:,:)                                 &
+      & ice_impedance=ice_impeda_s1(:,:),                &
+      & K=hyd_cond_s1(:,:)                               &
       & )
     ice_impede(:) = ice_impeda_s1(:,1)
     k_start(:)    = hyd_cond_s1(:,1)
@@ -1004,8 +1003,7 @@ CONTAINS
     ELSE IF (i_infil == 3) THEN
       !!---Assuming that pondig water is euqally distributed throughout the soil layer
       CALL get_soilhyd_cond_properties(                               &
-        & soilhydmodel, 1, dtime, nc, nlay,                           & ! nlay == nsoil and is now set to 1 (top soil layer)
-        & SPREAD(1,                             DIM=1, ncopies=nc),   & ! active soil layer set to one
+        & soilhydmodel, 1, nc, nlay,                                  & ! nlay == nsoil and is now set to 1 (top soil layer)
         & SPREAD(dsoil(:),                      DIM=2, ncopies=nlay), & ! soil depth of top layer
         & SPREAD(ws_soil(:) + water_to_soil(:), DIM=2, ncopies=nlay), &
         & SPREAD(ice_soil(:),                   DIM=2, ncopies=nlay), &
@@ -1017,7 +1015,7 @@ CONTAINS
         & SPREAD(zeros(:),                      DIM=2, ncopies=nlay), &
         & SPREAD(bclapp(:),                     DIM=2, ncopies=nlay), &
         & SPREAD(pore_size_index(:),            DIM=2, ncopies=nlay), &
-        & hyd_cond_s1(:,:)                                            &
+        & K=hyd_cond_s1(:,:)                                          &
         & )
       k_end(:) = hyd_cond_s1(:,1)
     ELSE IF (i_infil == 4) THEN
@@ -1196,16 +1194,16 @@ CONTAINS
     !   For numerical reasons, soil loops always cover all soil layers, even if they are not active (bedrock)
     CALL get_soilhyd_cond_properties(                                       &
           & soilhydmodel, interpol_mean,                                    &
-          & dtime,                                                          &
           & nc, nsoil,                                                      &
-          & nsoil_act(:), dsoil(:,:),                                       &
+          & dsoil(:,:),                                                     &
           & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
           & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &
           & hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),                       &
           & bclapp_sl(:,:), pore_size_index_sl(:,:),                        &
-          & ice_impeda_sl(:,:),                                             &
-          & hyd_cond_sl(:,:), diffus_sl(:,:),                               &
-          & hyd_cond_li(:,:), diffus_li(:,:)                                &
+          & dt=dtime, nsoil_act=nsoil_act(:),                               &
+          & ice_impedance=ice_impeda_sl(:,:),                               &
+          & K=hyd_cond_sl(:,:),       D=diffus_sl(:,:),                     &
+          & K_inter=hyd_cond_li(:,:), D_inter=diffus_li(:,:)                &
           )
 
     !< Diagnose evapotranspiration fluxes from the different soil layer based on the available
@@ -2141,11 +2139,11 @@ CONTAINS
 
   SUBROUTINE get_soilhyd_cond_properties(           &
             & soilhydmodel, interpol_mean,          &
-            & dt,                                   &
-            & nc, nsoil, nsoil_act, dsoil,          &
+            & nc, nsoil, dsoil,                     &
             & ws, is, wscools,                      &
             & wsat, fc, pwp,                        &
             & k_sat, mpot_sat, bclapp, ps_index,    &
+            & dt, nsoil_act,                        &
             & ice_impedance, K, D, K_inter,         &
             & D_inter, mpot_act                     &
             )
@@ -2157,11 +2155,10 @@ CONTAINS
     INTEGER,  INTENT(in) :: interpol_mean        !> and how to derive values at layer interface (AVG scheme)
     INTEGER,  INTENT(in) :: nc                   !> vector length
     INTEGER,  INTENT(in) :: nsoil                !> number of below ground layers
-    INTEGER,  INTENT(in) :: nsoil_act(:)         !> index of deepest soil layers (above bedrock)
     REAL(wp), INTENT(in) :: dsoil(:,:)           !> soil depth (until bedrock) per layer
     REAL(wp), INTENT(in) :: ws(:,:)              !> water content
     REAL(wp), INTENT(in) :: is(:,:)              !> ice content
-    REAL(wp), INTENT(in) :: wscools(:,:)         !> supercooled water
+    REAL(wp), INTENT(in) :: wscools(:,:)         !> potentially supercooled water
     REAL(wp), INTENT(in) :: wsat(:,:)            !> soil depth (until bedrock) per layer
     REAL(wp), INTENT(in) :: fc(:,:)              !> field capacity [m]
     REAL(wp), INTENT(in) :: pwp(:,:)             !> residual water (until bedrock) per layer
@@ -2170,6 +2167,7 @@ CONTAINS
     REAL(wp), INTENT(in) :: bclapp(:,:)          !> clapp & Hornberger exponent
     REAL(wp), INTENT(in) :: ps_index(:,:)        !> Pore size index
     REAL(wp), INTENT(in),  OPTIONAL :: dt                 !> time step length
+    INTEGER,  INTENT(in),  OPTIONAL :: nsoil_act(:)       !> index of deepest soil layers (above bedrock)
     REAL(wp), INTENT(out), OPTIONAL :: ice_impedance(:,:) !> Impedance factor to account for ice blocking flowpaths
     REAL(wp), INTENT(out), OPTIONAL :: K(:,:)             !> hydraulic condctivity of the soil layer [m]
     REAL(wp), INTENT(out), OPTIONAL :: D(:,:)             !> diffusivity of the soil layer [m]
@@ -2201,12 +2199,12 @@ CONTAINS
 
     ! Convert to volumetric quantities
     WHERE(dsoil(:,:)> 0._wp)
-      ws_vol(:,:)   =  ws(:,:)      / dsoil(:,:)
-      ice_vol(:,:)  =  is(:,:)      / dsoil(:,:)
-      scool_vol     =  wscools(:,:) / dsoil(:,:)
-      wsat_vol(:,:) =  wsat(:,:)    / dsoil(:,:)
-      fc_vol(:,:)   =  fc(:,:)      / dsoil(:,:)
-      pwp_vol(:,:)  =  pwp(:,:)     / dsoil(:,:)
+      ws_vol(:,:)   =  ws(:,:)                    / dsoil(:,:)
+      ice_vol(:,:)  =  is(:,:)                    / dsoil(:,:)
+      scool_vol     =  MIN(wscools(:,:), ws(:,:)) / dsoil(:,:)
+      wsat_vol(:,:) =  wsat(:,:)                  / dsoil(:,:)
+      fc_vol(:,:)   =  fc(:,:)                    / dsoil(:,:)
+      pwp_vol(:,:)  =  pwp(:,:)                   / dsoil(:,:)
     ELSEWHERE
       ws_vol(:,:)   =  0._wp
       ice_vol(:,:)  =  0._wp
@@ -2219,13 +2217,11 @@ CONTAINS
     ! Compute impedance factor due to soil ice
     DO i = 1, nc
       DO j = 1, nsoil
-        IF (j <= nsoil_act(i)) THEN
-          IF (fc_vol(i,j) + ice_vol(i,j) > 1.0e-10_wp) THEN
-            ice_imp(i,j)  = 10._wp**(-6._wp * (ice_vol(i,j) + scool_vol(i,j) ) &
-              & / (fc_vol(i,j) + ice_vol(i,j)))
-          ELSE
-            ice_imp(i,j) = 1._wp
-          END IF
+        IF (fc_vol(i,j) + ice_vol(i,j) > 1.0e-10_wp) THEN
+          ice_imp(i,j)  = 10._wp**(-6._wp * (ice_vol(i,j) + scool_vol(i,j) ) &
+            & / (fc_vol(i,j) + ice_vol(i,j)))
+        ELSE
+          ice_imp(i,j) = 1._wp
         END IF
       END DO
     END DO
@@ -2272,8 +2268,10 @@ CONTAINS
       K(:,:) = K(:,:) * ice_imp(:,:)
 
       ! Make sure percolation from top layer is limited to water content !!!
-      IF (dt > 0) THEN
-        K(:,1) = MIN(K(:,1), MAX(0._wp,(ws(:,1)-pwp(:,1)) / dt))
+      IF (PRESENT(dt)) THEN
+        IF (dt > 0) THEN
+          K(:,1) = MIN(K(:,1), MAX(0._wp,(ws(:,1)-pwp(:,1)) / dt))
+        END IF
       END IF
 
     END IF
@@ -2316,8 +2314,9 @@ CONTAINS
 
     IF (PRESENT(K_inter)) THEN
 
-      IF (.NOT. PRESENT(K)) THEN
-        WRITE (message_text,*) 'K at layer interface cannot be computed without computing K on layers'
+      IF (.NOT. PRESENT(K) .OR. .NOT. PRESENT(nsoil_act)) THEN
+        WRITE (message_text,*) 'K at layer interface cannot be computed without '//&
+          & 'information about actual soil depth and computing K on layers'
         CALL finish ('get_soilhyd_cond_properties', message_text)
       END IF
 
@@ -2341,8 +2340,9 @@ CONTAINS
 
     IF (PRESENT(D_inter)) THEN
 
-      IF (.NOT. PRESENT(D)) THEN
-        WRITE (message_text,*) 'D at layer interface cannot be computed without computing D on layers'
+      IF (.NOT. PRESENT(D) .OR. .NOT. PRESENT(nsoil_act)) THEN
+        WRITE (message_text,*) 'D at layer interface cannot be computed without '//&
+          & 'information about actual soil depth and computing D on layers'
         CALL finish ('get_soilhyd_cond_properties', message_text)
       END IF
       DO i = 1, nc
