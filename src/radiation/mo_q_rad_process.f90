@@ -29,7 +29,7 @@
 !! 24-08-2016: update to include two-stream approximation and soil albedo
 !! 02-09-2016: update to include clumping
 !!
-MODULE mo_rad_update_radiation
+MODULE mo_q_rad_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -40,21 +40,18 @@ MODULE mo_rad_update_radiation
   IMPLICIT NONE
 
   PRIVATE
-  PUBLIC :: update_radiation
+  PUBLIC :: radiation_quincy
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_update_radiation'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_rad_process'
 
 CONTAINS
 
-  !-----------------------------------------------------------------------------------------------------
-  ! Main Task
-  !
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
   !> calculates surface radiation reflection and absorption
-  !!
-  !! @todo currently no soil and snow albedo calculation in the update_radiation routine
-  !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE update_radiation(tile, options)
+  !> 
+  !> @todo currently no soil and snow albedo calculation in the radiation_quincy routine
+  !>
+  SUBROUTINE radiation_quincy(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
@@ -64,7 +61,7 @@ CONTAINS
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
-    USE mo_rad_constants,         ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, rfr_ratio_toc, k_r2fr_chl
+    USE mo_rad_parameters,        ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, rfr_ratio_toc, k_r2fr_chl
 
     ! Use of process configurations (t_PROC_config)
     ! ..
@@ -89,7 +86,7 @@ CONTAINS
     INTEGER                                :: ncanopy      ! number of canopy layers
     INTEGER                                :: icanopy             !< loop 1,ncanopy
     INTEGER                                :: iblk, ics, ice, nc
-    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_radiation'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_quincy'
     ! ---------------------------
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -293,7 +290,7 @@ CONTAINS
     rfr_ratio_boc(:) = rfr_ratio_toc * &
                        exp( k_r2fr_chl * SUM(leaf_nitrogen_cl(:,:) * fn_chl_cl(:,:) * lai_cl(:,:), DIM=2))
 
-  END SUBROUTINE update_radiation
+  END SUBROUTINE radiation_quincy
 
 
   !-----------------------------------------------------------------------------------------------------
@@ -342,7 +339,7 @@ CONTAINS
                               alb                 , &   ! out
                               sw_srf_net)               ! out
 
-    USE mo_rad_constants,           ONLY: min_cos_zenith_angle_rad, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, rho2sbeta, &
+    USE mo_rad_parameters,          ONLY: min_cos_zenith_angle_rad, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, rho2sbeta, &
                                           k_csf
 
     IMPLICIT NONE
@@ -556,4 +553,4 @@ CONTAINS
   END SUBROUTINE calc_sw_srf_net
 
 #endif
-END MODULE mo_rad_update_radiation
+END MODULE mo_q_rad_process

@@ -41,7 +41,7 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
-    USE mo_rad_constants,       ONLY: init_rad_constants
+    USE mo_rad_parameters,      ONLY: init_rad_parameters_quincy, init_rad_parameters_jsbach
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_assimi_parameters,   ONLY: init_assimi_parameters_quincy, init_assimi_parameters_jsbach
     USE mo_veg_constants,       ONLY: init_veg_constants
@@ -142,7 +142,7 @@ CONTAINS
 
       ALLOCATE(model%processes(max_no_of_processes))
       DO iproc=1,max_no_of_processes
-        model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
+        model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename), model_scheme)
       END DO
 
       ! point from each associated process%config to the model_config
@@ -281,7 +281,7 @@ CONTAINS
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
       CALL message(TRIM(routine), 'starting init of QUINCY process constants')
-      CALL init_rad_constants
+      CALL init_rad_parameters_quincy
       CALL init_assimi_parameters_quincy
       CALL init_veg_constants
       CALL init_spq_constants
@@ -291,6 +291,7 @@ CONTAINS
     CASE (MODEL_JSBACH)
       CALL init_pheno_parameters_jsbach
       CALL init_assimi_parameters_jsbach
+      CALL init_rad_parameters_jsbach
     END SELECT
 
     CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')
