@@ -68,7 +68,7 @@ CONTAINS
     USE mo_jsb_physical_constants,          ONLY: lambda_C14, rhoh2o, grav
     USE mo_jsb_math_constants,              ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_isotope_util,                    ONLY: calc_mixing_ratio_N15N14, calc_fractionation, calc_mixing_ratio_C14C
-    USE mo_rad_constants,                   ONLY: rfr_ratio_toc
+    USE mo_rad_parameters,                  ONLY: rfr_ratio_toc
     USE mo_veg_canopy,                      ONLY: calc_canopy_layers
     USE mo_veg_growth,                      ONLY: calc_diameter_from_woody_biomass, calc_height_from_diameter
     USE mo_veg_constants,                   ONLY: itree,eta_nfixation, max_leaf_shedding_rate, k_leafon_canopy, fresp_growth

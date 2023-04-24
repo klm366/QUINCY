@@ -63,22 +63,22 @@ CONTAINS
 
     model => get_model(tile%owner_model_id)
 
-    ! init differs between model_scheme
+    ! select init routine depending on the model
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
       IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
         CALL rad_read_init_vars(tile)
       END IF
 
-      CALL rad_init_bc(tile)
-      CALL rad_init_ic(tile)
+      CALL rad_init_bc_jsbach(tile)
+      CALL rad_init_ic_jsbach(tile)
 
       IF (tile%Is_last_process_tile(RAD_)) THEN
         CALL rad_finalize_init_vars()
       END IF
     CASE (MODEL_QUINCY)
       IF (tile%contains_vegetation) THEN
-        CALL rad_init_ic_q_(tile)
+        CALL rad_init_ic_quincy(tile)
       ENDIF
     END SELECT
 
@@ -187,7 +187,7 @@ CONTAINS
 
   END SUBROUTINE rad_read_init_vars
 
-  SUBROUTINE rad_init_bc(tile)
+  SUBROUTINE rad_init_bc_jsbach(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -195,7 +195,7 @@ CONTAINS
 
     ! dsl4jsb_Def_memory(RAD_)
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_bc_jsbach'
 
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
@@ -207,11 +207,11 @@ CONTAINS
 
     ! nothing to do in the moment ...
 
-  END SUBROUTINE rad_init_bc
+  END SUBROUTINE rad_init_bc_jsbach
 
-  SUBROUTINE rad_init_ic(tile)
+  SUBROUTINE rad_init_ic_jsbach(tile)
 
-    USE mo_rad_constants,  ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
+    USE mo_rad_parameters, ONLY: AlbedoCanopySnow_age, AlbedoCanopySnow_temp, AlbedoVisInitial, AlbedoNirInitial, &
       &                          AlbedoGlacierVisMax, AlbedoGlacierNirMax, AlbedoLakeWater
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -223,7 +223,7 @@ CONTAINS
 
     REAL(wp) :: albedo_age_weight
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic_jsbach'
 
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN
 
@@ -293,7 +293,7 @@ CONTAINS
       ! The albedo of snow on canopy:
       ! R: In the model the albedo of snow is weighted with albedo_age_weight between two albedo schemes (age and temperature).
       !    For snow on soil this is done with calculations of snow age and temperature and with differentiation between vis and nir
-      !    (see mo_rad_process in subroutine calc_snow_albedo).
+      !    (see mo_jsb_rad_process in subroutine calc_snow_albedo).
       !    However, for snow ON CANOPY the albedo from the age scheme and the albedo from the temperature scheme are simply assumed
       !    to be constant (see the following lines).
       !    Therefore as all inputs to this equation are constants, it was not necessary to calculate it for each time step and block
@@ -307,24 +307,24 @@ CONTAINS
 
     END IF
 
-  END SUBROUTINE rad_init_ic
+  END SUBROUTINE rad_init_ic_jsbach
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize radiation process (after memory has been set up)
   !!
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE rad_init_ic_q_(tile)
+  SUBROUTINE rad_init_ic_quincy(tile)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     !USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_rad_constants,         ONLY: rfr_ratio_toc
+    USE mo_rad_parameters,        ONLY: rfr_ratio_toc
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile         !< one tile with data structure for one lct
 
     !TYPE(t_jsb_model), POINTER :: model
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic_q_'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':rad_init_ic_quincy'
 
     dsl4jsb_Def_memory(RAD_)
 
@@ -366,7 +366,7 @@ CONTAINS
     ppfd_shaded_tfrac_mavg_cl(:,:,:)    = 10.0_wp
     ppfd_shaded_tcnl_mavg_cl(:,:,:)     = 10.0_wp
 
-  END SUBROUTINE rad_init_ic_q_
+  END SUBROUTINE rad_init_ic_quincy
 
 
   !-----------------------------------------------------------------------------------------------------

@@ -35,7 +35,7 @@ CONTAINS
     & )
 
     ! Declarations
-    USE mo_rad_constants,      ONLY: LaiLimit
+    USE mo_rad_parameters,     ONLY: LaiLimit
     USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! Arguments

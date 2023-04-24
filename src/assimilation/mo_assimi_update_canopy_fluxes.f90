@@ -49,8 +49,8 @@ CONTAINS
     USE mo_jsb_physical_constants,  ONLY: r_gas, Tzero
     USE mo_isotope_util,            ONLY: calc_fractionation
     USE mo_phy_schemes
-    USE mo_assimi_parameters,        ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
-    USE mo_rad_process,             ONLY: Has_minimal_radiation
+    USE mo_assimi_parameters,       ONLY: jmax2n, vcmax2n, E0v, E1v, t_jmax_offset, t_jmax_slope, t_jmax_opt_min, t_jmax_opt_max
+    USE mo_rad_util,                ONLY: Has_minimal_radiation
     dsl4jsb_Use_config(ASSIMI_)
     dsl4jsb_Use_memory(A2L_)
     dsl4jsb_Use_memory(ASSIMI_)
