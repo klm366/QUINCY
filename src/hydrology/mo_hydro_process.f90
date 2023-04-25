@@ -16,7 +16,7 @@ MODULE mo_hydro_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: message, finish, message_text, em_warn
+  USE mo_exception, ONLY: message, finish, message_text,warning
 
   IMPLICIT NONE
   PRIVATE
@@ -1321,7 +1321,7 @@ CONTAINS
     IF (ANY(soil_ice(:,:) < 0._wp)) THEN
       WRITE (message_text,*) 'negative soil ice: ', MINVAL(soil_ice), ' at ', MINLOC(soil_ice)
       CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+      ! CALL warning ('digest_evapotrans', message_text)
       ! soil_ice(:,:) = MAX(soil_ice(:,:), 0._wp)
     END IF
 
@@ -1329,7 +1329,7 @@ CONTAINS
     IF (ANY(ws_l(:,:) < 0._wp)) THEN
       WRITE (message_text,*) 'negative soil moisture: ', MINVAL(ws_l), ' at ', MINLOC(ws_l)
       CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+      ! CALL warning ('digest_evapotrans', message_text)
       ! ws_l(:,:) = MAX(ws_l(:,:), 0._wp)
     END IF
     IF (ANY(ws_l(:,:) > field_cap_l(:,:) + zfcmin)) THEN
@@ -1337,7 +1337,7 @@ CONTAINS
       WRITE (message_text,*) 'liquid water content above field capacity: at ',max2d(:) ,': ws_l: ', ws_l(max2d(1),max2d(2)), &
          ' field_cap_l: ', field_cap_l(max2d(1),max2d(2))
       CALL finish ('digest_evapotrans', message_text)
-      ! CALL message ('digest_evapotrans', message_text, all_print=.TRUE., level=em_warn)
+      ! CALL warning ('digest_evapotrans', message_text)
       ! ws_l(:,:) = MIN(ws_l(:,:), field_cap_l(:,:))
     END IF
 #endif
@@ -1426,7 +1426,7 @@ CONTAINS
       max2d(:) = MINLOC(ws_l(:,:))
       IF (ws_l(max2d(1),max2d(2)) < -1.e-20_wp) THEN
          WRITE (message_text,*) 'negative soil moisture: ', ws_l(max2d(1),max2d(2)), ' at ', max2d(:)
-         CALL message ('digest_infilt', message_text, all_print=.TRUE., level=em_warn)
+         CALL warning ('digest_infilt', message_text)
       END IF
       DO jk =1,nsoil
          ws_negative(:) = ws_negative(:) + MIN(ws_l(:,jk), 0._wp)
