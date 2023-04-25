@@ -581,10 +581,8 @@ CONTAINS
         IF (tile%lcts(j)%id == LAKE_TYPE) EXIT         ! We get index j of the lake tile
       END DO
 
-      !$ACC DATA CREATE(fract_ptr) PRESENT(tile%lcts)
       fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)    ! Lake fraction
-
-      !$ACC DATA PRESENT(fract_ptr)
+      !$ACC DATA CREATE(fract_ptr) PRESENT(tile%lcts)
       !$ACC PARALLEL LOOP
       DO i=1,nc
         fact_lake(i) = fract_ptr(i)                    ! Lake fraction
@@ -601,7 +599,6 @@ CONTAINS
         END IF
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC END DATA
       !$ACC END DATA
 
     ELSE    ! without lakes
