@@ -201,8 +201,8 @@ CONTAINS
     nbr_subdomains  = 1
 #ifdef YAC_coupling
     CALL yac_fput(yac_river_runoff_field_id, nbr_hor_cells, collection_size, buffer, info, ierror)
-#endif
     IF ( info == YAC_ACTION_PUT_FOR_RESTART ) write_coupler_restart = .TRUE.
+#endif
 
     IF ( write_coupler_restart ) THEN
        CALL warning(TRIM(routine), 'YAC says it is put for restart')
