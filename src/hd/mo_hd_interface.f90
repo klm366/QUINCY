@@ -11,6 +11,8 @@
 !> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !>
 
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_hd_interface
 !#ifndef __NO_JSBACH__
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)

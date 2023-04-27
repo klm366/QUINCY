@@ -11,6 +11,9 @@
 !! Where software is supplied by third parties, it is indicated in the
 !! headers of the routines.
 !!
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_jsbach_model
 
 #ifdef __ICON__
