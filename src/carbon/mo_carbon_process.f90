@@ -1400,21 +1400,26 @@ CONTAINS
   !
   ! calculate per tile density from density per canopy m2
   !
-  ELEMENTAL SUBROUTINE get_per_tile(  &
+  SUBROUTINE get_per_tile(  &
     & Cpool_per_tile,                 & ! out
     & Cpool_per_canopy,               & ! in
     & veg_fract_correction,           & ! in
     & fract_fpc_max)                    ! in
 
-    !$claw model-data
-    REAL(wp), INTENT(IN) ::  fract_fpc_max, veg_fract_correction
-    REAL(wp), INTENT(IN) ::  Cpool_per_canopy
-    REAL(wp), INTENT(OUT)::  Cpool_per_tile
-    !$claw end model-data
+    REAL(wp), INTENT(IN), DIMENSION(:) :: &
+      & Cpool_per_canopy, &
+      & fract_fpc_max,    &
+      & veg_fract_correction
+    REAL(wp), INTENT(OUT), DIMENSION(:) :: &
+      & Cpool_per_tile
 
-    !$claw sca
+    INTEGER :: ic
 
-    Cpool_per_tile = Cpool_per_canopy * veg_fract_correction * fract_fpc_max
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
+    DO ic = 1, SIZE(fract_fpc_max)
+      Cpool_per_tile(ic) = Cpool_per_canopy(ic) * veg_fract_correction(ic) * fract_fpc_max(ic)
+    END DO
+    !$ACC END PARALLEL LOOP
 
   END SUBROUTINE get_per_tile
 

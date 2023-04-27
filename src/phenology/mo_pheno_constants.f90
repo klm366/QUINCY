@@ -186,9 +186,9 @@ MODULE mo_pheno_constants
 
   TYPE(t_PhenologyParameters), SAVE :: PhenoParam
 
-  !$acc declare create(PhenoParam%all, PhenoParam%EG_SG, PhenoParam%EG, & 
-  !$acc PhenoParam%SG, PhenoParam%RG, PhenoParam%GRS, PhenoParam%CRP,   & 
-  !$acc PhenoParam%FR, PhenoParam)
+  !$ACC DECLARE CREATE(PhenoParam%all, PhenoParam%EG_SG, PhenoParam%EG) &
+  !$ACC   CREATE(PhenoParam%SG, PhenoParam%RG, PhenoParam%GRS) &
+  !$ACC   CREATE(PhenoParam%CRP, PhenoParam%FR, PhenoParam)
 
   !! quincy
   REAL(wp), SAVE ::   & 

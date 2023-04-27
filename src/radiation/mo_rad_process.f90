@@ -38,7 +38,7 @@ MODULE mo_rad_process
 
 CONTAINS
 
-  PURE ELEMENTAL SUBROUTINE calc_radiation_surface_net( &
+  SUBROUTINE calc_radiation_surface_net( &
     & swvis_down,    & ! in
     & swnir_down,    & ! in
     & alb_vis,       & ! in
@@ -54,8 +54,7 @@ CONTAINS
 
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
-    !$claw model-data
-    REAL(wp),  INTENT(in) :: &
+    REAL(wp),  INTENT(in), DIMENSION(:) :: &
       & swvis_down,          &
       & swnir_down,          &
       & alb_vis,             &
@@ -64,37 +63,47 @@ CONTAINS
       & t
 
     REAL(wp),  INTENT(out) :: &
-      & rad_net
-    REAL(wp),  INTENT(out), OPTIONAL :: &
+      & rad_net(:)
+
+    REAL(wp),  INTENT(out), OPTIONAL, DIMENSION(:) :: &
       & swvis_net,                      & ! net shortwave radiation in visible range
       & swnir_net,                      & ! net shortwave radiation in near infrared range
       & sw_net,                         &
       & lw_net
-    !$claw end model-data
 
     REAL(wp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
 
-    !$claw sca
+    INTEGER :: nc, ic
 
-    ! Compute net SW radiation from downward SW and albedo
-    zswvis_net = swvis_down * (1._wp - alb_vis)
-    zswnir_net = swnir_down * (1._wp - alb_nir)
-    zsw_net    = zswvis_net + zswnir_net
+    nc = SIZE(swvis_down)
 
-    ! Compute LW net radiation from incoming and the thermal radiation from the surface
-    zlw_net = lwnet_from_lwdown(lw_down, t)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG VECTOR &
+    !$ACC   PRIVATE(zswvis_net, zswnir_net, zsw_net, zlw_net)
+    DO ic=1,nc
 
-    ! Compute net radiation
-    rad_net = zsw_net + zlw_net
+      ! Compute net SW radiation from downward SW and albedo
+      zswvis_net = swvis_down(ic) * (1._wp - alb_vis(ic))
+      zswnir_net = swnir_down(ic) * (1._wp - alb_nir(ic))
+      zsw_net    = zswvis_net + zswnir_net
 
-    IF (PRESENT(swvis_net)) swvis_net = zswvis_net
-    IF (PRESENT(swnir_net)) swnir_net = zswnir_net
-    IF (PRESENT(sw_net)) sw_net = zsw_net
-    IF (PRESENT(lw_net)) lw_net = zlw_net
+      ! Compute LW net radiation from incoming and the thermal radiation from the surface
+      zlw_net = lwnet_from_lwdown(lw_down(ic), t(ic))
+
+      ! Compute net radiation
+      rad_net(ic) = zsw_net + zlw_net
+
+      IF (PRESENT(swvis_net)) swvis_net(ic) = zswvis_net
+      IF (PRESENT(swnir_net)) swnir_net(ic) = zswnir_net
+      IF (PRESENT(sw_net))    sw_net(ic)    = zsw_net
+      IF (PRESENT(lw_net))    lw_net(ic)    = zlw_net
+
+    END DO
+    !$ACC END PARALLEL
 
   END SUBROUTINE calc_radiation_surface_net
 
-  ELEMENTAL SUBROUTINE calc_par( &
+  SUBROUTINE calc_par( &
     & ncanopy,                  & ! in
     & icanopy,                  & ! in
     & use_alb_veg_simple,       & ! in
@@ -115,6 +124,8 @@ CONTAINS
                                   ! however I want it in the model output and thus it has to be updated by returning it
     & apar_per_lai_cl  )          ! output, used outside for assimilation
 
+    !$ACC ROUTINE SEQ
+
     ! Use declarations
     USE mo_rad_constants,  ONLY: &
       & Epar,                    & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1
@@ -131,7 +142,6 @@ CONTAINS
                                 canopy_bound_lai,      &
                                 canopy_bound_lai_delta
 
-    !$claw model-data
     REAL(wp),  INTENT(in)    ::                        &
                                 par,                   &
                                 alb_vis_soil,          &
@@ -146,7 +156,6 @@ CONTAINS
                                 faPAR_cl,              &
                                 lai_cl,                &
                                 apar_per_lai_cl
-    !$claw end model-data
 
     REAL(wp) :: ZH, K0, ZP1, Q0, Q1, B0, B1,    & ! These variables vary per grid cell
                 EKL, EHL, B4, FC, FSHD,         & ! These variables vary per grid cell, FC =fractional vegetation cover
@@ -156,8 +165,6 @@ CONTAINS
 
     ! ---------------------------
     ! Go
-
-    !$claw sca
 
     ! Expresse radiation in  mol(photons)/(m^2 s)
     par_down_mol = par / Epar
@@ -364,17 +371,10 @@ CONTAINS
         B4 =   (1._wp - Q0 - Q1) * fract_par_direct &
           &  + (1._wp - ZP1) * B1 + (1._wp - ZP0) * B0
 
-      END IF ! cos_zenith_angle
+        IF (B4_layer_above < 7777776._wp) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
+          B4 = B4_layer_above                  !    with the second level use level above...
+        ENDIF
 
-        ! IF (icanopy < ncanopy) THEN
-           !------------------------------------------------------------
-           ! Only Layers-1, i.e. except the lower boundary calculation
-           !------------------------------------------------------------
-      IF (B4_layer_above < 7777776._wp) THEN  ! R: necessary for elemental subroutine as B4 from layer above comes in ...
-        B4 = B4_layer_above                  !    with the second level use level above...
-      ENDIF
-
-      IF (cos_zenith_angle .GE. ZenithMinPar) THEN  ! do not calculate PAR for zenith angles below ZenithMinPar
         IF (icanopy < ncanopy) THEN
            !----------------------------------------------------------------------------
            ! p2=1/p1
@@ -430,15 +430,12 @@ CONTAINS
            faPAR_cl = B4_layer_above - X0
            !B4_layer_above = X0
         ENDIF ! icanopy
+        !------------------------------------------------------------
+        ! Multiplication of faPAR_cl with fc because D-D(iGP-1)
+        ! division is made outside FfaPAR_clL and is still the old l ???
+        !------------------------------------------------------------
+        faPAR_cl = faPAR_cl * FSHD
      ENDIF  ! cos_zenith_angle
-
-     !------------------------------------------------------------
-     ! Multiplication of faPAR_cl with fc because D-D(iGP-1)
-     ! division is made outside FfaPAR_clL and is still the old l ???
-     !------------------------------------------------------------
-     IF (cos_zenith_angle .GE. ZenithMinPar) THEN
-       faPAR_cl = faPAR_cl * FSHD
-     END IF
 
     ! Compute absorbed PAR per leaf area in canopy layer [units: (absorbed photons) / (m^2(leaf area) s)] from
     ! par and fraction of absorbed PAR
@@ -447,23 +444,25 @@ CONTAINS
   END SUBROUTINE calc_par
 
   !
-  PURE ELEMENTAL SUBROUTINE calc_alb_lwtr( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_alb_lwtr( &
     & l_day,                               &
     & alb_lwtr                             &
     & )
+
+    !$ACC ROUTINE SEQ
 
     ! Use declarations
     USE mo_rad_constants,          ONLY: AlbedoLakeWater
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(inout) :: &
       & alb_lwtr
-    !$claw end model-data
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -476,19 +475,23 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE ELEMENTAL SUBROUTINE calc_alb_lice( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_alb_lice( &
     & l_day,       &
     & t,           &
     & w_snow_lice, &
     & alb_lice     &
     & )
 
+    !$ACC ROUTINE SEQ
+
     ! Use declarations
     USE mo_rad_constants,          ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax, AlbedoLakeSnowMin, AlbedoLakeSnowMax
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(in)    :: &
@@ -496,13 +499,11 @@ CONTAINS
       & w_snow_lice
     REAL(wp), INTENT(inout) :: &
       & alb_lice
-    !$claw end model-data
 
     ! Local variables
     REAL(wp) :: t_upper_limit    ! Upper temperature limit for cold snow albedo
     REAL(wp) :: alb_min, alb_max ! Minimum and maximum snow albedo
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -533,12 +534,17 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE ELEMENTAL SUBROUTINE calc_glacier_albedo( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_glacier_albedo( &
     & l_day,   &
     & t,       &
     & alb_vis, &
     & alb_nir  &
     & )
+
+    !$ACC ROUTINE SEQ
 
     ! Use declarations
     USE mo_rad_constants, ONLY: AlbedoGlacierVisMin,  & ! Albedo of glacier in the visible range at the melting point
@@ -549,7 +555,6 @@ CONTAINS
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)    :: &
       & l_day
     REAL(wp), INTENT(in)    :: &
@@ -557,9 +562,7 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & alb_vis,               & ! Albedo of canopy in the VIS range without snow cover.
       & alb_nir                  ! Albedo of canopy in the NIR range without snow cover.
-    !$claw end model-data
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -603,7 +606,10 @@ CONTAINS
   ! covers less than its area available.) Only for the logarithmic case (albedo_options%UseSOC .eq. 'log') the soil albedo result
   ! of JSBACH4 differs from JSBACH3. In this case this "well separated" result is as reasonable as the "well mixed" result of JS3.
 
-  ELEMENTAL SUBROUTINE calc_soil_albedo( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_soil_albedo( &
     & l_day,                     &
     & use_alb_mineralsoil_const, &
     & use_alb_soil_organic_int,  &
@@ -619,27 +625,24 @@ CONTAINS
     & alb_nir_soil               & ! InOut
     & )
 
+    !$ACC ROUTINE SEQ
+
     ! Use declarations
     USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for 
                                                                        ! alb_vis_mineralsoil
 
     ! Arguments
-    !$claw model-data
     LOGICAL,          INTENT(in)  :: l_day
-    !$claw end model-data
 
     LOGICAL,          INTENT(in)  :: use_alb_mineralsoil_const
     INTEGER,          INTENT(in)  :: use_alb_soil_organic_int
     LOGICAL,          INTENT(in)  :: use_alb_soil_litter
-    !$claw model-data
     REAL(wp),         INTENT(in)  :: &
       & c_ag_sum_1,         &
       & c_bg_sum
-    !$claw end model-data
     REAL(wp),         INTENT(in)  :: &
       & SpecificLeafArea_C, &
       & AlbedoLitterVIS
-    !$claw model-data
     REAL(wp),         INTENT(in)  :: &
       & alb_background
     REAL(wp),         INTENT(inout) :: &
@@ -648,7 +651,6 @@ CONTAINS
       & alb_nir_mineralsoil,   & ! Albedo of soil without carbon or litter.
       & alb_vis_soil,          & ! Albedo of soil (may incl. litter layer and/or carbon within soil)
       & alb_nir_soil             ! Albedo of soil (may incl. litter layer and/or carbon within soil)
-    !$claw end model-data
 
     ! Local variables
     REAL(wp), PARAMETER ::                                   &
@@ -740,7 +742,10 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  ELEMENTAL SUBROUTINE calc_snow_albedo( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE calc_snow_albedo( &
     & l_day,             & ! in
     & fract_snow_soil,   & ! in
     & snow_age,          & ! in
@@ -750,6 +755,8 @@ CONTAINS
     & alb_vis_snow,      & ! inout
     & alb_nir_snow       & ! inout
     & )
+
+    !$ACC ROUTINE SEQ
 
     ! Declarations
     USE mo_rad_constants, ONLY: &
@@ -769,24 +776,20 @@ CONTAINS
     USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)  :: l_day
     REAL(wp), INTENT(in)  ::                    & !
                              fract_snow_soil,   & ! Fraction of snow covered ground
                              snow_age,          & ! non-dimensional age of snow
                              cos_zenith_angle,  & ! cosinus of zenith angle of incoming radiation
                              t_srf
-    !$claw end model-data
 
     REAL(wp), INTENT(in)  ::                    & !
                              albedo_age_weight    ! 0 < albedo_age_weight < 1: snow albedo is calcualted by linearly weighting
                                                   !                            the snow albedo resulting from both age and
                                                   !                            temperature schemes
-    !$claw model-data
     REAL(wp), INTENT(inout) ::              &
                              alb_vis_snow,  & ! Albedo of canopy in the VIS range without snow cover.
                              alb_nir_snow     ! Albedo of canopy in the NIR range without snow cover.
-    !$claw end model-data
 
     ! Local variables
     REAL(wp)              ::                    &
@@ -796,8 +799,6 @@ CONTAINS
                              alb_nir_snow_temp, &
                              snow_age_factor,   &
                              snow_albedo_angle_factor
-
-    !$claw sca
 
     ! Initialize local variables
     alb_vis_snow_age  = 0.0_wp
@@ -860,7 +861,7 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  ELEMENTAL SUBROUTINE calc_sky_view_fractions( &
+  SUBROUTINE calc_sky_view_fractions( &
     & l_day,              & ! in
     & lai,                & ! in
     & fract_fpc_max,      & ! in
@@ -870,25 +871,22 @@ CONTAINS
     & sky_view_fract_stem & ! inout
     & )
 
+    !$ACC ROUTINE SEQ
+
     ! Use declarations
     USE mo_rad_constants,  ONLY: SkyViewFactor ! Constant in calculating the sky view fractions
 
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in)  :: l_day
     REAL(wp), INTENT(in)  :: lai,              & ! leaf area index
                              fract_fpc_max,    & ! maximum foliage projected cover
                              cos_zenith_angle    ! cosinus of zenith angle of incoming radiationa
-    !$claw end model-data
     REAL(wp), INTENT(in)  :: StemArea
-    !$claw model-data
     REAL(wp), INTENT(inout) :: &
       & sky_view_fract,   & ! Fraction of "visible" bare ground below vegetation without accounting for stems.
                             ! (Falling with rising LAI.)
       & sky_view_fract_stem   ! Fraction of soil below vegetation which is covered by stems but not by LAI.
-    !$claw end model-data
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -907,7 +905,10 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  PURE ELEMENTAL SUBROUTINE Merge_albedos_of_vegtile( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  SUBROUTINE Merge_albedos_of_vegtile( &
     & l_day,               & ! in
     & l_forest,            & ! in
     & sky_view_fract,      & ! in
@@ -925,20 +926,17 @@ CONTAINS
     & alb_nir              & ! inout
     & )
 
+    !$ACC ROUTINE SEQ
+
     ! Arguments
-    !$claw model-data
     LOGICAL,  INTENT(in) :: l_day ! flag to indicate if it is day or night
-    !$claw end model-data
     LOGICAL,  INTENT(in) :: l_forest
     
-    !$claw model-data
     REAL(wp), INTENT(in) :: &
       sky_view_fract,       &
       sky_view_fract_stem
-    !$claw end model-data
     REAL(wp), INTENT(in) :: &
       AlbedoCanopySnow    
-    !$claw model-data
     REAL(wp), INTENT(in) :: &
       fract_snow_soil,      & ! Snow covered area fraction of soil
       fract_snow_can,       & ! Fraction of snow covered canopy (forest)
@@ -953,7 +951,6 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & alb_vis, &
       & alb_nir
-    !$claw end model-data
 
     ! Local variables
     REAL(wp) :: &
@@ -961,7 +958,6 @@ CONTAINS
                            ! when it is assumed that no stems (but only the canopy) cover the soil
       & alb_nir_nostems
 
-    !$claw sca
     ! ---------------------------
     ! Go
 
@@ -1021,7 +1017,10 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   !
   ! This is the echam5 scheme
-  REAL(wp) PURE ELEMENTAL FUNCTION get_surface_albedo_simple( &
+#ifndef _OPENACC
+  ELEMENTAL PURE &
+#endif
+  REAL(wp) FUNCTION get_surface_albedo_simple( &
     & t_srf,             &
     & fract_forest,      &
     & grnd_snow_fract,   & ! R: fract_snow_soil umbenannt, da grnd_snow_fract nicht unbedingt dasselbe sein muss...
@@ -1029,6 +1028,8 @@ CONTAINS
     & lai,               &
     & alb_background     &
     & )
+
+    !$ACC ROUTINE SEQ
 
     !-----------------------------------------------------------------------
     ! Use declarations
@@ -1054,7 +1055,6 @@ CONTAINS
                             albedo_can               ! Albedo on canopy
 
 
-    !$claw sca routine
     ! ---------------------------
     ! Go
 
@@ -1098,7 +1098,9 @@ CONTAINS
   !
   !--------------------------------------------------------------------------------------------------------------------------------
   !
-  ELEMENTAL FUNCTION Has_minimal_radiation_2(swvis, swnir) RESULT(l_day)
+  FUNCTION Has_minimal_radiation_2(swvis, swnir) RESULT(l_day)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
@@ -1107,21 +1109,19 @@ CONTAINS
       & swnir
     LOGICAL :: l_day
 
-    !$claw sca routine
-
     l_day = swvis + swnir > MinRadiation
 
   END FUNCTION Has_minimal_radiation_2
   !
-  ELEMENTAL FUNCTION Has_minimal_radiation_1(sw) RESULT(l_day)
+  FUNCTION Has_minimal_radiation_1(sw) RESULT(l_day)
+
+    !$ACC ROUTINE SEQ
 
     USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
 
     REAL(wp), INTENT(in) :: &
       & sw
     LOGICAL :: l_day
-
-    !$claw sca routine
 
     l_day = sw > MinRadiation
 

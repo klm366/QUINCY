@@ -14,6 +14,8 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_jsb_tile
 #ifndef __NO_JSBACH__
 
@@ -269,7 +271,7 @@ CONTAINS
 
     ! Allocate all memory components for new tile and initialize their data part with NULL()
     ALLOCATE(this%mem(max_no_of_processes))
-    !$acc enter data create(this%mem)
+    !$ACC ENTER DATA CREATE(this%mem)
 
     ! Loop over all processes and initialize memory for this tile
     parent_tile => this%parent_tile
@@ -318,14 +320,14 @@ CONTAINS
         this%mem(iproc)%p%owner_tile_path(:) = this%path(:)
         this%mem(iproc)%p%owner_tile_name = TRIM(this%name)
         this%mem(iproc)%p%in_var_groups = in_var_groups    ! Must be before CALL to %Init !
-        !$acc update device(this%mem(iproc)%p)
-        !$acc enter data create(this%mem(iproc)%p%vars)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p)
+        !$ACC ENTER DATA CREATE(this%mem(iproc)%p%vars)
         IF (prefix /= '') THEN
           CALL this%mem(iproc)%p%Init(TRIM(process_name)//'_'//TRIM(prefix), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         ELSE
           CALL this%mem(iproc)%p%Init(TRIM(process_name), TRIM(suffix), this%lcts(:)%id, this%owner_model_id)
         END IF
-        !$acc update device(this%mem(iproc)%p%vars)
+        !$ACC UPDATE DEVICE(this%mem(iproc)%p%vars)
         IF (debug_on()) &
           & CALL message(TRIM(routine), 'Created memory for process '//TRIM(process_name)//' on tile '//TRIM(this%name))
 
@@ -334,18 +336,18 @@ CONTAINS
           IF (.NOT. ASSOCIATED(parent_tile%mem(iproc)%p%children) .AND. no_of_children > 0) THEN
             parent_tile%mem(iproc)%p%no_of_children = no_of_children
             ALLOCATE(parent_tile%mem(iproc)%p%children(no_of_children))
-            !$acc enter data create(parent_tile%mem(iproc)%p%children)
+            !$ACC ENTER DATA CREATE(parent_tile%mem(iproc)%p%children)
           END IF
           child_no = this%path(this%level)
           parent_tile%mem(iproc)%p%children(child_no)%p => this%mem(iproc)%p
-          !$acc update device(parent_tile%mem(iproc)%p%children(child_no)%p)
+          !$ACC UPDATE DEVICE(parent_tile%mem(iproc)%p%children(child_no)%p)
           __acc_attach(parent_tile%mem(iproc)%p%children(child_no)%p)
         END IF
 
       END IF
 
     END DO
-    !$acc update device(this%mem)
+    !$ACC UPDATE DEVICE(this%mem)
 
   END SUBROUTINE Init_tile
 
@@ -401,7 +403,7 @@ CONTAINS
       varlist_name_loc = TRIM(varlist_name)
     END IF
 
-    !$acc enter data copyin(this)
+    !$ACC ENTER DATA COPYIN(this)
 
     CALL jsb_add_var(varlist_name_loc, 'fract', tmp_fract,                                 &
       & hgrid, surface,                                                                                         &
@@ -554,7 +556,7 @@ CONTAINS
     END IF
 
     ! Loop over lcts of this tile and add variables for fractions for each lct
-    !$acc enter data create(this%lcts)
+    !$ACC ENTER DATA CREATE(this%lcts)
     DO ilct=1,SIZE(this%lcts)
 
       !! !$acc enter data create(this%lcts(ilct)%fract)
@@ -613,7 +615,7 @@ CONTAINS
             mem%vars(i)%p%child_idx(child_no) = 0
           END IF
         END DO
-        !$acc enter data copyin(mem%vars(i)%p%child_idx)
+        !$ACC ENTER DATA COPYIN(mem%vars(i)%p%child_idx)
         ! __acc_attach(mem%vars(i)%p%child_idx)
       END DO
 
