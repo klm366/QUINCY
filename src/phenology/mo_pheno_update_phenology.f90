@@ -8,6 +8,9 @@
 !! First version by Sönke Zaehle (2016-04-11)
 !! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
 !!
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_pheno_update_phenology
 #ifndef __NO_JSBACH__
 

@@ -107,22 +107,27 @@ CONTAINS
 
     !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
     !$ACC PARALLEL DEFAULT(PRESENT)
-    !$ACC LOOP GANG VECTOR
+    !$ACC LOOP GANG(STATIC:1) VECTOR
     DO ic = 1, nc
-      bottom(ic)    = SUM(dz (ic,:))
-      root_depth(ic) = SUM(dz_root(ic,:))
-#ifndef _OPENACC
-      IF (root_depth(ic) > bottom(ic) + EPSILON(1._wp)) THEN
-        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-      ELSE
-#endif
-        bottom(ic)    = 0._wp
-        bottom_m1(ic) = 0._wp
-        ws_root  (ic) = 0._wp
+      root_depth(ic) = 0._wp
+      bottom(ic)     = 0._wp
+      bottom_m1(ic)  = 0._wp
+      ws_root(ic)    = 0._wp
+    END DO
 
-        !$ACC LOOP SEQ
-        DO is = 1, nsoil
-          bottom(ic)    = bottom(ic) + dz(ic,is)
+    !$ACC LOOP SEQ
+    DO ic = 1, nc
+      !$ACC LOOP GANG(STATIC:1) VECTOR
+      DO is = 1, nsoil
+        root_depth(ic) = root_depth(ic) + dz_root(ic,is)
+      END DO
+    END DO
+    
+    !$ACC LOOP SEQ
+    DO ic = 1, nc
+      !$ACC LOOP GANG(STATIC:1) VECTOR
+      DO is = 1, nsoil
+        bottom(ic)    = bottom(ic) + dz(ic,is)
           IF (root_depth(ic) >= bottom(ic)) THEN              ! Root zone extends to below current layer
             ws_root(ic) = ws_root(ic) + ws(ic,is)
           ELSE IF (root_depth(ic) > bottom_m1(ic)) THEN       ! Root zone above current layer but below previous layer, i.e.
@@ -131,10 +136,16 @@ CONTAINS
           END IF
           bottom_m1(ic) = bottom_m1(ic) + dz(ic,is)
         END DO
-#ifndef _OPENACC
-      END IF
-#endif
     END DO
+
+#ifndef _OPENACC
+    DO ic = 1, SIZE(ws, 1)
+      IF (root_depth(ic) > bottom(ic) + EPSILON(1._wp)) THEN
+        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
+      END IF
+    END DO
+#endif
+
     !$ACC END PARALLEL
     !$ACC END DATA
 

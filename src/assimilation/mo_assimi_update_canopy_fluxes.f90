@@ -8,6 +8,10 @@
 !! First version by Sönke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_assimi_update_canopy_fluxes.f90
 !!
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/vegetation/mo_veg_respiration.pp-jsb.f90"
+
 MODULE mo_assimi_update_canopy_fluxes
 #ifndef __NO_JSBACH__
 

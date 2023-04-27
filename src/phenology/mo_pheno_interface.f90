@@ -14,6 +14,13 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/phenology/mo_pheno_process.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/phenology/mo_pheno_update_phenology.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_phy_schemes.pp-jsb.f90"
+!NEC$ options "-finline-file=externals/jsbach/src/shared/mo_time_averages.pp-jsb.f90"
+!NEC$ options "-finline-max-function-size=100"
+
 MODULE mo_pheno_interface
 #ifndef __NO_JSBACH__
 
