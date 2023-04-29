@@ -37,11 +37,12 @@ MODULE mo_mix_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_mix_memory
 
     ! Common variables independent of lct_type
-    TYPE(t_jsb_var_real2d) :: &
-      & wtr_latflow,          & !< Lateral water flow between tiles               [kg m-2 s-1]
-      & runoff_retention        !< Runoff retention reservoir                     [m water equivalent]
-    TYPE(t_jsb_var_real3d) :: &
-      & drain_lat_retention_sl  !< Lateral drainage retention reservoir           [m water equivalent]
+    TYPE(t_jsb_var_real2d) ::   &
+      & wtr_latflow,            & !< Lateral water flow between tiles               [kg m-2 s-1]
+      & runoff_retention          !< Runoff retention reservoir                     [m water equivalent]
+    TYPE(t_jsb_var_real3d) ::   &
+      & wtr_diflat_sl,          & !< Lateral diffusion flux between tiles           [kg m-2 s-1]
+      & drain_lat_retention_sl    !< Lateral drainage retention reservoir           [m water equivalent]
 
   CONTAINS
     PROCEDURE :: Init => Init_mix_memory
@@ -87,7 +88,7 @@ CONTAINS
     END IF
 
 
-    ! Common variables
+    ! Common surface variables
 
     CALL mem%Add_var('wtr_latflow', mem%wtr_latflow,                                 &
       & hgrid, surface,                                                              &
@@ -104,7 +105,18 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, lrestart=.TRUE.,                                             &
       & output_level=BASIC,                                                          &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & initval_r=0.0_wp)
+
+    ! Common soil layer variables
+
+    CALL mem%Add_var( 'wtr_diflat_sl', mem%wtr_diflat_sl,                            &
+      & hgrid, soil_w,                                                               &
+      & t_cf('wtr_diflat_sl', 'kg m-2 s-1',                                          &
+      &      'Diffusion flux from neighbouring tile'),                               &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,                                                          &
+      & lrestart=.FALSE., initval_r=0.0_wp)
 
     CALL mem%Add_var( 'drain_lat_retention_sl', mem%drain_lat_retention_sl,          &
       & hgrid, soil_w,                                                               &
@@ -113,7 +125,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,                                                          &
-      & lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+      & lrestart=.TRUE., initval_r=0.0_wp)
 
 
   END SUBROUTINE Init_mix_memory

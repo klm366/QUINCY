@@ -139,7 +139,6 @@ MODULE mo_hydro_memory_class
       & wtr_freeze_sl,        & !< Flux from freezing water in soil layers                                  [kg m-2 s-1]
       & ice_melt_sl,          & !< Flux from melting ice in soil layers                                     [kg m-2 s-1]
       & drain_lat_sl,         & !< Lateral drainage flux on soil layers                                     [kg m-2 s-1]
-      & wtr_diffus_sl,        & !< Diffusion flux between tiles                                             [kg m-2 s-1]
       & wtr_soil_sat_sl,      & !< Soil water content at saturation (from soil porosity, reduced by ice)    [m]
       & wtr_soil_fc_sl,       & !< Water content of soil layers at field capacity (reduced by ice)          [m]
       & wtr_soil_pwp_sl,      & !< Water content of soil layers at permanent wilting point (reduced by ice  [m]
@@ -938,13 +937,6 @@ CONTAINS
       CALL mem%Add_var( 'wtr_soil_pot_scool_sl', mem%wtr_soil_pot_scool_sl,                   &
         & hgrid, soil_w,                                                                      &
         & t_cf('wtr_soil_pot_scool_sl', 'm', 'Potentially supercooled water on soil layers'), &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
-        & prefix, suffix,                                                                     &
-        & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-
-      CALL mem%Add_var( 'wtr_diffus_sl', mem%wtr_diffus_sl,                   &
-        & hgrid, soil_w,                                                                      &
-        & t_cf('wtr_diffus_sl', 'kg m-2 s-1', 'Diffusion flux from neighbouring tile'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                  &
         & prefix, suffix,                                                                     &
         & lrestart=.FALSE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
