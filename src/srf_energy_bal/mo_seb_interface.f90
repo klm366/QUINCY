@@ -13,6 +13,8 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_seb_interface
 #ifndef __NO_JSBACH__
 
@@ -300,9 +302,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: w_ice_melt_sl
 
 
-    INTEGER  :: iblk , ics, ice, i
-    REAL(wp) :: dtime
+    INTEGER  :: iblk , ics, ice, nc, ic
+    REAL(wp) :: dtime, dz1
 
+    LOGICAL :: &
+      & l_freeze_config, &
+      & l_snow_config
     REAL(wp), DIMENSION(options%nc) :: &
       & heat_cap
 
@@ -316,12 +321,15 @@ CONTAINS
     iblk  = options%iblk
     ics   = options%ics
     ice   = options%ice
+    nc    = options%nc
     dtime = options%dtime
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(SSE_)
+    l_freeze_config = dsl4jsb_Config(SSE_)%l_freeze
+    l_snow_config   = dsl4jsb_Config(SSE_)%l_snow
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
     IF (tile%contains_land) THEN
@@ -329,6 +337,7 @@ CONTAINS
     END IF
 
     soil_e => Get_vgrid('soil_depth_energy')
+    dz1 = soil_e%dz(1)
     !nsoil = soil_e%n_levels
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
       snow_e => Get_vgrid('snow_depth_energy')
@@ -351,43 +360,34 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_ice_melt_sl)    ! in
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
-        !$claw acc data create(heat_cap)
+        !$ACC DATA CREATE(heat_cap)
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+        DO ic=1,nc
 
-        ! Correction for snowmelt
-        !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_0 tile_name=tile%name
-        t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:)
+          ! Correction for snowmelt
+          t_unfilt(ic) = t_unfilt(ic) - snowmelt(ic) * dtime * alf / hcap_grnd_old(ic)
 
-        IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
-          !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_1 tile_name=tile%name
-          heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
-          IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-            !$claw acc data present(t_unfilt,snow_depth_sl,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
-            !$claw acc parallel loop gang vector
-            DO i = 1,  size(t_unfilt, dim=1)
-              IF (snow_depth_sl(i,nsnow) < EPSILON(1._wp) .AND. heat_cap(i) > 0._wp) THEN  ! No snow layers present
+          IF (l_freeze_config) THEN
+            heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
+            IF (l_snow_config) THEN
+              IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
               ! Correction for melting of ice in soil layers
-                t_unfilt(i) = t_unfilt(i) - w_ice_melt_sl   (i,1) * dtime * alf / heat_cap(i)
-                t_unfilt(i) = t_unfilt(i) + w_soil_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+                t_unfilt(ic) = t_unfilt(ic) - w_ice_melt_sl   (ic,1) * dtime * alf / heat_cap(ic)
+                t_unfilt(ic) = t_unfilt(ic) + w_soil_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
               END IF
-            END DO
-            !$claw acc end data
-          ELSE   ! No snow layers present
-            !$claw acc data present(t_unfilt,heat_cap,w_ice_melt_sl,w_soil_freeze_sl)
-            !$claw acc parallel loop gang vector
-            DO i = 1, size(t_unfilt,dim=1)
-              IF (heat_cap(i) > 0._wp) THEN
+            ELSE   ! No snow layers present
+              IF (heat_cap(ic) > 0._wp) THEN
                 ! Correction for melting of ice in soil layers
-                t_unfilt(i) = t_unfilt(i) - w_ice_melt_sl   (i,1) * dtime * alf / heat_cap(i)
-                t_unfilt(i) = t_unfilt(i) + w_soil_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+                t_unfilt(ic) = t_unfilt(ic) - w_ice_melt_sl   (ic,1) * dtime * alf / heat_cap(ic)
+                t_unfilt(ic) = t_unfilt(ic) + w_soil_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
               END IF
-            END DO
-            !$claw acc end data
+            END IF
           END IF
-        END IF
-        !$claw acc end data
-      END IF
 
-      
+        END DO
+        !$ACC END PARALLEL LOOP
+        !$ACC END DATA
+      END IF
 
     ELSE
 

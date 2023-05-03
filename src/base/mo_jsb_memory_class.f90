@@ -204,6 +204,7 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
+    var%full_name = TRIM(name_loc)
     IF (loutput_loc) THEN
       IF (mem%in_var_groups) THEN
         var%is_in_output = is_variable_in_output(var%full_name, groups(:))
@@ -230,7 +231,6 @@ CONTAINS
 
     var%ptr => var%ptr1d
     var%name = TRIM(name)
-    var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL1D
     var%missval = missval_r_loc
@@ -250,8 +250,8 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr1d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr1d)
     __acc_attach(var%ptr1d)
     __acc_attach(var%ptr)
 
@@ -401,8 +401,8 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr2d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr2d)
     __acc_attach(var%ptr2d)
     __acc_attach(var%ptr)
 
@@ -567,8 +567,8 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
-    !$acc enter data copyin(var)
-    !$acc update device(var%ptr3d)
+    !$ACC ENTER DATA COPYIN(var)
+    !$ACC UPDATE DEVICE(var%ptr3d)
     __acc_attach(var%ptr3d)
     __acc_attach(var%ptr)
 

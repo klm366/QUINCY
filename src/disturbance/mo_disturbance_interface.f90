@@ -14,6 +14,8 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_disturb_interface
 #ifndef __NO_JSBACH__
 
@@ -30,6 +32,7 @@ MODULE mo_disturb_interface
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
+  USE mo_carbon_constants,   ONLY: molarMassCO2_kg, sec_per_day
 
   ! Use of processes in this module (Get_disturb_memory and Get_disturb_config)
   dsl4jsb_Use_processes DISTURB_, FUEL_, ASSIMI_, A2L_, CARBON_, SEB_
@@ -133,7 +136,7 @@ CONTAINS
 
     ! Local variables
     TYPE(t_jsb_model), POINTER                :: model
-    REAL(wp), DIMENSION(options%nc)           :: old_c_state_sum, dummy_flux
+    REAL(wp), DIMENSION(options%nc)           :: old_c_state_sum_ta, dummy_flux
 
     INTEGER :: iblk, nc, ics, ice
 
@@ -205,7 +208,7 @@ CONTAINS
     !
     dsl4jsb_Real2D_onChunk :: cover_fract_pot
     !
-    dsl4jsb_Real2D_onChunk :: cflux_fire_all_2_atm_ta
+    dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm_ta
 
     ! Locally allocated vectors
     !
@@ -291,7 +294,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ASSIMI_,    cover_fract_pot)         ! in
 
     !ta variable required for the carbon conservation test
-    dsl4jsb_Get_var2D_onChunk(CARBON_,    cflux_fire_all_2_atm_ta) ! out
+    dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm_ta) ! out
 
     ! ---------------------------
     ! Go
@@ -392,7 +395,7 @@ CONTAINS
           CASE (1) !! jsbach algorithm
 
             !Calculate current sum before operation for c conservation test
-            CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
+            CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
             CALL relocate_carbon_damage(                 &
               & damaged_fract(:),                        & ! in
@@ -440,7 +443,7 @@ CONTAINS
 
             ! wind has no extra flux to atmos, only redistribution among cpools - therefore cflux = 0._wp
             dummy_flux = 0._wp
-            CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
+            CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
               & dummy_flux(:), cconservation_wind(:))
 
           CASE DEFAULT
@@ -453,7 +456,7 @@ CONTAINS
           CASE (1) !! jsbach algorithm
 
            !Calculate current sum before operation for c conservation test
-            CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum(:))
+            CALL calculate_current_c_ta_state_sum(tile, options, old_c_state_sum_ta(:))
 
             CALL relocate_carbon_fire(                    &
               & burned_fract(:),                          & ! in, only for windbreak
@@ -502,10 +505,10 @@ CONTAINS
               & cflux_dist_woods_2_soil = cflux_dist_woods_2_soil(:),                     &
               & cflux_fire_all_2_atm = cflux_fire_all_2_atm(:))
 
-            !@todo: shouldn't cflux_fire_all_2_atm be negative since its a flux away from land?
-            !For conservation test: negate currently positve cflux_fire_all_2_atm (flux away from land!)
-            CALL check_carbon_conservation(tile, options, old_c_state_sum(:), &
-              & -cflux_fire_all_2_atm_ta(:), cconservation_fire(:))
+            ! For conservation test: negate currently positve co2flux_fire_all_2_atm_ta (flux away from land!)
+            ! and convert back from CO2 flux to carbon change per day
+            CALL check_carbon_conservation(tile, options, old_c_state_sum_ta(:), &
+              & -co2flux_fire_all_2_atm_ta(:) * sec_per_day / molarMassCO2_kg, cconservation_fire(:))
 
           CASE (2) !! Arora & Boer algorithm
             CALL finish('disturbed_fract','Arora & Boer algorithm not implemented yet.')
@@ -592,7 +595,7 @@ CONTAINS
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_nonsoluble_ag2_ta,     weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_1_ta,            weighted_by_fract)
        dsl4jsb_Aggregate_onChunk(CARBON_,  c_humus_2_ta,            weighted_by_fract)
-       dsl4jsb_Aggregate_onChunk(CARBON_,  cflux_fire_all_2_atm_ta, weighted_by_fract)
+       dsl4jsb_Aggregate_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta, weighted_by_fract)
     ENDIF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

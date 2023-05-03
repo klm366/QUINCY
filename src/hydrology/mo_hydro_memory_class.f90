@@ -18,6 +18,7 @@ MODULE mo_hydro_memory_class
   USE mo_kind, ONLY: wp
   USE mo_util, ONLY: One_of
 
+  USE mo_jsb_control,      ONLY: jsbach_runs_standalone
   USE mo_jsb_model_class,  ONLY: t_jsb_model
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_memory_class, ONLY: t_jsb_memory
@@ -60,6 +61,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & runoff,               & !< surface runoff
       & drainage,             & !< drainage
+      & ws_negative,          & !< sum of negative soil moisture (diagnosis of errors) [m]
       & discharge,            & !< discharge (local)
       & discharge_ocean,      & !< discharge to the ocean
       & internal_drain          !< internal drain
@@ -234,8 +236,6 @@ CONTAINS
       ini_snow_dens = dens_snow
     END IF
 
-    !! !$acc enter data pcreate(mem)
-
     ! Common variables
 
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -317,6 +317,15 @@ CONTAINS
       & loutput=.TRUE., output_level=BASIC,                                  &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
+    CALL mem%Add_var( 'ws_negative', mem%ws_negative,                        &
+      & hgrid, surface,                                                      &
+      & t_cf('ws_negative', 'kg m-2', 'negative soil water'),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & loutput=.TRUE., output_level=BASIC,                                  &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
     CALL mem%Add_var( 'discharge', mem%discharge,                            &
       & hgrid, surface,                                                      &
       & t_cf('discharge', 'kg m-2 s-1', 'local discharge'),                  &
@@ -362,13 +371,15 @@ CONTAINS
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'elevation', mem%elevation,                                    &
-      & hgrid, surface,                                                              &
-      & t_cf('elevation', '', ''),                                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    IF (jsbach_runs_standalone()) THEN
+       CALL mem%Add_var( 'elevation', mem%elevation,                                    &
+         & hgrid, surface,                                                              &
+         & t_cf('elevation', '', ''),                                                   &
+         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+         & prefix, suffix,                                                              &
+         & lrestart=.FALSE.,                                                            &
+         & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    END IF
 
     CALL mem%Add_var( 'oro_stddev', mem%oro_stddev,                                  &
       & hgrid, surface,                                                              &

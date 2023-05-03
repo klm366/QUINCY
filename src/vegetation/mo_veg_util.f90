@@ -7,6 +7,9 @@
 !! @par Revision History
 !! First version by Jan Engel (2019-11-04)
 !!
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_veg_util
 #ifndef __NO_JSBACH__
 

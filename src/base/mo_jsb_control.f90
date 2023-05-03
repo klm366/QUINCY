@@ -37,6 +37,10 @@ MODULE mo_jsb_control
   PUBLIC :: timer_jsbach, timer_aggregate, timer_integrate, timer_process_task, timer_process_msg, timer_forcing
   PUBLIC :: max_no_of_models
 
+  ! Needed for inlining timer_on and debug_on on NEC.
+  PUBLIC :: debug_level, timer_level
+  PROTECTED :: debug_level, timer_level
+
   LOGICAL,           SAVE :: is_standalone
   LOGICAL,           SAVE :: restart_jsbach
   CHARACTER(len=99), SAVE :: model_base_dir
@@ -183,9 +187,18 @@ CONTAINS
       READ(nml_unit, jsb_model_nml)
     END DO
 
+    IF (no_of_models == 0 ) THEN
+      CALL finish(routine, 'Namelist jsb_model_nml missing in '//TRIM(namelist_filename)// &
+        & '. One jsb_model_nml section is needed for each model incidence.')
+    END IF
     IF (no_of_models > max_no_of_models) THEN
       CALL finish(routine, 'no_of_models > max_no_of_models')
     ENDIF
+
+    IF (is_standalone .AND. .NOT. l_force_from_obs) THEN
+      CALL finish(routine, 'l_force_from_obs needs to be true - also with forcing data generated from '// &
+        & 'model output. Forcing from atmosphere interface data currently not implemented.')
+    END IF
 
     ldebugio = debug_io > 0
 

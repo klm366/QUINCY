@@ -12,6 +12,8 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_var_class.pp-jsb.f90"
+
 MODULE mo_jsb_model_class
 #ifndef __NO_JSBACH__
 
@@ -650,11 +652,11 @@ CONTAINS
         mem => tile%mem(iproc)%p
         DO i=1,mem%no_of_vars
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$acc update host(mem%vars(i)%p%ptr2d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr2d) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$acc update host(mem%vars(i)%p%ptr3d) if(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE HOST(mem%vars(i)%p%ptr3d) IF(mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart)
             ! IF (mem%vars(i)%p%is_in_output .OR. mem%vars(i)%p%is_in_restart) CALL message(routine//': gpu2cpu', TRIM(mem%vars(i)%p%full_name))
             CONTINUE
           END IF
@@ -712,10 +714,10 @@ CONTAINS
         DO i=1,mem%no_of_vars
           ! IF (mem%vars(i)%p%is_in_restart) CALL message(routine//': cpu2gpu', TRIM(mem%vars(i)%p%full_name))
           IF (ASSOCIATED(mem%vars(i)%p%ptr2d)) THEN
-            !$acc update device(mem%vars(i)%p%ptr2d) if(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr2d) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           ELSE IF (ASSOCIATED(mem%vars(i)%p%ptr3d)) THEN
-            !$acc update device(mem%vars(i)%p%ptr3d) if(mem%vars(i)%p%is_in_restart)
+            !$ACC UPDATE DEVICE(mem%vars(i)%p%ptr3d) IF(mem%vars(i)%p%is_in_restart)
             CONTINUE
           END IF
         END DO

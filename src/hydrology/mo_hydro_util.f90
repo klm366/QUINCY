@@ -24,7 +24,7 @@ MODULE mo_hydro_util
   PUBLIC :: get_water_in_root_zone
 
   INTERFACE get_water_in_root_zone
-    !MODULE PROCEDURE get_water_in_root_zone_1d
+    ! MODULE PROCEDURE get_water_in_root_zone_1d
     MODULE PROCEDURE get_water_in_root_zone_2d
   END INTERFACE
 
@@ -49,16 +49,16 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_water_in_root_zone_d'
 
-    !$claw acc routine seq
+    !$ACC ROUTINE SEQ
 
     n  = SIZE(dz)       ! Number of soil layers
     bottom    = SUM(dz (:))
     root_depth = SUM(dz_root(:))
+#ifndef _OPENACC
     IF (root_depth > bottom + EPSILON(1._wp)) THEN
-      !$claw remove
       CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-      !$claw end remove
     ELSE
+#endif
       bottom    = 0._wp
       bottom_m1 = 0._wp
       ws_root   = 0._wp
@@ -71,7 +71,9 @@ CONTAINS
         END IF
         bottom_m1 = bottom_m1 + dz(i)
       END DO
+#ifndef _OPENACC
     END IF
+#endif
 
   END SUBROUTINE get_water_in_root_zone_1d
 
@@ -97,23 +99,28 @@ CONTAINS
 
     n  = SIZE(dz,2)       ! Number of soil layers
 
-    !$claw acc data present(ws, dz, dz_root, ws_root) create(bottom, bottom_m1, root_depth)
-    !$claw acc parallel default(present)
-    !$claw acc loop gang vector
+    !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
+    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC LOOP GANG(STATIC:1) VECTOR
     DO j = 1, SIZE(ws, 1)
-      bottom (j)    = SUM(dz (j,:))
-      root_depth(j) = SUM(dz_root(j,:))
-      IF (root_depth(j) > bottom(j) + EPSILON(1._wp)) THEN
-        !$claw remove
-        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
-        !$claw end remove
-      ELSE
+      root_depth(j) = 0._wp
         bottom(j)    = 0._wp
         bottom_m1(j) = 0._wp
         ws_root  (j) = 0._wp
+    END DO
 
-        !$claw acc loop seq
-        DO i=1,n
+    !$ACC LOOP SEQ
+    DO i=1,n
+      !$ACC LOOP GANG(STATIC:1) VECTOR
+      DO j = 1, SIZE(ws, 1)
+        root_depth(j) = root_depth(j) + dz_root(j,i)
+      END DO
+    END DO
+
+    !$ACC LOOP SEQ
+    DO i=1,n
+      !$ACC LOOP GANG(STATIC:1) VECTOR
+      DO j = 1, SIZE(ws, 1)
           bottom(j)    = bottom(j) + dz(j,i)
           IF (root_depth(j) >= bottom(j)) THEN                ! Root zone extends to below current layer
             ws_root(j) = ws_root(j) + ws(j,i)
@@ -122,10 +129,18 @@ CONTAINS
           END IF
           bottom_m1(j) = bottom_m1(j) + dz(j,i)
         END DO
+    END DO
+
+#ifndef _OPENACC
+    DO j = 1, SIZE(ws, 1)
+      IF (root_depth(j) > bottom(j) + EPSILON(1._wp)) THEN
+        CALL finish(TRIM(routine), 'Root zone larger than soil depth.')
       END IF
     END DO
-    !$claw acc end parallel
-    !$claw acc end data
+#endif
+
+    !$ACC END PARALLEL
+    !$ACC END DATA
 
   END SUBROUTINE get_water_in_root_zone_2d
 

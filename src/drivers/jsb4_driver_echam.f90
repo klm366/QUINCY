@@ -28,6 +28,7 @@ PROGRAM jsb4_driver
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_mvstream,           ONLY: init_mvstream, mvstream_update_cache, mvstream_accumulate
+  USE mo_sub_nml,            ONLY: set_stream_element_nml, set_stream_nml
   USE mo_jsb_time,           ONLY: t_datetime, deallocateDatetime
 
   dsl4jsb_Use_processes SEB_, TURB_, HYDRO_
@@ -47,7 +48,6 @@ PROGRAM jsb4_driver
   USE mo_exception,          ONLY: message, message_text, finish
   USE mo_kind,               ONLY: wp
   USE mo_jsb_math_constants, ONLY: deg2rad
-  USE mo_orbit,              ONLY: orbit_kepler, orbit_vsop87
   USE mo_util,               ONLY : int2string
 
 !>>> TODO? echam:
@@ -65,14 +65,11 @@ PROGRAM jsb4_driver
 
   ! time control and orbit calc
   USE mo_time_control,     ONLY: time_set, time_reset, lstop, l_trigfiles, l_putrerun, delta_time, &
-    &                            time_step_len, get_orbit_times, l_orbvsop87, current_date, next_date, write_date, &
+    &                            time_step_len, current_date, next_date, write_date, &
     &                            echam_time, manager_state
-
-  USE mo_radiation_parameters, ONLY: lyr_perp, nmonth, yr_perp, solar_parameters
+  USE mo_orbit_solar,      ONLY: compute_cos_zenith_angle
 
   USE mo_timer, ONLY: init_timer, cleanup_timer, timer_start, timer_stop, timer_loop, timer_output, timer_restart
-
-!<<<
 
   IMPLICIT NONE
 
@@ -94,11 +91,8 @@ PROGRAM jsb4_driver
                      ! Default (-1): each domain is processed in one call
   INTEGER:: buffer(4) ! buffer to broadcast the 4 above variables
 
-  LOGICAL :: l_rad_call = .FALSE.  ! TODO? echam -- orbit calculation
-  REAL(wp) :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun, flx_ratio
   REAL(wp), POINTER     :: lon(:,:), lat(:,:)
   REAL(wp), ALLOCATABLE :: coslon(:,:), coslat(:,:), sinlon(:,:), sinlat(:,:)
-  REAL(wp), ALLOCATABLE :: daylght_frc(:,:)
 
   TYPE(t_jsb_model), POINTER :: model
   CLASS(t_jsb_tile_abstract),  POINTER :: tile
@@ -299,7 +293,6 @@ PROGRAM jsb4_driver
     ALLOCATE(coslat(nproma,nblks))
     ALLOCATE(sinlon(nproma,nblks))
     ALLOCATE(sinlat(nproma,nblks))
-    ALLOCATE(daylght_frc(nproma, nblks))
 
     coslon = COS(deg2rad * lon)
     sinlon = SIN(deg2rad * lon)
@@ -323,6 +316,8 @@ PROGRAM jsb4_driver
   ics = 1
 
   CALL init_mvstream('namelist.jsbach')
+  CALL set_stream_element_nml('namelist.jsbach')
+  CALL set_stream_nml('namelist.jsbach')
 
   IF(jsbach_is_restarted()) THEN
 
@@ -380,16 +375,7 @@ PROGRAM jsb4_driver
 
     IF (.NOT. read_interface_vars) THEN
 
-      ! copied from jsbach3: mo_zenith.f90
-      CALL get_orbit_times(l_rad_call, lyr_perp, nmonth, yr_perp, time_of_day, orbit_date)
-      IF (l_orbvsop87) THEN
-         CALL orbit_vsop87 (orbit_date, rasc_sun, decl_sun, dist_sun)
-      ELSE
-         CALL orbit_kepler (orbit_date, rasc_sun, decl_sun, dist_sun)
-      END IF
-
-      CALL solar_parameters(decl_sun, dist_sun, time_of_day, sinlon, sinlat, coslon, coslat, &
-        & flx_ratio, cos_zenith_angle, daylght_frc)
+      CALL compute_cos_zenith_angle(sinlon, sinlat, coslon, coslat, cos_zenith_angle)
 
       IF (timer_on()) CALL timer_start(timer_forcing(1))
       CALL get_interface_variables_from_external_forcing(1, 1, nproma, npromz, nblks, current_datetime_ptr, next_datetime_ptr, &
@@ -518,7 +504,7 @@ PROGRAM jsb4_driver
   DEALLOCATE(CO2_flux)
 
   IF (.NOT. read_interface_vars) THEN
-    DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat, daylght_frc)
+    DEALLOCATE(lon, lat, coslon, coslat, sinlon, sinlat)
     DEALLOCATE(t_srf_proc, fact_q_air_proc, fact_qsat_srf_proc, rough_h_srf_proc, rough_m_srf_proc, evapo_act2pot_proc)
     !DEALLOCATE(evapo_act_sum_proc, evapo_pot_sum_proc)
   ENDIF

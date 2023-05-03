@@ -86,7 +86,7 @@ CONTAINS
 
   END SUBROUTINE fuel_init_bc
 
-  RECURSIVE SUBROUTINE fuel_init_ic(tile)
+  SUBROUTINE fuel_init_ic(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 

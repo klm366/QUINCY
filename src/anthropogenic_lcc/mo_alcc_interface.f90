@@ -13,6 +13,9 @@
 !> Please see [this link](https://code.mpimet.mpg.de/attachments/download/20888/MPI-M-ICONLizenzvertragV2.6.pdf) for details.
 !> Where software is supplied by third parties, it is indicated in the headers of the routines.
 !>
+
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_alcc_interface
 #ifndef __NO_JSBACH__
 

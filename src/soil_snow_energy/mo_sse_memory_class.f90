@@ -110,8 +110,6 @@ CONTAINS
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
 
-    !! !$acc enter data pcreate(mem)
-
     CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
@@ -160,13 +158,16 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
-      & hgrid, surface,                                                      &
-      & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    IF (      .NOT. dsl4jsb_Config(SSE_)%l_heat_cond_map                     &
+      & .AND. .NOT. dsl4jsb_Config(SSE_)%l_soil_texture) THEN               
+      CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
+        & hgrid, surface,                                                      &
+        & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+    END IF
 
     CALL mem%Add_var( 't_soil_sl', mem%t_soil_sl,                            &
       & hgrid, soil_e,                                                       &

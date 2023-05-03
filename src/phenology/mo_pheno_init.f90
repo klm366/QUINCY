@@ -204,31 +204,31 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'setting lai_clim ...')
 
     dsl4jsb_memory(PHENO_)%lai_mon(:,:,:) = pheno_init_vars%lai_mon(:,:,:)
-    !$acc enter data attach(dsl4jsb_memory(PHENO_)%lai_mon)
-    !$acc update device(dsl4jsb_memory(PHENO_)%lai_mon)
+    !$ACC ENTER DATA ATTACH(dsl4jsb_memory(PHENO_)%lai_mon)
+    !$ACC UPDATE DEVICE(dsl4jsb_memory(PHENO_)%lai_mon)
 
     ! Foliage projected cover climatology
     IF (debug_on()) CALL message(TRIM(routine), 'setting veg_fract ...')
     dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,:) = pheno_init_vars%fract_fpc_mon(:,:,:)
-    !$acc update device(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
+    !$ACC UPDATE DEVICE(dsl4jsb_memory(PHENO_)%fract_fpc_mon)
 
     ! Forest fraction
-    ! @todo: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
+    ! TODO: only used for use_alb_veg_simple=.TRUE. and HYDRO_ init if l_organic=.TRUE.
     IF (debug_on()) CALL message(TRIM(routine), 'setting forest_fract ...')
     dsl4jsb_var2D_onDomain(PHENO_, fract_forest) = pheno_init_vars%fract_forest
-    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_forest))
+    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_forest))
 
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
     dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
-    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
+    !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
 
     IF (tile%lcts(1)%lib_id /= 0)  THEN ! only if the present tile is a pft
       !JN 10.01.18: for now: set the maxLai for non forest types to the one from the Lctlib
       !             later one might think about allometric relation ships in other multi annual plants, too?
       IF ( (dsl4jsb_Config(PHENO_)%l_forestRegrowth) .AND. (.NOT. dsl4jsb_Lctlib_param(ForestFlag)) ) THEN
         dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom) = dsl4jsb_Lctlib_param(MaxLAI)
-        !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
+        !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
       END IF
 
       !JN 10.01.18: with l_forestRegrowth the maxLAI can change over time for forest pfts
@@ -240,7 +240,7 @@ CONTAINS
         dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
           & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
       END IF
-      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction))
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction))
     END IF
 
   END SUBROUTINE pheno_init_bc
@@ -254,15 +254,31 @@ CONTAINS
 
     TYPE(t_jsb_model),       POINTER :: model
 
+    dsl4jsb_Real2D_onDomain :: lai
+    dsl4jsb_Real2D_onDomain :: fract_fpc
+    dsl4jsb_Real2D_onDomain :: fract_fpc_max
+    dsl4jsb_Real2D_onDomain :: MaxLai_allom
+    REAL(wp), POINTER :: &
+      & lai_mon(:,:,:), &
+      & fract_fpc_mon(:,:,:)
+
     dsl4jsb_Def_config(PHENO_)
     dsl4jsb_Def_memory(PHENO_)
 
     REAL(wp) :: wgt1, wgt2
     INTEGER  :: nmw1,nmw2
+    INTEGER  :: nblks, ib, nc, ic
+
+    REAL(wp) :: ClumpinessFactor_param, MaxLai_param
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_ic'
 
     model => get_model(tile%owner_model_id)
+
+    IF (tile%lcts(1)%lib_id /= 0) THEN
+      ClumpinessFactor_param = dsl4jsb_Lctlib_param(ClumpinessFactor)
+      MaxLai_param           = dsl4jsb_Lctlib_param(MaxLai)
+    END IF
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
@@ -270,37 +286,76 @@ CONTAINS
     IF (debug_on()) CALL message(TRIM(routine), 'Setting initial conditions of pheno memory (lai) for tile '// &
       &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(PHENO_)%bc_filename))
 
+    nblks = SIZE(dsl4jsb_var_ptr(PHENO_, lai), 2)
+    nc    = SIZE(dsl4jsb_var_ptr(PHENO_, lai), 1)
+
+    dsl4jsb_Get_var2D_onDomain(PHENO_, lai)
+    dsl4jsb_Get_var2D_onDomain(PHENO_, fract_fpc)
+    dsl4jsb_Get_var2D_onDomain(PHENO_, fract_fpc_max)
+    dsl4jsb_Get_var2D_onDomain(PHENO_, maxLAI_allom)
+    lai_mon       => dsl4jsb_memory(PHENO_)%lai_mon
+    fract_fpc_mon => dsl4jsb_memory(PHENO_)%fract_fpc_mon
+
     ! Set initial leaf area index from climatology (read in pheno_init_bc)
     CALL get_time_interpolation_weights(wgt1, wgt2, nmw1, nmw2)
-    dsl4jsb_var2D_onDomain(PHENO_, lai) = &
-      & wgt1 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%lai_mon(:,:,nmw2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    DO ib=1,nblks
+      DO ic=1,nc
+        lai(ic,ib) = wgt1 * lai_mon(ic,ib,nmw1) + wgt2 * lai_mon(ic,ib,nmw2)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
 
     IF (model%config%l_compat401) THEN
-      !$claw expand
-      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
-        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), 2._wp)
-      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc))
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO ib=1,nblks
+        DO ic=1,nc
+          fract_fpc(ic,ib) = get_foliage_projected_cover( &
+            &                  fract_fpc_max(ic,ib), lai(ic,ib), 2._wp)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
       IF (       TRIM(dsl4jsb_Config(PHENO_)%scheme) == 'climatology' &
-          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: eneral vegetation tile, no specific PFT
-        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = &
-          & wgt1 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw1) + wgt2 * dsl4jsb_memory(PHENO_)%fract_fpc_mon(:,:,nmw2)
+          & .OR. tile%lcts(1)%lib_id == 0) THEN         ! lib_id=0: general vegetation tile, no specific PFT
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        DO ib=1,nblks
+          DO ic=1,nc
+            fract_fpc(ic,ib) = wgt1 * fract_fpc_mon(ic,ib,nmw1) + wgt2 * fract_fpc_mon(ic,ib,nmw2)
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
       ELSE
         IF ( .NOT. dsl4jsb_Config(PHENO_)%l_forestRegrowth )  THEN
-          dsl4jsb_var2D_onDomain(PHENO_, lai) = MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_Lctlib_param(MaxLai))
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+          DO ib=1,nblks
+            DO ic=1,nc
+              lai(ic,ib) = MIN(lai(ic,ib), MaxLai_param)
+            END DO
+          END DO
+          !$ACC END PARALLEL LOOP
         ELSE
-          dsl4jsb_var2D_onDomain(PHENO_, lai) = &
-            & MIN(dsl4jsb_var2D_onDomain(PHENO_, lai), dsl4jsb_var2D_onDomain(PHENO_, maxLAI_allom))
+          !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+          DO ib=1,nblks
+            DO ic=1,nc
+              lai(ic,ib) = MIN(lai(ic,ib), maxLAI_allom(ic,ib))
+            END DO
+          END DO
+          !$ACC END PARALLEL LOOP
         END IF
-        !$claw expand
-        dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover(                &
-          & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
-          & dsl4jsb_Lctlib_param(ClumpinessFactor))
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        DO ib=1,nblks
+          DO ic=1,nc
+            ! fract_fpc = get_foliage_projected_cover(                &
+            !   & fract_fpc_max, lai, &
+            !   & dsl4jsb_Lctlib_param(ClumpinessFactor))
+            fract_fpc(ic,ib) = get_foliage_projected_cover(                &
+              & fract_fpc_max(ic,ib), lai(ic,ib), ClumpinessFactor_param)
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
-      !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc))
     END IF
-
-    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
 
   END SUBROUTINE pheno_init_ic
 
@@ -322,6 +377,9 @@ CONTAINS
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),       POINTER  :: model
+
+    INTEGER :: nblks, ib, nc, ic
+    REAL(wp) :: ClumpinessFactor_param, MaxLai_param
        
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_q_'
     ! ---------------------------
@@ -333,6 +391,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain    :: growing_season
     dsl4jsb_Real2D_onDomain    :: lai_max
     dsl4jsb_Real2D_onDomain    :: lai
+    dsl4jsb_Real2D_onDomain    :: fract_fpc
+    dsl4jsb_Real2D_onDomain    :: fract_fpc_max
+    dsl4jsb_Real2D_onDomain    :: veg_fract_correction
+
     ! ---------------------------
     ! 0.4 Debug Option
     IF (debug_on()) CALL message(routine, 'Setting boundary conditions of pheno memory (quincy) for tile '// &
@@ -348,6 +410,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(PHENO_, growing_season)
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai_max)
     dsl4jsb_Get_var2D_onDomain(PHENO_, lai)
+    dsl4jsb_Get_var2D_onDomain(PHENO_, fract_fpc)
+    dsl4jsb_Get_var2D_onDomain(PHENO_, fract_fpc_max)
+    dsl4jsb_Get_var2D_onDomain(PHENO_, veg_fract_correction)
+
+    ClumpinessFactor_param = dsl4jsb_Lctlib_param(ClumpinessFactor)
+    MaxLai_param           = dsl4jsb_Lctlib_param(MaxLai)
+
+    nblks = SIZE(dsl4jsb_var_ptr(PHENO_, lai), 2)
+    nc    = SIZE(dsl4jsb_var_ptr(PHENO_, lai), 1)
 
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
@@ -357,21 +428,45 @@ CONTAINS
     !!
     !! init growing_season, lai_max, lai
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
-      ! lai_max == jsbach4 lctlib parameter
-      lai_max(:,:) = dsl4jsb_Lctlib_param(MaxLAI)
-      ! lai init should also work with 0.0_wp (in QUINCY canopy it is initialized with 6.0_wp)
-      lai(:,:)     = 1.0_wp
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO ib=1,nblks
+        DO ic=1,nc
+          ! lai_max == jsbach4 lctlib parameter
+          lai_max(ic,ib) = MaxLAI_param
+          ! lai init should also work with 0.0_wp (in QUINCY canopy it is initialized with 6.0_wp)
+          lai(ic,ib)     = 1.0_wp
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
       ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
       IF(dsl4jsb_Lctlib_param(phenology_type) == ievergreen) THEN
-        growing_season(:,:) = true
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        DO ib=1,nblks
+          DO ic=1,nc
+            growing_season(ic,ib) = true
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
       ELSE
-        growing_season(:,:) = false
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+        DO ib=1,nblks
+          DO ic=1,nc
+            growing_season(ic,ib) = false
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
       ENDIF
     ELSE
       ! default for non-PFT tiles
-      lai_max(:,:)        = 1.0_wp
-      lai(:,:)            = 0.0_wp
-      growing_season(:,:) = false
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO ib=1,nblks
+        DO ic=1,nc
+          lai_max       (ic,ib) = 1.0_wp
+          lai           (ic,ib) = 0.0_wp
+          growing_season(ic,ib) = false
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     ENDIF
 
     !> 2.0 jsbach4 "pheno init" code copied with minor modifications
@@ -380,26 +475,45 @@ CONTAINS
     !> 2.1 get fract_fpc_max
     ! Maximum foliage projected cover
     IF (debug_on()) CALL message(TRIM(routine), 'setting veg_ratio_max ...')
-    dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max) = pheno_init_vars%fract_fpc_max
-    !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max))
-    
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+    DO ib=1,nblks
+      DO ic=1,nc
+        fract_fpc_max(ic,ib) = pheno_init_vars%fract_fpc_max(ic,ib)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
+
     !> 2.2 calc initial fract_fpc 
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
-      !$claw expand
-      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover(                &
-        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), &
-        & dsl4jsb_Lctlib_param(ClumpinessFactor))
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO ib=1,nblks
+        DO ic=1,nc
+          fract_fpc(ic,ib) = get_foliage_projected_cover(                &
+            & fract_fpc_max(ic,ib), lai(ic,ib), &
+            & ClumpinessFactor_param)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     ELSE
       ! other than PFT tiles (in jsbach4 used in case l_compat401=.TRUE.)
-      !$claw expand
-      dsl4jsb_var2D_onDomain(PHENO_, fract_fpc) = get_foliage_projected_cover( &
-        & dsl4jsb_var2D_onDomain(PHENO_, fract_fpc_max), dsl4jsb_var2D_onDomain(PHENO_, lai), 2._wp)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO ib=1,nblks
+        DO ic=1,nc
+          fract_fpc(ic,ib) = get_foliage_projected_cover(fract_fpc_max(ic,ib), lai(ic,ib), 2._wp)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     ENDIF
     
     !> 2.3 veg_fract_correction (a factor between 0 and 1, not modified at runtime, see pheno mem class for some docu)
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
-      dsl4jsb_var2D_onDomain(PHENO_, veg_fract_correction) =   &
-        & 1.0_wp - exp(-dsl4jsb_Lctlib_param(MaxLAI) / dsl4jsb_Lctlib_param(clumpinessFactor))
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1) COLLAPSE(2)
+      DO ib=1,nblks
+        DO ic=1,nc
+          veg_fract_correction(ic,ib) = 1.0_wp - exp(-MaxLAI_param / clumpinessFactor_param)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     ENDIF
 
   END SUBROUTINE pheno_init_q_

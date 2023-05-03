@@ -133,7 +133,7 @@ CONTAINS
 
   END SUBROUTINE turb_init_bc
 
-  RECURSIVE SUBROUTINE turb_init_ic(tile)
+  SUBROUTINE turb_init_ic(tile)
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -171,7 +171,7 @@ CONTAINS
       dsl4jsb_var2D_onDomain(TURB_,rough_m) = turb_init_vars%rough_m
       dsl4jsb_var2D_onDomain(TURB_,rough_m_star) = 1._wp / LOG(dsl4jsb_Config(TURB_)%blending_height / turb_init_vars%rough_m)**2
 
-      !$acc update device(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star))
+      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(TURB_,rough_m), dsl4jsb_var2D_onDomain(TURB_,rough_m_star))
 
     END IF
 
