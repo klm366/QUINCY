@@ -1600,13 +1600,12 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
-!    iblk  = options%iblk
+    ! Note: options is defined here as a local variable. It is needed in calculate_current_c_ta_state_sum
     options%ics = 1
     options%ice = grid%nproma
 
     ics = options%ics
     ice = options%ice
-    nc = ice - ics + 1
 
     ALLOCATE(C_flux_yday(nc))
 
@@ -1619,6 +1618,7 @@ CONTAINS
         ice = grid%npromz
         ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
       END IF
+      options%nc = ice - ics + 1
 
       dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout
