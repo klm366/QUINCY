@@ -815,7 +815,6 @@ CONTAINS
     REAL(wp) :: deficit_trans(nc)            ! transpiration that could not be extracted from the soil [m]
     REAL(wp) :: deficit_sevap(nc)            ! soil evaporation that could not be extracted from the soil [m]
     REAL(wp) :: remoist(nc)                  ! for TPE
-    REAL(wp) :: zmvg_sl(nc,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
     REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
     REAL(wp) :: weq_wsat_sl(nc,nsoil)        ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
     REAL(wp) :: weq_field_cap_sl(nc,nsoil)   ! field capacity of the soil layer (not reduced by ice) [m]
@@ -831,7 +830,7 @@ CONTAINS
     !$ACC DATA &
     !$ACC   CREATE(weq_soil, ws_inter_sl, ws_vol_sl, ice_impeda_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
-    !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, zmvg_sl) &
+    !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist) &
     !$ACC   CREATE(wtr_rsdl_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, wtr_transp_residual) &
     !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, wtr_soil_mobile_sl, last_soil_layer, hlp1, hlp2, hlp3, hlp4)
 
@@ -862,7 +861,6 @@ CONTAINS
         weq_field_cap_sl(ic,is) = vol_field_cap_sl(ic,is) * dsoil(ic,is)
         weq_p_wilt_sl   (ic,is) = vol_p_wilt_sl(ic,is)    * dsoil(ic,is)
 
-        zmvg_sl(ic,is) = pore_size_index_sl(ic,is) / (pore_size_index_sl(ic,is)+1._wp)
         ! supercooled water in the soil should not be able to move vertically
         ! @todo at some point p_wilt has to be renamed to something more appropriate, as it
         !       basically describes immobile adhesion water which is not really the same
@@ -911,16 +909,15 @@ CONTAINS
     !   For numerical reasons, soil loops always cover all soil layers, even if they are not active (bedrock)
     CALL get_soilhyd_cond_properties(                                       &
           & soilhydmodel, interpol_mean,                                    &
-          & dtime,                                                          &
-          & nc,nsoil,                                                       &
-          & last_soil_layer(:), dsoil(:,:),                                 &
+          & nc, nsoil, dsoil(:,:),                                          &
           & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
           & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &
           & hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),                       &
-          & bclapp_sl(:,:), zmvg_sl(:,:),                                   &
-          & ice_impeda_sl(:,:),                                             &
-          & hyd_cond_sl(:,:), diffus_sl(:,:),                               &
-          & hyd_cond_li(:,:), diffus_li(:,:)                                &
+          & bclapp_sl(:,:), pore_size_index_sl(:,:),                        &
+          & dt=dtime, last_soil_layer=last_soil_layer(:),                   &
+          & ice_impedance=ice_impeda_sl(:,:),                               &
+          & K=hyd_cond_sl(:,:),       D=diffus_sl(:,:),                     &
+          & K_inter=hyd_cond_li(:,:), D_inter=diffus_li(:,:)                &
           )
 
     !< Diagnose evapotranspiration fluxes from the different soil layer based on the available
@@ -1976,67 +1973,75 @@ CONTAINS
 
   SUBROUTINE get_soilhyd_cond_properties(           &
             & soilhydmodel, interpol_mean,          &
-            & dt,                                   &
-            & nc, nsoil, last_soil_layer, dsoil,    &
+            & nc, nsoil, dsoil,                     &
             & ws, ice, wscools,                     &
             & wsat, fc, pwp,                        &
-            & k_sat, mpot_sat, bclapp, mvgn,        &
-            & ice_impedance, K, D, K_inter, D_inter &
+            & k_sat, mpot_sat, bclapp, ps_index,    &
+            & dt, last_soil_layer,                  &
+            & ice_impedance, K, D, K_inter,         &
+            & D_inter, mpot_act                     &
             )
 
     USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
       &                              Upstream_, Arithmetic_
 
-    INTEGER,  INTENT(in)            :: soilhydmodel       !> Approaches to determine conductivites & diffusivities (KD)
-    INTEGER,  INTENT(in)            :: interpol_mean      !> and how to derive values at layer interface (AVG scheme)
-    REAL(wp), INTENT(in)            :: dt                 !> time step length
-    INTEGER,  INTENT(in)            :: nc                 !> vector length
-    INTEGER,  INTENT(in)            :: nsoil              !> number of below ground layers
-    INTEGER,  INTENT(in)            :: last_soil_layer(:) !> index of deepest soil layers (above bedrock)
-    REAL(wp), INTENT(in)            :: dsoil(:,:)         !> soil depth (until bedrock) per layer
-    REAL(wp), INTENT(in)            :: ws(:,:)            !> water content
-    REAL(wp), INTENT(in)            :: ice(:,:)           !> ice content
-    REAL(wp), INTENT(in)            :: wscools(:,:)       !> supercooled water
-    REAL(wp), INTENT(in)            :: wsat(:,:)          !> soil depth (until bedrock) per layer
-    REAL(wp), INTENT(in)            :: fc(:,:)            !> field capacity [m]
-    REAL(wp), INTENT(in)            :: pwp(:,:)           !> residual water (until bedrock) per layer
-    REAL(wp), INTENT(in)            :: k_sat(:,:)         !> hydraaulic conductivity
-    REAL(wp), INTENT(in)            :: mpot_sat(:,:)      !> matric potential
-    REAL(wp), INTENT(in)            :: bclapp(:,:)        !> clapp & Hornberger exponent
-    REAL(wp), INTENT(in)            :: mvgn(:,:)          !> Van Genuchten m
+    INTEGER,  INTENT(in) :: soilhydmodel         !> Model to determine conductivites & diffusivities (KD)
+    INTEGER,  INTENT(in) :: interpol_mean        !> and how to derive values at layer interface (AVG scheme)
+    INTEGER,  INTENT(in) :: nc                   !> vector length
+    INTEGER,  INTENT(in) :: nsoil                !> number of below ground layers
+    REAL(wp), INTENT(in) :: dsoil(:,:)           !> soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in) :: ws(:,:)              !> water content
+    REAL(wp), INTENT(in) :: ice(:,:)             !> ice content
+    REAL(wp), INTENT(in) :: wscools(:,:)         !> potentially supercooled water
+    REAL(wp), INTENT(in) :: wsat(:,:)            !> soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in) :: fc(:,:)              !> field capacity [m]
+    REAL(wp), INTENT(in) :: pwp(:,:)             !> residual water (until bedrock) per layer
+    REAL(wp), INTENT(in) :: k_sat(:,:)           !> hydraaulic conductivity
+    REAL(wp), INTENT(in) :: mpot_sat(:,:)        !> matric potential for saturated soils
+    REAL(wp), INTENT(in) :: bclapp(:,:)          !> clapp & Hornberger exponent
+    REAL(wp), INTENT(in) :: ps_index(:,:)        !> Pore size index
+    REAL(wp), INTENT(in),  OPTIONAL :: dt                 !> time step length
+    INTEGER,  INTENT(in),  OPTIONAL :: last_soil_layer(:) !> index of deepest soil layers (above bedrock)
     REAL(wp), INTENT(out), OPTIONAL :: ice_impedance(:,:) !> Impedance factor to account for ice blocking flowpaths
     REAL(wp), INTENT(out), OPTIONAL :: K(:,:)             !> hydraulic condctivity of the soil layer [m]
     REAL(wp), INTENT(out), OPTIONAL :: D(:,:)             !> diffusivity of the soil layer [m]
     REAL(wp), INTENT(out), OPTIONAL :: K_inter(:,:)       !> hydraulic condctivity at (upper) layer interface [m]
     REAL(wp), INTENT(out), OPTIONAL :: D_inter(:,:)       !> diffusivity at (upper) layer interface [m]
+    REAL(wp), INTENT(out), OPTIONAL :: mpot_act(:,:)      !> matric potential at actual soil state
 
     ! local variables
     INTEGER  :: ic, is ! cell index and soil layer index
-    REAL(wp) :: ws_vol(nc,nsoil), ice_vol(nc,nsoil), scool_vol(nc,nsoil), &
-             &  ws_rel_vol(nc,nsoil),  ws_range_vol(nc,nsoil),  &
-             &  wsat_vol(nc,nsoil), fc_vol(nc,nsoil), pwp_vol(nc,nsoil), &
-             &  ws_free_vol(nc,nsoil), ice_imp(nc,nsoil)
+    REAL(wp) :: ck
+    REAL(wp) :: ws_vol(nc,nsoil), ice_vol(nc,nsoil), scool_vol(nc,nsoil),     &
+             &  nvgn(nc,nsoil), mvgn(nc,nsoil), ws_rel_vol(nc,nsoil),         &
+             &  ws_range_vol(nc,nsoil), wsat_vol(nc,nsoil), fc_vol(nc,nsoil), &
+             &  pwp_vol(nc,nsoil), ws_free_vol(nc,nsoil), ice_imp(nc,nsoil)
 
     !$ACC DATA &
     !$ACC   CREATE(ws_vol, ice_vol, scool_vol, ws_rel_vol, ws_range_vol) &
     !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, ws_free_vol, ice_imp)
 
+    ck = 8.0_wp ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
+
         ! Set defaults
         ws_rel_vol(ic,is) = 0._wp
         ice_imp(ic,is)    = 1._wp
+        nvgn(ic,is)       = ps_index(ic,is) + 1._wp
+        mvgn(ic,is)       = ps_index(ic,is) / nvgn(ic,is)
 
         ! Convert to volumetric quantities
-        IF (dsoil(ic,is)> 0._wp) THEN
-          ws_vol(ic,is)    =  ws(ic,is)      / dsoil(ic,is)
-          ice_vol(ic,is)   =  ice(ic,is)     / dsoil(ic,is)
-          scool_vol(ic,is) =  wscools(ic,is) / dsoil(ic,is)
-          wsat_vol(ic,is)  =  wsat(ic,is)    / dsoil(ic,is)
-          fc_vol(ic,is)    =  fc(ic,is)      / dsoil(ic,is)
-          pwp_vol(ic,is)   =  pwp(ic,is)     / dsoil(ic,is)
+        IF (dsoil(ic,is) > 0._wp) THEN
+          ws_vol(ic,is)    =  ws(ic,is)                      / dsoil(ic,is)
+          ice_vol(ic,is)   =  ice(ic,is)                     / dsoil(ic,is)
+          scool_vol(ic,is) =  MIN(wscools(ic,is), ws(ic,is)) / dsoil(ic,is)
+          wsat_vol(ic,is)  =  wsat(ic,is)                    / dsoil(ic,is)
+          fc_vol(ic,is)    =  fc(ic,is)                      / dsoil(ic,is)
+          pwp_vol(ic,is)   =  pwp(ic,is)                     / dsoil(ic,is)
         ELSE
           ws_vol(ic,is)    =  0._wp
           ice_vol(ic,is)   =  0._wp
@@ -2085,6 +2090,15 @@ CONTAINS
       END DO
       !$ACC END LOOP
     END IF
+    IF (PRESENT(mpot_act)) THEN
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          mpot_act(ic,is) = 0._wp
+        END DO
+      END DO
+      !$ACC END LOOP
+    END IF
     !$ACC END PARALLEL
 
     ! Compute impedance factor due to soil ice
@@ -2093,15 +2107,14 @@ CONTAINS
     DO is = 1, nsoil
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
-        IF (is <= last_soil_layer(ic)) THEN
-          IF (fc_vol(ic,is) + ice_vol(ic,is) > 1.0e-10_wp) THEN
-            ice_imp(ic,is)  = 10._wp**(-6._wp * (ice_vol(ic,is) + scool_vol(ic,is) ) &
-              & / (fc_vol(ic,is) + ice_vol(ic,is)))
-          ELSE
-            ice_imp(ic,is) = 1._wp
-          END IF
+        IF (fc_vol(ic,is) + ice_vol(ic,is) > 1.0e-10_wp) THEN
+          ice_imp(ic,is)  = 10._wp**(-6._wp * (ice_vol(ic,is) + scool_vol(ic,is) ) &
+            & / (fc_vol(ic,is) + ice_vol(ic,is)))
+        ELSE
+          ice_imp(ic,is) = 1._wp
         END IF
       END DO
+      !$ACC END LOOP
     END DO
     !$ACC END PARALLEL
     !$ACC WAIT(1)
@@ -2210,14 +2223,19 @@ CONTAINS
       !$ACC END LOOP
 
       ! Make sure percolation from top layer is limited to water content !!!
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
-      DO is = 1, nsoil
-        DO ic = 1, nc
-          K(ic,1) = MIN(K(ic,1), MAX(0._wp,(ws(ic,1)-pwp(ic,1)) / dt))
-        END DO
-      END DO
-      !$ACC END LOOP
-      !$ACC END PARALLEL
+      IF (PRESENT(dt)) THEN
+        IF (dt > 0) THEN
+          !$ACC LOOP GANG(STATIC: 1) VECTOR
+          DO is = 1, nsoil
+            DO ic = 1, nc
+              K(ic,1) = MIN(K(ic,1), MAX(0._wp,(ws(ic,1)-pwp(ic,1)) / dt))
+            END DO
+          END DO
+          !$ACC END LOOP
+        END IF
+        !$ACC END PARALLEL
+      END IF
+
     END IF
 
     ! Compute hydrological diffusivity (D) for every layer
@@ -2279,8 +2297,9 @@ CONTAINS
     IF (PRESENT(K_inter)) THEN
 
 #ifndef __OPENACC__
-      IF (.NOT. PRESENT(K)) THEN
-        WRITE (message_text,*) 'K at layer interface cannot be computed without computing K on layers'
+      IF (.NOT. PRESENT(K) .OR. .NOT. PRESENT(last_soil_layer)) THEN
+        WRITE (message_text,*) 'K at layer interface cannot be computed without '//&
+          & 'information about actual soil depth and computing K on layers'
         CALL finish ('get_soilhyd_cond_properties', message_text)
       END IF
 #endif
@@ -2310,8 +2329,9 @@ CONTAINS
     IF (PRESENT(D_inter)) THEN
 
 #ifndef __OPENACC__
-      IF (.NOT. PRESENT(D)) THEN
-        WRITE (message_text,*) 'D at layer interface cannot be computed without computing D on layers'
+      IF (.NOT. PRESENT(D) .OR. .NOT. PRESENT(last_soil_layer)) THEN
+        WRITE (message_text,*) 'D at layer interface cannot be computed without '//&
+          & 'information about actual soil depth and computing D on layers'
         CALL finish ('get_soilhyd_cond_properties', message_text)
       END IF
 #endif
@@ -2331,6 +2351,28 @@ CONTAINS
       END DO
       !$ACC END PARALLEL
 
+    END IF
+
+    ! Determine matric potential for actual soil moisture state
+    ! Formula from Stuurop 2021 (https://doi.org/10.1016/j.coldregions.2021.103456),
+    ! adjusted from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+    IF (PRESENT(mpot_act)) THEN
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      DO is = 1, nsoil
+        DO ic = 1, nc
+          IF (ws_rel_vol(ic,is) > 0._wp) THEN
+            IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
+              mpot_act(ic,is) = mpot_sat(ic,is) * (ws_rel_vol(ic,is)**(-bclapp(ic,is)))
+            ELSE
+              mpot_act(ic,is) = mpot_sat(ic,is) * (ws_rel_vol(ic,is)**(-1._wp/mvgn(ic,is)) - 1._wp)**(1._wp/nvgn(ic,is))
+            END IF
+            mpot_act(ic,is) = MAX(-100._wp, mpot_act(ic,is) * ((1._wp + ck * ice_vol(ic,is))**2._wp))
+          ELSE
+            mpot_act(ic,is) = -100._wp
+          END IF
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
     END IF
     !$ACC WAIT(1)
     !$ACC END DATA
