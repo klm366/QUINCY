@@ -14,8 +14,6 @@
 
 MODULE mo_rad_config_class
 #ifndef __NO_JSBACH__
-  ! -------------------------------------------------------------------------------------------------------
-  ! Used variables of module
 
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
@@ -23,14 +21,21 @@ MODULE mo_rad_config_class
   USE mo_jsb_control,       ONLY: debug_on
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
-  ! -------------------------------------------------------------------------------------------------------
-  ! Module variables
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_rad_config !, Get_rad_config
+  PUBLIC :: t_rad_config
 
+  ! ======================================================================================================= !
+  !> RAD_ configuration parameters
+  !>
   TYPE, EXTENDS(t_jsb_config) :: t_rad_config
+    !> common parameters used by all models
+    !>
+    ! ...
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> MODEL_JSBACH
+    !> 
     LOGICAL ::                     &
       & use_alb_veg_simple,        &  !< Use the simplified albedo calculations for vegetation tiles
       & use_alb_soil_scheme,       &  !< For vegetation and bare soil tiles:
@@ -66,6 +71,10 @@ MODULE mo_rad_config_class
       & AlbedoCanopySnow              ! Snow albedo for snow on canopy. This configuration value is not read in from
                                       ! the namelist. It is calcultated in subroutine rad_init_ic, but should nevertheless
                                       ! placed here!
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> MODEL_QUINCY
+    !> 
+    ! ...
   CONTAINS
     PROCEDURE :: Init => Init_rad_config
   END type t_rad_config
@@ -73,17 +82,16 @@ MODULE mo_rad_config_class
   CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_config_class'
 
 CONTAINS
-  ! -------------------------------------------------------------------------------------------------------
-  !> Initialize radiation process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_rad_config)
-  !!
+
+  ! ======================================================================================================= !
+  !> read RAD_ namelist and init configuration parameters
+  !>
   SUBROUTINE Init_rad_config(config)
-
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-
+    USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_rad_config), INTENT(inout) :: config
-
+    ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     LOGICAL                     :: use_alb_veg_simple
@@ -93,25 +101,26 @@ CONTAINS
     LOGICAL                     :: use_alb_soil_scheme
     LOGICAL                     :: use_alb_canopy
     REAL(wp)                    :: albedo_age_weight
-
-    NAMELIST /jsb_rad_nml/            &
-         active,                      &
-         ic_filename,                 &
-         bc_filename,                 &
-         use_alb_veg_simple,          &
-         use_alb_mineralsoil_const,   &
-         use_alb_soil_organic_C,      &
-         use_alb_soil_litter,         &
-         use_alb_soil_scheme,         &
-         use_alb_canopy,              &
-         albedo_age_weight
-
+#ifdef __QUINCY_STANDALONE__
+    NAMELIST /radiation_ctl/ &
+#else
+    NAMELIST /jsb_rad_nml/ &
+#endif
+      & active,                      &
+      & ic_filename,                 &
+      & bc_filename,                 &
+      & use_alb_veg_simple,          &
+      & use_alb_mineralsoil_const,   &
+      & use_alb_soil_organic_C,      &
+      & use_alb_soil_litter,         &
+      & use_alb_soil_scheme,         &
+      & use_alb_canopy,              &
+      & albedo_age_weight
     INTEGER :: nml_handler, nml_unit, istat
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config'
-
-    IF (debug_on()) CALL message(TRIM(routine), 'Starting radiation configuration')
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    CALL message(TRIM(routine), 'Starting radiation configuration')
+    ! ----------------------------------------------------------------------------------------------------- !
     ! Set defaults
     active                    = .TRUE.
     bc_filename               = 'bc_land_rad.nc'  !R: gibts im Moment noch nicht
@@ -123,16 +132,19 @@ CONTAINS
     use_alb_soil_scheme       = .FALSE.
     use_alb_canopy            = .FALSE.
     albedo_age_weight         = 0.5_wp
-
+    ! ----------------------------------------------------------------------------------------------------- !
     ! Read namelist
     nml_handler = open_nml(TRIM(config%namelist_filename))
-
+#ifdef __QUINCY_STANDALONE__
+    nml_unit = position_nml('radiation_ctl', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, radiation_ctl)
+#else
     nml_unit = position_nml('jsb_rad_nml', nml_handler, STATUS=istat)
     IF (istat == POSITIONED) READ(nml_unit, jsb_rad_nml)
-
+#endif
     CALL close_nml(nml_handler)
-
-    ! Write resulting values in config memory
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! Write namelist values into config
     config%active                    = active
     config%ic_filename               = ic_filename
     config%bc_filename               = bc_filename
@@ -143,6 +155,10 @@ CONTAINS
     config%use_alb_soil_scheme       = use_alb_soil_scheme
     config%use_alb_canopy            = use_alb_canopy
     config%albedo_age_weight         = albedo_age_weight
+
+    !> model-specific routines
+    !>
+    ! ...
 
   END SUBROUTINE Init_rad_config
 

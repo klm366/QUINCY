@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains the memory class for the soil_biogeochemistry processes
 !!
 !! @author
@@ -80,7 +80,7 @@ MODULE mo_sb_memory_class
 #ifdef __QUINCY_STANDALONE__
     !------------------------------------------------------------------------------------------------------ !
     !>QUINCY element-pool structures
-    !> 
+    !>
     TYPE(t_quincy_struct_sb_element) :: &   ! simple structure for elements: t_jsb_struct
                                         delta_pools, &          !< for mass balance checks in soil_biogeochemistry model
                                         mycorrhiza_export       !< nutrient flux from mycorrhiza to host plant
@@ -94,18 +94,18 @@ MODULE mo_sb_memory_class
 #else
     !------------------------------------------------------------------------------------------------------ !
     !>JSBACH4 element-pool structures
-    !> 
+    !>
     TYPE(t_sb_main_pool), POINTER :: sb_main_pool
     TYPE(t_sb_bgcm_main), POINTER :: sb_bgcm_main
 #endif
 
     !------------------------------------------------------------------------------------------------------ !
     !>veg_pool diagnostics - summary of C, N, P, C13, C14, N15 across the pool
-    !> 
+    !>
     ! sum sb_pool: dom & dom_assoc & fungi & mycorrhiza & microbial & residue & residue_assoc
     TYPE(t_jsb_var_real3d)  :: &
-      & sb_pool_total_som_c         , &         !< sum of soil organic matter components of sb_pool%*%carbon    
-      & sb_pool_total_som_n         , &         !< sum of soil organic matter components of sb_pool%*%nitrogen  
+      & sb_pool_total_som_c         , &         !< sum of soil organic matter components of sb_pool%*%carbon
+      & sb_pool_total_som_n         , &         !< sum of soil organic matter components of sb_pool%*%nitrogen
       & sb_pool_total_som_p         , &         !< sum of soil organic matter components of sb_pool%*%phosphorus
       & sb_pool_total_som_c13       , &         !< sum of soil organic matter components of sb_pool%*%carbon13
       & sb_pool_total_som_c14       , &         !< sum of soil organic matter components of sb_pool%*%carbon14
@@ -113,8 +113,8 @@ MODULE mo_sb_memory_class
 
     ! sum sb_pool: soluable_litter & polymeric_litter & woody_litter
     TYPE(t_jsb_var_real3d)  :: &
-      & sb_pool_total_litter_c      , &         !< sum of *litter of sb_pool%*%carbon    
-      & sb_pool_total_litter_n      , &         !< sum of *litter of sb_pool%*%nitrogen  
+      & sb_pool_total_litter_c      , &         !< sum of *litter of sb_pool%*%carbon
+      & sb_pool_total_litter_n      , &         !< sum of *litter of sb_pool%*%nitrogen
       & sb_pool_total_litter_p      , &         !< sum of *litter of sb_pool%*%phosphorus
       & sb_pool_total_litter_c13    , &         !< sum of *litter of sb_pool%*%carbon13
       & sb_pool_total_litter_c14    , &         !< sum of *litter of sb_pool%*%carbon14
@@ -137,12 +137,12 @@ MODULE mo_sb_memory_class
                             n2o_n15                   , &  !< N15-N2O [mol m-3]
                             n2_n15                    , &  !< N15-N2 [mol m-3]
                             po4_assoc_fast            , &  !< fast minerally associated phosphate  [mol m-3]
-                            po4_assoc_slow            , &  !< slow minerally associated phosphate  [mol m-3] 
-                            po4_occluded              , &  !< occluded phosphate [mol m-3] 
-                            po4_primary               , &  !< primary phosphate mineral [mol m-3] 
-                            po4_solute                , &  !< phophate in soil solution [mol m-3] 
+                            po4_assoc_slow            , &  !< slow minerally associated phosphate  [mol m-3]
+                            po4_occluded              , &  !< occluded phosphate [mol m-3]
+                            po4_primary               , &  !< primary phosphate mineral [mol m-3]
+                            po4_solute                , &  !< phophate in soil solution [mol m-3]
                             bulk_dens_corr_sl         , &  !< organic fraction corrected bulk-density of the soil [kg m-3]
-                            bulk_soil_carbon_sl       , &  !< bulk soil density of carbon [kg m-3] 
+                            bulk_soil_carbon_sl       , &  !< bulk soil density of carbon [kg m-3]
                             soil_litter_carbon_sl          !< (bulk) soil density of litter carbon [mol C m-3 soil]
 
     !------------------------------------------------------------------------------------------------------ !
@@ -162,39 +162,39 @@ MODULE mo_sb_memory_class
                             transport_n2o_n15            , &  !< transport of N15-N2O [mol m-3 timestep-1]
                             transport_n2_n15             , &  !< transport of N15-N2 [mol m-3 timestep-1]
                             transport_po4_assoc_fast     , &  !< transport of fast minerally associated phosphate  [mol m-3 timestep-1]
-                            transport_po4_assoc_slow     , &  !< transport of slow minerally associated phosphate  [mol m-3 timestep-1] 
-                            transport_po4_occluded       , &  !< transport of occluded phosphate [mol m-3 timestep-1] 
-                            transport_po4_primary        , &  !< transport of primary phosphate [mol m-3 timestep-1] 
+                            transport_po4_assoc_slow     , &  !< transport of slow minerally associated phosphate  [mol m-3 timestep-1]
+                            transport_po4_occluded       , &  !< transport of occluded phosphate [mol m-3 timestep-1]
+                            transport_po4_primary        , &  !< transport of primary phosphate [mol m-3 timestep-1]
                             transport_po4_solute              !< transport of minerally associated phosphate  [mol m-3 timestep-1]
 
     !------------------------------------------------------------------------------------------------------ !
     !>response functions 3D
     !>  temperature response functions
-    !> 
+    !>
     TYPE(t_jsb_var_real3d)  :: &
                             rtm_decomposition, &              !< rate modifier for decomposition processes [--]
                             rtm_depolymerisation, &           !< rate modifier for depolymerisation processes [--]
-                            rtm_mic_uptake, &                 !< rate modifier for microbial uptake [--] 
-                            rtm_plant_uptake, &               !< rate modifier for plant uptake [--] 
+                            rtm_mic_uptake, &                 !< rate modifier for microbial uptake [--]
+                            rtm_plant_uptake, &               !< rate modifier for plant uptake [--]
                             rtm_sorption, &                   !< rate modifier for sorption [--]
                             rtm_desorption, &                 !< rate modifier for desorption [--]
-                            rtm_hsc, &                        !< rate modifier for half-saturation constants [--] 
-                            rtm_nitrification, &              !< rate modifier for nitrification [--] 
-                            rtm_denitrification, &            !< rate modifier for denitrification [--] 
-                            rtm_gasdiffusion                  !< rate modifier for gasdiffusion [--] 
+                            rtm_hsc, &                        !< rate modifier for half-saturation constants [--]
+                            rtm_nitrification, &              !< rate modifier for nitrification [--]
+                            rtm_denitrification, &            !< rate modifier for denitrification [--]
+                            rtm_gasdiffusion                  !< rate modifier for gasdiffusion [--]
 
     !>  moisture response functions
-    !> 
+    !>
     TYPE(t_jsb_var_real3d)  :: &
                             rmm_decomposition, &              !< rate modifier for decomposition processes [--]
                             rmm_depolymerisation, &           !< rate modifier for depolymerisation processes [--]
-                            rmm_mic_uptake, &                 !< rate modifier for microbial uptake [--] 
-                            rmm_plant_uptake, &               !< rate modifier for plant uptake [--] 
+                            rmm_mic_uptake, &                 !< rate modifier for microbial uptake [--]
+                            rmm_plant_uptake, &               !< rate modifier for plant uptake [--]
                             rmm_sorption, &                   !< rate modifier for sorption [--]
                             rmm_desorption, &                 !< rate modifier for desorption [--]
-                            rmm_hsc, &                        !< rate modifier for half-saturation constants [--] 
-                            rmm_nitrification, &              !< rate modifier for nitrification [--] 
-                            rmm_gasdiffusion                  !< rate modifier for gasdiffusion [--] 
+                            rmm_hsc, &                        !< rate modifier for half-saturation constants [--]
+                            rmm_nitrification, &              !< rate modifier for nitrification [--]
+                            rmm_gasdiffusion                  !< rate modifier for gasdiffusion [--]
 
     !------------------------------------------------------------------------------------------------------ !
     !>fluxes 3D | respiration, mineralisation, uptake, nitrification, denitrification, ...
@@ -207,27 +207,27 @@ MODULE mo_sb_memory_class
                             myc_respiration_c13, &                !< c13 mycorrhizae respiration   [micro-mol m-3 s-1]
                             myc_respiration_c14, &                !< c14 mycorrhizae respiration   [micro-mol m-3 s-1]
                             net_mineralisation_nh4, &             !< net mineralisation of N    [micro-mol m-3 s-1]
-                            net_mineralisation_nh4_n15, &         !< net mineralisation of N15  [micro-mol m-3 s-1] 
+                            net_mineralisation_nh4_n15, &         !< net mineralisation of N15  [micro-mol m-3 s-1]
                             net_mineralisation_no3, &             !< net mineralisation of N    [micro-mol m-3 s-1]
-                            net_mineralisation_no3_n15, &         !< net mineralisation of N15  [micro-mol m-3 s-1] 
+                            net_mineralisation_no3_n15, &         !< net mineralisation of N15  [micro-mol m-3 s-1]
                             net_mineralisation_po4, &             !< net mineralisation of P  [micro-mol m-3 s-1]
                             plant_uptake_nh4_sl, &                !< plant uptake of N    [micro-mol m-3 s-1]
-                            plant_uptake_nh4_n15_sl, &            !< plant uptake of N15  [micro-mol m-3 s-1] 
+                            plant_uptake_nh4_n15_sl, &            !< plant uptake of N15  [micro-mol m-3 s-1]
                             plant_uptake_no3_sl, &                !< plant uptake of N    [micro-mol m-3 s-1]
-                            plant_uptake_no3_n15_sl, &            !< plant uptake of N15  [micro-mol m-3 s-1] 
+                            plant_uptake_no3_n15_sl, &            !< plant uptake of N15  [micro-mol m-3 s-1]
                             plant_uptake_po4_sl, &                !< plant uptake of P  [micro-mol m-3 s-1]
                             microbial_uptake_nh4_sl, &            !< microbial uptake of N    [micro-mol m-3 s-1]
-                            microbial_uptake_nh4_n15_sl, &        !< microbial uptake of N15  [micro-mol m-3 s-1] 
+                            microbial_uptake_nh4_n15_sl, &        !< microbial uptake of N15  [micro-mol m-3 s-1]
                             microbial_uptake_no3_sl, &            !< microbial uptake of N    [micro-mol m-3 s-1]
-                            microbial_uptake_no3_n15_sl, &        !< microbial uptake of N15  [micro-mol m-3 s-1] 
+                            microbial_uptake_no3_n15_sl, &        !< microbial uptake of N15  [micro-mol m-3 s-1]
                             microbial_uptake_po4_sl, &            !< microbial uptake of P  [micro-mol m-3 s-1]
                             mycorrhiza_uptake_nh4_sl, &           !< mycorrhiza uptake of N    [micro-mol m-3 s-1]
-                            mycorrhiza_uptake_nh4_n15_sl, &       !< mycorrhiza uptake of N15  [micro-mol m-3 s-1] 
+                            mycorrhiza_uptake_nh4_n15_sl, &       !< mycorrhiza uptake of N15  [micro-mol m-3 s-1]
                             mycorrhiza_uptake_no3_sl, &           !< mycorrhiza uptake of N    [micro-mol m-3 s-1]
-                            mycorrhiza_uptake_no3_n15_sl, &       !< mycorrhiza uptake of N15  [micro-mol m-3 s-1] 
+                            mycorrhiza_uptake_no3_n15_sl, &       !< mycorrhiza uptake of N15  [micro-mol m-3 s-1]
                             mycorrhiza_uptake_norg_sl, &          !< mycorrhiza uptake of N    [micro-mol m-3 s-1]
-                            mycorrhiza_uptake_norg_n15_sl, &      !< mycorrhiza uptake of N15  [micro-mol m-3 s-1] 
-                            mycorrhiza_uptake_po4_sl, &           !< mycorrhiza uptake of P  [micro-mol m-3 s-1] 
+                            mycorrhiza_uptake_norg_n15_sl, &      !< mycorrhiza uptake of N15  [micro-mol m-3 s-1]
+                            mycorrhiza_uptake_po4_sl, &           !< mycorrhiza uptake of P  [micro-mol m-3 s-1]
                             myc_export_n_tlabile_mavg_sl, &       !< time averaged export from mycorrhizae to plants of N [mol m-3]
                             myc_export_p_tlabile_mavg_sl, &       !< time averaged export from mycorrhizae to plants of P [mol m-3]
                             myc_export_c_tmyc_mavg_sl, &          !< time averaged export from mycorrhizae to plants of C [mol m-3]
@@ -261,7 +261,7 @@ MODULE mo_sb_memory_class
     !------------------------------------------------------------------------------------------------------ !
     !>2D transport fluxes for communication with groundwater and atmosphere
     !>
-    TYPE(t_jsb_var_real2d)  :: & 
+    TYPE(t_jsb_var_real2d)  :: &
                             leaching_dom_carbon, &                !< land to groundwater flux of DOM-C [micro-mol m-2 s-1]
                             leaching_dom_nitrogen, &              !< land to groundwater flux of DOM-N [micro-mol m-2 s-1]
                             leaching_dom_phosphorus, &            !< land to groundwater flux of DOM-P [micro-mol m-2 s-1]
@@ -273,8 +273,8 @@ MODULE mo_sb_memory_class
                             leaching_po4_solute, &                !< land to groundwater flux of PO4 [micro-mol m-2 s-1]
                             leaching_nh4_n15_solute, &            !< land to groundwater flux of 15NH4 [micro-mol m-2 s-1]
                             leaching_no3_n15_solute, &            !< land to groundwater flux of 15NO3 [micro-mol m-2 s-1]
-                            emission_nh3, &                       !< land to atmosphere flux of NH3 [micro-mol m-2 s-1] 
-                            emission_noy, &                       !< land to atmosphere flux of NOy [micro-mol m-2 s-1] 
+                            emission_nh3, &                       !< land to atmosphere flux of NH3 [micro-mol m-2 s-1]
+                            emission_noy, &                       !< land to atmosphere flux of NOy [micro-mol m-2 s-1]
                             emission_n2o, &                       !< land to atmosphere flux of N2O [micro-mol m-2 s-1]
                             emission_n2, &                        !< land to atmosphere flux of N2 [micro-mol m-2 s-1]
                             emission_nh3_n15, &                   !< land to atmosphere flux of 15NH3 [micro-mol m-2 s-1]
@@ -296,7 +296,7 @@ MODULE mo_sb_memory_class
                             km_adsorpt_po4_sl, &                  !< half saturation of po4 sorption isotherm [mol P m-3 soil]
                             km_adsorpt_nh4_sl, &                  !< half saturation of nh4 sorption isotherm [mol N m-3 soil]
                             k_bioturb, &                          !< diffusion rate resulting from bioturbation
-                            particle_fluxrate, &                  !< burial rate due to organic matter fall and decay [m s-1] 
+                            particle_fluxrate, &                  !< burial rate due to organic matter fall and decay [m s-1]
                             anaerobic_volume_fraction_sl, &       !< anaerobic volume fraction [unitless]
                             microbial_cue_eff, &                  !< instantaneous microbial CUE given NP constraints [unitless]
                             microbial_cue_eff_tmic_mavg, &        !< time-averaged microbial CUE given NP constraints [unitless]
@@ -308,7 +308,7 @@ MODULE mo_sb_memory_class
                             dom_cp, &                             !< dom CP ratio
                             dom_cn_mavg, &                        !< time-averaged dom CN ratio
                             dom_cp_mavg                           !< time-averaged dom CP ratio
- 
+
 
     !------------------------------------------------------------------------------------------------------ !
     !>3D soil properties
@@ -330,7 +330,7 @@ MODULE mo_sb_memory_class
     !------------------------------------------------------------------------------------------------------ !
     !>2D total fluxes for mass balance checks in soil_biogeochemistry model
     !>
-    TYPE(t_jsb_var_real2d)  :: & 
+    TYPE(t_jsb_var_real2d)  :: &
                             total_flux_carbon, &                  !< carbon mass balance checks in soil_biogeochemistry model [mol C m-2 s-1]
                             total_flux_nitrogen, &                !< nitrogen mass balance checks in soil_biogeochemistry model [mol N m-2 s-1]
                             total_flux_phosphorus, &              !< phosphorus mass balance checks in soil_biogeochemistry model [mol P m-2 s-1]
@@ -349,11 +349,11 @@ MODULE mo_sb_memory_class
   !> Type definition for sb_bgc_material_elements
   !>
   TYPE, EXTENDS(t_jsb_pool) :: t_sb_bgcm_with_elements
-    TYPE(t_jsb_var_real3d), POINTER :: carbon    
-    TYPE(t_jsb_var_real3d), POINTER :: nitrogen  
+    TYPE(t_jsb_var_real3d), POINTER :: carbon
+    TYPE(t_jsb_var_real3d), POINTER :: nitrogen
     TYPE(t_jsb_var_real3d), POINTER :: phosphorus
-    TYPE(t_jsb_var_real3d), POINTER :: carbon13  
-    TYPE(t_jsb_var_real3d), POINTER :: carbon14  
+    TYPE(t_jsb_var_real3d), POINTER :: carbon13
+    TYPE(t_jsb_var_real3d), POINTER :: carbon14
     TYPE(t_jsb_var_real3d), POINTER :: nitrogen15
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => sb_bgcm_with_elements_get_element_name_by_id
@@ -371,7 +371,7 @@ MODULE mo_sb_memory_class
     TYPE(t_sb_bgcm_with_elements), POINTER :: polymeric_litter     !< elements of structural litter (lignified litter)
     TYPE(t_sb_bgcm_with_elements), POINTER :: woody_litter         !< elements of physically protected wood litter
     TYPE(t_sb_bgcm_with_elements), POINTER :: fungi                !< elements of saprophytic fungal biomass
-    TYPE(t_sb_bgcm_with_elements), POINTER :: mycorrhiza           !< elements of mycorrhizal fungal biomass 
+    TYPE(t_sb_bgcm_with_elements), POINTER :: mycorrhiza           !< elements of mycorrhizal fungal biomass
     TYPE(t_sb_bgcm_with_elements), POINTER :: microbial            !< elements of microbial biomass (bacteria!)
     TYPE(t_sb_bgcm_with_elements), POINTER :: residue              !< elements of necromass of fungi, microbial and mycorrhiza
     TYPE(t_sb_bgcm_with_elements), POINTER :: residue_assoc        !< elements of minerally associated microbial necromass
@@ -379,7 +379,7 @@ MODULE mo_sb_memory_class
     PROCEDURE :: Get_element_name_by_id     => sb_bgcm_with_components_get_element_name_by_id
     PROCEDURE :: Init                       => sb_bgcm_with_components_init
   END TYPE t_sb_bgcm_with_components
-  
+
   ! ======================================================================================================= !
   !>
   !> Type definition for sb_bgc_material_main
@@ -407,7 +407,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> initialize memory for the SB_ process
-  !! pools and 
+  !! pools and
   !! 2d/3d variables
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_memory(mem, prefix, suffix, lct_ids, model_id)
@@ -473,12 +473,12 @@ CONTAINS
 
       ! --------------------------------------------------------------------------------------------------- !
       !>1.0 element-pool structures
-      !> 
+      !>
 
 #ifdef __QUINCY_STANDALONE__
       ! --------------------------------------------------------------------------------------------------- !
       !>  1.1 QUINCY element-pool structures
-      !> 
+      !>
 
       ! add pools to memory
       CALL mem%Add_pool('delta_pools', mem%delta_pools, &
@@ -512,7 +512,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .TRUE., &
         & lrestart = .TRUE.)
-        
+
       CALL mem%Add_pool('formation', mem%formation, &
         & hgrid, surface, &
         & t_cf('formation', TRIM(unit_sb_flux), 'Formation soil biogeochemistry flux'), &
@@ -521,7 +521,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .FALSE., &
         & lrestart = .FALSE.)
-        
+
       CALL mem%Add_pool('loss', mem%loss, &
         & hgrid, surface, &
         & t_cf('loss', TRIM(unit_sb_flux), 'Loss soil biogeochemistry flux'), &
@@ -530,7 +530,7 @@ CONTAINS
         & prefix, suffix, &
         & loutput = .FALSE., &
         & lrestart = .FALSE.)
-        
+
       CALL mem%Add_pool('transport', mem%transport, &
         & hgrid, surface, &
         & t_cf('transport', TRIM(unit_sb_flux), 'Transport soil biogeochemistry flux'), &
@@ -568,7 +568,7 @@ CONTAINS
       CALL mem%formation%microbial%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
       CALL mem%formation%residue%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
       CALL mem%formation%residue_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
-      
+
       CALL mem%loss%dom%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
       CALL mem%loss%dom_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
       CALL mem%loss%soluable_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
@@ -579,7 +579,7 @@ CONTAINS
       CALL mem%loss%microbial%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
       CALL mem%loss%residue%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
       CALL mem%loss%residue_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
-      
+
       CALL mem%transport%dom%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
       CALL mem%transport%dom_assoc%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
       CALL mem%transport%soluable_litter%Add_vars(prefix, suffix, lct_ids, model_id, TRIM(unit_sb_flux))
@@ -611,7 +611,7 @@ CONTAINS
       ! --------------------------------------------------------------------------------------------------- !
       !> Add the info to this memory that this memory contains bgc materials
       mem%has_bgc_materials = .TRUE.
-      
+
       ! --------------------------------------------------------------------------------------------------- !
       !> create the bgc_material components structures
       !>
@@ -721,7 +721,7 @@ CONTAINS
       !   & output_level = BASIC,                                                                        &
       !   & loutput = .TRUE.,                                                                            &
       !   & lrestart = .TRUE.,                                                                           &
-      !   & initval_r = 0.0_wp)        
+      !   & initval_r = 0.0_wp)
 
 
       !! ====================================================================================================
@@ -751,7 +751,7 @@ CONTAINS
       END SELECT
 
       ! --------------------------------------------------------------------------------------------------- !
-      !> create the soil biogeochemistry components pools & fluxes (sb_components_pool) 
+      !> create the soil biogeochemistry components pools & fluxes (sb_components_pool)
       !! sb_pool / sb_formation / ...
       ! create pools & fluxes
       ! "shortname" is used for model output names
@@ -856,7 +856,7 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
 
-      ! output to logfile all pools & their variables at model-init 
+      ! output to logfile all pools & their variables at model-init
       ! (maybe use for debugging; its quite a long list)
       !IF (.NOT. ASSOCIATED(mem%parent)) THEN
       !  CALL mem%sb_main_pool%Print()
@@ -866,7 +866,7 @@ CONTAINS
 
       ! --------------------------------------------------------------------------------------------------- !
       !>2.0 2D & 3D variables
-      !> 
+      !>
 
       ! diagnostic variables specific to QUINCY pools in ICON-Land
       CALL mem%Add_var('sb_pool_total_som_c', mem%sb_pool_total_som_c, &
@@ -879,7 +879,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_som_n', mem%sb_pool_total_som_n, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_som_n', '...', 'total N, sum of SOM sb_pool components'), &
@@ -890,7 +890,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_som_p', mem%sb_pool_total_som_p, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_som_p', '...', 'total P, sum of SOM sb_pool components'), &
@@ -901,7 +901,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_som_c13', mem%sb_pool_total_som_c13, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_som_c13', '...', 'total C13, sum of SOM sb_pool components'), &
@@ -912,7 +912,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_som_c14', mem%sb_pool_total_som_c14, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_som_c14', '...', 'total C14, sum of SOM sb_pool components'), &
@@ -923,7 +923,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_som_n15', mem%sb_pool_total_som_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_som_n15', '...', 'total N15, sum of SOM sb_pool components'), &
@@ -934,7 +934,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_litter_c', mem%sb_pool_total_litter_c, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_litter_c', '...', 'total C, sum of litter sb_pool components'), &
@@ -945,7 +945,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_litter_n', mem%sb_pool_total_litter_n, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_litter_n', '...', 'total N, sum of litter sb_pool components'), &
@@ -956,7 +956,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_litter_p', mem%sb_pool_total_litter_p, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_litter_p', '...', 'total P, sum of litter sb_pool components'), &
@@ -967,7 +967,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_litter_c13', mem%sb_pool_total_litter_c13, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_litter_c13', '...', 'total C13, sum of litter sb_pool components'), &
@@ -978,7 +978,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_litter_c14', mem%sb_pool_total_litter_c14, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_litter_c14', '...', 'total C14, sum of litter sb_pool components'), &
@@ -989,7 +989,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-              
+
       CALL mem%Add_var('sb_pool_total_litter_n15', mem%sb_pool_total_litter_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('sb_pool_total_litter_n15', '...', 'total N15, sum of litter sb_pool components'), &
@@ -1000,7 +1000,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-      
+
       ! normal SB_ variables (not specific to QUINCY pools in ICON-Land)
       CALL mem%Add_var('nh4_solute', mem%nh4_solute, &
         & hgrid, vgrid_soil_sb, &
@@ -1023,7 +1023,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('no3_solute', mem%no3_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('no3_solute', 'mol m-3', 'nitrate in soil solution'), &
@@ -1034,7 +1034,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('noy', mem%noy, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('noy', 'mol m-3', 'NO_y'), &
@@ -1045,7 +1045,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('n2o', mem%n2o, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('n2o', 'mol m-3', 'N2O'), &
@@ -1056,7 +1056,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('n2', mem%n2, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('n2', 'mol m-3', 'N2'), &
@@ -1067,7 +1067,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('nh4_n15_solute', mem%nh4_n15_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('nh4_n15_solute', 'mol m-3', 'N15-ammonium in soil solution'), &
@@ -1078,7 +1078,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('nh4_n15_assoc', mem%nh4_n15_assoc, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('nh4_n15_assoc', 'mol m-3', 'minerally associated N15-ammonium'), &
@@ -1089,7 +1089,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('no3_n15_solute', mem%no3_n15_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('no3_n15_solute', 'mol m-3', 'N15-nitrate in soil solution'), &
@@ -1100,7 +1100,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('noy_n15', mem%noy_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('noy_n15', 'mol m-3', 'N15-NO_y'), &
@@ -1111,7 +1111,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('n2o_n15', mem%n2o_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('n2o_n15', 'mol m-3', 'N15-N2O'), &
@@ -1122,7 +1122,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('n2_n15', mem%n2_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('n2_n15', 'mol m-3', 'N15-N2'), &
@@ -1133,7 +1133,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('po4_assoc_fast', mem%po4_assoc_fast, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('po4_assoc_fast', 'mol m-3', 'fast minerally associated phosphate'), &
@@ -1144,7 +1144,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('po4_assoc_slow', mem%po4_assoc_slow, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('po4_assoc_slow', 'mol m-3', 'slow minerally associated phosphate'), &
@@ -1155,7 +1155,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('po4_occluded', mem%po4_occluded, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('po4_occluded', 'mol m-3', 'occluded phosphate'), &
@@ -1177,7 +1177,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('po4_solute', mem%po4_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('po4_solute', 'mol m-3', 'phophate in soil solution'), &
@@ -1221,7 +1221,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_nh4_solute', mem%transport_nh4_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_nh4_solute', 'mol m-3 timestep-1', 'transport of ammonium in soil solution'), &
@@ -1232,7 +1232,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_nh4_assoc', mem%transport_nh4_assoc, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_nh4_assoc', 'mol m-3 timestep-1', 'transport of minerally associated ammonium'), &
@@ -1243,7 +1243,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_no3_solute', mem%transport_no3_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_no3_solute', 'mol m-3 timestep-1', 'transport of nitrate in soil solution'), &
@@ -1254,7 +1254,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_noy', mem%transport_noy, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_noy', 'mol m-3 timestep-1', 'transport of NO_y'), &
@@ -1265,7 +1265,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_n2o', mem%transport_n2o, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_n2o', 'mol m-3 timestep-1', 'transport of N2O'), &
@@ -1276,7 +1276,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_n2', mem%transport_n2, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_n2', 'mol m-3 timestep-1', 'transport of N2'), &
@@ -1287,7 +1287,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_nh4_n15_solute', mem%transport_nh4_n15_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_nh4_n15_solute', 'mol m-3 timestep-1', 'transport of N15-ammonium in soil solution'), &
@@ -1298,7 +1298,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_nh4_n15_assoc', mem%transport_nh4_n15_assoc, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_nh4_n15_assoc', 'mol m-3 timestep-1', 'transport of minerally associated N15-ammonium'), &
@@ -1309,7 +1309,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_no3_n15_solute', mem%transport_no3_n15_solute, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_no3_n15_solute', 'mol m-3 timestep-1', 'transport of N15-nitrate in soil solution'), &
@@ -1320,7 +1320,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_noy_n15', mem%transport_noy_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_noy_n15', 'mol m-3 timestep-1', 'transport of N15-NO_y'), &
@@ -1331,7 +1331,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_n2o_n15', mem%transport_n2o_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_n2o_n15', 'mol m-3 timestep-1', 'transport of N15-N2O'), &
@@ -1342,7 +1342,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_n2_n15', mem%transport_n2_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_n2_n15', 'mol m-3 timestep-1', 'transport of N15-N2'), &
@@ -1353,7 +1353,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_po4_assoc_fast', mem%transport_po4_assoc_fast, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_po4_assoc_fast', 'mol m-3 timestep-1', 'transport of fast minerally associated phosphate'), &
@@ -1364,7 +1364,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_po4_assoc_slow', mem%transport_po4_assoc_slow, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_po4_assoc_slow', 'mol m-3 timestep-1', 'transport of slow minerally associated phosphate'), &
@@ -1375,7 +1375,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_po4_occluded', mem%transport_po4_occluded, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_po4_occluded', 'mol m-3 timestep-1', 'transport of occluded phosphate'), &
@@ -1386,7 +1386,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('transport_po4_primary', mem%transport_po4_primary, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('transport_po4_primary', 'mol m-3 timestep-1', 'transport of primary phosphate'), &
@@ -1396,7 +1396,7 @@ CONTAINS
         & output_level = FULL, &
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
-        & initval_r = 0.0_wp)  
+        & initval_r = 0.0_wp)
 
       CALL mem%Add_var('transport_po4_solute', mem%transport_po4_solute, &
         & hgrid, vgrid_soil_sb, &
@@ -1408,7 +1408,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_decomposition', mem%rtm_decomposition, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_decomposition', '--', 'rate modifier for decomposition processes'), &
@@ -1419,7 +1419,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_depolymerisation', mem%rtm_depolymerisation, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_depolymerisation', '--', 'rate modifier for depolymerisation processes'), &
@@ -1430,7 +1430,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_mic_uptake', mem%rtm_mic_uptake, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_mic_uptake', '--', 'rate modifier for microbial uptake'), &
@@ -1441,7 +1441,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_plant_uptake', mem%rtm_plant_uptake, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_plant_uptake', '--', 'rate modifier for plant uptake'), &
@@ -1452,7 +1452,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_sorption', mem%rtm_sorption, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_sorption', '--', 'rate modifier for sorption'), &
@@ -1463,7 +1463,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_desorption', mem%rtm_desorption, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_desorption', '--', 'rate modifier for desorption'), &
@@ -1474,7 +1474,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_hsc', mem%rtm_hsc, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_hsc', '--', 'rate modifier for half-saturation constants'), &
@@ -1485,7 +1485,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_nitrification', mem%rtm_nitrification, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_nitrification', '--', 'rate modifier for nitrification'), &
@@ -1496,7 +1496,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_denitrification', mem%rtm_denitrification, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_denitrification', '--', 'rate modifier for denitrification'), &
@@ -1507,7 +1507,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rtm_gasdiffusion', mem%rtm_gasdiffusion, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rtm_gasdiffusion', '--', 'rate modifier for gasdiffusion'), &
@@ -1518,7 +1518,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_decomposition', mem%rmm_decomposition, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_decomposition', '--', 'rate modifier for decomposition processes'), &
@@ -1529,7 +1529,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_depolymerisation', mem%rmm_depolymerisation, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_depolymerisation', '--', 'rate modifier for depolymerisation processes'), &
@@ -1540,7 +1540,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_mic_uptake', mem%rmm_mic_uptake, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_mic_uptake', '--', 'rate modifier for microbial uptake'), &
@@ -1551,7 +1551,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_plant_uptake', mem%rmm_plant_uptake, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_plant_uptake', '--', 'rate modifier for plant uptake'), &
@@ -1562,7 +1562,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_sorption', mem%rmm_sorption, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_sorption', '--', 'rate modifier for sorption'), &
@@ -1573,7 +1573,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_desorption', mem%rmm_desorption, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_desorption', '--', 'rate modifier for desorption'), &
@@ -1584,7 +1584,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_hsc', mem%rmm_hsc, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_hsc', '--', 'rate modifier for half-saturation constants'), &
@@ -1595,7 +1595,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_nitrification', mem%rmm_nitrification, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_nitrification', '--', 'rate modifier for nitrification'), &
@@ -1606,7 +1606,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('rmm_gasdiffusion', mem%rmm_gasdiffusion, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('rmm_gasdiffusion', '--', 'rate modifier for gasdiffusion'), &
@@ -1617,7 +1617,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('het_respiration', mem%het_respiration, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('het_respiration', 'micro-mol m-3 s-1', 'heterotrophic respiration'), &
@@ -1628,7 +1628,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('het_respiration_c13', mem%het_respiration_c13, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('het_respiration_c13', 'micro-mol m-3 s-1', 'c13 heterotrophic respiration'), &
@@ -1639,7 +1639,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('het_respiration_c14', mem%het_respiration_c14, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('het_respiration_c14', 'micro-mol m-3 s-1', 'c14 heterotrophic respiration'), &
@@ -1650,7 +1650,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('myc_respiration', mem%myc_respiration, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('myc_respiration', 'micro-mol m-3 s-1', 'mycorrhizae respiration'), &
@@ -1661,7 +1661,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('myc_respiration_c13', mem%myc_respiration_c13, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('myc_respiration_c13', 'micro-mol m-3 s-1', 'c13 mycorrhizae respiration'), &
@@ -1672,7 +1672,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('myc_respiration_c14', mem%myc_respiration_c14, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('myc_respiration_c14', 'micro-mol m-3 s-1', 'c14 mycorrhizae respiration'), &
@@ -1683,7 +1683,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('net_mineralisation_nh4', mem%net_mineralisation_nh4, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('net_mineralisation_nh4', 'micro-mol m-3 s-1', 'net mineralisation of N'), &
@@ -1694,7 +1694,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('net_mineralisation_nh4_n15', mem%net_mineralisation_nh4_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('net_mineralisation_nh4_n15', 'micro-mol m-3 s-1', 'net mineralisation of N15'), &
@@ -1705,7 +1705,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('net_mineralisation_no3', mem%net_mineralisation_no3, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('net_mineralisation_no3', 'micro-mol m-3 s-1', 'net mineralisation of N'), &
@@ -1716,7 +1716,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('net_mineralisation_no3_n15', mem%net_mineralisation_no3_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('net_mineralisation_no3_n15', 'micro-mol m-3 s-1', 'net mineralisation of N15'), &
@@ -1727,7 +1727,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('net_mineralisation_po4', mem%net_mineralisation_po4, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('net_mineralisation_po4', 'micro-mol m-3 s-1', 'net mineralisation of P'), &
@@ -1738,7 +1738,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('plant_uptake_nh4_sl', mem%plant_uptake_nh4_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('plant_uptake_nh4_sl', 'micro-mol m-3 s-1', 'plant uptake of N'), &
@@ -1749,7 +1749,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('plant_uptake_nh4_n15_sl', mem%plant_uptake_nh4_n15_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('plant_uptake_nh4_n15_sl', 'micro-mol m-3 s-1', 'plant uptake of N15'), &
@@ -1760,7 +1760,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('plant_uptake_no3_sl', mem%plant_uptake_no3_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('plant_uptake_no3_sl', 'micro-mol m-3 s-1', 'plant uptake of N'), &
@@ -1771,7 +1771,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('plant_uptake_no3_n15_sl', 'micro-mol m-3 s-1', 'plant uptake of N15'), &
@@ -1804,7 +1804,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('microbial_uptake_nh4_n15_sl', 'micro-mol m-3 s-1', 'microbial uptake of N15'), &
@@ -1815,7 +1815,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('microbial_uptake_no3_sl', 'micro-mol m-3 s-1', 'microbial uptake of N'), &
@@ -1826,7 +1826,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('microbial_uptake_no3_n15_sl', 'micro-mol m-3 s-1', 'microbial uptake of N15'), &
@@ -1870,7 +1870,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('mycorrhiza_uptake_no3_sl', mem%mycorrhiza_uptake_no3_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('mycorrhiza_uptake_no3_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N'), &
@@ -1881,7 +1881,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('mycorrhiza_uptake_no3_n15_sl', mem%mycorrhiza_uptake_no3_n15_sl, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('mycorrhiza_uptake_no3_n15_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N15'), &
@@ -1969,7 +1969,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('volatilisation_nh4', mem%volatilisation_nh4, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('volatilisation_nh4', 'micro-mol m-3 s-1', 'volatilisation of NH4'), &
@@ -1980,7 +1980,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('volatilisation_nh4_n15', mem%volatilisation_nh4_n15, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('volatilisation_nh4_n15', 'micro-mol m-3 s-1', 'volatilisation of 15NH4'), &
@@ -1991,7 +1991,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('nitrification_no3', mem%nitrification_no3, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('nitrification_no3', 'micro-mol m-3 s-1', 'nitrification NO3'), &
@@ -2508,7 +2508,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
-			
+
       CALL mem%Add_var('qmax_fast_po4', mem%qmax_fast_po4, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('qmax_fast_po4', 'mol P m-3 soil', 'sorption capacity of po4 of the clay(Fe/Al) and SOM pool'), &
@@ -2728,7 +2728,7 @@ CONTAINS
         & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-			
+
       CALL mem%Add_var('Qmax_AlFe_cor', mem%Qmax_AlFe_cor, &
         & hgrid, vgrid_soil_sb, &
         & t_cf('Qmax_AlFe_cor', '', 'PO4 Qmax correction factor for clay/silt soil'), &
@@ -2917,7 +2917,7 @@ CONTAINS
       name='no_elements'
     END IF
   END FUNCTION sb_bgcm_with_elements_get_element_name_by_id
-  
+
   ! ======================================================================================================= !
   !>
   !> return name of element variable of bgc_material by its ENUM ID
@@ -2936,7 +2936,7 @@ CONTAINS
       name='no_elements'
     END IF
   END FUNCTION sb_bgcm_with_components_get_element_name_by_id
-  
+
   ! ======================================================================================================= !
   !>
   !> return name of element variable of bgc_material by its ENUM ID
@@ -2971,7 +2971,7 @@ CONTAINS
     CHARACTER(LEN=*),                   INTENT(in)    :: name                   ! pool name       (No spaces !)
     CHARACTER(LEN=*),                   INTENT(in)    :: shortname              ! pool short name (No spaces !)
     INTEGER,                            INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements 
+    LOGICAL,          OPTIONAL,         INTENT(in)    :: l_elements             ! IF pool has elements
     INTEGER,          OPTIONAL,         INTENT(in)    :: element_list(:) ! @TODO remove | list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,         INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3048,7 +3048,7 @@ CONTAINS
     CHARACTER(LEN=*),                     INTENT(in)    :: name                   ! pool name       (No spaces !)
     CHARACTER(LEN=*),                     INTENT(in)    :: shortname              ! pool short name (No spaces !)
     INTEGER,                              INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements 
+    LOGICAL,          OPTIONAL,           INTENT(in)    :: l_elements             ! IF pool has elements
     INTEGER,          OPTIONAL,           INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,           INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
@@ -3062,7 +3062,7 @@ CONTAINS
     IF (.NOT. PRESENT(element_unit)) CALL finish(routine, 'Missing unit for elements')
     this%element_unit = element_unit
   END SUBROUTINE sb_bgcm_with_components_init
-  
+
   ! ======================================================================================================= !
   !>
   !> initializing the t_sb_bgcm_main object
@@ -3075,12 +3075,12 @@ CONTAINS
     CHARACTER(LEN=*),               INTENT(in)    :: name                   ! pool name       (No spaces !)
     CHARACTER(LEN=*),               INTENT(in)    :: shortname              ! pool short name (No spaces !)
     INTEGER,                        INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
-    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements 
+    LOGICAL,          OPTIONAL,     INTENT(in)    :: l_elements             ! IF pool has elements
     INTEGER,          OPTIONAL,     INTENT(in)    :: element_list(:)        ! list of elements; used if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,     INTENT(in)    :: element_unit           ! unit of elements
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':sb_bgcm_main_init'
-  
+
     this%name              = name
     this%shortname         = shortname
     this%contains_elements = l_elements
@@ -3123,7 +3123,7 @@ CONTAINS
     ! bgcm_elements allocate & init & add to bgcm_components
     !   "shortname" is used for model output
     !   "element_list" is optional and can be used to select specific elements (not needed when all elements may be added)
-    !! @TODO: maybe extract as a routine given two strings and returning the pointer 
+    !! @TODO: maybe extract as a routine given two strings and returning the pointer
     !!    routine should start with IF(ASSOCIATED) NULLIFY(sb_bgcm_elements)
     !!    i.e. only left: function call with strings and subsequent assignment
     ! dom

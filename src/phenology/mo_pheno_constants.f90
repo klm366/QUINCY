@@ -23,9 +23,9 @@ MODULE mo_pheno_constants
   PUBLIC
 
   !< photosynthetic pathways and growth forms in the QUINCY model
-  !< 
+  !<
   !< TODO re-write as ENUM
-  !< 
+  !<
   INTEGER, PARAMETER ::                     &
       ievergreen              = 1         , &
       isummergreen            = 2         , &

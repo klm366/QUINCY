@@ -577,7 +577,7 @@ CONTAINS
     INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
     INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
-                                        ! each atmospheric forcing time step that is read in      
+                                        ! each atmospheric forcing time step that is read in
     INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)

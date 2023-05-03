@@ -1,8 +1,8 @@
 !>
-!! @brief functions needed to calculate variables affecting the atm-land interface 
+!! @brief functions needed to calculate variables affecting the atm-land interface
 !!
 !! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
 !! First version by Soenke Zaehle (2015-12-19)
@@ -31,19 +31,19 @@ CONTAINS
     USE mo_atmland_constants,       ONLY: eps_vpd
     USE mo_jsb_physical_constants,  ONLY: Tzero
 
-    IMPLICIT NONE 
+    IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: t_air           !< air temperature (K)
-    REAL(wp), INTENT(in) :: press_srf       !< atmospheric pressure (Pa) 
-    REAL(wp)             :: q_sat           !< saturating specific humidity (g/g) 
+    REAL(wp), INTENT(in) :: press_srf       !< atmospheric pressure (Pa)
+    REAL(wp)             :: q_sat           !< saturating specific humidity (g/g)
     ! ---------------------------
     ! 0.2 Local
     REAL(wp) :: esat            ! saturating vapour pressure (Pa)
     REAL(wp) :: a               ! Pa
     REAL(wp) :: b               ! no unit / einheitenlos
     REAL(wp) :: c               ! degC
-    REAL(wp) :: tmin            ! K 
+    REAL(wp) :: tmin            ! K
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_spec_humidity_sat'
 
 
@@ -52,9 +52,9 @@ CONTAINS
     ! ------------------------------------------------------------------------------------------------------------
 
 
-    a    = 611.0_wp    
-    b    = 17.502_wp  
-    c    = 240.97_wp    
+    a    = 611.0_wp
+    b    = 17.502_wp
+    c    = 240.97_wp
     tmin = 150._wp   ! for temperatures lower 50 K esat gets unreasonable numbers from the below calculations (very large / very small)
 
     ! calculating saturating vapour pressure [Pa] (Campbell & Norman)

@@ -28,7 +28,7 @@ MODULE mo_lnd_bgcm_store
 
   PUBLIC :: t_lnd_bgcm_store
 
-  
+
   ! ======================================================================================================= !
   !>
   !> bgc material store - stores pointers to the element variables of all bgcms across all processes
@@ -69,7 +69,7 @@ CONTAINS
     CLASS(t_lnd_bgcm_store), INTENT(INOUT) :: this !< to be initialised bgcm store
     ! -------------------------------------------------------------------------------------------------- !
 
-    ! After counting the materials the store can be prepared to 
+    ! After counting the materials the store can be prepared to
     ! 1. collect bookkeeping info about them
     ALLOCATE(this%bgc_material_name(this%nr_of_bgc_materials))
     ALLOCATE(this%bgc_material_ID(this%nr_of_bgc_materials))
@@ -120,7 +120,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER   :: routine = modname//':Append_process_bgcms_to_store'
     ! -------------------------------------------------------------------------------------------------- !
 
-    IF (debug_on()) & 
+    IF (debug_on()) &
       & CALL message(TRIM(routine), 'Append bgcms: '//TRIM(main_bgcm%name)//' - tile '//TRIM(tile_name))
 
     nr_of_bgcms_this_proc = SIZE(main_bgcm%pool_list)
@@ -169,7 +169,7 @@ CONTAINS
 
       ELSE
         ! i.e. no elements but one layer of compartments which are then expected to have elements
-        ! but no further compartments (asserted in the counting routine) 
+        ! but no further compartments (asserted in the counting routine)
         this%nr_of_levels(idx_bgcm) = 2
         ! current assumption (asserted in the counting routine): all elements of all compartments have the same dimension
         this%nr_of_dimensions(idx_bgcm) &
@@ -567,7 +567,7 @@ CONTAINS
     CLASS(t_lnd_bgcm_store),    INTENT(IN)    :: this       !< this bgcm store instance
     INTEGER,                    INTENT(IN)    :: bgcm_idx   !< index of the demanded bgcm in the store
     INTEGER,                    INTENT(IN)    :: nc         !< vector length
-    INTEGER,                    INTENT(IN)    :: dims(:)    !< dimensions of the 
+    INTEGER,                    INTENT(IN)    :: dims(:)    !< dimensions of the
     CHARACTER (len=*),          INTENT(IN)    :: tile_name  !< name of the tile with this bgcm store
     CHARACTER (len=*),          INTENT(IN)    :: caller     !< calling routine
     ! ----------------------------------------------------------------------------------------------------- !
@@ -656,7 +656,7 @@ CONTAINS
 
   END SUBROUTINE assert_wrote_back_to_store
 
-  
+
   ! ======================================================================================================= !
   !>
   !> deallocate bgcm store components
@@ -707,7 +707,7 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE Finalize_lnd_bgcm_store
-  
+
 
 #endif
 END MODULE mo_lnd_bgcm_store

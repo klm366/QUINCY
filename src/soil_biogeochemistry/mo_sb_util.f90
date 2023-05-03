@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains the utilities for the soil_biogeochemistry process
 !!
 !! @author
@@ -47,7 +47,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>reset sb fluxes (to zero)
-  !> 
+  !>
   SUBROUTINE reset_sb_fluxes(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
@@ -73,9 +73,9 @@ CONTAINS
     dsl4jsb_Def_memory(SB_)
 #ifdef __QUINCY_STANDALONE__
 #else
-    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_loss             
-    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_formation        
-    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_transport        
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_loss
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_formation
+    dsl4jsb_Def_pool(t_sb_components_pool)  :: sb_transport
     dsl4jsb_Def_pool(t_sb_elements_pool)    :: sb_mycorrhiza_export
 #endif
     ! ----------------------------------------------------------------------------------------------------- !
@@ -349,25 +349,25 @@ CONTAINS
     !                do_calc=LOGICAL, avg_period_unit='day')            ! OPTIONAL
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
-    
+
     !>  1.1 tlabile (averages at the timescale of the labile pool)
-    !> 
+    !>
     myc_export_n_tlabile_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tlabile_mavg_sl(:,:), &
-                                                       sb_mycorrhiza_export%nitrogen(:,:), mavg_period_tlabile) 
+                                                       sb_mycorrhiza_export%nitrogen(:,:), mavg_period_tlabile)
     myc_export_p_tlabile_mavg_sl(:,:) = calc_time_mavg(myc_export_p_tlabile_mavg_sl(:,:), &
                                                        sb_mycorrhiza_export%phosphorus(:,:), mavg_period_tlabile)
 
     !>  1.2 lctlib tau_mycorrhiza
     !>
     myc_export_c_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_c_tmyc_mavg_sl(:,:), &
-                                                    sb_mycorrhiza_export%carbon(:,:), & 
+                                                    sb_mycorrhiza_export%carbon(:,:), &
  	                                                  lctlib%tau_mycorrhiza, avg_period_unit='year')
     myc_export_n_tmyc_mavg_sl(:,:) = calc_time_mavg(myc_export_n_tmyc_mavg_sl(:,:), &
-                                                    sb_mycorrhiza_export%nitrogen(:,:), & 
+                                                    sb_mycorrhiza_export%nitrogen(:,:), &
  	                                                  lctlib%tau_mycorrhiza, avg_period_unit='year')
 
     !>  1.3 tmic (microbial community acclimation)
-    !> 
+    !>
     microbial_cue_eff_tmic_mavg(:,:) = calc_time_mavg(microbial_cue_eff_tmic_mavg(:,:), microbial_cue_eff(:,:), &
                                                       mavg_period_tmic)
     microbial_nue_eff_tmic_mavg(:,:) = calc_time_mavg(microbial_nue_eff_tmic_mavg(:,:), microbial_nue_eff(:,:), &
@@ -376,7 +376,7 @@ CONTAINS
                                                       mavg_period_tmic)
 
     !>  1.4 tenzyme (memory time-scale for enzyme allocation)
-    !> 
+    !>
     dom_cn_mavg(:,:)             = calc_time_mavg(dom_cn_mavg(:,:), dom_cn(:,:), &
                                                   mavg_period_tenzyme)
     dom_cp_mavg(:,:)             = calc_time_mavg(dom_cp_mavg(:,:), dom_cp(:,:), &

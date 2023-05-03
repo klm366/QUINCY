@@ -957,7 +957,7 @@ CONTAINS
         vol_p_wilt_org(:,i) = vol_p_wilt_org_below
       END DO
 
-      ! Saturated hydraulic conductivity following percolation theory 
+      ! Saturated hydraulic conductivity following percolation theory
       ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
       ! @todo: add CLAW directives
 

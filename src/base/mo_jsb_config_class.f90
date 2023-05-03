@@ -295,7 +295,7 @@ CONTAINS
     ! information for logfile
     CALL message(TRIM(caller), 'Mapping of element ID -> IND:')
 
-    ! carbon 
+    ! carbon
     ! is presumed to always be used, with ID = IND = 1 (thus call first for carbon!)
     CALL setup_element(config, .TRUE., ELEM_C_ID, 'C', caller)
     ! nitrogen
@@ -308,10 +308,10 @@ CONTAINS
     CALL setup_element(config, config%include_carbon14, ELEM_C14_ID, 'C14', caller)
     ! nitrogen15
     CALL setup_element(config, config%include_nitrogen15, ELEM_N15_ID, 'N15', caller)
-    
+
   END SUBROUTINE setup_element_index_map_in_config
 
-  
+
   ! ======================================================================================================= !
   !>
   !> Small helper to setup a given element according to its given flag

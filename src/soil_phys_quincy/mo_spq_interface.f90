@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains the interface to the spq processes
 !!
 !! @author
@@ -52,7 +52,7 @@ MODULE mo_spq_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_spq_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_reset_spq_fluxes
   CONTAINS
@@ -62,7 +62,7 @@ MODULE mo_spq_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: update_soil_turbulence task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_soil_turbulence
   CONTAINS
@@ -72,7 +72,7 @@ MODULE mo_spq_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition: update_spq_physics task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_spq_physics
   CONTAINS
@@ -83,7 +83,7 @@ MODULE mo_spq_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: reset_spq_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_reset_spq_fluxes
     PROCEDURE Create_task_reset_spq_fluxes         !< Constructor function for task
@@ -91,7 +91,7 @@ MODULE mo_spq_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_soil_turbulence task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_soil_turbulence
     PROCEDURE Create_task_update_soil_turbulence         !< Constructor function for task
@@ -99,7 +99,7 @@ MODULE mo_spq_interface
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_spq_physics task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   INTERFACE tsk_spq_physics
     PROCEDURE Create_task_update_spq_physics         !< Constructor function for task
@@ -112,7 +112,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: SPQ_ process
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_spq_tasks(this, model_id)
 
@@ -132,7 +132,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: reset_spq_fluxes task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_reset_spq_fluxes(model_id) RESULT(return_ptr)
 
@@ -150,7 +150,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_soil_turbulence task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_update_soil_turbulence(model_id) RESULT(return_ptr)
 
@@ -163,12 +163,12 @@ CONTAINS
 
     ALLOCATE(tsk_soil_turbulence::return_ptr)
     CALL return_ptr%Construct(name='soil_turbulence', process_id=SPQ_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_soil_turbulence
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_spq_physics task
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   FUNCTION Create_task_update_spq_physics(model_id) RESULT(return_ptr)
 
@@ -181,7 +181,7 @@ CONTAINS
 
     ALLOCATE(tsk_spq_physics::return_ptr)
     CALL return_ptr%Construct(name='spq_physics', process_id=SPQ_, owner_model_id=model_id)
-    
+
   END FUNCTION Create_task_update_spq_physics
 
   ! ======================================================================================================= !

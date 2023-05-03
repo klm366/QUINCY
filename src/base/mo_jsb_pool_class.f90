@@ -15,11 +15,11 @@ MODULE mo_jsb_pool_class
 
   PUBLIC :: t_jsb_pool, t_jsb_pool_p, t_jsb_pool_elem2d, t_jsb_pool_elem3d
   PUBLIC :: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15  ! element_id (element enumerator) for pools
-  
+
   TYPE, ABSTRACT, EXTENDS(t_hermetic) :: t_jsb_pool
     CHARACTER(LEN=:),  ALLOCATABLE :: shortname                                ! No spaces!
     CHARACTER(LEN=:),  ALLOCATABLE :: name                                     ! No spaces!
-    CHARACTER(LEN=:),  ALLOCATABLE :: path                                     ! 
+    CHARACTER(LEN=:),  ALLOCATABLE :: path                                     !
     CHARACTER(LEN=:),  ALLOCATABLE :: element_unit                             ! unit of pool element variables (used for output stream)
     INTEGER                        :: id                            = -1
       !< a pool id that - if set /= -1 - should be unique (from mo_lnd_bgcm_store_class)
@@ -77,7 +77,7 @@ MODULE mo_jsb_pool_class
   END INTERFACE
 
   TYPE, ABSTRACT, EXTENDS(t_jsb_pool) :: t_jsb_pool_elem2d
-    
+
     ! 1D element variables pointing to element%prtm1(:) of t_jsb_var_real2d
     REAL(wp),               POINTER :: carbon(:)       => NULL()
     REAL(wp),               POINTER :: nitrogen(:)     => NULL()
@@ -94,7 +94,7 @@ MODULE mo_jsb_pool_class
     REAL(wp),               POINTER :: domain_n15(:,:) => NULL()
 
   END TYPE t_jsb_pool_elem2d
-  
+
   TYPE, ABSTRACT, EXTENDS(t_jsb_pool) :: t_jsb_pool_elem3d
 
     ! 2D element variables pointing to element%prtm1(:,:) of t_jsb_var_real3d
@@ -114,14 +114,14 @@ MODULE mo_jsb_pool_class
 
   END TYPE t_jsb_pool_elem3d
 
-  !> element_id (element enumerator) for pools 
+  !> element_id (element enumerator) for pools
   !!
   !! used in the PROC_memory_class for initialization of pools
   !!
   !! names of element variables used in JSBACH are:
-  !! (sequence accordingly to the below enumerator) 
+  !! (sequence accordingly to the below enumerator)
   !!    carbon, nitrogen, phosphorus, carbon13, carbon14, nitrogen15
-  !! 
+  !!
   ENUM, BIND(C)
     ENUMERATOR :: ELEM_C = 1, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   END ENUM
@@ -359,7 +359,7 @@ CONTAINS
       pool => this
       RETURN
     END IF
-  
+
     ipos = INDEX(path, ':')
     IF (ipos > 1) THEN
       path_left = path(1:ipos-1)

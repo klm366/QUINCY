@@ -1,6 +1,6 @@
 !> Summary: tcq (test conserved quantities) memory class
 !>
-!>### Contains variables in the memory class of the test conserved quantities process 
+!>### Contains variables in the memory class of the test conserved quantities process
 !>
 !>
 !> Copyright (c) 2021 Julia Nabel
@@ -88,7 +88,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                      &
       & l_conserve_quan=.TRUE., cons_quan_type_id = LIVE_CARBON_CQ_TYPE,     &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var('a_dead_c_tcq', mem%a_dead_c_tcq,                                     &
       & hgrid, surface,                                                              &
@@ -96,7 +96,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                           &
       & l_conserve_quan=.TRUE., cons_quan_type_id = BG_DEAD_C_CQ_TYPE,     &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('another_dead_c_tcq', mem%another_dead_c_tcq,                                     &
       & hgrid, surface,                                                              &
@@ -104,7 +104,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                     &
       & l_conserve_quan=.TRUE., cons_quan_type_id = BG_DEAD_C_CQ_TYPE,     &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('an_implicit_scaling_tcq', mem%an_implicit_scaling_tcq,                      &
       & hgrid, surface,                                                              &
@@ -112,7 +112,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, output_level=BASIC,                                                 &
       & l_conserve_quan=.TRUE., cons_quan_type_id = PRODUCT_CARBON_CQ_TYPE,     &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('a_veg_c_ta_tcq', mem%a_veg_c_ta_tcq,                                     &
       & hgrid, surface,                                                              &
@@ -120,7 +120,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('a_dead_c_ta_tcq', mem%a_dead_c_ta_tcq,                                     &
       & hgrid, surface,                                                              &
@@ -128,7 +128,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,  &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('another_dead_c_ta_tcq', mem%another_dead_c_ta_tcq,                                     &
       & hgrid, surface,                                                              &
@@ -136,7 +136,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('an_implicit_scaling_ta_tcq', mem%an_implicit_scaling_ta_tcq,                      &
       & hgrid, surface,                                                              &
@@ -144,7 +144,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. ) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var('conservation_test_field', mem%conservation_test_field,                      &
       & hgrid, surface,                                                              &
@@ -152,7 +152,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp) 
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
 
       CALL mem%Add_var('old_sum', mem%old_sum,                      &
       & hgrid, surface,                                                              &
@@ -160,8 +160,8 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,      &
-      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp) 
-      
+      & loutput=.TRUE., lrestart=.TRUE., initval_r=0.0_wp)
+
 
   END SUBROUTINE Init_tcq_memory
 

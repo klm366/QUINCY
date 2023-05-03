@@ -463,7 +463,7 @@ CONTAINS
       ! science
       CALL model%Queue_task(SB_,      "sb_rate_modifier")           !
       CALL model%Queue_task(SPQ_,     "soil_turbulence")            !
-      CALL model%Queue_task(RAD_,     "radiation_q_")               !
+      CALL model%Queue_task(RAD_,     "radiation_quincy")           !
       CALL model%Queue_task(PHENO_,   "phenology")                  !
       CALL model%Queue_task(ASSIMI_,  "canopy_fluxes")              !
       CALL model%Queue_task(SPQ_,     "spq_physics")                !
@@ -474,7 +474,7 @@ CONTAINS
       CALL model%Queue_task(VEG_,     "veg_pools")                  !
       CALL model%Queue_task(SB_,      "sb_pools")                   !
       ! averaging variables in time
-      CALL model%Queue_task(RAD_,    "tavrg_radiation")             !
+      CALL model%Queue_task(RAD_,    "tavrg_radiation_quincy")      !
       CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")          !
       CALL model%Queue_task(VEG_,    "tavrg_vegetation")            !
       CALL model%Queue_task(SB_,     "tavrg_soilbiogeochemistry")   !
