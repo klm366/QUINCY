@@ -366,7 +366,7 @@ CONTAINS
     fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
     fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
 
-    !Assumption of circular depression with A = 1m² with in a circular elevation
+    !Assumption of circular depression with A = 1m2 with in a circular elevation
     !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
     length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
 
@@ -407,7 +407,7 @@ CONTAINS
     ELSEWHERE
       pwp_wi_dpr(:)       = 0._wp
     END WHERE
-    
+
     ! Start setting up the interpolated grid
     i_lvt = 1
     z_lvt = dsoil_lvt(i_lvt)
@@ -426,13 +426,14 @@ CONTAINS
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_lvt, z_dpr)
 
-    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m² within elevation area x
-    
+    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m2 within elevation area x
+
     DO i = 1, nrgrd
-      IF (i_lvt <= nsoil .AND. i_dpr <= nsoil .AND. dsoil_lvt(i_lvt) > 0._wp .AND. dsoil_dpr(MAX(i_dpr,1)) > 0._wp) THEN ! Above Bedrock in both tiles
+      IF (i_lvt <= nsoil .AND. i_dpr <= nsoil .AND. dsoil_lvt(MIN(i_lvt,nsoil)) > 0._wp &
+        & .AND. dsoil_dpr(MIN(MAX(i_dpr,1),nsoil)) > 0._wp) THEN ! Above Bedrock in both tiles
         h                   = z_rgrd_bot - z_rgrd_top
         a_inter             = len_inter * h
-    
+
         wtr_soil_lvt_rgrd   = wtr_soil_lvt(i_lvt)      * h / dsoil_lvt(i_lvt)
         ice_soil_lvt_rgrd   = ice_soil_lvt(i_lvt)      * h / dsoil_lvt(i_lvt)
         wsat_lvt_rgrd       = wsat_wi_lvt(i_lvt)       * h / dsoil_lvt(i_lvt)
@@ -486,7 +487,7 @@ CONTAINS
                           & +  (wtr_soil_dpr_rgrd+ice_soil_dpr_rgrd) * fr_dpr_rel)      &
                           & / (wsat_lvt_rgrd * fr_lvt_rel +wsat_dpr_rgrd * fr_dpr_rel ))
 
-          IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from elevation to depression 
+          IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from elevation to depression
 
             wtr_2_qlbrm     = MAX(0._wp, &
                           &  (wtr_rel_qlbrm * wsat_dpr_rgrd - wtr_soil_dpr_rgrd - ice_soil_dpr_rgrd) * fr_dpr_rel)
@@ -497,7 +498,7 @@ CONTAINS
             wtr_lat         = MAX(0._wp, wtr_lat)
             wtr_flx_lat     = wtr_lat / dtime
 
-          ELSE ! Flux is going from depression to elevation 
+          ELSE ! Flux is going from depression to elevation
 
             wtr_2_qlbrm     = MAX(0._wp, &
                            & (wtr_rel_qlbrm  * wsat_lvt_rgrd - wtr_soil_lvt_rgrd - ice_soil_lvt_rgrd) * fr_lvt_rel)
@@ -517,7 +518,7 @@ CONTAINS
 
         wtr_soil_lvt_updt(i_lvt)  = wtr_soil_lvt_updt(i_lvt) + wtr_soil_lvt_rgrd
         diffus_lvt(i_lvt)         = diffus_lvt(i_lvt) - wtr_lat / fr_lvt_rel
-        
+
         IF (i_dpr > 0) THEN
           wtr_soil_dpr_updt(i_dpr)  = wtr_soil_dpr_updt(i_dpr) + wtr_soil_dpr_rgrd
           diffus_dpr(i_dpr)         = diffus_dpr(i_dpr) + wtr_lat / fr_dpr_rel
@@ -532,11 +533,11 @@ CONTAINS
               z_lvt = z_lvt + dsoil_lvt(i_lvt)
             ELSE
               z_lvt = 10000._wp
-              i_lvt = nsoil + 1 
+              i_lvt = nsoil + 1
             END IF
           ELSE
             z_lvt = 10000._wp
-            i_lvt = nsoil + 1 
+            i_lvt = nsoil + 1
           END IF
         END IF
 
@@ -550,11 +551,11 @@ CONTAINS
                 z_dpr = z_dpr + dsoil_dpr(i_dpr)
               ELSE
                 z_dpr = 10000._wp
-                i_dpr = nsoil + 1 
+                i_dpr = nsoil + 1
               END IF
             ELSE
               z_dpr = 10000._wp
-              i_dpr = nsoil + 1 
+              i_dpr = nsoil + 1
             END IF
           END IF
         END IF
@@ -563,7 +564,7 @@ CONTAINS
         z_rgrd_bot=MIN(z_lvt, z_dpr)
 
 
-      ELSE IF (i_lvt <= nsoil .AND. dsoil_lvt(i_lvt) > 0._wp ) THEN  ! Above Bedrock in lvt tile only (should only be the case when using different soil depths)
+      ELSE IF (i_lvt <= nsoil .AND. dsoil_lvt(MIN(i_lvt,nsoil)) > 0._wp ) THEN ! Above Bedrock in lvt tile only (should only be the case when using different soil depths)
         ! hence there are no fluxes and wtr is just mapped to wtr_updt
         h                        = z_rgrd_bot - z_rgrd_top
         wtr_soil_lvt_rgrd        = wtr_soil_lvt(i_lvt) * h / dsoil_lvt(i_lvt)
@@ -580,7 +581,7 @@ CONTAINS
         z_rgrd_top=z_rgrd_bot
         z_rgrd_bot=z_lvt
 
-      ELSE IF (i_dpr > 0 .AND. i_dpr <= nsoil .AND. dsoil_dpr(i_dpr) > 0._wp ) THEN   ! Above Bedrock in dpr tile only
+      ELSE IF (i_dpr > 0 .AND. i_dpr <= nsoil .AND. dsoil_dpr(MIN(i_dpr,nsoil)) > 0._wp ) THEN   ! Above Bedrock in dpr tile only
         ! hence there are no fluxes and wtr is just mapped to wtr_updt
         h                        = z_rgrd_bot - z_rgrd_top
         wtr_soil_dpr_rgrd        = wtr_soil_dpr(i_dpr) * h / dsoil_dpr(i_dpr)
@@ -590,7 +591,7 @@ CONTAINS
           i_dpr=i_dpr+1
           IF (i_dpr <= nsoil) THEN
             IF (dsoil_dpr(i_dpr) > 0._wp) THEN
-              z_dpr = z_dpr + dsoil_dpr(i_dpr) 
+              z_dpr = z_dpr + dsoil_dpr(i_dpr)
             END IF
           END IF
         END IF
