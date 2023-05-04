@@ -1,15 +1,15 @@
 !> Summary: interface to the tcq process (test conserved quantities)
 !>
-!>### Contains the interfaces to the tcq process which is a small test process containing a couple of conserved quantities 
+!>### Contains the interfaces to the tcq process which is a small test process containing a couple of conserved quantities
 !>
-!> Note: 
-!> 
+!> Note:
+!>
 !>       1. This module takes advantage of the handling of the integrate and aggregate routines, which both
-!>          call the same routines in this module (integrate = aggregate). 
+!>          call the same routines in this module (integrate = aggregate).
 !>          Thereby each tile is processed by the same routine for the tasks of this process.
 !>
 !>       2. currently only 2D variables are dealt with -- if also 3D variables need to be conserved,
-!>          these will anyway have to specially be dealt with in the concept and thus need to be 
+!>          these will anyway have to specially be dealt with in the concept and thus need to be
 !>          identified with an own CQT e.g. distinguish WATER_2D_CQ_TYPE and WATER_3D_CQ_TYPE?
 !>          Also, integration of pool-structure might need some additional work.
 !>
@@ -32,7 +32,7 @@ MODULE mo_tcq_interface
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -53,19 +53,19 @@ MODULE mo_tcq_interface
   PUBLIC :: Register_tcq_tasks, tcq_transfer_from_active_to_passive_vars_onChunk
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_tcq_interface'
-  
+
   !> Type definition for tcq task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_tcq
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_tcq     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_tcq  !< Aggregates computed task variables
   END TYPE tsk_tcq
-  
+
   !> Constructor interface for tcq task
   INTERFACE tsk_tcq
     PROCEDURE Create_task_tcq                        !< Constructor function for task
   END INTERFACE tsk_tcq
-  
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -83,7 +83,7 @@ CONTAINS
     CALL return_ptr%Construct(name='tcq', process_id=TCQ_, owner_model_id=model_id)
 
   END FUNCTION Create_task_tcq
-    
+
   ! ====================================================================================================== !
   !
   !> Register tasks for tcq process
@@ -96,7 +96,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
 
     CALL this%Register_task(tsk_tcq(model_id))
-    
+
   END SUBROUTINE Register_tcq_tasks
 
   ! ====================================================================================================== !
@@ -134,14 +134,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk ::  an_implicit_scaling_ta_tcq
 
     dsl4jsb_Real2D_onChunk ::  veg_fract_correction
-    dsl4jsb_Real2D_onChunk ::  fract_fpc_max    
+    dsl4jsb_Real2D_onChunk ::  fract_fpc_max
     ! -------------------------------------------------------------------------------------------------- !
 
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
-    
+
     model => Get_model(tile%owner_model_id)
 
     ! If process is not to be calculated on this tile, do nothing
@@ -167,9 +167,9 @@ CONTAINS
     a_dead_c_ta_tcq = a_dead_c_tcq * veg_fract_correction * fract_fpc_max
     another_dead_c_ta_tcq = another_dead_c_tcq * veg_fract_correction * fract_fpc_max
     an_implicit_scaling_ta_tcq = an_implicit_scaling_tcq * veg_fract_correction * fract_fpc_max
-    
+
   END SUBROUTINE update_tcq
-  
+
   ! ====================================================================================================== !
   !
   !> Implementation of "aggregate" for task "tcq"
@@ -194,7 +194,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice
     REAL(wp) :: new_sum(options%nc)
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_tcq'
-    
+
     dsl4jsb_Real2D_onChunk ::  old_sum
     dsl4jsb_Real2D_onChunk ::  conservation_test_field
     dsl4jsb_Real2D_onChunk ::  a_dead_c_ta_tcq
@@ -207,9 +207,9 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     model => Get_model(tile%owner_model_id)
 
     dsl4jsb_Get_memory(TCQ_)
@@ -230,7 +230,7 @@ CONTAINS
         dsl4jsb_Get_var2D_onChunk(TCQ_,  another_dead_c_ta_tcq)
         dsl4jsb_Get_var2D_onChunk(TCQ_,  an_implicit_scaling_ta_tcq)
         new_sum = a_veg_c_ta_tcq + a_dead_c_ta_tcq + another_dead_c_ta_tcq + an_implicit_scaling_ta_tcq
-        
+
         conservation_test_field = new_sum - old_sum
         old_sum = new_sum
       ENDIF
@@ -268,7 +268,8 @@ CONTAINS
 
     ! for tcq the transfer is simple - just put everything from a_veg to a_dead...
     CALL transfer_from_active_to_passive_var_onChunk(                            &
-      & lcc_relocations, i_tile, options, tcq_potential_active_vars(1), tcq_required_passive_vars(1))
+      & lcc_relocations, i_tile, options%iblk, options%ics, options%ice,         &
+      & tcq_potential_active_vars(1), tcq_required_passive_vars(1))
 
   END SUBROUTINE tcq_transfer_from_active_to_passive_vars_onChunk
 

@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains structures and methods for soil_biogeochemistry config
 !!
 !! @author
@@ -26,33 +26,38 @@
 !! First version by Reiner Schnur (2013-04-04);
 !! 2nd version by Jan Engel, MPI BGC (20170104) -> integration into QUINCY
 !! 3rd version by Jan Engel, MPI BGC (20200619) -> integration into jsbach4
+!! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
 !!
 MODULE mo_sb_config_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,              ONLY: wp
-  USE mo_exception,         ONLY: message_text, message, finish
+  USE mo_exception,         ONLY: message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_sb_config
+  PUBLIC :: t_sb_config, get_number_of_sb_compartments
+  PUBLIC :: SB_PART_DOM_IDX , SB_PART_DOM_ASSOC_IDX, SB_PART_SOLUBLE_LITTER_IDX,                   &
+    &       SB_PART_POLYMERIC_LITTER_IDX, SB_PART_WOODY_LITTER_IDX
+  PUBLIC :: SB_PART_FUNGI_IDX, SB_PART_MYCORRHIZA_IDX, SB_PART_MICROBIAL_IDX, SB_PART_RESIDUE_IDX, &
+    &       SB_PART_RESIDUE_ASSOC_IDX
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the soil_biogeochemistry process, derived from t_jsb_config
-  !! 
+  !!
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_sb_config
     !> options
-    !! 
+    !!
     CHARACTER(15)         :: sb_model_scheme
     CHARACTER(15)         :: sb_nloss_scheme
     CHARACTER(15)         :: sb_bnf_scheme
     CHARACTER(15)         :: sb_adsorp_scheme
     !> flags
-    !! 
+    !!
     LOGICAL               :: flag_sb_prescribe_nh4
     LOGICAL               :: flag_sb_prescribe_no3
     LOGICAL               :: flag_sb_prescribe_po4
@@ -67,7 +72,7 @@ MODULE mo_sb_config_class
     ! P sorpion
     LOGICAL               :: flag_sb_double_langmuir
     !> parameter
-    !! 
+    !!
     INTEGER               :: usda_taxonomy_class
     INTEGER               :: nwrb_taxonomy_class
     INTEGER               :: lithology_class
@@ -78,9 +83,26 @@ MODULE mo_sb_config_class
     REAL(wp)              :: soil_p_occluded
     REAL(wp)              :: soil_p_primary
     REAL(wp)              :: qmax_org_fine_particle    !< maximum sorption capacity of OM to fine soil particle, mol C/ kg fine particle
+
    CONTAINS
      PROCEDURE :: Init => Init_sb_config
   END type t_sb_config
+
+  !> INDs of soil biogeochemistry compartments (since sb compartments are static, these are also used as IDs)
+  ENUM, BIND(C)
+    ENUMERATOR ::                   &
+      & SB_PART_DOM_IDX = 1,          &  !< dissolved organic matter
+      & SB_PART_DOM_ASSOC_IDX,        &  !< minerally associated dissolved organic matter
+      & SB_PART_SOLUBLE_LITTER_IDX,   &  !< metabolic litter (sugars, cellulose etc.)
+      & SB_PART_POLYMERIC_LITTER_IDX, &  !< structural litter (lignified litter)
+      & SB_PART_WOODY_LITTER_IDX,     &  !< physically protected wood litter
+      & SB_PART_FUNGI_IDX,            &  !< saprophytic fungal biomass
+      & SB_PART_MYCORRHIZA_IDX,       &  !< mycorrhizal fungal biomass
+      & SB_PART_MICROBIAL_IDX,        &  !< microbial biomass (bacteria!)
+      & SB_PART_RESIDUE_IDX,          &  !< necromass of fungi, microbial and mycorrhiza
+      & SB_PART_RESIDUE_ASSOC_IDX,    &  !< minerally associated microbial necromass
+      & LAST_SB_PART_IDX                 !< last of this ENUM, used to determine the max number of compartments
+  END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_config_class'
 
@@ -88,7 +110,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration routine of t_sb_config
-  !! 
+  !!
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_sb_config(config)
@@ -130,7 +152,7 @@ CONTAINS
                                    soil_p_primary
     REAL(wp)                    :: qmax_org_fine_particle
 
-    NAMELIST /jsb_sb_nml/       & 
+    NAMELIST /jsb_sb_nml/       &
                       active                    , &
                       bc_filename               , &
                       ic_filename               , &
@@ -143,7 +165,7 @@ CONTAINS
                       flag_sb_prescribe_po4     , &
                       flag_mycorrhiza           , &
                       flag_mycorrhiza_org       , &
-                      flag_mycorrhiza_prim      , & 
+                      flag_mycorrhiza_prim      , &
                       flag_sb_jsm_transport     , &
                       flag_sb_jsm_litter_input  , &
                       flag_sb_jsm_OM_sorption   , &
@@ -157,11 +179,9 @@ CONTAINS
                       soil_p_slow               , &
                       soil_p_occluded           , &
                       soil_p_primary            , &
-                      qmax_org_fine_particle    
+                      qmax_org_fine_particle
 
-    ! variables for reading model-options from namelist
-    INTEGER  :: nml_handler, nml_unit, istat
-
+    INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_sb_config'
 
     CALL message(TRIM(routine), 'Starting soil_biogeochemistry configuration')
@@ -171,8 +191,8 @@ CONTAINS
     bc_filename                 = 'bc_land_sb.nc'
     ic_filename                 = 'ic_land_sb.nc'
     sb_model_scheme             = "simple_1d"       ! simple_1d jsm
-    sb_nloss_scheme             = "dynamic"         ! none fixed dynamic 
-    sb_bnf_scheme               = "standard"        ! none standard unlimited 
+    sb_nloss_scheme             = "dynamic"         ! none fixed dynamic
+    sb_bnf_scheme               = "standard"        ! none standard unlimited
     sb_adsorp_scheme            = "eca_full"        ! eca_full; eca_part (only uptake, not for adsorption); eca_none
     flag_sb_prescribe_nh4       = .TRUE.
     flag_sb_prescribe_no3       = .TRUE.
@@ -188,7 +208,7 @@ CONTAINS
     nwrb_taxonomy_class         = 1
     lithology_class             = 1
     soil_ph                     = 6.5_wp        ! soil ph
-    soil_p_depth                = 0.5_wp        ! 0.5 m is the default for all sites, unless there is a specific measurement for this value 
+    soil_p_depth                = 0.5_wp        ! 0.5 m is the default for all sites, unless there is a specific measurement for this value
     soil_p_labile               = 50._wp        ! content of P* in soil until soil_p_depth from global P input data (Labile_Inorganic_P) [gP/m2]
     soil_p_slow                 = 70._wp        ! content of P* in soil until soil_p_depth from global P input data (Seconday_Mineral__P) [gP/m2]
     soil_p_occluded             = 150._wp       ! content of P* in soil until soil_p_depth from global P input data (Occluded_P) [gP/m2]
@@ -225,15 +245,25 @@ CONTAINS
     config%usda_taxonomy_class             = usda_taxonomy_class
     config%nwrb_taxonomy_class             = nwrb_taxonomy_class
     config%lithology_class                 = lithology_class
-    config%soil_ph                         = soil_ph 
+    config%soil_ph                         = soil_ph
     config%soil_p_depth                    = soil_p_depth
-    config%soil_p_labile                   = soil_p_labile 
-    config%soil_p_slow                     = soil_p_slow 
-    config%soil_p_occluded                 = soil_p_occluded 
-    config%soil_p_primary                  = soil_p_primary    
+    config%soil_p_labile                   = soil_p_labile
+    config%soil_p_slow                     = soil_p_slow
+    config%soil_p_occluded                 = soil_p_occluded
+    config%soil_p_primary                  = soil_p_primary
     config%qmax_org_fine_particle          = qmax_org_fine_particle
 
   END SUBROUTINE Init_sb_config
+
+  ! ====================================================================================================== !
+  !
+  !> Returns the number of sb compartments defined in the enumerator
+  !
+  FUNCTION get_number_of_sb_compartments() RESULT(last_type_id)
+    INTEGER :: last_type_id
+
+    last_type_id = LAST_SB_PART_IDX - 1
+  END FUNCTION get_number_of_sb_compartments
 
 #endif
 END MODULE mo_sb_config_class

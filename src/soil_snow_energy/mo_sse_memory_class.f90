@@ -115,7 +115,7 @@ CONTAINS
 
     ! ----------------------------------------------------------------------------------------------------- !
     ! jsbach4 memory
-    ! 
+    !
 
     CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &

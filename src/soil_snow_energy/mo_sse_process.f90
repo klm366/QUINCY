@@ -135,7 +135,7 @@ CONTAINS
       IF (water + ice <= EPSILON(1._wp)) THEN
         heat_cond = hcond_dry
       ELSE
-        
+
 
         ! Thermal conductivity of soil solids
         hcond_soil = (1._wp - fract_organic) * heat_cond_soil_mineral + fract_organic * hcond_org
@@ -191,7 +191,7 @@ CONTAINS
         END IF
         ! @todo: vol_field_cap should probably be replaced by MIN(vol_field_cap, liquid_max/layer_depth) if l_supercool=T
         vpor_sat = porosity - MAX(water + ice, vol_field_cap)  ! Empty pores remaining if soil is saturated
-!        vpor_sat = porosity - vol_field_cap  ! Empty pores remaining if soil is saturated
+!       vpor_sat = porosity - vol_field_cap  ! Empty pores remaining if soil is saturated
         fract_water = water / (1._wp - vpor_sat) / layer_depth ! Water fraction rel. to completely saturated soil
         fract_ice   =   ice / (1._wp - vpor_sat) / layer_depth ! Ice fraction rel. to completely saturated soil
         hcond_sat =   hcond_soil      ** (1._wp-fract_water-fract_ice) &
@@ -461,7 +461,7 @@ CONTAINS
     REAL(wp), INTENT(inout), OPTIONAL ::  ice(:,:)          !! Ice storage [m]
     REAL(wp), INTENT(out), OPTIONAL   ::  frozen(:,:)       !! Water flux from freezing soil water [kg m-2 s-1]
     REAL(wp), INTENT(out), OPTIONAL   ::  melt(:,:)         !! Water flux from melting soil ice    [kg m-2 s-1]
-    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m] 
+    REAL(wp), INTENT(out), OPTIONAL   ::  liquid_max(:,:)   !! Water that remains liquid at sub-zero temps [m]
 
     !------------------------------------------------------------------
     !  local Variables
@@ -503,7 +503,7 @@ CONTAINS
         heat_cap(jl,jk) = dz(jk) * vol_heat_cap(jl,jk)
       END DO
     END DO
-    
+
     !-----------------------------------------------------------------------------------------------
     !  Computation of soil temperaturs
     !    from surface temperatur and A and B coefficients computed at the previous time step
@@ -524,7 +524,7 @@ CONTAINS
       !$claw acc parallel default(none) present(t_unfilt,t_soil_sl,t_soil_acoef,t_soil_bcoef)
 
       ! uppermost layer
-      !$claw acc loop gang vector 
+      !$claw acc loop gang vector
       DO jl=1,nidx
         t_soil_sl(jl,1) = t_unfilt(jl)
       END DO
@@ -573,7 +573,7 @@ CONTAINS
               ! ice(jl,jk) = ice(jl,jk) - melt(jl,jk)
               ! t_soil_sl(jl,jk) = t_soil_sl(jl,jk) - melt(jl,jk) * alf * rhoi / heat_cap(jl,jk)
             END IF
-          END DO 
+          END DO
         END DO
         !$claw acc end parallel
         !$claw acc end data
@@ -589,7 +589,7 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_sse_calc_soil_temperature_expand_2 counter=ser_counter
         frozen(:,:) = frozen(:,:) * rhoh2o / delta_time
         melt  (:,:) = melt  (:,:) * rhoi   / delta_time
-        !$claw end expand 
+        !$claw end expand
       END IF
 
       ! Thawing depth
@@ -770,7 +770,7 @@ CONTAINS
         t_soil_acoef(jl,jk-1) = (t_soil_sl(jl,jk) * zdz2(jl,jk) + zdz1(jl,jk) * t_soil_acoef(jl,jk)) * z1(jl,jk-1)
         t_soil_bcoef(jl,jk-1) = zdz1(jl,jk-1) * z1(jl,jk-1)
       END DO
-    END DO  
+    END DO
     !$claw acc end parallel
     !$claw acc end data
 
@@ -948,7 +948,7 @@ CONTAINS
     ! Reset old values accounting for changes in number of snow layers
     !
     !$claw acc data present(itop,t_snow)
-    !$claw acc parallel 
+    !$claw acc parallel
     !$claw acc loop gang vector private(itop_new)
     DO jl=1,nidx
       ! itop_prev = itop_old(jl)
@@ -1008,7 +1008,7 @@ CONTAINS
           END IF
         END DO
       END DO
-      
+
       !$claw acc parallel loop gang vector
       DO jl=1,nidx
         ! New temperature for top soil layer (t_unfilt where there was or is no snow)
@@ -1298,7 +1298,7 @@ CONTAINS
       END IF
     END DO
   !
-    !$claw acc parallel 
+    !$claw acc parallel
     !$claw acc loop gang vector
     DO i = 1, nidx
       !$claw acc loop seq
@@ -1341,7 +1341,7 @@ CONTAINS
     END DO
   !
 
-    !$claw acc parallel 
+    !$claw acc parallel
     !$claw acc loop gang vector
     DO i = 1, nidx
       !$claw acc loop seq
@@ -1382,9 +1382,9 @@ CONTAINS
 
     IF (temp < tmelt) THEN
       ! supercooled water equation (Niu&Yang,2006)
-      liquid_max =                                                              &
-        & w_max                                                                 & ! Maximum water storage
-        & * ( alf * (tmelt - temp) / MAX(1.e-10_wp, grav * temp * matrix_pot) ) &
+      liquid_max =                                                               &
+        & w_max                                                                  & ! Maximum water storage
+        & * ( alf * (tmelt - temp) / MAX(1.e-10_wp,  grav * temp * (-matrix_pot)) ) &
         &   ** ( -1._wp / MAX(1._wp, bclapp))
     ELSE
       liquid_max = 0._wp

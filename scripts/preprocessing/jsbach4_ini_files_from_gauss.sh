@@ -7,7 +7,7 @@
 # Authors: Reiner Schnur, Veronika Gayler, Rene Redler, MPI-M
 #
 # Reiner Schnur, MPI-M, 2017-04-10 initial version
-# 
+#
 # Based on scripts from Veronika Gayler, Thomas Raddatz and Marco Giorgetta
 #
 # The script generates cover fractions relative to the parent tile of the
@@ -26,7 +26,7 @@ set -eu
 coupled=false                # land sea mask for coupled experiment?
 
 refinement=R02B04            # ICON-Land grid resolution
-bisections=4                 # Determines Gaussian source grid resolution (see below)
+bisections=${refinement#*B}  # Determines Gaussian source grid resolution (see below)
 atmGridID=0043
 oceGridID=0036               # Required for coupled configurations
 revision=r00xx               # Revision directory that will be generated
@@ -39,7 +39,7 @@ ggrids=""                    # disable Gaussian grids
 
 rootdir=/pool/data/ICON/grids/public/mpim
 case `hostname` in
-  mlogin*|mistralpp*|levante*)
+  levante*)
     output_root=/pool/data/ICON/grids/public/mpim
     # output_root=/pool/data/ICON/grids/private/jsbach/mpim
     # output_root=/work/mj0060/m212005/ini_files
@@ -92,15 +92,13 @@ source_res_dict[9]=T255
 source_res_dict[10]=T255
 source_res_dict[11]=T255
 
-year=${start_year}
-
 #input_root=/pool/data/JSBACH/input
 
 # Note: glac must be at beginning of varlist
 varlist="glac lake init_moist snow roughness_length albedo elevation
-fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max 
+fao forest_fract maxmoist lai_clim veg_fract surf_temp veg_ratio_max
 albedo_veg_vis albedo_veg_nir albedo_soil_vis albedo_soil_nir roughness_length_oro
-soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity 
+soil_depth soil_porosity pore_size_index soil_field_cap heat_capacity heat_conductivity
 moisture_pot hyd_cond_sat wilting_point bclapp fract_org_sl root_depth layer_moist
 oromea orostd orosig orogam orothe oropic oroval"
 varlist="${varlist} cover_fract"
@@ -127,12 +125,6 @@ case `hostname` in
     module load netcdf-c/4.8.1-gcc-11.2.0
     module load nag/7.1-gcc-11.2.0
     module list
-    ;;
-  mlogin*|mistralpp*)
-    module load cdo/1.9.6-magicsxx-gcc64
-    module load nco/4.6.7-gcc48
-    module load netcdf_c/4.3.2-gcc48
-    module load nag/6.2
     ;;
    *)
     #module load cdo/1.7.2-gccsys       # cdo 1.8.0 has problems with remapcon
@@ -188,6 +180,9 @@ function generate_gauss_data {
   export echam_fractional=${echam_fractional}  # initial file for echam runs with fractional land sea mask
   export masks_file=default                    # file with land sea mask (default: use echam land sea mask)
   export pool=/pool/data/ECHAM6/input/r0005/${res_atm}     # directories with echam input data
+  if [[ ${res_oce} == dCRUNCEP ]]; then
+    export pool=${pool_prepare}/${res_atm}/ECHAM6          # directory with echam input data
+  fi
   export pool_land=${pool_prepare}/${res_atm}
   export srcdir=.
   if [[ ${res_atm} == 05 ]]; then
@@ -196,8 +191,8 @@ function generate_gauss_data {
       echo "----------"
       echo " WARNING: LUH2v2h landuse data as used for CMIP6 is not yet available in 0.5 deg resolution."
       echo "----------"
-      echo "          We use LUH crop and pasture fractions as in CMIP5, here." 
-      echo "          Switch to source grid resolution T127, T63 or T31 if you want LUH2v2h data." 
+      echo "          We use LUH crop and pasture fractions as in CMIP5, here."
+      echo "          Switch to source grid resolution T127, T63 or T31 if you want LUH2v2h data."
   fi
 
   rm -f ../jsbach_*.nc
@@ -219,24 +214,37 @@ function generate_land_sea_mask {
 
   temp=$(mktemp -u --tmpdir=.)
 
-  # Make sure, the icon grid file includes a valid land sea mask
-  if [[ $(cdo -s output -fldsum -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} | tr -d ' ') == 0 ]]
-  then
-    echo "Invalid land sea mask in icon_grid_file ${icon_grid_file}:"
-    echo "Variable cell_sea_land_mask does not have any land grid cells."
-    echo "Check if there is another grid file, e.g. with suffix _Glsm.nc."
-    exit 1
-  fi
-
-  ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
-  ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
-    -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
-
   if [[ ${coupled} == "true" ]]
   then
+
     ${cdo} chname,cell_sea_land_mask,notsea -setgrid,${icon_grid_file} \
       -setrtoc,0.999,1.1,1 -setrtoc,-1,0.001,0 ${coupled_lsf_file} ${grid_name}_notsea.nc
+
+    # Glacier mask
+    ${cdo} remapycon,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} -gtc,0.5   ${temp} ${grid_name}_glac-05_remap.nc
+    ${cdo} -gtc,0.001 ${temp} ${grid_name}_glac-0001_remap.nc
+    # The glacier mask corresponds to the 0.5 mask within the continents and to the 0.001 mask
+    # at the costs to avoid non-glacier land cells North of Greenland or at the Antarctic coast.
+    ${cdo} ifthenelse -gtc,0.7 ${coupled_lsf_file}   \
+          ${grid_name}_glac-05_remap.nc ${grid_name}_glac-0001_remap.nc \
+          ${grid_name}_glac_remap.tmp.nc
+    ${cdo} setvar,glac -mul -gtc,0 ${grid_name}_notsea.nc ${grid_name}_glac_remap.tmp.nc ${grid_name}_glac_remap.nc
+
   else
+    # Make sure, the icon grid file includes a valid land sea mask
+    if [[ $(cdo -s output -fldsum -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} | tr -d ' ') == 0 ]]
+    then
+      echo "Invalid land sea mask in icon_grid_file ${icon_grid_file}:"
+      echo "Variable cell_sea_land_mask does not have any land grid cells."
+      echo "Check if there is another grid file, e.g. with suffix _Glsm.nc."
+      exit 1
+    fi
+
+    ${cdo} remapnn,${icon_grid_file} gauss_${source_res}_glac.nc ${temp}
+    ${cdo} setvar,glac -setmisstoc,0 -setmissval,-9.e33 \
+      -mul -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} ${temp} ${grid_name}_glac_remap.nc
+
     ${cdo} setname,notsea -setrtoc,-1,0.001,0 -setrtoc,0.999,1.1,1 -setmisstoc,0 -setmissval,-9.e33 \
       -ifthenelse -setmisstoc,0 -masklonlatbox,0.,360.,-60.,90. -gtc,0 -selvar,cell_sea_land_mask ${icon_grid_file} \
       -max ${grid_name}_glac_remap.nc -setgrid,${icon_grid_file} -selvar,FR_LAND_TOPO ${extpar_file} \
@@ -249,7 +257,7 @@ function generate_land_sea_mask {
   # Set small lake fractions below 0.01 to zero
   ${cdo} setvar,lake -setrtoc,-1,0.01,0 gauss_${source_res}_lake.nc gauss_${source_res}_lake_ext.nc
   ${cdo} remapdis,${grid_name}_notsea.nc gauss_${source_res}_lake_ext.nc ${temp}
-  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -gec,0.999 ${grid_name}_notsea.nc \
+  ${cdo} setvar,lake -setmissval,-9.e33 -ifthen -ltc,0.5 ${grid_name}_glac_remap.nc -ifthen -gec,0.999 ${grid_name}_notsea.nc \
 	 -setrtoc,-1,0.01,0 ${temp} ${grid_name}_lake_remap.nc
 
   rm ${temp}
@@ -430,7 +438,7 @@ function pseudo_remap_var {
   if [[ ${var} == oro* ]]; then
   	VAR=$(echo ${var} | tr -s 'a-z' 'A-Z')
 	  ${cdo} -setvar,${var} -selvar,${VAR}  ${pool}/${res_atm}${res_oce}_jan_surf.nc  ${grid_name}_${var}_remap.nc
-  else 
+  else
 	  ln -s gauss_${grid_name}_${var}.nc ${grid_name}_${var}_remap.nc
   fi
 
@@ -480,7 +488,7 @@ function generate_fractions {
         then
           ${cdo} setrtoc,1,1.1,0 pft${ipft}.nc zpft && mv zpft pft${ipft}.nc
         fi
-        ncwa -a ntiles pft${ipft}.nc zpft 
+        ncwa -a ntiles pft${ipft}.nc zpft
         ${cdo} setmisstoc,0 zpft pft${ipft}.nc && rm zpft
         (( i = i + 1 ))
       done
@@ -494,23 +502,34 @@ function generate_fractions {
         ${cdo} setname,fract_pft${ipft} pft${ipft}.nc ${grid_name}_fract_pft${ipft}_remap.nc && rm pft${ipft}.nc
         ncatted -a long_name,fract_pft${ipft},m,c,"Fraction of pft${ipft} tile rel. to veg tile" ${grid_name}_fract_pft${ipft}_remap.nc
         debug_file ${grid_name}_fract_pft${ipft}_remap.nc
-      done        
+      done
     fi
   done
 }
 
 function crosscheck_vars {
 
+  # Set minimum soil depth of non-glacier grid cells to 0.01
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} ifthenelse -mulc,-1 -subc,1 ${grid_name}_fract_glac.nc -setrtoc,0,0.1,0.1 ${grid_name}_soil_depth_remap.nc ${grid_name}_soil_depth_remap.nc ${temp}
   mv ${temp} ${grid_name}_soil_depth_remap.nc
   debug_file ${grid_name}_soil_depth_remap.nc
+
+  # Calculate maximum soil water amount from soil depth and field capacity
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} mul ${grid_name}_soil_field_cap_remap.nc ${grid_name}_soil_depth_remap.nc max_soilwater.nc
   ${cdo} min ${grid_name}_maxmoist_remap.nc max_soilwater.nc ${temp}
   mv ${temp} ${grid_name}_maxmoist_remap.nc
   debug_file ${grid_name}_maxmoist_remap.nc
   rm max_soilwater.nc
+
+  # Make sure initial soil moisture is less then maxmoist
+  temp=$(mktemp -u --tmpdir=.)
+  ${cdo} -le ${grid_name}_init_moist_remap.nc ${grid_name}_maxmoist_remap.nc le-mask.tmp
+  ${cdo} ifthenelse le-mask.tmp ${grid_name}_init_moist_remap.nc ${grid_name}_maxmoist_remap.nc ${temp}
+  mv ${temp} ${grid_name}_init_moist_remap.c
+
+  # Set missing value of surface temperature to 280K
   temp=$(mktemp -u --tmpdir=.)
   ${cdo} setmisstoc,280 ${grid_name}_surf_temp_remap.nc ${temp}
   mv ${temp} ${grid_name}_surf_temp_remap.nc
@@ -598,6 +617,15 @@ function generate_output_files {
 
   outfile="${grid_name}_bc_land_soil_${year}.nc"
   echo "Generating output file ${outfile} ..."
+
+  # Initial files on the Gaussian grid should not contain missing values. Variable
+  # fract_org_sl is adapted here (after extrapolation), as the icon grid initial
+  # files should not be affected.
+  if [[ $(echo ${grid_name} | cut -c1) == T ]]; then   # Gausian grid
+    cdo setmisstoc,0 ${grid_name}_fract_org_sl_remap.nc  ${grid_name}_fract_org_sl_remap.tmp
+    mv ${grid_name}_fract_org_sl_remap.tmp ${grid_name}_fract_org_sl_remap.nc
+  fi
+
   ${cdo} merge \
       ${grid_name}_soil_depth_remap.nc \
       ${grid_name}_root_depth_remap.nc \
@@ -612,6 +640,7 @@ function generate_output_files {
       ${grid_name}_soil_porosity_remap.nc \
       ${grid_name}_wilting_point_remap.nc \
       ${grid_name}_fao_remap.nc \
+      ${grid_name}_maxmoist_remap.nc \
       ${outfile}
   #ncrename -d cell,ncells ${outfile} >& /dev/null
   copy_uuid ${outfile}
@@ -778,15 +807,16 @@ for bisection in $bisections $ggrids
 do
   [[ $(echo ${bisection} | cut -c1) == T ]] && jsb4icon=false || jsb4icon=true
   if [[ ${jsb4icon} == true ]]; then
-    if [[ $bisection -ge 8  ]]
+    bisect=$(echo ${bisection} | awk '{print $1 + 0}')
+    if [[ $bisect -ge 8  ]]
     then
-      ## cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
+      # cdo="${cdo} -f nc4 -P 8"  # leads to crash with current cdo version on levante
       ulimit -s unlimited
       ulimit -v unlimited
       ulimit -m unlimited
     fi
 
-    if [[ $bisection -le 5 ]]
+    if [[ $bisect -le 5 ]]
     then
       remap_scheme=ycon
     else
@@ -794,7 +824,7 @@ do
     fi
 
     grid_name=${refinement}
-    source_res=${source_res_dict[${bisection}]}
+    source_res=${source_res_dict[${bisect}]}
   else         # jsbach4 on gaussian grid
     grid_name=${bisection}
     remap_scheme=ycon
@@ -805,6 +835,8 @@ do
   echo "=============================================================="
   echo "===  Generating files for $grid_name from $source_res      ==="
   echo "=============================================================="
+
+  year=${start_year}
 
   if [[ ${jsb4icon} == true ]]; then
     icon_grid=icon_grid_${atmGridID}_${grid_name}_G.nc
@@ -821,7 +853,7 @@ do
     case ${source_res} in
 	  T* )
 	    source_grid=${source_res}grid
-	    ;;	 
+	    ;;
 	  05 )
 	    ${cdo} griddes ${pool_prepare}/05/ECHAM6/05_jan_surf.nc > 0.5grid
 	    source_grid=0.5grid
@@ -840,24 +872,24 @@ do
   echo "===  Get initial_tarfiles from git.mpimet.mpg.de/git/mpiesm.git ==="
   echo "==================================================================="
 
-  # svn -r 9561 checkout https://svn.mpimet.mpg.de/svn/cosmos/branches/mpiesm-landveg/contrib/initial_tarfiles
-  # svn has been moved to git, thus ...
-
-  git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
-  # git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
-  cd mpiesm-landveg
-  git config core.sparseCheckout true
-  echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
-  git checkout 5fd38a895
-  mv contrib/initial_tarfiles/ ..
-  cd ../initial_tarfiles
-  rm -rf ../mpiesm-landveg
+  if [[ ! -d initial_tarfiles ]]; then
+    git clone -n -b mpiesm-landveg https://git.mpimet.mpg.de/git/mpiesm.git mpiesm-landveg
+    # git clone -n -b mpiesm-landveg git@git.mpimet.mpg.de:mpiesm.git mpiesm-landveg
+    cd mpiesm-landveg
+    git config core.sparseCheckout true
+    echo /contrib/initial_tarfiles >> .git/info/sparse-checkout
+    git checkout 5fd38a895
+    mv contrib/initial_tarfiles/ ..
+    cd ..
+    rm -rf mpiesm-landveg
+  fi
+  cd initial_tarfiles
 
   echo Creating Gaussian input file ...
   generate_gauss_data
 
   cd ..
-  
+
   shopt -s extglob
   #[[ $npfts -gt 0 ]] && \
   #    input_file=`ls ${input_root}/r0*/${source_res}/jsbach_${source_res}+(GR|TP)*_fractional_${npts}tiles_5layers_${year}.nc | tail -1` || \
@@ -882,7 +914,7 @@ do
 
     for var in $varlist
     do
-      extrapolate_var $var 
+      extrapolate_var $var
     done
 
     for var in $varlist
@@ -910,6 +942,9 @@ do
 
   if [[ ${dryrun} != "true" ]]
   then
+    if [[ ${jsb4icon} != true ]]; then
+      output_dir=${output_root}/${revision}/${grid_name}
+    fi
     echo output directory ${output_dir}
     mkdir -p ${output_dir}
   fi
@@ -918,15 +953,16 @@ do
   then
     echo "Copying output files to ${output_dir}"
     [[ ${clean} == "true" ]] && cpmv="mv" || cpmv="cp -p"
+    [[ ${jsb4icon} == true ]] && grid_tag="" || grid_tag=${grid_name}${res_oce}_
     for npfts in $npfts_list
     do
       [[ $npfts -gt 0 ]] && pft_tag="${npfts}pfts_" || pft_tag=""
-      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${pft_tag}$year.nc
+      ${cpmv} ${grid_name}_bc_land_frac_${pft_tag}$year.nc ${output_dir}/bc_land_frac_${pft_tag}${grid_tag}$year.nc
     done
-    ${cpmv} ${grid_name}_bc_land_phys_$year.nc ${output_dir}/bc_land_phys_$year.nc
-    ${cpmv} ${grid_name}_bc_land_soil_$year.nc ${output_dir}/bc_land_soil_$year.nc
-    ${cpmv} ${grid_name}_bc_land_sso_$year.nc  ${output_dir}/bc_land_sso_$year.nc
-    ${cpmv} ${grid_name}_ic_land_soil_$year.nc ${output_dir}/ic_land_soil_$year.nc
+    ${cpmv} ${grid_name}_bc_land_phys_$year.nc ${output_dir}/bc_land_phys_${grid_tag}$year.nc
+    ${cpmv} ${grid_name}_bc_land_soil_$year.nc ${output_dir}/bc_land_soil_${grid_tag}$year.nc
+    ${cpmv} ${grid_name}_bc_land_sso_$year.nc ${output_dir}/bc_land_sso_${grid_tag}$year.nc
+    ${cpmv} ${grid_name}_ic_land_soil_$year.nc ${output_dir}/ic_land_soil_${grid_tag}$year.nc
 
     if [[ ${coupled} == "true" ]] && [[ ${hd_file}x != 'x' ]]
     then
@@ -938,7 +974,7 @@ do
   # -------------------------------------------------------
   # now we generate bc_land_frac files for additional years
   # -------------------------------------------------------
-  
+
   for ((year=${start_year}+1;year<=${end_year};year++))
   do
     echo "now processing bc_land_fact for year " ${year}

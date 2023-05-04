@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains structures and methods for veg config
 !!
 !! @author
@@ -26,6 +26,7 @@
 !! First version by Reiner Schnur (2013-04-04);
 !! replaces the previous SLM mo_veg_config_class created 2016-03-17 that was based on the JSBACH4 mo_veg_config_class anyway;
 !! integration into SLM by Jan Engel, MPI BGC (20160401)
+!! code additions for bgcm store solution by Julia Nabel, MPI BGC (20230117)
 !!
 MODULE mo_veg_config_class
 #ifndef __NO_JSBACH__
@@ -41,34 +42,53 @@ MODULE mo_veg_config_class
   ! Module variables
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_veg_config
+  PUBLIC :: t_veg_config, Get_number_of_veg_compartments
+  PUBLIC :: VEG_PART_LEAF_IDX , VEG_PART_FINE_ROOT_IDX, VEG_PART_COARSE_ROOT_IDX, VEG_PART_SAP_WOOD_IDX, &
+    &       VEG_PART_HEART_WOOD_IDX, VEG_PART_LABILE_IDX, VEG_PART_RESERVE_IDX, VEG_PART_FRUIT_IDX, &
+    &       VEG_PART_SEED_BED_IDX
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the vegetation process, derived from t_jsb_config
-  !! 
+  !!
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_veg_config
     INTEGER          :: pft_id
     REAL(wp)         :: cohort_harvest_interval    !< interval of harvesting plants [yr], used with veg_dynamics_scheme="cohort"
     CHARACTER(15)    :: bnf_scheme                 !< select scheme to simulate BNF (biological nitrogen fixation)
-                                                   !! "none fixed standard optimal resistance unlimited"   
+                                                   !! "none fixed standard optimal resistance unlimited"
     CHARACTER(15)    :: veg_dynamics_scheme        !< select scheme to calculate within-tile vegetation dynamics + start from bareground
                                                    !! none: constant mortality
-                                                   !! "none population cohort"   
+                                                   !! "none population cohort"
     CHARACTER(15)    :: biomass_alloc_scheme       !< select scheme for veg biomass allocation: fixed dynamic optimal
     CHARACTER(15)    :: leaf_stoichom_scheme       !< select scheme for C/N leaf stoichometry:  fixed dynamic optimal
+
    CONTAINS
      PROCEDURE :: Init => Init_veg_config
   END type t_veg_config
+
+  !> INDs of vegetation compartments (since vegetation compartments are static, these are also used as IDs)
+  ENUM, BIND(C)
+    ENUMERATOR ::               &
+      & VEG_PART_LEAF_IDX = 1,    &   !< leaves
+      & VEG_PART_FINE_ROOT_IDX,   &   !< fine roots
+      & VEG_PART_COARSE_ROOT_IDX, &   !< coarse roots
+      & VEG_PART_SAP_WOOD_IDX,    &   !< sap wood
+      & VEG_PART_HEART_WOOD_IDX,  &   !< heart wood
+      & VEG_PART_LABILE_IDX,      &   !< labile
+      & VEG_PART_RESERVE_IDX,     &   !< reserve
+      & VEG_PART_FRUIT_IDX,       &   !< fruit
+      & VEG_PART_SEED_BED_IDX,    &   !< seed bed
+      & LAST_VEG_PART_IDX ! needs to be the last -- it is used to determine the number of compartments
+  END ENUM
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_veg_config_class'
 
 CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> configuration routine of t_veg_config
-  !! 
-  !! 
+  !!
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_veg_config(config)
 
@@ -86,26 +106,24 @@ CONTAINS
                                    bc_filename
     INTEGER                     :: plant_functional_type_id
     REAL(wp)                    :: cohort_harvest_interval
-    CHARACTER(15)               :: bnf_scheme       
+    CHARACTER(15)               :: bnf_scheme
     CHARACTER(15)               :: veg_dynamics_scheme
     CHARACTER(15)               :: biomass_alloc_scheme
     CHARACTER(15)               :: leaf_stoichom_scheme
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_veg_config'
 
-    NAMELIST /jsb_veg_nml/       & 
+    NAMELIST /jsb_veg_nml/       &
       active,                       &
       ic_filename,                  &
       bc_filename,                  &
       plant_functional_type_id,     &
       cohort_harvest_interval,      &
-      bnf_scheme,                   & 
+      bnf_scheme,                   &
       veg_dynamics_scheme,          &
       biomass_alloc_scheme,         &
       leaf_stoichom_scheme
 
-    ! variables for reading model-options from namelist
-    INTEGER  :: nml_handler, nml_unit, istat
-
+    INTEGER  :: nml_handler, nml_unit, istat      ! variables for reading model-options from namelist
     CALL message(TRIM(routine), 'Starting veg configuration')
 
     ! Set defaults
@@ -140,6 +158,17 @@ CONTAINS
     config%leaf_stoichom_scheme          = leaf_stoichom_scheme
 
   END SUBROUTINE Init_veg_config
+
+
+  ! ====================================================================================================== !
+  !>
+  !> Returns the number of veg compartments defined in the enumerator
+  !>
+  FUNCTION Get_number_of_veg_compartments() RESULT(last_type_id)
+    INTEGER :: last_type_id
+
+    last_type_id = LAST_VEG_PART_IDX - 1
+  END FUNCTION Get_number_of_veg_compartments
 
 #endif
 END MODULE mo_veg_config_class

@@ -25,7 +25,7 @@ MODULE mo_tlcc_interface
   USE mo_jsb_varlist,     ONLY: VARNAME_LEN
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -39,19 +39,19 @@ MODULE mo_tlcc_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_tlcc_interface'
   CHARACTER(len=*), PARAMETER :: procname = 'tlcc'
-  
+
   !> Type definition for tlcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_tlcc
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_tlcc     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_tlcc  !< Aggregates computed task variables
   END TYPE tsk_tlcc
-  
+
   !> Constructor interface for tlcc pre task
   INTERFACE tsk_tlcc
     PROCEDURE Create_task_tlcc                        !< Constructor function for task
   END INTERFACE tsk_tlcc
-  
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -68,7 +68,7 @@ CONTAINS
     CALL return_ptr%Construct(name=procname, process_id=TLCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_tlcc
-    
+
   ! ====================================================================================================== !
   !
   !> Register tasks for tlcc process
@@ -80,7 +80,7 @@ CONTAINS
     INTEGER,               INTENT(in)   :: model_id    !< Model id
     ! -------------------------------------------------------------------------------------------------- !
     CALL this%Register_task(tsk_tlcc(model_id))
-    
+
   END SUBROUTINE Register_tlcc_tasks
 
   ! ====================================================================================================== !
@@ -128,7 +128,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    
+
     model => Get_model(tile%owner_model_id)
 
     !>
@@ -136,21 +136,21 @@ CONTAINS
     !>
     dsl4jsb_Get_lcc_relocations(TLCC_, lcc_relocations)
     nr_of_tiles = lcc_relocations%nr_of_tiles
-    
+
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(TLCC_)) RETURN
 
     ! Assert, that PPLCC is active
-    IF (.NOT. model%Is_process_active(PPLCC_)) THEN
+    IF (.NOT. model%Is_process_enabled(PPLCC_)) THEN
       CALL finish(TRIM(routine), 'Violation of precondition: lcc processes need pplcc to be active')
     ENDIF
 
     ! If not newday, do nothing
     IF( .NOT. is_newday(options%current_datetime,dtime)) RETURN
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    ! Assert, that this tile is the VEG tile 
+    ! Assert, that this tile is the VEG tile
     ! - this lcc process works on the PFT tiles but is controlled on their parent tile
     IF (.NOT. tile%name .EQ. 'veg') THEN
       CALL finish(TRIM(routine), 'Violation of precondition: tlcc processes is expected to run on the veg tile, instead' &
@@ -175,7 +175,7 @@ CONTAINS
     !>         [TR: suggested to permute the order of tiles in the loop]
     !>
     source_tile = (/ 'pft04', 'pft03' /)
-    sink_tile = (/ 'pft06', 'pft05' /) 
+    sink_tile = (/ 'pft06', 'pft05' /)
 
     IF (allAtOnce) THEN
       nr_of_iterations = 1
@@ -216,15 +216,15 @@ CONTAINS
           ELSEIF (allAtOnce .AND. (current_tile%name .EQ. 'pft05')) THEN
             is_sink = .TRUE.
             shift_fract = 0.3_wp
-            remaining_fract = 0.7_wp 
+            remaining_fract = 0.7_wp
           ELSEIF (allAtOnce .AND. (current_tile%name .EQ. 'pft06')) THEN
             is_sink = .TRUE.
             shift_fract = 1.0_wp
-            remaining_fract = 0.0_wp 
+            remaining_fract = 0.0_wp
           ELSEIF (.NOT. allAtOnce .AND. (TRIM(current_tile%name) .EQ. TRIM(current_sink))) THEN
             is_sink = .TRUE.
             shift_fract = 1.0_wp
-            remaining_fract = 0.0_wp 
+            remaining_fract = 0.0_wp
           ENDIF
 
           IF (is_source) THEN
@@ -232,7 +232,7 @@ CONTAINS
             WHERE (current_fract(:) .GT. 0.00015_wp)
               lost_area(:, i_tile) = 0.00015_wp
               moved_fract(:) = moved_fract(:) + 0.00015_wp
-            END WHERE 
+            END WHERE
 
             current_fract(:) = current_fract(:) - lost_area(:, i_tile)
             CALL current_tile%Set_fraction(ics, ice, iblk, fract=current_fract(:))
@@ -254,7 +254,7 @@ CONTAINS
       END DO
 
       !>
-      !> 3. Each lcc process needs to call start lcc to collect to be transferred matter 
+      !> 3. Each lcc process needs to call start lcc to collect to be transferred matter
       !>
       CALL start_lcc_reloc(lcc_relocations, options, lost_area, initial_area)
 
@@ -262,9 +262,9 @@ CONTAINS
       !> 4. Afterwards active content needs to be relocated to passive vars by manipulating the arrays in lcc_relocations
       !>
       !>     4.a This can be done by explicitly specifying how active variables should be treated
-      !>         e.g. by calling transfer_from_active_to_passive_var_onChunk for named variables 
+      !>         e.g. by calling transfer_from_active_to_passive_var_onChunk for named variables
       !>
-      ! 
+      !
       ! IF (last_involved_tile%Has_process_memory(TCQ_)) THEN
       !   ! For the test cq a_veg is simply put in a_dead ...
       !   active_var_name = 'a_veg_c_tcq'
@@ -301,10 +301,10 @@ CONTAINS
       ENDDO
 
       !>
-      !> 5. Each lcc process needs to call end lcc to make the passive matter transfer 
+      !> 5. Each lcc process needs to call end lcc to make the passive matter transfer
       !>
       CALL end_lcc_reloc(lcc_relocations, options, gained_area)
-    ENDDO ! Number of iterations depending on if allAtOnce  
+    ENDDO ! Number of iterations depending on if allAtOnce
 
     !>
     !> 6. Deallocate area vectors
@@ -312,9 +312,9 @@ CONTAINS
     DEALLOCATE(lost_area, gained_area, initial_area)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_tlcc
-  
+
   ! ====================================================================================================== !
   !
   !> Implementation of "aggregate" for task "tlcc"
@@ -334,11 +334,11 @@ CONTAINS
     iblk = options%iblk
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     !> Currently nothing to do
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_tlcc

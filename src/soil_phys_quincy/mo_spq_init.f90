@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Initialization of the the spq memory.
 !!
 !! @author
@@ -35,7 +35,7 @@ MODULE mo_spq_init
   USE mo_kind,                  ONLY: wp
   USE mo_exception,             ONLY: message_text, finish, message
   USE mo_jsb_control,           ONLY: debug_on
-  
+
   USE mo_jsb_model_class,       ONLY: t_jsb_model
   USE mo_jsb_grid_class,        ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_grid,              ONLY: Get_grid, Get_vgrid
@@ -52,7 +52,7 @@ MODULE mo_spq_init
   !   REAL(wp), POINTER ::  &
   !     & elevation(:,:)
   ! END TYPE t_spq_init_vars
-  ! 
+  !
   ! TYPE(t_spq_init_vars) :: spq_init_vars
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_spq_init'
@@ -61,8 +61,8 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize spq process (after memory has been set up)
-  !! 
-  !! 
+  !!
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE spq_init(tile)
 
@@ -115,7 +115,7 @@ CONTAINS
     ! SPQ_
     dsl4jsb_Real2D_onDomain    :: soil_depth
     dsl4jsb_Real2D_onDomain    :: root_depth
-    dsl4jsb_Real2D_onDomain    :: t_srf_old 
+    dsl4jsb_Real2D_onDomain    :: t_srf_old
     dsl4jsb_Real2D_onDomain    :: w_skin
     dsl4jsb_Real2D_onDomain    :: w_soil_root
     dsl4jsb_Real2D_onDomain    :: w_soil_root_pwp
@@ -131,14 +131,14 @@ CONTAINS
     dsl4jsb_Real3D_onDomain    :: heat_capa_sl
     dsl4jsb_Real3D_onDomain    :: therm_cond_sl
     dsl4jsb_Real3D_onDomain    :: w_soil_pwp_sl
-    dsl4jsb_Real3D_onDomain    :: w_soil_fc_sl 
-    dsl4jsb_Real3D_onDomain    :: w_soil_sat_sl 
+    dsl4jsb_Real3D_onDomain    :: w_soil_fc_sl
+    dsl4jsb_Real3D_onDomain    :: w_soil_sat_sl
     dsl4jsb_Real3D_onDomain    :: w_soil_sl
     dsl4jsb_Real3D_onDomain    :: w_soil_pot_sl
-    dsl4jsb_Real3D_onDomain    :: saxtonA 
-    dsl4jsb_Real3D_onDomain    :: saxtonB 
-    dsl4jsb_Real3D_onDomain    :: saxtonC 
-    dsl4jsb_Real3D_onDomain    :: kdiff_sat_sl 
+    dsl4jsb_Real3D_onDomain    :: saxtonA
+    dsl4jsb_Real3D_onDomain    :: saxtonB
+    dsl4jsb_Real3D_onDomain    :: saxtonC
+    dsl4jsb_Real3D_onDomain    :: kdiff_sat_sl
     dsl4jsb_Real3D_onDomain    :: sand_sl
     dsl4jsb_Real3D_onDomain    :: silt_sl
     dsl4jsb_Real3D_onDomain    :: clay_sl
@@ -242,10 +242,10 @@ CONTAINS
             &                                      soil_lay_width_sl(:,isoil-1,iblk)
           soil_lay_depth_ubound_sl(:,isoil,iblk) = soil_lay_depth_ubound_sl(:,isoil-1,iblk) + &
             &                                      soil_lay_width_sl(:,isoil,iblk)
-        END IF                                
+        END IF
         ! soil-layer center ['(lower_bound + upper_bound) * 0.5']
         soil_lay_depth_center_sl(:,isoil,iblk)   = (soil_lay_depth_lbound_sl(:,isoil,iblk) + &
-          &                                        soil_lay_depth_ubound_sl(:,isoil,iblk)) * 0.5_wp 
+          &                                        soil_lay_depth_ubound_sl(:,isoil,iblk)) * 0.5_wp
       END DO
     END DO
 
@@ -257,15 +257,15 @@ CONTAINS
     !                           ' to at least ', SUM(soil_lay_width_sl(ics,1:nsoil_sb-1)), ' but better ', &
     !                           SUM(soil_lay_width_sl(ics,1:nsoil_sb)), ' and re-start the simulation.'
     !     CALL finish(TRIM(routine), message_text)
-    !   END IF  
+    !   END IF
     ! END DO
-    
+
     !> 4.0 init soil-property variables
-    !! 
-    
+    !!
+
     !> 4.1 init with one site-specific value for all soil layers
-    !! 
-    bulk_dens_sl(:,:,:)   = dsl4jsb_Config(SPQ_)%bulk_density 
+    !!
+    bulk_dens_sl(:,:,:)   = dsl4jsb_Config(SPQ_)%bulk_density
     heat_capa_sl(:,:,:)   = soil_heat_cap
     therm_cond_sl(:,:,:)  = soil_therm_cond
     sand_sl(:,:,:)        = dsl4jsb_Config(SPQ_)%soil_sand  ! only default values from namlist for now
@@ -276,40 +276,40 @@ CONTAINS
     t_soil_sl(:,:,:)      = 273.15_wp
 
     !> 5.0 soil hydraulic properties, based on Saxton and Rawls 2006, SSSA
-    !! 
+    !!
 
     !> 5.1 fractional water holding capacity at permanent wilting point
     !! note that this assumes that the soil hydraulic properties are identical between the layers
     !!
-    hlp1(:,:,:)         = k_pwp_s * sand_sl(:,:,:) + & 
+    hlp1(:,:,:)         = k_pwp_s * sand_sl(:,:,:) + &
                           k_pwp_c * clay_sl(:,:,:) + &
                           k_pwp_sc * sand_sl(:,:,:) * clay_sl(:,:,:) + &
                           k_pwp_a
-    theta_pwp_sl(:,:,:) = k_pwp_at + (1.0_wp + k_pwp_bt) * hlp1(:,:,:) 
-    !> 5.2 fractional water holding capacity at field capacity 
-    !! 
+    theta_pwp_sl(:,:,:) = k_pwp_at + (1.0_wp + k_pwp_bt) * hlp1(:,:,:)
+    !> 5.2 fractional water holding capacity at field capacity
+    !!
     hlp1(:,:,:)         = k_fc_s * sand_sl(:,:,:) + &
                           k_fc_c * clay_sl(:,:,:) + &
                           k_fc_sc * sand_sl(:,:,:) * clay_sl(:,:,:) + &
                           k_fc_a
     theta_fc_sl(:,:,:)  = k_fc_at + (1.0_wp + k_fc_bt) * hlp1(:,:,:) + k_fc_ct * hlp1(:,:,:) ** 2._wp
 
-    !> 5.3 fractional water holding capacity at saturation 
-    !! 
-    hlp1(:,:,:)         = k_sat_s * sand_sl(:,:,:) + & 
+    !> 5.3 fractional water holding capacity at saturation
+    !!
+    hlp1(:,:,:)         = k_sat_s * sand_sl(:,:,:) + &
                           k_sat_c * clay_sl(:,:,:) + &
                           k_sat_sc * sand_sl(:,:,:) * clay_sl(:,:,:) + &
                           k_sat_a
-    theta_sat_sl(:,:,:) = theta_fc_sl(:,:,:) + k_sat_at + (1.0_wp + k_sat_bt) * hlp1(:,:,:) - & 
-                          k_sat_ct * sand_sl(:,:,:) + k_sat_dt 
-    
-    !> 5.4 parameters describing the moisture-tension curve                 
-    !! note that for convenience, B has a negative sign and A is in MPa 
+    theta_sat_sl(:,:,:) = theta_fc_sl(:,:,:) + k_sat_at + (1.0_wp + k_sat_bt) * hlp1(:,:,:) - &
+                          k_sat_ct * sand_sl(:,:,:) + k_sat_dt
+
+    !> 5.4 parameters describing the moisture-tension curve
+    !! note that for convenience, B has a negative sign and A is in MPa
     saxtonB(:,:,:)    = - (LOG(wpot_pwp) - LOG(wpot_fc)) / (LOG(theta_fc_sl(:,:,:)) - LOG(theta_pwp_sl(:,:,:)))
     saxtonA(:,:,:)    = - (EXP( LOG(wpot_fc) - saxtonB(:,:,:) * LOG(theta_fc_sl(:,:,:)))) / 1000.0_wp
 
     !> 5.5 parameters describing the moisture-diffusivity curve
-    !! 
+    !!
     kdiff_sat_sl(:,:,:) = kdiff_sat_max * (theta_sat_sl(:,:,:) - theta_fc_sl(:,:,:)) ** (3.0_wp + 1._wp / saxtonB(:,:,:))
     saxtonC(:,:,:)      = 3.0_wp - 2._wp * saxtonB(:,:,:)
 
@@ -317,7 +317,7 @@ CONTAINS
     !> 6.0 rooting depth given by prescribed AWC
     !! soil water in the rooting zone [m] \n
     !! the init of 'root_fraction_sl(:,:,:)' (sec 6.3) depends on this init of the root_depth(:)
-    !! 
+    !!
     soil_awc(:,:)         = 0._wp
     w_soil_root_pwp(:,:)  = 0._wp
     w_soil_root_fc(:,:)   = 0._wp
@@ -326,7 +326,7 @@ CONTAINS
       DO isoil = 1,nsoil_sb
         hlp1(:,isoil,iblk)     = soil_lay_width_sl(:,isoil,iblk) * (theta_fc_sl(:,isoil,iblk) - theta_pwp_sl(:,isoil,iblk))
         soil_awc(:,iblk)       = soil_awc(:,iblk) + hlp1(:,isoil,iblk)
-        WHERE (soil_awc(:,iblk) < (dsl4jsb_Config(SPQ_)%soil_awc_prescribe / 1000._wp)) 
+        WHERE (soil_awc(:,iblk) < (dsl4jsb_Config(SPQ_)%soil_awc_prescribe / 1000._wp))
           root_depth(:,iblk)       = root_depth(:,iblk) + soil_lay_width_sl(:,isoil,iblk)
           w_soil_root_pwp(:,iblk)  = w_soil_root_pwp(:,iblk) + theta_pwp_sl(:,isoil,iblk) * soil_lay_width_sl(:,isoil,iblk)
           w_soil_root_fc(:,iblk)   = w_soil_root_fc(:,iblk) + theta_fc_sl(:,isoil,iblk) * soil_lay_width_sl(:,isoil,iblk)
@@ -344,27 +344,27 @@ CONTAINS
     END DO
 
     !> 6.1 water in the surface reservoir [m]
-    !! 
+    !!
     w_skin(:,:) = 0.0_wp
 
-    !> 6.2 adjust initial water amount to prescribed theta 
-    !! 
-    w_soil_root(:,:)        = w_soil_root_pwp(:,:) + & 
-      &                       dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:)) 
+    !> 6.2 adjust initial water amount to prescribed theta
+    !!
+    w_soil_root(:,:)        = w_soil_root_pwp(:,:) + &
+      &                       dsl4jsb_Config(SPQ_)%soil_theta_prescribe * (w_soil_root_fc(:,:) - w_soil_root_pwp(:,:))
     w_soil_root_theta(:,:)  = dsl4jsb_Config(SPQ_)%soil_theta_prescribe
-    w_soil_root_pot(:,:)    = saxtonA(:,1,:) * (MIN(w_soil_root_fc, w_soil_root(:,:)) / root_depth(:,:)) ** saxtonB(:,1,:) 
+    w_soil_root_pot(:,:)    = saxtonA(:,1,:) * (MIN(w_soil_root_fc, w_soil_root(:,:)) / root_depth(:,:)) ** saxtonB(:,1,:)
 
-    !> 6.3 root fraction 
-    !! 
+    !> 6.3 root fraction
+    !!
     !! root fractions assuming an exponential distribution of roots \n
     !!   Cr_l = Cr_0 * exp(-lctlib%k_root_dist*depth) \n
     !! integral to bottom of root zone: 1/lctlib%k_root_dist * (1 - exp(-lctlib%k_root_dist*depth) \n
     !!   thus for each layer
     !!
     !! root_fraction_sl(:,:,:) is a variable of veg_mem and depends on the init of root_depth(:), see section 6.0
-    !! 
+    !!
     !! note: upper bound is the larger value compared to lower bound !
-    !! 
+    !!
     ! layer 1 (vgrid_soil_sb)
     root_fraction_sl(:,1,:) = (1._wp - EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,1,:))) / &
                               (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,:)))
@@ -374,47 +374,47 @@ CONTAINS
         WHERE(root_depth(:,iblk) > soil_lay_depth_ubound_sl(:,isoil,iblk))
           WHERE(root_depth(:,iblk) > soil_lay_depth_ubound_sl(:,isoil,iblk))
             root_fraction_sl(:,isoil,iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil,iblk)) - &
-              &                               EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil,iblk))) / & 
+              &                               EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil,iblk))) / &
               &                              (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,iblk)))
           ELSEWHERE
             root_fraction_sl(:,isoil,iblk) = (EXP(-lctlib%k_root_dist * soil_lay_depth_ubound_sl(:,isoil,iblk)) - &
-              &                               EXP(-lctlib%k_root_dist * root_depth(:,iblk))) / & 
+              &                               EXP(-lctlib%k_root_dist * root_depth(:,iblk))) / &
               &                              (1._wp - EXP(-lctlib%k_root_dist * root_depth(:,iblk)))
           ENDWHERE
         ELSEWHERE
-          root_fraction_sl(:,isoil,iblk) = 0.0_wp 
+          root_fraction_sl(:,isoil,iblk) = 0.0_wp
         ENDWHERE
       END DO
     END DO
 
 
     !> 7.0 soil water per layer depth
-    !! 
+    !!
     w_soil_pwp_sl(:,:,:)  = 0.0_wp
     w_soil_fc_sl(:,:,:)   = 0.0_wp
     w_soil_sat_sl(:,:,:)  = 0.0_wp
     DO iblk = 1,nblks
       DO isoil = 1,nsoil_sb
-        WHERE(soil_lay_width_sl(:,isoil,iblk) > 0.0_wp) 
-          w_soil_pwp_sl(:,isoil,iblk) = theta_pwp_sl(:,isoil,iblk) * soil_lay_width_sl(:,isoil,iblk) 
-          w_soil_fc_sl(:,isoil,iblk)  = theta_fc_sl(:,isoil,iblk)  * soil_lay_width_sl(:,isoil,iblk) 
-          w_soil_sat_sl(:,isoil,iblk) = theta_sat_sl(:,isoil,iblk) * soil_lay_width_sl(:,isoil,iblk) 
+        WHERE(soil_lay_width_sl(:,isoil,iblk) > 0.0_wp)
+          w_soil_pwp_sl(:,isoil,iblk) = theta_pwp_sl(:,isoil,iblk) * soil_lay_width_sl(:,isoil,iblk)
+          w_soil_fc_sl(:,isoil,iblk)  = theta_fc_sl(:,isoil,iblk)  * soil_lay_width_sl(:,isoil,iblk)
+          w_soil_sat_sl(:,isoil,iblk) = theta_sat_sl(:,isoil,iblk) * soil_lay_width_sl(:,isoil,iblk)
         ENDWHERE
       END DO
     END DO
-    
+
     !> 7.1 adjust initial water amount to prescribed theta
-    !! 
+    !!
     w_soil_sl(:,:,:) = w_soil_pwp_sl(:,:,:) + dsl4jsb_Config(SPQ_)%soil_theta_prescribe * &
       &                (w_soil_fc_sl(:,:,:) - w_soil_pwp_sl(:,:,:))
 
     !> 7.2 soil water potential per layer
-    !! 
+    !!
     WHERE(soil_lay_width_sl(:,:,:) > eps8)
       hlp1(:,:,:)          = MIN(w_soil_fc_sl(:,:,:), w_soil_sl(:,:,:)) / soil_lay_width_sl(:,:,:)
       w_soil_pot_sl(:,:,:) = saxtonA(:,:,:) * hlp1(:,:,:) ** saxtonB(:,:,:)
     ELSEWHERE
-      w_soil_pot_sl(:,:,:) = 0.0_wp 
+      w_soil_pot_sl(:,:,:) = 0.0_wp
     ENDWHERE
 
     !>8.0 read elevation
@@ -432,81 +432,81 @@ CONTAINS
   END SUBROUTINE spq_init
 
   ! SUBROUTINE spq_finalize_init_vars
-  ! 
+  !
   !   DEALLOCATE( &
   !     & spq_init_vars%elevation             &
   !     & )
-  ! 
+  !
   ! END SUBROUTINE spq_finalize_init_vars
 
   ! SUBROUTINE spq_read_init_vars(tile)
-  ! 
+  !
   !   USE mo_jsb_process_class,     ONLY: SPQ_
   !   dsl4jsb_Use_config(SPQ_)
-  ! 
+  !
   !   CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-  ! 
+  !
   !   dsl4jsb_Def_config(SPQ_)
-  ! 
+  !
   !   REAL(wp), POINTER :: &
   !     & ptr_2D(:,  :)
-  ! 
+  !
   !   TYPE(t_jsb_model), POINTER :: model
   !   TYPE(t_jsb_grid),  POINTER :: grid
   !   TYPE(t_input_file)         :: input_file
   !   INTEGER                    :: nproma, nblks
-  ! 
+  !
   !   CHARACTER(len=*), PARAMETER :: routine = modname//':spq_read_init_vars'
-  ! 
+  !
   !   IF (.NOT. tile%Is_process_calculated(SPQ_)) RETURN
-  ! 
+  !
   !   IF (debug_on()) CALL message(routine, 'Reading/setting SPQ_ init vars')
-  ! 
+  !
   !   model  => Get_model(tile%owner_model_id)
   !   grid   => Get_grid(model%grid_id)
   !   nproma =  grid%Get_nproma()
   !   nblks  =  grid%Get_nblks()
-  ! 
+  !
   !   ALLOCATE( &
   !     & spq_init_vars%elevation       (nproma, nblks)        &
   !     & )
-  ! 
+  !
   !     spq_init_vars%elevation      (:,:)   = missval
-  ! 
+  !
   !   ! Get SPQ_ config
   !   dsl4jsb_Get_config(SPQ_)
-  ! 
+  !
   !   !----------
-  ! 
+  !
   !   input_file = jsb_netcdf_open_input(TRIM(dsl4jsb_Config(SPQ_)%bc_sso_filename), model%grid_id)
-  ! 
+  !
   !   ! Orography ...
   !   ptr_2D => input_file%Read_2d(  &
   !     & variable_name='elevation', &
   !     & fill_array = spq_init_vars%elevation)
   !   spq_init_vars%elevation = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-  ! 
+  !
   !   CALL input_file%Close()
-  ! 
+  !
   ! END SUBROUTINE spq_read_init_vars
 
   ! !-----------------------------------------------------------------------------------------------------
   ! !> ensure a certain minimum proportion for sand, clay and silt
-  ! !! 
+  ! !!
   ! !! Saxton equations with too small soil-texture fractions may lead to unrealistic percolation rates and soil water potentials
   ! !!
   ! !! using these modified soil texture for "saxton functions in spq_init" only
   ! !-----------------------------------------------------------------------------------------------------
   ! SUBROUTINE calc_soil_texture_saxton_compatible(nc, nsoil_sb, sand_sl, silt_sl, clay_sl)
-  ! 
+  !
   !   USE mo_jsb_math_constants,          ONLY: eps8
   !   USE mo_kind,                        ONLY: wp
   !   USE mo_exception,                   ONLY: message
-  ! 
-  ! 
+  !
+  !
   !   IMPLICIT NONE
   !   ! ---------------------------
-  !   ! 0.1 InOut 
+  !   ! 0.1 InOut
   !   INTEGER,                                          INTENT(in)    :: nc, &             !< dimensions
   !                                                                      nsoil_sb
   !   REAL(wp), DIMENSION(nc,nsoil_sb),                 INTENT(inout) :: sand_sl, &        !< sand proportion per layer
@@ -523,15 +523,15 @@ CONTAINS
   !   REAL(wp)                                        :: min_prop_soil_texture, &
   !                                                      max_prop_soil_texture
   !   CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_soil_texture_saxton_compatible'
-  ! 
-  ! 
+  !
+  !
   !   ! ------------------------------------------------------------------------------------------------------------
   !   ! Go science
   !   ! ------------------------------------------------------------------------------------------------------------
-  ! 
-  ! 
+  !
+  !
   !   !> 0.9 init local variables
-  !   !!  
+  !   !!
   !   min_prop_soil_texture = 0.2_wp
   !   max_prop_soil_texture = 1.0_wp - (2.0_wp * min_prop_soil_texture)
   !   hlp_sand_sl(:,:)      = 0.0_wp
@@ -540,11 +540,11 @@ CONTAINS
   !   sand_original_sl(:,:) = sand_sl(:,:)
   !   clay_original_sl(:,:) = clay_sl(:,:)
   !   silt_original_sl(:,:) = silt_sl(:,:)
-  ! 
+  !
   !   !> 1.0 ensure a minimum proportion 'min_prop_soil_texture' for sand, clay and silt
   !   !! this is to ensure applying the empirical functions by Saxton within the range of the texture they were designed for \n
-  !   !! 
-  !   WHERE (sand_sl(:,:) < min_prop_soil_texture .AND. clay_sl(:,:) < min_prop_soil_texture) 
+  !   !!
+  !   WHERE (sand_sl(:,:) < min_prop_soil_texture .AND. clay_sl(:,:) < min_prop_soil_texture)
   !     sand_sl(:,:)     = min_prop_soil_texture
   !     clay_sl(:,:)     = min_prop_soil_texture
   !     silt_sl(:,:)     = max_prop_soil_texture
@@ -587,7 +587,7 @@ CONTAINS
   !       sand_sl(:,:) = sand_sl(:,:) - hlp_clay_sl(:,:) * hlp_sand_sl(:,:)
   !       silt_sl(:,:) = silt_sl(:,:) - hlp_clay_sl(:,:) * hlp_silt_sl(:,:)
   !     ENDWHERE
-  !     clay_sl(:,:) = min_prop_soil_texture      
+  !     clay_sl(:,:) = min_prop_soil_texture
   !   ELSEWHERE (silt_sl(:,:) < min_prop_soil_texture)
   !     hlp_silt_sl(:,:) = min_prop_soil_texture - silt_sl(:,:)
   !     ! proportion of hlp_silt_sl(:,:) to be drawn from sand and clay
@@ -605,14 +605,14 @@ CONTAINS
   !     ENDWHERE
   !     silt_sl(:,:) = min_prop_soil_texture
   !   ENDWHERE
-  ! 
+  !
   !   !> 1.1 ensure all adds up to exactly 1.0_wp
-  !   !! 
+  !   !!
   !   clay_sl(:,:) = 1.0_wp
   !   clay_sl(:,:) = clay_sl(:,:) - (sand_sl(:,:) + silt_sl(:,:))
-  ! 
+  !
   !   !> 1.2 output any changes in soil texture to stdout or log
-  !   !! 
+  !   !!
   !   IF (ABS(SUM(sand_sl(:,:) - sand_original_sl(:,:))) > eps8) THEN
   !     CALL message(TRIM(routine), ' Modified the soil texture sand input for saxton calculation.')
   !     print*,TRIM(routine), " Modified the soil texture sand input for saxton calculation: ", sand_sl(:,:) - sand_original_sl(:,:)
@@ -625,7 +625,7 @@ CONTAINS
   !     CALL message(TRIM(routine), ' Modified the soil texture silt input for saxton calculation.')
   !     print*,TRIM(routine), " Modified the soil texture silt input for saxton calculation: ", silt_sl(:,:) - silt_original_sl(:,:)
   !   ENDIF
-  ! 
+  !
   ! END SUBROUTINE calc_soil_texture_saxton_compatible
 
 

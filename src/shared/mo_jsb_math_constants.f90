@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,19 +16,19 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief
 !!  Contains mathematical constants
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
 !!  First version by Jan Engel copying parameter from mo_base_constants (20190114)
 !!
 MODULE mo_jsb_math_constants
 #ifndef __NO_JSBACH__
- 
+
   USE mo_kind,                  ONLY: wp
   USE mo_math_constants                     ! from host model ICON/ECHAM to get, e.g., pi & deg2rad
 
@@ -38,7 +38,7 @@ MODULE mo_jsb_math_constants
 
   ! time control
   REAL(wp), PARAMETER   :: dtime     = 1800._wp               !< length of one time step in seconds
-  REAL(wp), PARAMETER   :: one_year  = 365._wp                !< length of one year in days 
+  REAL(wp), PARAMETER   :: one_year  = 365._wp                !< length of one year in days
   REAL(wp), PARAMETER   :: one_day   = 86400._wp              !< length of one day in seconds
   ! conversion of degree to radians
   REAL(wp), PARAMETER   :: degcircle = 360._wp                !< degrees per circle
@@ -48,7 +48,7 @@ MODULE mo_jsb_math_constants
   REAL(wp), PARAMETER   :: eps8      = 0.00000001_wp
   REAL(wp), PARAMETER   :: eps4      = 0.0001_wp
   REAL(wp), PARAMETER   :: zero      = 0.0_wp                 !< just zero
-  
+
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_jsb_math_constants'
 

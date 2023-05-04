@@ -36,7 +36,7 @@ CONTAINS
     & )
 
     ! Declarations
-    USE mo_rad_constants,      ONLY: LaiLimit
+    USE mo_rad_parameters,     ONLY: LaiLimit
     USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! Arguments
@@ -50,7 +50,7 @@ CONTAINS
 
     REAL(wp), INTENT(out) :: &
       & scaling_fact_cl
-    !$claw end model-data  
+    !$claw end model-data
 
     ! Local variables
     REAL(wp) ::         &
@@ -99,7 +99,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_constants                                     ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_parameters                                    ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas  ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     LOGICAL,  INTENT(in) ::   &
@@ -201,10 +201,10 @@ CONTAINS
       KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air**(-1))  ! Division "/T1 /t_air" are expressed strange here (and in the
                                                                 ! following) because if this subroutine is not used as elemental
                                                                 ! (e.g. for tests) it makes accuracy of calculation much better!
-                                                                ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14. 
+                                                                ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14.
                                                                 !    Stelle nach dem Komma, obwohl Inputs (R_gas, T0, T1, t_air)
                                                                 !    genau gleich. Ursache: epsilon ist 2.22E-16 (JSBACH3
-                                                                !    und JSBACH4) und EXP verstärkt Fehler.
+                                                                !    und JSBACH4) und EXP verstaerkt Fehler.
       KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1)  * t_air**(-1)) ! see above
 
       !---------------------------------------------------------------------------------!
@@ -423,7 +423,7 @@ CONTAINS
 
     !-----------------------------------------------------------------------
     !  DECLARATIONS
-    USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
+    USE mo_assimi_parameters                                     ! we need all of them, except of f_aut_leaf and cCost.
     USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     !-----------------------------------------------------------------------
@@ -538,11 +538,11 @@ CONTAINS
       !---------------------------------------------------------------------------------
       KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air**(-1) )  ! R: Abweichung ab der 13. Stelle nach dem Komma,
                                                                  !    obwohl T0 und T1 und t_air genau gleich. Ursache:
-                                                                 !    epsilon ist 2.22E-16 (JSBACH3 und JSBACH4) und EXP verstärkt
+                                                                 !    epsilon ist 2.22E-16 (JSBACH3 und JSBACH4) und EXP verstaerkt
                                                                  !    Fehler.
       KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1) * t_air**(-1) )  ! R: Abweichung ab der 9. Stelle nach dem Komma, obwohl T0 und T1
-                                                                 !    und t_air genau gleich. (Grund warum hier Abweichung größer
-                                                                 !    als oben: KO0 ist um Faktor 3 größer als KC0.)
+                                                                 !    und t_air genau gleich. (Grund warum hier Abweichung groesser
+                                                                 !    als oben: KO0 ist um Faktor 3 groesser als KC0.)
       GAM = MAX (1.7E-6_wp * TC, 0._wp)                          ! R: Keine Abweichungen
       VCMAX = CarboxRate * N_scaling_factors &
                 * EXP(EV * T0 / R_gas * T1**(-1) * t_air**(-1) ) ! PVM=PVM0*N_scaling_factors*EXP(Energy scaled relative 25C)
@@ -556,7 +556,7 @@ CONTAINS
       JMAX = ETransport * N_scaling_factors       &  ! PJM=PJM0*N_scaling_factors*EXP(Energy scaled relative 25C)
                 * TC / 25._wp                        ! R: bis hierher keinerlei Abweichung. N_scaling_factors und ETransport genau
                                                      !    gleich.
-      JMAX = MAX(JMAX, minOfMaxCarboxrate) ! R: Abweichung nur für Fall minOfmaxCarboxrate und dann ab der 13. Stelle nach dem
+      JMAX = MAX(JMAX, minOfMaxCarboxrate) ! R: Abweichung nur fuer Fall minOfmaxCarboxrate und dann ab der 13. Stelle nach dem
                                            !    Komma weil minOfMaxCarboxrate = 1.0e-12 ist
 
       !---------------------------------------------------------------------------------
@@ -591,7 +591,7 @@ CONTAINS
       !---------------------------------------------------------------------------------
       !if (R_gas < 0.1 .OR. t_air < 0.1 .OR. press_srf < 0.1) &
       !print*,iGP,R_gas,t_air,press_srf
-      G0 = canopy_cond_cl / 1.6_wp / R_gas * t_air**(-1) * press_srf ! R: Die folgenden Berechnungen führen zu keinen Abweichungen
+      G0 = canopy_cond_cl / 1.6_wp / R_gas * t_air**(-1) * press_srf ! R: Die folgenden Berechnungen fuehren zu keinen Abweichungen
                                                                      !    im Ergebnis CO2_conc_leaf_cl und bei GASS zu einer
                                                                      !    Abweichung ab der 16. Stelle nach Komma
       !---------------------------------------------------------------------------------
@@ -756,7 +756,7 @@ CONTAINS
     & NPP_pot_rate_ca )
 
     ! Use Declarations
-    USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
+    USE mo_assimi_parameters,   ONLY: f_aut_leaf, cCost
 
     ! Arguments
     !$claw model-data
@@ -767,12 +767,12 @@ CONTAINS
 
     REAL(wp),  INTENT(out) :: &
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
-    !$claw end model-data  
+    !$claw end model-data
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
 
-    REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
+    REAL(wp)             :: hlp
     REAL(wp)             :: maintenanceRespiration ! R_m
     REAL(wp)             :: growthRespiration      ! R_g
 
@@ -785,6 +785,7 @@ CONTAINS
     ! ---------------------------
     ! Go
 
+    hlp =  (cCost -1._wp) / cCost
     maintenanceRespiration = dark_respiration_ca / f_aut_leaf
     growthRespiration = max(0._wp,hlp * (gross_assimilation_ca - maintenanceRespiration))
     NPP_pot_rate_ca = gross_assimilation_ca - maintenanceRespiration - growthRespiration
@@ -810,7 +811,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
     REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
     REAL(wp), INTENT(inout) :: seconds_year       ! sum of seconds till new_year
-    REAL(wp), INTENT(inout) :: NPP_sum_year       ! 
+    REAL(wp), INTENT(inout) :: NPP_sum_year       !
     REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
 
 !   local variables

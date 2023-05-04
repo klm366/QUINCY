@@ -1,7 +1,14 @@
 before_script:
-  #- pip install --no-cache-dir lxml
-  #- pip install --no-cache-dir ford
   - apk add --update --no-cache graphviz ttf-freefont
+
+test-job:
+  script:
+  - sh ./build-doc.sh -q
+  tags:
+    - sphinx
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+      when: manual
 
 pages:
   script:
@@ -9,14 +16,10 @@ pages:
   - mv doc/html/ public/
   tags:
     - sphinx
-  only:
-    - schedules
-      #- develop-staging
-    #when: manual
-    #except:
-      #- schedules
   artifacts:
     paths:
       - public
     expire_in: 10min
+  rules:
+    - if: ($CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "schedule")
 

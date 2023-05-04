@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains the utilities for the spq process
 !!
 !! @author
@@ -50,7 +50,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION calc_qmax_texture
   !!
-  !! Output: sorption capacity for organic material 
+  !! Output: sorption capacity for organic material
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_qmax_texture(qmax_fine_particle, silt_sl, clay_sl) RESULT(qmax_texture)
 
@@ -74,7 +74,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> init/reset soil fluxes (with/to zero)
-  !! 
+  !!
   !! called in the land model interface prior to all Tasks
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE reset_spq_fluxes(tile, options)
@@ -95,7 +95,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
-    ! 0.2 Local 
+    ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     !TYPE(t_lctlib_element), POINTER       :: lctlib         !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
@@ -104,9 +104,6 @@ CONTAINS
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
     dsl4jsb_Def_memory(SPQ_)                          ! TYPE(t_spq_memory),      POINTER :: spq__mem
-    ! Declare pointers to variables in memory
-    ! SPQ_ 2D
-    dsl4jsb_Real2D_onChunk      :: transpiration
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -118,29 +115,15 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ---------------------------
     ! 0.5 Get Memory
-    ! Get process config
-!    dsl4jsb_Get_config(SPQ_)
     ! Get process memories
     dsl4jsb_Get_memory(SPQ_)           ! spq__mem => spq_memory
-    ! Get process variables (Set pointers to variables in memory)
     model  => Get_model(tile%owner_model_id)
-    !lctlib => model%lctlib(tile%lcts%lib_id)
-    ! ---------------------------
-    dsl4jsb_Get_var2D_onChunk(SPQ_, transpiration)
-
-
-
+    !lctlib => model%lctlib(tile%lcts(1)%lib_id)
     ! ------------------------------------------------------------------------------------------------------------
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-
-    ! flux variables
-    transpiration(:) = zero                  !< transpiration in kg m-2 s-1
-
-    ! other variables
-    ! ...
-
+    dsl4jsb_var2D_onChunk(SPQ_, transpiration) = zero                  !< transpiration in kg m-2 s-1
 
   END SUBROUTINE reset_spq_fluxes
 

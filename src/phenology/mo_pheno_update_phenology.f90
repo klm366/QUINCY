@@ -1,11 +1,11 @@
 !>
-!! @brief module to determine the phenological state of a plant 
+!! @brief module to determine the phenological state of a plant
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2016-04-11)
+!! First version by Soenke Zaehle (2016-04-11)
 !! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
 !!
 MODULE mo_pheno_update_phenology
@@ -30,14 +30,14 @@ CONTAINS
   ! ======================================================================================================= !
   !>update phenology - QUINCY
   !>  determine onset and end of the growing season for some PFT
-  !> 
+  !>
   !>  PFT: evergreen, raingreen, cold-deciduous trees and perennial grasses
-  !> 
-  !>  @todo 
+  !>
+  !>  @todo
   !>  OBS: currently uncalibrated, in particular rain green phenology
   !>  Dev: Have more cost-benefit in decision to start/stop growing season
   !>      what about seasonality beyond off/on behaviour? -> implies some collaboration between
-  !>      turnover rates and phenology -> should the two be linked? 
+  !>      turnover rates and phenology -> should the two be linked?
   SUBROUTINE update_phenology_quincy(tile, options)
 
     USE mo_jsb_class,               ONLY: Get_model
@@ -88,7 +88,8 @@ CONTAINS
     nc      = options%nc
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(PHENO_)) RETURN  ! run task only if the process "is calculated" at this tile
+    IF (tile%lcts(1)%lib_id == 0)                 RETURN  ! run task only if the present tile is a pft
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
@@ -147,11 +148,11 @@ CONTAINS
       & nd_dormance(:)                     , &
       & gdd(:)                             )    ! inout
 
-  END SUBROUTINE update_phenology_quincy 
+  END SUBROUTINE update_phenology_quincy
 
   ! ======================================================================================================= !
-  !>calculate phenology 
-  !> 
+  !>calculate phenology
+  !>
   ELEMENTAL SUBROUTINE calc_phenology(  &
     & phenology_type                  , &
     & beta_soil_flush                 , &
@@ -179,8 +180,8 @@ CONTAINS
     USE mo_jsb_math_constants,      ONLY: dtime, one_day
     USE mo_jsb_physical_constants,  ONLY: Tzero
     USE mo_jsb_impl_constants,      ONLY: true, false, test_false_true
-    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial, &
-                                          gdd_t_air_threshold
+    USE mo_pheno_constants,         ONLY: ievergreen, iraingreen, isummergreen, iperennial
+    USE mo_pheno_parameters,        ONLY: gdd_t_air_threshold
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,      INTENT(in)    :: phenology_type                   !< lctlib parameter
     REAL(wp),     INTENT(in)    :: beta_soil_flush                  !< lctlib parameter
@@ -203,7 +204,7 @@ CONTAINS
     REAL(wp),     INTENT(inout) :: growth_req_n_tlabile_mavg        !< moles N required for a unit of C growth to determine labile pool size
     REAL(wp),     INTENT(inout) :: growth_req_p_tlabile_mavg        !< moles P required for a unit of N growth to determine labile pool size
     REAL(wp),     INTENT(inout) :: nd_dormance                      !< number of days in dormancy since last growing season
-    REAL(wp),     INTENT(inout) :: gdd                              !< growing degree days 
+    REAL(wp),     INTENT(inout) :: gdd                              !< growing degree days
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)                    :: hlp1                             !< helper variable for tmp values
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_phenology'
@@ -215,30 +216,30 @@ CONTAINS
     !>1.0 check growing season has started or ended
     !>
     ! If not in growing season, check whether growing season has started
-    IF(growing_season < test_false_true) THEN 
+    IF(growing_season < test_false_true) THEN
       SELECT CASE (phenology_type)
         CASE (ievergreen)
           ! nothing to do here
         CASE (iraingreen)
           ! if soil moisture is above specified threshold
-          IF(beta_soil_gs_tphen_mavg > beta_soil_flush) THEN 
+          IF(beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
             growing_season            = true
             growth_req_n_tlabile_mavg = 1._wp / cn_leaf
             growth_req_p_tlabile_mavg = 1._wp / np_leaf
           ENDIF
-        CASE (isummergreen)     
-          ! if GDD requirement is exceeded. The latter depends on the length of the 
+        CASE (isummergreen)
+          ! if GDD requirement is exceeded. The latter depends on the length of the
           !  dormancy period (aka "chilling requirement"). Parameterisation follows ORCHIDEE
-          hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance ) 
-          IF(gdd > hlp1) THEN 
+          hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
+          IF(gdd > hlp1) THEN
              growing_season            = true
              growth_req_n_tlabile_mavg = 1._wp / cn_leaf
              growth_req_p_tlabile_mavg = 1._wp / np_leaf
           ENDIF
         CASE (iperennial)
           ! if temperature and soil moisture are not limiting growth
-          hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance ) 
-          IF(gdd > hlp1 .AND. beta_soil_gs_tphen_mavg > beta_soil_flush) THEN 
+          hlp1 = gdd_req_max * EXP( - k_gdd_dormance * nd_dormance )
+          IF(gdd > hlp1 .AND. beta_soil_gs_tphen_mavg > beta_soil_flush) THEN
             growing_season            = true
             growth_req_n_tlabile_mavg = 1._wp / cn_leaf
             growth_req_p_tlabile_mavg = 1._wp / np_leaf
@@ -249,27 +250,27 @@ CONTAINS
       SELECT CASE (phenology_type)
         CASE (ievergreen)
           ! nothing to do here
-        CASE (iraingreen)       
+        CASE (iraingreen)
           ! if soil moisture is below given threshold AND leaves have been out a given number of days
           IF(beta_soil_gs_tphen_mavg < beta_soil_senescence .AND. mean_leaf_age > min_leaf_age ) THEN
             growing_season = false
           ENDIF
-        CASE (isummergreen)     
-          ! if temperature are declining below a certain threshold AND 
+        CASE (isummergreen)
+          ! if temperature are declining below a certain threshold AND
           !  leaves have been out a given number of days
           IF(t_air_week_mavg < t_air_month_mavg .AND. t_air_tphen_mavg < t_air_senescence .AND. &
             & mean_leaf_age > min_leaf_age) THEN
             growing_season = false
           ENDIF
-        CASE (iperennial)       
-          ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND 
+        CASE (iperennial)
+          ! if carbon balance of the plant becomes negative OR leaves have been damaged by frost/drought AND
           !  leaves have been out a given number of days
           IF((t_air_tphen_mavg < t_air_senescence .OR. beta_soil_gs_tphen_mavg < beta_soil_senescence .OR. &
             & gpp_tlabile_mavg < maint_respiration_tlabile_mavg).AND. mean_leaf_age > min_leaf_age) THEN
             growing_season = false
           ENDIF
       END SELECT
-    ENDIF   
+    ENDIF
 
     !>2.0 modify phenology counters
     !>
@@ -283,15 +284,15 @@ CONTAINS
     ENDIF
 
     !>  2.2 nd_dormance counter
-    !> 
-    IF (growing_season > test_false_true) THEN 
+    !>
+    IF (growing_season > test_false_true) THEN
       gdd         = 0.0_wp
       nd_dormance = 0.0_wp
     ELSE
-      nd_dormance = nd_dormance + dtime / one_day 
+      nd_dormance = nd_dormance + dtime / one_day
     ENDIF
 
-  END SUBROUTINE calc_phenology 
+  END SUBROUTINE calc_phenology
 
 #endif
 END MODULE mo_pheno_update_phenology

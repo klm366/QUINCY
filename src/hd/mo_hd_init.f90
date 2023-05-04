@@ -73,7 +73,7 @@ CONTAINS
     ! Get hd config
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. model%Is_process_active(HD_)) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
@@ -137,6 +137,15 @@ CONTAINS
         & variable_name='CELLS_UP',                   &
         & start_extdim=1, end_extdim=nneigh_max,    &
         & extdim_name='nneigh')
+
+      IF (dsl4jsb_config(HD_)%use_bifurcated_rivers) THEN
+        ! Number of channel river splits into
+        return_pointer => input_file%Read_2d(         &
+          & variable_name='NSPLIT',                   &
+          & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
+      ELSE
+        dsl4jsb_var_ptr(HD_,nsplit)(:,:) = 1._wp
+      END IF
 
       nproma = grid%nproma
       nblks  = grid%nblks
@@ -235,7 +244,7 @@ CONTAINS
     ! Get hd config
     dsl4jsb_Get_config(HD_)
 
-    IF (.NOT. model%Is_process_active(HD_)) RETURN
+    IF (.NOT. model%Is_process_enabled(HD_)) RETURN
 
     ! Get hd memory of the tile (only the root tile is used)
     dsl4jsb_Get_memory(HD_)
@@ -256,15 +265,15 @@ CONTAINS
       nblks  = grid%nblks
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
-      
+
       ! Overlandflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FLFMEM',                   &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_o_max,           &
         & extdim_name='oresnum')
-      
-      
+
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)
@@ -274,14 +283,14 @@ CONTAINS
            END DO
          END DO
       END DO
-      
+
       ! Baseflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FGMEM',                    &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_b_max,           &
         & extdim_name='bresnum')
-      
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)
@@ -291,14 +300,14 @@ CONTAINS
             END DO
           END DO
       END DO
-      
+
       ! Riverflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FRFMEM',                   &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_r_max,           &
         & extdim_name='rresnum')
-      
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)

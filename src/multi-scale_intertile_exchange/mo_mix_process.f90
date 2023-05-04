@@ -20,8 +20,7 @@ MODULE mo_mix_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion, &
-          & calc_intertile_diffusion_new
+  PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_process'
 
@@ -31,53 +30,59 @@ CONTAINS
   !>
   !! @brief   Compute intertile exchange of surface runoff
   !!
-  PURE ELEMENTAL SUBROUTINE calc_runoff_transport(            &
-    & dtime, fract_to_retention, retention_time,                 &
-    & source_wtr_pond_max, source_fract, target_fract, runoff_source,       &
+  PURE ELEMENTAL SUBROUTINE calc_runoff_transport(             &
+    & l_lag, dtime, retention_time, wtr_pond_max_source,       &
+    & source_fract, target_fract, runoff_source,               &
     & wtr_latflow_source, wtr_latflow_target, wtr_pond_source, &
-    & runoff_retention_target,  wtr_pond_target &
+    & wtr_pond_target, runoff_retention_source                 &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
-    REAL(wp), INTENT(in)    :: dtime,              & !< timestep length
-      &                        fract_to_retention, &
-      &                        retention_time, &
-      &                        source_wtr_pond_max,    & !< maximum surface water storage on source tile
-      &                        source_fract,       & !< area fraction of water source tile
-      &                        target_fract          !< area fraction of water target tile
-    REAL(wp), INTENT(inout) :: runoff_source,      & !< surface runoff on source tile
-      &                        wtr_latflow_source, & !< lateral water flow from source tile
-      &                        wtr_latflow_target, & !< lateral water flow towards target tile
-      &                        wtr_pond_source,    & !< surface water storage on source tile
-      &                        runoff_retention_target, &
-      &                        wtr_pond_target       !< surface water storage on target tile
+    LOGICAL,  INTENT(in)    :: l_lag                      !< T: apply lag to overland flow
+    REAL(wp), INTENT(in)    :: dtime,                   & !< timestep length                        [s]
+      &                        retention_time,          & !< retention time for lateral transport   [s]
+      &                        wtr_pond_max_source,     & !< maximum surface water storage on source tile [m]
+      &                        source_fract,            & !< area fraction of water source tile
+      &                        target_fract               !< area fraction of water target tile
+    REAL(wp), INTENT(inout) :: runoff_source,           & !< surface runoff on source tile          [kg m-2 s-1]
+      &                        wtr_latflow_source,      & !< lateral water flow from source tile    [kg m-2 s-1]
+      &                        wtr_latflow_target,      & !< lateral water flow towards target tile [kg m-2 s-1]
+      &                        wtr_pond_source,         & !< surface water storage on source tile   [m]
+      &                        wtr_pond_target,         & !< surface water storage on target tile   [m]
+      &                        runoff_retention_source    !< intermediate storage for overland flow [m]
 
-    REAL(wp)                :: overland_flx,       &
-      &                        wtr_to_retention,  &
-      &                        wtr_from_retention
+    REAL(wp)                :: overland_flx_source,     & !< surface flow leaving source tile       [m]
+      &                        overland_flx_target        !< surface flow arriving at target tile   [m]
 
-    !> Update target ponds with surface runoff from source tile
-    !!   *** DUMMY implementation which later on will be replaced with a physics based process ***
+    !> Update target ponds with surface runoff/pond overflow from source tile
     !!   Surface runoff is scaled with the tile fractions and moved into the target tile's
-    !!   pond storage
-    !! @todo If a flow lag is required it needs to be implemented here, probably with an
-    !!   temporary storage on the source tile, which then also needs to be part of the global
-    !!   water balance
-
-    overland_flx    = MAX(0._wp, wtr_pond_source + runoff_source * dtime / rhoh2o - source_wtr_pond_max)
-    wtr_pond_source = MIN(source_wtr_pond_max, wtr_pond_source + runoff_source * dtime / rhoh2o)
+    !!   pond storage.
+    !!   In case of long transport routes (upland to lowland) a retention storage is used.
+    !! @todo the retention store lag time needs to be physics based, not fixed to some arbitrary value
 
     IF (target_fract > 1.0e-10_wp) THEN
-      wtr_latflow_source = wtr_latflow_source - overland_flx * rhoh2o / dtime
-      runoff_source      = 0._wp
-      wtr_latflow_target = wtr_latflow_target + overland_flx * (source_fract / target_fract) * rhoh2o / dtime
-      wtr_to_retention   = fract_to_retention * overland_flx * (source_fract / target_fract)
-      wtr_pond_target    = wtr_pond_target    + overland_flx * (source_fract / target_fract) - wtr_to_retention
-      runoff_retention_target = runoff_retention_target + wtr_to_retention
-      wtr_from_retention = runoff_retention_target * dtime / retention_time
-      wtr_pond_target    = wtr_pond_target + wtr_from_retention
-      runoff_retention_target = runoff_retention_target - wtr_from_retention
+      ! Compute pond overflow on source tile and update source tile pond storage
+      overland_flx_source = MAX(0._wp, wtr_pond_source + runoff_source * dtime / rhoh2o - wtr_pond_max_source)
+      wtr_pond_source     = MIN(wtr_pond_max_source, wtr_pond_source + runoff_source * dtime / rhoh2o)
+      ! Set source tile runoff to zero as it goes down the hill
+      runoff_source       = 0._wp
+
+      ! Compute flows for and update runoff retention storage
+      IF (l_lag) THEN
+        runoff_retention_source = runoff_retention_source + overland_flx_source
+        overland_flx_source     = runoff_retention_source * MIN(1.0_wp, dtime / retention_time)
+        runoff_retention_source = MAX(0._wp, runoff_retention_source - overland_flx_source)
+      END IF
+
+      ! Scale overland flow to account for tile fraction differences
+      overland_flx_target = overland_flx_source * (source_fract / target_fract)
+      ! Update target pond storage
+      wtr_pond_target     = wtr_pond_target + overland_flx_target
+      ! Update lateral flows
+      wtr_latflow_source  = wtr_latflow_source - overland_flx_source * rhoh2o / dtime
+      wtr_latflow_target  = wtr_latflow_target + overland_flx_target * rhoh2o / dtime
+
     END IF
 
   END SUBROUTINE calc_runoff_transport
@@ -87,90 +92,74 @@ CONTAINS
   !! @brief   Compute intertile exchange of lateral drainage
   !!
   PURE ELEMENTAL SUBROUTINE calc_drainage_transport(        &
-    & dtime, fract_to_retention, retention_time,            &
-    & source_fract, target_fract, field_cap_source,  field_cap_target,         &
-    & latdrain_source, drainage_source, wtr_latflow_source, &
-    & wtr_latflow_target, latdrain_retention_target,        &
-    & wtr_soil_source, wtr_soil_target &
+    & l_lag, dtime, retention_time, field_cap_source,       &
+    & source_fract, target_fract, drainlat_source,          &
+    & drainage_source, wtr_latflow_source,                  &
+    & wtr_latflow_target, wtr_soil_source, wtr_soil_target, &
+    & drainlat_retention_source                             &
     )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
-    REAL(wp), INTENT(in)    :: dtime,              & !< timestep length
-      &                        fract_to_retention, &
-      &                        retention_time,     &
-      &                        source_fract,       & !< area fraction of water source tile
-      &                        target_fract,       & !< area fraction of water target tile
-      &                        field_cap_source,   & !< soil field capacity of source tile
-      &                        field_cap_target      !< soil field capacity of target tile
-    REAL(wp), INTENT(inout) :: latdrain_source,    & !< lateral drainage on source tile
-      &                        drainage_source,    & !< bottom drainage on source tile
-      &                        wtr_latflow_source, & !< lateral water flow from source tile
-      &                        wtr_latflow_target, & !< lateral water flow towards target tile
-      &                        latdrain_retention_target, &
-      &                        wtr_soil_source,    & !< soil water storage on source tile
-      &                        wtr_soil_target       !< soil water storage on target tile
+    LOGICAL,  INTENT(in)    :: l_lag                       !< T: apply lag to overland flow
+    REAL(wp), INTENT(in)    :: dtime,                    & !< timestep length                        [s]
+      &                        retention_time,           & !< retention time for lateral transport   [s]
+      &                        field_cap_source,         & !< soil field capacity of source tile     [m]
+      &                        source_fract,             & !< area fraction of water source tile     []
+      &                        target_fract                !< area fraction of water target tile     []
+    REAL(wp), INTENT(inout) :: drainlat_source,          & !< lateral drainage on source tile        [kg m-2 s-1]
+      &                        drainage_source,          & !< bottom drainage on source tile         [kg m-2 s-1]
+      &                        wtr_latflow_source,       & !< lateral water flow from source tile    [kg m-2 s-1]
+      &                        wtr_latflow_target,       & !< lateral water flow towards target tile [kg m-2 s-1]
+      &                        wtr_soil_source,          & !< soil water storage on source tile      [m]
+      &                        wtr_soil_target,          & !< soil water storage on target tile      [m]
+      &                        drainlat_retention_source   !< lateral drainage retention storage     [m]
+
     ! Local variables
-    REAL(wp)                :: src2trgt,           &
-      &                        trgt2src,           &
-      &                        latflow_act,        &
-      &                        wtr_to_retention,   &
-      &                        wtr_from_retention, &
-      &                        wtr_remoist
+    REAL(wp)                :: drainlat_flx_source,      & !< lateral drainage flux leaving source tile                        [m]
+      &                        drainlat_flx_target,      & !< lateral drainage flux arriving at target tile                    [m]
+      &                        wtr_remoist_source          !< water from retention storage re-entering the soil at source tile [m]
 
     !> Update target soil with lateral drainage from source tile
-    !!   *** DUMMY implementation which later on will be replaced with a physics based process ***
     !!   Lateral drainage is scaled with the tile fractions and moved into the target tile's
     !!   soil storage. It flows into the same layer as it originates from on the source tile.
     !!   Excess drainage is added to the total drainage of the source tile.
-    !! @todo If a flow lag is required it needs to be implemented here, probably with an
-    !!   temporary storage on the source tile, which then also needs to be part of the global
-    !!   water balance
+    !!   In case of long transport routes (upland to lowland) a retention storage is used.
+    !!   This reservoir can remoist the soil water storage in the source tile in later time steps.
+    !! @todo the retention store lag time needs to be physics based, not fixed to some arbitrary value
+    !! @todo where does the retention storage reside physically? On the hillslope? Doesn't this concept
+    !!       bypass the upper limit for soil moisture storage
 
+    ! Water within the retention storage is allowed to remoist the soil layer water storage
+    IF (drainlat_retention_source > 1.0e-10_wp .AND. wtr_soil_source < field_cap_source) THEN
+      wtr_remoist_source        = MIN(drainlat_retention_source, field_cap_source - wtr_soil_source)
+      wtr_soil_source           = wtr_soil_source + wtr_remoist_source
+      drainlat_retention_source = MAX(0._wp, drainlat_retention_source - wtr_remoist_source)
+    END IF
+
+    ! Compute lateral flow
     IF (target_fract > 1.0e-10_wp) THEN
-      src2trgt           = source_fract / target_fract
-      ! Substract diagnosed lateral drainage from total drainage
-      ! and from latflow of srouce tile
-      drainage_source    = drainage_source    - latdrain_source
-      wtr_latflow_source = wtr_latflow_source - latdrain_source
-      ! Scale and add all lateral drainage to target tile soil layer
-      latflow_act        = latdrain_source * src2trgt
-      wtr_latflow_target = wtr_latflow_target + latflow_act
-      latdrain_source    = 0._wp
+      ! Compute lateral drainage on source tile and update total drainage and total lateral water flow
+      drainlat_flx_source = drainlat_source    * dtime / rhoh2o
+      drainage_source     = drainage_source    - drainlat_source
+      ! Set source tile lateral drainage to zero as it left the tile
+      drainlat_source     = 0._wp
 
-      ! converting fluxes into volume
-      latflow_act        = latflow_act * dtime / rhoh2o
-      ! and add to the retention resersoir of the target tile
-      ! or to the tile directly if retention reservoir is not taken into considderation (micro scale)
-      wtr_to_retention   = fract_to_retention * latflow_act
-      wtr_soil_target    = wtr_soil_target + latflow_act - wtr_to_retention
-      latdrain_retention_target = latdrain_retention_target + wtr_to_retention
-      ! calculate fluxes from retention reservoir to soil column in target tile
-      ! and adding water to soil and subtracting it from reservoir
-      wtr_from_retention = latdrain_retention_target * dtime / retention_time
-      latdrain_retention_target = latdrain_retention_target - wtr_from_retention
-      wtr_soil_target           = wtr_soil_target           + wtr_from_retention
-      ! water that has not left the reservoir can remoist the soil in the source tile
-      ! if water is below the field capacity
-      IF (source_fract > 1.0e-10_wp .AND. &
-          latdrain_retention_target > 1.0e-10_wp .AND. &
-          wtr_soil_source < field_cap_source) THEN
-        trgt2src    = target_fract / source_fract
-        ! calculating the maximum amount of water that re-enters the source tile
-        wtr_remoist = MIN(latdrain_retention_target*trgt2src, &
-                          field_cap_source - wtr_soil_source)
-        ! add it to the soil in the tile
-        wtr_soil_source = wtr_soil_source + wtr_remoist
-        ! adjust the diagnosed lateral flux from source to sink
-        latflow_act        = wtr_remoist * rhoh2o / dtime
-        wtr_latflow_source = wtr_latflow_source + latflow_act
-        !latdrain_source    = latdrain_source + latflow_act
-        ! update the retention reservoir on the target tile
-        latdrain_retention_target = latdrain_retention_target - wtr_remoist * src2trgt
-        ! and adjust the lateral flux to the target tile
-        latflow_act        = wtr_remoist * src2trgt * rhoh2o / dtime            
-        wtr_latflow_target = wtr_latflow_target - latflow_act
+      ! Compute flows for and update drainage retention storage (only macro scale flow)
+      IF (l_lag) THEN
+        drainlat_retention_source = drainlat_retention_source + drainlat_flx_source
+        drainlat_flx_source       = drainlat_retention_source * MIN(1.0_wp, dtime / retention_time)
+        drainlat_retention_source = MAX(0._wp, drainlat_retention_source - drainlat_flx_source)
       END IF
+
+      ! Scale lateral drainage flow to account for tile fraction differences
+      drainlat_flx_target = drainlat_flx_source * (source_fract / target_fract)
+      ! Update target soil layer water content
+      wtr_soil_target    = wtr_soil_target + drainlat_flx_target
+      ! Update lateral flows
+      wtr_latflow_source  = wtr_latflow_source - drainlat_flx_source * rhoh2o / dtime
+      wtr_latflow_target  = wtr_latflow_target + drainlat_flx_target * rhoh2o / dtime
+
     END IF
 
   END SUBROUTINE calc_drainage_transport
@@ -179,7 +168,7 @@ CONTAINS
   !>
   !! @brief   Compute intertile lateral diffusion between tiles
   !!
-  PURE ELEMENTAL SUBROUTINE calc_intertile_diffusion(           &
+  PURE ELEMENTAL SUBROUTINE calc_intertile_diffusion_old(           &
     & dtime, source_fract, target_fract, field_cap_source,      &
     & field_cap_target, wtr_latflow_source, wtr_latflow_target, &
     & wtr_soil_source, wtr_soil_target &
@@ -231,28 +220,28 @@ CONTAINS
       wtr_latflow_source = wtr_latflow_source + diffus_source * rhoh2o / dtime
     END IF
 
-  END SUBROUTINE calc_intertile_diffusion
+  END SUBROUTINE calc_intertile_diffusion_old
 
 
   ! ===============================================================================================================================
   !>
   !! @brief   Compute intertile lateral diffusion between tiles with different surface elevation (elevation/depression)
   !!
-  SUBROUTINE calc_intertile_diffusion_new(nsoil, i_shm, dtime,   &
+  SUBROUTINE calc_intertile_diffusion(nsoil, soilhydmodel, dtime,   &
       &      h_offset, lvt_fract, dpr_fract, dsoil_lvt,dsoil_dpr,          &
       &      field_cap_lvt, field_cap_dpr, wsat_lvt, wsat_dpr,   &
       &      pwp_lvt, pwp_dpr, mpot_sat_lvt, mpot_sat_dpr,       &
       &      k_sat_lvt, k_sat_dpr, bclapp_lvt, bclapp_dpr, ps_index_lvt, ps_index_dpr,             &
+      &      ice_impede_lvt, ice_impede_dpr, k_lvt, k_dpr, mpot_lvt, mpot_dpr,                     &
       &      ice_soil_lvt, ice_soil_dpr, wtr_scool_lvt, wtr_scool_dpr, wtr_pond_lvt, wtr_pond_dpr, &
       &      wtr_latflow_lvt, wtr_latflow_dpr, wtr_soil_lvt, wtr_soil_dpr, diffus_lvt, diffus_dpr  &
       &      )
 
     USE mo_jsb_math_constants,     ONLY: pi
     USE mo_jsb_physical_constants, ONLY: rhoh2o
-    USE mo_hydro_process,          ONLY: get_conductivies_diffusivities
 
     INTEGER, INTENT(in)     :: nsoil,               & !< number of soil layers
-                               i_shm                  !< Choice of soil hydrological model
+                               soilhydmodel           !< Choice of soil hydrological model
 
     REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
       &                        h_offset,            &
@@ -275,6 +264,12 @@ CONTAINS
       &                        bclapp_dpr(:),       &
       &                        ps_index_lvt(:),     &
       &                        ps_index_dpr(:),     &
+      &                        ice_impede_lvt(:),   & !< Soil layer ice impedance factor on source tile []
+      &                        ice_impede_dpr(:),   & !< Soil layer ice impedance factor on target tile []
+      &                        k_lvt(:),            & !< Soil layer hyd. conductivity on source tile [m s-1]
+      &                        k_dpr(:),            & !< Soil layer hyd. conductivity on target tile [m s-1]
+      &                        mpot_lvt(:),         & !< Soil layer matric potential on source tile [?]
+      &                        mpot_dpr(:),         & !< Soil layer matric potential on target tile [?]
       &                        ice_soil_lvt(:),     &
       &                        ice_soil_dpr(:),     &
       &                        wtr_scool_lvt(:),    &
@@ -295,7 +290,7 @@ CONTAINS
 
 
     ! Local variables ------------------------------------------------------------------------------------
-    INTEGER                 :: varindex, nrgrd, i, i_lvt, i_dpr
+    INTEGER                 :: nrgrd, i, i_lvt, i_dpr
 
     REAL(wp)                :: fr_lvt_rel,       &
       &                        fr_dpr_rel,       &
@@ -315,12 +310,6 @@ CONTAINS
       &                        wtr_2_qlbrm
 
     REAL(wp)                ::                           &
-      &                        mpot_lvt(nsoil),          &
-      &                        mpot_dpr(nsoil),          &
-      &                        ice_impede_lvt(nsoil),    &
-      &                        ice_impede_dpr(nsoil),    &
-      &                        k_lvt(nsoil),             &
-      &                        k_dpr(nsoil),             &
       &                        wtr_soil_lvt_updt(nsoil), &
       &                        wtr_soil_dpr_updt(nsoil), &
       &                        field_cap_wi_lvt(nsoil),    & !< soil field capacity incl. ice of elevation tile
@@ -377,7 +366,7 @@ CONTAINS
     fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
     fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
 
-    !Assumption of circular depression with A = 1m² with in a circular elevation
+    !Assumption of circular depression with A = 1m2 with in a circular elevation
     !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
     length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
 
@@ -419,50 +408,6 @@ CONTAINS
       pwp_wi_dpr(:)       = 0._wp
     END WHERE
 
-
-    varindex      = 1
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
-                    & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
-                    & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
-                    & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
-                    & ice_impede_lvt(:))
-
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
-                    & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
-                    & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
-                    & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &
-                    & ice_impede_dpr(:))
-
-
-    varindex      = 2
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
-                    & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
-                    & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
-                    & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
-                    & k_lvt(:))
-
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
-                    & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
-                    & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
-                    & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &
-                    & k_dpr(:))
-
-
-    varindex      = 4
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
-                    & dsoil_lvt(:), wtr_soil_lvt(:), ice_soil_lvt(:), wtr_scool_lvt(:),   &
-                    & wsat_wi_lvt(:), field_cap_wi_lvt(:), pwp_wi_lvt(:), k_sat_lvt(:),   &
-                    & mpot_sat_lvt(:), bclapp_lvt(:), ps_index_lvt(:),                    &
-                    & mpot_lvt(:))
-
-    call get_conductivies_diffusivities(i_shm,varindex,                                   &
-                    & dsoil_dpr(:), wtr_soil_dpr(:), ice_soil_dpr(:), wtr_scool_dpr(:),   &
-                    & wsat_wi_dpr(:), field_cap_wi_dpr(:), pwp_wi_dpr(:), k_sat_dpr(:),   &
-                    & mpot_sat_dpr(:), bclapp_dpr(:), ps_index_dpr(:),                    &
-                    & mpot_dpr(:))
-
-
-    
     ! Start setting up the interpolated grid
     i_lvt = 1
     z_lvt = dsoil_lvt(i_lvt)
@@ -481,13 +426,14 @@ CONTAINS
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_lvt, z_dpr)
 
-    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m² within elevation area x
-    
+    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m2 within elevation area x
+
     DO i = 1, nrgrd
-      IF (i_lvt <= nsoil .AND. i_dpr <= nsoil .AND. dsoil_lvt(i_lvt) > 0._wp .AND. dsoil_dpr(MAX(i_dpr,1)) > 0._wp) THEN ! Above Bedrock in both tiles
+      IF (i_lvt <= nsoil .AND. i_dpr <= nsoil .AND. dsoil_lvt(MIN(i_lvt,nsoil)) > 0._wp &
+        & .AND. dsoil_dpr(MIN(MAX(i_dpr,1),nsoil)) > 0._wp) THEN ! Above Bedrock in both tiles
         h                   = z_rgrd_bot - z_rgrd_top
         a_inter             = len_inter * h
-    
+
         wtr_soil_lvt_rgrd   = wtr_soil_lvt(i_lvt)      * h / dsoil_lvt(i_lvt)
         ice_soil_lvt_rgrd   = ice_soil_lvt(i_lvt)      * h / dsoil_lvt(i_lvt)
         wsat_lvt_rgrd       = wsat_wi_lvt(i_lvt)       * h / dsoil_lvt(i_lvt)
@@ -541,7 +487,7 @@ CONTAINS
                           & +  (wtr_soil_dpr_rgrd+ice_soil_dpr_rgrd) * fr_dpr_rel)      &
                           & / (wsat_lvt_rgrd * fr_lvt_rel +wsat_dpr_rgrd * fr_dpr_rel ))
 
-          IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from elevation to depression 
+          IF (wtr_flx_lat > 0._wp) THEN ! Flux is going from elevation to depression
 
             wtr_2_qlbrm     = MAX(0._wp, &
                           &  (wtr_rel_qlbrm * wsat_dpr_rgrd - wtr_soil_dpr_rgrd - ice_soil_dpr_rgrd) * fr_dpr_rel)
@@ -552,7 +498,7 @@ CONTAINS
             wtr_lat         = MAX(0._wp, wtr_lat)
             wtr_flx_lat     = wtr_lat / dtime
 
-          ELSE ! Flux is going from depression to elevation 
+          ELSE ! Flux is going from depression to elevation
 
             wtr_2_qlbrm     = MAX(0._wp, &
                            & (wtr_rel_qlbrm  * wsat_lvt_rgrd - wtr_soil_lvt_rgrd - ice_soil_lvt_rgrd) * fr_lvt_rel)
@@ -572,7 +518,7 @@ CONTAINS
 
         wtr_soil_lvt_updt(i_lvt)  = wtr_soil_lvt_updt(i_lvt) + wtr_soil_lvt_rgrd
         diffus_lvt(i_lvt)         = diffus_lvt(i_lvt) - wtr_lat / fr_lvt_rel
-        
+
         IF (i_dpr > 0) THEN
           wtr_soil_dpr_updt(i_dpr)  = wtr_soil_dpr_updt(i_dpr) + wtr_soil_dpr_rgrd
           diffus_dpr(i_dpr)         = diffus_dpr(i_dpr) + wtr_lat / fr_dpr_rel
@@ -587,11 +533,11 @@ CONTAINS
               z_lvt = z_lvt + dsoil_lvt(i_lvt)
             ELSE
               z_lvt = 10000._wp
-              i_lvt = nsoil + 1 
+              i_lvt = nsoil + 1
             END IF
           ELSE
             z_lvt = 10000._wp
-            i_lvt = nsoil + 1 
+            i_lvt = nsoil + 1
           END IF
         END IF
 
@@ -605,11 +551,11 @@ CONTAINS
                 z_dpr = z_dpr + dsoil_dpr(i_dpr)
               ELSE
                 z_dpr = 10000._wp
-                i_dpr = nsoil + 1 
+                i_dpr = nsoil + 1
               END IF
             ELSE
               z_dpr = 10000._wp
-              i_dpr = nsoil + 1 
+              i_dpr = nsoil + 1
             END IF
           END IF
         END IF
@@ -618,7 +564,7 @@ CONTAINS
         z_rgrd_bot=MIN(z_lvt, z_dpr)
 
 
-      ELSE IF (i_lvt <= nsoil .AND. dsoil_lvt(i_lvt) > 0._wp ) THEN  ! Above Bedrock in lvt tile only (should only be the case when using different soil depths)
+      ELSE IF (i_lvt <= nsoil .AND. dsoil_lvt(MIN(i_lvt,nsoil)) > 0._wp ) THEN ! Above Bedrock in lvt tile only (should only be the case when using different soil depths)
         ! hence there are no fluxes and wtr is just mapped to wtr_updt
         h                        = z_rgrd_bot - z_rgrd_top
         wtr_soil_lvt_rgrd        = wtr_soil_lvt(i_lvt) * h / dsoil_lvt(i_lvt)
@@ -635,7 +581,7 @@ CONTAINS
         z_rgrd_top=z_rgrd_bot
         z_rgrd_bot=z_lvt
 
-      ELSE IF (i_dpr > 0 .AND. i_dpr <= nsoil .AND. dsoil_dpr(i_dpr) > 0._wp ) THEN   ! Above Bedrock in dpr tile only
+      ELSE IF (i_dpr > 0 .AND. i_dpr <= nsoil .AND. dsoil_dpr(MIN(i_dpr,nsoil)) > 0._wp ) THEN   ! Above Bedrock in dpr tile only
         ! hence there are no fluxes and wtr is just mapped to wtr_updt
         h                        = z_rgrd_bot - z_rgrd_top
         wtr_soil_dpr_rgrd        = wtr_soil_dpr(i_dpr) * h / dsoil_dpr(i_dpr)
@@ -645,7 +591,7 @@ CONTAINS
           i_dpr=i_dpr+1
           IF (i_dpr <= nsoil) THEN
             IF (dsoil_dpr(i_dpr) > 0._wp) THEN
-              z_dpr = z_dpr + dsoil_dpr(i_dpr) 
+              z_dpr = z_dpr + dsoil_dpr(i_dpr)
             END IF
           END IF
         END IF
@@ -665,11 +611,7 @@ CONTAINS
     diffus_lvt(:) = diffus_lvt(:) * rhoh2o / dtime
     diffus_dpr(:) = diffus_dpr(:) * rhoh2o / dtime
 
-  END SUBROUTINE calc_intertile_diffusion_new
-
-
-
-
+  END SUBROUTINE calc_intertile_diffusion
 
 #endif
 END MODULE mo_mix_process

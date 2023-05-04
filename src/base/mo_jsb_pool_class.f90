@@ -15,13 +15,17 @@ MODULE mo_jsb_pool_class
 
   PUBLIC :: t_jsb_pool, t_jsb_pool_p, t_jsb_pool_elem2d, t_jsb_pool_elem3d
   PUBLIC :: ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15  ! element_id (element enumerator) for pools
-  
+
   TYPE, ABSTRACT, EXTENDS(t_hermetic) :: t_jsb_pool
     CHARACTER(LEN=:),  ALLOCATABLE :: shortname                                ! No spaces!
     CHARACTER(LEN=:),  ALLOCATABLE :: name                                     ! No spaces!
-    CHARACTER(LEN=:),  ALLOCATABLE :: path                                     ! 
+    CHARACTER(LEN=:),  ALLOCATABLE :: path                                     !
     CHARACTER(LEN=:),  ALLOCATABLE :: element_unit                             ! unit of pool element variables (used for output stream)
+    INTEGER                        :: id                            = -1
+      !< a pool id that - if set /= -1 - should be unique (from mo_lnd_bgcm_store_class)
     INTEGER                        :: owner_model_id                = 0        ! ID of the jsbach model this pool is running at
+    LOGICAL                        :: contains_elements             = .FALSE.  ! contains element variables
+    LOGICAL                        :: contains_bgcm                 = .FALSE.  ! contains bgc_material (t_jsb_pool)
     LOGICAL                        :: contains_elem_1d_ptr_to_chunk = .FALSE.  ! t_jsb_pool_elem2d -> set TRUE in the pool init routines in the PROC_memory_class
     LOGICAL                        :: contains_elem_2d_ptr_to_chunk = .FALSE.  ! t_jsb_pool_elem3d -> set TRUE in the pool init routines in the PROC_memory_class
     CLASS(t_jsb_pool_p),   POINTER :: pool_list(:) => NULL()                   ! children
@@ -54,11 +58,12 @@ MODULE mo_jsb_pool_class
   END TYPE t_jsb_pool_p
 
   ABSTRACT INTERFACE
-    SUBROUTINE init_iface(this, name, shortname, l_elements, element_list, element_unit)
+    SUBROUTINE init_iface(this, name, shortname, elements_index_map, l_elements, element_list, element_unit)
       IMPORT t_jsb_pool
       CLASS(t_jsb_pool),          INTENT(inout) :: this
       CHARACTER(LEN=*),           INTENT(in)    :: name
       CHARACTER(LEN=*),           INTENT(in)    :: shortname
+      INTEGER,                    INTENT(in)    :: elements_index_map(:)
       LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements      ! Add elements yes or no?
       INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:) ! Select elements to add
       CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit
@@ -72,7 +77,7 @@ MODULE mo_jsb_pool_class
   END INTERFACE
 
   TYPE, ABSTRACT, EXTENDS(t_jsb_pool) :: t_jsb_pool_elem2d
-    
+
     ! 1D element variables pointing to element%prtm1(:) of t_jsb_var_real2d
     REAL(wp),               POINTER :: carbon(:)       => NULL()
     REAL(wp),               POINTER :: nitrogen(:)     => NULL()
@@ -89,7 +94,7 @@ MODULE mo_jsb_pool_class
     REAL(wp),               POINTER :: domain_n15(:,:) => NULL()
 
   END TYPE t_jsb_pool_elem2d
-  
+
   TYPE, ABSTRACT, EXTENDS(t_jsb_pool) :: t_jsb_pool_elem3d
 
     ! 2D element variables pointing to element%prtm1(:,:) of t_jsb_var_real3d
@@ -109,14 +114,14 @@ MODULE mo_jsb_pool_class
 
   END TYPE t_jsb_pool_elem3d
 
-  !> element_id (element enumerator) for pools 
+  !> element_id (element enumerator) for pools
   !!
   !! used in the PROC_memory_class for initialization of pools
   !!
   !! names of element variables used in JSBACH are:
-  !! (sequence accordingly to the below enumerator) 
+  !! (sequence accordingly to the below enumerator)
   !!    carbon, nitrogen, phosphorus, carbon13, carbon14, nitrogen15
-  !! 
+  !!
   ENUM, BIND(C)
     ENUMERATOR :: ELEM_C = 1, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   END ENUM
@@ -250,15 +255,19 @@ CONTAINS
 
   END SUBROUTINE t_jsb_pool_add_var
 
-  SUBROUTINE t_jsb_pool_add_pool(this, pool)
+  SUBROUTINE t_jsb_pool_add_pool(this, pool, id)
 
     CLASS(t_jsb_pool),         INTENT(inout) :: this
-    CLASS(t_jsb_pool), TARGET, INTENT(in)    :: pool
+    CLASS(t_jsb_pool), TARGET, INTENT(inout) :: pool
+    INTEGER, OPTIONAL,         INTENT(in)    :: id  !< unique id of this bgcm
 
     TYPE(t_jsb_pool_p), POINTER :: pool_list(:), leaf_list(:)
     INTEGER :: n_pools, n_leaves, i
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_pool_add_pool'
+
+    ! if bgc materials should be used within the bgcm store, they need to have a unique id for quick association
+    IF( PRESENT(id)) pool%id = id
 
     IF (ASSOCIATED(this%pool_list)) THEN
       n_pools = SIZE(this%pool_list)
@@ -350,7 +359,7 @@ CONTAINS
       pool => this
       RETURN
     END IF
-  
+
     ipos = INDEX(path, ':')
     IF (ipos > 1) THEN
       path_left = path(1:ipos-1)
@@ -452,27 +461,19 @@ CONTAINS
     !   if applicable: associate REAL element vectors with %ptrm1 & %ptr2d/3d
     IF (ALLOCATED(this%element_list)) THEN
       DO i=1,SIZE(this%element_list)
-        SELECT TYPE (element => this%element_list(i)%p)
-        CLASS IS (t_jsb_var_real2d)
+        ASSOCIATE (element => this%element_list(i)%p)
           CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           element%subset_type = itype
-        CLASS IS (t_jsb_var_real3d)
-          CALL element%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-          element%subset_type = itype
-        END SELECT
+        END ASSOCIATE
       END DO
     END IF
 
     IF (ALLOCATED(this%var_list)) THEN
       DO i=1,SIZE(this%var_list)
-        SELECT TYPE (var => this%var_list(i)%p)
-        CLASS IS (t_jsb_var_real2d)
+        ASSOCIATE (var => this%var_list(i)%p)
           CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
           var%subset_type = itype
-        CLASS IS (t_jsb_var_real3d)
-          CALL var%Associate_pointers(ic_start, ic_end, iblk_start, iblk_end)
-          var%subset_type = itype
-        END SELECT
+        END ASSOCIATE
       END DO
     END IF
 

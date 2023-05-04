@@ -269,7 +269,8 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Implementation of "update" for task "snowmelt_correction"
-  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting
+  !! Task "snowmelt_correction" applies a correction for t_unfilt due to snow and ice melting,
+  !! surface water freezing and thawing and soil moisture freezing and thawing.
   !!
   !! @param[in,out] tile    Tile for which routine is executed.
   !! @param[in]     config  Vector of process configurations.
@@ -344,8 +345,8 @@ CONTAINS
 
       dsl4jsb_Get_var2D_onChunk(SEB_,      t_unfilt)         ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snowmelt)         ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)       ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)         ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_freeze)      ! in
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    pond_melt)        ! in
 
       dsl4jsb_Get_var2D_onChunk(SSE_,      hcap_grnd_old)    ! in
       IF (dsl4jsb_Config(SSE_)%l_snow) THEN
@@ -358,7 +359,7 @@ CONTAINS
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
         !$claw acc data create(heat_cap)
 
-        ! Correction for snowmelt
+        ! Correction for snowmelt and pond melting/freezing
         !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_0 tile_name=tile%name
         t_unfilt(:) = t_unfilt(:) - snowmelt(:)    * dtime * alf / hcap_grnd_old(:)
         t_unfilt(:) = t_unfilt(:) - pond_melt(:)   * dtime * alf / hcap_grnd_old(:)

@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains the major pool code used by the memory class for the vegetation processes
 !!
 !! @author
@@ -40,11 +40,11 @@ MODULE mo_sb_memory_class_util
   ! all is public except the modename; code is used by the mo_veg_memory_class only
   PUBLIC
   PRIVATE :: modname
-  
+
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for helper elements with ALLOCATABLE variables for elements in sb memory
-  !! 
-  !! 
+  !!
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE t_sb_element_a
     REAL(wp), ALLOCATABLE :: carbon(:,:)      ! dimension of variable in memory is var(ics:ice,soil_layers,iblk)
@@ -76,7 +76,7 @@ MODULE mo_sb_memory_class_util
     !! operator overload
     ! *
     PROCEDURE               :: Multiply_element_a                   ! Multiply two elements
-    PROCEDURE               :: Multiply_element_a_and_scalar        ! Multiply element with 
+    PROCEDURE               :: Multiply_element_a_and_scalar        ! Multiply element with
     PROCEDURE, PASS(this2)  :: Multiply_scalar_and_element_a        ! Multiply scalar with element
     PROCEDURE               :: Multiply_element_a_and_field2d       ! Multiply element with REAL field2d ( var(ics:ice,soil_layers) )
     PROCEDURE, PASS(this2)  :: Multiply_field2d_and_element_a       ! Multiply REAL field2d ( var(ics:ice,soil_layers) ) with element
@@ -86,8 +86,8 @@ MODULE mo_sb_memory_class_util
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for helper pools with ALLOCATABLE variables for pools in sb memory
-  !! 
-  !! 
+  !!
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE t_sb_pool_a
     TYPE(t_sb_element_a)  :: dom                 !< dissolved organic matter
@@ -96,10 +96,10 @@ MODULE mo_sb_memory_class_util
     TYPE(t_sb_element_a)  :: polymeric_litter    !< structural litter (lignified litter)
     TYPE(t_sb_element_a)  :: woody_litter        !< physically protected wood litter
     TYPE(t_sb_element_a)  :: fungi               !< saprophytic fungal biomass
-    TYPE(t_sb_element_a)  :: mycorrhiza          !< mycorrhizal fungal biomass 
+    TYPE(t_sb_element_a)  :: mycorrhiza          !< mycorrhizal fungal biomass
     TYPE(t_sb_element_a)  :: microbial           !< microbial biomass (bacteria!)
     TYPE(t_sb_element_a)  :: residue             !< necromass of fungi, microbial and mycorrhiza
-    TYPE(t_sb_element_a)  :: residue_assoc       !< minerally associated microbial necromass 
+    TYPE(t_sb_element_a)  :: residue_assoc       !< minerally associated microbial necromass
   CONTAINS
     PRIVATE
     !! operator overload
@@ -133,9 +133,9 @@ MODULE mo_sb_memory_class_util
 
   !-----------------------------------------------------------------------------------------------------
   !> Type definition for elements in sb pool
-  !! 
-  !! elements in soil are 3D 
-  !! 
+  !!
+  !! elements in soil are 3D
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_struct) :: t_quincy_struct_sb_element
     TYPE(t_jsb_var_real3d)    :: carbon       !< total carbon concentration of pool [mol m-3]
@@ -153,7 +153,7 @@ MODULE mo_sb_memory_class_util
   !> Type definition for sb pool with nested TYPEs
   !!
   !! used for: pool ...
-  !!  
+  !!
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_n_struct) :: t_quincy_struct_sb_pool
     TYPE(t_quincy_struct_sb_element)  :: dom                 !< dissolved organic matter
@@ -162,10 +162,10 @@ MODULE mo_sb_memory_class_util
     TYPE(t_quincy_struct_sb_element)  :: polymeric_litter    !< structural litter (lignified litter)
     TYPE(t_quincy_struct_sb_element)  :: woody_litter        !< physically protected wood litter
     TYPE(t_quincy_struct_sb_element)  :: fungi               !< saprophytic fungal biomass
-    TYPE(t_quincy_struct_sb_element)  :: mycorrhiza          !< mycorrhizal fungal biomass 
+    TYPE(t_quincy_struct_sb_element)  :: mycorrhiza          !< mycorrhizal fungal biomass
     TYPE(t_quincy_struct_sb_element)  :: microbial           !< microbial biomass (bacteria!)
     TYPE(t_quincy_struct_sb_element)  :: residue             !< necromass of fungi, microbial and mycorrhiza
-    TYPE(t_quincy_struct_sb_element)  :: residue_assoc       !< minerally associated microbial necromass 
+    TYPE(t_quincy_struct_sb_element)  :: residue_assoc       !< minerally associated microbial necromass
   CONTAINS
     PROCEDURE :: Init           => Init_t_quincy_struct_sb_pool
     PROCEDURE :: Add_elements   => Add_pool_elements_to_memory
@@ -834,7 +834,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE Init_t_quincy_struct_sb_element(this,s)
 
-    CLASS(t_quincy_struct_sb_element),  INTENT(inout) :: this 
+    CLASS(t_quincy_struct_sb_element),  INTENT(inout) :: this
     REAL(wp),                           INTENT(in)    :: s
 
     this%carbon%ptr(:,:,:)     = s
@@ -843,7 +843,7 @@ CONTAINS
     this%carbon13%ptr(:,:,:)   = s
     this%carbon14%ptr(:,:,:)   = s
     this%nitrogen15%ptr(:,:,:) = s
-  END SUBROUTINE Init_t_quincy_struct_sb_element 
+  END SUBROUTINE Init_t_quincy_struct_sb_element
 
   !-----------------------------------------------------------------------------------------------------
   !> Initialisation t_quincy_struct_sb_pool with a scalar
@@ -851,7 +851,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL SUBROUTINE Init_t_quincy_struct_sb_pool(this,s)
 
-    CLASS(t_quincy_struct_sb_pool), INTENT(inout) :: this 
+    CLASS(t_quincy_struct_sb_pool), INTENT(inout) :: this
     REAL(wp),                       INTENT(in)    :: s
 
     CALL this%dom%init(s)
@@ -864,12 +864,12 @@ CONTAINS
     CALL this%microbial%init(s)
     CALL this%residue%init(s)
     CALL this%residue_assoc%init(s)
-  END SUBROUTINE Init_t_quincy_struct_sb_pool 
+  END SUBROUTINE Init_t_quincy_struct_sb_pool
 
   ! ======================================================================================================= !
   !>Add all variables of an element TYPE to the process memory
   !>pool%Add_vars()
-  !> 
+  !>
   SUBROUTINE Add_element_variables_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
 
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
@@ -879,7 +879,7 @@ CONTAINS
     USE mo_jsb_class,         ONLY: Get_model
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_quincy_struct_sb_element),  INTENT(inout) :: this 
+    CLASS(t_quincy_struct_sb_element),  INTENT(inout) :: this
     CHARACTER(len=*),                   INTENT(in)    :: prefix          !< process name
     CHARACTER(len=*),                   INTENT(in)    :: suffix          !< tile name
     INTEGER,                            INTENT(in)    :: lct_ids !(:)    !< in jsbach4: vector of land cover type IDs
@@ -899,7 +899,7 @@ CONTAINS
     hgrid         => Get_grid(model%grid_id)
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
 
-    ! add variables to pool 
+    ! add variables to pool
     var_name      = TRIM(this%name)//'_carbon'
     var_name_long = 'Carbon in soil biogeochemistry '//TRIM(this%name)
     CALL this%Add_var(TRIM(var_name), this%carbon, &
@@ -973,15 +973,15 @@ CONTAINS
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Add_pool_elements_to_memory(this, prefix, suffix, lct_ids, model_id, unit)
-  
+
     USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_class,         ONLY: Get_model
-    USE mo_jsb_model_class,   ONLY: t_jsb_model    
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_quincy_struct_sb_pool),  INTENT(inout) :: this 
+    CLASS(t_quincy_struct_sb_pool),  INTENT(inout) :: this
     CHARACTER(len=*),                INTENT(in)    :: prefix          !< process name
     CHARACTER(len=*),                INTENT(in)    :: suffix          !< tile name
     INTEGER,                         INTENT(in)    :: lct_ids !(:)    !< in jsbach4: vector of land cover type IDs
@@ -993,14 +993,14 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER  :: surface                      ! Vertical grid
     INTEGER                     :: table
     CHARACTER(len=40)           :: element_name
-    CHARACTER(len=80)           :: element_name_long    
+    CHARACTER(len=80)           :: element_name_long
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Add_pool_elements_to_memory'
     ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(model_id)
     table         = 1     ! in jsbach4 this line is: table = tables(1)
     hgrid         => Get_grid(model%grid_id)
     surface       => Get_vgrid('surface')
-    
+
     ! run add_var()
     element_name      = TRIM(this%name)//'_dom'
     element_name_long = 'Dissolved organic matter element of SB'//TRIM(this%name)
@@ -1101,7 +1101,7 @@ CONTAINS
       & t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix, &
       & loutput = .TRUE., &
-      & lrestart = .TRUE.)  
+      & lrestart = .TRUE.)
   END SUBROUTINE Add_pool_elements_to_memory
 
   !-----------------------------------------------------------------------------------------------------
@@ -1384,7 +1384,7 @@ CONTAINS
   SUBROUTINE Deallocate_var_sb_pools_elements_a
 
     !< 1.0  DEALLOCATE variables
-    !! 
+    !!
     DEALLOCATE(sb_pool%dom%carbon)
     DEALLOCATE(sb_pool%dom%nitrogen)
     DEALLOCATE(sb_pool%dom%phosphorus)
@@ -1658,12 +1658,13 @@ CONTAINS
   USE mo_util,                   ONLY: One_of
   USE mo_jsb_utils_iface,        ONLY: assign_if_present_allocatable
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real3d
-  USE mo_jsb_pool_class,         ONLY: t_jsb_pool_elem3d, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
+  USE mo_jsb_pool_class,         ONLY: t_jsb_pool, t_jsb_pool_elem3d, ELEM_C, ELEM_N, ELEM_P, ELEM_C13, ELEM_C14, ELEM_N15
   USE mo_jsb_subset,             ONLY: t_subset, ON_DOMAIN, ON_CHUNK
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: all_elements, Create_sb_components_pool
+  PUBLIC :: all_elements
+  PUBLIC :: Create_sb_components_pool
   PUBLIC :: t_sb_main_pool, t_sb_components_pool, t_sb_elements_pool
 
   !-----------------------------------------------------------------------------------------------------
@@ -1786,10 +1787,10 @@ CONTAINS
     TYPE(t_sb_elements_pool), POINTER :: polymeric_litter    !< elements of structural litter (lignified litter)
     TYPE(t_sb_elements_pool), POINTER :: woody_litter        !< elements of physically protected wood litter
     TYPE(t_sb_elements_pool), POINTER :: fungi               !< elements of saprophytic fungal biomass
-    TYPE(t_sb_elements_pool), POINTER :: mycorrhiza          !< elements of mycorrhizal fungal biomass 
+    TYPE(t_sb_elements_pool), POINTER :: mycorrhiza          !< elements of mycorrhizal fungal biomass
     TYPE(t_sb_elements_pool), POINTER :: microbial           !< elements of microbial biomass (bacteria!)
     TYPE(t_sb_elements_pool), POINTER :: residue             !< elements of necromass of fungi, microbial and mycorrhiza
-    TYPE(t_sb_elements_pool), POINTER :: residue_assoc       !< elements of minerally associated microbial necromass 
+    TYPE(t_sb_elements_pool), POINTER :: residue_assoc       !< elements of minerally associated microbial necromass
   CONTAINS
     !! infrastructure
     PROCEDURE :: Get_element_name_by_id     => t_sb_components_pool_get_element_name_by_id
@@ -1863,7 +1864,7 @@ CONTAINS
   TYPE, EXTENDS(t_sb_elements_pool) :: t_sb_main_pool
     !> 1.0 element variables
     !! inherited from t_sb_elements_pool
-    !! 
+    !!
     !> 2.0 components_pools
     !! pools
     TYPE(t_sb_components_pool),   POINTER :: sb_pool
@@ -1880,15 +1881,13 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> list with the element_id of all elements as defined above
-  !! is allocated in Init_PROC_memory
+  !! is allocated and initalized in Init_PROC_memory
   !-----------------------------------------------------------------------------------------------------
   INTEGER, ALLOCATABLE, SAVE :: all_elements(:)
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_sb_memory_class_util'
 
-
 CONTAINS
-
 
   !-----------------------------------------------------------------------------------------------------
   !> helper function for t_sb_elements_pool
@@ -1920,12 +1919,12 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>set all elements of the sb_elements_pool to the scalar value
-  !> 
+  !>
   SUBROUTINE t_sb_elements_pool_set_all_elements_to_scalar_value_on_chunk(this, scalar)
 
     CLASS(t_sb_elements_pool), INTENT(inout) :: this
     REAL(wp)                 , INTENT(in)    :: scalar
-    
+
     this%carbon(:,:)       = scalar
     this%nitrogen(:,:)     = scalar
     this%phosphorus(:,:)   = scalar
@@ -1937,12 +1936,12 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>set all elements of the sb_components_pool to the scalar value
-  !> 
+  !>
   SUBROUTINE t_sb_components_pool_set_all_elements_to_scalar_value_on_chunk(this, scalar)
 
     CLASS(t_sb_components_pool), INTENT(inout) :: this
     REAL(wp)                   , INTENT(in)    :: scalar
-    
+
     ! elements
     this%carbon(:,:)       = scalar
     this%nitrogen(:,:)     = scalar
@@ -1962,18 +1961,19 @@ CONTAINS
     CALL this%residue%Set_to_scalar_on_chunk(scalar)
     CALL this%residue_assoc%Set_to_scalar_on_chunk(scalar)
 
-  END SUBROUTINE t_sb_components_pool_set_all_elements_to_scalar_value_on_chunk  
+  END SUBROUTINE t_sb_components_pool_set_all_elements_to_scalar_value_on_chunk
 
   !-----------------------------------------------------------------------------------------------------
   !> initializing an object of the SB_ elements pool "t_sb_elements_pool"
   !! "pool_object%Init()"
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE t_sb_elements_pool_init(this, name, shortname, l_elements, element_list, element_unit)
-
+  SUBROUTINE t_sb_elements_pool_init(this, name, shortname, elements_index_map, &
+    &                                l_elements, element_list, element_unit)
     CLASS(t_sb_elements_pool),  INTENT(inout) :: this               ! object of TYPE t_sb_elements_pool
     CHARACTER(LEN=*),           INTENT(in)    :: name               ! pool name       (No spaces !)
     CHARACTER(LEN=*),           INTENT(in)    :: shortname          ! pool short name (No spaces !)
-    LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements         ! IF pool has elements 
+    INTEGER,                    INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
+    LOGICAL,          OPTIONAL, INTENT(in)    :: l_elements         ! IF pool has elements
     INTEGER,          OPTIONAL, INTENT(in)    :: element_list(:)    ! list of elements; use if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)    :: element_unit       ! unit of elements
 
@@ -1995,10 +1995,10 @@ CONTAINS
     ALLOCATE(element_list_loc(SIZE(all_elements)))
     element_list_loc(:) = all_elements(:)
     CALL assign_if_present_allocatable(element_list_loc, element_list)  ! selects element_list if available
-  
+
     this%element_unit                  = element_unit
     this%contains_elem_2d_ptr_to_chunk = .TRUE.
-  
+
     !> carbon
     IF (One_of(ELEM_C, element_list_loc) > 0) THEN
       CALL this%Add_element('carbon', 'C', ELEM_C, dim=3)
@@ -2041,7 +2041,7 @@ CONTAINS
     INTEGER,                    INTENT(in)            :: nc                 ! number of points in chunk
     INTEGER,                    INTENT(in)            :: nvgrid             ! number of layers of the vertical grid
     INTEGER,                    INTENT(in)            :: nb                 ! number of blocks
-    LOGICAL,                    INTENT(in)            :: l_elements         ! IF pool has elements 
+    LOGICAL,                    INTENT(in)            :: l_elements         ! IF pool has elements
     CHARACTER(LEN=*),           INTENT(in)            :: element_unit       ! unit of elements
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_sb_elements_pool_op_ov_hlp_init'
@@ -2057,7 +2057,7 @@ CONTAINS
 
     IF (subset_type == ON_CHUNK) THEN
       ! all_elements(:) defined in PROC_memory_class: contains the elements used by this PROC
-      ! NOT checking elements; simply assuming all 'all_elements(:)' are used 
+      ! NOT checking elements; simply assuming all 'all_elements(:)' are used
       ! [simply to improve runtime by avoiding: 'IF (One_of(ELEM_C, all_elements(:)) > 0) THEN']
       ALLOCATE(this%op_ov_hlp_2d_c(nc,nvgrid))
       IF (ASSOCIATED(this%carbon))     NULLIFY(this%carbon)
@@ -2241,12 +2241,13 @@ CONTAINS
   !> initializing the element-variables of an object of the SB_ components pool "t_sb_components_pool"
   !! "pool_object%Init()"
   !-----------------------------------------------------------------------------------------------------
-  SUBROUTINE t_sb_components_pool_init(this, name, shortname, l_elements, element_list, element_unit)
-
+  SUBROUTINE t_sb_components_pool_init(this, name, shortname, elements_index_map, &
+    &                                  l_elements, element_list, element_unit)
     CLASS(t_sb_components_pool),  INTENT(inout) :: this               ! object of TYPE t_sb_components_pool
     CHARACTER(LEN=*),             INTENT(in)    :: name               ! pool name       (No spaces !)
     CHARACTER(LEN=*),             INTENT(in)    :: shortname          ! pool short name (No spaces !)
-    LOGICAL,          OPTIONAL,   INTENT(in)    :: l_elements         ! IF pool has elements 
+    INTEGER,                      INTENT(in)    :: elements_index_map(:)  ! elements ID -> IND
+    LOGICAL,          OPTIONAL,   INTENT(in)    :: l_elements         ! IF pool has elements
     INTEGER,          OPTIONAL,   INTENT(in)    :: element_list(:)    ! list of elements; use if only selected elements should be added
     CHARACTER(LEN=*), OPTIONAL,   INTENT(in)    :: element_unit       ! unit of elements
 
@@ -2268,10 +2269,10 @@ CONTAINS
     ALLOCATE(element_list_loc(SIZE(all_elements)))
     element_list_loc(:) = all_elements(:)
     CALL assign_if_present_allocatable(element_list_loc, element_list)  ! selects element_list if available
-  
+
     this%element_unit                  = element_unit
     this%contains_elem_2d_ptr_to_chunk = .TRUE.
-  
+
     !> carbon
     IF (One_of(ELEM_C, element_list_loc) > 0) THEN
       CALL this%Add_element('carbon', 'C', ELEM_C, dim=3)
@@ -2314,7 +2315,7 @@ CONTAINS
     INTEGER,                      INTENT(in)            :: nc                 ! number of points in chunk
     INTEGER,                      INTENT(in)            :: nvgrid             ! number of layers of the vertical grid
     INTEGER,                      INTENT(in)            :: nb                 ! number of blocks
-    LOGICAL,                      INTENT(in)            :: l_elements         ! IF pool has elements 
+    LOGICAL,                      INTENT(in)            :: l_elements         ! IF pool has elements
     CHARACTER(LEN=*),             INTENT(in)            :: element_unit       ! unit of elements
     CHARACTER(LEN=*),             INTENT(in)            :: pool_suffix        ! add to the name of each elements_pool created here
 
@@ -2330,10 +2331,10 @@ CONTAINS
     this%element_unit   = element_unit    ! not needed but setting it anyway
 
     !> 1.0 tissue pool: init element var
-    !! 
+    !!
     IF (subset_type == ON_CHUNK) THEN
       ! all_elements(:) defined in PROC_memory_class: contains the elements used by this PROC
-      ! NOT checking elements; simply assuming all 'all_elements(:)' are used 
+      ! NOT checking elements; simply assuming all 'all_elements(:)' are used
       ! [simply to improve runtime by avoiding: 'IF (One_of(ELEM_C, all_elements(:)) > 0) THEN']
       ALLOCATE(this%op_ov_hlp_2d_c(nc,nvgrid))
       IF (ASSOCIATED(this%carbon))     NULLIFY(this%carbon)
@@ -2375,7 +2376,7 @@ CONTAINS
     ENDIF
 
     !> 2.0 element pools: allocate & init & add to components pool
-    !!     
+    !!
     ALLOCATE(this%dom)
     CALL this%dom%Init_op_ov_hlp(               'op_ov_hlp_dom'//pool_suffix, 'op_ov_hlp_dom', &
       &                                         owner_model_id, subset_type, nc, nvgrid, nb, .TRUE., element_unit)
@@ -2415,12 +2416,13 @@ CONTAINS
   !!   init and add all its objects of the "t_sb_elements_pool" with "pool_object%Init()"
   !!   "object => Create_sb_components_pool()"
   !-----------------------------------------------------------------------------------------------------
-  FUNCTION Create_sb_components_pool(name, shortname, unit, lct_ids, pool_prefix, pool_suffix) RESULT(sb_components_pool)
-
+  FUNCTION Create_sb_components_pool(name, shortname, unit, lct_ids, elements_index_map, pool_prefix, pool_suffix) &
+    &      RESULT(sb_components_pool)
     CHARACTER(LEN=*),           INTENT(in)  :: name
     CHARACTER(LEN=*),           INTENT(in)  :: shortname
     CHARACTER(LEN=*),           INTENT(in)  :: unit
     INTEGER,                    INTENT(in)  :: lct_ids(:)
+    INTEGER,                    INTENT(in)  :: elements_index_map(:)  ! elements ID -> IND
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_prefix
     CHARACTER(LEN=*), OPTIONAL, INTENT(in)  :: pool_suffix
     TYPE(t_sb_components_pool), POINTER     :: sb_components_pool
@@ -2437,71 +2439,88 @@ CONTAINS
 
     ! tissue pool init
     ALLOCATE(sb_components_pool)
-    CALL sb_components_pool%Init(name, shortname, l_elements=.TRUE., element_unit=unit)
-    
+    CALL sb_components_pool%Init(name, shortname, elements_index_map(:), l_elements=.TRUE., element_unit=unit)
+
     ! element pools allocate & init & add to tissue pool
     ! "shortname" is used for model output
     ! "element_list" is optional and can be used to select specific elements (not needed when all elements may be added)
     ! dom
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='dom_pool'//suffix_loc, shortname='dom', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='dom_pool'//suffix_loc, shortname='dom', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%dom => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! dom_assoc
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='dom_assoc_pool'//suffix_loc, shortname='dom_assoc', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='dom_assoc_pool'//suffix_loc, shortname='dom_assoc', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%dom_assoc => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! soluable_litter
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='soluable_litter_pool'//suffix_loc, shortname='sol_litter', l_elements=.TRUE., &
-                               element_unit=unit)
+    CALL sb_elements_pool%Init(name='soluable_litter_pool'//suffix_loc, shortname='sol_litter', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%soluable_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! polymeric_litter
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='polymeric_litter_pool'//suffix_loc, shortname='pol_litter', l_elements=.TRUE., &
-                               element_unit=unit)
+    CALL sb_elements_pool%Init(name='polymeric_litter_pool'//suffix_loc, shortname='pol_litter', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%polymeric_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! woody_litter
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='woody_litter_pool'//suffix_loc, shortname='woo_litter', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='woody_litter_pool'//suffix_loc, shortname='woo_litter', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%woody_litter => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! fungi
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='fungi_pool'//suffix_loc, shortname='fungi', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='fungi_pool'//suffix_loc, shortname='fungi', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%fungi => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! mycorrhiza
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='mycorrhiza_pool'//suffix_loc, shortname='mycorrhiza', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='mycorrhiza_pool'//suffix_loc, shortname='mycorrhiza', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%mycorrhiza => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! microbial
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='microbial_pool'//suffix_loc, shortname='microbial', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='microbial_pool'//suffix_loc, shortname='microbial', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%microbial => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! residue
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='residue_pool'//suffix_loc, shortname='residue', l_elements=.TRUE., element_unit=unit)
+    CALL sb_elements_pool%Init(name='residue_pool'//suffix_loc, shortname='residue', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%residue => sb_elements_pool
     NULLIFY(sb_elements_pool)
     ! residue_assoc
     ALLOCATE(sb_elements_pool)
-    CALL sb_elements_pool%Init(name='residue_assoc_pool'//suffix_loc, shortname='residue_assoc', l_elements=.TRUE., &
-                               element_unit=unit)
+    CALL sb_elements_pool%Init(name='residue_assoc_pool'//suffix_loc, shortname='residue_assoc', &
+      & elements_index_map=elements_index_map(:), &
+      & l_elements=.TRUE., element_unit=unit)
     CALL sb_components_pool%Add_pool(sb_elements_pool)
     sb_components_pool%residue_assoc => sb_elements_pool
     NULLIFY(sb_elements_pool)
@@ -2573,7 +2592,7 @@ CONTAINS
     CALL this%mycorrhiza%Associate_chunk_var_ptr(ics, ice, iblk)
     CALL this%microbial%Associate_chunk_var_ptr(ics, ice, iblk)
     CALL this%residue%Associate_chunk_var_ptr(ics, ice, iblk)
-    CALL this%residue_assoc%Associate_chunk_var_ptr(ics, ice, iblk)    
+    CALL this%residue_assoc%Associate_chunk_var_ptr(ics, ice, iblk)
 
   END SUBROUTINE t_sb_components_pool_associate_chunk_variable_pointers
 
@@ -2626,7 +2645,7 @@ CONTAINS
         END SELECT
       END DO
     END IF
-    
+
     ! associate pointers for all element pools of this components pool
     CALL this%dom%Associate_domain_var_ptr()
     CALL this%dom_assoc%Associate_domain_var_ptr()
@@ -2644,7 +2663,7 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   !> operator overload and assignment routines for element pools
   !!  TYPE t_sb_elements_pool
-  !! 
+  !!
   !--------------------------------------------------------------------------------------------------------------------------------
 
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -2683,7 +2702,7 @@ CONTAINS
     IF (ALLOCATED(this%op_ov_hlp_3d_c13))   DEALLOCATE(this%op_ov_hlp_3d_c13)
     IF (ALLOCATED(this%op_ov_hlp_3d_c14))   DEALLOCATE(this%op_ov_hlp_3d_c14)
     IF (ALLOCATED(this%op_ov_hlp_3d_n15))   DEALLOCATE(this%op_ov_hlp_3d_n15)
-    
+
     IF (ALLOCATED(this%shortname))          DEALLOCATE(this%shortname)
     IF (ALLOCATED(this%name))               DEALLOCATE(this%name)
     ! not allocated: this%path
@@ -2691,11 +2710,11 @@ CONTAINS
     IF (ASSOCIATED(this%pool_list))         DEALLOCATE(this%pool_list)
     IF (ASSOCIATED(this%leaf_list))         DEALLOCATE(this%leaf_list)
     IF (ALLOCATED(this%element_list))       DEALLOCATE(this%element_list)
-    IF (ALLOCATED(this%var_list))           DEALLOCATE(this%var_list)    
+    IF (ALLOCATED(this%var_list))           DEALLOCATE(this%var_list)
     ! this%temporary of t_hermetic is PRIVATE
 
   END SUBROUTINE finalize_sb_elements_pool
-  
+
   !--------------------------------------------------------------------------------------------------------------------------------
   ! = assign
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -2711,7 +2730,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_scalar_to_sb_elem_p'
 
     sub = lhs%Get_subset()
-    
+
     IF (sub%type == ON_CHUNK) THEN
       lhs%carbon     = rhs
       lhs%nitrogen   = rhs
@@ -2733,15 +2752,15 @@ CONTAINS
   ! t_sb_elements_pool = field2d(:,:) | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_field2d_to_sb_elem_p(lhs, rhs)
-  
+
     CLASS(t_sb_elements_pool), INTENT(inout) :: lhs
     REAL(wp),                  INTENT(in)    :: rhs(:,:)
 
     TYPE(t_subset)              :: sub
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field2d_to_sb_elem_p'
-    
+
     sub = lhs%Get_subset()
-    
+
     IF (sub%type == ON_CHUNK) THEN
       lhs%carbon     = rhs(:,:)
       lhs%nitrogen   = rhs(:,:)
@@ -2752,13 +2771,13 @@ CONTAINS
     ELSE
       CALL finish(routine, lhs%shortname//' Dimension mismatch, cannot assign 2d-field to jsb_var real3d on domain')
     END IF
-  
+
   END SUBROUTINE Assign_field2d_to_sb_elem_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! t_sb_elements_pool = field3d(:,:,:) | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_field3d_to_sb_elem_p(lhs, rhs)
-  
+
     CLASS(t_sb_elements_pool), INTENT(inout) :: lhs
     REAL(wp),                  INTENT(in)    :: rhs(:,:,:)
 
@@ -2783,7 +2802,7 @@ CONTAINS
       lhs%domain_c14 = rhs(:,:,:)
       lhs%domain_n15 = rhs(:,:,:)
     END IF
-  
+
   END SUBROUTINE Assign_field3d_to_sb_elem_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! t_sb_elements_pool = t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
@@ -2795,20 +2814,20 @@ CONTAINS
 
     TYPE(t_subset)              :: sub
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_sb_elem_p_to_sb_elem_p'
-    
+
     sub = lhs%Get_subset()
 
     IF (sub%type == ON_CHUNK) THEN
-      lhs%carbon     = rhs%carbon    
-      lhs%nitrogen   = rhs%nitrogen  
+      lhs%carbon     = rhs%carbon
+      lhs%nitrogen   = rhs%nitrogen
       lhs%phosphorus = rhs%phosphorus
-      lhs%carbon13   = rhs%carbon13  
-      lhs%carbon14   = rhs%carbon14  
+      lhs%carbon13   = rhs%carbon13
+      lhs%carbon14   = rhs%carbon14
       lhs%nitrogen15 = rhs%nitrogen15
     ELSE
-      lhs%domain_c   = rhs%domain_c  
-      lhs%domain_n   = rhs%domain_n  
-      lhs%domain_p   = rhs%domain_p  
+      lhs%domain_c   = rhs%domain_c
+      lhs%domain_n   = rhs%domain_n
+      lhs%domain_p   = rhs%domain_p
       lhs%domain_c13 = rhs%domain_c13
       lhs%domain_c14 = rhs%domain_c14
       lhs%domain_n15 = rhs%domain_n15
@@ -2823,12 +2842,12 @@ CONTAINS
   ! t_sb_elements_pool + scalar        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_sb_elem_p_and_scalar(struct1, scalar) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: scalar
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_scalar'
 
@@ -2865,12 +2884,12 @@ CONTAINS
   ! scalar + t_sb_elements_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_scalar_and_sb_elem_p(scalar, struct1) RESULT(structOut)
-  
+
     REAL(wp),                      INTENT(in)  :: scalar
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_sb_elem_p'
 
@@ -2887,16 +2906,16 @@ CONTAINS
 
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
-      structOut%carbon          = scalar + struct1%carbon    
-      structOut%nitrogen        = scalar + struct1%nitrogen  
+      structOut%carbon          = scalar + struct1%carbon
+      structOut%nitrogen        = scalar + struct1%nitrogen
       structOut%phosphorus      = scalar + struct1%phosphorus
-      structOut%carbon13        = scalar + struct1%carbon13  
-      structOut%carbon14        = scalar + struct1%carbon14  
+      structOut%carbon13        = scalar + struct1%carbon13
+      structOut%carbon14        = scalar + struct1%carbon14
       structOut%nitrogen15      = scalar + struct1%nitrogen15
     ELSE
-      structOut%domain_c        = scalar + struct1%domain_c  
-      structOut%domain_n        = scalar + struct1%domain_n  
-      structOut%domain_p        = scalar + struct1%domain_p  
+      structOut%domain_c        = scalar + struct1%domain_c
+      structOut%domain_n        = scalar + struct1%domain_n
+      structOut%domain_p        = scalar + struct1%domain_p
       structOut%domain_c13      = scalar + struct1%domain_c13
       structOut%domain_c14      = scalar + struct1%domain_c14
       structOut%domain_n15      = scalar + struct1%domain_n15
@@ -2907,12 +2926,12 @@ CONTAINS
   ! t_sb_elements_pool + field2d(:,:)        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_sb_elem_p_and_field2d(struct1, field2d) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: field2d(:,:)
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_field2d'
 
@@ -2944,12 +2963,12 @@ CONTAINS
   ! field2d(:,:) + t_sb_elements_pool        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_field2d_and_sb_elem_p(field2d, struct1) RESULT(structOut)
-  
+
     REAL(wp),                      INTENT(in)  :: field2d(:,:)
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field2d_and_sb_elem_p'
 
@@ -2966,11 +2985,11 @@ CONTAINS
 
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
-      structOut%carbon          = field2d(:,:) + struct1%carbon    
-      structOut%nitrogen        = field2d(:,:) + struct1%nitrogen  
+      structOut%carbon          = field2d(:,:) + struct1%carbon
+      structOut%nitrogen        = field2d(:,:) + struct1%nitrogen
       structOut%phosphorus      = field2d(:,:) + struct1%phosphorus
-      structOut%carbon13        = field2d(:,:) + struct1%carbon13  
-      structOut%carbon14        = field2d(:,:) + struct1%carbon14  
+      structOut%carbon13        = field2d(:,:) + struct1%carbon13
+      structOut%carbon14        = field2d(:,:) + struct1%carbon14
       structOut%nitrogen15      = field2d(:,:) + struct1%nitrogen15
     ELSE
       CALL finish(routine, 'Dimension mismatch, cannot calc with 2d-field and jsb_var real3d on domain')
@@ -2981,12 +3000,12 @@ CONTAINS
   ! t_sb_elements_pool + field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_sb_elem_p_and_field3d(struct1, field3d) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: field3d(:,:,:)
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_field3d'
 
@@ -3024,11 +3043,11 @@ CONTAINS
   ! t_sb_elements_pool + t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_sb_elem_p_and_sb_elem_p(struct1, struct2) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1, struct2
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_sb_elem_p'
 
@@ -3046,15 +3065,15 @@ CONTAINS
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      + struct2%carbon
-      structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen  
+      structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen
       structOut%phosphorus      = struct1%phosphorus  + struct2%phosphorus
-      structOut%carbon13        = struct1%carbon13    + struct2%carbon13  
-      structOut%carbon14        = struct1%carbon14    + struct2%carbon14  
+      structOut%carbon13        = struct1%carbon13    + struct2%carbon13
+      structOut%carbon14        = struct1%carbon14    + struct2%carbon14
       structOut%nitrogen15      = struct1%nitrogen15  + struct2%nitrogen15
     ELSE
-      structOut%domain_c        = struct1%domain_c    + struct2%domain_c  
-      structOut%domain_n        = struct1%domain_n    + struct2%domain_n  
-      structOut%domain_p        = struct1%domain_p    + struct2%domain_p  
+      structOut%domain_c        = struct1%domain_c    + struct2%domain_c
+      structOut%domain_n        = struct1%domain_n    + struct2%domain_n
+      structOut%domain_p        = struct1%domain_p    + struct2%domain_p
       structOut%domain_c13      = struct1%domain_c13  + struct2%domain_c13
       structOut%domain_c14      = struct1%domain_c14  + struct2%domain_c14
       structOut%domain_n15      = struct1%domain_n15  + struct2%domain_n15
@@ -3069,12 +3088,12 @@ CONTAINS
   ! t_sb_elements_pool - scalar        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Subtract_sb_elem_p_minus_scalar(struct1, scalar) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: scalar
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_elem_p_minus_scalar'
 
@@ -3111,12 +3130,12 @@ CONTAINS
   ! t_sb_elements_pool - field2d(:,:)        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Subtract_sb_elem_p_minus_field2d(struct1, field2d) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: field2d(:,:)
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_elem_p_minus_field2d'
 
@@ -3148,12 +3167,12 @@ CONTAINS
   ! t_sb_elements_pool - field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Subtract_sb_elem_p_minus_field3d(struct1, field3d) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: field3d(:,:,:)
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_elem_p_minus_field3d'
 
@@ -3191,11 +3210,11 @@ CONTAINS
   ! t_sb_elements_pool - t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Subtract_sb_elem_p_minus_sb_elem_p(struct1, struct2) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1, struct2
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_elem_p_minus_sb_elem_p'
 
@@ -3213,15 +3232,15 @@ CONTAINS
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      - struct2%carbon
-      structOut%nitrogen        = struct1%nitrogen    - struct2%nitrogen  
+      structOut%nitrogen        = struct1%nitrogen    - struct2%nitrogen
       structOut%phosphorus      = struct1%phosphorus  - struct2%phosphorus
-      structOut%carbon13        = struct1%carbon13    - struct2%carbon13  
-      structOut%carbon14        = struct1%carbon14    - struct2%carbon14  
+      structOut%carbon13        = struct1%carbon13    - struct2%carbon13
+      structOut%carbon14        = struct1%carbon14    - struct2%carbon14
       structOut%nitrogen15      = struct1%nitrogen15  - struct2%nitrogen15
     ELSE
-      structOut%domain_c        = struct1%domain_c    - struct2%domain_c  
-      structOut%domain_n        = struct1%domain_n    - struct2%domain_n  
-      structOut%domain_p        = struct1%domain_p    - struct2%domain_p  
+      structOut%domain_c        = struct1%domain_c    - struct2%domain_c
+      structOut%domain_n        = struct1%domain_n    - struct2%domain_n
+      structOut%domain_p        = struct1%domain_p    - struct2%domain_p
       structOut%domain_c13      = struct1%domain_c13  - struct2%domain_c13
       structOut%domain_c14      = struct1%domain_c14  - struct2%domain_c14
       structOut%domain_n15      = struct1%domain_n15  - struct2%domain_n15
@@ -3236,12 +3255,12 @@ CONTAINS
   ! t_sb_elements_pool * scalar        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_sb_elem_p_with_scalar(struct1, scalar) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: scalar
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_elem_p_with_scalar'
 
@@ -3278,12 +3297,12 @@ CONTAINS
   ! scalar * t_sb_elements_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_scalar_with_sb_elem_p(scalar, struct1) RESULT(structOut)
-  
+
     REAL(wp),                      INTENT(in)  :: scalar
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_scalar_with_sb_elem_p'
 
@@ -3300,16 +3319,16 @@ CONTAINS
 
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
-      structOut%carbon          = scalar * struct1%carbon    
-      structOut%nitrogen        = scalar * struct1%nitrogen  
+      structOut%carbon          = scalar * struct1%carbon
+      structOut%nitrogen        = scalar * struct1%nitrogen
       structOut%phosphorus      = scalar * struct1%phosphorus
-      structOut%carbon13        = scalar * struct1%carbon13  
-      structOut%carbon14        = scalar * struct1%carbon14  
+      structOut%carbon13        = scalar * struct1%carbon13
+      structOut%carbon14        = scalar * struct1%carbon14
       structOut%nitrogen15      = scalar * struct1%nitrogen15
     ELSE
-      structOut%domain_c        = scalar * struct1%domain_c  
-      structOut%domain_n        = scalar * struct1%domain_n  
-      structOut%domain_p        = scalar * struct1%domain_p  
+      structOut%domain_c        = scalar * struct1%domain_c
+      structOut%domain_n        = scalar * struct1%domain_n
+      structOut%domain_p        = scalar * struct1%domain_p
       structOut%domain_c13      = scalar * struct1%domain_c13
       structOut%domain_c14      = scalar * struct1%domain_c14
       structOut%domain_n15      = scalar * struct1%domain_n15
@@ -3320,12 +3339,12 @@ CONTAINS
   ! t_sb_elements_pool * field2d(:,:)        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_sb_elem_p_with_field2d(struct1, field2d) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: field2d(:,:)
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_elem_p_with_field2d'
 
@@ -3357,12 +3376,12 @@ CONTAINS
   ! field2d(:,:) * t_sb_elements_pool        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_field2d_with_sb_elem_p(field2d, struct1) RESULT(structOut)
-  
+
     REAL(wp),                      INTENT(in)  :: field2d(:,:)
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field2d_with_sb_elem_p'
 
@@ -3379,11 +3398,11 @@ CONTAINS
 
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
-      structOut%carbon          = field2d(:,:) * struct1%carbon    
-      structOut%nitrogen        = field2d(:,:) * struct1%nitrogen  
+      structOut%carbon          = field2d(:,:) * struct1%carbon
+      structOut%nitrogen        = field2d(:,:) * struct1%nitrogen
       structOut%phosphorus      = field2d(:,:) * struct1%phosphorus
-      structOut%carbon13        = field2d(:,:) * struct1%carbon13  
-      structOut%carbon14        = field2d(:,:) * struct1%carbon14  
+      structOut%carbon13        = field2d(:,:) * struct1%carbon13
+      structOut%carbon14        = field2d(:,:) * struct1%carbon14
       structOut%nitrogen15      = field2d(:,:) * struct1%nitrogen15
     ELSE
       CALL finish(routine, 'Dimension mismatch, cannot calc with 2d-field and jsb_var real3d on domain')
@@ -3394,12 +3413,12 @@ CONTAINS
   ! t_sb_elements_pool * field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_sb_elem_p_with_field3d(struct1, field3d) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: field3d(:,:,:)
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_elem_p_with_field3d'
 
@@ -3437,12 +3456,12 @@ CONTAINS
   ! field3d(:,:,:) * t_sb_elements_pool        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_field3d_with_sb_elem_p(field3d, struct1) RESULT(structOut)
-  
+
     REAL(wp),                      INTENT(in)  :: field3d(:,:,:)
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field3d_with_sb_elem_p'
 
@@ -3460,16 +3479,16 @@ CONTAINS
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       IF (SIZE(field3d,3) > 1) CALL finish(routine, 'Dimension mismatch, field3d with nblks > 1; calc with REAL pool%element(:)')
-      structOut%carbon          = field3d(:,:,1) * struct1%carbon    
-      structOut%nitrogen        = field3d(:,:,1) * struct1%nitrogen  
+      structOut%carbon          = field3d(:,:,1) * struct1%carbon
+      structOut%nitrogen        = field3d(:,:,1) * struct1%nitrogen
       structOut%phosphorus      = field3d(:,:,1) * struct1%phosphorus
-      structOut%carbon13        = field3d(:,:,1) * struct1%carbon13  
-      structOut%carbon14        = field3d(:,:,1) * struct1%carbon14  
+      structOut%carbon13        = field3d(:,:,1) * struct1%carbon13
+      structOut%carbon14        = field3d(:,:,1) * struct1%carbon14
       structOut%nitrogen15      = field3d(:,:,1) * struct1%nitrogen15
     ELSE
-      structOut%domain_c        = field3d(:,:,:) * struct1%domain_c  
-      structOut%domain_n        = field3d(:,:,:) * struct1%domain_n  
-      structOut%domain_p        = field3d(:,:,:) * struct1%domain_p  
+      structOut%domain_c        = field3d(:,:,:) * struct1%domain_c
+      structOut%domain_n        = field3d(:,:,:) * struct1%domain_n
+      structOut%domain_p        = field3d(:,:,:) * struct1%domain_p
       structOut%domain_c13      = field3d(:,:,:) * struct1%domain_c13
       structOut%domain_c14      = field3d(:,:,:) * struct1%domain_c14
       structOut%domain_n15      = field3d(:,:,:) * struct1%domain_n15
@@ -3480,11 +3499,11 @@ CONTAINS
   ! t_sb_elements_pool * t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_sb_elem_p_with_sb_elem_p(struct1, struct2) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1, struct2
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_elem_p_with_sb_elem_p'
 
@@ -3502,15 +3521,15 @@ CONTAINS
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      * struct2%carbon
-      structOut%nitrogen        = struct1%nitrogen    * struct2%nitrogen  
+      structOut%nitrogen        = struct1%nitrogen    * struct2%nitrogen
       structOut%phosphorus      = struct1%phosphorus  * struct2%phosphorus
-      structOut%carbon13        = struct1%carbon13    * struct2%carbon13  
-      structOut%carbon14        = struct1%carbon14    * struct2%carbon14  
+      structOut%carbon13        = struct1%carbon13    * struct2%carbon13
+      structOut%carbon14        = struct1%carbon14    * struct2%carbon14
       structOut%nitrogen15      = struct1%nitrogen15  * struct2%nitrogen15
     ELSE
-      structOut%domain_c        = struct1%domain_c    * struct2%domain_c  
-      structOut%domain_n        = struct1%domain_n    * struct2%domain_n  
-      structOut%domain_p        = struct1%domain_p    * struct2%domain_p  
+      structOut%domain_c        = struct1%domain_c    * struct2%domain_c
+      structOut%domain_n        = struct1%domain_n    * struct2%domain_n
+      structOut%domain_p        = struct1%domain_p    * struct2%domain_p
       structOut%domain_c13      = struct1%domain_c13  * struct2%domain_c13
       structOut%domain_c14      = struct1%domain_c14  * struct2%domain_c14
       structOut%domain_n15      = struct1%domain_n15  * struct2%domain_n15
@@ -3525,12 +3544,12 @@ CONTAINS
   ! t_sb_elements_pool / scalar        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Div_sb_elem_p_by_scalar(struct1, scalar) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: scalar
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_elem_p_by_scalar'
 
@@ -3567,12 +3586,12 @@ CONTAINS
   ! t_sb_elements_pool / field2d(:,:)        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Div_sb_elem_p_by_field2d(struct1, field2d) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: field2d(:,:)
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_elem_p_by_field2d'
 
@@ -3604,12 +3623,12 @@ CONTAINS
   ! t_sb_elements_pool / field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Div_sb_elem_p_by_field3d(struct1, field3d) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1
     REAL(wp),                      INTENT(in)  :: field3d(:,:,:)
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_elem_p_by_field3d'
 
@@ -3647,11 +3666,11 @@ CONTAINS
   ! t_sb_elements_pool / t_sb_elements_pool | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Div_sb_elem_p_by_sb_elem_p(struct1, struct2) RESULT(structOut)
-  
+
     CLASS(t_sb_elements_pool),     INTENT(in)  :: struct1, struct2
     TYPE(t_sb_elements_pool)                   :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_elem_p_and_sb_elem_p'
 
@@ -3669,15 +3688,15 @@ CONTAINS
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      / struct2%carbon
-      structOut%nitrogen        = struct1%nitrogen    / struct2%nitrogen  
+      structOut%nitrogen        = struct1%nitrogen    / struct2%nitrogen
       structOut%phosphorus      = struct1%phosphorus  / struct2%phosphorus
-      structOut%carbon13        = struct1%carbon13    / struct2%carbon13  
-      structOut%carbon14        = struct1%carbon14    / struct2%carbon14  
+      structOut%carbon13        = struct1%carbon13    / struct2%carbon13
+      structOut%carbon14        = struct1%carbon14    / struct2%carbon14
       structOut%nitrogen15      = struct1%nitrogen15  / struct2%nitrogen15
     ELSE
-      structOut%domain_c        = struct1%domain_c    / struct2%domain_c  
-      structOut%domain_n        = struct1%domain_n    / struct2%domain_n  
-      structOut%domain_p        = struct1%domain_p    / struct2%domain_p  
+      structOut%domain_c        = struct1%domain_c    / struct2%domain_c
+      structOut%domain_n        = struct1%domain_n    / struct2%domain_n
+      structOut%domain_p        = struct1%domain_p    / struct2%domain_p
       structOut%domain_c13      = struct1%domain_c13  / struct2%domain_c13
       structOut%domain_c14      = struct1%domain_c14  / struct2%domain_c14
       structOut%domain_n15      = struct1%domain_n15  / struct2%domain_n15
@@ -3688,7 +3707,7 @@ CONTAINS
   !--------------------------------------------------------------------------------------------------------------------------------
   !> operator overload and assignment routines for tissue pools
   !!  TYPE t_sb_components_pool
-  !! 
+  !!
   !--------------------------------------------------------------------------------------------------------------------------------
 
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -3727,7 +3746,7 @@ CONTAINS
     IF (ALLOCATED(this%op_ov_hlp_3d_c13))   DEALLOCATE(this%op_ov_hlp_3d_c13)
     IF (ALLOCATED(this%op_ov_hlp_3d_c14))   DEALLOCATE(this%op_ov_hlp_3d_c14)
     IF (ALLOCATED(this%op_ov_hlp_3d_n15))   DEALLOCATE(this%op_ov_hlp_3d_n15)
-    
+
     IF (ASSOCIATED(this%dom))               DEALLOCATE(this%dom)
     IF (ASSOCIATED(this%dom_assoc))         DEALLOCATE(this%dom_assoc)
     IF (ASSOCIATED(this%soluable_litter))   DEALLOCATE(this%soluable_litter)
@@ -3738,7 +3757,7 @@ CONTAINS
     IF (ASSOCIATED(this%microbial))         DEALLOCATE(this%microbial)
     IF (ASSOCIATED(this%residue))           DEALLOCATE(this%residue)
     IF (ASSOCIATED(this%residue_assoc))     DEALLOCATE(this%residue_assoc)
-    
+
     IF (ALLOCATED(this%shortname))          DEALLOCATE(this%shortname)
     IF (ALLOCATED(this%name))               DEALLOCATE(this%name)
     ! not allocated: this%path
@@ -3746,9 +3765,9 @@ CONTAINS
     IF (ASSOCIATED(this%pool_list))         DEALLOCATE(this%pool_list)
     IF (ASSOCIATED(this%leaf_list))         DEALLOCATE(this%leaf_list)
     IF (ALLOCATED(this%element_list))       DEALLOCATE(this%element_list)
-    IF (ALLOCATED(this%var_list))           DEALLOCATE(this%var_list)    
+    IF (ALLOCATED(this%var_list))           DEALLOCATE(this%var_list)
     ! this%temporary of t_hermetic is PRIVATE
-   
+
   END SUBROUTINE finalize_sb_components_pool
 
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -3764,7 +3783,7 @@ CONTAINS
 
     TYPE(t_subset)              :: sub
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_scalar_to_sb_comp_p'
-    
+
     sub = lhs%Get_subset()
 
     IF (sub%type == ON_CHUNK) THEN
@@ -3782,7 +3801,7 @@ CONTAINS
       lhs%domain_c14 = rhs
       lhs%domain_n15 = rhs
     END IF
-    
+
     lhs%dom              = rhs
     lhs%dom_assoc        = rhs
     lhs%soluable_litter  = rhs
@@ -3793,19 +3812,19 @@ CONTAINS
     lhs%microbial        = rhs
     lhs%residue          = rhs
     lhs%residue_assoc    = rhs
-    
+
   END SUBROUTINE Assign_scalar_to_sb_comp_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool = field2d(:,:) | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_field2d_to_sb_comp_p(lhs, rhs)
-  
+
     CLASS(t_sb_components_pool),  INTENT(inout) :: lhs
     REAL(wp),                     INTENT(in)    :: rhs(:,:)
 
     TYPE(t_subset)              :: sub
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_field2d_to_sb_comp_p'
-    
+
     sub = lhs%Get_subset()
 
     IF (sub%type == ON_CHUNK) THEN
@@ -3829,13 +3848,13 @@ CONTAINS
     lhs%microbial        = rhs(:,:)
     lhs%residue          = rhs(:,:)
     lhs%residue_assoc    = rhs(:,:)
-    
+
   END SUBROUTINE Assign_field2d_to_sb_comp_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool = field3d(:,:,:) | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   SUBROUTINE Assign_field3d_to_sb_comp_p(lhs, rhs)
-  
+
     CLASS(t_sb_components_pool),  INTENT(inout) :: lhs
     REAL(wp),                     INTENT(in)    :: rhs(:,:,:)
 
@@ -3883,35 +3902,35 @@ CONTAINS
 
     TYPE(t_subset)              :: sub
     CHARACTER(len=*), PARAMETER :: routine = modname//':Assign_sb_comp_p_to_sb_comp_p'
-    
+
     sub = lhs%Get_subset()
 
     IF (sub%type == ON_CHUNK) THEN
-      lhs%carbon     = rhs%carbon    
-      lhs%nitrogen   = rhs%nitrogen  
+      lhs%carbon     = rhs%carbon
+      lhs%nitrogen   = rhs%nitrogen
       lhs%phosphorus = rhs%phosphorus
-      lhs%carbon13   = rhs%carbon13  
-      lhs%carbon14   = rhs%carbon14  
+      lhs%carbon13   = rhs%carbon13
+      lhs%carbon14   = rhs%carbon14
       lhs%nitrogen15 = rhs%nitrogen15
     ELSE
-      lhs%domain_c   = rhs%domain_c  
-      lhs%domain_n   = rhs%domain_n  
-      lhs%domain_p   = rhs%domain_p  
+      lhs%domain_c   = rhs%domain_c
+      lhs%domain_n   = rhs%domain_n
+      lhs%domain_p   = rhs%domain_p
       lhs%domain_c13 = rhs%domain_c13
       lhs%domain_c14 = rhs%domain_c14
       lhs%domain_n15 = rhs%domain_n15
     END IF
-    
-    lhs%dom              = rhs%dom             
-    lhs%dom_assoc        = rhs%dom_assoc       
-    lhs%soluable_litter  = rhs%soluable_litter 
+
+    lhs%dom              = rhs%dom
+    lhs%dom_assoc        = rhs%dom_assoc
+    lhs%soluable_litter  = rhs%soluable_litter
     lhs%polymeric_litter = rhs%polymeric_litter
-    lhs%woody_litter     = rhs%woody_litter    
-    lhs%fungi            = rhs%fungi           
-    lhs%mycorrhiza       = rhs%mycorrhiza      
-    lhs%microbial        = rhs%microbial       
-    lhs%residue          = rhs%residue         
-    lhs%residue_assoc    = rhs%residue_assoc   
+    lhs%woody_litter     = rhs%woody_litter
+    lhs%fungi            = rhs%fungi
+    lhs%mycorrhiza       = rhs%mycorrhiza
+    lhs%microbial        = rhs%microbial
+    lhs%residue          = rhs%residue
+    lhs%residue_assoc    = rhs%residue_assoc
 
   END SUBROUTINE Assign_sb_comp_p_to_sb_comp_p
 
@@ -3927,7 +3946,7 @@ CONTAINS
     REAL(wp),                         INTENT(in)  :: scalar
     TYPE(t_sb_components_pool)                    :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_scalar'
 
@@ -3975,15 +3994,15 @@ CONTAINS
   ! scalar + sb_components_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_scalar_and_sb_comp_p(scalar, struct1) RESULT(structOut)
-  
+
     REAL(wp),                         INTENT(in)  :: scalar
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_scalar_and_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -3997,46 +4016,46 @@ CONTAINS
 
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
-      structOut%carbon          = scalar + struct1%carbon    
-      structOut%nitrogen        = scalar + struct1%nitrogen  
+      structOut%carbon          = scalar + struct1%carbon
+      structOut%nitrogen        = scalar + struct1%nitrogen
       structOut%phosphorus      = scalar + struct1%phosphorus
-      structOut%carbon13        = scalar + struct1%carbon13  
-      structOut%carbon14        = scalar + struct1%carbon14  
+      structOut%carbon13        = scalar + struct1%carbon13
+      structOut%carbon14        = scalar + struct1%carbon14
       structOut%nitrogen15      = scalar + struct1%nitrogen15
     ELSE
-      structOut%domain_c        = scalar + struct1%domain_c  
-      structOut%domain_n        = scalar + struct1%domain_n  
-      structOut%domain_p        = scalar + struct1%domain_p  
+      structOut%domain_c        = scalar + struct1%domain_c
+      structOut%domain_n        = scalar + struct1%domain_n
+      structOut%domain_p        = scalar + struct1%domain_p
       structOut%domain_c13      = scalar + struct1%domain_c13
       structOut%domain_c14      = scalar + struct1%domain_c14
       structOut%domain_n15      = scalar + struct1%domain_n15
     END IF
 
-    structOut%dom              = scalar + struct1%dom             
-    structOut%dom_assoc        = scalar + struct1%dom_assoc       
-    structOut%soluable_litter  = scalar + struct1%soluable_litter 
+    structOut%dom              = scalar + struct1%dom
+    structOut%dom_assoc        = scalar + struct1%dom_assoc
+    structOut%soluable_litter  = scalar + struct1%soluable_litter
     structOut%polymeric_litter = scalar + struct1%polymeric_litter
-    structOut%woody_litter     = scalar + struct1%woody_litter    
-    structOut%fungi            = scalar + struct1%fungi           
-    structOut%mycorrhiza       = scalar + struct1%mycorrhiza      
-    structOut%microbial        = scalar + struct1%microbial       
-    structOut%residue          = scalar + struct1%residue         
-    structOut%residue_assoc    = scalar + struct1%residue_assoc   
-  
+    structOut%woody_litter     = scalar + struct1%woody_litter
+    structOut%fungi            = scalar + struct1%fungi
+    structOut%mycorrhiza       = scalar + struct1%mycorrhiza
+    structOut%microbial        = scalar + struct1%microbial
+    structOut%residue          = scalar + struct1%residue
+    structOut%residue_assoc    = scalar + struct1%residue_assoc
+
   END FUNCTION Add_scalar_and_sb_comp_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool + field2d(:,:)        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_sb_comp_p_and_field2d(struct1, field2d) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: field2d(:,:)
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_field2d'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4047,7 +4066,7 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      + field2d(:,:)
@@ -4070,21 +4089,21 @@ CONTAINS
     structOut%microbial        = struct1%microbial        + field2d(:,:)
     structOut%residue          = struct1%residue          + field2d(:,:)
     structOut%residue_assoc    = struct1%residue_assoc    + field2d(:,:)
-  
+
   END FUNCTION Add_sb_comp_p_and_field2d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! field2d(:,:) + sb_components_pool        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_field2d_and_sb_comp_p(field2d, struct1) RESULT(structOut)
-  
+
     REAL(wp),                         INTENT(in)  :: field2d(:,:)
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_field2d_and_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4095,44 +4114,44 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
-      structOut%carbon          = field2d(:,:) + struct1%carbon    
-      structOut%nitrogen        = field2d(:,:) + struct1%nitrogen  
+      structOut%carbon          = field2d(:,:) + struct1%carbon
+      structOut%nitrogen        = field2d(:,:) + struct1%nitrogen
       structOut%phosphorus      = field2d(:,:) + struct1%phosphorus
-      structOut%carbon13        = field2d(:,:) + struct1%carbon13  
-      structOut%carbon14        = field2d(:,:) + struct1%carbon14  
+      structOut%carbon13        = field2d(:,:) + struct1%carbon13
+      structOut%carbon14        = field2d(:,:) + struct1%carbon14
       structOut%nitrogen15      = field2d(:,:) + struct1%nitrogen15
     ELSE
       CALL finish(routine, 'Dimension mismatch, cannot calc with 2d-field and jsb_var real3d on domain')
     END IF
 
-    structOut%dom              = field2d(:,:) + struct1%dom             
-    structOut%dom_assoc        = field2d(:,:) + struct1%dom_assoc       
-    structOut%soluable_litter  = field2d(:,:) + struct1%soluable_litter 
+    structOut%dom              = field2d(:,:) + struct1%dom
+    structOut%dom_assoc        = field2d(:,:) + struct1%dom_assoc
+    structOut%soluable_litter  = field2d(:,:) + struct1%soluable_litter
     structOut%polymeric_litter = field2d(:,:) + struct1%polymeric_litter
-    structOut%woody_litter     = field2d(:,:) + struct1%woody_litter    
-    structOut%fungi            = field2d(:,:) + struct1%fungi           
-    structOut%mycorrhiza       = field2d(:,:) + struct1%mycorrhiza      
-    structOut%microbial        = field2d(:,:) + struct1%microbial       
-    structOut%residue          = field2d(:,:) + struct1%residue         
-    structOut%residue_assoc    = field2d(:,:) + struct1%residue_assoc   
-  
+    structOut%woody_litter     = field2d(:,:) + struct1%woody_litter
+    structOut%fungi            = field2d(:,:) + struct1%fungi
+    structOut%mycorrhiza       = field2d(:,:) + struct1%mycorrhiza
+    structOut%microbial        = field2d(:,:) + struct1%microbial
+    structOut%residue          = field2d(:,:) + struct1%residue
+    structOut%residue_assoc    = field2d(:,:) + struct1%residue_assoc
+
   END FUNCTION Add_field2d_and_sb_comp_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool + field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_sb_comp_p_and_field3d(struct1, field3d) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_field3d'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4143,7 +4162,7 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       IF (SIZE(field3d,3) > 1) CALL finish(routine, 'Dimension mismatch, field3d with nblks > 1; calc with REAL pool%element(:)')
@@ -4172,20 +4191,20 @@ CONTAINS
     structOut%microbial        = struct1%microbial        + field3d(:,:,:)
     structOut%residue          = struct1%residue          + field3d(:,:,:)
     structOut%residue_assoc    = struct1%residue_assoc    + field3d(:,:,:)
-  
+
   END FUNCTION Add_sb_comp_p_and_field3d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool + sb_components_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Add_sb_comp_p_and_sb_comp_p(struct1, struct2) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1, struct2
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Add_sb_comp_p_and_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4196,37 +4215,37 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      + struct2%carbon
-      structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen  
+      structOut%nitrogen        = struct1%nitrogen    + struct2%nitrogen
       structOut%phosphorus      = struct1%phosphorus  + struct2%phosphorus
-      structOut%carbon13        = struct1%carbon13    + struct2%carbon13  
-      structOut%carbon14        = struct1%carbon14    + struct2%carbon14  
+      structOut%carbon13        = struct1%carbon13    + struct2%carbon13
+      structOut%carbon14        = struct1%carbon14    + struct2%carbon14
       structOut%nitrogen15      = struct1%nitrogen15  + struct2%nitrogen15
     ELSE
-      structOut%domain_c        = struct1%domain_c    + struct2%domain_c  
-      structOut%domain_n        = struct1%domain_n    + struct2%domain_n  
-      structOut%domain_p        = struct1%domain_p    + struct2%domain_p  
+      structOut%domain_c        = struct1%domain_c    + struct2%domain_c
+      structOut%domain_n        = struct1%domain_n    + struct2%domain_n
+      structOut%domain_p        = struct1%domain_p    + struct2%domain_p
       structOut%domain_c13      = struct1%domain_c13  + struct2%domain_c13
       structOut%domain_c14      = struct1%domain_c14  + struct2%domain_c14
       structOut%domain_n15      = struct1%domain_n15  + struct2%domain_n15
     END IF
 
-    structOut%dom              = struct1%dom              + struct2%dom             
-    structOut%dom_assoc        = struct1%dom_assoc        + struct2%dom_assoc       
-    structOut%soluable_litter  = struct1%soluable_litter  + struct2%soluable_litter 
+    structOut%dom              = struct1%dom              + struct2%dom
+    structOut%dom_assoc        = struct1%dom_assoc        + struct2%dom_assoc
+    structOut%soluable_litter  = struct1%soluable_litter  + struct2%soluable_litter
     structOut%polymeric_litter = struct1%polymeric_litter + struct2%polymeric_litter
-    structOut%woody_litter     = struct1%woody_litter     + struct2%woody_litter    
-    structOut%fungi            = struct1%fungi            + struct2%fungi           
-    structOut%mycorrhiza       = struct1%mycorrhiza       + struct2%mycorrhiza      
-    structOut%microbial        = struct1%microbial        + struct2%microbial       
-    structOut%residue          = struct1%residue          + struct2%residue         
-    structOut%residue_assoc    = struct1%residue_assoc    + struct2%residue_assoc   
-  
+    structOut%woody_litter     = struct1%woody_litter     + struct2%woody_litter
+    structOut%fungi            = struct1%fungi            + struct2%fungi
+    structOut%mycorrhiza       = struct1%mycorrhiza       + struct2%mycorrhiza
+    structOut%microbial        = struct1%microbial        + struct2%microbial
+    structOut%residue          = struct1%residue          + struct2%residue
+    structOut%residue_assoc    = struct1%residue_assoc    + struct2%residue_assoc
+
   END FUNCTION Add_sb_comp_p_and_sb_comp_p
-  
+
   !--------------------------------------------------------------------------------------------------------------------------------
   ! - minus
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -4234,12 +4253,12 @@ CONTAINS
   ! sb_components_pool - scalar        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Subtract_sb_comp_p_minus_scalar(struct1, scalar) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: scalar
     TYPE(t_sb_components_pool)                    :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_comp_p_minus_scalar'
 
@@ -4281,21 +4300,21 @@ CONTAINS
     structOut%microbial        = struct1%microbial        - scalar
     structOut%residue          = struct1%residue          - scalar
     structOut%residue_assoc    = struct1%residue_assoc    - scalar
-  
+
   END FUNCTION Subtract_sb_comp_p_minus_scalar
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool - field2d(:,:)        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Subtract_sb_comp_p_minus_field2d(struct1, field2d) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: field2d(:,:)
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_comp_p_minus_field2d'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4306,7 +4325,7 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      - field2d(:,:)
@@ -4329,21 +4348,21 @@ CONTAINS
     structOut%microbial        = struct1%microbial        - field2d(:,:)
     structOut%residue          = struct1%residue          - field2d(:,:)
     structOut%residue_assoc    = struct1%residue_assoc    - field2d(:,:)
-  
+
   END FUNCTION Subtract_sb_comp_p_minus_field2d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool - field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Subtract_sb_comp_p_minus_field3d(struct1, field3d) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_comp_p_minus_field3d'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4354,7 +4373,7 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       IF (SIZE(field3d,3) > 1) CALL finish(routine, 'Dimension mismatch, field3d with nblks > 1; calc with REAL pool%element(:)')
@@ -4383,20 +4402,20 @@ CONTAINS
     structOut%microbial        = struct1%microbial        - field3d(:,:,:)
     structOut%residue          = struct1%residue          - field3d(:,:,:)
     structOut%residue_assoc    = struct1%residue_assoc    - field3d(:,:,:)
-  
+
   END FUNCTION Subtract_sb_comp_p_minus_field3d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool - sb_components_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Subtract_sb_comp_p_minus_sb_comp_p(struct1, struct2) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1, struct2
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Subtract_sb_comp_p_minus_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4407,37 +4426,37 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      - struct2%carbon
-      structOut%nitrogen        = struct1%nitrogen    - struct2%nitrogen  
+      structOut%nitrogen        = struct1%nitrogen    - struct2%nitrogen
       structOut%phosphorus      = struct1%phosphorus  - struct2%phosphorus
-      structOut%carbon13        = struct1%carbon13    - struct2%carbon13  
-      structOut%carbon14        = struct1%carbon14    - struct2%carbon14  
+      structOut%carbon13        = struct1%carbon13    - struct2%carbon13
+      structOut%carbon14        = struct1%carbon14    - struct2%carbon14
       structOut%nitrogen15      = struct1%nitrogen15  - struct2%nitrogen15
     ELSE
-      structOut%domain_c        = struct1%domain_c    - struct2%domain_c  
-      structOut%domain_n        = struct1%domain_n    - struct2%domain_n  
-      structOut%domain_p        = struct1%domain_p    - struct2%domain_p  
+      structOut%domain_c        = struct1%domain_c    - struct2%domain_c
+      structOut%domain_n        = struct1%domain_n    - struct2%domain_n
+      structOut%domain_p        = struct1%domain_p    - struct2%domain_p
       structOut%domain_c13      = struct1%domain_c13  - struct2%domain_c13
       structOut%domain_c14      = struct1%domain_c14  - struct2%domain_c14
       structOut%domain_n15      = struct1%domain_n15  - struct2%domain_n15
     END IF
 
-    structOut%dom              = struct1%dom              - struct2%dom             
-    structOut%dom_assoc        = struct1%dom_assoc        - struct2%dom_assoc       
-    structOut%soluable_litter  = struct1%soluable_litter  - struct2%soluable_litter 
+    structOut%dom              = struct1%dom              - struct2%dom
+    structOut%dom_assoc        = struct1%dom_assoc        - struct2%dom_assoc
+    structOut%soluable_litter  = struct1%soluable_litter  - struct2%soluable_litter
     structOut%polymeric_litter = struct1%polymeric_litter - struct2%polymeric_litter
-    structOut%woody_litter     = struct1%woody_litter     - struct2%woody_litter    
-    structOut%fungi            = struct1%fungi            - struct2%fungi           
-    structOut%mycorrhiza       = struct1%mycorrhiza       - struct2%mycorrhiza      
-    structOut%microbial        = struct1%microbial        - struct2%microbial       
-    structOut%residue          = struct1%residue          - struct2%residue         
-    structOut%residue_assoc    = struct1%residue_assoc    - struct2%residue_assoc   
-  
+    structOut%woody_litter     = struct1%woody_litter     - struct2%woody_litter
+    structOut%fungi            = struct1%fungi            - struct2%fungi
+    structOut%mycorrhiza       = struct1%mycorrhiza       - struct2%mycorrhiza
+    structOut%microbial        = struct1%microbial        - struct2%microbial
+    structOut%residue          = struct1%residue          - struct2%residue
+    structOut%residue_assoc    = struct1%residue_assoc    - struct2%residue_assoc
+
   END FUNCTION Subtract_sb_comp_p_minus_sb_comp_p
-  
+
   !--------------------------------------------------------------------------------------------------------------------------------
   ! * multiply
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -4445,12 +4464,12 @@ CONTAINS
   ! sb_components_pool * scalar        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_sb_comp_p_with_scalar(struct1, scalar) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: scalar
     TYPE(t_sb_components_pool)                    :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_comp_p_with_scalar'
 
@@ -4492,21 +4511,21 @@ CONTAINS
     structOut%microbial        = struct1%microbial        * scalar
     structOut%residue          = struct1%residue          * scalar
     structOut%residue_assoc    = struct1%residue_assoc    * scalar
-  
+
   END FUNCTION Multiply_sb_comp_p_with_scalar
   !--------------------------------------------------------------------------------------------------------------------------------
   ! scalar * sb_components_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_scalar_with_sb_comp_p(scalar, struct1) RESULT(structOut)
-  
+
     REAL(wp),                         INTENT(in)  :: scalar
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_scalar_with_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4520,46 +4539,46 @@ CONTAINS
 
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
-      structOut%carbon          = scalar * struct1%carbon    
-      structOut%nitrogen        = scalar * struct1%nitrogen  
+      structOut%carbon          = scalar * struct1%carbon
+      structOut%nitrogen        = scalar * struct1%nitrogen
       structOut%phosphorus      = scalar * struct1%phosphorus
-      structOut%carbon13        = scalar * struct1%carbon13  
-      structOut%carbon14        = scalar * struct1%carbon14  
+      structOut%carbon13        = scalar * struct1%carbon13
+      structOut%carbon14        = scalar * struct1%carbon14
       structOut%nitrogen15      = scalar * struct1%nitrogen15
     ELSE
-      structOut%domain_c        = scalar * struct1%domain_c  
-      structOut%domain_n        = scalar * struct1%domain_n  
-      structOut%domain_p        = scalar * struct1%domain_p  
+      structOut%domain_c        = scalar * struct1%domain_c
+      structOut%domain_n        = scalar * struct1%domain_n
+      structOut%domain_p        = scalar * struct1%domain_p
       structOut%domain_c13      = scalar * struct1%domain_c13
       structOut%domain_c14      = scalar * struct1%domain_c14
       structOut%domain_n15      = scalar * struct1%domain_n15
     END IF
 
-    structOut%dom              = scalar * struct1%dom             
-    structOut%dom_assoc        = scalar * struct1%dom_assoc       
-    structOut%soluable_litter  = scalar * struct1%soluable_litter 
+    structOut%dom              = scalar * struct1%dom
+    structOut%dom_assoc        = scalar * struct1%dom_assoc
+    structOut%soluable_litter  = scalar * struct1%soluable_litter
     structOut%polymeric_litter = scalar * struct1%polymeric_litter
-    structOut%woody_litter     = scalar * struct1%woody_litter    
-    structOut%fungi            = scalar * struct1%fungi           
-    structOut%mycorrhiza       = scalar * struct1%mycorrhiza      
-    structOut%microbial        = scalar * struct1%microbial       
-    structOut%residue          = scalar * struct1%residue         
-    structOut%residue_assoc    = scalar * struct1%residue_assoc   
-  
+    structOut%woody_litter     = scalar * struct1%woody_litter
+    structOut%fungi            = scalar * struct1%fungi
+    structOut%mycorrhiza       = scalar * struct1%mycorrhiza
+    structOut%microbial        = scalar * struct1%microbial
+    structOut%residue          = scalar * struct1%residue
+    structOut%residue_assoc    = scalar * struct1%residue_assoc
+
   END FUNCTION Multiply_scalar_with_sb_comp_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool * field2d(:,:)        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_sb_comp_p_with_field2d(struct1, field2d) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: field2d(:,:)
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_comp_p_with_field2d'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4570,7 +4589,7 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      * field2d(:,:)
@@ -4593,21 +4612,21 @@ CONTAINS
     structOut%microbial        = struct1%microbial        * field2d(:,:)
     structOut%residue          = struct1%residue          * field2d(:,:)
     structOut%residue_assoc    = struct1%residue_assoc    * field2d(:,:)
-  
+
   END FUNCTION Multiply_sb_comp_p_with_field2d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! field2d(:,:) * sb_components_pool        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_field2d_with_sb_comp_p(field2d, struct1) RESULT(structOut)
-  
+
     REAL(wp),                         INTENT(in)  :: field2d(:,:)
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field2d_with_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4618,44 +4637,44 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
-      structOut%carbon          = field2d(:,:) * struct1%carbon    
-      structOut%nitrogen        = field2d(:,:) * struct1%nitrogen  
+      structOut%carbon          = field2d(:,:) * struct1%carbon
+      structOut%nitrogen        = field2d(:,:) * struct1%nitrogen
       structOut%phosphorus      = field2d(:,:) * struct1%phosphorus
-      structOut%carbon13        = field2d(:,:) * struct1%carbon13  
-      structOut%carbon14        = field2d(:,:) * struct1%carbon14  
+      structOut%carbon13        = field2d(:,:) * struct1%carbon13
+      structOut%carbon14        = field2d(:,:) * struct1%carbon14
       structOut%nitrogen15      = field2d(:,:) * struct1%nitrogen15
     ELSE
       CALL finish(routine, 'Dimension mismatch, cannot calc with 2d-field and jsb_var real3d on domain')
     END IF
 
-    structOut%dom              = field2d(:,:) * struct1%dom             
-    structOut%dom_assoc        = field2d(:,:) * struct1%dom_assoc       
-    structOut%soluable_litter  = field2d(:,:) * struct1%soluable_litter 
+    structOut%dom              = field2d(:,:) * struct1%dom
+    structOut%dom_assoc        = field2d(:,:) * struct1%dom_assoc
+    structOut%soluable_litter  = field2d(:,:) * struct1%soluable_litter
     structOut%polymeric_litter = field2d(:,:) * struct1%polymeric_litter
-    structOut%woody_litter     = field2d(:,:) * struct1%woody_litter    
-    structOut%fungi            = field2d(:,:) * struct1%fungi           
-    structOut%mycorrhiza       = field2d(:,:) * struct1%mycorrhiza      
-    structOut%microbial        = field2d(:,:) * struct1%microbial       
-    structOut%residue          = field2d(:,:) * struct1%residue         
-    structOut%residue_assoc    = field2d(:,:) * struct1%residue_assoc   
-  
+    structOut%woody_litter     = field2d(:,:) * struct1%woody_litter
+    structOut%fungi            = field2d(:,:) * struct1%fungi
+    structOut%mycorrhiza       = field2d(:,:) * struct1%mycorrhiza
+    structOut%microbial        = field2d(:,:) * struct1%microbial
+    structOut%residue          = field2d(:,:) * struct1%residue
+    structOut%residue_assoc    = field2d(:,:) * struct1%residue_assoc
+
   END FUNCTION Multiply_field2d_with_sb_comp_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool * field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_sb_comp_p_with_field3d(struct1, field3d) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_comp_p_with_field3d'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4666,7 +4685,7 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       IF (SIZE(field3d,3) > 1) CALL finish(routine, 'Dimension mismatch, field3d with nblks > 1; calc with REAL pool%element(:)')
@@ -4695,21 +4714,21 @@ CONTAINS
     structOut%microbial        = struct1%microbial        * field3d(:,:,:)
     structOut%residue          = struct1%residue          * field3d(:,:,:)
     structOut%residue_assoc    = struct1%residue_assoc    * field3d(:,:,:)
-  
+
   END FUNCTION Multiply_sb_comp_p_with_field3d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! field3d(:,:,:) * sb_components_pool        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_field3d_with_sb_comp_p(field3d, struct1) RESULT(structOut)
-  
+
     REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     TYPE(t_sb_components_pool)                    :: structOut
-  
+
     TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_field3d_with_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4720,49 +4739,49 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       IF (SIZE(field3d,3) > 1) CALL finish(routine, 'Dimension mismatch, field3d with nblks > 1; calc with REAL pool%element(:)')
-      structOut%carbon          = field3d(:,:,1) * struct1%carbon    
-      structOut%nitrogen        = field3d(:,:,1) * struct1%nitrogen  
+      structOut%carbon          = field3d(:,:,1) * struct1%carbon
+      structOut%nitrogen        = field3d(:,:,1) * struct1%nitrogen
       structOut%phosphorus      = field3d(:,:,1) * struct1%phosphorus
-      structOut%carbon13        = field3d(:,:,1) * struct1%carbon13  
-      structOut%carbon14        = field3d(:,:,1) * struct1%carbon14  
+      structOut%carbon13        = field3d(:,:,1) * struct1%carbon13
+      structOut%carbon14        = field3d(:,:,1) * struct1%carbon14
       structOut%nitrogen15      = field3d(:,:,1) * struct1%nitrogen15
     ELSE
-      structOut%domain_c        = field3d(:,:,:) * struct1%domain_c  
-      structOut%domain_n        = field3d(:,:,:) * struct1%domain_n  
-      structOut%domain_p        = field3d(:,:,:) * struct1%domain_p  
+      structOut%domain_c        = field3d(:,:,:) * struct1%domain_c
+      structOut%domain_n        = field3d(:,:,:) * struct1%domain_n
+      structOut%domain_p        = field3d(:,:,:) * struct1%domain_p
       structOut%domain_c13      = field3d(:,:,:) * struct1%domain_c13
       structOut%domain_c14      = field3d(:,:,:) * struct1%domain_c14
       structOut%domain_n15      = field3d(:,:,:) * struct1%domain_n15
     END IF
 
-    structOut%dom              = field3d(:,:,:) * struct1%dom             
-    structOut%dom_assoc        = field3d(:,:,:) * struct1%dom_assoc       
-    structOut%soluable_litter  = field3d(:,:,:) * struct1%soluable_litter 
+    structOut%dom              = field3d(:,:,:) * struct1%dom
+    structOut%dom_assoc        = field3d(:,:,:) * struct1%dom_assoc
+    structOut%soluable_litter  = field3d(:,:,:) * struct1%soluable_litter
     structOut%polymeric_litter = field3d(:,:,:) * struct1%polymeric_litter
-    structOut%woody_litter     = field3d(:,:,:) * struct1%woody_litter    
-    structOut%fungi            = field3d(:,:,:) * struct1%fungi           
-    structOut%mycorrhiza       = field3d(:,:,:) * struct1%mycorrhiza      
-    structOut%microbial        = field3d(:,:,:) * struct1%microbial       
-    structOut%residue          = field3d(:,:,:) * struct1%residue         
-    structOut%residue_assoc    = field3d(:,:,:) * struct1%residue_assoc   
-  
+    structOut%woody_litter     = field3d(:,:,:) * struct1%woody_litter
+    structOut%fungi            = field3d(:,:,:) * struct1%fungi
+    structOut%mycorrhiza       = field3d(:,:,:) * struct1%mycorrhiza
+    structOut%microbial        = field3d(:,:,:) * struct1%microbial
+    structOut%residue          = field3d(:,:,:) * struct1%residue
+    structOut%residue_assoc    = field3d(:,:,:) * struct1%residue_assoc
+
   END FUNCTION Multiply_field3d_with_sb_comp_p
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool * sb_components_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Multiply_sb_comp_p_with_sb_comp_p(struct1, struct2) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1, struct2
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Multiply_sb_comp_p_with_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4773,37 +4792,37 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      * struct2%carbon
-      structOut%nitrogen        = struct1%nitrogen    * struct2%nitrogen  
+      structOut%nitrogen        = struct1%nitrogen    * struct2%nitrogen
       structOut%phosphorus      = struct1%phosphorus  * struct2%phosphorus
-      structOut%carbon13        = struct1%carbon13    * struct2%carbon13  
-      structOut%carbon14        = struct1%carbon14    * struct2%carbon14  
+      structOut%carbon13        = struct1%carbon13    * struct2%carbon13
+      structOut%carbon14        = struct1%carbon14    * struct2%carbon14
       structOut%nitrogen15      = struct1%nitrogen15  * struct2%nitrogen15
     ELSE
-      structOut%domain_c        = struct1%domain_c    * struct2%domain_c  
-      structOut%domain_n        = struct1%domain_n    * struct2%domain_n  
-      structOut%domain_p        = struct1%domain_p    * struct2%domain_p  
+      structOut%domain_c        = struct1%domain_c    * struct2%domain_c
+      structOut%domain_n        = struct1%domain_n    * struct2%domain_n
+      structOut%domain_p        = struct1%domain_p    * struct2%domain_p
       structOut%domain_c13      = struct1%domain_c13  * struct2%domain_c13
       structOut%domain_c14      = struct1%domain_c14  * struct2%domain_c14
       structOut%domain_n15      = struct1%domain_n15  * struct2%domain_n15
     END IF
 
-    structOut%dom              = struct1%dom              * struct2%dom             
-    structOut%dom_assoc        = struct1%dom_assoc        * struct2%dom_assoc       
-    structOut%soluable_litter  = struct1%soluable_litter  * struct2%soluable_litter 
+    structOut%dom              = struct1%dom              * struct2%dom
+    structOut%dom_assoc        = struct1%dom_assoc        * struct2%dom_assoc
+    structOut%soluable_litter  = struct1%soluable_litter  * struct2%soluable_litter
     structOut%polymeric_litter = struct1%polymeric_litter * struct2%polymeric_litter
-    structOut%woody_litter     = struct1%woody_litter     * struct2%woody_litter    
-    structOut%fungi            = struct1%fungi            * struct2%fungi           
-    structOut%mycorrhiza       = struct1%mycorrhiza       * struct2%mycorrhiza      
-    structOut%microbial        = struct1%microbial        * struct2%microbial       
-    structOut%residue          = struct1%residue          * struct2%residue         
-    structOut%residue_assoc    = struct1%residue_assoc    * struct2%residue_assoc   
-  
+    structOut%woody_litter     = struct1%woody_litter     * struct2%woody_litter
+    structOut%fungi            = struct1%fungi            * struct2%fungi
+    structOut%mycorrhiza       = struct1%mycorrhiza       * struct2%mycorrhiza
+    structOut%microbial        = struct1%microbial        * struct2%microbial
+    structOut%residue          = struct1%residue          * struct2%residue
+    structOut%residue_assoc    = struct1%residue_assoc    * struct2%residue_assoc
+
   END FUNCTION Multiply_sb_comp_p_with_sb_comp_p
-  
+
   !--------------------------------------------------------------------------------------------------------------------------------
   ! / divide
   !--------------------------------------------------------------------------------------------------------------------------------
@@ -4811,12 +4830,12 @@ CONTAINS
   ! sb_components_pool / scalar        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Div_sb_comp_p_by_scalar(struct1, scalar) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: scalar
     TYPE(t_sb_components_pool)                    :: structOut
 
-    TYPE(t_subset)              :: sub  
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_comp_p_by_scalar'
 
@@ -4858,21 +4877,21 @@ CONTAINS
     structOut%microbial        = struct1%microbial        / scalar
     structOut%residue          = struct1%residue          / scalar
     structOut%residue_assoc    = struct1%residue_assoc    / scalar
-  
+
   END FUNCTION Div_sb_comp_p_by_scalar
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool / field2d(:,:)        | ON_CHUNK
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Div_sb_comp_p_by_field2d(struct1, field2d) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: field2d(:,:)
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_comp_p_by_field2d'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4883,7 +4902,7 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      / field2d(:,:)
@@ -4906,21 +4925,21 @@ CONTAINS
     structOut%microbial        = struct1%microbial        / field2d(:,:)
     structOut%residue          = struct1%residue          / field2d(:,:)
     structOut%residue_assoc    = struct1%residue_assoc    / field2d(:,:)
-  
+
   END FUNCTION Div_sb_comp_p_by_field2d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool / field3d(:,:,:)        | ON_CHUNK & ON_DOMAIN | field3d(:,:,1) & field3d(:,:,:)
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Div_sb_comp_p_by_field3d(struct1, field3d) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1
     REAL(wp),                         INTENT(in)  :: field3d(:,:,:)
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_comp_p_by_field3d'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4931,7 +4950,7 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       IF (SIZE(field3d,3) > 1) CALL finish(routine, 'Dimension mismatch, field3d with nblks > 1; calc with REAL pool%element(:)')
@@ -4960,20 +4979,20 @@ CONTAINS
     structOut%microbial        = struct1%microbial        / field3d(:,:,:)
     structOut%residue          = struct1%residue          / field3d(:,:,:)
     structOut%residue_assoc    = struct1%residue_assoc    / field3d(:,:,:)
-  
+
   END FUNCTION Div_sb_comp_p_by_field3d
   !--------------------------------------------------------------------------------------------------------------------------------
   ! sb_components_pool / sb_components_pool        | ON_CHUNK & ON_DOMAIN
   !--------------------------------------------------------------------------------------------------------------------------------
   FUNCTION Div_sb_comp_p_by_sb_comp_p(struct1, struct2) RESULT(structOut)
-  
+
     CLASS(t_sb_components_pool),      INTENT(in)  :: struct1, struct2
     TYPE(t_sb_components_pool)                    :: structOut
-  
-    TYPE(t_subset)              :: sub  
+
+    TYPE(t_subset)              :: sub
     INTEGER                     :: nvgrid
     CHARACTER(len=*), PARAMETER :: routine = modname//':Div_sb_comp_p_by_sb_comp_p'
-  
+
     sub = struct1%Get_subset()
     IF (sub%type /= ON_CHUNK) THEN  ! get domain dimension not available via Get_subset() during process init
       sub%nc = SIZE(struct1%domain_c(:,:,:), 1)
@@ -4984,35 +5003,35 @@ CONTAINS
     ENDIF
     CALL structOut%Init_op_ov_hlp('op_ov_hlp', 'op_ov_hlp', struct1%owner_model_id, &
       &                           sub%type, sub%nc, nvgrid, sub%nb, .TRUE., TRIM(struct1%element_unit), 'veg_p')
-  
+
     ! run calculation
     IF (sub%type == ON_CHUNK) THEN
       structOut%carbon          = struct1%carbon      / struct2%carbon
-      structOut%nitrogen        = struct1%nitrogen    / struct2%nitrogen  
+      structOut%nitrogen        = struct1%nitrogen    / struct2%nitrogen
       structOut%phosphorus      = struct1%phosphorus  / struct2%phosphorus
-      structOut%carbon13        = struct1%carbon13    / struct2%carbon13  
-      structOut%carbon14        = struct1%carbon14    / struct2%carbon14  
+      structOut%carbon13        = struct1%carbon13    / struct2%carbon13
+      structOut%carbon14        = struct1%carbon14    / struct2%carbon14
       structOut%nitrogen15      = struct1%nitrogen15  / struct2%nitrogen15
     ELSE
-      structOut%domain_c        = struct1%domain_c    / struct2%domain_c  
-      structOut%domain_n        = struct1%domain_n    / struct2%domain_n  
-      structOut%domain_p        = struct1%domain_p    / struct2%domain_p  
+      structOut%domain_c        = struct1%domain_c    / struct2%domain_c
+      structOut%domain_n        = struct1%domain_n    / struct2%domain_n
+      structOut%domain_p        = struct1%domain_p    / struct2%domain_p
       structOut%domain_c13      = struct1%domain_c13  / struct2%domain_c13
       structOut%domain_c14      = struct1%domain_c14  / struct2%domain_c14
       structOut%domain_n15      = struct1%domain_n15  / struct2%domain_n15
     END IF
 
-    structOut%dom              = struct1%dom              / struct2%dom             
-    structOut%dom_assoc        = struct1%dom_assoc        / struct2%dom_assoc       
-    structOut%soluable_litter  = struct1%soluable_litter  / struct2%soluable_litter 
+    structOut%dom              = struct1%dom              / struct2%dom
+    structOut%dom_assoc        = struct1%dom_assoc        / struct2%dom_assoc
+    structOut%soluable_litter  = struct1%soluable_litter  / struct2%soluable_litter
     structOut%polymeric_litter = struct1%polymeric_litter / struct2%polymeric_litter
-    structOut%woody_litter     = struct1%woody_litter     / struct2%woody_litter    
-    structOut%fungi            = struct1%fungi            / struct2%fungi           
-    structOut%mycorrhiza       = struct1%mycorrhiza       / struct2%mycorrhiza      
-    structOut%microbial        = struct1%microbial        / struct2%microbial       
-    structOut%residue          = struct1%residue          / struct2%residue         
-    structOut%residue_assoc    = struct1%residue_assoc    / struct2%residue_assoc   
-  
+    structOut%woody_litter     = struct1%woody_litter     / struct2%woody_litter
+    structOut%fungi            = struct1%fungi            / struct2%fungi
+    structOut%mycorrhiza       = struct1%mycorrhiza       / struct2%mycorrhiza
+    structOut%microbial        = struct1%microbial        / struct2%microbial
+    structOut%residue          = struct1%residue          / struct2%residue
+    structOut%residue_assoc    = struct1%residue_assoc    / struct2%residue_assoc
+
   END FUNCTION Div_sb_comp_p_by_sb_comp_p
 
 !! #################################################################################################################################

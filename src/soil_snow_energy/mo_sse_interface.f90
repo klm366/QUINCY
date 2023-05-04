@@ -29,7 +29,7 @@ MODULE mo_sse_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, VEG_ 
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, VEG_
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
@@ -107,7 +107,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Register tasks: SSE_ process
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Register_sse_tasks(process, model_id)
 
@@ -118,7 +118,7 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     TYPE(t_jsb_model), POINTER :: model
-    
+
     model   => Get_model(model_id)
 
     CALL process%Register_task(tsk_soil_and_snow_temp(model_id))
@@ -128,7 +128,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> update_soil_and_snow_temperature
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_and_snow_temperature(tile, options)
 
@@ -332,7 +332,7 @@ CONTAINS
         & )
 
 
-      !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
+      !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
       RETURN
 
     END IF
@@ -544,7 +544,7 @@ CONTAINS
     END DO
     !$claw acc end data
 
-    !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)  
+    !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -606,7 +606,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> update_soil_and_snow_properties
-  !! 
+  !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE update_soil_and_snow_properties(tile, options)
 
@@ -638,7 +638,7 @@ CONTAINS
       & soil_depth_sl,        &
       & fract_org_sl,         &
       & vol_heat_cap_sl,      &
-      & heat_cond_sl,         & 
+      & heat_cond_sl,         &
       & wtr_soil_sl,          &
       & ice_soil_sl,          &
       & vol_porosity_sl,      &
@@ -653,13 +653,13 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_vgrid), POINTER :: soil_e
 
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: & 
+    REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: &
       & vol_heat_cap_tmp,                    &
-      & vol_heat_cap_org_tmp,                & 
+      & vol_heat_cap_org_tmp,                &
       & soil_e_dz_tmp,                       &
-      & vol_porosity_org_tmp,                & 
-      & heat_cond_tmp,                       & 
-      & hcond_org_tmp,                       & 
+      & vol_porosity_org_tmp,                &
+      & heat_cond_tmp,                       &
+      & hcond_org_tmp,                       &
       & hcond_dry_org_tmp
 
     INTEGER  :: iblk, ics, ice, nc, i, j
@@ -724,7 +724,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl)
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)  
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_field_cap_sl)
 
     IF (dsl4jsb_Config(HYDRO_)%l_organic .AND. tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, fract_org_sl)
@@ -763,10 +763,10 @@ CONTAINS
       DO j = 2, nsoil
         vol_heat_cap_org_tmp(:,j) = vol_hcap_org_below
       END DO
-      
+
       soil_e_dz_tmp(:,:) = SPREAD( soil_e%dz(:), DIM=1, ncopies=nc)
       !$claw acc update device(vol_heat_cap_tmp,vol_heat_cap_org_tmp,soil_e_dz_tmp)
- 
+
       !$claw expand parallel update savepoint=ser_jsb_sse_calc_vol_heat_capacity_1 tile_name=tile%name
       vol_heat_cap_sl (:,:) = calc_vol_heat_capacity( &
         !&                        SPREAD( vol_heat_cap(:),                 DIM=2, ncopies=nsoil) , &
@@ -780,7 +780,7 @@ CONTAINS
         !&                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc) &
         &                                soil_e_dz_tmp(:,:)          &
         & )
-      
+
       !$claw acc exit data delete(fract_water,fract_ice,vol_heat_cap_tmp, vol_heat_cap_org_tmp,soil_e_dz_tmp)
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, vol_heat_cap_org_tmp, soil_e_dz_tmp)
     ELSE
@@ -795,7 +795,7 @@ CONTAINS
     ENDIF
 
     IF (dsl4jsb_Config(SSE_)%l_heat_cond_dyn) THEN
-      
+
       ALLOCATE(heat_cond_tmp(nc,nsoil), vol_porosity_org_tmp(nc,nsoil), &
              & hcond_org_tmp(nc,nsoil), hcond_dry_org_tmp(nc,nsoil), soil_e_dz_tmp(nc,nsoil))
       !$claw acc enter data pcreate(heat_cond_tmp,vol_porosity_org_tmp,hcond_org_tmp,hcond_dry_org_tmp,soil_e_dz_tmp)

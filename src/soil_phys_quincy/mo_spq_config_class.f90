@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Contains structures and methods for spq config
 !!
 !! @author
@@ -40,12 +40,12 @@ MODULE mo_spq_config_class
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration of the spq process, derived from t_jsb_config
-  !! 
+  !!
   !! currently it does mainly: reading parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   TYPE, EXTENDS(t_jsb_config) :: t_spq_config
     CHARACTER(len=filename_max) :: bc_sso_filename !< For elevation (available in HYDRO_ too, for jsbach4 physics)
-    
+
     INTEGER               :: nsoil_energy         !< number of soil layers for soil energy calculations   ! depreciated feature, but needed for now, see ticket #521
     INTEGER               :: nsoil_water          !< number of soil layers for soil moisture calculations ! depreciated feature, but needed for now, see ticket #521
     REAL(wp)              :: soil_depth           !< actual soil and rooting depth
@@ -56,7 +56,7 @@ MODULE mo_spq_config_class
     REAL(wp)              :: soil_sand            !< soil sand proportion - site specific from forcing info file
     REAL(wp)              :: soil_silt            !< soil silt proportion - site specific from forcing info file
     REAL(wp)              :: soil_clay            !< soil clay proportion - recalculated from: clay = 1.0 -sand -silt
-    REAL(wp)              :: bulk_density    
+    REAL(wp)              :: bulk_density
   CONTAINS
     PROCEDURE :: Init => Init_spq_config
   END TYPE t_spq_config
@@ -69,7 +69,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> configuration routine of t_spq_config
-  !! 
+  !!
   !! currently it does only: read parameters from namelist
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE Init_spq_config(config)
@@ -89,15 +89,15 @@ CONTAINS
     ! variables for reading from namlist, identical to variable-name in namelist
     LOGICAL                     :: active
     INTEGER                     :: nsoil_energy    , &
-                                   nsoil_water    
-    REAL(wp)                    :: dz_energy(max_soil_layers), &                        ! vector of soil layer thicknesses 
+                                   nsoil_water
+    REAL(wp)                    :: dz_energy(max_soil_layers), &                        ! vector of soil layer thicknesses
                                    dz_water(max_soil_layers)
     REAL(wp)                    :: soil_layer_profile_ubound_estimate(max_soil_layers)  ! intial estimate of soil profile using the upper bound of each soil layer [m]
     REAL(wp), ALLOCATABLE       :: ubounds_soil_lay_energy(:), &                        ! layer upper bound (note! upper bound > lower bound)
                                    ubounds_soil_lay_water(:)
     REAL(wp)                    :: wsr_capacity    , &
                                    wsn_capacity    , &
-                                   soil_depth   
+                                   soil_depth
     REAL(wp)                    :: soil_awc_prescribe, &
                                    soil_theta_prescribe
     REAL(wp)                    :: soil_sand       , &
@@ -110,8 +110,8 @@ CONTAINS
     REAL(wp)                    :: min_layer_depth      ! for soil layer calculations
     TYPE(t_jsb_vgrid), POINTER  :: vgrid_soil_sb
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Init_spq_config'
-    
-    NAMELIST /spq_ctl/       & 
+
+    NAMELIST /jsb_spq_nml/       &
                           active                  , &
                           ic_filename             , &
                           bc_filename             , &
@@ -128,7 +128,7 @@ CONTAINS
                           soil_sand               , &
                           soil_silt               , &
                           soil_clay               , &
-                          bulk_density            
+                          bulk_density
 
     ! variables for reading model-options from namelist
     INTEGER :: nml_handler, nml_unit, istat
@@ -149,12 +149,12 @@ CONTAINS
     dz_energy(1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
     dz_energy(6:max_soil_layers)  = 0._wp
     dz_water (1:5)                = (/0.065_wp,0.254_wp,0.913_wp,2.902_wp,5.700_wp/)
-    dz_water (6:max_soil_layers)  = 0._wp 
+    dz_water (6:max_soil_layers)  = 0._wp
     wsr_capacity                  = 2.E-4_wp
     wsn_capacity                  = 2.E-4_wp
-    soil_depth                    = 5.7_wp 
+    soil_depth                    = 5.7_wp
     soil_awc_prescribe            = 300.0_wp
-    soil_theta_prescribe          = 1.0_wp 
+    soil_theta_prescribe          = 1.0_wp
     soil_sand                     = 0.3_wp
     soil_silt                     = 0.4_wp
     soil_clay                     = 0.3_wp
@@ -164,15 +164,15 @@ CONTAINS
     ! &SPQ_CTL
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
-    nml_unit = position_nml('SPQ_CTL', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, spq_ctl)
+    nml_unit = position_nml('jsb_spq_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_spq_nml)
 
     CALL close_nml(nml_handler)
 
     ! check initialisation of number of soil layers
-    IF (nsoil_water .LT. 5 .OR. nsoil_water .GT. 20) & 
+    IF (nsoil_water .LT. 5 .OR. nsoil_water .GT. 20) &
         CALL finish(routine,'Number of soil layers needs to be a number from the range 5 to 20.')
-    IF (nsoil_water .NE. nsoil_energy) & 
+    IF (nsoil_water .NE. nsoil_energy) &
         CALL finish(routine,'Init with different numbers of soil layers for energy and water not yet supported for QUINCY.')
 
     ! allocate upper-bound soil-layer vectors with dimensions defined in the namelist
@@ -184,10 +184,10 @@ CONTAINS
     IF(nsoil_water > 5) THEN
       ! initial calculation of soil profile (for soil moisture calculations) calculating the upper bound of each layer
       DO isoil=1,nsoil_water
-        soil_layer_profile_ubound_estimate(isoil) = min_layer_depth * & 
-                                                    exp(k_soil_profile * isoil * REAL(max_soil_layers)/REAL(nsoil_water)) - & 
+        soil_layer_profile_ubound_estimate(isoil) = min_layer_depth * &
+                                                    exp(k_soil_profile * isoil * REAL(max_soil_layers)/REAL(nsoil_water)) - &
                                                     min_layer_depth
-      ENDDO 
+      ENDDO
       ! final calculation of soil profile, calculating the layer thickness (dz(:)) and correcting for minimum soil-layer thickness
       dz_water(1) = min_layer_depth
       DO isoil=2,nsoil_water
@@ -221,11 +221,11 @@ CONTAINS
     config%bc_sso_filename           = bc_sso_filename
     config%nsoil_energy              = nsoil_energy     ! depreciated feature, but needed for now, see ticket #521
     config%nsoil_water               = nsoil_water      ! depreciated feature, but needed for now, see ticket #521
-    config%soil_awc_prescribe        = soil_awc_prescribe 
-    config%soil_theta_prescribe      = soil_theta_prescribe 
+    config%soil_awc_prescribe        = soil_awc_prescribe
+    config%soil_theta_prescribe      = soil_theta_prescribe
     config%wsr_capacity              = wsr_capacity
     config%wsn_capacity              = wsn_capacity
-    config%soil_depth                = soil_depth 
+    config%soil_depth                = soil_depth
     config%soil_sand                 = soil_sand
     config%soil_silt                 = soil_silt
     !config%soil_clay                = not using the input value, as soil_clay must be calculated from soil_sand & soil_silt to guarantee: 1=sand+silt+clay
@@ -239,9 +239,9 @@ CONTAINS
     END IF
 
     !< Create vertical axis (vgrid)
-    !! 
+    !!
     !! these are "infrastructure" values, ubounds and dz must be corrected/limited by site-specific bedrock depth "soil_depth" !
-    !! 
+    !!
     !! site-specific soil-layer thickness values are stored in soil_depth_sl (and calc in spq_init) \n
     !! the function new_vgrid() does: (a) check for 'dz(:) <= zero', and (b) calc levels & lbounds from ubounds and dz \n
     !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
@@ -250,7 +250,7 @@ CONTAINS
                       units='m', &
                       ! levels=  , &      ! is calculated from ubounds and dz
                       ! lbounds=  , &     ! is calculated from ubounds and dz
-                      ubounds=ubounds_soil_lay_water(:), & 
+                      ubounds=ubounds_soil_lay_water(:), &
                       dz=dz_water(:))
     CALL register_vgrid(vgrid_soil_sb)
 
