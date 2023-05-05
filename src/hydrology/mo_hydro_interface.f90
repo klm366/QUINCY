@@ -1075,10 +1075,14 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
+
     ! Local variables
     !
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
 
     ! Locally allocated vectors
 
@@ -1088,13 +1092,16 @@ CONTAINS
 
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
+    LOGICAL  :: l_latdrain
+    LOGICAL  :: l_pf_soil(options%nc)
 
-    INTEGER  :: iblk, ics, ice, nc
+    INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
+    REAL(wp) :: wtr_pond_max(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1132,24 +1139,42 @@ CONTAINS
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
 
     !$claw acc data create(tile, tile%fract, tile_fract)
     !$claw acc parallel loop gang vector
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
-    ! @todo move to mix module
-    ! !!!!!!! HERE IT WOULD ALSO BE POSSIBLE TO PRESCRIBE A l_pf_soil
-    ! !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
-    ! !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1)       ! in
-    ! DO i = 1, nc
-    !   IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth below soil depth ...
-    !    &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! ... and not at maximum.
-    !     l_pf_soil(i)=.TRUE.
-    !   ELSE
-    !     l_pf_soil(i)=.FALSE.
-    !   END IF
-    ! END DO
+    IF (tile%contains_depression) THEN
+      wtr_pond_max(:) = MAX(0._wp, dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max) &
+        &             - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
+    ELSE
+      wtr_pond_max(:) = 0.0_wp
+    END IF
+
+    ! Latdrain drain flag
+    ! For testing purposes assuming no lateral drainage from lowland depression
+    IF (tile%contains_lowland .AND. tile%contains_depression) THEN
+      l_latdrain = .FALSE.
+    ELSE
+      l_latdrain = .TRUE.
+    END IF
+    ! Simple diagnostic for permafrost reaching into the soil above the berock
+    ! impeding fluxes into the "groundwater"
+
+    !!!!!!! HERE IT WOULD ALSO BE POSSIBLE TO PRESCRIBE A l_pf_soil
+    !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
+    !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1) ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)      ! in
+    DO i = 1, nc
+      IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth below soil depth ...
+       &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! ... but not at maximum.
+        l_pf_soil(i)=.TRUE.
+      ELSE
+        l_pf_soil(i)=.FALSE.
+      END IF
+    END DO
 
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
@@ -1163,7 +1188,10 @@ CONTAINS
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
+      & l_latdrain,                                             &
+      & l_pf_soil(:),                                           &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
+      & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
@@ -1175,6 +1203,7 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
       & dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max    ),     &
+      & wtr_pond_max(:),                                        &
       & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
       ! inout
@@ -1197,31 +1226,6 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl      ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
       & )
-
-    ! @todo Move to mix module!
-    ! ! For testing only
-    ! ! l_macrotrans_subsurf == .false. -> on macroscale, lateral drainage in unfrozen soils
-    ! ! is assumed to reach bedrock boundary before reaching the lower tile.
-    ! ! In frozen soils lateral drainage can not reach bedrock boundary and
-    ! ! flows to lower (macroscale) tile, however this is only the case if
-    ! ! the permafrost extends upwards into the soil above bedrock
-
-    ! dsl4jsb_Get_var2D_onChunk(SSE_, thaw_depth_max_ym1)       ! in
-    ! IF (tile%contains_upland .AND. tile%contains_depression) THEN
-    !   IF (.NOT. dsl4jsb_Config(HYDRO_)%l_macrotrans_subsurf) THEN
-    !     DO i = 1, nc
-    !       IF (l_pf_soil(i)) THEN ! PF in soil above bedrock
-    !         latdrain_sl(i,:) = drain_lat_sl(i,:)
-    !       ELSE
-    !          latdrain_sl(i,:) = 0._wp
-    !       END IF
-    !     END DO
-    !   ELSE
-    !     latdrain_sl(:,:) = drain_lat_sl(:,:)
-    !   END IF
-    ! ELSE
-    !   latdrain_sl(:,:) = drain_lat_sl(:,:)
-    ! END IF
 
     ! Update weq_pond storage due to potential soil infiltration overflow
     dsl4jsb_var2D_onChunk(HYDRO_, weq_pond) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_pond) &

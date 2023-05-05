@@ -567,7 +567,7 @@ CONTAINS
   ! @param [in]      wtr_soil_pot_scool_sl Amount of potentially supercooled water [m]
   ! @param [in,out]  wtr_soil_sl         Content un-frozen water of soil layers in rooting zone  [m]
   ! @param [in,out]  ice_soil_sl         Content of frozen water of soil layers in rooting zone  [m]
-  ! @param [out]     wsat_sl             Maximum possible amount of water in soil layer          [m]
+  ! @param [out]     weq_wsat_sl         Maximum possible amount of water in soil layer          [m]
   ! @param [out]     field_cap_sl        Water content at field capacity in soil layer           [m]
   ! @param [out]     p_wilt_sl           Water content at permanent wilting point in soil layers [m]
   ! @param [out]     runoff_dunne        Runoff due to soil saturation excess                    [m]
@@ -576,11 +576,11 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
-    & soilhydmodel, interpol_mean,                                                       &
-    & w_soil_wilt_fract, soil_depth_sl, root_depth_sl,                                   &
+    & soilhydmodel, interpol_mean, l_latdrain, l_pf_soil,                                &
+    & w_soil_wilt_fract, slope, soil_depth_sl, root_depth_sl,                            &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
-    & fract_pond_max, evapotrans_soil, transpiration,                                    &
+    & fract_pond_max, wtr_pond_max, evapotrans_soil, transpiration,                      &
     ! inout
     & infilt, runoff, wtr_soil_sl, ice_soil_sl, wtr_pond, tpe_overflow,                  &
     & evapo_deficit, &
@@ -598,6 +598,8 @@ CONTAINS
       & soilhydmodel, interpol_mean
     REAL(wp), INTENT(in) :: &
       & dtime, w_soil_wilt_fract
+    LOGICAL, INTENT(in) :: l_latdrain
+    LOGICAL, INTENT(in), DIMENSION(:) :: l_pf_soil
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! Tile fraction > 0
@@ -605,7 +607,7 @@ CONTAINS
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
     REAL(wp), INTENT(in), DIMENSION(:) ::               &
-      & lat, lon,                                       &
+      & lat, lon, slope, wtr_pond_max,                  &
       & fract_pond_max, evapotrans_soil, transpiration
     REAL(wp), INTENT(inout), DIMENSION(:) :: &
       & tpe_overflow, infilt, runoff, evapo_deficit, wtr_pond
@@ -702,7 +704,8 @@ CONTAINS
     wtr_soilhyd_res(:) = 0._wp
 
     CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, soilhydmodel, interpol_mean,   &
-      &     w_soil_wilt_fract, soil_depth_sl, wtr_field_cap_sl, wtr_wsat_sl,         &
+      &     l_latdrain, l_pf_soil,                                                   &
+      &     w_soil_wilt_fract, slope, soil_depth_sl, wtr_field_cap_sl, wtr_wsat_sl,  &
       &     weq_field_cap_sl, weq_wsat_sl, weq_p_wilt_sl,                            &
       &     hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,           &
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
@@ -715,7 +718,9 @@ CONTAINS
     drainage(:)  = drainage(:) + drain_rock(:) + drain_lat(:)
     WHERE (fract_pond_max(:) > EPSILON(1._wp))
       ! Infiltration overflow goes into ponds water storage
-      wtr_pond(:) = wtr_pond(:) + infilt_over(:)
+      runoff_dunne(:) = MAX(0._wp, infilt_over(:) - (wtr_pond_max(:) - wtr_pond(:)))
+      wtr_pond(:) = MIN(wtr_pond(:) + infilt_over(:), wtr_pond_max(:))
+      infilt_over(:) = runoff_dunne(:)
     ELSEWHERE
       ! Infitration overflow goes into surface runoff
       runoff_dunne(:) = infilt_over(:)
@@ -754,9 +759,11 @@ CONTAINS
   !!   ARNO Scheme infiltration routine and extented for HydroTiles usecase
 
   SUBROUTINE calc_orographic_features(nc, nlat, l_hydrotiles, l_upland, &
-    & max_slope, oro_stddev, steepness, micro_slope, macro_slope )
+    & max_slope, oro_stddev, weq_pond_max, source_fract, target_fract,  &
+    & steepness, micro_slope, macro_slope)
 
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
+    USE mo_jsb_math_constants,     ONLY: pi
 
     INTEGER,  INTENT(in)  :: nc                    !< Number of gridcells
     INTEGER,  INTENT(in)  :: nlat                  !< (Effective) number of latitudes for steepness parameter
@@ -765,15 +772,20 @@ CONTAINS
 
     REAL(wp), INTENT(in)  :: max_slope             !< Maximum slope threshold                           [m/m]
     REAL(wp), INTENT(in)  :: oro_stddev(:)         !< standard deviation of orography                   [m]
+    REAL(wp), INTENT(in)  :: weq_pond_max(:)       !< Maximum pond/depression depth                     [m]
+    REAL(wp), INTENT(in)  :: source_fract(:)       !< Hydrotiles source tile fraction                   []
+    REAL(wp), INTENT(in)  :: target_fract(:)       !< Hydrotiles target tile fraction                   []
     REAL(wp), INTENT(out) :: steepness(:)          !< parameter defining the subgrid slope distribution [/]
     REAL(wp), INTENT(out) :: micro_slope(:)        !< slope on microtopography tiles
     REAL(wp), INTENT(out) :: macro_slope(:)        !< slope on macrotopography tiles
 
 
     ! Local variables
+    INTEGER  :: i
     REAL(wp) ::                       &
       & sigma_0,                      &            !< minimum value (100 m); below b = 0.01
-      & sigma_max                                  !< resolution-dependent maximum
+      & sigma_max,                    &            !< resolution-dependent maximum
+      & fr_dpr_rel                                 !< fraction-depression relation ?? []
     !
     ! steepness b: shape parameter, defining the sub-gid scale steepness of the orographie:
     !
@@ -792,13 +804,24 @@ CONTAINS
 
     ELSE
       ! Compute tile specific steepness for HydroTiles setup
-      micro_slope(:) = 0._wp
+
+      ! Macroslope depends on orographic features
       IF (l_upland) THEN
         macro_slope(:) = MIN(max_slope, MAX(0.01_wp, &
           & (oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max) ))
       ELSE
         macro_slope(:) = 0.01_wp
       END IF
+
+      ! Micro-slope depends on some made up relation between source and target file
+      DO i = 1, nc
+        IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp) THEN
+          fr_dpr_rel  = target_fract(i) / (source_fract(i) + target_fract(i))
+          micro_slope(i) = weq_pond_max(i) / ((1._wp / fr_dpr_rel) / pi)**0.5_wp
+        ELSE
+          micro_slope(:) = 0._wp
+        END IF
+      END DO
 
       ! Add micro and macro slopes
       steepness(:) = MIN(0.5_wp, macro_slope(:) + micro_slope(:))
@@ -954,14 +977,13 @@ CONTAINS
       & v_max(nc),           &   ! Avg. velocity of water; vertical crossection
       & sro_max(nc),         &   ! velocity relative to m2 gridcell area
       & fract_infilt(nc),    &   ! fraction of ponding water that can infiltrate due to inicreasing k
-      & infilt_pot(nc),      &   ! Additional infitration flux due to increasing k
-      & zmvg(nc)                 ! vanGenuchten parameter
+      & infilt_pot(nc)           ! Additional infitration flux due to increasing k
 
     REAL(wp) ::              &
       & ice_impeda_s1(nc,1), &  ! layered ice impedance on a singled layer
       & hyd_cond_s1(nc,1)       ! layered hydrologic conductivity on a single layer
 
-    !--------------------------------------------------------------------------------------------------------------------------------------
+    !---------------------------------------------------------------------------------------------------------
 
     nlay           = 1 ! Number of soil layers set to 1 because only top soil layer is used
     zeros(:)       = 0._wp
@@ -1079,8 +1101,8 @@ CONTAINS
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
   SUBROUTINE soilhyd(nc, l_fract, lat, lon, nsoil, dtime,           &
-    & soilhydmodel, interpol_mean,                                  &
-    & w_soil_wilt_fract, dsoil,                                     &
+    & soilhydmodel, interpol_mean, l_latdrain, l_pf_soil,           &
+    & w_soil_wilt_fract, slope, dsoil,                              &
     & wtr_field_cap_sl, wtr_wsat_sl, weq_field_cap_sl, weq_wsat_sl, &
     & weq_p_wilt_sl, hyd_cond_sat_sl,                               &
     & bclapp_sl, matrix_pot_sl, pore_size_index_sl,                 &
@@ -1090,6 +1112,8 @@ CONTAINS
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                 &
     & ltpe_closed, ltpe_open)
 
+    USE mo_jsb_math_constants,     ONLY: pi
+
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     LOGICAL,  INTENT(IN)            :: l_fract(:)                 ! Tile fraction > 0
     REAL(wp), INTENT(IN)            :: lat(:)                     ! Grid cell latitudes
@@ -1097,8 +1121,11 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
     INTEGER,  INTENT(in)            :: soilhydmodel               ! hydrology model scheme
     INTEGER,  INTENT(in)            :: interpol_mean              ! lateral interpolation scheme
+    LOGICAL,  INTENT(in)            :: l_latdrain
+    LOGICAL,  INTENT(in)            :: l_pf_soil(:)
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
-    REAL(wp), INTENT(in)            :: w_soil_wilt_fract       ! fractional plant wilting point [/]
+    REAL(wp), INTENT(in)            :: w_soil_wilt_fract          ! fractional plant wilting point [/]
+    REAL(wp), INTENT(in)            :: slope(:)                   ! microslope, or some other ?
     REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
     REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      ! field capacity of the soil layer (reduced by ice) [m]
     REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           ! saturation capacity of the soil layer (reduced by ice) [m]
@@ -1116,7 +1143,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: infilt(:)                  ! amount of infiltration within timestep [m]
     REAL(wp), INTENT(INOUT)         :: ice_soil_sl(:,:)           ! amount of ice in the soil [m]
     REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: infilt_over(:)             ! amount of infiltration overflow (Horton + Dunne) [m]
+    REAL(wp), INTENT(INOUT)         :: infilt_over(:)             ! amount of infiltration overflow (Dunne) [m]
     REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! drainage from lowest soil layer [m]
     REAL(wp), INTENT(INOUT)         :: drain_lat_sl(:,:)          ! overflow from subsurface soil layers [m]
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
@@ -1126,6 +1153,13 @@ CONTAINS
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
 
+    ! Local parameters
+    REAL(wp), PARAMETER ::  zwdcri = 0.9_wp
+    REAL(wp), PARAMETER ::  zwdmin = 0.05_wp
+    REAL(wp), PARAMETER ::  zdrmin = 0.001_wp / (3600._wp*1000._wp)  ! factor for slow drainage (~ 10 hours)
+    REAL(wp), PARAMETER ::  zdrmax = 0.1_wp   / (3600._wp*1000._wp)  ! factor for fast drainage (~ 4 days)
+    REAL(wp), PARAMETER ::  zdrexp = 1.5_wp
+
     ! Local variables
     INTEGER  :: i, j                         ! looping index (cells index and soil layer))
     INTEGER  :: nsoil_act(nc)                ! deepest soil layer index (above the bedrock boundary)
@@ -1134,12 +1168,14 @@ CONTAINS
     REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice)
     REAL(wp) :: ws_inter_sl(nc,nsoil)        ! soil moisture with infiltration added to first layer
     REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil mositure
+    REAL(wp) :: ws_crit(nc)                  ! threshold for fast drainage
     REAL(wp) :: ice_impeda_sl(nc,nsoil)      ! ice impedance factor on all soil layers
     REAL(wp) :: hyd_cond_sl(nc,nsoil)        ! hydraulic conductivity of a layer [m/s]
     REAL(wp) :: diffus_sl(nc,nsoil)          ! diffusivity at mid-depth of the layer[m2/s]
     REAL(wp) :: hyd_cond_li(nc,nsoil)        ! hydraulic conductivity at upper layer interface
     REAL(wp) :: diffus_li(nc,nsoil)          ! diffusivity at upper layer interface
     REAL(wp) :: drain_sl(nc)                 ! drainage from the current layer
+    REAL(wp) :: drain_crit(nc)
     REAL(wp) :: evapo_soil_sl1(nc)           ! bare soil evaporation extracted from top layer (mobile part)
     REAL(wp) :: transpiration_sl(nc,nsoil)   ! transpiration extracted from every soil layer
     REAL(wp) :: deficit_evapotrans(nc)       ! water that could not be extracted from the soil [m]
@@ -1149,9 +1185,6 @@ CONTAINS
     REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
     REAL(wp) :: wtr_transp_residual(nc)      ! numerical error caused by the vertical transport scheme [m]
     REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
-    REAL(wp) :: wtr_exinfcap(nc)             ! surface runoff due to exceeding the soil infiltration capacity [m]
-                                             ! (currently zero, as process is not implemented)
-    REAL(wp) :: wtr_exwsat(nc)               ! surface runoff due to exceeding the soil moisture saturation [m]
 
     !$claw acc data &
     !$claw acc present(dsoil, wtr_field_cap_sl, hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, &
@@ -1170,9 +1203,7 @@ CONTAINS
       END IF
     END DO
 
-    !> Initialize surface runoff components
-    wtr_exinfcap(:) = infilt(:)
-    wtr_exwsat(:)   = 0._wp
+    infilt_over(:) = 0._wp
 
     DO i = 1, nc
       nsoil_act(i) = 0
@@ -1213,28 +1244,60 @@ CONTAINS
       &                      wtr_soil_sl - wtr_rsdl_sl, evapo_deficit, evapo_soil_sl1,       &
       &                      transpiration_sl, deficit_sevap, deficit_trans)
 
+    !
+    !> Drainage pt.1
+    !
+    ! Drainage of the lowest layer above bedrock. It replaces percolation calculated above
+    ! Only done if permafrost contained to bedrock layers
+    ! Above a critical point, fast drainage occurs.
+    DO i = 1,nc
+      IF (.NOT. l_pf_soil(i)) THEN
+        ! Hier könnte man sicher auch einfach:
+        ! drain_sl(j) = MIN(hyd_cond_sl(j,i) * dtime, MAX(0._wp, wtr_soil_sl(j,i)-wtr_rsdl_sl(j,i)))
+        ! nehmen, wie fst alle anderen Modelle auch ...
+        ws_crit(i) = weq_field_cap_sl(i,nsoil_act(i)) * zwdcri     ! soil moisture above which drainage strongly increases
+
+        IF (wtr_soil_sl(i,nsoil_act(i)) < wtr_rsdl_sl(i,nsoil_act(i))) THEN
+            ! no drainage without mobile water
+            drain_sl(i) = 0._wp
+        ELSE
+          ! Slow drainage of mobile water
+          IF (weq_field_cap_sl(i,nsoil_act(i)) > wtr_rsdl_sl(i,nsoil_act(i))) THEN
+            ! slow drainage = slow drainage factor * relative soil moisture
+            drain_sl(i) = zdrmin * (wtr_soil_sl(i,nsoil_act(i)) - wtr_rsdl_sl(i,nsoil_act(i))) &
+                     &  / (weq_field_cap_sl(i,nsoil_act(i)) - wtr_rsdl_sl(i,nsoil_act(i)))
+          ELSE
+            drain_sl(i) = 0._wp
+          END IF
+
+          ! Fast drainage of mobile water
+
+          ! Note: here we use weq_wsat_sl (from porosity, reduced by amount of soil ice) and no longer
+          !    weq_field_cap_sl as in the above drainage calculations.
+
+          IF (wtr_soil_sl(i,nsoil_act(i)) - wtr_soil_pot_scool_sl(i,nsoil_act(i)) > ws_crit(i)) THEN
+            ! enough liquid water for fast drainage
+            drain_crit(i) = (zdrmax-zdrmin) * ((wtr_soil_sl(i,nsoil_act(i))-wtr_soil_pot_scool_sl(i,nsoil_act(i))-ws_crit(i)) &
+             &                             / (weq_wsat_sl(i,nsoil_act(i)) - ws_crit(i)))**zdrexp
+            drain_sl(i) = drain_sl(i) &
+                      & + MIN(drain_crit(i), (wtr_soil_sl(i,nsoil_act(i))-wtr_soil_pot_scool_sl(i,nsoil_act(i))-ws_crit(i))/dtime)
+          END IF
+        END IF
+        ! drainage is limited by the available water of the layer and impeded by ice
+
+        drain_sl(i)   = MIN(ice_impeda_sl(i,nsoil_act(i))*drain_sl(i), &
+                      & MAX(0._wp, (wtr_soil_sl(i,nsoil_act(i))-wtr_rsdl_sl(i,nsoil_act(i)))/dtime))
+
+        drain_rock(i) = drain_rock(i) + drain_sl(i) * dtime             ! [m/s] -> [m]
+      END IF
+    END DO
+
     DO i = 1, nc
-      ! Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
-      ! @todo this is implicitely done already within the ARNO scheme, thus it cannot be re-applied here.
-      !       As soon as the Arno Scheme is retired and the different soil properties associated with
-      !       orography are explizitly resolved, infiltration could be computed based on the conductivity instead.
-      !       However, that with the current model configuration this approach either results in too high
-      !       infiltration (if top layer conductivity is not constraint with the amout of water + infiltration
-      !       of the top layer) or too low if the soil is not fully saturated. Smart ideas are needed here!
-      ! infilt(i)       = MIN(infilt(i), hyd_cond_sl(i,1) * dtime)
-
-      ! Any water exceeding the infiltration capacity is given to the surface runoff (Horton runoff)
-      !   Currently zero, as it is already included in the surface runoff from the ARNO scheme
-      wtr_exinfcap(i) = MAX(wtr_exinfcap(i) - infilt(i), 0._wp)
-
-      ! Prescribe drainage from hydraulic conductivity of the lowest layer [m s-1] --> [m]
-      drain_rock(i) = hyd_cond_sl(i,nsoil_act(i)) * dtime
-
       !< store actual soil water state, infiltration (upper boundary condition) and evaporation
       !  to compute the residual transport error
       wtr_transp_residual(i) = SUM(wtr_soil_sl(i,:)) + infilt(i) + evapo_soil_sl1(i) + SUM(transpiration_sl(i,:))
 
-      ! Determination of Vertical movement of mobile water through the soil.
+      ! Determination of vertical movement of mobile water through the soil.
       !   Note that normalized storage values (volumetric soil moisture and storage change) are
       !   needed for the transport and immobile water is temporarily removed from the soil.
       DO j = 1, nsoil
@@ -1383,74 +1446,106 @@ CONTAINS
       END DO
     END DO
 
-    ! Additional corrections for excess soil moisture
+    ! Update soil hyd.-properties
+    CALL get_soilhyd_cond_properties(                                       &
+          & soilhydmodel, interpol_mean,                                    &
+          & nc, nsoil,                                                      &
+          & dsoil(:,:),                                                     &
+          & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
+          & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &
+          & hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),                       &
+          & bclapp_sl(:,:), pore_size_index_sl(:,:),                        &
+          & dt=dtime, nsoil_act=nsoil_act(:),                               &
+          & ice_impedance=ice_impeda_sl(:,:),                               &
+          & K=hyd_cond_sl(:,:),       D=diffus_sl(:,:),                     &
+          & K_inter=hyd_cond_li(:,:), D_inter=diffus_li(:,:)                &
+          )
+
     DO i = 1, nc
-      ! In case of over-saturation water would not have infiltrated in the first place --> pile
-      ! water upwards
-      DO j = nsoil, 1, -1
-        IF (j > 1) THEN
-          ! If saturation moisture is exceeded, add the excess water to next higher soil layer
-          IF (wtr_soil_sl(i,j) > wtr_wsat_sl(i,j)) THEN
-            wtr_soil_sl(i,j-1) = wtr_soil_sl(i,j-1) + (wtr_soil_sl(i,j) - wtr_wsat_sl(i,j))
-            wtr_soil_sl(i,j)   = wtr_wsat_sl(i,j)
-          END IF
-        ELSE IF (j == 1) THEN
-          ! Top layer saturation excess is added to the surface runoff (Dunne runoff)
-          IF (wtr_soil_sl(i,j) > wtr_wsat_sl(i,j)) THEN
-            wtr_exwsat(i)      = wtr_soil_sl(i,j) - wtr_wsat_sl(i,j)
-            wtr_soil_sl(i,j)   = wtr_wsat_sl(i,j)
-          END IF
-        END IF
-      END DO
+      !
+      !> Drainage pt.2
       !
       ! Lateral Drainage (i.e. drainage from upper soil layers)
-      ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to
-      !      move lateraly until it reaches the stream (or the neighbouring topo-tile).
-      !      In this implementation all water above field capacity is added to the drainage. However,
-      !      this is a very simplistic assumption. For e.g. high resolution simulations it might
-      !      be worthwile to consider lateral drainage as a reservoir outflow with a predefined
-      !      lagtime to allow for oversaturation of soils.
-      ! @todo In the current model configuration lateral drainage seems to deteriorate river
-      !      discharge while it has little effect on evapotranspiration. Therefore it is
-      !      disabled, but this should be revised, e.g. for high resolution simulations.
-      DO j = nsoil, 1, -1
-        ! If maximum moisture is exceeded, add the excess water to lateral drainage
-        IF (wtr_soil_sl(i,j) > wtr_field_cap_sl(i,j)) THEN
-          drain_sl(i)      = wtr_soil_sl(i,j) - wtr_field_cap_sl(i,j) ! Put excess water in lateral drainage
-          wtr_soil_sl(i,j) = wtr_soil_sl(i,j) - drain_sl(i)           ! remove lateral drainage of the layer from soil moisture
-          IF (.NOT. ltpe_closed) THEN
-            ! Add excess water to lateral drainage
-            drain_lat_sl(i,j)   = drain_lat_sl(i,j)  + drain_sl(i)
-          ELSE
-            ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
-            tpe_overflow(i) = tpe_overflow(i) + drain_sl(i)
+      !      The idea is that drainage occurs through cracks from an upper soil layer directly
+      !      down to the bedrock layer.
+      ! ---- In supersaturated, frozen soils, the water above the field capacity is assumed to
+      !      move lateraly until it reaches the stream (or the neighbouring topo-tile)
+      ! @todo: This concept needs to be discussed. Should lateral drainage occur at all?
+      !
+      DO j = 1, nsoil_act(i) - 1
+        !> Calculating lateral drainage from all but the lowest layer above bedrock
+        !
+        !> Drainage pt.2a --- from all soils (impeded in the presence of ice)
+        !  ws_free(i) = MAX(wtr_field_cap_sl(i,j) * zwdfre, EPSILON(1._wp))
+        ! soil moisture above which drainage strongly increases
+        ! 1.) Caluclate drainage for all soils
+        drain_sl(i) = MIN(hyd_cond_sl(i,j) * SIN(slope(j)*pi/2._wp) * dtime, MAX(0._wp, wtr_soil_sl(i,j)-wtr_rsdl_sl(i,j)))
+        IF ((.NOT. ltpe_closed) .AND. l_latdrain) THEN
+          IF (wtr_soil_sl(i,j) > wtr_rsdl_sl(i,j)) THEN
+            wtr_soil_sl(i,j)  = wtr_soil_sl(i,j)  - drain_sl(i) ! remove drainage of the layer from soil moisture
+            drain_lat_sl(i,j) = drain_lat_sl(i,j) + drain_sl(i) ! and add to lateral drainage
           END IF
-        ELSE IF (ltpe_closed) THEN
-          ! refill soil moisture from overflow pool
-          remoist(i)       = MIN(tpe_overflow(i), wtr_field_cap_sl(i,j) - wtr_soil_sl(i,j))
-          wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + remoist(i)
-          tpe_overflow(i)  = tpe_overflow(i) - remoist(i)
         END IF
       END DO
+
+      ! 3. Correct percolation if maximum moisture is exceeded, and correct soil moisture of the
+      !    above layer accordingly
+
+      ! Overflow is not allowed from layers below the surface layer.
+      ! Instead it is assumed that water piles upwards from saturated layers.
+      DO j = nsoil_act(i), 2, -1
+        IF (.NOT. ltpe_closed) THEN
+          IF (wtr_soil_sl(i,j) > wtr_wsat_sl(i,j)) THEN
+            ! soil moisture above field capacity:
+            wtr_soil_sl(i,j-1) = wtr_soil_sl(i,j-1) + wtr_soil_sl(i,j) - wtr_wsat_sl(i,j)
+            wtr_soil_sl(i,j)   = wtr_wsat_sl(i,j)
+          END IF
+        ELSE
+          IF (wtr_soil_sl(i,j) > wtr_field_cap_sl(i,j)) THEN
+            ! redirect overflow from drainage to overflow pool
+            tpe_overflow(i) = tpe_overflow(i) + wtr_soil_sl(i,j) - wtr_field_cap_sl(i,j)
+            wtr_soil_sl(i,j) = wtr_field_cap_sl(i,j)
+          ELSE ! wtr_soil_sl <= wtr_field_cap_sl
+            ! refill soil moisture from overflow pool
+            remoist(i) = MIN(tpe_overflow(i), wtr_field_cap_sl(i,j) - wtr_soil_sl(i,j))
+            wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + remoist(i)
+            tpe_overflow(i) = tpe_overflow(i) - remoist(i)
+          END IF
+        END IF
+      END DO
+
+      ! 4. Add overflow of the surface layer to drainage (seems to be added to ponds by now)
+      ! Overflow from the surface layer enters drainage, resp. the overflow pool for TPE closed.
+      ! This should not happen, this is just for security.
+      IF (.NOT. ltpe_closed) THEN
+        IF (wtr_soil_sl(i,1) > wtr_wsat_sl(i,1)) THEN
+          infilt_over(i)   = wtr_soil_sl(i,1) - wtr_wsat_sl(i,1)
+          infilt(i)        = MAX(0._wp, infilt(i) - infilt_over(i))
+          wtr_soil_sl(i,1) = wtr_wsat_sl(i,1)
+        END IF
+      ELSE      ! TPE closed case
+        wtr_soil_sl(i,1) = wtr_soil_sl(i,1) + tpe_overflow(i)
+        IF (wtr_soil_sl(i,1) > wtr_field_cap_sl(i,1)) THEN
+          ! redirect overflow to overflow pool
+          tpe_overflow(i)  = wtr_soil_sl(i,1) - wtr_field_cap_sl(i,1)
+          wtr_soil_sl(i,1) = wtr_field_cap_sl(i,1)
+        END IF
+      END IF
 
       ! Modification for TPE (open)
       IF (ltpe_open) THEN
         !$claw acc loop seq
         DO j = 1, nsoil
-          !IF (i == nsoil - 2 .OR. i == nsoil - 1 .OR. i == nsoil) THEN   ! special adaptation of Shirisha
-          IF (i == nsoil-1 .OR. i == nsoil) THEN
+          !IF (j == nsoil - 2 .OR. j == nsoil - 1 .OR. j == nsoil) THEN   ! special adaptation of Shirisha
+          IF (j == nsoil-1 .OR. j == nsoil) THEN
             IF (dsoil(i,j) > 0._wp) THEN
              ! keep the two lowest soil layers always very wet
-             wtr_soil_sl(i,j) = MAX(wtr_soil_sl(i,j),wtr_field_cap_sl(i,j) * 0.9_wp)
+             wtr_soil_sl(i,j) = MAX(wtr_soil_sl(i,j), wtr_field_cap_sl(i,j) * 0.9_wp)
             END IF
           END IF
         END DO
       END IF
-
     END DO
-
-    ! Add surface runoff components as infiltration overflow
-    infilt_over(:) = wtr_exinfcap(:) + wtr_exwsat(:)
 
     ! Check value range for soil moisture
     DO i = 1, nc
@@ -2244,7 +2339,8 @@ CONTAINS
     ! Making sure ws_rel is in the physical range
     ! This is especially important when infiltration is added to the first layer
     IF (soilhydmodel == VanGenuchten_) THEN
-      ws_rel_vol(:,:) = MIN(0.9999_wp, MAX(0._wp, ws_rel_vol(:,:))) ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
+      ! doesn't work for wrel == 1; (1-ws_rel(:,:)**(1/mvgn(:,:)))**(-mvgn)
+      ws_rel_vol(:,:) = MIN(0.9999_wp, MAX(0._wp, ws_rel_vol(:,:)))
     ELSE  ! Brooks & Corey; Van Genuchten
       ws_rel_vol(:,:) = MIN(1._wp,     MAX(0._wp, ws_rel_vol(:,:)))
     END IF

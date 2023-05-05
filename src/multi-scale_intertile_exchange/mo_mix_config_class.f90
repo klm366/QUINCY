@@ -23,14 +23,15 @@ MODULE mo_mix_config_class
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
+  ! Module variables
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_mix_config
 
   TYPE, EXTENDS(t_jsb_config) :: t_mix_config
      LOGICAL                  :: &
-       & l_hydro_mix               !< enable lateral transport of water between grid tiles
+       & l_hydro_mix,            & !< enable lateral transport of water between grid tiles
+       & l_macrotrans_subsurf      !< enable long distance lateral drainage
 
    CONTAINS
      PROCEDURE :: Init => Init_mix_config
@@ -41,7 +42,7 @@ MODULE mo_mix_config_class
 CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Initialize multi-scale intertile exchange process
-  !!  
+  !!
   SUBROUTINE Init_mix_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -50,11 +51,13 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    LOGICAL                     :: l_hydro_mix
+    LOGICAL                     :: l_hydro_mix,         &
+      &                            l_macrotrans_subsurf
 
     NAMELIST /jsb_mix_nml/       &
          active,                 &
-         l_hydro_mix
+         l_hydro_mix,            &
+         l_macrotrans_subsurf
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -63,8 +66,9 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting multi-scale intertile exchange configuration')
 
     ! Set defaults
-    active              = .TRUE.
-    l_hydro_mix         = .FALSE.
+    active               = .TRUE.
+    l_hydro_mix          = .FALSE.
+    l_macrotrans_subsurf = l_hydro_mix
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -79,6 +83,12 @@ CONTAINS
       CALL message(TRIM(routine), 'Lateral water flow between tiles is enabled')
     ELSE
       CALL message(TRIM(routine), 'Lateral water flow between tiles is disabled')
+    END IF
+    config%l_macrotrans_subsurf = l_macrotrans_subsurf
+    IF (l_macrotrans_subsurf) THEN
+      CALL message(TRIM(routine), 'Long distance lateral drainage enabled')
+    ELSE
+      CALL message(TRIM(routine), 'Long distance lateral drainage disabled')
     END IF
 
   END SUBROUTINE Init_mix_config

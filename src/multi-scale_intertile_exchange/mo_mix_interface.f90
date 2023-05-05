@@ -36,7 +36,7 @@ MODULE mo_mix_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes MIX_, HYDRO_
+  dsl4jsb_Use_processes MIX_, HYDRO_, SSE_
 
   ! Use of process configurations
   dsl4jsb_Use_config(MIX_)
@@ -45,6 +45,7 @@ MODULE mo_mix_interface
   ! Use of process memories
   dsl4jsb_Use_memory(MIX_)
   dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(SSE_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables
@@ -237,11 +238,13 @@ CONTAINS
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(MIX_)
     dsl4jsb_Def_memory(HYDRO_)
+    dsl4jsb_Def_memory(SSE_)
 
     dsl4jsb_Def_memory_tile(MIX_,   sibl_tile)
     dsl4jsb_Def_memory_tile(HYDRO_, sibl_tile)
 
     ! Declare pointers to variables in memory
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
     dsl4jsb_Real2D_onChunk :: micro_slope
     dsl4jsb_Real2D_onChunk :: wtr_latflow
     dsl4jsb_Real2D_onChunk :: wtr_pond
@@ -290,6 +293,8 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: wtr_pond_max    !< Maximum pond water depth       [m]
     REAL(wp), DIMENSION(options%nc) :: wtr_pond_tmp    !< Temporary pond water storage   [m]
     REAL(wp), DIMENSION(options%nc) :: fr_dpr_rel      !< ???
+    LOGICAL,  DIMENSION(options%nc) :: l_pf_soil       !< Permafrost mask                []
+    LOGICAL,  DIMENSION(options%nc) :: l_latdrain      !< T: allow lateral drainage      []
 
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) ::         &
     & ice_imp_source,                                & !< Soil layer ice impedance factor on source tile []
@@ -327,6 +332,7 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(MIX_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(SSE_)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(MIX_,   wtr_latflow)            ! inout
@@ -338,6 +344,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)               ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)               ! inout
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)     ! in
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)          ! inout
       dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)        ! in
@@ -374,7 +381,6 @@ CONTAINS
       ALLOCATE(weq_p_wilt_sl(nc,nsoil))
       ALLOCATE(weq_p_wilt_sl_sibl_tile(nc,nsoil))
 
-
       ! This check should be moved to init routine as soon as enough stuff is there to justify one
       IF (tile%process_action(HYDRO_) /= ON_TILE_) THEN
         CALL finish(routine, 'MIX_ processes must be activate on the same tiles as HYDRO_')
@@ -382,6 +388,15 @@ CONTAINS
 
       wtr_pond_max(:) = MAX(0._wp, dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max) &
         &                        - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
+
+      DO i = 1, nc
+        IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth < soil depth ...
+         &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! ... but not at maximum.
+          l_pf_soil(i)=.TRUE.
+        ELSE
+          l_pf_soil(i)=.FALSE.
+        END IF
+      END DO
 
       ! Source tiles are always either upland or ridge tiles
       IF (tile%contains_upland .OR. tile%contains_ridge) THEN
@@ -441,7 +456,7 @@ CONTAINS
           ! Identify correct downhill target sibling for drainage
           l_latflow = (tile%contains_upland       .AND. tile%contains_ridge           .AND. &
             &          sibl_tile%contains_upland  .AND. sibl_tile%contains_depression) .OR. & ! upland ridge      --> upland depression
-            ! This condition should only be used if soils are frozen, does not yet seem to be implemented
+            ! This condition should only be used if soils are frozen or large scale transport is explicitly required
             &         (tile%contains_upland       .AND. tile%contains_depression      .AND. &
             &          sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. & ! upland depression --> lowland depression
             !
@@ -461,11 +476,27 @@ CONTAINS
             retention_time = 360000._wp  ! Hundert hours retention time (
                                          ! outflow = h_re * dt/retention_time)
 
+            ! Additional condition: long distance lateral drainage from upland to lowland tiles is allowed
+            ! either under permafrost conditions or if l_macrotrans_subsurf is True
+            DO i = 1, nc
+              IF (tile%contains_upland .AND. tile%contains_depression) THEN    ! Long-distance and
+                IF (dsl4jsb_Config(MIX_)%l_macrotrans_subsurf .OR. &           ! Switch true or
+                  &  l_pf_soil(i)) THEN                                        ! Permafrost
+                l_latdrain(i) = .TRUE.
+                ELSE                                                           ! Long-distance but not allowed
+                  l_latdrain(i) = .FALSE.
+                END IF
+              ELSE                                                             ! Other distances
+                l_latdrain(i) = .TRUE.
+              END IF
+            END DO
+
             ! Move lateral drainage from source to target tile
             DO i = 1, nsoil
               CALL calc_drainage_transport( &
                 ! in
                 & l_lag,                                 & !< T: Apply lag
+                & l_latdrain(:),                         & !< T: allow lateral drainage in gridcell
                 & dtime,                                 & !< model time step                          [s]
                 & retention_time,                        & !< lagged flow retention time               [s]
                 & wtr_soil_fc_sl(:,i),                   & !< soil layer field capacity at source tile [m]

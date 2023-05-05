@@ -388,6 +388,7 @@ CONTAINS
     USE mo_hydro_process,         ONLY: calc_orographic_features
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    CLASS(t_jsb_tile_abstract), POINTER :: sibl_tile
 
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
@@ -395,7 +396,8 @@ CONTAINS
     TYPE(t_jsb_model), POINTER        :: model
     TYPE(t_jsb_grid),  POINTER        :: grid
     TYPE(t_jsb_vgrid), POINTER        :: soil_w
-    INTEGER                           :: i, nsoil
+    INTEGER                           :: i, nsoil, nsibl
+    REAL(wp), ALLOCATABLE             :: source_fract(:,:), target_fract(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
 
@@ -425,6 +427,39 @@ CONTAINS
     !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_,elevation), &
     !$acc dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev)
 
+    ! Get source and target tile fractions for qarctic usecase
+    ALLOCATE(source_fract(SIZE(tile%fract,1), SIZE(tile%fract,2)))
+    ALLOCATE(target_fract(SIZE(tile%fract,1), SIZE(tile%fract,2)))
+
+    IF (TRIM(model%config%usecase) == 'jsbach_qarctic' .AND. &
+      & (tile%contains_upland .OR. tile%contains_lowland)) THEN
+      CALL tile%Get_fraction(fract=source_fract(:,:))
+      target_fract(:,:) = source_fract(:,:) ! For those tiles without target cell
+      ! Get number of tiles in this hierarchy level and loop over then
+      nsibl = tile%parent_tile%Get_no_of_children()
+      DO i = 1, nsibl
+        IF (i == 1) THEN
+          sibl_tile => tile%parent_tile%Get_first_child_tile()
+        ELSE
+          sibl_tile => sibl_tile%Get_next_sibling_tile()
+        END IF
+        ! Identify correct downhill target sibling for runoff
+        IF ( (tile%contains_upland       .AND. tile%contains_ridge      .AND.       &
+          &   sibl_tile%contains_upland  .AND. sibl_tile%contains_depression) .OR.  &
+          &  (tile%contains_upland       .AND. tile%contains_depression .AND.       &
+          &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR.  &
+          &  (tile%contains_lowland      .AND. tile%contains_ridge      .AND.       &
+          &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) ) THEN
+          CALL sibl_tile%Get_fraction(fract=target_fract(:,:))
+          exit
+        END IF
+      END DO
+    ELSE
+      ! Fractions are not used non-qarctic setups
+      source_fract(:,:) = 1._wp
+      target_fract(:,:) = 1._wp
+    END IF
+
     ! Compute steepness parameter for surface runoff
     DO i = 1, grid%Get_nblks()
       CALL calc_orographic_features(                      &
@@ -435,12 +470,15 @@ CONTAINS
         & tile%contains_upland,                           & !< T: Upland HydroTile
         & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
         & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),      & !< Standard deviation of orography [m]
+        & dsl4jsb_var_ptr(HYDRO_, weq_pond_max )(:,i),    & !< Maximum pond / depression depth [m]
+        & source_fract(:,i), target_fract(:,i),           & !< Fractions of source and target tile []
         ! out
         & dsl4jsb_var_ptr(HYDRO_, steepness  )(:,i),      & !< parameter defining the subgrid slope distribution [m/m]
         & dsl4jsb_var_ptr(HYDRO_, micro_slope)(:,i),      & !< slope on microtopography tiles [m/m]
         & dsl4jsb_var_ptr(HYDRO_, macro_slope)(:,i)       & !< slope on macrotopography tiles [m/m]
         & )
     END DO
+    DEALLOCATE(source_fract, target_fract)
 
     IF (tile%contains_soil) THEN
 

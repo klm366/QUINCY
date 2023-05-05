@@ -54,8 +54,7 @@ MODULE mo_hydro_config_class
       & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
-      & l_ponds,              & !< Additional surface water storage
-      & l_macrotrans_subsurf
+      & l_ponds                 !< Additional surface water storage
 
     INTEGER               ::  &
       & runoff_scheme,        & !< Choice of runoff and infiltration scheme: 'ARNO' (default), 'QArctic' (only with hydrotiles)
@@ -89,7 +88,7 @@ CONTAINS
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, runoff_scheme, soilhydmodel, interpol_mean
     LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
-      &                            l_ponds, l_macrotrans_subsurf
+      &                            l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -110,7 +109,6 @@ CONTAINS
       & l_organic,                  &
       & l_socmap,                   &
       & l_glac_in_soil,             &
-      & l_macrotrans_subsurf,       &
       & l_infil_subzero,            &
       & l_ponds,                    &
       & runoff_scheme,              &
@@ -148,7 +146,6 @@ CONTAINS
     l_organic              = .TRUE.
     l_socmap               = .TRUE.
     l_glac_in_soil         = .FALSE.
-    l_macrotrans_subsurf   = .TRUE.
     l_infil_subzero        = .TRUE.
     l_ponds                = .FALSE.
     runoff_scheme          = "Arno"
@@ -221,7 +218,6 @@ CONTAINS
       & CALL message(TRIM(routine), 'Replacing organic carbon fractions with map from bc file: ' //TRIM(logical2string(l_socmap)))
 
     config%l_glac_in_soil       = l_glac_in_soil
-    config%l_macrotrans_subsurf = l_macrotrans_subsurf
     config%l_infil_subzero      = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
