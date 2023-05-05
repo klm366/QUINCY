@@ -537,6 +537,21 @@ CONTAINS
         & l_fixed_fractions=l_fixed_fractions,                            &
         & l_rel_fractions=model%config%relative_fractions_in_file)
 
+      CALL model%Goto_next_tile(tile)
+      ! ---------------------------------------------------------------------------------------------- !
+    END DO
+
+    ! Interrupt and reset loop to make ensure all fractions are initialized before processes are initialized
+    CALL model%Reset_tiles()
+    CALL model%Get_top_tile(tile)
+
+    DO WHILE (ASSOCIATED(tile))
+
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+
       ! ---------------------------------------------------------------------------------------------- !
       !>
       !>     2.3 Initialize processes on each tile
