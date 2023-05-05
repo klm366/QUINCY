@@ -938,7 +938,7 @@ CONTAINS
       ! see CLM45 Tech Note, section 7.4.1 Hydraulic Properties, p.161 f.
 
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
-      DO is=2,nsoil
+      DO is=1,nsoil
         DO ic=1,nc
           IF (fract_org_sl(ic,is) > thresh_org) THEN
             ! Connected flow pathways consisting of organic material only exist
@@ -1451,9 +1451,9 @@ CONTAINS
         wtr_rootzone_avail_max(ic) = MAX(weq_rootzone_max(ic) - ice_rootzone(ic) - wtr_rootzone_scool_pot(ic), 0._wp)
       END DO
       !$ACC END PARALLEL LOOP
+    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       !$ACC PARALLEL LOOP DEFAULT(PRESENT)
       DO ic=1,nc
         wtr_rootzone_avail_max(ic) = MAX(weq_rootzone_max(ic) - ice_rootzone(ic), 0._wp)
