@@ -32,7 +32,13 @@ MODULE mo_alcc_config_class
   TYPE, EXTENDS(t_jsb_config)      :: t_alcc_config
      INTEGER                       :: nr_of_pfts
      CHARACTER(len=filename_max-7) :: alcc_filename_prefix 
-     CHARACTER(len=SHORT_NAME_LEN) :: scheme
+     CHARACTER(len=15)             :: scheme
+     INTEGER                       :: interactive_istep
+     INTEGER                       :: interactive_ipft_from
+     INTEGER                       :: interactive_ipft_to
+     REAL(wp)                      :: interactive_center(2)
+     REAL(wp)                      :: interactive_radius
+     REAL(wp)                      :: interactive_fract_max ! Maximum tile fraction on tile specified by interactive_ipft_from
      !< Prefix of alcc filename prefix with len filename_max-7 (to add yyyy.nc) 
    CONTAINS
      PROCEDURE :: Init => Init_alcc_config
@@ -64,9 +70,15 @@ CONTAINS
     LOGICAL                       :: active
     CHARACTER(len=filename_max)   :: ic_filename, bc_filename
     CHARACTER(len=filename_max-7) :: alcc_filename_prefix
-    CHARACTER(len=SHORT_NAME_LEN) :: scheme
+    CHARACTER(len=15)             :: scheme
     TYPE(t_jsb_vgrid), POINTER    :: pft_layer
     INTEGER                       :: i, nr_of_pfts
+    INTEGER                       :: interactive_istep
+    INTEGER                       :: interactive_ipft_from
+    INTEGER                       :: interactive_ipft_to
+    REAL(wp)                      :: interactive_center(2)
+    REAL(wp)                      :: interactive_radius
+    REAL(wp)                      :: interactive_fract_max
 
     NAMELIST /jsb_alcc_nml/      &
          active,                      &
@@ -74,7 +86,13 @@ CONTAINS
          bc_filename,                 &
          alcc_filename_prefix,        &
          scheme,                      &
-         nr_of_pfts
+         nr_of_pfts,                  &
+         interactive_istep,           &
+         interactive_ipft_from,       &
+         interactive_ipft_to,         &
+         interactive_center,          &
+         interactive_radius,          &
+         interactive_fract_max
 
     INTEGER :: nml_handler, nml_unit, istat
 
@@ -84,12 +102,18 @@ CONTAINS
     CALL message(TRIM(routine), 'Starting alcc configuration')
 
     ! Set defaults
-    active               = .FALSE.
-    bc_filename          = 'bc_land_alcc.nc'
-    ic_filename          = 'ic_land_alcc.nc'
-    alcc_filename_prefix = 'bc_land_frac_11pfts_'
-    nr_of_pfts           = 11
-    scheme               = 'maps'
+    active                  = .FALSE.
+    bc_filename             = 'bc_land_alcc.nc'
+    ic_filename             = 'ic_land_alcc.nc'
+    alcc_filename_prefix    = 'bc_land_frac_11pfts_'
+    nr_of_pfts              = 11
+    scheme                  = 'maps'
+    interactive_istep       = -1
+    interactive_ipft_from   = 1                 ! Tropical broadleaf evergreen
+    interactive_ipft_to     = 11                ! C3 crops
+    interactive_center(1:2) = [-65._wp, -5._wp] ! Somewhere in Amazon
+    interactive_radius      = 1.E6              ! 1000 km
+    interactive_fract_max   = 0.1_wp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -98,16 +122,24 @@ CONTAINS
 
     CALL close_nml(nml_handler)
 
-    config%active               = active
-    config%ic_filename          = ic_filename
-    config%bc_filename          = bc_filename
-    config%alcc_filename_prefix = alcc_filename_prefix
-    config%scheme               = scheme
-    config%nr_of_pfts           = nr_of_pfts
+    config%active                = active
+    config%ic_filename           = ic_filename
+    config%bc_filename           = bc_filename
+    config%alcc_filename_prefix  = alcc_filename_prefix
+    config%scheme                = TRIM(scheme)
+    config%nr_of_pfts            = nr_of_pfts
+    config%interactive_istep     = interactive_istep
+    config%interactive_ipft_from = interactive_ipft_from
+    config%interactive_ipft_to   = interactive_ipft_to
+    config%interactive_center(:) = interactive_center(:)
+    config%interactive_radius    = interactive_radius
+    config%interactive_fract_max = interactive_fract_max
 
     SELECT CASE (TRIM(config%scheme))
     CASE ('maps')
       CALL message(TRIM(routine), 'Reading land use data from maps.')
+    CASE ('interactive')
+      CALL message(TRIM(routine), 'Interactively changing land use data.')
     CASE DEFAULT
       CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(config%scheme))
     END SELECT

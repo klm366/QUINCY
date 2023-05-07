@@ -33,7 +33,7 @@ MODULE mo_alcc_init
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: alcc_init, read_land_use_data
+  PUBLIC :: alcc_init, read_land_use_data, set_land_use_data
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_init'
 
@@ -184,6 +184,8 @@ CONTAINS
 
         ! potentially correct read values (if relative fracts in map, else cf_correction has been set to 1.0_wp)
         cf_current_year(:,i_tile,:) = cf_current_year(:,i_tile,:) * cf_correction
+      CASE ('interactive')
+        CALL finish(routine, 'Should not be here')
       CASE DEFAULT
         CALL finish(TRIM(routine), 'Unimplemented alcc scheme specified: '// TRIM(dsl4jsb_Config(ALCC_)%scheme) )
       END SELECT
@@ -217,6 +219,126 @@ CONTAINS
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
   END SUBROUTINE read_land_use_data
+
+  ! ====================================================================================================== !
+  !
+  !> Reading of land use data 
+  !
+  SUBROUTINE set_land_use_data(model_id)
+
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_grid,            ONLY: Get_grid
+    USE mo_jsb_time_iface,      ONLY: t_datetime
+    USE mo_jsb_varlist,         ONLY: VARNAME_LEN
+    USE mo_io_units,            ONLY: filename_max
+    USE mo_jsb_parallel,        ONLY: Get_omp_thread
+    USE mo_util,                ONLY: dist_lonlat
+
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id
+
+    TYPE(t_jsb_model),           POINTER :: model
+    TYPE(t_jsb_grid),            POINTER :: hgrid  
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile, current_tile
+
+    INTEGER :: ic, iblk, i_tile, no_omp_thread, nproma, npromz, ncells, nblks
+    REAL(wp), ALLOCATABLE :: cf_correction(:,:) ! Difference between new and old tile fractions
+    REAL(wp) :: zdist ! Distance of grid cell from center of area to be changed
+    REAL(wp) :: znew  ! New fraction
+
+    dsl4jsb_Def_config(ALCC_)
+    dsl4jsb_Def_memory(ALCC_)
+
+    dsl4jsb_Real3D_onDomain :: cf_current
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':set_land_use_data'
+
+    no_omp_thread = Get_omp_thread()
+
+    model => Get_model(model_id)
+    hgrid => Get_grid(model%grid_id)
+    nproma = hgrid%nproma
+    npromz = hgrid%npromz
+    nblks  = hgrid%nblks
+
+    dsl4jsb_Get_config(ALCC_)
+
+    IF (TRIM(dsl4jsb_Config(ALCC_)%scheme) /= 'interactive') CALL finish(routine, 'Should not be here')
+
+    IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
+
+    CALL message(routine, 'Interactive setting of land cover')
+
+    ! ilcc is expected to run on the veg tile 
+    ! -> search for the veg tile
+    CALL model%Get_top_tile(tile)
+    DO WHILE (ASSOCIATED(tile))
+      IF (tile%visited(no_omp_thread)) THEN  ! Have been here before
+        CALL model%Goto_next_tile(tile)
+        CYCLE
+      END IF
+      IF (tile%name .EQ. 'veg') EXIT
+      CALL model%Goto_next_tile(tile)
+    ENDDO
+    !>
+    !> Assertion: ilcc is expected to run on the veg tile
+    !>
+    IF (.NOT. ASSOCIATED(tile)) THEN
+      CALL finish(TRIM(routine), &
+        & 'Violation of assertion: veg tile required but not found in tile tree.')
+    ENDIF
+
+    ALLOCATE(cf_correction(nproma, nblks))
+    cf_correction(:,:) = 0._wp
+
+    dsl4jsb_Get_memory(ALCC_)
+    dsl4jsb_Get_var3D_onDomain(ALCC_, cf_current)
+
+    current_tile => tile%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+      IF (i_tile == dsl4jsb_Config(ALCC_)%interactive_ipft_from) THEN
+        CALL current_tile%Get_fraction(fract=cf_current(:,i_tile,:))
+        DO iblk = 1,nblks
+          IF (iblk == nblks) THEN
+            ncells = npromz
+          ELSE
+            ncells = nproma
+          END IF
+          DO ic = 1,ncells
+            zdist = dist_lonlat(hgrid%lon(ic,iblk), hgrid%lat(ic,iblk), &
+              &                 dsl4jsb_Config(ALCC_)%interactive_center(1), &
+              &                 dsl4jsb_Config(ALCC_)%interactive_center(2)  &
+              &                 )
+            IF (zdist < dsl4jsb_Config(ALCC_)%interactive_radius) THEN
+              znew = MIN(cf_current(ic,i_tile,iblk), dsl4jsb_Config(ALCC_)%interactive_fract_max)
+              cf_correction(ic,iblk) = cf_current(ic,i_tile,iblk) - znew
+              cf_current(ic,i_tile,iblk) = znew
+            END IF
+          END DO
+        END DO
+        CALL current_tile%Set_fraction(fract=cf_current(:,i_tile,:))
+      END IF
+      EXIT
+      current_tile => current_tile%Get_next_sibling_tile()
+    ENDDO
+
+    current_tile => tile%Get_first_child_tile()
+    i_tile = 0
+    DO WHILE (ASSOCIATED(current_tile))
+      i_tile = i_tile + 1
+      IF (i_tile == dsl4jsb_Config(ALCC_)%interactive_ipft_to) THEN
+        CALL current_tile%Get_fraction(fract=cf_current(:,i_tile,:))
+        CALL current_tile%Set_fraction(fract=cf_current(:,i_tile,:) + cf_correction(:,:))
+        EXIT
+      END IF
+      current_tile => current_tile%Get_next_sibling_tile()
+    ENDDO
+
+    DEALLOCATE(cf_correction)
+
+  END SUBROUTINE set_land_use_data
 
 #endif
 END MODULE mo_alcc_init

@@ -49,7 +49,7 @@ CONTAINS
     ! USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_constants,     ONLY: init_pheno_constants
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, ALCC_
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
     dsl4jsb_Use_config(RAD_)
@@ -57,6 +57,7 @@ CONTAINS
     dsl4jsb_Use_config(DISTURB_)
     dsl4jsb_Use_config(FUEL_)
     dsl4jsb_Use_config(PPLCC_)
+    dsl4jsb_Use_config(ALCC_)
 
     CHARACTER(len=*), INTENT(in) :: master_namelist_filename
 
@@ -67,6 +68,7 @@ CONTAINS
     dsl4jsb_Def_config(DISTURB_)
     dsl4jsb_Def_config(FUEL_)
     dsl4jsb_Def_config(PPLCC_)
+    dsl4jsb_Def_config(ALCC_)
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
@@ -139,6 +141,7 @@ CONTAINS
       dsl4jsb_Get_config(FUEL_)
       dsl4jsb_Get_config(DISTURB_)
       dsl4jsb_Get_config(PPLCC_)
+      dsl4jsb_Get_config(ALCC_)
 
       ! Crosscheck process configs
       IF (TRIM(model%config%tpe_scheme) /= '') THEN
@@ -177,7 +180,7 @@ CONTAINS
       END IF
 
       IF (model%Do_fractions_change()) THEN
-        IF (.NOT. dsl4jsb_Config(PPLCC_)%active) THEN
+        IF (.NOT. dsl4jsb_Config(PPLCC_)%active .AND. TRIM(dsl4jsb_Config(ALCC_)%scheme) /= 'interactive') THEN
           CALL message(TRIM(routine), 'Activating PPLCC_ process since some process changes fractions')
         END IF
         dsl4jsb_Config(PPLCC_)%active = .TRUE.

@@ -24,6 +24,7 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(NLCC_)
+  dsl4jsb_Use_config(ALCC_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -214,6 +215,7 @@ CONTAINS
     CLASS(t_jsb_aggregator), POINTER    :: weighted_by_fract
 
     dsl4jsb_Def_config(PHENO_)
+    dsl4jsb_Def_config(ALCC_)
 
     CHARACTER(len=*), PARAMETER         :: routine = modname//':jsbach_init'
     ! -------------------------------------------------------------------------------------------------- !
@@ -229,6 +231,7 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_config(PHENO_)
+    dsl4jsb_Get_config(ALCC_)
 
     ! -------------------------------------------------------------------------------------------------- !
     !>
@@ -270,8 +273,12 @@ CONTAINS
         CALL model%Queue_task(NLCC_, "nlcc")
       END IF
 
-      IF (model%processes(ALCC_)%p%config%active) THEN
-        CALL model%Queue_task(ALCC_, "alcc")
+      IF (dsl4jsb_Config(ALCC_)%active) THEN
+        IF (TRIM(dsl4jsb_Config(ALCC_)%scheme) == 'maps') THEN
+          CALL model%Queue_task(ALCC_, "alcc")
+        ELSE IF (TRIM(dsl4jsb_Config(ALCC_)%scheme) == 'interactive') THEN
+          CALL model%Queue_task(ALCC_, "ilcc")
+        END IF
       END IF
 
       IF (model%processes(PPLCC_)%p%config%active) THEN

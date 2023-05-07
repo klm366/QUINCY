@@ -22,7 +22,7 @@ MODULE mo_util
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, int2string, real2string, logical2string, &
-    &       report_memory_usage, soil_init_from_texture
+    &       report_memory_usage, soil_init_from_texture, dist_lonlat
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -301,6 +301,25 @@ CONTAINS
     END IF
     !
   END FUNCTION logical2string
+
+  PURE ELEMENTAL FUNCTION dist_lonlat(lon1, lat1, lon2, lat2) RESULT(dist)
+
+    USE mo_jsb_math_constants,     ONLY: deg2rad
+    USE mo_jsb_physical_constants, ONLY: earth_radius
+
+    REAL(wp), INTENT(in) :: lon1, lat1, lon2, lat2 ! [deg]
+    REAL(wp)             :: dist                   ! [m]
+
+    REAL(wp) :: zlon1, zlat1, zlon2, zlat2 ! [rad]
+
+    zlon1 = lon1 * deg2rad
+    zlat1 = lat1 * deg2rad
+    zlon2 = lon2 * deg2rad
+    zlat2 = lat2 * deg2rad
+
+    dist = ACOS( SIN(zlat1)*SIN(zlat2) + COS(zlat1)*COS(zlat2)*COS(zlon2-zlon1) ) * earth_radius
+
+  END FUNCTION dist_lonlat
 
   SUBROUTINE report_memory_usage()
 

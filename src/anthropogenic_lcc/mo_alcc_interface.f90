@@ -41,7 +41,6 @@ MODULE mo_alcc_interface
   PUBLIC :: Register_alcc_tasks
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_interface'
-  CHARACTER(len=*), PARAMETER :: procname = 'alcc'
   
   !> Type definition for alcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_alcc
@@ -54,7 +53,19 @@ MODULE mo_alcc_interface
   INTERFACE tsk_alcc
     PROCEDURE Create_task_alcc                        !< Constructor function for task
   END INTERFACE tsk_alcc
+
+  !> Type definition for ilcc task (interactive land cover change)
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_ilcc
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_ilcc     !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_ilcc  !< Aggregates computed task variables
+  END TYPE tsk_ilcc
   
+  !> Constructor interface for ilcc task
+  INTERFACE tsk_ilcc
+    PROCEDURE Create_task_ilcc                        !< Constructor function for task
+  END INTERFACE tsk_ilcc
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -68,9 +79,24 @@ CONTAINS
     CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "alcc"
     ! -------------------------------------------------------------------------------------------------- !
     ALLOCATE(tsk_alcc::return_ptr)
-    CALL return_ptr%Construct(name=procname, process_id=ALCC_, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='alcc', process_id=ALCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_alcc
+    
+  ! ====================================================================================================== !
+  !
+  !> Constructor for ilcc task
+  !
+  FUNCTION Create_task_ilcc(model_id) RESULT(return_ptr)
+
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER,                   INTENT(in) :: model_id    !< Model id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr  !< Instance of process task "ilcc"
+    ! -------------------------------------------------------------------------------------------------- !
+    ALLOCATE(tsk_ilcc::return_ptr)
+    CALL return_ptr%Construct(name='ilcc', process_id=ALCC_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_ilcc
     
   ! ====================================================================================================== !
   !
@@ -83,6 +109,7 @@ CONTAINS
     INTEGER,               INTENT(in)   :: model_id    !< Model id
     ! -------------------------------------------------------------------------------------------------- !
     CALL this%Register_task(tsk_alcc(model_id))
+    CALL this%Register_task(tsk_ilcc(model_id))
     
   END SUBROUTINE Register_alcc_tasks
 
@@ -131,7 +158,7 @@ CONTAINS
     dtime   = options%dtime
 
     model => Get_model(tile%owner_model_id)
-    process_id = Get_process_id(procname)
+    process_id = Get_process_id('alcc')
 
     dsl4jsb_Get_memory(ALCC_)
     dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current_year)
@@ -276,6 +303,81 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_alcc
+
+  ! ====================================================================================================== !
+  !
+  !> Implementation of "update" for task "ilcc"
+  !>
+  !> Task "ilcc" updates land cover fractions based on interactive configuration
+  !
+  SUBROUTINE update_ilcc(tile, options)
+
+    USE mo_util,              ONLY: one_of
+    USE mo_jsb_time,          ONLY: is_newday, is_newyear
+    USE mo_jsb_process_class, ONLY: Get_process_id
+
+    IMPLICIT NONE
+
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_memory(ALCC_)
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_ilcc'
+    LOGICAL, PARAMETER :: allAtOnce = .FALSE.
+
+    CLASS(t_jsb_tile_abstract), POINTER :: current_tile
+    TYPE(t_jsb_model), POINTER          :: model
+
+    INTEGER  :: i_tile, iblk, ics, ice, nc, process_id, nr_of_tiles
+    REAL(wp) :: dtime
+    REAL(wp), DIMENSION(options%nc) :: cf_diff
+
+    dsl4jsb_Real3D_onChunk :: cf_current
+    ! -------------------------------------------------------------------------------------------------- !
+
+    ! Get local variables from options argument
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    nc      = options%nc
+    dtime   = options%dtime
+
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_memory(ALCC_)
+    dsl4jsb_Get_var3D_onChunk(ALCC_, cf_current)
+
+    ! If process is not active on this tile, do nothing
+    IF (.NOT. tile%Is_process_active(ALCC_)) RETURN
+
+  END SUBROUTINE update_ilcc
+
+  ! ====================================================================================================== !
+  !
+  !> Implementation of "aggregate" for task "ilcc"
+  !
+  SUBROUTINE aggregate_ilcc(tile, options)
+
+    ! -------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile     !< Tile for which routine is executed
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options  !< Additional run-time parameters
+    ! -------------------------------------------------------------------------------------------------- !
+    INTEGER  :: iblk
+    !X if necessary: REAL(wp) :: dtime, steplen
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_ilcc'
+    ! -------------------------------------------------------------------------------------------------- !
+
+    iblk = options%iblk
+    
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    
+    !> Currently nothing to do
+    
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_ilcc
 
 #endif
 END MODULE mo_alcc_interface

@@ -21,7 +21,8 @@ MODULE mo_jsb_time
                                get_date_components, get_time_start, &
                                get_time_dt, is_time_experiment_start, get_time_experiment_start, is_time_restart, &
                                get_year_length, get_month_length, get_day_length, get_year_day,   &
-                               is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef
+                               is_time_ltrig_rad_m1, get_time_interpolation_weights, get_asselin_coef, &
+                               timestep_since_experiment_start
 
   IMPLICIT NONE
   PRIVATE
@@ -36,7 +37,7 @@ MODULE mo_jsb_time
             get_year, get_month, get_day, get_secs_of_day
   PUBLIC :: get_time_interpolation_weights
   PUBLIC :: get_asselin_coef
-  PUBLIC :: timestep_in_days, timesteps_per_day
+  PUBLIC :: timestep_in_days, timesteps_per_day, timestep_since_experiment_start
 
   TYPE(t_datetime), POINTER, SAVE :: start_date
   TYPE(t_datetime), POINTER, SAVE :: final_date

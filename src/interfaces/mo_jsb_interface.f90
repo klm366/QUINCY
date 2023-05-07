@@ -28,7 +28,7 @@ MODULE mo_jsb_interface
   USE mo_atmland_interface,   ONLY: update_atm2land, update_land2atm
   USE mo_jsb_subset,          ONLY: ON_CHUNK
   USE mo_jsb_parallel,        ONLY: Get_omp_thread, Is_omp_inside_serial !, get_my_global_mpi_id
-  USE mo_jsb_time,            ONLY: t_datetime, is_newyear
+  USE mo_jsb_time,            ONLY: t_datetime, is_newyear, timestep_since_experiment_start
 
   dsl4jsb_Use_processes CARBON_, ALCC_
 
@@ -371,13 +371,16 @@ CONTAINS
 
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
 
-    USE mo_alcc_init,           ONLY : read_land_use_data
+    USE mo_alcc_init,           ONLY : read_land_use_data, set_land_use_data
+    dsl4jsb_Use_processes ALCC_
+    dsl4jsb_Use_config(ALCC_)
 
     INTEGER,                   INTENT(in) :: model_id
     TYPE(t_datetime), POINTER, INTENT(in) :: current_datetime
     REAL(wp),                  INTENT(in) :: dtime
 
     TYPE(t_jsb_model),           POINTER :: model
+    dsl4jsb_Def_config(ALCC_)
 
     INTEGER :: no_omp_thread
 
@@ -393,16 +396,26 @@ CONTAINS
     IF (no_omp_thread /= 1) CALL finish(routine, 'should not be called inside OMP parallel region!')
 
     model => Get_model(model_id)
+    dsl4jsb_Get_config(ALCC_)
 
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Reset all tiles at the beginning of the timestep
     CALL model%Reset_tiles()
 
-    !> For the ALCC process land use data has to be read once a year
-    IF (is_newyear(current_datetime,dtime) .AND. model%processes(ALCC_)%p%config%active) THEN
-      CALL read_land_use_data(model_id, current_datetime)
-    ENDIF
+    IF (dsl4jsb_Config(ALCC_)%active) THEN
+      IF (TRIM(dsl4jsb_Config(ALCC_)%scheme) == 'maps') THEN
+        !> For the ALCC process land use data has to be read once a year
+        IF (is_newyear(current_datetime,dtime)) THEN
+          CALL read_land_use_data(model_id, current_datetime)
+        ENDIF
+      ELSE IF (TRIM(dsl4jsb_Config(ALCC_)%scheme) == 'interactive') THEN
+        ! current_datetime is "old" datetime, therefore increment timestep by 1
+        IF (timestep_since_experiment_start(current_datetime, dtime) + 1 == dsl4jsb_Config(ALCC_)%interactive_istep) THEN
+          CALL set_land_use_data(model_id)
+        END IF
+      END IF
+    END IF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
 
