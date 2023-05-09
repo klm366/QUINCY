@@ -94,7 +94,7 @@ CONTAINS
       & hgrid, surface,                                                              &
       & t_cf('wtr_latflow', 'kg m-2 s-1', 'Lateral water flow between tiles'),       &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
+      & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
       & output_level=BASIC,                                                          &
       & lrestart=.FALSE., initval_r=0.0_wp )
 
@@ -103,9 +103,9 @@ CONTAINS
       & t_cf('runoff_retention', 'm (water equivalent)',                             &
       &      'Lateral overland flow retention reservoir'),                           &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix, lrestart=.TRUE.,                                             &
+      & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
       & output_level=BASIC,                                                          &
-      & initval_r=0.0_wp)
+      & lrestart=.TRUE., initval_r=0.0_wp)
 
     ! Common soil layer variables
 
@@ -123,7 +123,7 @@ CONTAINS
       & t_cf('drain_lat_retention_sl', 'm (water equivalent)',                       &
       &      'Retention reservoir for lateral drainage'),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
+      & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
       & output_level=BASIC,                                                          &
       & lrestart=.TRUE., initval_r=0.0_wp)
 
