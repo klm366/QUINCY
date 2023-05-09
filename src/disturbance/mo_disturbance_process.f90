@@ -119,7 +119,9 @@ CONTAINS
     & fba_smooth,                           & ! in
 
     & nc,                                   & ! in
+    & iblk,                                 & ! in
     & tilename,                             & ! in
+    & max_pft,                              & ! in
 
     & d_input,     d_hidden,                & ! in
     & d_output,    d_region,                & ! in
@@ -171,17 +173,17 @@ CONTAINS
     & V31_memory, V32_memory, V33_memory,    & ! inout
     & V34_memory, V35_memory, V36_memory,    & ! inout
     & V37_memory, V38_memory, V39_memory,    & ! inout
-    & RHC_memory, Y_memory,                  & ! inout
+    & RHC_memory, Y_memory,   R_memory,      & ! inout
 
-    & minmax,                               & ! in 
-    & gfed_region,                          & ! in
+    & minmax,                                & ! in 
+    & gfed_region,                           & ! in
 
-    & burned_fract,                         & ! inout
-    & burned_fract_infer,                   & ! inout
-    & burned_fract_test                     & ! inout
-    & )
+    & burned_fract,                          & ! inout
+    & burned_fract_infer,                    & ! inout
+    & burned_fract_test,                     & ! inout
+    & weight)
 
-    !USE mo_global_variable
+    USE mo_global_variable
 
     ! Input Arguments
     REAL(wp), INTENT(in) ::                         &
@@ -237,7 +239,7 @@ CONTAINS
       
 
     INTEGER, INTENT(in) ::                          &
-      & nc,                                         & ! in
+      & nc,                  iblk,                  & ! in
       & d_input,             d_hidden,              & ! in
       & d_output,            d_region,              & ! in
       & iteration,           is_training,           & ! in
@@ -245,7 +247,7 @@ CONTAINS
       & memory_idx                                    ! in
 
     CHARACTER(len=*), INTENT(in)::                  &
-      & tilename                                      ! in
+      & tilename,            max_pft                  ! in
 
     ! Output Arguments
     REAL(wp), INTENT(inout) ::                      &
@@ -270,28 +272,29 @@ CONTAINS
       & vW5(:,:),              vb5(:),              &  ! inout (training)
       & vW6(:,:),              vb6(:),              &  ! inout (training)
 
-      & V1_memory(:,:),  V2_memory(:,:),  V3_memory(:,:),     & ! inout (training)
-      & V4_memory(:,:),  V5_memory(:,:),  V6_memory(:,:),     & ! inout (training)
-      & V7_memory(:,:),  V8_memory(:,:),  V9_memory(:,:),     & ! inout (training)
-      & V10_memory(:,:), V11_memory(:,:), V12_memory(:,:),    & ! inout (training)
-      & V13_memory(:,:), V14_memory(:,:), V15_memory(:,:),    & ! inout (training)
-      & V16_memory(:,:), V17_memory(:,:), V18_memory(:,:),    & ! inout (training)
-      & V19_memory(:,:), V20_memory(:,:), V21_memory(:,:),    & ! inout (training)
-      & V22_memory(:,:), V23_memory(:,:), V24_memory(:,:),    & ! inout (training)
-      & V25_memory(:,:), V26_memory(:,:), V27_memory(:,:),    & ! inout (training)
-      & V28_memory(:,:), V29_memory(:,:), V30_memory(:,:),    & ! inout (training)
-      & V31_memory(:,:), V32_memory(:,:), V33_memory(:,:),    & ! inout (training)
-      & V34_memory(:,:), V35_memory(:,:), V36_memory(:,:),    & ! inout (training)
-      & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),    & ! inout (training)
-      & RHC_memory(:,:), Y_memory(:,:),                       & ! inout (training)
+      & V1_memory (:,:),  V2_memory(:,:),  V3_memory(:,:),   & ! inout (training)
+      & V4_memory (:,:),  V5_memory(:,:),  V6_memory(:,:),   & ! inout (training)
+      & V7_memory (:,:),  V8_memory(:,:),  V9_memory(:,:),   & ! inout (training)
+      & V10_memory(:,:), V11_memory(:,:), V12_memory(:,:),   & ! inout (training)
+      & V13_memory(:,:), V14_memory(:,:), V15_memory(:,:),   & ! inout (training)
+      & V16_memory(:,:), V17_memory(:,:), V18_memory(:,:),   & ! inout (training)
+      & V19_memory(:,:), V20_memory(:,:), V21_memory(:,:),   & ! inout (training)
+      & V22_memory(:,:), V23_memory(:,:), V24_memory(:,:),   & ! inout (training)
+      & V25_memory(:,:), V26_memory(:,:), V27_memory(:,:),   & ! inout (training)
+      & V28_memory(:,:), V29_memory(:,:), V30_memory(:,:),   & ! inout (training)
+      & V31_memory(:,:), V32_memory(:,:), V33_memory(:,:),   & ! inout (training)
+      & V34_memory(:,:), V35_memory(:,:), V36_memory(:,:),   & ! inout (training)
+      & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),   & ! inout (training)
+      & RHC_memory(:,:), Y_memory  (:,:),   R_memory(:,:),   & ! inout (training)
 
       & burned_fract(:),                                      & ! inout
       & burned_fract_infer(:),                                & ! inout
-      & burned_fract_test(:)                                    ! inout
+      & burned_fract_test(:),                                 & ! inout
+      & weight
 
     ! Locals
-    INTEGER, PARAMETER :: bs = 1024
-    !INTEGER, PARAMETER :: bs = 512
+    !INTEGER, PARAMETER :: bs = 1024
+    INTEGER, PARAMETER :: bs = 1280
     REAL(wp) ::                                                   &
       & nn_inputs    (nc, d_input),                               &
       & nn_layer1_out(nc, d_hidden), nn_layer1_act(nc, d_hidden), &
@@ -333,10 +336,10 @@ CONTAINS
       & dW6(d_hidden, d_output),     db6(d_output)
 
                  
-    INTEGER  :: i, j, k, idx
+    INTEGER  :: i, j, k, idx, pid, getpid
     real(wp) :: lr_rate, keep_prob, loss, u
     real(wp) :: q_rel_air_constraint(nc)
-    real(wp) :: tr_q_rel_air_constraint(bs), tr_target(bs)
+    real(wp) :: tr_q_rel_air_constraint(bs), tr_target(bs), tr_weights(bs)
 
     ! initialize
     nn_inputs(:,1) = (t_air(:)                     - minmax(1,1))       &
@@ -394,6 +397,7 @@ CONTAINS
                    / (minmax(26,2)                 - minmax(26,1)+1e-8) 
 
     nn_inputs(:,27:39)= pfts_fract(:,1:13)
+
      
     ! calculate FBA
     keep_prob = 1.
@@ -457,7 +461,7 @@ CONTAINS
     ENDIF
 
     ! saving in memory
-    IF (is_saving .eq. 1) THEN
+    IF ((is_saving .eq. 1) .and. (max_pft .eq. tilename)) THEN
       V1_memory (:,memory_idx) = nn_inputs(:,1)
       V2_memory (:,memory_idx) = nn_inputs(:,2)
       V3_memory (:,memory_idx) = nn_inputs(:,3)
@@ -499,68 +503,38 @@ CONTAINS
       V39_memory(:,memory_idx) = nn_inputs(:,39)
       RHC_memory(:,memory_idx) = q_rel_air_constraint(:)
       Y_memory  (:,memory_idx) = fba_smooth(:)
+      R_memory  (:,memory_idx) = gfed_region(:)
+
+      !DO i = 1,nc
+        !IF ((gfed_region(i) .eq. 9) .and. (fba_smooth(i) .gt. 0)) THEN
+        !IF ((gfed_region(i) .eq. 9.) .or. (gfed_region(i) .eq. 8.)) THEN
+        !  R_memory(i,memory_idx) = 1._wp
+        !ELSEIF (gfed_region(i) .eq. 0.) THEN
+        !  R_memory(i,memory_idx) = 0._wp
+        !ELSE
+        !  R_memory(i,memory_idx) = 1._wp
+        !ENDIF
+      !ENDDO
     ENDIF
 
-    ! training
-    IF (is_training .eq. 1) THEN
+    pid = getpid()
+    pid = mod(pid, 8)
+    !IF((is_training .eq. 1) .and. (pid .eq. 0)) THEN
+    !  print*, iblk, first_iblk
+    !ENDIF
 
-      ! random training batch from memory
-      k=0
-      DO i = 1,nc
-      DO j = 1,INT(bs/nc)
-        k = k+1
+    !IF ((pid .eq. 0) .and. (max_pft .eq. tilename)) THEN
+    !  print*, layer1_weight_update(10,20), iblk
+    !ENDIF
 
-        !IF (k .eq. 1) THEN
-        !  idx = memory_idx
-        !ELSE
-        call RANDOM_NUMBER(u)
-        idx = 1 + INT(FLOOR((730)*u))
-        !idx = 1 + INT(FLOOR((1095)*u))
-        !ENDIF
-        
-        tr_inputs(k,1)  = V1_memory(i,idx)
-        tr_inputs(k,2)  = V2_memory(i,idx)
-        tr_inputs(k,3)  = V3_memory(i,idx)
-        tr_inputs(k,4)  = V4_memory(i,idx)
-        tr_inputs(k,5)  = V5_memory(i,idx)
-        tr_inputs(k,6)  = V6_memory(i,idx)
-        tr_inputs(k,7)  = V7_memory(i,idx)
-        tr_inputs(k,8)  = V8_memory(i,idx)
-        tr_inputs(k,9)  = V9_memory(i,idx)
-        tr_inputs(k,10) = V10_memory(i,idx)
-        tr_inputs(k,11) = V11_memory(i,idx)
-        tr_inputs(k,12) = V12_memory(i,idx)
-        tr_inputs(k,13) = V13_memory(i,idx)
-        tr_inputs(k,14) = V14_memory(i,idx)
-        tr_inputs(k,15) = V15_memory(i,idx)
-        tr_inputs(k,16) = V16_memory(i,idx)
-        tr_inputs(k,17) = V17_memory(i,idx)
-        tr_inputs(k,18) = V18_memory(i,idx)
-        tr_inputs(k,19) = V19_memory(i,idx)
-        tr_inputs(k,20) = V20_memory(i,idx)
-        tr_inputs(k,21) = V21_memory(i,idx)
-        tr_inputs(k,22) = V22_memory(i,idx)
-        tr_inputs(k,23) = V23_memory(i,idx)
-        tr_inputs(k,24) = V24_memory(i,idx)
-        tr_inputs(k,25) = V25_memory(i,idx)
-        tr_inputs(k,26) = V26_memory(i,idx)
-        tr_inputs(k,27) = V27_memory(i,idx)
-        tr_inputs(k,28) = V28_memory(i,idx)
-        tr_inputs(k,29) = V29_memory(i,idx)
-        tr_inputs(k,30) = V30_memory(i,idx)
-        tr_inputs(k,31) = V31_memory(i,idx)
-        tr_inputs(k,32) = V32_memory(i,idx)
-        tr_inputs(k,33) = V33_memory(i,idx)
-        tr_inputs(k,34) = V34_memory(i,idx)
-        tr_inputs(k,35) = V35_memory(i,idx)
-        tr_inputs(k,36) = V36_memory(i,idx)
-        tr_inputs(k,37) = V37_memory(i,idx)
-        tr_inputs(k,38) = V38_memory(i,idx)
-        tr_inputs(k,39) = V39_memory(i,idx)
-        tr_q_rel_air_constraint(k) = RHC_memory(i,idx)
-        tr_target(k) = Y_memory(i,idx)
-      ENDDO
-      ENDDO
+    IF ((is_training .eq. 1) .and. (pid .eq. 0) .and. (iblk .eq. first_iblk) .and. (max_pft .eq. tilename)) THEN
+      print*, 'train'
+      print*, layer1_weight_update(10,20), iblk, first_iblk
+      CALL load_global_batch()
+      tr_inputs(:,:) = batch_global(:,1:39)
+      tr_q_rel_air_constraint(:) = batch_global(:,40)
+      tr_target(:) = batch_global(:,41)
+      tr_weights(:) = 1._wp
 
       ! generate dropout mask
       keep_prob = 0.9
@@ -590,6 +564,7 @@ CONTAINS
         bs, d_input, d_hidden, d_output, keep_prob,    &
         tr_q_rel_air_constraint)
 
+
       ! clear gradients
       dW1(:,:) = 0.;  db1(:) = 0.
       dW2(:,:) = 0.;  db2(:) = 0.
@@ -610,7 +585,8 @@ CONTAINS
         dW1, dW2, dW3, dW4, dW5, dW6,                                              &
         db1, db2, db3, db4, db5, db6,                                              &
         bs, d_input, d_hidden, d_output, keep_prob,                                &
-        tr_q_rel_air_constraint)
+        tr_q_rel_air_constraint, tr_weights)
+
 
       lr_rate = 1e-5
       CALL update(                                     &
@@ -625,6 +601,167 @@ CONTAINS
         layer1_bias_update,    layer2_bias_update,    layer3_bias_update,   &
         layer4_bias_update,    layer5_bias_update,    layer6_bias_update,   &
         lr_rate, iteration, d_input, d_hidden, d_output)
+      
+
+      CALL update_trainable_parameters(               &
+        & layer1_weight_update,  layer1_bias_update,  &
+        & layer2_weight_update,  layer2_bias_update,  &
+        & layer3_weight_update,  layer3_bias_update,  &
+        & layer4_weight_update,  layer4_bias_update,  &
+        & layer5_weight_update,  layer5_bias_update,  &
+        & layer6_weight_update,  layer6_bias_update   )
+
+      !print*, layer1_weight_update(10,20), iblk, first_iblk
+
+    ENDIF
+
+    ! training
+    !IF (is_training .eq. 1) THEN
+    !
+    !  ! random training batch from memory
+    !  k=0
+    !  !weight = 1._wp
+    !  DO i = 1,nc
+    !    IF ((gfed_region(i) .eq. 8.) .or. (gfed_region(i) .eq. 9.)) THEN   ! Africa
+    !      weight = 50._wp
+    !    ELSEIF ((gfed_region(i) .eq. 4.) .or. (gfed_region(i) .eq. 5.)) THEN   ! South America
+    !      weight = 10._wp
+    !    ELSEIF (gfed_region(i) .eq. 14.) THEN   ! Australia
+    !      weight = 10._wp
+    !    ELSEIF (gfed_region(i) .eq. 6.) THEN   ! Europe
+    !      weight = 2._wp
+    !    ELSEIF (gfed_region(i) .eq. 10.) THEN   ! North Asia
+    !      weight = 2._wp
+    !    ELSE
+    !      weight = 0.2_wp
+    !    ENDIF
+    !  DO j = 1,INT(bs/nc)
+    !    k = k+1
+
+    !    IF (k .eq. 1) THEN
+    !      idx = memory_idx
+    !    ELSE
+    !      call RANDOM_NUMBER(u)
+    !      idx = 1 + INT(FLOOR((730)*u))
+    !    !idx = 1 + INT(FLOOR((1095)*u))
+    !    ENDIF
+        
+    !    tr_inputs(k,1)  = V1_memory(i,idx)
+    !    tr_inputs(k,2)  = V2_memory(i,idx)
+    !    tr_inputs(k,3)  = V3_memory(i,idx)
+    !    tr_inputs(k,4)  = V4_memory(i,idx)
+    !    tr_inputs(k,5)  = V5_memory(i,idx)
+    !    tr_inputs(k,6)  = V6_memory(i,idx)
+    !    tr_inputs(k,7)  = V7_memory(i,idx)
+    !    tr_inputs(k,8)  = V8_memory(i,idx)
+    !    tr_inputs(k,9)  = V9_memory(i,idx)
+    !    tr_inputs(k,10) = V10_memory(i,idx)
+    !    tr_inputs(k,11) = V11_memory(i,idx)
+    !    tr_inputs(k,12) = V12_memory(i,idx)
+    !    tr_inputs(k,13) = V13_memory(i,idx)
+    !    tr_inputs(k,14) = V14_memory(i,idx)
+    !    tr_inputs(k,15) = V15_memory(i,idx)
+    !    tr_inputs(k,16) = V16_memory(i,idx)
+    !    tr_inputs(k,17) = V17_memory(i,idx)
+    !    tr_inputs(k,18) = V18_memory(i,idx)
+    !    tr_inputs(k,19) = V19_memory(i,idx)
+    !    tr_inputs(k,20) = V20_memory(i,idx)
+    !    tr_inputs(k,21) = V21_memory(i,idx)
+    !    tr_inputs(k,22) = V22_memory(i,idx)
+    !    tr_inputs(k,23) = V23_memory(i,idx)
+    !    tr_inputs(k,24) = V24_memory(i,idx)
+    !    tr_inputs(k,25) = V25_memory(i,idx)
+    !    tr_inputs(k,26) = V26_memory(i,idx)
+    !    tr_inputs(k,27) = V27_memory(i,idx)
+    !    tr_inputs(k,28) = V28_memory(i,idx)
+    !    tr_inputs(k,29) = V29_memory(i,idx)
+    !    tr_inputs(k,30) = V30_memory(i,idx)
+    !    tr_inputs(k,31) = V31_memory(i,idx)
+    !    tr_inputs(k,32) = V32_memory(i,idx)
+    !    tr_inputs(k,33) = V33_memory(i,idx)
+    !    tr_inputs(k,34) = V34_memory(i,idx)
+    !    tr_inputs(k,35) = V35_memory(i,idx)
+    !    tr_inputs(k,36) = V36_memory(i,idx)
+    !    tr_inputs(k,37) = V37_memory(i,idx)
+    !    tr_inputs(k,38) = V38_memory(i,idx)
+    !    tr_inputs(k,39) = V39_memory(i,idx)
+    !    tr_q_rel_air_constraint(k) = RHC_memory(i,idx)
+    !    tr_target(k) = Y_memory(i,idx)
+    !    !tr_weights(k) = R_memory(i,idx)
+    !  ENDDO
+    !  ENDDO
+    !
+    !  ! generate dropout mask
+    !  keep_prob = 0.9
+    !  CALL generate_dropout_mask(tr_layer1_mask, keep_prob, bs, d_hidden)
+    !  CALL generate_dropout_mask(tr_layer2_mask, keep_prob, bs, d_hidden)
+    !  CALL generate_dropout_mask(tr_layer3_mask, keep_prob, bs, d_hidden)
+    !  CALL generate_dropout_mask(tr_layer4_mask, keep_prob, bs, d_hidden)
+    !  CALL generate_dropout_mask(tr_layer5_mask, keep_prob, bs, d_hidden)
+    !  tr_layer6_mask(:,:) = 1.
+
+
+    !  ! Forward propagation
+    !  CALL forward(                                    &
+    !    tr_inputs,     tr_outputs,                     & 
+    !    layer1_weight_update, layer1_bias_update, 'leaky_relu',      & 
+    !    tr_layer1_out, tr_layer1_act, tr_layer1_mask,  &
+    !    layer2_weight_update, layer2_bias_update, 'leaky_relu',      &
+    !    tr_layer2_out, tr_layer2_act, tr_layer2_mask,  &
+    !    layer3_weight_update, layer3_bias_update, 'leaky_relu',      &
+    !    tr_layer3_out, tr_layer3_act, tr_layer3_mask,  &
+    !    layer4_weight_update, layer4_bias_update, 'leaky_relu',      &
+    !    tr_layer4_out, tr_layer4_act, tr_layer4_mask,  &
+    !    layer5_weight_update, layer5_bias_update, 'leaky_relu',      &
+    !    tr_layer5_out, tr_layer5_act, tr_layer5_mask,  &
+    !    layer6_weight_update, layer6_bias_update, 'linear',          &
+    !    tr_layer6_out, tr_layer6_act, tr_layer6_mask,  &
+    !    bs, d_input, d_hidden, d_output, keep_prob,    &
+    !    tr_q_rel_air_constraint)
+
+      !DO i = 1,nc
+      !  IF ((gfed_region(i) .eq. 9.) .and. (tr_target(i) .ne. 0.)) THEN
+      !    print*, gfed_region(i), tr_outputs(i,1), tr_target(i)
+      !  ELSEIF ((gfed_region(i) .eq. 5.) .and. (tr_target(i) .ne. 0.)) THEN
+      !    print*, gfed_region(i), tr_outputs(i,1), tr_target(i)
+      !  ENDIF
+      !ENDDO
+
+    !  ! clear gradients
+    !  dW1(:,:) = 0.;  db1(:) = 0.
+    !  dW2(:,:) = 0.;  db2(:) = 0.
+    !  dW3(:,:) = 0.;  db3(:) = 0.
+    !  dW4(:,:) = 0.;  db4(:) = 0.
+    !  dW5(:,:) = 0.;  db5(:) = 0.
+    !  dW6(:,:) = 0.;  db6(:) = 0.
+
+    !  ! Backward propagation
+    !  CALL backward(                                                               &
+    !    tr_inputs, tr_outputs, tr_target,                                          &
+    !    layer1_weight_update, 'leaky_relu', tr_layer1_out, tr_layer1_act, tr_layer1_mask, &
+    !    layer2_weight_update, 'leaky_relu', tr_layer2_out, tr_layer2_act, tr_layer2_mask, &
+    !    layer3_weight_update, 'leaky_relu', tr_layer3_out, tr_layer3_act, tr_layer3_mask, &
+    !    layer4_weight_update, 'leaky_relu', tr_layer4_out, tr_layer4_act, tr_layer4_mask, &
+    !    layer5_weight_update, 'leaky_relu', tr_layer5_out, tr_layer5_act, tr_layer5_mask, &
+    !    layer6_weight_update, 'linear',     tr_layer6_out, tr_layer6_act, tr_layer6_mask, &
+    !    dW1, dW2, dW3, dW4, dW5, dW6,                                              &
+    !    db1, db2, db3, db4, db5, db6,                                              &
+    !    bs, d_input, d_hidden, d_output, keep_prob,                                &
+    !    tr_q_rel_air_constraint, tr_weights)
+
+    !  lr_rate = 1e-3
+    !  CALL update(                                     &
+    !    dW1, dW2, dW3, dW4, dW5, dW6,                  &
+    !    db1, db2, db3, db4, db5, db6,                  &
+    !    mW1, mW2, mW3, mW4, mW5, mW6,                  &
+    !    mb1, mb2, mb3, mb4, mb5, mb6,                  &
+    !    vW1, vW2, vW3, vW4, vW5, vW6,                  &
+    !    vb1, vb2, vb3, vb4, vb5, vb6,                  &
+    !    layer1_weight_update,  layer2_weight_update,  layer3_weight_update, &
+    !    layer4_weight_update,  layer5_weight_update,  layer6_weight_update, &
+    !    layer1_bias_update,    layer2_bias_update,    layer3_bias_update,   &
+    !    layer4_bias_update,    layer5_bias_update,    layer6_bias_update,   &
+    !    lr_rate, iteration, d_input, d_hidden, d_output)
 
       !layer1_weight_global(:,:) = layer1_weight_global(:,:)+1
       !layer1_weight_global(:,:) = layer1_weight_update(:,:)
@@ -648,7 +785,7 @@ CONTAINS
       !print*, layer1_weight_global(10,20)
 
 
-    ENDIF
+    !ENDIF
 
     
   END SUBROUTINE burned_fract_dl
@@ -1011,12 +1148,16 @@ CONTAINS
       derivative_W (:,:) = derivative_W(:,:)+derivative_W_(:,:)
       WHERE(derivative_W >  1e-1) derivative_W =  1e-1
       WHERE(derivative_W < -1e-1) derivative_W = -1e-1
+      !WHERE(derivative_W >  1) derivative_W =  1
+      !WHERE(derivative_W < -1) derivative_W = -1
 
       derivative_b_    = SUM(derivative_Z_, dim=1)
       derivative_b_(:) = derivative_b_(:)/float(batch_size)
       derivative_b (:) = derivative_b(:)+derivative_b_(:)
       WHERE(derivative_b >  1e-1) derivative_b =  1e-1
       WHERE(derivative_b < -1e-1) derivative_b = -1e-1
+      !WHERE(derivative_b >  1) derivative_b =  1
+      !WHERE(derivative_b < -1) derivative_b = -1
 
       derivative_X_ = matmul(derivative_Z_, transpose(weight))
 
@@ -1036,7 +1177,7 @@ CONTAINS
           dW1, dW2, dW3, dW4, dW5, dW6,                   &
           db1, db2, db3, db4, db5, db6,                   &
           batch_size, d_in, d_hid, d_out, keep_prob,      &
-          rh_constraint                                   )
+          rh_constraint, weights                          )
 
       IMPLICIT NONE
       INTEGER,  INTENT(IN) :: batch_size, d_in, d_hid, d_out
@@ -1081,6 +1222,7 @@ CONTAINS
       REAL(wp), INTENT(INOUT) :: dW5(d_hid,d_hid), db5(d_hid)
       REAL(wp), INTENT(INOUT) :: dW6(d_hid,d_out), db6(d_out)
       REAL(wp), INTENT(IN)    :: rh_constraint(batch_size)
+      REAL(wp), INTENT(IN)    :: weights(batch_size)
 
       ! local
       REAL(wp) :: dlayer1_act_(batch_size, d_hid)
@@ -1091,7 +1233,8 @@ CONTAINS
       REAL(wp) :: dlayer6_act_(batch_size, d_out)
       REAL(wp) :: dinput_     (batch_size, d_in )
 
-      dlayer6_act_(:,1) = 2.*(output(:,1)-target_y(:)*100)    ! MSE
+      !dlayer6_act_(:,1) = 2.*(output(:,1)-target_y(:)*100)    ! MSE
+      dlayer6_act_(:,1) = weights(:)*2.*(output(:,1)-target_y(:)*100)    ! MSE
 
       ! constraints
       dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-input(:,27)-input(:,39))

@@ -113,7 +113,8 @@ MODULE mo_disturb_memory_class
     V38_memory,               & ! for Fire <Rackhun Son>
     V39_memory,               & ! for Fire <Rackhun Son>
     RHC_memory,               & ! for Fire <Rackhun Son>
-    Y_memory
+    Y_memory,                 &
+    R_memory
 
     !lstm_hidden,             & ! for Fire <Rackhun Son>
     !lstm_cell,               & ! for Fire <Rackhun Son>
@@ -747,6 +748,14 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('R_memory', mem%R_memory,                              &
+      & hgrid, memory,                                                      &
+      & t_cf('R_memory', '-',                                               &
+      &  'R memory'),                                                       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 1.0_wp)
 
 
     !CALL mem%Add_var('lstm_hidden', mem%lstm_hidden,                        &

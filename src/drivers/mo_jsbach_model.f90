@@ -140,7 +140,7 @@ CONTAINS
 
     USE mo_derived_variable_handling, ONLY: update_statistics
 
-    USE mo_global_variable,         ONLY: merge_trainable_parameters  ! <Rackhun Son>
+    USE mo_global_variable  ! <Rackhun Son>
 
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
@@ -179,6 +179,8 @@ CONTAINS
     LOGICAL                                :: lprint_timestep, l_nml_output
   
     INTEGER, ALLOCATABLE :: output_jfile(:) ! number of output files
+
+    INTEGER :: pid, getpid  ! Rackhun Son
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_model'
 
@@ -567,9 +569,21 @@ CONTAINS
       ENDIF
 
       !IF (jstep .ne. 1) THEN
-      IF (jstep .ne. 350641) THEN  ! restart 1999~
-        CALL merge_trainable_parameters()  ! <Rackhun Son>
-      ENDIF
+      !IF (jstep .ne. 350641) THEN  ! restart 1999~
+      !IF (jstep .ne. 350641) THEN  ! restart 2009~
+      !print*, 'jstep: ', jstep
+      !  CALL merge_trainable_parameters()  ! <Rackhun Son>
+      !ENDIF
+
+      !IF (lprint_timestep) THEN
+      !  pid = getpid()
+      !  pid = mod(pid, 8)
+
+      !  IF (pid .eq. 0) THEN
+      !    CALL save_memory_variables()
+      !    !print*, pid
+      !  ENDIF
+      !ENDIF
   
       ! set namelist output flag
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
@@ -722,6 +736,7 @@ CONTAINS
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
     USE mo_jsb_math_constants,        ONLY: eps8
+
 
     dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_, ANTHRO2L_
     dsl4jsb_Use_memory(A2L_)
