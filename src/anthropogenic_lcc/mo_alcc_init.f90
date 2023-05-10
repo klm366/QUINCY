@@ -319,8 +319,8 @@ CONTAINS
           END DO
         END DO
         CALL current_tile%Set_fraction(fract=cf_current(:,i_tile,:))
+        EXIT
       END IF
-      EXIT
       current_tile => current_tile%Get_next_sibling_tile()
     ENDDO
 
