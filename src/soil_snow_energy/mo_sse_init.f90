@@ -562,6 +562,7 @@ CONTAINS
         !$ACC END PARALLEL LOOP
       END IF
 
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(3)
       DO is = 1, nsoil
         DO ib = 1, nblks
           DO ic = 1, nproma
@@ -576,6 +577,7 @@ CONTAINS
           END DO
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
 
       ! t_soil_sl(:,:,:) = t_soil_sl(:,:,:) + ice_soil_sl(:,:,:) * alf * rhoh2o / heat_cap_sl(:,:,:)
       ! IF (TRIM(tile%name) == 'land') THEN
