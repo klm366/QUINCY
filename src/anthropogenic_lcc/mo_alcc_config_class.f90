@@ -112,7 +112,7 @@ CONTAINS
     interactive_ipft_from   = 1                 ! Tropical broadleaf evergreen
     interactive_ipft_to     = 11                ! C3 crops
     interactive_center(1:2) = [-65._wp, -5._wp] ! Somewhere in Amazon
-    interactive_radius      = 1.E6              ! 1000 km
+    interactive_radius      = 1.E6_wp           ! 1000 km
     interactive_fract_max   = 0.1_wp
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
