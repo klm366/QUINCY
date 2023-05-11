@@ -100,11 +100,6 @@ CONTAINS
     nc     = SIZE(ws,1)
     nsoil  = SIZE(dz,2)       ! Number of soil layers
 
-    !$ACC PARALLEL LOOP VECTOR COLLAPS(1)
-    DO ic = 1, nc
-      ws_root(ic) = 0._wp
-    END DO
-
     !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG(STATIC:1) VECTOR
