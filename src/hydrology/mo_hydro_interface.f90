@@ -644,7 +644,6 @@ CONTAINS
 
       CALL calc_surface_hydrology_land(   &
         ! in
-        & nc,                             & !< in
         & is_experiment_start,            & !< in
         & dtime,                          & !< in
         & ltpe_closed     ,               & !< in
