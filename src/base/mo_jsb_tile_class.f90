@@ -102,7 +102,6 @@ MODULE mo_jsb_tile_class
     TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) !< list of conserved quantities sort by type
     TYPE(t_jsb_lcc_proc_p), ALLOCATABLE    :: lcc_processes(:)        !< list of lcc structures indexed by proc id
     TYPE(t_lnd_bgcm_store), POINTER        :: bgcm_store => NULL()    !< the bgcm store collecting pools and their elements on this tile
-    !CLASS(t_jsb_param_p),       POINTER    :: param(:)
     TYPE(t_jsb_memory_p),       POINTER    :: mem(:)                  !< Memory for all processes on the tile
     CLASS(t_jsb_tile_abstract), POINTER    :: self_tile => NULL()     !< pointer to the tile to enable assigning it as target
 
