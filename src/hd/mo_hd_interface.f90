@@ -539,9 +539,11 @@ CONTAINS
     INTEGER, INTENT(in) :: iblk, ics, ice
     INTEGER :: i
 
-    REAL(wp),INTENT(in) :: fract_lake_changes(:)    !< lake fraction changes
-    REAL(wp),INTENT(in) :: fract_land(:)            !< lake fraction
-    REAL(wp)            :: fract(options%nc)        !< fraction of current tile
+    REAL(wp),INTENT(in) :: fract_lake_changes(:)        !< lake fraction changes
+    REAL(wp),INTENT(in) :: fract_land(:)                !< lake fraction
+    REAL(wp)            :: fract(options%nc)            !< fraction of current tile
+    REAL(wp)            :: fract_parent(options%nc)     !< fraction of land tile
+    REAL(wp)            :: fract_parent_old(options%nc) !< previous fraction of land tile
 
     ! skipt box tile
     IF (TRIM(cur%name) /= 'box') THEN
@@ -550,12 +552,18 @@ CONTAINS
 
       ! adjust fraction for lake, land and all children
       CALL cur%Get_fraction(ics, ice, iblk, fract=fract(:))
+      CALL cur%parent_tile%Get_fraction(ics, ice, iblk, fract_old=fract_parent_old(:))
+      CALL cur%parent_tile%Get_fraction(ics, ice, iblk, fract=fract_parent(:))
       IF(cur%is_lake) THEN
         fract(:) = fract(:) + fract_lake_changes(:)
       ELSE IF(cur%is_land) THEN
         fract(:) = fract(:) - fract_lake_changes(:)
       ELSE
-        fract(:) = fract(:) - fract_lake_changes(:) * fract(:) / MAX(EPSILON(1._wp),fract_land(:))
+        WHERE (fract_parent_old(:) > 0._wp)
+          fract(:) = fract(:) * fract_parent(:) / fract_parent_old(:)
+        ELSE WHERE
+          fract(:) = 0._wp
+        END WHERE
       ENDIF
       CALL cur%Set_fraction(ics, ice, iblk, fract=fract(:))
 
