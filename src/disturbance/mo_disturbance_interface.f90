@@ -313,7 +313,9 @@ CONTAINS
     REAL(wp), POINTER      :: gfed_region(:)
 
     INTEGER :: iteration, is_training, is_saving, is_infer, memory_idx, n, i_temporal, i_spatial, max_pft_idx
-    REAL(wp) :: weight, u
+    INTEGER :: save_batch
+    REAL(wp) :: weight, u, r, t
+    REAL(wp) :: threshold(14)
     CHARACTER(len=10) :: max_pft
 
     !LOGICAL  :: pft_mask ! True for pfts to which the disturbance should be applied.
@@ -532,6 +534,9 @@ CONTAINS
     lai_ave(:)   = lai_ave(:)   + lai(:)          *(options%dtime/60._wp/60._wp/24._wp)
 
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
+      threshold(1)=0.5;    threshold(2)=-0.5;  threshold(3)=0.0;  threshold(4)=0.0;  threshold(5)=-0.5 
+      threshold(6)=0.5;    threshold(7)=-0.5;  threshold(8)=0.5;  threshold(9)=0.25;  threshold(10)=0.5 
+      threshold(11)=-0.5;  threshold(12)=0.5; threshold(13)=0.5; threshold(14)=0.5
 
       ! calculate auxiliary variables for DL fire model   <Rackhun Son>
       IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
@@ -581,7 +586,8 @@ CONTAINS
             max_pft = 'pft11'
           ENDIF
 
-          IF (tile%name .eq. max_pft) THEN
+          r = SUM(R_memory)
+          IF ((tile%name .eq. max_pft) .and. (r .gt. 0.)) THEN
             n=1
             DO WHILE ( n<=8 )
               CALL RANDOM_NUMBER(u)
@@ -589,7 +595,32 @@ CONTAINS
               CALL RANDOM_NUMBER(u)
               i_spatial  = 1 + INT(FLOOR((128)*u))
 
-              IF (R_memory(i_spatial,i_temporal) .ne. 0.) THEN
+              t = threshold(INT(R_memory(i_spatial,i_temporal)))
+              IF (t .ge. 0) THEN
+                IF (Y_memory(i_spatial,i_temporal) .gt. 0.) THEN
+                  save_batch = 1
+                ELSE
+                  CALL RANDOM_NUMBER(u)
+                  IF (u .gt. t) THEN
+                    save_batch = 1
+                  ELSE
+                    save_batch = 0
+                  ENDIF
+                ENDIF
+              ELSE
+                IF (Y_memory(i_spatial,i_temporal) .eq. 0.) THEN
+                  save_batch = 1
+                ELSE
+                  CALL RANDOM_NUMBER(u)
+                  IF (u .gt. -t) THEN
+                    save_batch = 1
+                  ELSE
+                    save_batch = 0
+                  ENDIF
+                ENDIF
+              ENDIF  
+              
+              IF ((R_memory(i_spatial,i_temporal) .ne. 0.) .and. (save_batch .eq. 1)) THEN
                 CALL update_pid_batch(                                                                                    &
                   & V1_memory (i_spatial,i_temporal),  V2_memory(i_spatial,i_temporal),  V3_memory(i_spatial,i_temporal), &
                   & V4_memory (i_spatial,i_temporal),  V5_memory(i_spatial,i_temporal),  V6_memory(i_spatial,i_temporal), &
@@ -820,8 +851,8 @@ CONTAINS
               & gdp(:),                                                   &
               & hdi(:),                                                   &
 
-              !& fba,                                                      &
-              & fba_smooth,                                               &
+              & fba,                                                      &
+              !& fba_smooth,                                               &
               & nc,                                                       &
               & iblk,                                                     &
               & tile%name,                                                &

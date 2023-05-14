@@ -454,11 +454,12 @@ CONTAINS
     WHERE (burned_fract_test < 0.) burned_fract_test = 0.
     WHERE (burned_fract_test > 1.) burned_fract_test = 1.
 
-    IF (is_infer .eq. 0) THEN
-      burned_fract(:) = fba_smooth(:)
-    ELSE
-      burned_fract(:) = burned_fract_test(:)
-    ENDIF
+    !IF (is_infer .eq. 0) THEN
+    !  burned_fract(:) = fba_smooth(:)
+    !ELSE
+    !  burned_fract(:) = burned_fract_test(:)
+    !ENDIF
+    burned_fract(:) = burned_fract_test(:)
 
     ! saving in memory
     IF ((is_saving .eq. 1) .and. (max_pft .eq. tilename)) THEN
@@ -534,7 +535,16 @@ CONTAINS
       tr_inputs(:,:) = batch_global(:,1:39)
       tr_q_rel_air_constraint(:) = batch_global(:,40)
       tr_target(:) = batch_global(:,41)
-      tr_weights(:) = 1._wp
+
+      DO i=1,bs
+        IF ((batch_global(i,42) .eq. 8) .or. (batch_global(i,42) .eq. 5)  .or. &
+            (batch_global(i,42) .eq. 7) .or. (batch_global(i,42) .eq. 11) .or. &
+            (batch_global(i,42) .eq. 9)) THEN
+          tr_weights(i) = 2._wp
+        ELSE
+          tr_weights(i) = 1._wp
+        ENDIF
+      ENDDO
 
       ! generate dropout mask
       keep_prob = 0.9
@@ -1235,6 +1245,7 @@ CONTAINS
 
       !dlayer6_act_(:,1) = 2.*(output(:,1)-target_y(:)*100)    ! MSE
       dlayer6_act_(:,1) = weights(:)*2.*(output(:,1)-target_y(:)*100)    ! MSE
+      !dlayer6_act_(:,1) = weights(:)*100.*0.5/SQRT(ABS(output(:,1)-target_y(:)))    ! MSE
 
       ! constraints
       dlayer6_act_(:,1) = dlayer6_act_(:,1)*(1._wp-input(:,27)-input(:,39))
