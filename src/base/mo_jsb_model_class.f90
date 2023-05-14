@@ -190,8 +190,8 @@ CONTAINS
     IF (ASSOCIATED(this%processes(iproc)%p)) THEN
       IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
         Is_process_enabled = this%processes(iproc)%p%config%active
-      ELSE 
-        ! If the process is associated but the configuration is not associated 
+      ELSE
+        ! If the process is associated but the configuration is not associated
         ! we assume here that the process is active on the model -- currently this is the case for l2a and a2l
         Is_process_enabled = .TRUE.
       ENDIF
@@ -223,13 +223,13 @@ CONTAINS
   END SUBROUTINE Configure_model_processes
 
   ! ======================================================================================================= !
-  !> 
+  !>
   !> Checks if there is an active process that changes fractions on this tile
   !>
   FUNCTION Any_process_changes_fractions(this) RESULT(l_fractions_change)
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_model), INTENT(inout) :: this                 !< tile to check
-    LOGICAL                           :: l_fractions_change   
+    LOGICAL                           :: l_fractions_change
       !< true if there is any active land cover change (lcc) process
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: iproc
@@ -530,8 +530,8 @@ CONTAINS
       jsbach_subsets(this%id)%sub(no_omp_thread)%ice  =  0
       jsbach_subsets(this%id)%sub(no_omp_thread)%nb   =  grid%nblks
       jsbach_subsets(this%id)%sub(no_omp_thread)%nc   =  grid%nproma
-    END SELECT 
-    jsbach_subsets(this%id)%sub(no_omp_thread)%type = type   
+    END SELECT
+    jsbach_subsets(this%id)%sub(no_omp_thread)%type = type
 
   END SUBROUTINE Set_subset
 

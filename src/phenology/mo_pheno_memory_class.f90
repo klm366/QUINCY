@@ -54,7 +54,7 @@ MODULE mo_pheno_memory_class
 
     TYPE(t_jsb_var_real3d) :: &
       & lai_cl                            !< leaf area index per canopy layer [m2 m-2]
-    
+
     !------------------------------------------------------------------------------------------------------ !
     !> 2.0 variables used only by JSBACH
     !>
@@ -156,7 +156,7 @@ CONTAINS
   ! ======================================================================================================= !
   !> initialize memory (variables) for the process: phenology
   !>
-  !>   init only the variables needed for the particular model 
+  !>   init only the variables needed for the particular model
   !>   (i.e. allocate memory, add to varlist, set metadata)
   !>
   SUBROUTINE Init_pheno_memory(mem, prefix, suffix, lct_ids, model_id)
@@ -190,7 +190,7 @@ CONTAINS
     !>
     CASE DEFAULT
       WRITE(message_text,'(2a)') 'invalid model_scheme', model%config%model_scheme
-      CALL finish(routine, message_text) 
+      CALL finish(routine, message_text)
     END SELECT
   END SUBROUTINE Init_pheno_memory
 
@@ -255,7 +255,7 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-      
+
       CALL mem%Add_var( 'fract_fpc', mem%fract_fpc,                            &
         & hgrid, surface,                                                      &
         & t_cf('foliage_projected_cover', '', ''),                             &
@@ -433,7 +433,7 @@ CONTAINS
 
         END IF ! l_forestRegrowth
       END IF ! logrop
-      
+
       ! grib setting for: lai differentiation box tile and other tiles
       ! this is done because ... TODO
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -441,7 +441,7 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-    
+
       CALL mem%Add_var( 'lai', mem%lai,                                        &
         & hgrid, surface,                                                      &
         & t_cf('leaf_area_index', '', ''),                                     &
@@ -449,14 +449,14 @@ CONTAINS
         & prefix, suffix,                                                      &
         & loutput=.TRUE., output_level=BASIC,                                  &
         & initval_r=0.0_wp )
-        
+
       CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &
         & hgrid, vgrid_canopy,                                               &
         & t_cf('LAI for each canopy layer', '', ''),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix,                                                    &
         & lrestart=.FALSE., initval_r=0.0_wp )
-        
+
 #ifdef __ICON__
       ! --------------------------------------------------------------------------------------------------- !
       ! Diagnostic global carbon sums for experiment monitoring
@@ -513,7 +513,7 @@ CONTAINS
     ! create memory at tiles of LAND_TYPE or VEG_TYPE
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
       & One_of(VEG_TYPE,  lct_ids(:)) > 0) THEN
-       
+
       ! grib setting for: lai differentiation box tile and other tiles
       ! this is done because ... TODO
       IF (TRIM(mem%owner_tile_name) == 'box') THEN
@@ -521,7 +521,7 @@ CONTAINS
       ELSE
         grib2_desc = t_grib2(255, 255, 255, grib_bits)
       END IF
-        
+
       CALL mem%Add_var('lai', mem%lai, &
         & hgrid, surface, &
         & t_cf('lai', 'm2 m-2', 'actual leaf area index'), &
@@ -532,7 +532,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-        
+
       CALL mem%Add_var('lai_cl', mem%lai_cl, &
         & hgrid, vgrid_canopy, &
         & t_cf('lai_cl', 'm2 m-2', 'leaf area index per canopy layer'), &
@@ -543,7 +543,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-        
+
       CALL mem%Add_var('growing_season', mem%growing_season, &
         & hgrid, surface, &
         & t_cf('growing_season', 'logical', 'logical to identify whether the plant is in the growing season'), &
@@ -554,7 +554,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-        
+
       CALL mem%Add_var('gdd', mem%gdd, &
         & hgrid, surface, &
         & t_cf('gdd', 'K days', 'growing degree days above 5 degC'), &
@@ -565,7 +565,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-        
+
       CALL mem%Add_var('nd_dormance', mem%nd_dormance, &
         & hgrid, surface, &
         & t_cf('nd_dormance', '# days', 'number of days since last growing season'), &
@@ -576,7 +576,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-        
+
       CALL mem%Add_var('lai_max', mem%lai_max, &
         & hgrid, surface, &
         & t_cf('lai_max', 'm2 m-2', 'maximum lai (site specific)'), &
@@ -587,7 +587,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-        
+
       CALL mem%Add_var('cumm_lai_cl', mem%cumm_lai_cl, &
         & hgrid, vgrid_canopy, &
         & t_cf('cumm_lai_cl', 'm2 m-2', 'cummulative leaf area above the mid-point of the canopy layer '), &

@@ -12,7 +12,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_rad_process
+MODULE mo_jsb_rad_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
@@ -23,16 +23,11 @@ MODULE mo_rad_process
   PUBLIC ::                        &
     & calc_radiation_surface_net,  &
     & calc_par,                    &
-    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, Has_minimal_radiation,              &
+    & calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, &
     & calc_soil_albedo, calc_pond_albedo, calc_snow_albedo, calc_sky_view_fractions, Merge_albedos_of_vegtile, &
     & get_surface_albedo_simple
 
-  INTERFACE Has_minimal_radiation
-    MODULE PROCEDURE Has_minimal_radiation_1
-    MODULE PROCEDURE Has_minimal_radiation_2
-  END INTERFACE
-
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_rad_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_rad_process'
 
 CONTAINS
 
@@ -110,7 +105,7 @@ CONTAINS
     & lai_cl,                   & ! out
     & apar_per_lai_cl  )          ! out
 
-    USE mo_rad_constants,  ONLY: &
+    USE mo_rad_parameters, ONLY: &
       & Epar,                    & ! Energy content of PAR [J / mol(photons)]=(4.6 mol/MJ PAR)**-1
       & SoilReflectivityParMin,  & ! Minimum soil reflectivity in PAR region
       & FcMax,                   &
@@ -443,7 +438,7 @@ CONTAINS
     & )
 
     ! Use declarations
-    USE mo_rad_constants,          ONLY: AlbedoLakeWater
+    USE mo_rad_parameters,         ONLY: AlbedoLakeWater
 
     ! Arguments
     !$claw model-data
@@ -474,7 +469,7 @@ CONTAINS
     & )
 
     ! Use declarations
-    USE mo_rad_constants,          ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax, AlbedoLakeSnowMin, AlbedoLakeSnowMax
+    USE mo_rad_parameters,         ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax, AlbedoLakeSnowMin, AlbedoLakeSnowMax
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     ! Arguments
@@ -531,7 +526,7 @@ CONTAINS
     & )
 
     ! Use declarations
-    USE mo_rad_constants, ONLY: AlbedoGlacierVisMin,  & ! Albedo of glacier in the visible range at the melting point
+    USE mo_rad_parameters,ONLY: AlbedoGlacierVisMin,  & ! Albedo of glacier in the visible range at the melting point
                                 AlbedoGlacierVisMax,  & ! Albedo of glacier in the visible range at hard frost
                                 TempAlbedoGlacierMax, & ! Maximum glacier albedo at this temperature below melting point of H2O
                                 AlbedoGlacierNirMin,  & ! Albedo of glacier in the NIR range at at the melting point
@@ -588,7 +583,7 @@ CONTAINS
   ! the albedo calculation could be done only on the highest parent tile (the grid cell). The childs would not have a meaningful
   ! albedo. Thus in JSBACH4 the albedo calculations are done only on the lowest child tiles and are then accumulated on the parent
   ! tiles. This represents a "well separated" assumption in contrast of the "well mixed" assumtion in JSBACH3. In the result it
-  ! does not matter for linear relations between carbon (in and on the soil) and soil albedo. (Exception: the litter for any 
+  ! does not matter for linear relations between carbon (in and on the soil) and soil albedo. (Exception: the litter for any
   ! vegetation tile in JSBACH4 would cover more area than available for this tile and the litter of any other vegetation tile
   ! covers less than its area available.) Only for the logarithmic case (albedo_options%UseSOC .eq. 'log') the soil albedo result
   ! of JSBACH4 differs from JSBACH3. In this case this "well separated" result is as reasonable as the "well mixed" result of JS3.
@@ -610,7 +605,7 @@ CONTAINS
     & )
 
     ! Use declarations
-    USE mo_rad_constants, ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for 
+    USE mo_rad_parameters,ONLY: AlbedoSoilConstVis, AlbedoSoilConstNir ! Albedo constant alternatively usable for
                                                                        ! alb_vis_mineralsoil
 
     ! Arguments
@@ -716,7 +711,7 @@ CONTAINS
                                                               !    smaller here as it is calcul. for each single tile but the sum
                                                               !    of tiles will give a much higher "litter_view_fract" or - to
                                                               !    name it better - a higher contribution of the litter part to
-                                                              !    alb_soil_vis However, therefore it meight be necessary to 
+                                                              !    alb_soil_vis However, therefore it meight be necessary to
                                                               !    rescale this funktion ...
 
       alb_vis_soil = (1.0_wp - litter_view_fract) * alb_vis_soil_nolitter + litter_view_fract * alb_vis_litter
@@ -742,7 +737,7 @@ CONTAINS
     & )
 
     ! Declarations
-    USE mo_rad_constants, ONLY: &
+    USE mo_rad_parameters,ONLY: &
       & ZenithAngleFactor,      & ! Factor in solar zenith angle dependence of snow albedo
                                   ! (the increase of snow albedo is the higher this factor)
       & AlbedoSnowVisMax_age,   &
@@ -860,7 +855,7 @@ CONTAINS
     & )
 
     ! Declarations
-    USE mo_rad_constants,           ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax
+    USE mo_rad_parameters,          ONLY: AlbedoLakeIceMin, AlbedoLakeIceMax
 
     USE mo_jsb_physical_constants,  ONLY: tmelt     ! tmelt =273.15_wp
 
@@ -941,7 +936,7 @@ CONTAINS
     & )
 
     ! Use declarations
-    USE mo_rad_constants,  ONLY: SkyViewFactor ! Constant in calculating the sky view fractions
+    USE mo_rad_parameters, ONLY: SkyViewFactor ! Constant in calculating the sky view fractions
 
     ! Arguments
     !$claw model-data
@@ -1117,7 +1112,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     ! Use declarations
     USE mo_jsb_physical_constants,  ONLY: tmelt
-    USE mo_rad_constants,           ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple, &
+    USE mo_rad_parameters,          ONLY: AlbedoCanopySnow_simple, AlbedoSnowMin_simple, AlbedoSnowMax_simple, &
       &                                   AlbedoLakeWater, AlbedoLakeIceMin
 
     ! Arguments
@@ -1188,37 +1183,6 @@ CONTAINS
                                     + forest_view_fract * albedo_can)
 
   END FUNCTION get_surface_albedo_simple
-  !
-  !--------------------------------------------------------------------------------------------------------------------------------
-  !
-  ELEMENTAL FUNCTION Has_minimal_radiation_2(swvis, swnir) RESULT(l_day)
-
-    USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
-
-    REAL(wp), INTENT(in) :: &
-      & swvis, &
-      & swnir
-    LOGICAL :: l_day
-
-    !$claw sca routine
-
-    l_day = swvis + swnir > MinRadiation
-
-  END FUNCTION Has_minimal_radiation_2
-  !
-  ELEMENTAL FUNCTION Has_minimal_radiation_1(sw) RESULT(l_day)
-
-    USE mo_rad_constants, ONLY: MinRadiation ! Minimum amount of radiation for albedo calculations
-
-    REAL(wp), INTENT(in) :: &
-      & sw
-    LOGICAL :: l_day
-
-    !$claw sca routine
-
-    l_day = sw > MinRadiation
-
-  END FUNCTION Has_minimal_radiation_1
 
 #endif
-END MODULE mo_rad_process
+END MODULE mo_jsb_rad_process

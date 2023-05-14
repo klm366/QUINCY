@@ -5,7 +5,7 @@
 !!    * the processes that are active on each tile or its leaves
 !!    * the fraction of each tile
 !!    * the land-cover-type of each tile
-!! 
+!!
 !! @brief Contains methods for initialization of model usecases.
 !!
 !! @author
@@ -99,8 +99,8 @@ CONTAINS
     !  land  lakes
     !   |
     !   |-------------
-    !   |            |      
-    !  vegetation  glacier 
+    !   |            |
+    !  vegetation  glacier
 
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -195,8 +195,8 @@ CONTAINS
     !  land  lakes
     !   |
     !   |-------------
-    !   |            |      
-    !  vegetation  glacier 
+    !   |            |
+    !  vegetation  glacier
     !   |
     !   |-----------------
     !   |      |      |
@@ -263,12 +263,12 @@ CONTAINS
           IF (model%processes(WLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
           END IF
-          
+
           IF (model%processes(NLCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(NLCC_, ON_TILE_, AGGREGATE_)
           END IF
-          
-        ! using quincy: 
+
+        ! using quincy:
         !  HYDRO_ is active at PFT tiles to make all the HYDRO_ variables available to the PFT tiles
         !    note: HYDRO_ results differ only marginally between ON_TILE_ & ON_LEAFS_ (tested by Reiner)
         !  SSE_ runs at PFT tiles instead of VEG tile, which is fine with the jsb4 tasks (info by Reiner)
@@ -283,7 +283,7 @@ CONTAINS
             & fract_varname='fract_veg')
         END SELECT
 
-        !   
+        !
         IF (model%processes(TLCC_)%p%config%active) THEN
           CALL veg_tile%Set_process_action(TLCC_, ON_TILE_, AGGREGATE_)
         END IF
@@ -311,7 +311,7 @@ CONTAINS
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
     ! IF (ASSOCIATED(lake_tile)) CONTINUE
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
-        
+
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
@@ -376,7 +376,7 @@ CONTAINS
     !   |---------------...------------------------...---
     !   |                           |       |           |
     !  pft01                       pft04   pft05        pft11
-    !   |                           | 
+    !   |                           |
     !   |---------------...         |---------------...
     !   |           |               |           |
     !  pft01_fc01  pft01_fc02 ...  pft04_fc01  pft04_fc02 ...
@@ -390,8 +390,8 @@ CONTAINS
 
     dsl4jsb_Get_config(FAGE_)
 
-    ! FAGE_ is the process that organises ageing in the age classes. 
-    ! It does not make sense to run age classes without FAGE_ and vice versa! 
+    ! FAGE_ is the process that organises ageing in the age classes.
+    ! It does not make sense to run age classes without FAGE_ and vice versa!
     IF (.NOT. model%processes(FAGE_)%p%config%active) THEN
       CALL finish(TRIM(routine), "It does not make sense to use age classes without FAGE_ and vice versa!")
     END IF
@@ -484,7 +484,7 @@ CONTAINS
                   CALL pft_tile%Set_process_action(WLCC_, ON_TILE_, AGGREGATE_)
                 END IF
 
-              IF (model%lctlib(pft_ids(i))%ForestFlag) THEN 
+              IF (model%lctlib(pft_ids(i))%ForestFlag) THEN
 
                 CALL pft_tile%Set_process_action(FAGE_, ON_TILE_, AGGREGATE_)
 
@@ -501,7 +501,7 @@ CONTAINS
     ! IF (ASSOCIATED(glacier_tile)) CONTINUE
     ! IF (ASSOCIATED(lake_tile)) CONTINUE
     ! IF (ASSOCIATED(pft_tile)) CONTINUE
-        
+
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile, fage_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
@@ -570,7 +570,7 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! box tile
-    ! 
+    !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
       & processes      =(/A2L_,     L2A_,     ANTHRO2L_, RAD_     , TURB_    /), &   ! < Rackhun Son >
@@ -580,7 +580,7 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! land tile w/o process
-    ! 
+    !
     land_tile => t_jsb_tile('land', 'Land tile', &
       ! add processes here only to make model init and jsb4_forcing working
       ! none of the tasks of these processes is running via task queue
@@ -592,7 +592,7 @@ CONTAINS
 
     !------------------------------------------------------------------------------------------------------ !
     ! vegetation tile with PFT tiles as leafs
-    ! 
+    !
     veg_tile => t_jsb_tile('veg', 'Veg tile', &
       & processes       = (/HYDRO_,    SSE_,     ASSIMI_,   PHENO_,    VEG_,      SB_,       SPQ_/), &
       & process_actions = (/ON_LEAFS_, ON_LEAFS_,ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_, ON_LEAFS_/), &

@@ -52,9 +52,9 @@ MODULE mo_pheno_init
 CONTAINS
 
   !> Run phenology init
-  !! 
+  !!
   !! run jsb4 or/and quincy init routine
-  !! 
+  !!
   SUBROUTINE pheno_init(tile)
 
     ! Arguments
@@ -304,7 +304,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize pheno variables for boundary conditions (bc)
-  !! 
+  !!
   !! quincy
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE pheno_init_bc_quincy(tile)
@@ -312,14 +312,14 @@ CONTAINS
     ! see also the USE statements in the module header
     USE mo_pheno_constants,       ONLY: ievergreen
     USE mo_jsb_impl_constants,    ONLY: false, true
-    
+
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),       POINTER  :: model
-       
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_quincy'
     ! ---------------------------
     ! 0.3 Declare Memory

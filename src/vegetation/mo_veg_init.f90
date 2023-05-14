@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
+!!
 !! @brief Initialization of the the vegetation memory.
 !!
 !! @author
@@ -120,7 +120,7 @@ CONTAINS
     dsl4jsb_Real2D_onDomain     :: target_cn_fine_root
     dsl4jsb_Real2D_onDomain     :: target_np_fine_root
     dsl4jsb_Real2D_onDomain     :: dens_ind
-    dsl4jsb_Real2D_onDomain     :: height 
+    dsl4jsb_Real2D_onDomain     :: height
     dsl4jsb_Real2D_onDomain     :: dphi
     dsl4jsb_Real2D_onDomain     :: npp_talloc_mavg
     dsl4jsb_Real2D_onDomain     :: n_fixation_talloc_mavg
@@ -335,14 +335,14 @@ CONTAINS
 
         ! ------------------------------------------------------------------------------------------------- !
         !>  differ between vegetation dynamics schemes: cohort, population, none
-        !> 
+        !>
         SELECT CASE (TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme))
           ! ----------------------------------------------------------------------------------------------- !
           ! start bareground with vegetation dynamics switched on: cohort scheme
           CASE ("cohort")
             ! modify two parameters
             background_mort_rate_tree  = 0.0_wp    ! default: 0.01_wp
-            background_mort_rate_grass = 0.0_wp    ! default: 0.05_wp 
+            background_mort_rate_grass = 0.0_wp    ! default: 0.05_wp
             ! individual density
             dens_ind(:,:) = 1.0_wp
             ! reserve C N P
@@ -363,7 +363,7 @@ CONTAINS
             ELSE
               hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14', lctlib%ps_pathway)
             ENDIF
-            veg_pool%reserve%domain_c14(:,:) = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:,:)) * & 
+            veg_pool%reserve%domain_c14(:,:) = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:,:)) * &
               & veg_pool%reserve%domain_c(:,:)
             ! reserve N15
             veg_pool%reserve%domain_n15(:,:) = veg_pool%reserve%domain_n(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
@@ -391,8 +391,8 @@ CONTAINS
             ELSE
               hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14', lctlib%ps_pathway)
             ENDIF
-            veg_pool%seed_bed%domain_c14(:,:) = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:,:)) * & 
-              & veg_pool%seed_bed%domain_c(:,:) 
+            veg_pool%seed_bed%domain_c14(:,:) = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14-hlp1(:,:)) * &
+              & veg_pool%seed_bed%domain_c(:,:)
             ! seed_bed N15
             veg_pool%seed_bed%domain_n15(:,:) = veg_pool%seed_bed%domain_n(:,:) / &
               & ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
@@ -420,8 +420,8 @@ CONTAINS
             ELSE
               hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14', lctlib%ps_pathway)
             ENDIF
-            veg_pool%reserve%domain_c14(:,:) = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14 - hlp1(:,:)) * & 
-              & veg_pool%reserve%domain_c(:,:) 
+            veg_pool%reserve%domain_c14(:,:) = calc_mixing_ratio_C14C(def_co2_deltaC13, def_co2_deltaC14 - hlp1(:,:)) * &
+              & veg_pool%reserve%domain_c(:,:)
             ! reserve N15
             veg_pool%reserve%domain_n15(:,:) = veg_pool%reserve%domain_n(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
 
@@ -429,7 +429,7 @@ CONTAINS
           ! error catching
           CASE DEFAULT
             WRITE(message_text,'(2a)') 'not a valid veg_dynamics_scheme: ', TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)
-            CALL finish(routine, message_text) 
+            CALL finish(routine, message_text)
         ENDSELECT
 
       ! --------------------------------------------------------------------------------------------------- !
@@ -448,7 +448,7 @@ CONTAINS
         veg_pool%leaf%domain_p(:,:) = veg_pool%leaf%domain_n(:,:) / lctlib%np_leaf
         IF(lctlib%growthform == itree) THEN
           height(:,:) = 10.0_wp
-        ELSE 
+        ELSE
           height(:,:) = 1.0_wp
         ENDIF
         leaf_nitrogen_cl(:,:,:) = 0.0_wp  ! this is intentionally wrong; i.e., it will not work at the 1st timestep (which is probably night anyway)
@@ -490,7 +490,7 @@ CONTAINS
     t_air_week_mavg(:,:)                  = 283.15_wp
     t_air_month_mavg(:,:)                 = 283.15_wp
     t_jmax_opt_mavg(:,:)                  = 17.0_wp
-    
+
     ! allocation moving averages
     npp_talloc_mavg(:,:)                  = 0.0_wp
     n_fixation_talloc_mavg(:,:)           = 0.0_wp

@@ -57,9 +57,9 @@ MODULE mo_pheno_interface
 
   ! ======================================================================================================= !
   !> Type definition for the phenology task
-  !>  
+  !>
   !>   MODEL_JSBACH and MODEL_QUINCY
-  !>  
+  !>
   TYPE, EXTENDS(t_jsb_process_task) ::   tsk_phenology
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_phenology    !< Advances task computation for one timestep
@@ -73,9 +73,9 @@ MODULE mo_pheno_interface
 
   ! ======================================================================================================= !
   !> Type definition for foliage_projected_cover task
-  !>  
+  !>
   !>   MODEL_JSBACH
-  !>  
+  !>
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_foliage_projected_cover
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_fpc
@@ -146,9 +146,9 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Implementation of "update" of the "phenology" task
-  !> 
+  !>
   !>  calls a model specific routine
-  !> 
+  !>
   SUBROUTINE update_phenology(tile, options)
     USE mo_jsb_model_class,         ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,               ONLY: Get_model
@@ -727,7 +727,7 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate" of the "phenology" task
-  !> 
+  !>
   SUBROUTINE aggregate_phenology(tile, options)
     USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
@@ -866,7 +866,7 @@ CONTAINS
         !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_2 tile_name=tile%name
         fract_fpc(:) = REAL(wgt1,wp) * fract_fpc_mon(:,nmw1) + REAL(wgt2,wp) * fract_fpc_mon(:,nmw2)
       END IF
-    ELSE        
+    ELSE
       ! We have PFTs and %scheme /= climatology
       ClumpinessFactor = dsl4jsb_Lctlib_param(ClumpinessFactor) ! Do a copy to avoid deep copy on accelerator
       !$claw expand parallel update savepoint=ser_jsb_pheno_update_fpc_expand_3 tile_name=tile%name
@@ -941,7 +941,7 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'For target '//TRIM(target%name)//' ...')
 
     CALL target%Get_fraction(ics, ice, iblk, fract=target_fract(:))
@@ -957,11 +957,11 @@ CONTAINS
     dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, day_npp_sum, source)
     dsl4jsb_Get_var2d_onChunk_tile_name(PHENO_, day_npp_sum, target)
 
-    ! There are pheno variables that need to be merged upon ageing 
+    ! There are pheno variables that need to be merged upon ageing
     ! because they are used for bookkeeping by various processes but are not conserved
     ! (i.e. they are not automatically dealed with by pplcc and the lcc framework)
     ! For the pheno process these are lai and the day_npp_sum
-    ! [According to the specifications in Reick et al. (2021) the LAI is to be interpreted as leaf area 
+    ! [According to the specifications in Reick et al. (2021) the LAI is to be interpreted as leaf area
     ! "per canopy area", where canopy area is defined as area covered by a hypothetical tile without canopy gaps.]
     CALL weighted_avg_per_canopy_var_upon_area_movement(target_fract(:), moved_area(:), &
       &  veg_fract_correction_source(:), veg_fract_correction_target(:), lai_source(:), lai_target(:))

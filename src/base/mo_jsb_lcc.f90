@@ -59,7 +59,7 @@ CONTAINS
     USE mo_tcq_constants,     ONLY: tcq_potential_active_vars, tcq_required_passive_vars
 
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*),  INTENT(in) :: process_name      !< name of the encompassing lcc process  
+    CHARACTER(len=*),  INTENT(in) :: process_name      !< name of the encompassing lcc process
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile  !< current tile on which the lcc process runs
     INTEGER,           INTENT(in) :: active_cqts(:)    !< cqts that are actively relocated by this lcc process
     INTEGER,           INTENT(in) :: passive_cqts(:)   !< cqts that are passively relocated by this lcc process
@@ -68,7 +68,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_lcc'
 
     TYPE(t_jsb_model), POINTER          :: model
-    TYPE(t_jsb_grid),  POINTER          :: hgrid  
+    TYPE(t_jsb_grid),  POINTER          :: hgrid
     TYPE(t_jsb_lcc_proc), POINTER       :: lcc_relocations
     CLASS(t_jsb_tile_abstract), POINTER :: child, leave
     INTEGER :: nr_of_children, nr_of_leaves
@@ -105,13 +105,13 @@ CONTAINS
     lcc_relocations%tile_names = involved_descendant_tiles(:)
 
     ! for flcc a CQT can be active and passive at the same time: jsbach4: ag woody litter is burning upon fire, but then at the same
-    ! time filled with new woody litter which then needs to be passively allocated, therefore no assertion on disjunct cqt groups here 
+    ! time filled with new woody litter which then needs to be passively allocated, therefore no assertion on disjunct cqt groups here
 
     nr_of_active_vars = 0
     nr_of_passive_vars = 0
     nr_of_procs_with_active_vars = 0
 
-    ! Iterate over the descendants of the tile to collect the CQ variables of 
+    ! Iterate over the descendants of the tile to collect the CQ variables of
     ! the actively and passively relocated CQTs
     IF(tile%Has_children()) THEN
       nr_of_children = tile%Get_no_of_children()
@@ -126,7 +126,7 @@ CONTAINS
 
       ! check if this is a leave (currently lcc can only run on leaves!) and if not go to the children of this node (i.e. the leaves)
       IF(child%Has_children()) THEN
-        leave => child%Get_first_child_tile() 
+        leave => child%Get_first_child_tile()
         nr_of_leaves = child%Get_no_of_children()
       ELSE
         leave => child
@@ -195,7 +195,7 @@ CONTAINS
                   & leave%conserved_quantities, lcc_relocations%active_vars_cqt, lcc_relocations%active_vars_process_id, &
                   & lcc_relocations%active_vars, lcc_relocations%active_vars_names)
 
-              ENDDO 
+              ENDDO
             ENDIF
             ! and separately for the passive cqts
             IF (ANY(leave%conserved_quantities(i_cqt)%p%type_id == passive_cqts(:) )) THEN
@@ -207,7 +207,7 @@ CONTAINS
                   & leave%conserved_quantities, lcc_relocations%passive_vars_cqt,  lcc_relocations%passive_vars_process_id, &
                   & lcc_relocations%passive_vars, lcc_relocations%passive_vars_names )
 
-              ENDDO 
+              ENDDO
             ENDIF !... for active or passive CQTs
 
           ENDDO !... for all CQTs
@@ -245,7 +245,7 @@ CONTAINS
                 & TRIM(involved_descendant_tiles(1)), leave%conserved_quantities, &
                 & lcc_relocations%passive_vars, lcc_relocations%nr_of_passive_vars, 'passive')
             ENDIF
-          ENDDO 
+          ENDDO
 
           ! Assertion: all variables found on the first tile need to also be cqs for all other tiles
           IF (.NOT. i_active_this_tile == nr_of_active_vars ) THEN
@@ -286,7 +286,7 @@ CONTAINS
 
     ! JN-TODO: following code is only a check! Could e.g. be surrounded by debug flag or similar (to else disable check)
     !>
-    !> Assert: check against potential active and required passive variables for each process with active vars 
+    !> Assert: check against potential active and required passive variables for each process with active vars
     !>
     !
     ! ... to enable active relocation, a process needs to 'expect' the variables assumed as active by a lcc process
@@ -359,9 +359,9 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations  !< lcc structure of the calling lcc process
     TYPE(t_jsb_task_options),   INTENT(in) :: options             !< run-time parameters
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile               
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
         !< tile on which the lcc process is running for which the lcc structure is initialized here
-    REAL(wp),                   INTENT(inout) :: initial_area(:,:)  !< current area of involved tiles 
+    REAL(wp),                   INTENT(inout) :: initial_area(:,:)  !< current area of involved tiles
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_lcc_reloc'
 
@@ -404,9 +404,9 @@ CONTAINS
         current_tile => parent%Get_first_child_tile()
       ENDIF
 
-      IF (one_of(current_tile%name, lcc_relocations%tile_names) > 0) THEN 
+      IF (one_of(current_tile%name, lcc_relocations%tile_names) > 0) THEN
         i_tile = i_tile + 1
-        
+
         CALL current_tile%Get_fraction(ics, ice, iblk, fract=current_fract(:))
 
         initial_area(:, i_tile) = current_fract(:)
@@ -439,7 +439,7 @@ CONTAINS
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations
-        !< lcc structure of the calling lcc process for collecting to be transferred matter 
+        !< lcc structure of the calling lcc process for collecting to be transferred matter
     TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< run-time parameters
     REAL(wp),                   INTENT(in)    :: lost_area(:,:)    !< area moved from involved tiles
     REAL(wp),                   INTENT(in)    :: initial_area(:,:) !< initial area of involved tiles
@@ -470,7 +470,7 @@ CONTAINS
       CALL finish(TRIM(routine), 'Violation of assertion: Area arrays have values out of range ([0.0, 1.0]). Please check!')
     ENDIF
     !>
-    !> Assertion: lost area <= initial_area 
+    !> Assertion: lost area <= initial_area
     !>
     ! -> JN-TODO: we might want/need to discuss the concept of the e-10 areas here
     IF (ANY((initial_area - lost_area) < -EPSILON(1._wp) )) THEN
@@ -479,7 +479,7 @@ CONTAINS
     ENDIF
 
     !>
-    !> NOTE: in the current implementation it is crucial that the active vars are filled first, 
+    !> NOTE: in the current implementation it is crucial that the active vars are filled first,
     !>       because implementation of flcc made it necessary that variables can be active and passive
     !>       and currently active vars are relocated first and then passive vars are relocated
     !> HOWEVER: as soon as lcc is realised as passive -> active -> passive relocation via bare tile
@@ -491,7 +491,7 @@ CONTAINS
 
     CALL collect_to_be_transferred_matter(options, lost_area, initial_area, &
       & nr_of_tiles, lcc_relocations%nr_of_passive_vars, lcc_relocations%passive_vars)
-    
+
   END SUBROUTINE start_lcc_reloc
 
   ! ====================================================================================================== !
@@ -508,7 +508,7 @@ CONTAINS
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations
-        !< lcc structure of the calling lcc process for distributing to be relocated matter 
+        !< lcc structure of the calling lcc process for distributing to be relocated matter
     TYPE(t_jsb_task_options),   INTENT(in)    :: options           !< run-time parameters
     REAL(wp),                   INTENT(in)    :: gained_area(:,:)  !< area moved to involved tiles
     ! -------------------------------------------------------------------------------------------------- !
@@ -576,7 +576,7 @@ CONTAINS
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(inout) :: lcc_relocations
-        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var 
+        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var
     CLASS(t_jsb_tile_abstract), INTENT(in)    :: tile    !< tile on which relocation should be conducted
     INTEGER,                    INTENT(in)    :: i_tile  !< index of the tile in lcc structure
     TYPE(t_jsb_task_options),   INTENT(in)    :: options !< run-time parameters
@@ -622,7 +622,7 @@ CONTAINS
         CASE DEFAULT
           !>
           !> Assertion: Each process that has conserved quantities used as actively relocated CQs needs
-          !>            to provide a specific routine for the active relocation 
+          !>            to provide a specific routine for the active relocation
           !>
           CALL finish(TRIM(routine), this_proc_name &
             & // ' contains variables that are actively relocated by ' // TRIM(lcc_relocations%name) &
@@ -680,7 +680,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':collect_names_of_descendant_leaves_up_to_2layers'
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     current_tile => tile%Get_first_child_tile()
     ind_list = 1
     DO WHILE (ASSOCIATED(current_tile))
@@ -793,7 +793,7 @@ CONTAINS
 
   END SUBROUTINE collect_pointers_for_cqs
 
-  
+
   ! ====================================================================================================== !
   !
   !> Helper: collect to be transferred matter upon start of lcc
@@ -825,7 +825,7 @@ CONTAINS
           to_be_transferred(:) = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
             &   * (lost_area(:, i_tile) / initial_area(:, i_tile))
           var_list(i_var)%p%relocate_this(ics:ice,i_tile,iblk) = to_be_transferred(:)
-          ! and subtract it 
+          ! and subtract it
           var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) &
             & = var_list(i_var)%p%var_on_tile(i_tile)%p%ptr2d(ics:ice,iblk) - to_be_transferred(:)
         END WHERE
@@ -847,16 +847,16 @@ CONTAINS
         !< lcc structure of the calling lcc process
     CHARACTER(len=*),           INTENT(IN)    :: this_proc_name
         !< name of the process whose active variables are checked
-    CHARACTER(len=*),           INTENT(IN)    :: active_vars_on_this_lcc_proc(:) 
+    CHARACTER(len=*),           INTENT(IN)    :: active_vars_on_this_lcc_proc(:)
         !< variables active for the calling lcc process that live on the tested process
-    CHARACTER(len=*),           INTENT(IN)    :: potential_active_vars(:) 
+    CHARACTER(len=*),           INTENT(IN)    :: potential_active_vars(:)
         !< variables potentially active for the tested process
     ! -------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':check_active_lcc_vars'
     INTEGER                     :: i_var
     ! -------------------------------------------------------------------------------------------------- !
 
-    ! Assertion: calling lcc process should not call this routine with active vars 
+    ! Assertion: calling lcc process should not call this routine with active vars
     ! that are not contained in the specified (and handled) potential active vars
     DO i_var = 1,SIZE(active_vars_on_this_lcc_proc)
       IF (.NOT. ANY(active_vars_on_this_lcc_proc(i_var) .EQ. potential_active_vars)) THEN
@@ -865,7 +865,7 @@ CONTAINS
           & // ' of process ' // this_proc_name)
       ENDIF
     ENDDO
-    
+
   END SUBROUTINE check_active_lcc_vars
 
   ! ====================================================================================================== !

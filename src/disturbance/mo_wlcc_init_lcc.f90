@@ -37,8 +37,8 @@ MODULE mo_wlcc_init_lcc
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_wlcc_init_lcc_class'
   CHARACTER(len=*), PARAMETER :: procname = 'wlcc'
-  
-  INTEGER, PARAMETER :: nr_of_active_cqts = 1 
+
+  INTEGER, PARAMETER :: nr_of_active_cqts = 1
   INTEGER, PARAMETER :: nr_of_passive_cqts = 4
 
 CONTAINS
@@ -60,7 +60,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':wlcc_init_lcc'
     ! -------------------------------------------------------------------------------------------------- !
-    
+
     IF (.NOT. tile%Is_process_calculated(WLCC_)) RETURN
 
     IF (debug_on()) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')

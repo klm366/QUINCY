@@ -16,7 +16,7 @@
 !>
 MODULE mo_tlcc_config_class
 #ifndef __NO_JSBACH__
-  
+
   USE mo_exception,         ONLY: message
   USE mo_io_units,          ONLY: filename_max
   USE mo_jsb_config_class,  ONLY: t_jsb_config
@@ -43,7 +43,7 @@ CONTAINS
   !> Initialize tlcc process
   !!
   !! @param[inout]     config     Configuration type of process (t_tlcc_config)
-  !!  
+  !!
   SUBROUTINE Init_tlcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -81,7 +81,7 @@ CONTAINS
     config%active              = active
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
-    
+
   END SUBROUTINE Init_tlcc_config
 
 #endif

@@ -39,7 +39,7 @@ MODULE mo_lnd_bgcm_class
       & ELEM_N15_ID,        &
       & LAST_ELEM_ID ! needs to be the last -- it is only used to determine the max number of elements
   END ENUM
-  
+
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lnd_bgcm_class'
 
 CONTAINS
@@ -53,7 +53,7 @@ CONTAINS
     INTEGER :: last_type_id
     ! -------------------------------------------------------------------------------------------------- !
     ! The elem id enum  starts with 1 to be able to use the ids as indices in arrays with all possible elements
-    last_type_id = LAST_ELEM_ID - 1 
+    last_type_id = LAST_ELEM_ID - 1
 
   END FUNCTION get_max_number_of_elements
 
@@ -67,7 +67,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_pool), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
-    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine 
+    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
     ! -------------------------------------------------------------------------------------------------- !
     IF(ASSOCIATED(this%pool_list)) THEN
       IF(.NOT. SIZE(this%pool_list) .EQ. 0) THEN
@@ -90,7 +90,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_pool), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
-    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine 
+    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
     INTEGER                                :: this_dim  !< dimension
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: nr_of_elements, i_element

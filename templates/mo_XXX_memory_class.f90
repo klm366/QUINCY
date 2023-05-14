@@ -49,17 +49,17 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_<PROCESS_NAME_LOWER_CASE>_memory
-    
+
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
       !X add your 2D variables here e.g: & t,                    & !< Surface temperature    [K]
 
-      
+
     ! Additional variables for LAND lct_type
     TYPE(t_jsb_var_real2d) :: &
       !X add your 2D variables here e.g: & s_star,               & !< Surface dry static energy (s^star, see manual)    [m2 s-2]
 
-      
+
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]

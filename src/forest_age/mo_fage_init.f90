@@ -33,10 +33,10 @@ MODULE mo_fage_init
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(FAGE_)
   dsl4jsb_Use_memory(FAGE_)
-    
+
   IMPLICIT NONE
   PRIVATE
-  
+
   PUBLIC :: fage_init
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_fage_init'
@@ -45,22 +45,22 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Initialize fage process 
+  !> Initialize fage process
   !
   SUBROUTINE fage_init(tile)
-    !-----------------------------------------------------------------------  
+    !-----------------------------------------------------------------------
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     !-----------------------------------------------------------------------
     CHARACTER(len=*), PARAMETER :: routine = modname//':fage_init'
     !-----------------------------------------------------------------------
-    
+
     CALL fage_init_ic(tile)
 
   END SUBROUTINE fage_init
 
   ! ====================================================================================================== !
   !
-  !> Initialize initial conditions for fage process 
+  !> Initialize initial conditions for fage process
   !
   SUBROUTINE fage_init_ic(tile)
 
@@ -129,6 +129,6 @@ CONTAINS
     ENDIF
 
   END SUBROUTINE fage_init_ic
-  
+
 #endif
 END MODULE mo_fage_init

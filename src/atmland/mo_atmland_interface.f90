@@ -480,13 +480,13 @@ CONTAINS
       ! Update the daytime counter and trace the cosine zenith angle for time averaging purposes
       DO ic = 1, nc
       ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)
-      ! reset the daytime_counter if last timestep was midnight 
+      ! reset the daytime_counter if last timestep was midnight
         IF ((prev_one_cos_zenith_angle(ic) - prev_two_cos_zenith_angle(ic)) > eps8 .AND. &
             & (prev_two_cos_zenith_angle(ic) - prev_three_cos_zenith_angle(ic)) <= eps8) THEN
           ! zero the counter for number of accumulated values per day
           daytime_counter(ic) = 0.0_wp
         ENDIF
-  
+
         ! count number of daytime values
         IF (swpar_srf_down(ic) > eps8) THEN
           daytime_counter(ic) = daytime_counter(ic) + 1.0_wp
@@ -655,7 +655,7 @@ CONTAINS
       !$acc end data
 
     ELSE    ! without lakes
- 
+
       !$acc data present(fact_land, fact_lake)
       !$acc parallel loop
       DO i=1,nc
@@ -953,7 +953,7 @@ CONTAINS
         END DO
         !$acc end data
       ELSE
-        !$acc kernels default(present) 
+        !$acc kernels default(present)
         latent_hflx_wtr(:) = 0._wp
         !$acc end kernels
       END IF

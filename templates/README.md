@@ -8,7 +8,7 @@ Scientific processes are usually capsuled within an own sub-folder within the IC
 When implementing a new process in ICON-LAND, mandatory [process modules](https://gitlab.dkrz.de/jsbach/jsbach/-/wikis/Documentation/ICON-Land-framework/processes#process-modules) need to be added, and the process needs to be made known in several modules of the ICON-L infrastructure (see [How to "register" a process](https://gitlab.dkrz.de/jsbach/jsbach/-/wikis/Documentation/ICON-Land-framework/processes#how-to-register-a-process)). The templates for the mandatory modules are found in the `templates` directory.
 
 ## How to register a new process
-In order to use a process within ICON-LAND, the process needs to be made known to several modules - depending on the type of the process and process requirements. 
+In order to use a process within ICON-LAND, the process needs to be made known to several modules - depending on the type of the process and process requirements.
 
 - All processes need a process ID which needs to be added to the according enumerator in [mo_jsb_process_class](https://gitlab.dkrz.de/jsbach/jsbach/-/blob/dev/src/base/mo_jsb_process_class.f90). In this module, also a mapping onto a process name and back needs to be specified.
 - The process itself needs to be specified in [mo_jsb_model_usecases](https://gitlab.dkrz.de/jsbach/jsbach/-/blob/dev/src/base/mo_jsb_model_usecases.f90) for the [usecases](https://gitlab.dkrz.de/jsbach/jsbach/-/wikis/Documentation/ICON-Land-framework/usecases) for which it should be calculated.
@@ -19,6 +19,6 @@ In order to use a process within ICON-LAND, the process needs to be made known t
 - In the special case of an land cover change process:
     * the init lcc routine needs to be called in `jsbach_init` of  [mo_jsb_model_init](https://gitlab.dkrz.de/jsbach/jsbach/-/blob/dev/src/base/mo_jsb_model_init.f90).
     * the update routine of a task of an lcc process needs to call certain lcc infrastructure routines of [mo_jsb_lcc](https://gitlab.dkrz.de/jsbach/jsbach/-/blob/dev/src/base/mo_jsb_lcc.f90) - see [LCC infrastructure](https://gitlab.dkrz.de/jsbach/jsbach/-/wikis/Documentation/ICON-Land-framework/lcc-infrastructure).
- 
+
 Tip: usually it is helpful to identify an existing process with a similar type and purpose and to search how this is used in the different ICON-LAND infrastructure modules.
 

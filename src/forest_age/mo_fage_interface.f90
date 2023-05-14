@@ -44,19 +44,19 @@ MODULE mo_fage_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_fage_interface'
   CHARACTER(len=*), PARAMETER :: procname = 'fage'
-  
+
   !> Type definition for fage pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_forest_age
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_forest_age     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_forest_age  !< Aggregates computed task variables
   END TYPE tsk_forest_age
-  
+
   !> Constructor interface for fage pre task
   INTERFACE tsk_forest_age
     PROCEDURE Create_task_forest_age                        !< Constructor function for task
   END INTERFACE tsk_forest_age
-  
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -73,7 +73,7 @@ CONTAINS
     CALL return_ptr%Construct(name=procname, process_id=FAGE_, owner_model_id=model_id)
 
   END FUNCTION Create_task_forest_age
-    
+
   ! ====================================================================================================== !
   !
   !> Register tasks for fage process
@@ -85,7 +85,7 @@ CONTAINS
     INTEGER,               INTENT(in)   :: model_id    !< Model id
     ! -------------------------------------------------------------------------------------------------- !
     CALL this%Register_task(tsk_forest_age(model_id))
-    
+
   END SUBROUTINE Register_fage_tasks
 
   ! ====================================================================================================== !
@@ -94,7 +94,7 @@ CONTAINS
   !>
   !> Task "fage" shifts area from one age class to the next and cares for quantities conserved upon aging
   !>
-  !> Note that ageing is conducted globally at the same time step 'newyear' 
+  !> Note that ageing is conducted globally at the same time step 'newyear'
   !>  i.e. the update happens at different seasons, daytimes, etc
   !
   SUBROUTINE update_forest_age(tile, options)
@@ -103,7 +103,7 @@ CONTAINS
     USE mo_jsb_time,           ONLY: is_newyear
     USE mo_jsb_lcc_class,      ONLY: t_jsb_lcc_proc
     USE mo_jsb_lcc,            ONLY: init_lcc_reloc, start_lcc_reloc, end_lcc_reloc
-    
+
     USE mo_carbon_interface,   ONLY: merge_carbon_vars_upon_ageing
     USE mo_pheno_interface,    ONLY: merge_pheno_variables_upon_ageing
     USE mo_fage_process,       ONLY: recalc_fract_per_age_upon_ageing, synchronise_fracts
@@ -145,7 +145,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     dtime   = options%dtime
-    
+
     model => Get_model(tile%owner_model_id)
     ac_grid => Get_vgrid('age_classes_grid')
 
@@ -172,7 +172,7 @@ CONTAINS
         & // 'are expected to be equal. But number of lcc tiles is ' // int2string(nr_of_tiles)    &
         & // ' as opposed to the number of age classes: ' // int2string(nacs) // '. Please check!')
     ENDIF
-    
+
     ! If process is not to be calculated on this tile, do nothing
     IF (.NOT. tile%Is_process_calculated(FAGE_)) RETURN
 
@@ -181,7 +181,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    ! Assert that this tile is a PFT tile 
+    ! Assert that this tile is a PFT tile
     ! - this lcc process changes the age class (pftXX_fcYY) tiles but is controlled on their parent tile
     IF (INDEX(tile%name, 'pft') == 0) THEN
       CALL finish(TRIM(routine), 'Violation of precondition: fage processes is expected to run on pft tiles, instead' &
@@ -273,7 +273,7 @@ CONTAINS
 
       ! move further down in the age classes
       current_child => prev_child
-    ENDDO ! i = nacs,2,-1 -- movements from one age-class to the text starting with older classes 
+    ENDDO ! i = nacs,2,-1 -- movements from one age-class to the text starting with older classes
 
     !>
     !> 6. Deallocate area vectors
@@ -282,13 +282,13 @@ CONTAINS
 
     !>
     !> 7. Further actions specific for ageing lcc process: shift fracts in fract_per_age vector
-    !> 
+    !>
     CALL recalc_fract_per_age_upon_ageing(nc, dsl4jsb_Config(FAGE_)%max_age, fract_per_age(:,:), mean_age(:))
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_forest_age
-  
+
   ! ====================================================================================================== !
   !
   !> Implementation of "aggregate" for task "fage"
@@ -310,9 +310,9 @@ CONTAINS
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     dsl4jsb_Get_memory(FAGE_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -494,7 +494,7 @@ CONTAINS
     IF(ANY(cf_loss .GT. 0._wp)) THEN
       IF (dsl4jsb_Config(FAGE_)%alcc_age_fract_scheme == 'prop' ) THEN
         ! ---------------------------------------------------------------------------------------------- !
-        ! iterate over each age class - with the prop (proportional scheme) 
+        ! iterate over each age class - with the prop (proportional scheme)
         ! they can be treated separately from each other with only the total
         ! area (i.e. forest_pft_fract) as weight
         i_age_class = 1
@@ -507,7 +507,7 @@ CONTAINS
             this_cf_loss(:) = cf_loss(:) * (current_fract(:) / forest_pft_fract(:))
           END WHERE
           ! -------------------------------------------------------------------------------------------- !
-          ! adapt the fract_per_age tracing vector accordingly 
+          ! adapt the fract_per_age tracing vector accordingly
           IF(.NOT. age_class_tile%Is_first_child()) THEN
             ! then call for this age-class:
             CALL recalc_fract_per_age_proportionally(nc, dsl4jsb_Config(FAGE_)%max_age, &
@@ -526,7 +526,7 @@ CONTAINS
           lost_area(:,ind_age_class_tile) = lost_area(:,ind_age_class_tile) + this_cf_loss(:)
           ! -------------------------------------------------------------------------------------------- !
           ! Go to next age class (if any)
-          i_age_class = i_age_class + 1 
+          i_age_class = i_age_class + 1
           age_class_tile => age_class_tile%Get_next_sibling_tile()
         END DO
       ELSE

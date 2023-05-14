@@ -17,10 +17,10 @@
 !>
 MODULE mo_fage_process
 #ifndef __NO_JSBACH__
- 
+
    USE mo_kind,      ONLY: wp
    USE mo_exception, ONLY: message, message_text, finish
- 
+
    IMPLICIT NONE
    PRIVATE
 
@@ -33,7 +33,7 @@ MODULE mo_fage_process
 
   ! ====================================================================================================== !
   !
-  !> recalculate the tracked age fractions [y] upon ageing 
+  !> recalculate the tracked age fractions [y] upon ageing
   !> i.e. shifting fractions of maximum age from one age class to the next
   !
   SUBROUTINE recalc_fract_per_age_upon_ageing( nidx, nage, fract_per_age, mean_age)
@@ -93,7 +93,7 @@ MODULE mo_fage_process
       thisMinAge = int(age_ubounds(i_ac-1)+1)
       thisMaxAge = int(age_ubounds(i_ac))
 
-      IF (ANY(fract_per_age(:,thisMinAge:thisMaxAge) < - EPSILON(1._wp))) THEN 
+      IF (ANY(fract_per_age(:,thisMinAge:thisMaxAge) < - EPSILON(1._wp))) THEN
         WRITE (message_text,*) 'Violation of assertion: tracked age fraction got negative for age class ', &
           & i_ac, ' of pft ', pftid
         CALL finish (routine, message_text)
@@ -180,7 +180,7 @@ MODULE mo_fage_process
     REAL(wp), intent(in)    :: source_var       !< value of the variable in the source tile
     REAL(wp), intent(inout) :: target_var       !< value of the variable in the target tile
     ! -------------------------------------------------------------------------------------------------- !
-     IF (delta_fract .GT. 0._wp) THEN 
+     IF (delta_fract .GT. 0._wp) THEN
       target_var = ((target_var * old_target_fract) + (source_var * delta_fract)) / (old_target_fract + delta_fract)
      ENDIF
 

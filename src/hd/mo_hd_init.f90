@@ -139,7 +139,7 @@ CONTAINS
         & extdim_name='nneigh')
 
       IF (dsl4jsb_config(HD_)%use_bifurcated_rivers) THEN
-        ! Number of channel river splits into 
+        ! Number of channel river splits into
         return_pointer => input_file%Read_2d(         &
           & variable_name='NSPLIT',                   &
           & fill_array = dsl4jsb_var_ptr(HD_,nsplit))
@@ -265,15 +265,15 @@ CONTAINS
       nblks  = grid%nblks
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
-      
+
       ! Overlandflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FLFMEM',                   &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_o_max,           &
         & extdim_name='oresnum')
-      
-      
+
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)
@@ -283,14 +283,14 @@ CONTAINS
            END DO
          END DO
       END DO
-      
+
       ! Baseflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FGMEM',                    &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_b_max,           &
         & extdim_name='bresnum')
-      
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)
@@ -300,14 +300,14 @@ CONTAINS
             END DO
           END DO
       END DO
-      
+
       ! Riverflow reservoir
       ptr => input_file%Read_2d_extdim(  &
         & variable_name='FRFMEM',                   &
         & start_extdim=1,                           &
         & end_extdim= hd__mem%nres_r_max,           &
         & extdim_name='rresnum')
-      
+
       DO blk = blks, blke
          jcs = grid%get_col_start(blk)
          jce = grid%get_col_end  (blk)

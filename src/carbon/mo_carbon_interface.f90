@@ -705,7 +705,7 @@ CONTAINS
                (- veg_fract_correction * fract_fpc_max          & ! Minus: atmosphere gain is positive
                     * cflux_herb_2_atm )                          ! .. herbivory
 
-    co2flux_npp_2_atm_yday_ta = molarMassCO2_kg *               & ! daily C conservation test cannot deal with 
+    co2flux_npp_2_atm_yday_ta = molarMassCO2_kg *               & ! daily C conservation test cannot deal with
               (- veg_fract_correction * fract_fpc_max           & ! diurnal cycle of NPP,
                    * (NPP_act_yDayMean))                          ! therefore here additionaly the day mean
 
@@ -873,7 +873,7 @@ CONTAINS
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
-    ! if running with FLCC (which runs on the veg tile) 
+    ! if running with FLCC (which runs on the veg tile)
     ! the co2flux_fire_all_2_atm_ta variable is changed on the leaves
     ! ... it therefore requires a carbon aggregation task on the leaves to run subsequent to the flcc task
     dsl4jsb_Aggregate_onChunk(CARBON_,  co2flux_fire_all_2_atm_ta, weighted_by_fract)
@@ -1003,7 +1003,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_1_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_decomp_humus_2_sum) ! inout
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_1_sum)   ! inout
-    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout            
+    dsl4jsb_Get_var2D_onChunk(CARBON_,  c_into_humus_2_sum)   ! inout
 
     c_green           = c_green           * (oldRefArea / newRefArea)
     c_woods           = c_woods           * (oldRefArea / newRefArea)
@@ -1520,7 +1520,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_bg2_ta)     ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_humus_2_ta)            ! in
 
-    !$claw expand parallel update 
+    !$claw expand parallel update
     current_c_state_sum_ta(ics:ice) = c_green_ta(:) + c_woods_ta(:) + c_reserve_ta(:) + c_crop_harvest_ta(:) + &
         & c_acid_ag1_ta(:) + c_water_ag1_ta(:) + c_ethanol_ag1_ta(:) + c_nonsoluble_ag1_ta(:) + &
         & c_acid_ag2_ta(:) + c_water_ag2_ta(:) + c_ethanol_ag2_ta(:) + c_nonsoluble_ag2_ta(:) + &
@@ -1637,7 +1637,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     IMPLICIT NONE
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_lcc_proc),       INTENT(INOUT) :: lcc_relocations
-        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var 
+        !< lcc structure of the calling lcc process for distributing matter from an active to a passive var
     CLASS(t_jsb_tile_abstract), INTENT(IN)    :: tile    !< tile for which the relocation is be conducted
     INTEGER,                    INTENT(IN)    :: i_tile  !< index of the tile in lcc structure
     TYPE(t_jsb_task_options),   INTENT(IN)    :: options !< run-time parameters
@@ -1647,7 +1647,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     TYPE(t_jsb_model), POINTER   :: model
 
     INTEGER :: i, k, i_pool, i_passive, i_litter_coefficient, nc, ics, ice, iblk
-    
+
     REAL(wp) :: litter_coefficient, fraction, this_fract
     REAL(wp) :: this_fract_green_aboveGround, this_fract_wood_aboveGround, fire_fract_wood_2_atmos, not_burned_AG_fract
     REAL(wp), DIMENSION(options%nc) :: non_woody_litter, woody_litter, this_litter
@@ -1666,7 +1666,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     model => Get_model(tile%owner_model_id)
     dsl4jsb_Get_config(CARBON_)
 
-    ! Collect matter from potential active variables -- here unfortunately explicit 
+    ! Collect matter from potential active variables -- here unfortunately explicit
     non_woody_litter = 0.0
     woody_litter = 0.0
     CALL collect_matter_of_active_vars_onChunk( non_woody_litter, lcc_relocations, &
@@ -1683,7 +1683,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
       ! # in this case part of the ag wood has also already been added to the atmosphere flux
       fire_fract_wood_2_atmos = dsl4jsb_Config(CARBON_)%fire_fract_wood_2_atmos
       not_burned_AG_fract = (1.0_wp - fire_fract_wood_2_atmos) * fract_wood_aboveGround
-      ! (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround)) = Rest of wood after burning parts of AG wood 
+      ! (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround)) = Rest of wood after burning parts of AG wood
       this_fract_wood_aboveGround = not_burned_AG_fract / (not_burned_AG_fract + (1.0_wp - fract_wood_aboveGround))
     ENDIF
 
@@ -1718,7 +1718,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
       !JN-TODO: better way? Reiner? DSL?
       DO i = 1,nc
-        k = ics + i - 1 
+        k = ics + i - 1
         CALL add_litter_to_yasso_pool( &
           & lcc_relocations%passive_vars(i_passive)%p%relocate_this(k,i_tile,iblk), &
           & this_litter(i), fraction, litter_coefficient)
@@ -1756,7 +1756,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     iblk = options%iblk
     ics  = options%ics
     ice  = options%ice
-    
+
     dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_memory(PHENO_)
 
@@ -1902,7 +1902,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
     !INTEGER                     :: ics, ice, iblk
 
     CALL calculate_current_c_ta_state_sum(tile, options, Cconserve)
-    
+
     !$claw expand parallel update
     Cconserve(:) = Cconserve(:) - old_c_state_sum_ta(:) - cflux_ta(:)
 
@@ -1964,7 +1964,7 @@ END SUBROUTINE recalc_carbon_per_tile_vars
 
       ! Do not test as long as carbon_conservation_test still carries the initialisation value
       IF (.NOT. ALL(carbon_conservation_test .EQ. -999.0_wp)) THEN
-      
+
         ! CO2 flux due to npp, soil respiration and herbivory
         C_flux_yday(ics:ice) = &
           & - ((  dsl4jsb_var2D_onChunk(CARBON_, co2flux_npp_2_atm_yday_ta)  &

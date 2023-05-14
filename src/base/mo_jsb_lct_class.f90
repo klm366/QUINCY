@@ -1,14 +1,14 @@
 !> Summary: Definitions and methods for landcover types.
 !>
-!>### Landcover types 
+!>### Landcover types
 !>
-!> This module provides possible ids for landcover types (lcts), a constructor for new lct instances and 
+!> This module provides possible ids for landcover types (lcts), a constructor for new lct instances and
 !> further methods.
 !>
-!> Each lct has a named id. Furthermore, it can have a name, a longname, a fraction, 
+!> Each lct has a named id. Furthermore, it can have a name, a longname, a fraction,
 !> and in case that it is a PFT tile an id for the lctlib.
 !>
-!> lcts are used in usecases upon tile generation. 
+!> lcts are used in usecases upon tile generation.
 !> Each tile has a primary lct and, in addition, contains all lcts of its descendant tiles.
 !> Leaf tiles only have one lct.
 !> The lcts of a tile are used to define properties of the tile.
@@ -30,7 +30,7 @@
 !>
 !> @todo currently the constructor does not catch cases where the id is not contained in the enumerator
 !>
-!> @todo clarify language by adding another term and renaming members of t_jsb_lct: 
+!> @todo clarify language by adding another term and renaming members of t_jsb_lct:
 !>       -> issue: the id of the lct is not a unique id of the created t_jsb_lct, at least not in case of PFTs
 !>                 (all PFTs share the same id (VEG_TYPE) and only differ in fract and lib_id?!)
 !>       => suggestion: call it type_id

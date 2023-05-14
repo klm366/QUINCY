@@ -41,7 +41,7 @@ CONTAINS
     USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
     USE mo_jsb_grid,            ONLY: Register_vgrid
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
-    USE mo_rad_constants,       ONLY: init_rad_constants
+    USE mo_rad_parameters,      ONLY: init_rad_parameters_quincy, init_rad_parameters_jsbach
     USE mo_atmland_constants,   ONLY: init_atmland_constants
     USE mo_assimi_parameters,   ONLY: init_assimi_parameters_quincy, init_assimi_parameters_jsbach
     USE mo_veg_constants,       ONLY: init_veg_constants
@@ -97,7 +97,7 @@ CONTAINS
     jsbach%no_of_models = no_of_models
 
     ALLOCATE(jsbach_subsets(no_of_models))
-  
+
     ! Create models according to master namelist
     DO model_idx=1,no_of_models
       NULLIFY(model)
@@ -142,7 +142,7 @@ CONTAINS
 
       ALLOCATE(model%processes(max_no_of_processes))
       DO iproc=1,max_no_of_processes
-        model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
+        model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename), model_scheme)
       END DO
 
       ! point from each associated process%config to the model_config
@@ -254,7 +254,7 @@ CONTAINS
           CALL message(TRIM(routine), 'Switching on carbon process since disturbance process is active')
         END IF
 
-        IF(model%Is_process_enabled(FAGE_) & 
+        IF(model%Is_process_enabled(FAGE_) &
             & .AND. .NOT. (TRIM(model%config%usecase) == 'jsbach_forest_age_classes')) THEN
           CALL finish(routine, &
             & 'The FAGE process should only be used with the jsbach_forest_age_classes usecase! Please check!')
@@ -281,16 +281,17 @@ CONTAINS
     SELECT CASE (model_scheme)
     CASE (MODEL_QUINCY)
       CALL message(TRIM(routine), 'starting init of QUINCY process constants')
-      CALL init_rad_constants      
+      CALL init_rad_parameters_quincy
       CALL init_assimi_parameters_quincy
-      CALL init_veg_constants    
+      CALL init_veg_constants
       CALL init_spq_constants
       CALL init_sb_constants
       CALL init_pheno_parameters_quincy
-      CALL init_atmland_constants  
+      CALL init_atmland_constants
     CASE (MODEL_JSBACH)
       CALL init_pheno_parameters_jsbach
       CALL init_assimi_parameters_jsbach
+      CALL init_rad_parameters_jsbach
     END SELECT
 
     CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')
@@ -322,10 +323,10 @@ CONTAINS
     CASE DEFAULT
       lctlib_filename = 'lctlib_nlct21.def'
     END SELECT
-    
+
     ! import lctlib
     ! use model_scheme_char, instead of the ENUM model_scheme, to differentiate between model schemes
-    !  because mo_jsb_model_class is not used in this function 
+    !  because mo_jsb_model_class is not used in this function
     model%lctlib => Read_lctlib(TRIM(lctlib_filename), &
       &                         TRIM(model%config%model_scheme_char), &
       &                         TRIM(model%config%usecase))
