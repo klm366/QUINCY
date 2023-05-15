@@ -296,29 +296,25 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-!vg>>
-    ! Save old surface temperature and saturation spec. humidity
-    t_unfilt_old(:) = t_unfilt(:)
-    t_old   (:) = t(:)
-!vg<<
-
     w_soil_critical_config = dsl4jsb_Config(SSE_)%w_soil_critical
     l_snow_config          = dsl4jsb_Config(SSE_)%l_snow
     l_freeze_config        = dsl4jsb_Config(SSE_)%l_freeze
     l_supercool_config     = dsl4jsb_Config(SSE_)%l_supercool
 
-    ! Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
-    ! leading to a crash in convect_tables
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
+
       IF (is_ocean(ic) .OR. is_lake(ic)) THEN
+        ! Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
+        ! leading to a crash in convect_tables
         t_unfilt_old(ic) = 280._wp
         t_old(ic)        = 280._wp
+      ELSE
+        ! Save old surface temperature and saturation spec. humidity
+        t_unfilt_old(ic) = t_unfilt(ic)
+        t_old       (ic) = t(ic)
       END IF
-    END DO
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic = 1, nc
       qsat_srf_old(ic) = qsat(t_old(ic), press_srf(ic))
 
       ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
@@ -420,18 +416,22 @@ CONTAINS
       END IF
 
       ! 'Effective temperature' used in radheat of the atmosphere model (see Eq. 6.3 in ECHAM5 manual)
-      ! Security prints for more meaningfull error message than "lookup table overflow"
-      IF (4._wp * t_star(ic) - 3._wp * t_old(ic) <= 0._wp) THEN
-        WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',     &
-             & '(', grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t_star: ', t_star(ic), 'K,  t_old: ' , t_old(ic), 'K'
-        CALL finish(TRIM(routine), message_text)
-      END IF
       t_eff(ic) = (t_old(ic)**3 * (4._wp * t_star(ic) - 3._wp * t_old(ic))) ** 0.25_wp
 
     END DO
     !$ACC END PARALLEL LOOP
 
     !$ACC END DATA
+
+#ifndef _OPENACC
+    ! Security prints for more meaningfull error message than "lookup table overflow"
+    IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp)) THEN
+      ic = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
+      WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',         &
+            & '(', grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t_star: ', t_star(ic), 'K,  t_old: ' , t_old(ic), 'K'
+      CALL finish(TRIM(routine), message_text)
+    END IF
+#endif
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
