@@ -1080,4 +1080,3 @@ CONTAINS
     pseudo_soil_temp= t_air_in_Celcius / N_pseudo_soil_temp  +  F_pseudo_soil_temp * pseudo_soil_temp
 
   END SUBROUTINE calc_pseudo_soil_temp
-
