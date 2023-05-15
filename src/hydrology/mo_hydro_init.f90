@@ -382,7 +382,7 @@ CONTAINS
         ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0.25_wp, ptr_2D(:,:) >= 0._wp)
 
       ELSE   ! l_soil_texture
-      
+
         ! Soil texture information
 
         ! fraction of sand upper soil
@@ -832,9 +832,9 @@ CONTAINS
       dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl) = MAX(0._wp, &
         & MIN(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl)))
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl), &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl), &
-      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl), &
+      !$ACC UPDATE DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sat_sl))  &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_fc_sl))   &
       !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_pwp_sl))
     END IF
 

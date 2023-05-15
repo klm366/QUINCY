@@ -117,7 +117,7 @@ CONTAINS
         root_depth(ic) = root_depth(ic) + dz_root(ic,is)
       END DO
     END DO
-    
+
     !$ACC LOOP SEQ
     DO ic = 1, nc
       !$ACC LOOP GANG(STATIC:1) VECTOR

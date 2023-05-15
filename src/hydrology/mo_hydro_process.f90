@@ -612,9 +612,9 @@ CONTAINS
       evapo_deficit(ic) = evapo_deficit(ic) * rhoh2o / dtime
     END DO
     !$ACC END PARALLEL LOOP
- 
+
     !$ACC END DATA
- 
+
   END SUBROUTINE calc_soil_hydrology
 
 
@@ -986,15 +986,15 @@ CONTAINS
         !$ACC LOOP SEQ
         DO is = nsoil_act(ic), 1, -1
           IF (wtr_soil_sl(ic,is) < 0._wp) THEN
-            WRITE (message_text_long,*) 'Soil moisture correction needed at ',  &
-              &  lat(ic),'N and ',lon(ic),'E:' ,          NEW_LINE('a'),          &
+            WRITE (message_text_long,*) 'Soil moisture correction needed at ',   &
+              &  lat(ic),'N and ',lon(ic),'E:' ,         NEW_LINE('a'),          &
               &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
               &  'Bottom drainage: ', drain_rock(ic)
             CALL message('soilhyd', message_text_long, all_print=.TRUE.)
             drain_rock(ic) = MAX((drain_rock(ic) + wtr_soil_sl(ic,is)), 0._wp)
             wtr_soil_sl(ic,is) = 0._wp
             WRITE (message_text_long,*) 'After correction: wtr_soil_sl(ic,:): ', &
-              &  lat(ic),'N and ',lon(ic),'E:' ,          NEW_LINE('a'),          &
+              &  lat(ic),'N and ',lon(ic),'E:' ,         NEW_LINE('a'),          &
               &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
               &  'Bottom drainage: ', drain_rock(ic)
             CALL message('soilhyd', message_text_long, all_print=.TRUE.)
@@ -1014,7 +1014,7 @@ CONTAINS
       !< 1. Complain if the overall transport error is too large
       IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
         WRITE (message_text_long,*) 'Soil water transport residual too large at ', &
-          & lat(ic),'N and ',lon(ic),'E:',                    NEW_LINE('a'), &
+          & lat(ic),'N and ',lon(ic),'E:',                   NEW_LINE('a'), &
           & 'Transport residual: ', wtr_transp_residual(ic), NEW_LINE('a'), &
           & 'Infiltration:       ', infilt(ic),              NEW_LINE('a'), &
           & 'Soil evaporation:   ', evapo_soil_sl1(ic),      NEW_LINE('a'), &
@@ -1121,7 +1121,7 @@ CONTAINS
       END DO
       !
       ! Lateral Drainage (i.e. drainage from upper soil layers)
-      ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to 
+      ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to
       !      move lateraly until it reaches the stream (or the neighbouring topo-tile).
       !      In this implementation all water above field capacity is added to the drainage. However,
       !      this is a very simplistic assumption. For e.g. high resolution simulations it might
@@ -1134,7 +1134,7 @@ CONTAINS
       !   ! If maximum moisture is exceeded, add the excess water to lateral drainage
       !   IF (wtr_soil_sl(ic,is) > wtr_field_cap_sl(ic,is)) THEN
       !     drain_sl(ic)      = wtr_soil_sl(ic,is) - wtr_field_cap_sl(ic,is) ! Put excess water in lateral drainage
-      !     wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) - drain_sl(ic)           ! remove lateral drainage of the layer from soil moisture
+      !     wtr_soil_sl(ic,is) = wtr_soil_sl(ic,is) - drain_sl(ic)      ! remove lateral drainage of the layer from soil moisture
       !     IF (.NOT. ltpe_closed) THEN
       !       ! Add excess water to lateral drainage
       !       drain_lat(ic,is)   = drain_lat(ic,is)  + drain_sl(ic)
@@ -1750,7 +1750,7 @@ CONTAINS
   INTEGER, INTENT(in) :: n                          ! number of active soil levels
   REAL(wp), Intent(in):: dt, alpha,            &    ! time step
                        & top_bound, bot_bound, &    ! fluxes at upper and lower boundary
-                       & dzf(n),               &    ! soil layer thickness 
+                       & dzf(n),               &    ! soil layer thickness
                        & C(n),                 &    ! heat capacity if used for heat transport,
                                                     ! set to 1 for water transport
                        & S(n),                 &    ! prescribed water/heat change flux per layer

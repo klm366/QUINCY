@@ -713,10 +713,10 @@ CONTAINS
 
     REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: & 
       & vol_heat_cap_tmp,                    &
-      & vol_heat_cap_org_tmp,                & 
-      & vol_porosity_org_tmp,                & 
-      & heat_cond_tmp,                       & 
-      & hcond_org_tmp,                       & 
+      & vol_heat_cap_org_tmp,                &
+      & vol_porosity_org_tmp,                &
+      & heat_cond_tmp,                       &
+      & hcond_org_tmp,                       &
       & hcond_dry_org_tmp
 
     INTEGER  :: iblk, ics, ice, nc, nsoil, ic, is
@@ -852,16 +852,15 @@ CONTAINS
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
-
-          vol_heat_cap_sl (ic,is) = calc_vol_heat_capacity( &
-            &                                vol_heat_cap_tmp(ic,is)     , &
-            &                                vol_heat_cap_org_tmp(ic,is) , &
-            &                                vol_porosity_sl(ic,is)      , &
-            &                                fract_org_sl(ic,is)         , &
-            &                                fract_water(ic,is)          , &
-            &                                fract_ice  (ic,is)          , &
-            &                                soil_depth_sl(ic,is)        , &
-            &                                soil_e_dz(is)                 &
+          vol_heat_cap_sl(ic,is) = calc_vol_heat_capacity(          &
+            &                         vol_heat_cap_tmp(ic,is)     , &
+            &                         vol_heat_cap_org_tmp(ic,is) , &
+            &                         vol_porosity_sl(ic,is)      , &
+            &                         fract_org_sl(ic,is)         , &
+            &                         fract_water(ic,is)          , &
+            &                         fract_ice(ic,is)            , &
+            &                         soil_depth_sl(ic,is)        , &
+            &                         soil_e_dz(is)                 &
             & )
         END DO
       END DO

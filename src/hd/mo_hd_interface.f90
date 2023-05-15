@@ -292,7 +292,7 @@ CONTAINS
       & outflow_drainage,      &
       & outflow_rivers,        &
       & outflow_resid,         &
-     !& outflow_count,         &
+      !dbg & outflow_count,    &
       & discharge,             &
       & discharge_ocean,       &
       & internal_drain,        &
@@ -362,8 +362,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, coast_ocean)      ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, nsplit)           ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
-   !dsl4jsb_Get_var2D_onDomain(HD_, outflow_count)    ! OUT
-
+    !dbg dsl4jsb_Get_var2D_onDomain(HD_, outflow_count)    ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, internal_drain)  ! OUT

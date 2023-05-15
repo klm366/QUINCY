@@ -301,7 +301,7 @@ CONTAINS
         & lrestart=.FALSE.,                                                                &
         & initval_r=0.0_wp )
     ENDIF
-#endif  
+#endif
 
   END SUBROUTINE Init_hd_memory
 

@@ -348,19 +348,19 @@ CONTAINS
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
-      
+
     CALL mem%Add_var( 'discharge', mem%discharge,                                    &
       & hgrid, surface,                                                              &
       & t_cf('discharge', 'm3 s-1', 'Local discharge'),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix, output_level=BASIC,                                                              &
+      & prefix, suffix, output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'discharge_ocean', mem%discharge_ocean,                        &
       & hgrid, surface,                                                              &
       & t_cf('discharge_ocean', 'm3 s-1', 'Discharge to the ocean'),                 &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix, output_level=BASIC,                                                              &
+      & prefix, suffix, output_level=BASIC,                                          &
       & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'internal_drain', mem%internal_drain,                          &

@@ -52,7 +52,8 @@ MODULE mo_hydro_config_class
       & l_infil_subzero         !< Allow infiltration at soil temperatures below 0degC
     INTEGER               :: &
       & soilhydmodel,        & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
-      & interpol_mean          !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean 
+      & interpol_mean          !< Interpolation scheme to optain K & D at layer interface:
+                               !     'upstream' (default) or 'arithmetic' mean
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config

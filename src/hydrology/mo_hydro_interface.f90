@@ -1058,7 +1058,7 @@ CONTAINS
     !
     dsl4jsb_Def_config(HYDRO_)
     dsl4jsb_Def_memory(HYDRO_)
-    
+
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: wtr_soilhyd_res
 
@@ -1115,7 +1115,7 @@ CONTAINS
 
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)
-    
+
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
 
     CALL calc_soil_hydrology( &
@@ -2027,7 +2027,7 @@ CONTAINS
       skinres_max(ic) = config_w_skin_max
     END DO
     !$ACC END PARALLEL
- 
+
     dsl4jsb_Get_memory(HYDRO_)
 
     ! First handle LAKE_TYPE lct
@@ -2360,7 +2360,7 @@ CONTAINS
           CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
         END IF
       END IF
-      
+
       weq_land(ic) = weq_land_new
     END DO
     !$ACC END LOOP
