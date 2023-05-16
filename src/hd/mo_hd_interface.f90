@@ -483,13 +483,18 @@ CONTAINS
         height_lake(:) = 0._wp
         fract_lake(:)   = 0._wp
       END WHERE
+      WHERE ( basin_mask(:) > 0._wp )
+        fract_lake(:) = MIN( MAX(fract_lake(:), 0._wp), 1._wp - EPSILON(1._wp))
+      ELSE WHERE
+        fract_lake(:) = MIN( MAX(fract_lake(:), 0._wp), 1._wp)
+      END WHERE
       height_dyn(:) = height_oro_min(:) + height_lake(:)
       area_lake (:) = fract_lake(:) * area
 
       ! update lake fraction [%]
       WHERE (basin_mask(:) > 0._wp)
         ! lake and land fraction changes [%]
-        fract_lake_changes(:) = MIN( MAX(fract_lake(:), 0._wp), 1._wp) - fract_lake_old(:)
+        fract_lake_changes(:) = fract_lake(:) - fract_lake_old(:)
       ELSE WHERE
         fract_lake_changes(:) = 0._wp
       END WHERE
