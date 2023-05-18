@@ -851,8 +851,8 @@ CONTAINS
               & gdp(:),                                                   &
               & hdi(:),                                                   &
 
-              & fba,                                                      &
-              !& fba_smooth,                                               &
+              !& fba,                                                      &
+              & fba_smooth,                                               &
               & nc,                                                       &
               & iblk,                                                     &
               & tile%name,                                                &

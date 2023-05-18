@@ -130,7 +130,8 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: temp_varname  = 'air_temp'         ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: rHcf_varname  = 'rHcf'             ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: fba_varname   = 'fba'              ! < Rackhun Son >
-  CHARACTER(len=*), PARAMETER :: fba_smooth_varname  = 'fba_smooth' ! < Rackhun Son >
+  !CHARACTER(len=*), PARAMETER :: fba_smooth_varname  = 'fba_smooth' ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: fba_smooth_varname  = 'fba_7mv'    ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: popd_varname  = 'population'       ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: gdp_varname   = 'gdp'              ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: hdi_varname   = 'hdi'              ! < Rackhun Son >

@@ -568,7 +568,6 @@ CONTAINS
         CALL message('',message_text)
       ENDIF
 
-<<<<<<< HEAD
       !IF (jstep .ne. 1) THEN
       !IF (jstep .ne. 350641) THEN  ! restart 1999~
       !IF (jstep .ne. 350641) THEN  ! restart 2009~
@@ -586,8 +585,6 @@ CONTAINS
       !  ENDIF
       !ENDIF
   
-=======
->>>>>>> dev
       ! set namelist output flag
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
 
