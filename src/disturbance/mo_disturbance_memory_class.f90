@@ -47,6 +47,7 @@ MODULE mo_disturb_memory_class
     max_wind_10m,             & ! for windbreak
     max_wind_10m_act,         & ! for windbreak
 
+    koppen,                   & ! for Fire <Rackhun Son>
     burned_fract_infer,       & ! for Fire <Rackhun Son>
     burned_fract_test,        & ! for Fire <Rackhun Son>
     t_air_ave,                & ! for Fire <Rackhun Son>
@@ -62,6 +63,8 @@ MODULE mo_disturb_memory_class
     lai_ave                     ! for Fire <Rackhun Son>
 
   TYPE(t_jsb_var_real3d) ::   &
+    t_air_annual,             & ! for Fire <Rackhun Son>
+    rain_annual,              & ! for Fire <Rackhun Son>
     t_air_clim,               & ! for Fire <Rackhun Son>
     q_clim,                   & ! for Fire <Rackhun Son>
     q_rel_clim,               & ! for Fire <Rackhun Son>
@@ -113,8 +116,10 @@ MODULE mo_disturb_memory_class
     V38_memory,               & ! for Fire <Rackhun Son>
     V39_memory,               & ! for Fire <Rackhun Son>
     RHC_memory,               & ! for Fire <Rackhun Son>
-    Y_memory,                 &
-    R_memory
+    Y_memory,                 & ! for Fire <Rackhun Son>
+    R_memory,                 & ! for Fire <Rackhun Son>
+    Koppen_memory               ! for Fire <Rackhun Son>
+
 
     !lstm_hidden,             & ! for Fire <Rackhun Son>
     !lstm_cell,               & ! for Fire <Rackhun Son>
@@ -260,6 +265,14 @@ CONTAINS
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
 
+    CALL mem%Add_var('t_air_annual', mem%t_air_annual,                      &
+      & hgrid, daily,                                                       &
+      & t_cf('t_air_annual', 'K',                                           &
+      &  'temperature annual data'),                                        &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
     CALL mem%Add_var('q_ave', mem%q_ave,                                    &
       & hgrid, surface,                                                     &
       & t_cf('q_ave', 'g/g',                                                &
@@ -288,6 +301,14 @@ CONTAINS
       & hgrid, surface,                                                     &
       & t_cf('rain_ave', '',                                                &
       &  'precipitation daily average'),                                    &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('rain_annual', mem%rain_annual,                        &
+      & hgrid, daily,                                                       &
+      & t_cf('rain_annual', '',                                             &
+      &  'precipitation annual data'),                                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
@@ -757,6 +778,13 @@ CONTAINS
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 1.0_wp)
 
+    CALL mem%Add_var('Koppen_memory', mem%Koppen_memory,                    &
+      & hgrid, memory,                                                      &
+      & t_cf('Koppen_memory', '-',                                          &
+      &  'Koppen memory'),                                                  &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
 
     !CALL mem%Add_var('lstm_hidden', mem%lstm_hidden,                        &
     !  & hgrid, d_lstm,                                                      &
@@ -773,6 +801,14 @@ CONTAINS
     !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
     !  & prefix, suffix,                                                     &
     !  & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var( 'koppen', mem%koppen,                                             &
+      & hgrid, surface,                                                                 &
+      & t_cf('koppen', '-', 'Koppen-Geiger classification'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
+      & prefix, suffix,                                                                 &
+      & output_level=BASIC,                                                             &
+      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp )
 
     CALL mem%Add_var( 'burned_fract_infer', mem%burned_fract_infer,                     &
       & hgrid, surface,                                                                 &
