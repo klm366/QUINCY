@@ -151,6 +151,8 @@ CONTAINS
 
     USE mo_jsb_time_iface,        ONLY: get_year_day    ! <Rackhun Son>
     USE mo_time_config,           ONLY: time_config     ! <Rackhun Son>
+    USE mo_jsb_grid,              ONLY: Get_grid        ! <Rackhun Son>
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid      ! <Rackhun Son>
     USE mo_global_variable                              ! <Rackhun Son>
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -158,9 +160,10 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER                :: model
+    TYPE(t_jsb_grid),  POINTER                :: grid  ! <Rackhun Son>
     INTEGER :: iblk, nc, ics, ice
-    INTEGER :: iyr, imo, idy, day_of_year, i          ! <Rackhun Son>
-    REAL(wp) :: clim_ratio, yearly_ratio, diff_year   ! average ratio for climatology <Rackhun Son>
+    INTEGER :: iyr, imo, idy, day_of_year, i           ! <Rackhun Son>
+    REAL(wp) :: clim_ratio, yearly_ratio, diff_year    ! average ratio for climatology <Rackhun Son>
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_damaged_area'
 
@@ -310,11 +313,13 @@ CONTAINS
       & q_rel_air
          
     ! Declare pointers to variables in memory <Rackhun Son>
-    REAL(wp), POINTER      :: lightning_climatology(:)
-    REAL(wp), POINTER      :: slope(:)
-    REAL(wp), POINTER      :: roughness(:)
-    REAL(wp), POINTER      :: road_density(:)
-    REAL(wp), POINTER      :: gfed_region(:)
+    REAL(wp), POINTER :: lightning_climatology(:)
+    REAL(wp), POINTER :: slope(:)
+    REAL(wp), POINTER :: roughness(:)
+    REAL(wp), POINTER :: road_density(:)
+    REAL(wp), POINTER :: gfed_region(:)
+
+    REAL(wp), POINTER :: lat(:)
 
     INTEGER :: iteration, is_training, is_saving, is_infer, memory_idx, n, i_temporal, i_spatial, max_pft_idx
     INTEGER :: save_batch
@@ -344,6 +349,10 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+
+    grid => Get_grid(model%grid_id) ! <Rackhun Son>
+
+    lat => grid%lat(ics:ice, iblk) ! <Rackhun Son>
 
     ! Get process configurations
     dsl4jsb_Get_config(DISTURB_)
@@ -603,7 +612,8 @@ CONTAINS
             ! random sampling from memory
             r = SUM(R_memory)
             !k = SUM(Koppen_memory)
-            IF ((tile%name .eq. max_pft) .and. (r .gt. 0.)) THEN
+            IF (tile%name .eq. max_pft) THEN
+            !IF ((tile%name .eq. max_pft) .and. (r .gt. 0.)) THEN
             !IF ((tile%name .eq. max_pft) .and. (r .gt. 0.) .and. (k .gt. 0.)) THEN
              n=1
               DO WHILE ( n<=8 )
@@ -612,26 +622,26 @@ CONTAINS
                 CALL RANDOM_NUMBER(u)
                 i_spatial  = 1 + INT(FLOOR((128)*u))
 
-                IF ((R_memory(i_spatial,i_temporal) .ne. 0.))  THEN
+                !IF ((R_memory(i_spatial,i_temporal) .ne. 0.))  THEN
                 !IF ((R_memory(i_spatial,i_temporal) .ne. 0.) .and. (Koppen_memory(i_spatial,i_temporal) .ne. 0.))  THEN
-                  CALL update_pid_batch(                                                                                    &
-                    & V1_memory (i_spatial,i_temporal),  V2_memory(i_spatial,i_temporal),  V3_memory(i_spatial,i_temporal), &
-                    & V4_memory (i_spatial,i_temporal),  V5_memory(i_spatial,i_temporal),  V6_memory(i_spatial,i_temporal), &
-                    & V7_memory (i_spatial,i_temporal),  V8_memory(i_spatial,i_temporal),  V9_memory(i_spatial,i_temporal), &
-                    & V10_memory(i_spatial,i_temporal), V11_memory(i_spatial,i_temporal), V12_memory(i_spatial,i_temporal), &
-                    & V13_memory(i_spatial,i_temporal), V14_memory(i_spatial,i_temporal), V15_memory(i_spatial,i_temporal), &
-                    & V16_memory(i_spatial,i_temporal), V17_memory(i_spatial,i_temporal), V18_memory(i_spatial,i_temporal), &
-                    & V19_memory(i_spatial,i_temporal), V20_memory(i_spatial,i_temporal), V21_memory(i_spatial,i_temporal), &
-                    & V22_memory(i_spatial,i_temporal), V23_memory(i_spatial,i_temporal), V24_memory(i_spatial,i_temporal), &
-                    & V25_memory(i_spatial,i_temporal), V26_memory(i_spatial,i_temporal), V27_memory(i_spatial,i_temporal), &
-                    & V28_memory(i_spatial,i_temporal), V29_memory(i_spatial,i_temporal), V30_memory(i_spatial,i_temporal), &
-                    & V31_memory(i_spatial,i_temporal), V32_memory(i_spatial,i_temporal), V33_memory(i_spatial,i_temporal), &
-                    & V34_memory(i_spatial,i_temporal), V35_memory(i_spatial,i_temporal), V36_memory(i_spatial,i_temporal), &
-                    & V37_memory(i_spatial,i_temporal), V38_memory(i_spatial,i_temporal), V39_memory(i_spatial,i_temporal), &
-                    & RHC_memory(i_spatial,i_temporal), Y_memory  (i_spatial,i_temporal),   R_memory(i_spatial,i_temporal), &
-                    & Koppen_memory(i_spatial,i_temporal), n, iblk)
-                  n = n+1
-                ENDIF
+                CALL update_pid_batch(                                                                                    &
+                  & V1_memory (i_spatial,i_temporal),  V2_memory(i_spatial,i_temporal),  V3_memory(i_spatial,i_temporal), &
+                  & V4_memory (i_spatial,i_temporal),  V5_memory(i_spatial,i_temporal),  V6_memory(i_spatial,i_temporal), &
+                  & V7_memory (i_spatial,i_temporal),  V8_memory(i_spatial,i_temporal),  V9_memory(i_spatial,i_temporal), &
+                  & V10_memory(i_spatial,i_temporal), V11_memory(i_spatial,i_temporal), V12_memory(i_spatial,i_temporal), &
+                  & V13_memory(i_spatial,i_temporal), V14_memory(i_spatial,i_temporal), V15_memory(i_spatial,i_temporal), &
+                  & V16_memory(i_spatial,i_temporal), V17_memory(i_spatial,i_temporal), V18_memory(i_spatial,i_temporal), &
+                  & V19_memory(i_spatial,i_temporal), V20_memory(i_spatial,i_temporal), V21_memory(i_spatial,i_temporal), &
+                  & V22_memory(i_spatial,i_temporal), V23_memory(i_spatial,i_temporal), V24_memory(i_spatial,i_temporal), &
+                  & V25_memory(i_spatial,i_temporal), V26_memory(i_spatial,i_temporal), V27_memory(i_spatial,i_temporal), &
+                  & V28_memory(i_spatial,i_temporal), V29_memory(i_spatial,i_temporal), V30_memory(i_spatial,i_temporal), &
+                  & V31_memory(i_spatial,i_temporal), V32_memory(i_spatial,i_temporal), V33_memory(i_spatial,i_temporal), &
+                  & V34_memory(i_spatial,i_temporal), V35_memory(i_spatial,i_temporal), V36_memory(i_spatial,i_temporal), &
+                  & V37_memory(i_spatial,i_temporal), V38_memory(i_spatial,i_temporal), V39_memory(i_spatial,i_temporal), &
+                  & RHC_memory(i_spatial,i_temporal), Y_memory  (i_spatial,i_temporal),   R_memory(i_spatial,i_temporal), &
+                  & Koppen_memory(i_spatial,i_temporal), n, iblk)
+                n = n+1
+                !ENDIF
               ENDDO
             ENDIF
           ENDIF
@@ -831,7 +841,7 @@ CONTAINS
         t_air_annual(:,day_of_year) = t_air_ave(:)
         rain_annual (:,day_of_year) = rain_ave(:)
 
-        CALL Koppen_Geiger_classification(nc, t_air_annual,  rain_annual, koppen)
+        CALL Koppen_Geiger_classification(nc, t_air_annual, rain_annual, lat, koppen)
 
         !IF (iyr .ge. 2001) THEN
         !  DO n = 1,nc

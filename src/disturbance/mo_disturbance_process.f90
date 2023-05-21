@@ -365,7 +365,7 @@ CONTAINS
       & dW6(d_hidden, d_output*d_class),     db6(d_output*d_class)
                  
     INTEGER  :: i, j, k, idx, pid, getpid, c
-    real(wp) :: lr_rate, keep_prob, loss, u
+    real(wp) :: lr_rate, keep_prob, loss, u, r
     real(wp) :: q_rel_air_constraint(nc)
     real(wp) :: tr_q_rel_air_constraint(bs), tr_target(bs), tr_weights(bs), tr_koppen(bs)
     real(wp) :: c_num(d_class)
@@ -644,8 +644,10 @@ CONTAINS
       c_num(:) = 1e-8
       DO i = 1,bs
         c = INT(tr_koppen(i))
+        r = batch_global(i,42)
 
-        IF (c .ne. 0) THEN
+        !IF (c .ne. 0) THEN
+        IF ((c .ne. 0) .and. (r .ge. 1._wp)) THEN
           c_num(c) = c_num(c) + 1._wp
 
           ! generate dropout mask
@@ -922,10 +924,10 @@ CONTAINS
   END SUBROUTINE sat_specific_humidity
 
   ! NN-training
-  SUBROUTINE Koppen_Geiger_classification(nc, t_air_annual, rain_annual, koppen)
+  SUBROUTINE Koppen_Geiger_classification(nc, t_air_annual, rain_annual, lat, koppen)
     IMPLICIT NONE
     INTEGER,  INTENT(IN)    :: nc
-    REAL(wp), INTENT(IN)    :: t_air_annual(nc, 366), rain_annual(nc, 366)
+    REAL(wp), INTENT(IN)    :: t_air_annual(nc, 366), rain_annual(nc, 366), lat(nc)
     REAL(wp), INTENT(INOUT) :: koppen(nc)
 
     ! local
@@ -972,8 +974,13 @@ CONTAINS
       t_ann    = SUM(t_monthly)/12._wp
       p_ann    = SUM(p_monthly)
 
-      p_summer = p_monthly(4) +p_monthly(5) +p_monthly(6) +p_monthly(7) +p_monthly(8) +p_monthly(9)
-      p_winter = p_monthly(10)+p_monthly(11)+p_monthly(12)+p_monthly(1) +p_monthly(2) +p_monthly(3)
+      IF (lat(i) .ge. 0) THEN 
+        p_summer = p_monthly(4) +p_monthly(5) +p_monthly(6) +p_monthly(7) +p_monthly(8) +p_monthly(9)
+        p_winter = p_monthly(10)+p_monthly(11)+p_monthly(12)+p_monthly(1) +p_monthly(2) +p_monthly(3)
+      ELSE
+        p_summer = p_monthly(10)+p_monthly(11)+p_monthly(12)+p_monthly(1) +p_monthly(2) +p_monthly(3)
+        p_winter = p_monthly(4) +p_monthly(5) +p_monthly(6) +p_monthly(7) +p_monthly(8) +p_monthly(9)
+      ENDIF
 
       IF (p_summer .gt. SUM(p_monthly)*0.7) THEN
         p_threshold = 2._wp*t_ann + 28._wp  
