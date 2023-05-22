@@ -45,35 +45,38 @@ MODULE mo_jsb_memory_class
   IMPLICIT NONE
   PRIVATE
 
+  !< t_jsb_memory   : basic type to define memory for each tile and process
+  !< t_jsb_memory_p : vector of pointers 
   PUBLIC :: t_jsb_memory_p, t_jsb_memory
 
   ! This type contains the memory state for each tile for one process
   TYPE, ABSTRACT :: t_jsb_memory
     INTEGER :: id = 0
-    INTEGER :: grid_id = 0
-    INTEGER :: owner_model_id = 0
-    INTEGER :: owner_proc_id = 0
-    CHARACTER(LEN=:), ALLOCATABLE :: owner_proc_name
-    INTEGER :: no_of_children = 0
-    TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()
-    CLASS(t_jsb_memory) , POINTER :: parent => NULL()
-    INTEGER, ALLOCATABLE :: owner_tile_path(:)
-    CHARACTER(len=SHORT_NAME_LEN) :: owner_tile_name
-    INTEGER :: max_no_of_vars = 0
+    INTEGER :: grid_id = 0                                   !< grid ID of defined memory
+    INTEGER :: owner_model_id = 0                            !< model ID of defined memory
+    INTEGER :: owner_proc_id = 0                             !< process ID of defined memory
+    CHARACTER(LEN=:), ALLOCATABLE :: owner_proc_name         !< process name of defined memory
+    INTEGER :: no_of_children = 0                            !< number of children
+    TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()   !< vector of pointers for children memory
+    CLASS(t_jsb_memory) , POINTER :: parent => NULL()        !< points for parent memory
+    INTEGER, ALLOCATABLE :: owner_tile_path(:)               !< tile location (in tile tree) of defined memory
+    CHARACTER(len=SHORT_NAME_LEN) :: owner_tile_name         !< tile name of defined memory
+    INTEGER :: max_no_of_vars = 0                            !< maximum number of allocating variables in memory
     INTEGER :: no_of_vars = 0
     LOGICAL :: has_bgc_materials = .FALSE.
-    CLASS(t_jsb_pool), POINTER :: pools         => NULL()
-    CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()   ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
+    CLASS(t_jsb_pool), POINTER :: pools         => NULL()    ! TODO? This is old pool implementation and will be modified by new updates (Jan Engle)
+    CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()    ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
-    TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
-    LOGICAL :: in_var_groups = .FALSE.
+    TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)                !< vector of variables in memory
+    LOGICAL :: in_var_groups = .FALSE.                       !< whether this memory belongs any part of variable groups
   CONTAINS
-    PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
+    PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init                       !< Initial function to be implemented in each instance of tile memory
+                                                                               !< PASS(mem) -> pass memory object as the first argument 'mem'
     PROCEDURE                                    :: Get_var
-    PROCEDURE                                    :: t_jsb_memory_add_var_r1d
-    PROCEDURE                                    :: t_jsb_memory_add_var_r2d
-    PROCEDURE                                    :: t_jsb_memory_add_var_r3d
-    PROCEDURE                                    :: t_jsb_memory_add_pool
+    PROCEDURE                                    :: t_jsb_memory_add_var_r1d   !< to add 1-dimension variable in a speified memory
+    PROCEDURE                                    :: t_jsb_memory_add_var_r2d   !< to add 2-dimension variable in a speified memory
+    PROCEDURE                                    :: t_jsb_memory_add_var_r3d   !< to add 3-dimension variable in a speified memory
+    PROCEDURE                                    :: t_jsb_memory_add_pool      !< to add pool
                                                     !< Add a (hierarchical) pool structure to memory
                                                     !< (sub-pools and elements)
     PROCEDURE                                    :: t_jsb_memory_add_pool_var_r2d
@@ -118,28 +121,28 @@ CONTAINS
     output_level, verbose                                       &
     )
 
-    CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
-    CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
-    TYPE(t_jsb_var_real1d), TARGET, INTENT(inout) :: var              ! reference to jsbach var
-    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! vg:  needed for patch id
-    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid type
-    TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
-    TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
-    TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
-    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
-    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
-    LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
-    INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
-    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
-    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
-    LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+    CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 !< memory structure
+    CHARACTER(len=*),     INTENT(in)           :: name                !< name of variable
+    TYPE(t_jsb_var_real1d), TARGET, INTENT(inout) :: var              !< reference to jsbach var
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               !< vg:  needed for patch id
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               !< vertical grid type
+    TYPE(t_cf),           INTENT(in)           :: cf                  !< CF (Climate Forecast) related metadata
+    TYPE(t_grib1),        INTENT(in)           :: grib1               !< GRIB1 related metadata
+    TYPE(t_grib2),        INTENT(in)           :: grib2               !< GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              !< Prefix for variable name (indicate process name for output variable)
+    CHARACTER(len=*),     INTENT(in)           :: suffix              !< Suffix for variable name (indicate tile name for output variable)
+    LOGICAL,              INTENT(in), OPTIONAL :: loutput             !< output flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          !< container flag (for ICON variables with tile dimension)
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            !< restart flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       !< continue restart if var not available
+    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           !< initial value
+    INTEGER,              INTENT(in), OPTIONAL :: isteptype           !< type of statistical processing
+    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          !< reset value (after accumulation)
+    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               !< missing value flag
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           !< missing value
+    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     !< aggregate over all tiles including tiles which the variable do not exist
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        !< minimum level of output groups this var belongs to
+    LOGICAL,              INTENT(in), OPTIONAL :: verbose             !< print information
 
 ! 1d list elements are not supported with ECHAM streams
 #ifdef __ICON__
@@ -268,31 +271,31 @@ CONTAINS
     output_level, verbose                                       &
     )
 
-    CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
+    CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 !< memory structure
   !!$    TYPE(t_jsb_varlist),  INTENT(inout)        :: this_list           ! list
-    CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
-    TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var              ! reference to jsbach var
-    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid type
-    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid type
-    TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
-    TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
-    TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
-    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
-    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
-    LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
-    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
-    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
-    INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
-    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
-    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
-    LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+    CHARACTER(len=*),     INTENT(in)           :: name                !< name of variable
+    TYPE(t_jsb_var_real2d), TARGET, INTENT(inout) :: var              !< reference to jsbach var
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               !< horizontal grid type
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               !< vertical grid type
+    TYPE(t_cf),           INTENT(in)           :: cf                  !< CF (Climate Forecast) related metadata
+    TYPE(t_grib1),        INTENT(in)           :: grib1               !< GRIB1 related metadata
+    TYPE(t_grib2),        INTENT(in)           :: grib2               !< GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              !< Prefix for variable name (indicate process name for output variable)
+    CHARACTER(len=*),     INTENT(in)           :: suffix              !< Suffix for variable name (indicate tile name for output variable)
+    LOGICAL,              INTENT(in), OPTIONAL :: loutput             !< output flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          !< container flag (for ICON variables with tile dimension)
+    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     !< if var carries a to-be-conserved quantity
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   !< type id of the conserved quantity (mo_jsb_cqt_class)
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            !< restart flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       !< continue restart if var not available
+    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           !< initial value
+    INTEGER,              INTENT(in), OPTIONAL :: isteptype           !< type of statistical processing
+    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          !< reset value (after accumulation)
+    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               !< missing value flag
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           !< missing value
+    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     !< aggregate over all tiles including tiles which the variable do not exist
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        !< minimum level of output groups this var belongs to
+    LOGICAL,              INTENT(in), OPTIONAL :: verbose             !< print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
@@ -310,21 +313,27 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r2d'
 
+    !< set output variable name
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
+    !< set loutput
     loutput_loc = .TRUE.
     IF (PRESENT(loutput)) loutput_loc = loutput
 
+    !< set missing value
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
+    !< set CF speicification
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
+    !< ldims : local dimension (dimension of chunk block)
+    !< gdims : global dimension for output file (netcdf, hdf, grip ... etc) grid format
     ldims(1) = hgrid%nproma
     ldims(2) = hgrid%nblks
     gdims(1:2) = hgrid%dims_g(1:2)
@@ -418,31 +427,31 @@ CONTAINS
     output_level, verbose                                        &
     )
 
-    CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 ! memory structure
-    CHARACTER(len=*),     INTENT(in)           :: name                ! name of variable
-    TYPE(t_jsb_var_real3d), INTENT(inout), TARGET :: var              ! reference to jsbach var
-    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               ! horizontal grid
-    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               ! vertical grid
-    TYPE(t_cf),           INTENT(in)           :: cf                  ! CF related metadata
-    TYPE(t_grib1),        INTENT(in)           :: grib1               ! GRIB1 related metadata
-    TYPE(t_grib2),        INTENT(in)           :: grib2               ! GRIB2 related metadata
-    CHARACTER(len=*),     INTENT(in)           :: prefix              ! Prefix for variable name
-    CHARACTER(len=*),     INTENT(in)           :: suffix              ! Suffix for variable name
-    INTEGER,              INTENT(in), OPTIONAL :: extra_dim_n         ! Extra (third) dimension (not levels)
-    LOGICAL,              INTENT(in), OPTIONAL :: loutput             ! output flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          ! container flag
-    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     ! if var carries a to-be-conserved quantity
-    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   ! type id of the conserved quantity (mo_jsb_cqt_class)
-    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            ! restart flag
-    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       ! continue restart if var not available
-    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           ! value if var not available
-    INTEGER,              INTENT(in), OPTIONAL :: isteptype           ! type of statistical processing
-    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          ! reset value (after accumulation)
-    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               ! missing value flag
-    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           ! missing value
-    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     ! aggregate over all child tiles?
-    INTEGER,              INTENT(in), OPTIONAL :: output_level        ! minimum level of output groups this var belongs to
-    LOGICAL,              INTENT(in), OPTIONAL :: verbose             ! print information
+    CLASS(t_jsb_memory),  INTENT(inout)        :: mem                 !< memory structure
+    CHARACTER(len=*),     INTENT(in)           :: name                !< name of variable
+    TYPE(t_jsb_var_real3d), INTENT(inout), TARGET :: var              !< reference to jsbach var
+    TYPE(t_jsb_grid),     POINTER, INTENT(in)  :: hgrid               !< horizontal grid
+    TYPE(t_jsb_vgrid),    POINTER, INTENT(in)  :: vgrid               !< vertical grid
+    TYPE(t_cf),           INTENT(in)           :: cf                  !< CF (Climate Forecast) related metadata
+    TYPE(t_grib1),        INTENT(in)           :: grib1               !< GRIB1 related metadata
+    TYPE(t_grib2),        INTENT(in)           :: grib2               !< GRIB2 related metadata
+    CHARACTER(len=*),     INTENT(in)           :: prefix              !< Prefix for variable name (indicate process name for output variable)
+    CHARACTER(len=*),     INTENT(in)           :: suffix              !< Suffix for variable name (indicate tile name for output variable)
+    INTEGER,              INTENT(in), OPTIONAL :: extra_dim_n         !< Extra (third) dimension (not levels)
+    LOGICAL,              INTENT(in), OPTIONAL :: loutput             !< output flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lcontainer          !< container flag (for ICON variables with tile dimension)
+    LOGICAL,              INTENT(in), OPTIONAL :: l_conserve_quan     !< if var carries a to-be-conserved quantity
+    INTEGER,              INTENT(in), OPTIONAL :: cons_quan_type_id   !< type id of the conserved quantity (mo_jsb_cqt_class)
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart            !< restart flag
+    LOGICAL,              INTENT(in), OPTIONAL :: lrestart_cont       !< continue restart if var not available
+    REAL(wp),             INTENT(in), OPTIONAL :: initval_r           !< initial value
+    INTEGER,              INTENT(in), OPTIONAL :: isteptype           !< type of statistical processing
+    REAL(wp),             INTENT(in), OPTIONAL :: resetval_r          !< reset value (after accumulation)
+    LOGICAL,              INTENT(in), OPTIONAL :: lmiss               !< missing value flag
+    REAL(dp),             INTENT(in), OPTIONAL :: missval_r           !< missing value
+    LOGICAL,              INTENT(in), OPTIONAL :: l_aggregate_all     !< aggregate over all tiles including tiles which the variable do not exist
+    INTEGER,              INTENT(in), OPTIONAL :: output_level        !< minimum level of output groups this var belongs to
+    LOGICAL,              INTENT(in), OPTIONAL :: verbose             !< print information
 
     TYPE(t_jsb_varlist), POINTER :: this_list           ! list
     CHARACTER(len=50) :: name_loc
@@ -461,21 +470,27 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r3d'
 
+    !< set output variable name
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
+    !< set loutput
     loutput_loc = .TRUE.
     IF (PRESENT(loutput)) loutput_loc = loutput
 
+    !< set missing value
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
+    !< set CF speicification
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
+    !< ldims : local dimension (dimension of chunk block)
+    !< gdims : global dimension for output file (netcdf, hdf, grip ... etc) grid format
     ldims(1) = hgrid%nproma
     gdims(1) = hgrid%dims_g(1)
     IF (PRESENT(extra_dim_n)) THEN
@@ -490,7 +505,7 @@ CONTAINS
       gdims(2) = hgrid%dims_g(2)
       gdims(3) = extra_dim_n
     ELSE
-      ldims(2) = vgrid%n_levels
+      ldims(2) = vgrid%n_levels    !< number of levels
       ldims(3) = hgrid%nblks
       gdims(2) = vgrid%n_levels
       gdims(3) = hgrid%dims_g(2)
