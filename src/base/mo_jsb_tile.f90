@@ -356,7 +356,6 @@ CONTAINS
           & CALL message(TRIM(routine), 'Linked memory for process '//TRIM(process_name)//&
           &                             ' on tile '//TRIM(this%name)//' to parent')
       ELSE
-        ! this%param(iproc)%p => t_jsb_param(iproc)
         tmp_ptr => Create_process_memory(iproc) ! Create memory for the specific process
         __acc_attach(tmp_ptr)
         this%mem(iproc)%p => tmp_ptr     !TODO: Still needed? Same as this%mem(iproc)%p%owner_proc_id  (see below)

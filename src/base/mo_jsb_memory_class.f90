@@ -17,7 +17,6 @@ MODULE mo_jsb_memory_class
 
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish
-  USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist,                         &
 #ifdef __ICON__
@@ -46,10 +45,7 @@ MODULE mo_jsb_memory_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_memory_p, t_jsb_memory, t_jsb_param
-
-  TYPE, ABSTRACT :: t_jsb_param
-  END TYPE t_jsb_param
+  PUBLIC :: t_jsb_memory_p, t_jsb_memory
 
   ! This type contains the memory state for each tile for one process
   TYPE, ABSTRACT :: t_jsb_memory
@@ -70,7 +66,6 @@ MODULE mo_jsb_memory_class
     CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()   ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
-    CLASS(t_jsb_param), POINTER :: param => NULL()
     LOGICAL :: in_var_groups = .FALSE.
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
@@ -103,17 +98,13 @@ MODULE mo_jsb_memory_class
   !       (of class t_jsb_var) contained in the memory structure.
   ABSTRACT INTERFACE
     SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
-      IMPORT :: t_jsb_memory, t_jsb_config
+      IMPORT :: t_jsb_memory
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
       INTEGER,             INTENT(in)    :: lct_ids(:)     !< Primary lct (1) and lcts of descendant tiles
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
-
-!  INTERFACE t_jsb_memory
-!    PROCEDURE Create_process_memory
-!  END INTERFACE t_jsb_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_memory_class'
 

@@ -1461,9 +1461,9 @@ CONTAINS
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
       wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:) - wtr_rootzone_scool_pot(:), 0._wp)
+    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       CALL get_amount_in_rootzone(ice_soil_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-    ELSE IF (dsl4jsb_Config(SSE_)%l_freeze .AND. .NOT. dsl4jsb_Config(SSE_)%l_supercool) THEN
       wtr_rootzone_avail_max(:) = MAX(weq_rootzone_max(:) - ice_rootzone(:), 0._wp)
     ELSE
       wtr_rootzone_avail_max(:) = weq_rootzone_max(:)
