@@ -930,6 +930,27 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
           & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
           & dsl4jsb_var2D_onDomain(A2L_, pch),                                         &
+          ! anthropogenic
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_temperature),                          &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_rel_humidity),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba),                                    &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primf),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4per),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_urban),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdf),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secma),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primn),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdn),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4ann),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_pastr),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_range),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3ann),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3nfx),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3per),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secmb),                         &
           ! Input for lakes (optional)
           & t_lake_tile(:,:),                                                          &
           & fact_q_air_lake_tile(:,:),                                                 &
@@ -981,6 +1002,7 @@ CONTAINS
           ! anthropogenic
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_temperature),                          &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, a_rel_humidity),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba),                                    &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &

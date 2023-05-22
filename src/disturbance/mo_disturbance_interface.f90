@@ -223,6 +223,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: a_temperature          ! daily average of temperature <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: a_rel_humidity         ! daily average of relative humidity <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: fba                    ! daily GFED4 burnt fraction <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: population             ! daily population density <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: gdp                    ! daily GDP density <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: hdi                    ! daily HDI density <Rackhun Son>
@@ -369,6 +370,7 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  a_temperature)            ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  a_rel_humidity)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  fba)                      ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  population)               ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  gdp)                      ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  hdi)                      ! in <Rackhun Son>
@@ -679,6 +681,8 @@ CONTAINS
           CASE (3)
             CALL finish('disturbed_fract','Thornicke spit fire not implemented yet.')
           CASE (4) !! Read burned_fract
+            !! GFED4 burnt fraction   <Rackhun Son>
+            burned_fract(:) = fba(:)
           CASE (5) !! DL based new fire algoritm   <Rackhun Son>
 
             !if (ISNAN(sum(fuel))) Then

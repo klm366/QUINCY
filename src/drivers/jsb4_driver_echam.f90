@@ -123,6 +123,7 @@ PROGRAM jsb4_driver
 
   REAL(wp), ALLOCATABLE :: a_temperature(:,:)       ! < Rackhun Son >
   REAL(wp), ALLOCATABLE :: a_rel_humidity(:,:)      ! < Rackhun Son >
+  REAL(wp), ALLOCATABLE :: fba(:,:)                 ! < Rackhun Son >
   REAL(wp), ALLOCATABLE :: population(:,:)          ! < Rackhun Son >
   REAL(wp), ALLOCATABLE :: gdp(:,:)                 ! < Rackhun Son >
   REAL(wp), ALLOCATABLE :: hdi(:,:)                 ! < Rackhun Son >
@@ -277,6 +278,7 @@ PROGRAM jsb4_driver
   ! anthropogenic forcing   < Rackhun Son >
   ALLOCATE(a_temperature(nproma, nblks))
   ALLOCATE(a_rel_humidity(nproma, nblks))
+  ALLOCATE(fba(nproma, nblks))
   ALLOCATE(population(nproma, nblks))
   ALLOCATE(gdp(nproma, nblks))
   ALLOCATE(hdi(nproma, nblks))
@@ -427,7 +429,7 @@ PROGRAM jsb4_driver
         & CO2_concentration, t_air_K, q_air, rain, snow, wind_air, wind_10m,                                          &
         & lw_srf_down, swvis_srf_down, swnir_srf_down, swpar_srf_down, fract_par_diffuse,                             &
         & press_srf, drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                               &
-        & a_temperature, a_rel_humidity, population, gdp, hdi,                                                        & 
+        & a_temperature, a_rel_humidity, fba, population, gdp, hdi,                                                        & 
         & land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn,             &
         & land_use_secdn, land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx,             &
         & land_use_c3per, land_use_secmb  ) ! < Rackhun Son >
@@ -464,7 +466,7 @@ PROGRAM jsb4_driver
         & rough_h_srf_proc(ics:ice,iblk), rough_m_srf_proc(ics:ice,iblk), q_snocpymlt(ics:ice),                                &
         & alb_vis_dir(ics:ice), alb_nir_dir(ics:ice),                                                                          &
         & alb_vis_dif(ics:ice), alb_nir_dif(ics:ice), CO2_flux(ics:ice), evapopot=evapopot(ics:ice),                           &
-        & a_temperature(ics:ice), a_rel_humidity(ics:ice), population(ics:ice), gdp(ics:ice), hdi(ics:ice),                    &
+        & a_temperature(ics:ice), a_rel_humidity(ics:ice), fba(ics:ice), population(ics:ice), gdp(ics:ice), hdi(ics:ice),      &
         & land_use_primf(ics:ice), land_use_c4per(ics:ice), land_use_urban(ics:ice), land_use_secdf(ics:ice),                  &
         & land_use_secma(ics:ice), land_use_primn(ics:ice), land_use_secdn(ics:ice), land_use_c4ann(ics:ice),                  &
         & land_use_pastr(ics:ice), land_use_range(ics:ice), land_use_c3ann(ics:ice), land_use_c3nfx(ics:ice),                  &
@@ -563,6 +565,7 @@ PROGRAM jsb4_driver
 
   DEALLOCATE(a_temperature)        ! < Rackhun Son >
   DEALLOCATE(a_rel_humidity)       ! < Rackhun Son >
+  DEALLOCATE(fba)                  ! < Rackhun Son >
   DEALLOCATE(population)           ! < Rackhun Son >  
   DEALLOCATE(gdp)                  ! < Rackhun Son > 
   DEALLOCATE(hdi)                  ! < Rackhun Son >

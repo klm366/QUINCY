@@ -111,6 +111,7 @@ CONTAINS
     ! For anthropogenic forcing     < Rackhun Son >
     & a_temperature,                                                    &
     & a_rel_humidity,                                                   &
+    & fba,                                                              &
     & population,                                                       &
     & gdp,                                                              &
     & hdi,                                                              &
@@ -226,6 +227,7 @@ CONTAINS
     REAL(wp), INTENT(in), OPTIONAL ::    &
       & a_temperature(:),                &
       & a_rel_humidity(:),               &
+      & fba(:),                          &
       & population(:),                   &
       & gdp(:),                          &
       & hdi(:),                          &
@@ -338,6 +340,7 @@ CONTAINS
       & model%options(no_omp_thread),               &
       & a_temperature      = a_temperature(:),      &
       & a_rel_humidity     = a_rel_humidity(:),     &
+      & fba                = fba(:),                &
       & population         = population(:),         &
       & gdp                = gdp(:),                &
       & hdi                = hdi(:),                &

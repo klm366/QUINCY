@@ -48,6 +48,7 @@ CONTAINS
     & tile, options,                    &
     & a_temperature,                    &
     & a_rel_humidity,                   &
+    & fba,                              &
     & population,                       &
     & gdp,                              &
     & hdi,                              &
@@ -75,6 +76,7 @@ CONTAINS
       & DEBUG_VAR,                                   &
       & a_temperature,                               &
       & a_rel_humidity,                              &
+      & fba,                                         &
       & population,                                  &
       & gdp,                                         &
       & hdi,                                         &
@@ -104,6 +106,7 @@ CONTAINS
       & DEBUG_VAR_ptr,         &
       & a_temperature_ptr,     &
       & a_rel_humidity_ptr,    &
+      & fba_ptr,               &
       & population_ptr,        &
       & gdp_ptr,               &
       & hdi_ptr,               &
@@ -141,6 +144,9 @@ CONTAINS
     END IF
     IF (PRESENT(a_rel_humidity)) THEN
       a_rel_humidity_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, a_rel_humidity)
+    END IF
+    IF (PRESENT(fba)) THEN
+      fba_ptr      => anthro2l__mem%fba%ptr(ics:ice,iblk)
     END IF
     IF (PRESENT(population)) THEN
       population_ptr          => dsl4jsb_var2D_onChunk(ANTHRO2L_, population)
@@ -215,6 +221,13 @@ CONTAINS
       !$acc loop gang vector
       DO i=1,nc
         a_rel_humidity_ptr(i) = a_rel_humidity(i)
+      END DO
+    END IF
+
+    IF (PRESENT(fba)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        fba_ptr(i) = fba(i)
       END DO
     END IF
 

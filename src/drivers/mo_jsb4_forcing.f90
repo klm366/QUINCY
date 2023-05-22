@@ -129,6 +129,7 @@ MODULE mo_jsb4_forcing
 
   CHARACTER(len=*), PARAMETER :: temp_varname  = 'air_temp'         ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: rHcf_varname  = 'rHcf'             ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: fba_varname   = 'fba'              ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: popd_varname  = 'population'       ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: gdp_varname   = 'gdp'              ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: hdi_varname   = 'hdi'              ! < Rackhun Son >
@@ -225,6 +226,7 @@ MODULE mo_jsb4_forcing
 
      TYPE(input_variable_type) :: temp            !! temperature from anthropogenic forcing [K]
      TYPE(input_variable_type) :: rHcf            !! relative humidity from anthropogenic forcing [%]
+     TYPE(input_variable_type) :: fba             !! fraction of burned area from anthropogenic forcing [%]
      TYPE(input_variable_type) :: population      !! population density from anthropogenic forcing 
      TYPE(input_variable_type) :: gdp             !! GDP from anthropogenic forcing 
      TYPE(input_variable_type) :: hdi             !! HDI from anthropogenic forcing
@@ -261,17 +263,14 @@ CONTAINS
     & swnir_srf_down, swpar_srf_down, fract_par_diffuse, press_srf,                        &
 
     & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                   &
-    & a_temperature, a_rel_humidity, population, gdp, hdi, &
+    & a_temperature, a_rel_humidity, fba, population, gdp, hdi, &
     & land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn, land_use_secdn, &
     & land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx, land_use_c3per, land_use_secmb, &   ! < Rackhun Son >)
 
     & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &
     & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                        &
-    & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice,                        &
-    & a_temperature, a_rel_humidity, population, gdp, hdi, &
-    & land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn, land_use_secdn, &
-    & land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx, land_use_c3per, land_use_secmb)
-
+    & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice)
+    
     INTEGER,  INTENT(IN)  :: model_id, ics, ice, icz, nblks
     TYPE(t_datetime),  INTENT(IN), POINTER :: current_datetime
     TYPE(t_datetime),  INTENT(IN), POINTER :: next_datetime
@@ -308,6 +307,7 @@ CONTAINS
 
     REAL(wp), INTENT(OUT) :: a_temperature(:,:)      ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: a_rel_humidity(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: fba(:,:)                ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: population(:,:)         ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: gdp(:,:)                ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: hdi(:,:)                ! < Rackhun Son >
@@ -398,6 +398,7 @@ CONTAINS
 
     a_temperature(:,:)     = 0._wp      ! < Rackhun Son >
     a_rel_humidity(:,:)    = 0._wp      ! < Rackhun Son >
+    fba(:,:)               = 0._wp      ! < Rackhun Son >
     population(:,:)        = 0._wp      ! < Rackhun Son >
     gdp(:,:)               = 0._wp      ! < Rackhun Son >
     hdi(:,:)               = 0._wp      ! < Rackhun Son >
@@ -614,6 +615,7 @@ CONTAINS
     ! --- anthropogenic  < Rackhun Son >
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%temp, a_temperature)
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%rHcf, a_rel_humidity)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%fba,  fba)
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%population, population)
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%gdp, gdp)
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%hdi, hdi)
@@ -1070,6 +1072,8 @@ CONTAINS
       & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%temp)
     CALL init_forcing_input_variable(rHcf_varname, forcing_rHcf_frequ, forcing_rHcf_ocean, &
       & forcing_rHcf_file_prefix, forcing_rHcf_unit, forcing_rHcf_const_rHcf, forcing_input%rHcf)
+    CALL init_forcing_input_variable(fba_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%fba)
     CALL init_forcing_input_variable(popd_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
       & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%population)
     CALL init_forcing_input_variable(gdp_varname, forcing_anthro_frequ, forcing_anthro_ocean, &

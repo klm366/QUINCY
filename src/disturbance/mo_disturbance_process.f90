@@ -258,22 +258,9 @@ CONTAINS
       & anthropogenic_l2_weight(:,:),                         &
       & anthropogenic_l2_bias(:),                             &
 
-      !& lig_topo_layer1_weight(:,:),              &
-      !& lig_topo_layer1_bias(:),                  &
-      !& lig_topo_layer2_weight(:,:),              &
-      !& lig_topo_layer2_bias(:),                  &
-
-      !& climate_emb_layer1_weight(:,:), climate_emb_layer1_bias(:),       &
-      !& climate_emb_layer2_weight(:,:), climate_emb_layer2_bias(:),       &
-
-      !& vegetation_emb_layer1_weight(:,:), vegetation_emb_layer1_bias(:), &
-      !& vegetation_emb_layer2_weight(:,:), vegetation_emb_layer2_bias(:), &
-
       & w_minmax(:,:),                                       &
       & l_minmax(:,:),                                       &
       & a_minmax(:,:),                                       &
-      !& embedding_min_max(:,:),            &
-      !& lig_topo_min_max(:,:),             &
       & gfed_region(:)
       
 
@@ -284,9 +271,6 @@ CONTAINS
       & d_land_input_n_pft,                         & ! in
       & d_anthro_input,      d_anthro_hidden,       & ! in
       & d_output,            d_region                 ! in
-      !& d_lnt_input,         d_lnt_hidden,         & ! in
-      !& d_emb_input,         d_emb_hidden,         & ! in
-      !& d_emb_output                                 ! in
 
     CHARACTER(len=*), INTENT(in)::                  &
       & tilename                                      ! in
@@ -673,42 +657,6 @@ CONTAINS
 
     ENDDO   ! r (region) iteration
 
-    !dum1 = sum(weather_lstm_outputs_sum, dim=2)
-    !dum2 = sum(land_lstm_outputs_sum, dim=2)
-    !dum3 = sum(anthro_nn_outputs_sum, dim=2)
-    !dum4 = sum(fuel_constraint, dim=2)
-    !dum4 = fuel_constraint
-
-    !where(gfed_region /= 4) dum1 = 0.
-    !where(gfed_region /= 4) dum2 = 0.
-    !where(gfed_region /= 4) dum3 = 0.
-    !where(gfed_region /= 4) dum4 = 0.
-
-    !num1 = gfed_region
-    !num2 = gfed_region
-    !num3 = gfed_region
-    !num4 = gfed_region
-
-    !where(gfed_region /= 4) num1 = 0.
-    !where(gfed_region /= 4) num2 = 0.
-    !where(gfed_region /= 4) num3 = 0.
-    !where(gfed_region /= 4) num4 = 0.
-    !where(gfed_region == 4) num1 = 1.
-    !where(gfed_region == 4) num2 = 1.
-    !where(gfed_region == 4) num3 = 1.
-    !where(gfed_region == 4) num4 = 1.
-
-    !if (ISNAN(sum(dum4))) then
-    !  print*, fuel
-    !endif
-
-    !if (sum(num4) .ne. 0) then
-    !  print*, sum(dum1)/(sum(num1)+1e-7), sum(dum2)/(sum(num2)+1e-7), sum(dum3)/(sum(num3)+1e-7), sum(dum4)/(sum(num4)+1e-7)
-    !endif
-    !if (sum(fuel_constraint) /= 0.) then
-    !  print*, sum(fuel_constraint)/(sum(num4)+1e-7)
-    !endif
-
     burned_fract = sum(weather_lstm_outputs_sum     &
                      * land_lstm_outputs_sum        &
                      * anthro_nn_outputs_sum        &
@@ -717,29 +665,15 @@ CONTAINS
     burned_fract(:) = burned_fract(:)/100.
     burned_fract(:) = burned_fract(:)*(1.-modified_pfts_fract(:,9)-modified_pfts_fract(:,1))
 
-    !burned_fract(:) = burned_fract(:)*sum(fuel_constraint, dim=2)
     burned_fract(:) = burned_fract(:)*fuel_constraint
-
-    !if (maxval(fuel_constraint) .gt. 0.1) then
-    !  print*, minval(fuel_constraint), maxval(fuel_constraint), maxval(fuel)
-    !endif
 
     q_rel_air_constraint(:) = q_rel_air(:)/100.
     where (q_rel_air_constraint < 0) q_rel_air_constraint = 0.
     where (q_rel_air_constraint > 1) q_rel_air_constraint = 1.
 
-    !q_rel_air_constraint(:) = (q_rel_air(:)-q_rel_clim_m(:)+q_rel_clim_o(:))/100.
     q_rel_air_constraint(:) = 1/(1+exp(-20*(q_rel_air_constraint(:)-0.5)))
-    !where (q_rel_air > 50) q_rel_air_constraint = 1.
     where (q_rel_air > 60) q_rel_air_constraint = 1.
-    !where (q_rel_air > 70) q_rel_air_constraint = 1.
     burned_fract(:) = burned_fract(:)*(1-q_rel_air_constraint(:))
-
-    !dum1 = burned_fract
-    !where(gfed_region /= 4) dum1 = 0.
-    !if (sum(num1) .ne. 0) then
-    !  print*, sum(dum1)/(sum(num1)+1e-8) *100*365
-    !endif
 
     where (burned_fract < 0.) burned_fract = 0.
     where (burned_fract > 1.) burned_fract = 1.

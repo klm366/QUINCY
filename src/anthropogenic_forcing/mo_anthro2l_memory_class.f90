@@ -40,6 +40,7 @@ MODULE mo_anthro2l_memory_class
       & DEBUG_VAR,                &  !< 
       & a_temperature,            & 
       & a_rel_humidity,           &
+      & fba,                      &
       & population,               &
       & gdp,                      &
       & hdi,                      &
@@ -131,6 +132,15 @@ CONTAINS
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'fba', mem%fba,                                        &
+      & hgrid, surface,                                                      &
+      & t_cf('fraction of burned area (anthropogenic)', '', ''),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      !& output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'population', mem%population,                          &
