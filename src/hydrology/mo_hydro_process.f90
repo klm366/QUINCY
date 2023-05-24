@@ -516,7 +516,7 @@ CONTAINS
     !$ACC DATA &
     !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, weq_rootzone_max, wtr_rootzone, ice_rootzone) &
     !$ACC   CREATE(drain_lat_sl, hlp_2d)
- 
+
     !
     !> Calculation of soil saturation, field capacity and wilting point
     !
@@ -677,6 +677,8 @@ CONTAINS
     &                    steepness, weq_rootzone_max,                              &
     &                    runoff, infilt)
 
+  !$ACC ROUTINE SEQ
+
     USE mo_jsb_physical_constants, ONLY: tmelt
 
     LOGICAL, INTENT(in)  :: l_infil_subzero
@@ -823,22 +825,21 @@ CONTAINS
     REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
     REAL(wp) :: wtr_exinfcap(nc)             ! surface runoff due to exceeding the soil infiltration capacity [m]
     REAL(wp) :: wtr_exwsat(nc)               ! surface runoff due to exceeding the soil moisture saturation [m]
+    REAL(wp) :: wtr_soil_mobile_sl(nc,nsoil) ! mobile soil water (needed with ACC)
 
     !$ACC DATA &
     !$ACC   CREATE(weq_soil, ws_inter_sl, ws_vol_sl, ice_impeda_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, zmvg_sl) &
     !$ACC   CREATE(wtr_rsdl_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, wtr_transp_residual) &
-    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, nsoil_act)
-    !$ACC   CREATE() &
+    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, wtr_soil_mobile_sl, nsoil_act)
 
     !$ACC PARALLEL DEFAULT(PRESENT)
 
     !> Finish in case of negative soil moisture
     !
-    !$ACC LOOP GANG VECTOR
+#ifndef _OPENACC
     DO is = 1, nsoil
-      !$ACC LOOP SEQ
       DO ic = 1, nc
         IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic)) THEN
           WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
@@ -848,6 +849,7 @@ CONTAINS
         END IF
       END DO
     END DO
+#endif
 
     !> Calculation of soil saturation, field capacity and wilting point taking into account soil ice
     !
@@ -885,7 +887,7 @@ CONTAINS
     DO ic = 1, nc
       ws_inter_sl(ic,1) = wtr_soil_sl(ic,1) + infilt(ic)
     END DO
-    !$ACC LOOP GANG(STATIC: 1) COLLAPS(2)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
     DO is = 2, nsoil
       DO ic = 1, nc
         ws_inter_sl(ic,is) = wtr_soil_sl(ic,is)
@@ -912,9 +914,16 @@ CONTAINS
 
     !< Diagnose evapotranspiration fluxes from the different soil layer based on the available
     !    mobile water
+    !$ACC PARALLEL LOOP VECTOR COLLAPSE(2)
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        wtr_soil_mobile_sl(ic,is) = wtr_soil_sl(ic,is) - wtr_rsdl_sl(ic,is)
+      END DO
+    END DO
+    !$ACC END PARALLEL LOOP
     CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, w_soil_wilt_fract, root_depth_sl, &
       &                      dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m,   &
-      &                      wtr_soil_sl - wtr_rsdl_sl, evapo_deficit, evapo_soil_sl1,       &
+      &                      wtr_soil_mobile_sl, evapo_deficit, evapo_soil_sl1,              &
       &                      transpiration_sl, deficit_sevap, deficit_trans)
 
     !$ACC PARALLEL DEFAULT(PRESENT)
@@ -978,12 +987,14 @@ CONTAINS
           wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) + wtr_rsdl_sl(ic,is)
         END IF
       END DO
+    END DO
+    !$ACC END PARALLEL
 
-      !< If lowest soil layer becomes negative, reduce bottom drainage
-      !    In rare cases - when the bottom layer is very thin - also above layers might get negative.
-      !    Generally, this only happens right after initialization.
+    !< If lowest soil layer becomes negative, reduce bottom drainage
+    !    In rare cases - when the bottom layer is very thin - also above layers might get negative.
+    !    Generally, this only happens right after initialization.
+    DO ic = 1, nc
       IF (wtr_soil_sl(ic, nsoil_act(ic)) < 0._wp .AND. l_fract(ic)) THEN
-        !$ACC LOOP SEQ
         DO is = nsoil_act(ic), 1, -1
           IF (wtr_soil_sl(ic,is) < 0._wp) THEN
             WRITE (message_text_long,*) 'Soil moisture correction needed at ',   &
@@ -1001,16 +1012,20 @@ CONTAINS
           END IF
         END DO
       END IF
+    END DO
 
-      !< subtract new soil state and bottom drainage (lower boundary condition) from water balance
+    !$ACC PARALLEL DEFAULT(PRESENT)
+    !< Subtract new soil state and bottom drainage (lower boundary condition) from water balance
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    DO ic = 1, nc
       wtr_transp_residual(ic) = wtr_transp_residual(ic) - (SUM(wtr_soil_sl(ic,:)) + drain_rock(ic))
       wtr_soilhyd_res(ic) = wtr_transp_residual(ic)
-
     END DO
 
     !< Correct for the vertical transport error.
-    !$ACC LOOP GANG(STATIC: 1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
+#ifndef _OPENACC
       !< 1. Complain if the overall transport error is too large
       IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
         WRITE (message_text_long,*) 'Soil water transport residual too large at ', &
@@ -1023,6 +1038,7 @@ CONTAINS
           & 'Soil moisture:      ', wtr_soil_sl(ic,:)
         CALL finish ('soilhyd', message_text_long)
       END IF
+#endif
 
       !< 2. Modify lower boundary condition (drainage) as much as possible
       IF (ABS(wtr_transp_residual(ic)) > 0._wp) THEN
@@ -1044,6 +1060,7 @@ CONTAINS
         END IF
       END DO
 
+#ifndef _OPENACC
       !> 4. Complain if correction is not sufficient
       IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
         WRITE (message_text_long,*) 'Cannot correct soil water transport residual at ', &
@@ -1056,6 +1073,7 @@ CONTAINS
           & 'Soil moisture:      ', wtr_soil_sl(ic,:)
         CALL finish ('soilhyd', message_text_long)
       END IF
+#endif
     END DO
 
     ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water,
@@ -1084,10 +1102,13 @@ CONTAINS
     DO ic = 1, nc
       deficit_evapotrans(ic) = deficit_sevap(ic) + deficit_trans(ic)
       weq_soil(ic) = SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:))  ! water and ice within the column
+#ifndef _OPENACC
       IF (weq_soil(ic) + deficit_evapotrans(ic) < -EPSILON(1.0_wp) .AND. l_fract(ic)) THEN
         WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
         CALL message ('soilhyd', message_text, all_print=.TRUE.)
       END IF
+#endif
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO is = 1, nsoil
         IF (deficit_evapotrans(ic) < 0._wp .AND. weq_soil(ic) > 0._wp) THEN
           ! reduce soil moisture and ice relative to the water content of each layer
@@ -1098,7 +1119,7 @@ CONTAINS
     END DO
 
     ! Additional corrections for excess soil moisture
-    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !$ACC LOOP
     DO ic = 1, nc
 
       ! In case of over-saturation water would not have infiltrated in the first place --> pile
@@ -1279,10 +1300,9 @@ CONTAINS
     !  diagnose evaporation and transpiration fluxes
     !----------------------------------------------------------------------------------------------
 
-
-    !  bare soil evaporation
-    ! -----------------------
-
+    !$ACC DATA &
+    !$ACC   CREATE(dummy_wtr_soil, deficit, remaining, rootfract, fixed, root_depth)
+#ifndef _OPENACC
     DO ic = 1, nc
       IF (ANY(wtr_soil_sl(ic,:) < 0._wp) .AND. l_fract(ic)) THEN
         WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
@@ -1291,16 +1311,29 @@ CONTAINS
         CALL finish ('diagnose_evapotrans', message_text)
       END IF
     END DO
+#endif
 
-    ! Use dummy soil moisture storage for diagnostics, because the real soil moisture storage
-    !   is only to be changed during the vertical transport
-    dummy_wtr_soil(:,:)   = wtr_soil_sl(:,:)
-    evapo_soil_sl1(:)     = 0._wp
-    transpiration_sl(:,:) = 0._wp
-    deficit_sevap(:)      = 0._wp     ! water missing for soil evaporation due to limited soil water
-    deficit_trans(:)      = 0._wp     ! water missing for transpiration due to limited soil water
+    !$ACC PARALLEL DEFAULT(PRESENT)
 
+    !  bare soil evaporation
+    ! -----------------------
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+    DO is = 1, nsoil
+      DO ic = 1, nc
+        ! Use dummy soil moisture storage for diagnostics, because the real soil moisture storage
+        !   is only to be changed during the vertical transport
+        dummy_wtr_soil(ic,is)   = wtr_soil_sl(ic,is)
+        transpiration_sl(ic,is) = 0._wp
+      END DO
+    END DO
+
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
+
+      evapo_soil_sl1(ic) = 0._wp
+      deficit_sevap(ic)  = 0._wp     ! water missing for soil evaporation due to limited soil water
+      deficit_trans(ic)  = 0._wp     ! water missing for transpiration due to limited soil water
 
       ! 1. Soil evaporation (mobile water only)
       ! ---------------
@@ -1374,6 +1407,7 @@ CONTAINS
       ! If the transpiration deficit can be reduced by redistributing transpiration extraction from different layers,
       !   it should be done already here. The deficit should be taken from layers starting at the
       !   surface to accelerate the feedback on evapotranspiration.
+      !$ACC LOOP SEQ
       DO is = 1, nsoil
         IF (deficit_trans(ic) < 0._wp .AND. dummy_wtr_soil(ic,is) > wtr_field_cap_sl(ic,is) * w_soil_wilt_fract) THEN
           ! add water that can be still transpired to the transpiration to reduce the overall deficit
@@ -1384,6 +1418,7 @@ CONTAINS
           transpiration_sl(ic,is) = transpiration_sl(ic,is) - remaining(ic) 
         END IF
       END DO
+
     END DO ! nc loop
 
     !$ACC END PARALLEL
@@ -1436,6 +1471,8 @@ CONTAINS
     & weq_snow_lice,                    & ! in
     & fract_snow_lice                   & ! out
     & )
+
+    !$ACC ROUTINE SEQ
 
     REAL(wp),  INTENT(in)    :: weq_snow_lice
     REAL(wp),  INTENT(out)   :: fract_snow_lice
@@ -1801,19 +1838,23 @@ CONTAINS
   ! It is based on the routine tridiag (page 43) in the
   ! Numerical Recipes in Fortran. 2nd Edition, 1992, ISBN 0-521-43064-X
 
+#ifndef _OPENACC
   IF( matrix(1,2) .EQ. 0.0) THEN
     WRITE (message_text,*) 'something went terribly wrong ... rewrite equations!', C(1), dzf(1)
     CALL finish('calc_vertical_transport', message_text)
   END IF
+#endif
   bet  = matrix(1,2)
   X_new(1) = matrix(1,4)/bet
   DO j = 2, n
     gam(j) = matrix(j-1,3) /bet
     bet    = matrix(j,2) - matrix(j,1) * gam(j)
+#ifndef _OPENACC
     IF( bet .EQ. 0.0) THEN
       WRITE (message_text,*) 'tridiag: matrix couldn t be solved !'
       CALL finish('calc_vertical_transport', message_text)
     END IF
+#endif
     X_new(j)   = (matrix(j,4) - matrix(j,1) * X_new(j-1)) / bet
   END DO
   DO j  = n-1, 1, -1

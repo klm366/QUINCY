@@ -263,8 +263,8 @@ CONTAINS
 
     lstart = is_time_experiment_start(options%current_datetime)
 
-    !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top, &
-    !$ACC   CREATE hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
+    !$ACC ENTER DATA CREATE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top) &
+    !$ACC   CREATE (hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
 
 #ifdef _CRAYFTN
     ! ACCWA (Cray Fortran 15.0.1) : present fails for certain types of pointers
@@ -314,8 +314,8 @@ CONTAINS
         & )
 
 
-      !$ACC EXIT DATA DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top, &
-      !$ACC   DELETE hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
+      !$ACC EXIT DATA DELETE(snow_depth, snow_fract, t_unfilt_corrected, t_soil_top) &
+      !$ACC   DELETE (hcap_grnd_snow, hcap_grnd_soil, grnd_hflx_snow, grnd_hflx_soil, ldglac, itop, itop_old)
       RETURN
 
     END IF
@@ -818,8 +818,9 @@ CONTAINS
       ALLOCATE(fract_water(nc, nsoil), fract_ice(nc, nsoil))
       !$ACC ENTER DATA PCREATE(fract_water, fract_ice)
 
-      DO ic = 1, size(soil_depth_sl, dim=1)
-        DO is = 1, size(soil_depth_sl, dim=2)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      DO is = 1, nsoil
+        DO ic = 1, nc
           IF (soil_depth_sl(ic,is) > 0._wp) THEN
             fract_water(ic,is) = wtr_soil_sl(ic,is) / soil_depth_sl(ic,is)
             fract_ice  (ic,is) = ice_soil_sl(ic,is) / soil_depth_sl(ic,is)
@@ -831,16 +832,14 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
 
+      !$ACC PARALLEL DEFAULT(PRESENT)
       ALLOCATE(vol_heat_cap_tmp(nc,nsoil), vol_heat_cap_org_tmp(nc,nsoil))
       !$ACC ENTER DATA PCREATE(vol_heat_cap_tmp, vol_heat_cap_org_tmp)
-      
-      !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(1)
       DO ic = 1, nc
         vol_heat_cap_tmp    (ic,1) = vol_heat_cap(ic)
         vol_heat_cap_org_tmp(ic,1) = vol_hcap_org_top
       END DO
-      !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 2, nsoil
         DO ic = 1, nc
@@ -848,6 +847,7 @@ CONTAINS
           vol_heat_cap_org_tmp(ic,is) = vol_hcap_org_below
         END DO
       END DO
+      !$ACC END PARALLEL LOOP
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil

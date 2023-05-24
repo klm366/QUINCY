@@ -800,7 +800,7 @@ CONTAINS
     REAL(wp) :: zdz1(nidx,nsnow+1), zdz2(nidx,nsnow+1)
     REAL(wp) :: t_soil_sl1(nidx)                  !< t_soil_sl(:,1)
 
-    !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2, t_soil_upper_layer)
+    !$ACC DATA CREATE(zmid, z1, zd1, zdz1, zdz2, t_soil_sl1)
 
     !$ACC PARALLEL LOOP GANG(STATIC: 1) VECTOR
     DO jl=1,nidx

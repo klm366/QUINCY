@@ -860,7 +860,7 @@ CONTAINS
           t_lwtr(i) = t_lwtr_ptr(i)
         END DO
         !$ACC END PARALLEL LOOP
-      !$ACC END DATA
+        !$ACC END DATA
       ELSE
         !$ACC KERNELS DEFAULT(PRESENT)
         t_lwtr(:) = 0._wp

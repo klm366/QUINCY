@@ -386,6 +386,7 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    INTEGER, PARAMETER :: nsoil = 5  !!!!! TODO: get rid of that parameter !!!!!
 
     ! Local variables
     !
@@ -430,6 +431,10 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff_glac
     dsl4jsb_Real2D_onChunk :: water_to_soil
     dsl4jsb_Real2D_onChunk :: weq_glac
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl
+    dsl4jsb_Real3D_onChunk :: vol_field_cap_sl
+    dsl4jsb_Real3D_onChunk :: soil_depth_sl
     dsl4jsb_Real3D_onChunk :: t_soil_sl
 
     ! Locally allocated vectors
@@ -440,8 +445,11 @@ CONTAINS
       & weq_rootzone,       &
       & weq_rootzone_max,   &
       & trans_tmp
+    REAL(wp), DIMENSION(options%nc,nsoil) :: &
+      & weq_soil_sl_tmp,    &
+      & field_cap_sl_tmp
 
-    INTEGER  :: iblk, ics, ice, nc, ic
+    INTEGER  :: iblk, ics, ice, nc, ic, is
     REAL(wp) :: dtime
     ! Variables from configs
     REAL(wp) :: &
@@ -548,18 +556,20 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_glac)     ! inout
     ELSE
       dsl4jsb_Get_var3D_onChunk(SSE_,      t_soil_sl)       ! in
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil)   ! out
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)     ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_soil_sl)     ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    vol_field_cap_sl) ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    soil_depth_sl)   ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_wet)       ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    wtr_skin)        ! inout
+      dsl4jsb_Get_var2D_onChunk(HYDRO_,    water_to_soil)   ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    snow_accum)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapotrans_soil) ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_skin)      ! out
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    evapo_deficit)   ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    infilt)          ! out
-      dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff)          ! out
       IF (tile%is_vegetation .OR. tile%is_land) THEN
-        dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_snow_can)   ! inout
         dsl4jsb_Get_var2D_onChunk(HYDRO_,   transpiration)  ! in
+        dsl4jsb_Get_var2D_onChunk(HYDRO_,   weq_snow_can)   ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   lai)            ! in
         dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)  ! in
       END IF
@@ -575,7 +585,8 @@ CONTAINS
       !$ACC END PARALLEL
     END IF
 
-    !$ACC DATA CREATE(w_skin_max, w_skin_canopy_max, trans_tmp)
+    !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
+    !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, field_cap_sl_tmp)
 
     IF (tile%is_glacier) THEN
       !$ACC PARALLEL DEFAULT(PRESENT)
@@ -602,7 +613,7 @@ CONTAINS
         drainage(ic) = 0._wp
         weq_snow_soil(ic) = 0._wp
         evapo_snow(ic) = evapopot(ic)
-        IF (model%config%l_compat401) THEN
+        IF (l_compat401_config) THEN
           snow_soil_dens(ic) = 330._wp
         ELSE
           snow_soil_dens(ic) = dens_snow
@@ -611,15 +622,23 @@ CONTAINS
       !$ACC END LOOP
       !$ACC END PARALLEL
     ELSE
+      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      DO is = 1, nsoil
+        DO  ic = 1, nc
+          weq_soil_sl_tmp(ic,is)  = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
+          field_cap_sl_tmp(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+
       ! Compute actual and maximum total rootzone moisture (liquid + ice)
-      CALL get_amount_in_rootzone( &
-        &  dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl) + dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl),    &
+      CALL get_amount_in_rootzone(weq_soil_sl_tmp(:,:),                                                  &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
-        &  weq_rootzone)
-      CALL get_amount_in_rootzone( &
-        &  dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl) * dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl),    &
+        &  weq_rootzone(:))
+      CALL get_amount_in_rootzone(field_cap_sl_tmp(:,:),                                                 &
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
-        &  weq_rootzone_max)
+        &  weq_rootzone_max(:))
 
       !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -848,6 +867,9 @@ CONTAINS
 
     IF (tile%is_lake .OR. tile%is_glacier) RETURN
 
+    !$ACC DATA CREATE(fract_perc, fract_uncon, hyd_cond_sat_uncon, hyd_cond_sat_org, vol_porosity_org) &
+    !$ACC   CREATE(bclapp_org, matrix_pot_org, pore_size_index_org, vol_field_cap_org, vol_p_wilt_org)
+
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
@@ -993,6 +1015,7 @@ CONTAINS
       DEALLOCATE(hyd_cond_sat_uncon)
     END IF
 
+    !$ACC END DATA
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE update_soil_properties
@@ -2021,12 +2044,6 @@ CONTAINS
 
     ! Use simple scalar for GPU
     config_w_skin_max = dsl4jsb_Config(HYDRO_)%w_skin_max
-    !$ACC PARALLEL DEFAULT(PRESENT)
-    !$ACC LOOP GANG VECTOR
-    DO ic=1,nc
-      skinres_max(ic) = config_w_skin_max
-    END DO
-    !$ACC END PARALLEL
 
     dsl4jsb_Get_memory(HYDRO_)
 
@@ -2092,7 +2109,7 @@ CONTAINS
     END IF
 #endif
 
-    !$ACC DATA CREATE(w_skin_max, w_skin_canopy_max)
+    !$ACC DATA CREATE(skinres_canopy_max, skinres_max)
 
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG VECTOR
@@ -2262,6 +2279,7 @@ CONTAINS
 
     INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: dtime
+    LOGICAL  :: is_experiment_start
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
     CHARACTER(len=4096)         :: message_text_long
@@ -2271,6 +2289,7 @@ CONTAINS
     ice   = options%ice
     nc    = options%nc
     dtime = options%dtime
+    is_experiment_start = is_time_experiment_start(options%current_datetime)
 
     ! IF (tile%lcts() RETURN   ! Check water balance only on root tile
     ! IF (tile%is_lake) RETURN
@@ -2320,10 +2339,12 @@ CONTAINS
         weq_land_new = 0._wp
       END IF
 
-      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
+      IF (.NOT. is_experiment_start) THEN
         weq_balance_err(ic) = weq_land(ic) + weq_fluxes(ic) * dtime - weq_land_new
       END IF
+      weq_land(ic) = weq_land_new
 
+#ifndef _OPENACC
       ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
       ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
       wb_threshold(ic) = 1.0e-11_wp * tile_area(ic) / dtime
@@ -2360,8 +2381,7 @@ CONTAINS
           CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
         END IF
       END IF
-
-      weq_land(ic) = weq_land_new
+#endif
     END DO
     !$ACC END LOOP
     !$ACC END PARALLEL
@@ -2514,7 +2534,7 @@ CONTAINS
     IF (HYDRO__mem%evapotrans_gmean%is_in_output)      &
       &  evapotrans_gmean     = global_sum_array(evapotrans(:,:)      * scaling(:,:)) / global_land_area
     ! Unit transformation from [m3] to [km3]: 1.e-9
-    IF (HYDRO__mem%weq_land_gsum%is_in_output)           &
+    IF (HYDRO__mem%weq_land_gsum%is_in_output)         &
       &  weq_land_gsum        = global_sum_array(weq_land(:,:)  * notsea(:,:) * in_domain(:,:)) * 1.e-9_wp
     ! Unit transformation from [m3/s] to [Sv] (1 Sv = 1.e6 m3/s)
     IF (HYDRO__mem%discharge_ocean_gsum%is_in_output)  &
@@ -2525,10 +2545,10 @@ CONTAINS
     IF (HYDRO__mem%fract_snow_gsum%is_in_output)       &
       &  fract_snow_gsum      = global_sum_array(fract_snow(:,:)      * scaling(:,:)) * 1.e-12_wp
     ! Unit transformation from [m water equivalent](= [t]) to [Gt]: 1.e-9
-    IF (HYDRO__mem%weq_snow_gsum%is_in_output)           &
+    IF (HYDRO__mem%weq_snow_gsum%is_in_output)         &
       &  weq_snow_gsum        = global_sum_array(weq_snow(:,:)        * scaling(:,:)) * 1.e-9_wp
     ! No unit transformation [m3]: 1
-    IF (HYDRO__mem%weq_balance_err_gsum%is_in_output)     &
+    IF (HYDRO__mem%weq_balance_err_gsum%is_in_output)  &
       &  weq_balance_err_gsum = global_sum_array(weq_balance_err(:,:) * notsea(:,:) * in_domain(:,:))
 
     DEALLOCATE (scaling, in_domain)
