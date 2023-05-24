@@ -221,49 +221,6 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: swl5_clim              ! daily climatology of volumetric soil water content in the 4th layer <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: lai_clim               ! daily climatology of LAI <Rackhun Son>
 
-    dsl4jsb_Real3D_onChunk :: V1_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V2_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V3_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V4_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V5_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V6_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V7_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V8_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V9_memory              ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V10_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V11_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V12_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V13_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V14_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V15_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V16_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V17_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V18_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V19_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V20_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V21_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V22_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V23_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V24_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V25_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V26_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V27_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V28_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V29_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V30_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V31_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V32_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V33_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V34_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V35_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V36_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V37_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V38_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: V39_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: RHC_memory             ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: Y_memory               ! training memory <Rackhun Son>
-    dsl4jsb_Real3D_onChunk :: R_memory               ! training memory <Rackhun Son>
-
     dsl4jsb_Real2D_onChunk :: a_temperature          ! daily average of temperature <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: a_rel_humidity         ! daily average of relative humidity <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: fba                    ! daily fraction of burned area <Rackhun Son>
@@ -271,24 +228,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: population             ! daily population density <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: gdp                    ! daily GDP density <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: hdi                    ! daily HDI density <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_primf         ! daily land_use_primf <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c4per         ! daily land_use_c4per <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_urban         ! daily land_use_urban <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_secdf         ! daily land_use_secdf <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_secma         ! daily land_use_secma <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_primn         ! daily land_use_primn <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_secdn         ! daily land_use_secdn <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c4ann         ! daily land_use_c4ann <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_pastr         ! daily land_use_pastr <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_range         ! daily land_use_range <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c3ann         ! daily land_use_c3ann <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c3nfx         ! daily land_use_c3nfx <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c3per         ! daily land_use_c3per <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_secmb         ! daily land_use_secmb <Rackhun Son> 
 
     dsl4jsb_Real2D_onChunk :: burned_fract
-    dsl4jsb_Real2D_onChunk :: burned_fract_infer
-    dsl4jsb_Real2D_onChunk :: burned_fract_test
     dsl4jsb_Real2D_onChunk :: damaged_fract
 
     dsl4jsb_Real2D_onChunk :: co2flux_fire_all_2_atm
@@ -311,12 +252,6 @@ CONTAINS
     REAL(wp), POINTER      :: roughness(:)
     REAL(wp), POINTER      :: road_density(:)
     REAL(wp), POINTER      :: gfed_region(:)
-
-    INTEGER :: iteration, is_training, is_saving, is_infer, memory_idx, n, i_temporal, i_spatial, max_pft_idx
-    INTEGER :: save_batch
-    REAL(wp) :: weight, u, r, t
-    REAL(wp) :: threshold(14)
-    CHARACTER(len=10) :: max_pft
 
     !LOGICAL  :: pft_mask ! True for pfts to which the disturbance should be applied.
     REAL(wp) :: persist ! Factor (as fraction) determining the persistance of q_rel_air_climbuf
@@ -384,20 +319,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  population)               ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  gdp)                      ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  hdi)                      ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_primf)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c4per)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_urban)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secdf)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secma)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_primn)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secdn)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c4ann)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_pastr)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_range)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3ann)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3nfx)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3per)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secmb)           ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   t_air_ave)                ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_ave)                    ! in <Rackhun Son>
@@ -421,52 +342,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   swl5_clim)                ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   lai_clim)                 ! in <Rackhun Son>
 
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V1_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V2_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V3_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V4_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V5_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V6_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V7_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V8_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V9_memory)                ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V10_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V11_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V12_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V13_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V14_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V15_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V16_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V17_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V18_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V19_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V20_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V21_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V22_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V23_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V24_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V25_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V26_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V27_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V28_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V29_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V30_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V31_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V32_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V33_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V34_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V35_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V36_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V37_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V38_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V39_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   RHC_memory)               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   Y_memory  )               ! in <Rackhun Son>
-    dsl4jsb_Get_var3D_onChunk(DISTURB_,   R_memory  )               ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract_infer)       ! out
-    dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract_test)        ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   damaged_fract)            ! out
 
     dsl4jsb_Get_var2D_onChunk(CARBON_,    co2flux_fire_all_2_atm)   ! out
@@ -534,135 +411,10 @@ CONTAINS
     lai_ave(:)   = lai_ave(:)   + lai(:)          *(options%dtime/60._wp/60._wp/24._wp)
 
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
-      threshold(1)=0.5;    threshold(2)=-0.5;  threshold(3)=0.0;  threshold(4)=0.0;  threshold(5)=-0.5 
-      threshold(6)=0.5;    threshold(7)=-0.5;  threshold(8)=0.5;  threshold(9)=0.25;  threshold(10)=0.5 
-      threshold(11)=-0.5;  threshold(12)=0.5; threshold(13)=0.5; threshold(14)=0.5
 
       ! calculate auxiliary variables for DL fire model   <Rackhun Son>
       IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
         diff_year = FLOAT(iyr-time_config%tc_exp_startdate%date%year) +1._wp
-
-        iteration  = 0
-        IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
-        !IF (iyr .eq. 2003) THEN
-          IF (iteration .eq. 0) THEN
-            CALL get_first_iblk(iblk)
-          ENDIF
-
-          is_training = 1
-          !iteration = (iyr-2003)*5946*365 + (day_of_year-1)*5946 + iblk*600
-          iteration = (iyr-2003)*365 + day_of_year
-        ELSE
-          is_training = 0
-        ENDIF
-
-        IF ((iyr .ge. 2002) .AND. (iyr .le. 2012)) THEN
-        !IF ((iyr .ge. 2002) .AND. (iyr .le. 2003)) THEN
-          ! random sampling from memory
-          
-          !max_pft_idx = MAXLOC(pfts_fract(i_spatial,:), dim=1)
-          max_pft_idx = MAXLOC(SUM(pfts_fract(:,:), dim=1), dim=1)
-          IF (max_pft_idx .eq. 1) THEN
-            max_pft = 'pft01'
-          ELSEIF (max_pft_idx .eq. 2) THEN
-            max_pft = 'pft02'
-          ELSEIF (max_pft_idx .eq. 3) THEN
-            max_pft = 'pft03'
-          ELSEIF (max_pft_idx .eq. 4) THEN
-            max_pft = 'pft04'
-          ELSEIF (max_pft_idx .eq. 5) THEN
-            max_pft = 'pft05'
-          ELSEIF (max_pft_idx .eq. 6) THEN
-            max_pft = 'pft06'
-          ELSEIF (max_pft_idx .eq. 7) THEN
-            max_pft = 'pft07'
-          ELSEIF (max_pft_idx .eq. 8) THEN
-            max_pft = 'pft08'
-          ELSEIF (max_pft_idx .eq. 9) THEN
-            max_pft = 'pft09'
-          ELSEIF (max_pft_idx .eq. 10) THEN
-            max_pft = 'pft10'
-          ELSEIF (max_pft_idx .eq. 11) THEN
-            max_pft = 'pft11'
-          ENDIF
-
-          r = SUM(R_memory)
-          IF ((tile%name .eq. max_pft) .and. (r .gt. 0.)) THEN
-            n=1
-            DO WHILE ( n<=8 )
-              CALL RANDOM_NUMBER(u)
-              i_temporal = 1 + INT(FLOOR((730)*u))
-              CALL RANDOM_NUMBER(u)
-              i_spatial  = 1 + INT(FLOOR((128)*u))
-
-              t = threshold(INT(R_memory(i_spatial,i_temporal)))
-              IF (t .ge. 0) THEN
-                IF (Y_memory(i_spatial,i_temporal) .gt. 0.) THEN
-                  save_batch = 1
-                ELSE
-                  CALL RANDOM_NUMBER(u)
-                  IF (u .gt. t) THEN
-                    save_batch = 1
-                  ELSE
-                    save_batch = 0
-                  ENDIF
-                ENDIF
-              ELSE
-                IF (Y_memory(i_spatial,i_temporal) .eq. 0.) THEN
-                  save_batch = 1
-                ELSE
-                  CALL RANDOM_NUMBER(u)
-                  IF (u .gt. -t) THEN
-                    save_batch = 1
-                  ELSE
-                    save_batch = 0
-                  ENDIF
-                ENDIF
-              ENDIF  
-              
-              IF ((R_memory(i_spatial,i_temporal) .ne. 0.) .and. (save_batch .eq. 1)) THEN
-                CALL update_pid_batch(                                                                                    &
-                  & V1_memory (i_spatial,i_temporal),  V2_memory(i_spatial,i_temporal),  V3_memory(i_spatial,i_temporal), &
-                  & V4_memory (i_spatial,i_temporal),  V5_memory(i_spatial,i_temporal),  V6_memory(i_spatial,i_temporal), &
-                  & V7_memory (i_spatial,i_temporal),  V8_memory(i_spatial,i_temporal),  V9_memory(i_spatial,i_temporal), &
-                  & V10_memory(i_spatial,i_temporal), V11_memory(i_spatial,i_temporal), V12_memory(i_spatial,i_temporal), &
-                  & V13_memory(i_spatial,i_temporal), V14_memory(i_spatial,i_temporal), V15_memory(i_spatial,i_temporal), &
-                  & V16_memory(i_spatial,i_temporal), V17_memory(i_spatial,i_temporal), V18_memory(i_spatial,i_temporal), &
-                  & V19_memory(i_spatial,i_temporal), V20_memory(i_spatial,i_temporal), V21_memory(i_spatial,i_temporal), &
-                  & V22_memory(i_spatial,i_temporal), V23_memory(i_spatial,i_temporal), V24_memory(i_spatial,i_temporal), &
-                  & V25_memory(i_spatial,i_temporal), V26_memory(i_spatial,i_temporal), V27_memory(i_spatial,i_temporal), &
-                  & V28_memory(i_spatial,i_temporal), V29_memory(i_spatial,i_temporal), V30_memory(i_spatial,i_temporal), &
-                  & V31_memory(i_spatial,i_temporal), V32_memory(i_spatial,i_temporal), V33_memory(i_spatial,i_temporal), &
-                  & V34_memory(i_spatial,i_temporal), V35_memory(i_spatial,i_temporal), V36_memory(i_spatial,i_temporal), &
-                  & V37_memory(i_spatial,i_temporal), V38_memory(i_spatial,i_temporal), V39_memory(i_spatial,i_temporal), &
-                  & RHC_memory(i_spatial,i_temporal), Y_memory  (i_spatial,i_temporal),   R_memory(i_spatial,i_temporal), &
-                  & n, iblk)
-                n = n+1
-              ENDIF
-            ENDDO
-          ENDIF
-        ENDIF
-
-        IF ((iyr .ge. 2001) .AND. (iyr .le. 2012)) THEN
-        !IF ((iyr .ge. 2002) .AND. (iyr .le. 2003)) THEN
-          is_saving = 1
-          memory_idx = day_of_year + MOD(iyr,2)*365
-
-          IF (memory_idx .gt. 730) THEN
-            is_saving = 0
-          ENDIF
-          
-        ELSE
-          is_saving = 0
-        ENDIF
-
-        IF (iyr .ge. 2013) THEN
-        !IF (iyr .ge. 2004) THEN
-          is_infer = 1
-        ELSE
-          is_infer = 0
-        ENDIF
-
 
         IF (is_time_experiment_start(options%current_datetime)) THEN   ! 1st iteration
           t_air_ave(:) = t_air_ave(:) /(options%dtime/60._wp/60._wp/24._wp)
@@ -686,21 +438,6 @@ CONTAINS
           swl4_clim(:,day_of_year)  = swl4_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
           swl5_clim(:,day_of_year)  = swl5_ave(:)  !/(options%dtime/60._wp/60._wp/24._wp)
           lai_clim(:,day_of_year)   = lai_ave(:)   !/(options%dtime/60._wp/60._wp/24._wp)
-
-          ! initialize trainable parameters
-          CALL update_trainable_parameters(                             &
-            & dsl4jsb_Config(DISTURB_)%layer1_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer1_bias,                     &
-            & dsl4jsb_Config(DISTURB_)%layer2_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer2_bias,                     &
-            & dsl4jsb_Config(DISTURB_)%layer3_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer3_bias,                     &
-            & dsl4jsb_Config(DISTURB_)%layer4_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer4_bias,                     &
-            & dsl4jsb_Config(DISTURB_)%layer5_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer5_bias,                     &
-            & dsl4jsb_Config(DISTURB_)%layer6_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer6_bias                      )
 
         !ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
         ELSE
@@ -737,24 +474,6 @@ CONTAINS
             swl4_clim(:,day_of_year)  = swl4_clim(:,day_of_year)  + swl4_ave(:)
             swl5_clim(:,day_of_year)  = swl5_clim(:,day_of_year)  + swl5_ave(:)
             lai_clim(:,day_of_year)   = lai_clim(:,day_of_year)   + lai_ave(:)
-          ENDIF
-
-          IF ((iyr .eq. 2013) .AND. (imo .eq. 1) .AND. (idy .eq. 1)) THEN
-          !IF ((iyr .eq. 2004) .AND. (imo .eq. 1) .AND. (idy .eq. 1)) THEN
-            CALL load_trained_parameters(                               &
-              & dsl4jsb_Config(DISTURB_)%layer1_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer1_bias_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer2_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer2_bias_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer3_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer3_bias_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer4_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer4_bias_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer5_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer5_bias_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer6_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer6_bias_update             )
-            print*, dsl4jsb_Config(DISTURB_)%layer1_weight_update(10,20)
           ENDIF
 
         ENDIF
@@ -839,24 +558,20 @@ CONTAINS
               & swl5_clim(:,day_of_year)/diff_year,                       &
               & lai_ave(:),                                               &
               & lai_clim(:,day_of_year)/diff_year,                        &
+
               & modified_pfts_fract(:,:),                                 &
-              !& pfts_fract(:,:),                                          &
               & fuel(:),                                                  &
               & lightning_climatology(:),                                 &
               & elevation(:),                                             &
-              !& slope(:),                                                 &
-              !& roughness(:),                                             &
 
               & population(:),                                            &
               & gdp(:),                                                   &
               & hdi(:),                                                   &
 
               & fba,                                                      &
-              !& fba_smooth,                                               &
               & nc,                                                       &
               & iblk,                                                     &
               & tile%name,                                                &
-              & max_pft,                                                  &
               
               & dsl4jsb_Config(DISTURB_)%d_input,                         &
               & dsl4jsb_Config(DISTURB_)%d_hidden,                        &
@@ -876,150 +591,10 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%layer6_weight,                   &
               & dsl4jsb_Config(DISTURB_)%layer6_bias,                     &
 
-              & dsl4jsb_Config(DISTURB_)%layer1_weight_update,                   &
-              & dsl4jsb_Config(DISTURB_)%layer1_bias_update,                     &
-              & dsl4jsb_Config(DISTURB_)%layer2_weight_update,                   &
-              & dsl4jsb_Config(DISTURB_)%layer2_bias_update,                     &
-              & dsl4jsb_Config(DISTURB_)%layer3_weight_update,                   &
-              & dsl4jsb_Config(DISTURB_)%layer3_bias_update,                     &
-              & dsl4jsb_Config(DISTURB_)%layer4_weight_update,                   &
-              & dsl4jsb_Config(DISTURB_)%layer4_bias_update,                     &
-              & dsl4jsb_Config(DISTURB_)%layer5_weight_update,                   &
-              & dsl4jsb_Config(DISTURB_)%layer5_bias_update,                     &
-              & dsl4jsb_Config(DISTURB_)%layer6_weight_update,                   &
-              & dsl4jsb_Config(DISTURB_)%layer6_bias_update,                     &
-
-              & dsl4jsb_Config(DISTURB_)%mW1,                             &
-              & dsl4jsb_Config(DISTURB_)%mb1,                             &
-              & dsl4jsb_Config(DISTURB_)%mW2,                             &
-              & dsl4jsb_Config(DISTURB_)%mb2,                             &
-              & dsl4jsb_Config(DISTURB_)%mW3,                             &
-              & dsl4jsb_Config(DISTURB_)%mb3,                             &
-              & dsl4jsb_Config(DISTURB_)%mW4,                             &
-              & dsl4jsb_Config(DISTURB_)%mb4,                             &
-              & dsl4jsb_Config(DISTURB_)%mW5,                             &
-              & dsl4jsb_Config(DISTURB_)%mb5,                             &
-              & dsl4jsb_Config(DISTURB_)%mW6,                             &
-              & dsl4jsb_Config(DISTURB_)%mb6,                             &
-
-              & dsl4jsb_Config(DISTURB_)%vW1,                             &
-              & dsl4jsb_Config(DISTURB_)%vb1,                             &
-              & dsl4jsb_Config(DISTURB_)%vW2,                             &
-              & dsl4jsb_Config(DISTURB_)%vb2,                             &
-              & dsl4jsb_Config(DISTURB_)%vW3,                             &
-              & dsl4jsb_Config(DISTURB_)%vb3,                             &
-              & dsl4jsb_Config(DISTURB_)%vW4,                             &
-              & dsl4jsb_Config(DISTURB_)%vb4,                             &
-              & dsl4jsb_Config(DISTURB_)%vW5,                             &
-              & dsl4jsb_Config(DISTURB_)%vb5,                             &
-              & dsl4jsb_Config(DISTURB_)%vW6,                             &
-              & dsl4jsb_Config(DISTURB_)%vb6,                             &
-
-              & iteration,                                                &
-              & is_training,                                              &
-              & is_saving,                                                &
-              & is_infer,                                                 &
-              & memory_idx,                                               &
-
-              & V1_memory (:,:),  V2_memory(:,:),  V3_memory(:,:),  &
-              & V4_memory (:,:),  V5_memory(:,:),  V6_memory(:,:),  &
-              & V7_memory (:,:),  V8_memory(:,:),  V9_memory(:,:),  &
-              & V10_memory(:,:), V11_memory(:,:), V12_memory(:,:),  &
-              & V13_memory(:,:), V14_memory(:,:), V15_memory(:,:),  &
-              & V16_memory(:,:), V17_memory(:,:), V18_memory(:,:),  &
-              & V19_memory(:,:), V20_memory(:,:), V21_memory(:,:),  &
-              & V22_memory(:,:), V23_memory(:,:), V24_memory(:,:),  &
-              & V25_memory(:,:), V26_memory(:,:), V27_memory(:,:),  &
-              & V28_memory(:,:), V29_memory(:,:), V30_memory(:,:),  &
-              & V31_memory(:,:), V32_memory(:,:), V33_memory(:,:),  &
-              & V34_memory(:,:), V35_memory(:,:), V36_memory(:,:),  &
-              & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),  &
-              & RHC_memory(:,:),   Y_memory(:,:),   R_memory(:,:),  &
-
               & dsl4jsb_Config(DISTURB_)%min_max,                         &
               & gfed_region(:),                                           &
               
-              & burned_fract(:),                                          & ! inout
-              & burned_fract_infer(:),                                    & ! inout
-              & burned_fract_test(:),                                     & ! inout
-              & weight)
-
-
-              ! save training results
-              IF (iyr == 2015) then
-
-                open(1001,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W1.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_input*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1002,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W2.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1003,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W3.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1004,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W4.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1005,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W5.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(1006,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/W6.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output*4)
-
-                open(2001,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b1.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2002,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b2.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2003,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b3.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2004,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b4.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2005,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b5.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*4)
-                open(2006,file='/work/mj0143/b301058/fire_online_0_base_update/saved_parameters/b6.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_output*4)
-
-                write(1001,rec=1) layer1_weight_global
-                write(1002,rec=1) layer2_weight_global
-                write(1003,rec=1) layer3_weight_global
-                write(1004,rec=1) layer4_weight_global
-                write(1005,rec=1) layer5_weight_global
-                write(1006,rec=1) layer6_weight_global
-
-                write(2001,rec=1) layer1_bias_global
-                write(2002,rec=1) layer2_bias_global
-                write(2003,rec=1) layer3_bias_global
-                write(2004,rec=1) layer4_bias_global
-                write(2005,rec=1) layer5_bias_global
-                write(2006,rec=1) layer6_bias_global
-
-                print*, layer1_weight_global(10,20)
-
-              ENDIF
-
-              !IF ((iyr .eq. 2012) .and. (imo .eq. 12) .and. (idy .eq. 31)) THEN
-              !IF (is_training .eq. 1) THEN  
-              !  CALL load_trained_parameters(                               &
-              !    & dsl4jsb_Config(DISTURB_)%layer1_weight_update,          &
-              !    & dsl4jsb_Config(DISTURB_)%layer1_bias_update,            &
-              !    & dsl4jsb_Config(DISTURB_)%layer2_weight_update,          &
-              !    & dsl4jsb_Config(DISTURB_)%layer2_bias_update,            &
-              !    & dsl4jsb_Config(DISTURB_)%layer3_weight_update,          &
-              !    & dsl4jsb_Config(DISTURB_)%layer3_bias_update,            &
-              !    & dsl4jsb_Config(DISTURB_)%layer4_weight_update,          &
-              !    & dsl4jsb_Config(DISTURB_)%layer4_bias_update,            &
-              !    & dsl4jsb_Config(DISTURB_)%layer5_weight_update,          &
-              !    & dsl4jsb_Config(DISTURB_)%layer5_bias_update,            &
-              !    & dsl4jsb_Config(DISTURB_)%layer6_weight_update,          &
-              !    & dsl4jsb_Config(DISTURB_)%layer6_bias_update             )
-              !ENDIF
+              & burned_fract(:)                                           ) ! inout
 
           CASE DEFAULT
             CALL finish('disturbed_fract','Unknown fire algorithm')
@@ -1102,8 +677,6 @@ CONTAINS
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract,            weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract_infer,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract_test,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, damaged_fract,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf_yDay,  weighted_by_fract)

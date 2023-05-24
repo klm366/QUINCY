@@ -57,37 +57,6 @@ MODULE mo_disturb_config_class
     REAL(wp), ALLOCATABLE :: layer5_weight(:,:), layer5_bias(:) ! dl fire model parameters <Rackhun Son>
     REAL(wp), ALLOCATABLE :: layer6_weight(:,:), layer6_bias(:) ! dl fire model parameters <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: layer1_weight_update(:,:), layer1_bias_update(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer2_weight_update(:,:), layer2_bias_update(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer3_weight_update(:,:), layer3_bias_update(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer4_weight_update(:,:), layer4_bias_update(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer5_weight_update(:,:), layer5_bias_update(:) ! dl fire model parameters <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer6_weight_update(:,:), layer6_bias_update(:) ! dl fire model parameters <Rackhun Son>
-
-    REAL(wp), ALLOCATABLE :: mW1(:,:),           mb1(:)         ! dl fire model 1st momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW2(:,:),           mb2(:)         ! dl fire model 1st momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW3(:,:),           mb3(:)         ! dl fire model 1st momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW4(:,:),           mb4(:)         ! dl fire model 1st momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW5(:,:),           mb5(:)         ! dl fire model 1st momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW6(:,:),           mb6(:)         ! dl fire model 1st momentum <Rackhun Son>
-
-    REAL(wp), ALLOCATABLE :: vW1(:,:),           vb1(:)         ! dl fire model 2nd momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW2(:,:),           vb2(:)         ! dl fire model 2nd momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW3(:,:),           vb3(:)         ! dl fire model 2nd momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW4(:,:),           vb4(:)         ! dl fire model 2nd momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW5(:,:),           vb5(:)         ! dl fire model 2nd momentum <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW6(:,:),           vb6(:)         ! dl fire model 2nd momentum <Rackhun Son>
-
-    !REAL(wp), ALLOCATABLE :: i2i_weight(:,:), i2i_bias(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: h2i_weight(:,:), h2i_bias(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: i2f_weight(:,:), i2f_bias(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: h2f_weight(:,:), h2f_bias(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: i2g_weight(:,:), i2g_bias(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: h2g_weight(:,:), h2g_bias(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: i2o_weight(:,:), i2o_bias(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: h2o_weight(:,:), h2o_bias(:) ! dl fire model parameters <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: out_weight(:,:), out_bias(:) ! dl fire model parameters <Rackhun Son>
-
     REAL(wp), ALLOCATABLE :: min_max(:,:)                  ! dl fire model parameters <Rackhun Son>
     !REAL(wp)              :: training_memory(35,1000000)   ! dl fire model memory     <Rackhun Son>
 
@@ -176,43 +145,11 @@ CONTAINS
     REAL(wp), ALLOCATABLE :: layer5_weight(:,:), layer5_bias(:) ! <Rackhun Son>
     REAL(wp), ALLOCATABLE :: layer6_weight(:,:), layer6_bias(:) ! <Rackhun Son>
 
-    REAL(wp), ALLOCATABLE :: layer1_weight_update(:,:), layer1_bias_update(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer2_weight_update(:,:), layer2_bias_update(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer3_weight_update(:,:), layer3_bias_update(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer4_weight_update(:,:), layer4_bias_update(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer5_weight_update(:,:), layer5_bias_update(:) ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: layer6_weight_update(:,:), layer6_bias_update(:) ! <Rackhun Son>
-
-    REAL(wp), ALLOCATABLE :: mW1(:,:),           mb1(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW2(:,:),           mb2(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW3(:,:),           mb3(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW4(:,:),           mb4(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW5(:,:),           mb5(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: mW6(:,:),           mb6(:)         ! <Rackhun Son>
-
-    REAL(wp), ALLOCATABLE :: vW1(:,:),           vb1(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW2(:,:),           vb2(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW3(:,:),           vb3(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW4(:,:),           vb4(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW5(:,:),           vb5(:)         ! <Rackhun Son>
-    REAL(wp), ALLOCATABLE :: vW6(:,:),           vb6(:)         ! <Rackhun Son>
-
-    !REAL(wp), ALLOCATABLE :: i2i_weight(:,:), i2i_bias(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: h2i_weight(:,:), h2i_bias(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: i2f_weight(:,:), i2f_bias(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: h2f_weight(:,:), h2f_bias(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: i2g_weight(:,:), i2g_bias(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: h2g_weight(:,:), h2g_bias(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: i2o_weight(:,:), i2o_bias(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: h2o_weight(:,:), h2o_bias(:) ! <Rackhun Son>
-    !REAL(wp), ALLOCATABLE :: out_weight(:,:), out_bias(:) ! <Rackhun Son>
-
     REAL(wp), ALLOCATABLE :: min_max(:,:)                 ! <Rackhun Son>
     !REAL(wp)              :: training_memory(35,1000000)  ! <Rackhun Son>
     
     TYPE(t_jsb_vgrid), POINTER :: daily            ! New axis for the day of year <Rackhun Son>
     TYPE(t_jsb_vgrid), POINTER :: memory           ! New axis for the day of year <Rackhun Son>
-    !TYPE(t_jsb_vgrid), POINTER :: d_lstm          ! New axis for weather LSTM    <Rackhun Son>
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_disturb_config'
 
@@ -307,173 +244,6 @@ CONTAINS
     layer6_bias = ptr_1D
     DEALLOCATE(ptr_1D)
 
-    ptr_1D => input_file%Read_1d(variable_name='layer1_weight_update')
-    layer1_weight_update = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer1_bias_update')
-    layer1_bias_update = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer2_weight_update')
-    layer2_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer2_bias_update')
-    layer2_bias_update = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer3_weight_update')
-    layer3_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer3_bias_update')
-    layer3_bias_update = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer4_weight_update')
-    layer4_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer4_bias_update')
-    layer4_bias_update = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer5_weight_update')
-    layer5_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer5_bias_update')
-    layer5_bias_update = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer6_weight_update')
-    layer6_weight_update = RESHAPE(ptr_1D, (/d_hidden, d_output/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='layer6_bias_update')
-    layer6_bias_update = ptr_1D
-    DEALLOCATE(ptr_1D)
-
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w_init')
-    mW1 = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b_init')
-    mb1 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w')
-    mW2 = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b')
-    mb2 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w')
-    mW3 = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b')
-    mb3 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w')
-    mW4 = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b')
-    mb4 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w')
-    mW5 = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b')
-    mb5 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w_last')
-    mW6 = RESHAPE(ptr_1D, (/d_hidden, d_output/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b_last')
-    mb6 = ptr_1D
-    DEALLOCATE(ptr_1D)
-
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w_init')
-    vW1 = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b_init')
-    vb1 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w')
-    vW2 = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b')
-    vb2 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w')
-    vW3 = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b')
-    vb3 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w')
-    vW4 = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b')
-    vb4 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w')
-    vW5 = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b')
-    vb5 = ptr_1D
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_w_last')
-    vW6 = RESHAPE(ptr_1D, (/d_hidden, d_output/), order=(/2, 1/))
-    DEALLOCATE(ptr_1D)
-    ptr_1D => input_file%Read_1d(variable_name='zero_momentum_b_last')
-    vb6 = ptr_1D
-    DEALLOCATE(ptr_1D)
-
-
-    !ptr_1D => input_file%Read_1d(variable_name='i2i_weight')
-    !i2i_weight = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='i2i_bias')
-    !i2i_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='h2i_weight')
-    !h2i_weight = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='h2i_bias')
-    !h2i_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='i2f_weight')
-    !i2f_weight = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='i2f_bias')
-    !i2f_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='h2f_weight')
-    !h2f_weight = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='h2f_bias')
-    !h2f_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='i2g_weight')
-    !i2g_weight = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='i2g_bias')
-    !i2g_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='h2g_weight')
-    !h2g_weight = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='h2g_bias')
-    !h2g_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='i2o_weight')
-    !i2o_weight = RESHAPE(ptr_1D, (/d_input, d_hidden/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='i2o_bias')
-    !i2o_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='h2o_weight')
-    !h2o_weight = RESHAPE(ptr_1D, (/d_hidden, d_hidden/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='h2o_bias')
-    !h2o_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='out_weight')
-    !out_weight = RESHAPE(ptr_1D, (/d_hidden, d_output/), order=(/2, 1/))
-    !DEALLOCATE(ptr_1D)
-    !ptr_1D => input_file%Read_1d(variable_name='out_bias')
-    !out_bias = ptr_1D
-    !DEALLOCATE(ptr_1D)
-
     ! Read parameters min/max normalization  <Rackhun Son>
     ptr_1D => input_file%Read_1d(variable_name='min_max')
     min_max = RESHAPE(ptr_1D, (/d_input, 2/), order=(/2, 1/))
@@ -521,77 +291,12 @@ CONTAINS
     config%layer6_weight          = layer6_weight    ! <Rackhun Son> 
     config%layer6_bias            = layer6_bias      ! <Rackhun Son>
 
-    config%layer1_weight_update          = layer1_weight_update    ! <Rackhun Son> 
-    config%layer1_bias_update            = layer1_bias_update      ! <Rackhun Son>
-    config%layer2_weight_update          = layer2_weight_update    ! <Rackhun Son> 
-    config%layer2_bias_update            = layer2_bias_update      ! <Rackhun Son>
-    config%layer3_weight_update          = layer3_weight_update    ! <Rackhun Son> 
-    config%layer3_bias_update            = layer3_bias_update      ! <Rackhun Son>
-    config%layer4_weight_update          = layer4_weight_update    ! <Rackhun Son> 
-    config%layer4_bias_update            = layer4_bias_update      ! <Rackhun Son>
-    config%layer5_weight_update          = layer5_weight_update    ! <Rackhun Son> 
-    config%layer5_bias_update            = layer5_bias_update      ! <Rackhun Son>
-    config%layer6_weight_update          = layer6_weight_update    ! <Rackhun Son> 
-    config%layer6_bias_update            = layer6_bias_update      ! <Rackhun Son>
-
-    config%mW1                    = mW1              ! <Rackhun Son> 
-    config%mb1                    = mb1              ! <Rackhun Son>
-    config%mW2                    = mW2              ! <Rackhun Son> 
-    config%mb2                    = mb2              ! <Rackhun Son>
-    config%mW3                    = mW3              ! <Rackhun Son> 
-    config%mb3                    = mb3              ! <Rackhun Son>
-    config%mW4                    = mW4              ! <Rackhun Son> 
-    config%mb4                    = mb4              ! <Rackhun Son>
-    config%mW5                    = mW5              ! <Rackhun Son> 
-    config%mb5                    = mb5              ! <Rackhun Son>
-    config%mW6                    = mW6              ! <Rackhun Son> 
-    config%mb6                    = mb6              ! <Rackhun Son>
-
-    config%vW1                    = vW1              ! <Rackhun Son> 
-    config%vb1                    = vb1              ! <Rackhun Son>
-    config%vW2                    = vW2              ! <Rackhun Son> 
-    config%vb2                    = vb2              ! <Rackhun Son>
-    config%vW3                    = vW3              ! <Rackhun Son> 
-    config%vb3                    = vb3              ! <Rackhun Son>
-    config%vW4                    = vW4              ! <Rackhun Son> 
-    config%vb4                    = vb4              ! <Rackhun Son>
-    config%vW5                    = vW5              ! <Rackhun Son> 
-    config%vb5                    = vb5              ! <Rackhun Son>
-    config%vW6                    = vW6              ! <Rackhun Son> 
-    config%vb6                    = vb6              ! <Rackhun Son>
-
-    !config%i2i_weight             = i2i_weight       ! <Rackhun Son>
-    !config%i2i_bias               = i2i_bias         ! <Rackhun Son>
-    !config%h2i_weight             = h2i_weight       ! <Rackhun Son>
-    !config%h2i_bias               = h2i_bias         ! <Rackhun Son>
-    !config%i2f_weight             = i2f_weight       ! <Rackhun Son>
-    !config%i2f_bias               = i2f_bias         ! <Rackhun Son>
-    !config%h2f_weight             = h2f_weight       ! <Rackhun Son>
-    !config%h2f_bias               = h2f_bias         ! <Rackhun Son>
-    !config%i2g_weight             = i2g_weight       ! <Rackhun Son>
-    !config%i2g_bias               = i2g_bias         ! <Rackhun Son>
-    !config%h2g_weight             = h2g_weight       ! <Rackhun Son>
-    !config%h2g_bias               = h2g_bias         ! <Rackhun Son>
-    !config%i2o_weight             = i2o_weight       ! <Rackhun Son>
-    !config%i2o_bias               = i2o_bias         ! <Rackhun Son>
-    !config%h2o_weight             = h2o_weight       ! <Rackhun Son>
-    !config%h2o_bias               = h2o_bias         ! <Rackhun Son>
-    !config%out_weight             = out_weight       ! <Rackhun Son>
-    !config%out_bias               = out_bias         ! <Rackhun Son>
-
     config%min_max                = min_max          ! <Rackhun Son>
 
 
     ! New axis for the day of year <Rackhun Son>
     daily => new_vgrid('daily', ZAXIS_GENERIC, 366, units='day')
     CALL Register_vgrid(daily)
-
-    memory => new_vgrid('memory', ZAXIS_GENERIC, 730, units='day')
-    CALL Register_vgrid(memory)
-
-    ! New axis for LSTM <Rackhun Son>
-    !d_lstm => new_vgrid('d__lstm', ZAXIS_GENERIC, d_hidden, units='')
-    !CALL Register_vgrid(d_lstm)
 
   END SUBROUTINE Init_disturb_config
 
