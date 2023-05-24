@@ -2,7 +2,7 @@
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
 ! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
 ! === ... <DATE>                    with the present date in YYYY-MM-DD format e.g. "2016-04-30"                              ===
-! === ... <PROCESS_NAME_LOWER_CASE> with your process name e.g. "seb" for surface energy balance                              ===
+! === ... lentic with your process name e.g. "seb" for surface energy balance                              ===
 ! ===                                                                                                                         ===
 ! === Then go through the code line by line to adapt it to your needs:                                                        ===
 ! === !X marks lines with examples (e.g:), templates (if necessary:) and implementation points (Implementation:) that you     ===
@@ -13,7 +13,7 @@
 
 
 !>
-!! @brief Contains structures and methods for <PROCESS_NAME_LOWER_CASE> config
+!! @brief Contains structures and methods for lentic config
 !!
 !! @author
 !!  <FIRST NAME LAST NAME>, MPI-M Hamburg
@@ -26,7 +26,7 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
+MODULE mo_lentic_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
@@ -40,55 +40,55 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
   ! Module variables 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: t_<PROCESS_NAME_LOWER_CASE>_config
+  !PUBLIC :: t_lentic_config
 
-  TYPE, EXTENDS(t_jsb_config) :: t_<PROCESS_NAME_LOWER_CASE>_config
+  !TYPE, EXTENDS(t_jsb_config) :: t_lentic_config
      !X e.g: LOGICAL                     :: use_alb_veg_simple
 
-   CONTAINS
-     PROCEDURE :: Init => Init_<PROCESS_NAME_LOWER_CASE>_config
-  END type t_<PROCESS_NAME_LOWER_CASE>_config
+  !  CONTAINS
+  !    PROCEDURE :: Init => Init_lentic_config
+  ! END type t_lentic_config
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_<PROCESS_NAME_LOWER_CASE>_config_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_lentic_config_class'
 
 CONTAINS
   ! -------------------------------------------------------------------------------------------------------
-  !> Initialize <PROCESS_NAME_LOWER_CASE> process
+  !> Initialize lentic process
   !!
-  !! @param[inout]     config     Configuration type of process (t_<PROCESS_NAME_LOWER_CASE>_config)
+  !! @param[inout]     config     Configuration type of process (t_lentic_config)
   !!  
-  SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_config(config)
+  SUBROUTINE Init_lentic_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
 
-    CLASS(t_<PROCESS_NAME_LOWER_CASE>_config), INTENT(inout) :: config
+    CLASS(t_lentic_config), INTENT(inout) :: config
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
     !X e.g: LOGICAL                     :: use_alb_veg_simple
 
-    NAMELIST /jsb_<PROCESS_NAME_LOWER_CASE>_nml/      &
+    NAMELIST /jsb_lentic_nml/      &
          active,                      &
          ic_filename,                 &
          bc_filename,                 &
-         !X e.g: use_<PROCESS_NAME_LOWER_CASE>_veg_simple
+         !X e.g: use_lentic_veg_simple
 
     INTEGER :: nml_handler, nml_unit, istat
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_<PROCESS_NAME_LOWER_CASE>_config'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_lentic_config'
 
-    CALL message(TRIM(routine), 'Starting <PROCESS_NAME_LOWER_CASE> configuration')
+    CALL message(TRIM(routine), 'Starting lentic configuration')
 
     ! Set defaults
     active              = .TRUE.
-    bc_filename         = 'bc_land_<PROCESS_NAME_LOWER_CASE>.nc'
-    ic_filename         = 'ic_land_<PROCESS_NAME_LOWER_CASE>.nc'
+    bc_filename         = 'bc_land_lentic.nc'
+    ic_filename         = 'ic_land_lentic.nc'
     !X e.g: use_alb_veg_simple        = .FALSE.
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
-    nml_unit = position_nml('jsb_<PROCESS_NAME_LOWER_CASE>_nml', nml_handler, STATUS=istat)
-    IF (istat == POSITIONED) READ(nml_unit, jsb_<PROCESS_NAME_LOWER_CASE>_nml)
+    nml_unit = position_nml('jsb_lentic_nml', nml_handler, STATUS=istat)
+    IF (istat == POSITIONED) READ(nml_unit, jsb_lentic_nml)
 
     CALL close_nml(nml_handler)
 
@@ -97,7 +97,7 @@ CONTAINS
     config%bc_filename         = bc_filename
     !X e.g: config%use_alb_veg_simple        = use_alb_veg_simple
     
-  END SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_config
+  END SUBROUTINE Init_lentic_config
 
 #endif
-END MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
+END MODULE mo_lentic_config_class

@@ -48,7 +48,7 @@ MODULE mo_lentic_constants
       & C_TT_1        = 11._wp/18._wp      , & ! Constant in the expression for C_TT (thermocline)
       & C_TT_2        = 7._wp/45._wp       , & ! Constant in the expression for C_TT (thermocline)
 
-    !  Thermodynamic parameters
+      ! Thermodynamic parameters
       & tpl_grav          = 9.81_wp       , & ! Acceleration due to gravity [m s^{-2}]
       & tpl_T_r           = 277.13_wp     , & ! Temperature of maximum density of fresh water [K]
       & tpl_a_T           = 1.6509E-05_wp , & ! Constant in the fresh-water equation of state [K^{-2}]
@@ -63,21 +63,32 @@ MODULE mo_lentic_constants
       & tpl_rho_I         = 9.1E+02_wp    , & ! Density of ice [kg m^{-3}]
       & tpl_rho_w_r       = 1.0E+03_wp    , & ! Maximum density of fresh water [kg m^{-3}]
 
-    !  Parameters of the shape functions 
-    !  Indices refer to T - thermocline, S - snow, I - ice,
-    !  B1 - upper layer of the bottom sediments, B2 - lower layer of the bottom sediments.
-    !  "pr0" and "pr1" denote zeta derivatives of the corresponding shape function 
-    !  at "zeta=0" ad "zeta=1", respectively.
-       & Phi_T_pr0_1   = 40._wp/3._wp   , & ! Constant in the expression for the T shape-function derivative 
-       & Phi_T_pr0_2   = 20._wp/3._wp   , & ! Constant in the expression for the T shape-function derivative 
+      !  Parameters of the shape functions 
+      !  Indices refer to T - thermocline, S - snow, I - ice,
+      !  B1 - upper layer of the bottom sediments, B2 - lower layer of the bottom sediments.
+      !  "pr0" and "pr1" denote zeta derivatives of the corresponding shape function 
+      !  at "zeta=0" ad "zeta=1", respectively.
+      & Phi_T_pr0_1   = 40._wp/3._wp   , & ! Constant in the expression for the T shape-function derivative 
+      & Phi_T_pr0_2   = 20._wp/3._wp   , & ! Constant in the expression for the T shape-function derivative 
 
-    !  Security constants
-       & c_small        = 1.0E-10_wp, & ! A small number
-       & h_ML_max       = 1.0E+3_wp , & ! Maximum mixed-layer depth [m]
-       & h_Snow_min     = 1.0E-5_wp , & ! Minimum snow thickness [m]
-       & h_Ice_min      = 1.0E-9_wp , & ! Minimum ice thickness [m]
-       & h_ML_min       = 1.0E-2_wp , & ! Minimum mixed-layer depth [m]
-       & u_star_min     = 1.0E-6_wp , & ! Minimum value of the surface friction velocity [m s^{-1}]
+      !  Security constants
+      & c_small        = 1.0E-10_wp, & ! A small number
+      & h_ML_max       = 1.0E+3_wp , & ! Maximum mixed-layer depth [m]
+      & h_Snow_min     = 1.0E-5_wp , & ! Minimum snow thickness [m]
+      & h_Ice_min      = 1.0E-9_wp , & ! Minimum ice thickness [m]
+      & h_ML_min       = 1.0E-2_wp , & ! Minimum mixed-layer depth [m]
+      & u_star_min     = 1.0E-6_wp , & ! Minimum value of the surface friction velocity [m s^{-1}]
+
+      !  Albedo for water, ice and snow.
+      & albedo_water_ref       = 0.20_ireals  , & ! Water
+      & albedo_whiteice_ref    = 0.60_ireals  , & ! White ice
+      & albedo_blueice_ref     = 0.10_ireals  , & ! Blue ice
+      & albedo_drysnow_ref     = 0.60_ireals  , & ! Dry snow 
+      & albedo_meltingsnow_ref = 0.10_ireals  , & ! Melting snow 
+
+      !  Empirical parameters.
+      & c_albice_MR = 95.6_ireals         ! Constant in the interpolation formula for 
+                                          ! the ice albedo (Mironov and Ritter 2004)
 
     CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_lentic_constants'
  

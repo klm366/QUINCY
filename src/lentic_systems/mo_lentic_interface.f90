@@ -138,7 +138,7 @@ CONTAINS
   !!
   SUBROUTINE update_lentic_wbphysics(tile, options)
 
-  !!  USE mo_rad_process, ONLY: calc_radiation_surface_net
+    USE mo_lentic_process, ONLY: calc_surface_temperature
 
 !!#ifdef SERIALIZE
     !$claw verbatim USE mo_ser_common, ONLY: init
@@ -157,40 +157,46 @@ CONTAINS
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_config(LENTIC_)
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(LENTIC_)
+    dsl4jsb_Def_memory(LENTIC_) 
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
-    ! atmospheric forcing
-      & wind_air,             &
-      & t_air,                &
-      & q_air,                &
-      & press_srf,            &
-      & lw_srf_down,          &
-      & swvis_srf_down,       &
-      & swnir_srf_down,       &
-    ! topography and location
-      & depth_w,              &
-      & fetch,                &
-      & par_Coriolis,         &
-      & pondtype,             &
-    ! FLake inout
-      & t_snow,               &
-      & t_lice,               &
-      & t_mnw,                &
-      & t_wml,                &
-      & t_bot,                &
-      & c_t,                  &
-      & h_ice,                &
-      & h_ml,                 &
+    ! ! atmospheric forcing
+    !   & wind_air,             &
+    !   & t_air,                &
+    !   & q_air,                &
+    !   & press_srf,            &
+    !   & lw_srf_down,          &
+    !   & swvis_srf_down,       &
+    !   & swnir_srf_down,       &
+    ! ! topography and location
+    !   & depth_w,              &
+    !   & fetch,                &
+    !   & par_Coriolis,         &
+    !   & pondtype,             &
+    ! ! FLake inout
+    !   & t_snow,               &
+    !   & t_lice,               &
+    !   & t_mnw,                &
+    !   & t_wml,                &
+    !   & t_bot,                &
+    !   & c_t,                  &
+    !   & h_ice,                &
+    !   & h_ml,                 &
       & t_sfc
 
-    REAL(wp) ::               &
-      & w_star(options%nc),   &
-      & u_star(options%nc),   &
-      & I_bot(options%nc),    &
-      & Q_watvap(options%nc), &
-      & steplen
+    ! REAL(wp) ::                 &
+    !   & w_star(options%nc),     &
+    !   & u_star(options%nc),     &
+    !   & I_bot(options%nc),      &
+    !   & I_h(options%nc),        &
+    !   & I_ice(options%nc),      &
+    !   & I_intm_0_h(options%nc), &
+    !   & I_intm_h_D(options%nc), &
+    !   & I_snow(options%nc),     & ! might not be needed
+    !   & I_w(options%nc),        & 
+    !   & Q_watvap(options%nc),   &
+    !   & steplen
     
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -216,75 +222,149 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
 
     ! Get process variables
-    dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)           ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)              ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)              ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)          ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)        ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)     ! in
-    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)     ! in
+    ! dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)           ! in
+    ! dsl4jsb_Get_var2D_onChunk(A2L_, t_air)              ! in
+    ! dsl4jsb_Get_var2D_onChunk(A2L_, q_air)              ! in
+    ! dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)          ! in
+    ! dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)        ! in
+    ! dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)     ! in
+    ! dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)     ! in
 
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! in
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, pondtype)        ! in
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! in
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, pondtype)        ! in
 
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)          ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_lice)          ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_mnw)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_wml)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_bot)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, c_t)             ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ice)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)          ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_lice)          ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_mnw)           ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_wml)           ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_bot)           ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, c_t)             ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ice)           ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_sfc)           ! inout
 
-    USE flake_derivedtypes         
-    USE flake_parameters , ONLY :   &
-      tpl_T_f                     , & 
-      tpl_rho_w_r                 , & 
-      h_Snow_min_flk              , & 
-      h_Ice_min_flk                   
-    USE flake_paramoptic_ref       
-    USE flake_albedo_ref           
-    USE flake           , ONLY :    &
-      flake_driver                , & 
-      flake_radflux               , & 
-      T_snow_p_flk, T_snow_n_flk  , &
-      T_ice_p_flk, T_ice_n_flk    , & 
-      T_mnw_p_flk, T_mnw_n_flk    , & 
-      T_wML_p_flk, T_wML_n_flk    , & 
-      T_bot_p_flk, T_bot_n_flk    , & 
-      T_B1_p_flk, T_B1_n_flk      , & 
-      C_T_p_flk, C_T_n_flk        , & 
-      h_snow_p_flk, h_snow_n_flk  , & 
-      h_ice_p_flk, h_ice_n_flk    , & 
-      h_ML_p_flk, h_ML_n_flk      , & 
-      H_B1_p_flk, H_B1_n_flk      , & 
-      Q_snow_flk                  , & 
-      Q_ice_flk                   , & 
-      Q_w_flk                     , & 
-      Q_bot_flk                   , & 
-      I_atm_flk                   , & 
-      I_snow_flk                  , & 
-      I_ice_flk                   , & 
-      I_w_flk                     , & 
-      I_h_flk                     , & 
-      I_bot_flk                   , & 
-      I_intm_0_h_flk              , & 
-      I_intm_h_D_flk              , & 
-      Q_star_flk                  , & 
-      u_star_w_flk                , & 
-      w_star_sfc_flk              , & 
-      dMsnowdt_flk                , &
-      H_Ice_max
-    USE SfcFlx          , ONLY :    &
-      SfcFlx_lwradwsfc            , & 
-      SfcFlx_momsenlat  
+    ! USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
+
+    ! USE flake_parameters , ONLY :   &
+    !   tpl_T_f                     , & 
+    !   tpl_rho_w_r                 , & 
+    !   h_Snow_min_flk              , & 
+    !   h_Ice_min_flk                   
+    ! USE flake_paramoptic_ref       
+
+! OLD FLAKE INITIALIZATION
+    !   REAL(wp), DIMENSION(options%nc)   :: 
+    !    &  T_snow_p_flk, T_snow_n_flk  , &
+    !    &  T_ice_p_flk, T_ice_n_flk    , & 
+    !    &  T_mnw_p_flk, T_mnw_n_flk    , & 
+    !    &  T_wML_p_flk, T_wML_n_flk    , & 
+    !    &  T_bot_p_flk, T_bot_n_flk    , & 
+    !    ! &  T_B1_p_flk, T_B1_n_flk      , & 
+    !    &  C_T_p_flk, C_T_n_flk        , & 
+    !    ! &  h_snow_p_flk, h_snow_n_flk  , & 
+    !    &  h_ice_p_flk, h_ice_n_flk    , & 
+    !    &  h_ML_p_flk, h_ML_n_flk      , & 
+    !    ! &  H_B1_p_flk, H_B1_n_flk      , & 
+    !    &  Q_snow_flk                  , & 
+    !    &  Q_ice_flk                   , & 
+    !    &  Q_w_flk                     , & 
+    !    &  Q_bot_flk                   , & 
+    !    &  I_atm_flk                   , & 
+    !    !&  I_snow_flk                  , & 
+    !   ! &  I_ice_flk                   , & 
+    !  !  &  I_w_flk                     , & 
+    !    !&  I_h_flk                     , & 
+    !   ! &  I_bot_flk                   , & 
+    !    !&  I_intm_0_h_flk              , & 
+    !    !&  I_intm_h_D_flk              , & 
+    !    &  Q_star_flk                  , & 
+    !    &  u_star_w_flk                , & 
+    !    &  w_star_sfc_flk              , & 
+    !    &  dMsnowdt_flk                , &
+    !    &  H_Ice_max
+    ! USE SfcFlx          , ONLY :    &
+    !   SfcFlx_lwradwsfc            , & 
+    !   SfcFlx_momsenlat  
 
     ! ---------------------------
     ! Go    
+
+    !  Set albedos of the lake water, lake ice and snow
+
+    ! albedo_water = albedo_water_ref
+    ! ! Use empirical formulation proposed by Mironov and Ritter (2004) for GME 
+    ! !_nu albedo_ice   = albedo_whiteice_ref 
+    ! albedo_ice   = EXP(-c_albice_MR*(tpl_T_f-T_sfc_p)/tpl_T_f)
+    ! albedo_ice   = albedo_whiteice_ref*(1._ireals-albedo_ice) + albedo_blueice_ref*albedo_ice
+    ! ! Snow is not considered
+    ! albedo_snow  = albedo_ice
     
+    ! IF (pondtype == 'iw') THEN
+    !     opticpar_water = opticpar_water_iwponds
+    ! ELSE 
+    !     IF (pondtype == 'mp') THEN
+    !         opticpar_water = opticpar_water_mpponds
+    !     ELSE
+    !         opticpar_water = opticpar_water_pcponds
+    !     ENDIF    
+    ! ENDIF
+    
+    ! ! Use default values
+    ! opticpar_ice   = opticpar_ice_opaque   ! Opaque ice
+    ! opticpar_snow  = opticpar_snow_opaque  ! Opaque snow
+
+
+    !  Set initial values
+    ! T_snow_p_flk = t_snow
+    ! T_ice_p_flk  = t_lice
+    ! T_mnw_p_flk  = t_mnw
+    ! T_wML_p_flk  = t_wml
+    ! T_bot_p_flk  = t_bot
+    ! C_T_p_flk    = c_t
+!    h_ML_n_flk   = h_ml
+
+
+    !  Compute solar radiation fluxes (positive downward)    (needed?)
+    ! I_atm_flk = I_atm_in
+    ! Q_bot_flk = Q_bot_in
+
+    ! call calc_radflux ( &
+    !                     & depth_w,        & ! in
+    !                     & albedo_water,   & ! in
+    !                     & albedo_ice,     & ! in
+    !                     & albedo_snow,    & ! in
+    !                     & h_ice,          & ! in 
+    !                     & h_ML,           & ! in 
+    !                     & h_snow,         & ! in
+    !                     & I_atm,          & ! in
+    !                     & opticpar_water, & ! in 
+    !                     & opticpar_ice,   & ! in 
+    !                     & opticpar_snow,  & ! in 
+    !                     & I_bot,          & ! out
+    !                     & I_h,            & ! out
+    !                     & I_ice,          & ! out
+    !                     & I_intm_0_h,     & ! out
+    !                     & I_intm_h_D,     & ! out
+    !                     & I_snow,         & ! out (but maybe not needed) 
+    !                     & I_w             & ! out
+    !                     )
+
+    ! TODO: COMPARE THE CONSTANTS!
+    !  Compute long-wave radiation fluxes (positive downward)
+    ! Q_w_flk = Q_atm_lw_in                          ! Radiation of the atmosphere 
+
+    ! lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
+    ! SfcFlx_lwradwsfc = c_lwrad_emis*tpsf_C_StefBoltz*T**4_iintegers
+    ! Q_w_flk = Q_w_flk - SfcFlx_lwradwsfc(T_sfc_p)  ! Radiation of the surface (notice the sign)
+    
+    ! ! JSBACH VERSION!  
+    ! ! Compute LW net radiation from incoming and the thermal radiation from the surface
+    ! zlw_net = lwnet_from_lwdown(lw_down, t)
+
+    ! TEST
+    call calc_surface_temperature(T_sfc )
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
   END SUBROUTINE update_lentic_wbphysics

@@ -2,7 +2,7 @@
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
 ! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
 ! === ... <DATE>                    with the present date in YYYY-MM-DD format e.g. "2016-04-30"                              ===
-! === ... <PROCESS_NAME_LOWER_CASE> with your process name e.g. "seb" for surface energy balance                              ===
+! === ... lentic with your process name e.g. "seb" for surface energy balance                              ===
 ! ===                                                                                                                         ===
 ! === Then go through the code line by line to adapt it to your needs:                                                        ===
 ! === !X marks lines with examples (e.g:), templates (if necessary:) and implementations points (Implementation:) that you    ===
@@ -13,20 +13,20 @@
 
 
 !>
-!! @brief Contains the memory class for the <PROCESS_NAME_LOWER_CASE> process.
+!! @brief Contains the memory class for the lentic process.
 !!
 !! @author
-!!  <FIRST NAME LAST NAME>, MPI-M Hamburg
+!!  Zoé Rehder, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version by <FIRST NAME LAST NAME> (<DATE>)
+!! First version by Zoé Rehder (22-05-2023)
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
-MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
+MODULE mo_lentic_memory_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind, ONLY: wp
@@ -35,20 +35,20 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
   USE mo_jsb_model_class,        ONLY: t_jsb_model
   USE mo_jsb_class,              ONLY: Get_model
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
-  USE mo_jsb_lct_class,          ONLY: !X e.g: LAND_TYPE, LAKE_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE
+  USE mo_jsb_lct_class,          ONLY: LAKE_TYPE
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_varlist,            ONLY: BASIC, MEDIUM, FULL
-  USE mo_jsb_physical_constants, ONLY: !X e.g: tmelt
+  !USE mo_jsb_physical_constants, ONLY: !X e.g: tmelt
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_<PROCESS_NAME_LOWER_CASE>_memory, max_no_of_vars
+  PUBLIC :: t_lentic_memory, max_no_of_vars
 
   INTEGER, PARAMETER :: max_no_of_vars = 40
 
   !> Type definition for memory
-  TYPE, EXTENDS(t_jsb_memory) :: t_<PROCESS_NAME_LOWER_CASE>_memory
+  TYPE, EXTENDS(t_jsb_memory) :: t_lentic_memory
     
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) :: &
@@ -62,24 +62,25 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
       
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
+      & T_sfc & !test
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]
 
   CONTAINS
-    PROCEDURE :: Init => Init_<PROCESS_NAME_LOWER_CASE>_memory
-  END TYPE t_<PROCESS_NAME_LOWER_CASE>_memory
+    PROCEDURE :: Init => Init_lentic_memory
+  END TYPE t_lentic_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_<PROCESS_NAME_LOWER_CASE>_memory_class'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_lentic_memory_class'
 
 CONTAINS
 
-  SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_memory(mem, prefix, suffix, lct_ids, model_id)
+  SUBROUTINE Init_lentic_memory(mem, prefix, suffix, lct_ids, model_id)
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_<PROCESS_NAME_LOWER_CASE>_memory), INTENT(inout) :: mem
+    CLASS(t_lentic_memory), INTENT(inout) :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
@@ -90,7 +91,7 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
     INTEGER :: table
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_<PROCESS_NAME_LOWER_CASE>_memory'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_lentic_memory'
 
     model => Get_model(model_id)
 
@@ -138,25 +139,25 @@ CONTAINS
 
     ! Additional variables for lakes
     !X add your LAKE-lct variables here e.g:
-    !XIF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_wtr%ptr)) THEN
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_wtr%ptr)) THEN
 
-    !X  CALL mem%Add_var( 't_wtr', mem%t_wtr,                                            &
-    !X    & hgrid, surface,                                                              &
-    !X    & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
-    !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-    !X    & prefix, suffix,                                                              &
-    !X    & initval_r=280.0_wp )
+      CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                            &
+        & hgrid, surface,                                                              &
+        & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & initval_r=280.0_wp )
 
-    !X  CALL mem%Add_var( 't_ice', mem%t_ice,                                            &
-    !X    & hgrid, surface,                                                              &
-    !X    & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
-    !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-    !X    & prefix, suffix,                                                              &
-    !X    & initval_r=tmelt )
+      ! CALL mem%Add_var( 't_ice', mem%t_ice,                                            &
+      !   & hgrid, surface,                                                              &
+      !   & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      !   & prefix, suffix,                                                              &
+      !   & initval_r=tmelt )
 
-    !X END IF
+     END IF
 
-  END SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_memory
+  END SUBROUTINE Init_lentic_memory
 
 #endif
-END MODULE mo_<PROCESS_NAME_LOWER_CASE>_memory_class
+END MODULE mo_lentic_memory_class
