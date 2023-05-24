@@ -54,8 +54,7 @@ CONTAINS
   SUBROUTINE Init_assimi_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_vertical_axes,  ONLY: t_jsb_vgrid, new_vgrid, Register_vgrid, VGRID_JSB_CANOPY, VGRID_Q_CANOPY
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
     USE mo_jsb_math_constants, ONLY: eps4
 
@@ -133,7 +132,7 @@ CONTAINS
     config%canopy_layer_scheme           = TRIM(canopy_layer_scheme)
 
     ! Create vertical axis
-    canopy_layer  => new_vgrid('canopy_layer', ZAXIS_GENERIC, config%ncanopy, &
+    canopy_layer  => new_vgrid('canopy_layer', VGRID_JSB_CANOPY, ZAXIS_GENERIC, config%ncanopy, &
       levels=(/ (REAL(i,kind=wp),i=1,config%ncanopy) /), units='')
     CALL register_vgrid(canopy_layer)
 
@@ -179,7 +178,7 @@ CONTAINS
     !! 
     !! note: the axis of the canopy_layer vgrid is used as "reversed", i.e., layer 1 is the top canopy layer \n
     !! levels is defined as the depth at the center of the layer: levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
-    vgrid_canopy  => new_vgrid('canopy_layer_q_', ZAXIS_GENERIC, ncanopy_q_, &
+    vgrid_canopy  => new_vgrid('canopy_layer_q_', VGRID_Q_CANOPY, ZAXIS_GENERIC, ncanopy_q_, &
                       longname='Canopy layers (leaf mass per layer as LAI) from ASSIMI_ QUINCY', &
                       units='m2 m-2 LAI', &
                       ! levels=   , &

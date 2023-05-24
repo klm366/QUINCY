@@ -49,8 +49,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, RAD_, ASSIMI_, PHENO_, VEG_  ! SSE_ 
-    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_jsb_vertical_axes,       ONLY: VGRID_Q_CANOPY
     USE mo_jsb_parallel,            ONLY: Get_omp_thread
     USE mo_atmland_constants,       ONLY: min_wind
     USE mo_jsb_physical_constants,  ONLY: r_gas, tmelt
@@ -79,7 +78,6 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER       :: model
     TYPE(t_lctlib_element), POINTER       :: lctlib                           !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER       :: vgrid_canopy                     !  Vertical grid
     INTEGER                               :: ncanopy                          !  number of canopy layers
     INTEGER                               :: icanopy                          !  for looping across ncanopy layers
     INTEGER                               :: no_omp_thread                    !  number of open mp thread (for task options)
@@ -154,6 +152,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    ncanopy = options%vdims(VGRID_Q_CANOPY)
     steplen = options%steplen
 
     ! ---------------------------
@@ -164,8 +163,6 @@ CONTAINS
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
-    ncanopy       =  vgrid_canopy%n_levels
     no_omp_thread = Get_omp_thread()
     ! Get process config
     dsl4jsb_Get_config(ASSIMI_)

@@ -20,8 +20,9 @@ MODULE mo_hydro_init
   USE mo_jsb_control,        ONLY: debug_on, jsbach_runs_standalone
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+  USE mo_jsb_grid,           ONLY: Get_grid
+  USE mo_jsb_vertical_axes,  ONLY: t_jsb_vgrid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
   USE mo_jsb_class,          ONLY: get_model
   USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input

@@ -43,8 +43,9 @@ CONTAINS
 
     USE mo_jsb_varlist,       ONLY: t_jsb_varlist
     USE mo_jsb_io,            ONLY: tables
-    USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
+    USE mo_jsb_grid_class,    ONLY: t_jsb_grid
+    USE mo_jsb_grid,          ONLY: Get_grid
+    USE mo_jsb_vertical_axes, ONLY: t_jsb_vgrid, Get_vgrid
 
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_tlcc_memory), INTENT(inout), TARGET :: mem

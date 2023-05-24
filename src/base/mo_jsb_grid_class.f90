@@ -34,8 +34,8 @@ MODULE mo_jsb_grid_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
-  PUBLIC :: new_grid, delete_grid, new_vgrid, delete_vgrid
+  PUBLIC :: t_jsb_grid, t_jsb_grid_ptr
+  PUBLIC :: new_grid, delete_grid
 
   TYPE t_jsb_grid
     INTEGER                       :: id = 0
@@ -76,25 +76,6 @@ MODULE mo_jsb_grid_class
   TYPE t_jsb_grid_ptr
     TYPE(t_jsb_grid), POINTER :: p => NULL()
   END TYPE t_jsb_grid_ptr
-
-  TYPE t_jsb_vgrid
-    INTEGER ::           id           = 0
-    CHARACTER(len=20) :: name         = ''
-    CHARACTER(len=50) :: longname     = ''
-    CHARACTER(len=10) :: units        = ''
-    INTEGER :: n_levels               = 0
-    REAL(wp), ALLOCATABLE :: levels(:)
-    REAL(wp), ALLOCATABLE :: lbounds(:)
-    REAL(wp), ALLOCATABLE :: ubounds(:)
-    REAL(wp), ALLOCATABLE :: dz(:)
-    INTEGER :: cdi_axis_type          = 0
-    INTEGER :: ZaxisID                = 0   ! ICON: zaxis type (ZA_*), ECHAM: cdi zaxis id
-    INTEGER :: echamZaxisIdx          = 0   ! ICON: N/A, ECHAM: levelindx for dimension
-  END TYPE t_jsb_vgrid
-
-  TYPE t_jsb_vgrid_ptr
-    TYPE(t_jsb_vgrid), POINTER :: p => NULL()
-  END TYPE t_jsb_vgrid_ptr
 
   INTERFACE new_grid
     MODULE PROCEDURE new_grid_from_file
@@ -381,170 +362,6 @@ CONTAINS
     get_col_end = get_col_end_domain(iblk, grid%patch)
 
   END FUNCTION get_col_end
-
-  FUNCTION new_vgrid(name, cdi_axis_type, length, longname, units, levels, lbounds, ubounds, dz) RESULT(new)
-
-
-    CHARACTER(len=*),           INTENT(in) :: name
-    INTEGER,                    INTENT(in) :: cdi_axis_type
-    INTEGER,                    INTENT(in) :: length
-    CHARACTER(len=*), OPTIONAL, INTENT(in) :: longname
-    CHARACTER(len=*), OPTIONAL, INTENT(in) :: units
-    REAL(wp),         OPTIONAL, INTENT(in) :: levels(length)
-    REAL(wp),         OPTIONAL, INTENT(in) :: lbounds(length)
-    REAL(wp),         OPTIONAL, INTENT(in) :: ubounds(length)
-    REAL(wp),         OPTIONAL, INTENT(in) :: dz(length)
-
-    TYPE(t_jsb_vgrid), POINTER :: new
-
-    INTEGER :: i
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':new_vgrid'
-
-    IF (TRIM(name) == '') CALL finish(routine, 'Must specify axis name')
-    IF (length < 1) CALL finish(routine, TRIM(name)//' - length < 1')
-
-    ALLOCATE(new)
-
-    new%cdi_axis_type = cdi_axis_type
-    new%name = TRIM(name)
-    new%n_levels = length
-
-    IF (PRESENT(longname)) THEN
-      new%longname = TRIM(longname)
-    ELSE
-      new%longname = ''
-    END IF
-    IF (PRESENT(units)) THEN
-      new%units  = TRIM(units)
-    ELSE
-      new%units = ''
-    END IF
-
-    ALLOCATE(new%levels(length), new%lbounds(length), new%ubounds(length), new%dz(length))
-    new%levels (:) = 0._wp
-    new%lbounds(:) = 0._wp
-    new%ubounds(:) = 0._wp
-    new%dz     (:) = 0._wp
-    !$ACC ENTER DATA PCREATE(new%levels, new%lbounds, new%ubounds, new%dz)
-
-    IF (PRESENT(levels))  new%levels (:) = levels(:)
-    IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
-    IF (PRESENT(ubounds)) new%ubounds(:) = ubounds(:)
-    IF (PRESENT(dz)) THEN
-      IF (ANY(dz(:) <= 0._wp)) CALL finish(routine, 'Dz must be larger than zero')
-      new%dz     (:) = dz(:)
-    END IF
-
-    IF (PRESENT(lbounds) .AND. PRESENT(ubounds)) THEN
-      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(routine, 'Ubounds must be larger than Lbounds')
-      IF (PRESENT(dz)) THEN
-        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(routine, 'Dz != Ubounds-Lbounds')
-      ELSE
-        new%dz(:) = ubounds(:) - lbounds(:)
-      END IF
-      IF (.NOT. PRESENT(levels)) THEN
-        new%levels(:) = 0.5_wp * (lbounds(:) + ubounds(:))
-      END IF
-    ELSE IF (PRESENT(lbounds)) THEN
-      IF (PRESENT(dz)) THEN
-        new%ubounds(:) = lbounds(:) + dz(:)
-        IF (.NOT. PRESENT(levels)) THEN
-          new%levels(:) = 0.5_wp * (lbounds(:) + new%ubounds(:))
-        END IF
-      ELSE IF (PRESENT(levels)) THEN
-        new%ubounds(:) = levels(:) + (levels(:) - lbounds(:))
-        new%dz(:) = new%ubounds(:) - lbounds(:)
-      ELSE
-        CALL finish(routine, 'Lbounds present ... specify either Levels or Dz!')
-      END IF
-    ELSE IF (PRESENT(ubounds)) THEN
-      IF (PRESENT(dz)) THEN
-        new%lbounds(:) = ubounds(:) - dz(:)
-        IF (.NOT. PRESENT(levels)) THEN
-          new%levels(:) = 0.5_wp * (new%lbounds(:) + ubounds(:))
-        END IF
-      ELSE IF (PRESENT(levels)) THEN
-        new%lbounds(:) = levels(:) - (ubounds(:) - levels(:))
-        new%dz(:) = ubounds(:) - new%lbounds(:)
-      ELSE
-        CALL finish(routine, 'Ubounds present ... specify either Levels or Dz!')
-      END IF
-    ELSE
-      IF (PRESENT(levels) .AND. PRESENT(dz)) THEN
-        CALL finish(routine, 'Levels and dz given ... please specify lbounds and/or ubounds')
-      ELSE IF (PRESENT(dz)) THEN
-        new%lbounds(1) = 0._wp
-        DO i=2,length
-          new%lbounds(i) = new%lbounds(i-1) + dz(i-1)
-        END DO
-        new%ubounds(:) = new%lbounds(:) + dz(:)
-        new%levels(:) = 0.5_wp * (new%lbounds(:) + new%ubounds(:))
-      ELSE IF (PRESENT(levels)) THEN
-        IF (length > 1) THEN ! Multi-level axis
-          new%lbounds(1) = 0._wp
-          DO i=2,length
-            new%lbounds(i) = levels(i-1) + (levels(i-1) - new%lbounds(i-1))
-          END DO
-          new%ubounds(:) = levels(:) + (levels(:) - new%lbounds(:))
-          new%dz(:) = new%ubounds(:) - new%lbounds(:)
-        ELSE ! Single level axis (level specified)
-          new%lbounds(1) = levels(1)
-          new%ubounds(1) = levels(1)
-          new%dz(1)      = 0._wp
-        END IF
-      ELSE
-        IF (length > 1) THEN ! Multi-level axis
-          DO i=1,length
-            new%levels(i) = REAL(i,wp)
-            new%lbounds(i) = REAL(i,wp)
-            new%ubounds(i) = REAL(i+1,wp)
-            new%dz(i) = 1._wp
-          END DO
-        ELSE ! Single level axis (level not specified)
-          new%levels(1) = 0._wp
-          new%lbounds(1) = 0._wp
-          new%ubounds(1) = 0._wp
-          new%dz(1)      = 0._wp
-        END IF
-      END IF
-    END IF
-    !$ACC UPDATE DEVICE(new%levels) IF(present(levels))
-    !$ACC UPDATE DEVICE(new%lbounds) IF(present(lbounds))
-    !$ACC UPDATE DEVICE(new%ubounds) IF(present(ubounds))
-    !$ACC UPDATE DEVICE(new%dz) IF(present(dz))
-  END FUNCTION new_vgrid
-
-  SUBROUTINE delete_vgrid(self)
-
-    ! USE mo_jsb_io_iface, ONLY: Destroy_zaxis
-
-#ifdef HAVE_F2003
-    TYPE(t_jsb_vgrid), POINTER, INTENT(inout) :: self
-#else
-    TYPE(t_jsb_vgrid), POINTER :: self
-#endif
-
-    CHARACTER(len=*), PARAMETER :: routine = modname//':delete_vgrid'
-
-    IF (self%id == 0) RETURN
-
-    CALL message(routine, 'starting destruction of JSBACH vgrid instance.')
-
-    !$ACC EXIT DATA DELETE(self%levels) IF(allocated(self%levels))
-    !$ACC EXIT DATA DELETE(self%lbounds) IF(allocated(self%lbounds))
-    !$ACC EXIT DATA DELETE(self%ubounds) IF(allocated(self%ubounds))
-    !$ACC EXIT DATA DELETE(self%dz) IF(allocated(self%dz))
-    IF (ALLOCATED(self%levels))  DEALLOCATE(self%levels)
-    IF (ALLOCATED(self%lbounds)) DEALLOCATE(self%lbounds)
-    IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)
-    IF (ALLOCATED(self%dz))      DEALLOCATE(self%dz)
-
-    DEALLOCATE(self)
-
-    CALL message(routine, 'destruction of JSBACH vgrid completed.')
-
-  END SUBROUTINE delete_vgrid
 
 #endif
 END MODULE mo_jsb_grid_class

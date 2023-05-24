@@ -118,6 +118,7 @@ CONTAINS
   FUNCTION new_model(id, name, shortname, description, namelist_filename) RESULT(return_ptr)
 
 !!$    USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
+    USE mo_jsb_vertical_axes, ONLY: INVALID
 
     INTEGER,                    INTENT(in) :: id
     CHARACTER(len=*),           INTENT(in) :: name
@@ -126,7 +127,7 @@ CONTAINS
     CHARACTER(len=*),           INTENT(in) :: namelist_filename !< Model namelist file
     TYPE(t_jsb_model), POINTER             :: return_ptr
 
-    INTEGER :: nthreads
+    INTEGER :: nthreads, ithread
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_model_class:new_model'
 
@@ -147,6 +148,10 @@ CONTAINS
 
     nthreads = Get_omp_no_of_threads()
     ALLOCATE(return_ptr%options(nthreads))
+    DO ithread=1,nthreads
+      ALLOCATE(return_ptr%options(ithread)%vdims(INVALID-1))
+      return_ptr%options(ithread)%vdims(:) = -1
+    END DO
     ALLOCATE(return_ptr%current_task(nthreads))
 
 !!$    return_ptr%Hsm => return_ptr%t_Hsm

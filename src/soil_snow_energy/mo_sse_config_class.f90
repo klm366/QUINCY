@@ -57,8 +57,7 @@ CONTAINS
 
     USE mo_sse_constants,      ONLY: snow_depth_min
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_vertical_axes,  ONLY: t_jsb_vgrid, new_vgrid, Register_vgrid, VGRID_JSB_ENERGY, VGRID_JSB_SNOW
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND, ZAXIS_GENERIC
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
 
@@ -182,7 +181,7 @@ CONTAINS
 
     CALL input_file%Close()
 
-    soil_vgrid  => new_vgrid('soil_depth_energy', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
+    soil_vgrid  => new_vgrid('soil_depth_energy', VGRID_JSB_ENERGY, ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                              &
       & lbounds = depths               (1:nsoil  ),                              &
       & ubounds = depths               (2:nsoil+1),                              &
@@ -210,7 +209,7 @@ CONTAINS
       END DO
       mids(1:nsnow) = (depths(1:nsnow) + depths(2:nsnow+1)) / 2._wp
 
-      snow_vgrid  => new_vgrid('snow_depth_energy', ZAXIS_GENERIC, nsnow,     &
+      snow_vgrid  => new_vgrid('snow_depth_energy', VGRID_JSB_SNOW, ZAXIS_GENERIC, nsnow,     &
         & levels  = mids                 (1:nsnow  ),                         &
         & lbounds = depths               (1:nsnow  ),                         &
         & ubounds = depths               (2:nsnow+1),                         &

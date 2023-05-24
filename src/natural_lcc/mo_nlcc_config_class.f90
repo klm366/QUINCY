@@ -50,8 +50,7 @@ CONTAINS
   SUBROUTINE Init_nlcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_vertical_axes,  ONLY: t_jsb_vgrid, new_vgrid, Register_vgrid, VGRID_JSB_PFTS
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
 
     CLASS(t_nlcc_config), INTENT(inout) :: config
@@ -106,7 +105,7 @@ CONTAINS
 
     ! Create vertical axis
     npft=11 ! TODO here we can not grab it from tile%no_of_children or mem%no_of_children
-    pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, npft, &
+    pft_layer  => new_vgrid('pfts', VGRID_JSB_PFTS, ZAXIS_GENERIC, npft, &
       & levels=(/ (REAL(i,kind=wp),i=1,npft) /), units='')
     CALL Register_vgrid(pft_layer)
 

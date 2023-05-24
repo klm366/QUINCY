@@ -18,7 +18,8 @@ MODULE mo_jsb_memory_class
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish
   USE mo_jsb_config_class,  ONLY: t_jsb_config
-  USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid_class,    ONLY: t_jsb_grid
+  USE mo_jsb_vertical_axes, ONLY: t_jsb_vgrid
   USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist,                         &
 #ifdef __ICON__
     &                             add_var_list_element_r1d,                           &

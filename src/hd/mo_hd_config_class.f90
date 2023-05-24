@@ -46,8 +46,8 @@ CONTAINS
   SUBROUTINE Init_hd_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_vertical_axes,  ONLY: t_jsb_vgrid, new_vgrid, Register_vgrid, &
+      &                              VGRID_HD_BASEFLOW, VGRID_HD_OVERLFLOW, VGRID_HD_RIVERFLOW
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
 
     CLASS(t_hd_config),INTENT(inout) :: config
@@ -114,13 +114,13 @@ CONTAINS
 
     IF (.NOT. active) RETURN
 
-    hd_o  => new_vgrid('hd_nres_overlflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
+    hd_o  => new_vgrid('hd_nres_overlflow', VGRID_HD_OVERLFLOW, ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
     CALL Register_vgrid(hd_o)
 
-    hd_b  => new_vgrid('hd_nres_baseflow', ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
+    hd_b  => new_vgrid('hd_nres_baseflow', VGRID_HD_BASEFLOW, ZAXIS_DEPTH_BELOW_LAND, 1, levels=(/1._wp/), units='')
     CALL Register_vgrid(hd_b)
 
-    hd_r  => new_vgrid('hd_nres_riverflow', ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._wp,2._wp,3._wp,4._wp,5._wp/), units='')
+    hd_r  => new_vgrid('hd_nres_riverflow', VGRID_HD_RIVERFLOW, ZAXIS_DEPTH_BELOW_LAND, 5, levels=(/1._wp,2._wp,3._wp,4._wp,5._wp/), units='')
     CALL Register_vgrid(hd_r)
 
   END SUBROUTINE Init_hd_config
