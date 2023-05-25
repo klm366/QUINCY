@@ -379,12 +379,18 @@ CONTAINS
   SUBROUTINE aggregate_lentic(tile, options)
 
     ! Arguments
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    dsl4jsb_Def_memory(LENTIC_)
+
+    CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_lentic'
     
     ! Get local variables from options argument
@@ -397,10 +403,13 @@ CONTAINS
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)    
-    !X Implementation: Start your process scheme here...
-    
-    
+    dsl4jsb_Get_memory(LENTIC_)
+
+    model             => Get_model(tile%owner_model_id)    
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    dsl4jsb_Aggregate_onChunk(LENTIC_, T_sfc,        weighted_by_fract)
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_lentic

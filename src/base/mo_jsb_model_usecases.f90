@@ -225,6 +225,13 @@ CONTAINS
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+      ELSE IF (model%config%use_flake) THEN
+        lake_tile => t_jsb_tile('lake', 'Lake tile', &
+          & processes=(/LENTIC_/), process_actions=(/ ON_TILE_/), &
+          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+        land_tile => t_jsb_tile('land', 'Land tile', &
+          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
