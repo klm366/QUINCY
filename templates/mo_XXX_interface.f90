@@ -36,14 +36,14 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
 
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
-  
+
   ! Use of basic structures
   USE mo_jsb_control,     ONLY: debug_on
   USE mo_kind,            ONLY: wp
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -59,39 +59,39 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
   dsl4jsb_Use_memory(<PROCESS_NAME_UPPER_CASE>_)
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
-  
+  ! Module variables
+
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: Register_<PROCESS_NAME_LOWER_CASE>_tasks !, t_<PROCESS_NAME_LOWER_CASE>_process
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_<PROCESS_NAME_LOWER_CASE>_interface'
-  
+
   !> Type definition for <PROCESS_NAME_LOWER_CASE> process
 !   TYPE, EXTENDS(t_jsb_process) :: t_<PROCESS_NAME_LOWER_CASE>_process
 !   CONTAINS
 !     PROCEDURE :: Register_tasks => Register_<PROCESS_NAME_LOWER_CASE>_tasks        !< Registers tasks for <PROCESS_NAME_LOWER_CASE> process
 !   END TYPE t_<PROCESS_NAME_LOWER_CASE>_process
-  
+
   !> Type definition for <PROCESS_NAME_LOWER_CASE> task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_<PROCESS_NAME_LOWER_CASE>_<TASK>     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_<PROCESS_NAME_LOWER_CASE>_<TASK>  !< Aggregates computed task variables
   END TYPE tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>
-  
+
   !> Constructor interface for <PROCESS_NAME_LOWER_CASE> task
   INTERFACE tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>
     PROCEDURE Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>                        !< Constructor function for task
   END INTERFACE tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>
 
   !X Repeat here for each additional task of the process the two blocks above ...
-  
+
 CONTAINS
 
   ! ================================================================================================================================
   !! Constructors for tasks
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for <PROCESS_NAME_LOWER_CASE> task
   !!
@@ -104,9 +104,9 @@ CONTAINS
     CALL return_ptr%Construct(name='<PROCESS_NAME_LOWER_CASE>_<TASK>', process_id=<PROCESS_NAME_UPPER_CASE>_, owner_model_id=model_id)
 
   END FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>
-  
+
   !X Repeat here for each additional task of the process the function above ...
-    
+
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for <PROCESS_NAME_LOWER_CASE> process
   !!
@@ -117,7 +117,7 @@ CONTAINS
 
     CALL process%Register_task(tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>(model_id))
     !X Repeat the line above here for each additional task of the process ...
-    
+
   END SUBROUTINE Register_<PROCESS_NAME_LOWER_CASE>_tasks
 
   ! ================================================================================================================================
@@ -152,14 +152,14 @@ CONTAINS
     nc      = options%nc
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
-    
+
     ! If process is not active on this tile, do nothing
     !IF (.NOT. tile%Is_process_calculated(<PROCESS_NAME_UPPER_CASE>_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    
+
     ! Get process memories
     dsl4jsb_Get_memory(<PROCESS_NAME_UPPER_CASE>_)
 
@@ -167,12 +167,12 @@ CONTAINS
     !X e.g: dsl4jsb_Get_var2D_onChunk(<PROCESS_NAME_UPPER_CASE>_, t_srf)     ! IN
 
     !X Implementation: Start your process scheme here...
-    
-    
+
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_<PROCESS_NAME_LOWER_CASE>
-  
+
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "<PROCESS_NAME_LOWER_CASE>"
@@ -189,7 +189,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_<PROCESS_NAME_LOWER_CASE>'
-    
+
     ! Get local variables from options argument
     iblk = options%iblk
     ics  = options%ics
@@ -197,26 +197,26 @@ CONTAINS
     nc   = options%nc
     !X if necessary: dtime   = options%dtime
     !X if necessary: steplen = options%steplen
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
-    model => Get_model(tile%owner_model_id)    
+    model => Get_model(tile%owner_model_id)
     !X Implementation: Start your process scheme here...
-    
+
     !X aggregation example (note that currently `weighted_by_fract` is the only implemented aggregator)
     !X weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
     !X dsl4jsb_Aggregate_onChunk(<PROCESS_NAME_UPPER_CASE>_, t_srf, weighted_by_fract)
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_<PROCESS_NAME_LOWER_CASE>
 
-  
+
   ! ================================================================================================================================
   !>
   !! @brief Another task for "<PROCESS_NAME_LOWER_CASE>"
   !  ....
-  
+
 #endif
 END MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface

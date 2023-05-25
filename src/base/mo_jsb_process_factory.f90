@@ -41,7 +41,8 @@ MODULE mo_jsb_process_factory
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_memory_class,      ONLY: t_hd_memory
 #endif
-  USE mo_rad_interface,        ONLY: Register_rad_tasks
+  USE mo_q_rad_interface,      ONLY: Register_rad_tasks_quincy
+  USE mo_jsb_rad_interface,    ONLY: Register_rad_tasks_jsbach
   USE mo_rad_config_class,     ONLY: t_rad_config
   USE mo_seb_interface,        ONLY: Register_seb_tasks
   USE mo_seb_config_class,     ONLY: t_seb_config
@@ -104,11 +105,18 @@ MODULE mo_jsb_process_factory
 
 CONTAINS
 
-  FUNCTION Create_process(iproc, model_id, namelist_filename) RESULT(return_ptr)
+  FUNCTION Create_process( &
+    & iproc, &
+    & model_id, &
+    & namelist_filename, &
+    & model_scheme) RESULT(return_ptr)
+    
+    USE mo_jsb_model_class,     ONLY: MODEL_JSBACH, MODEL_QUINCY
 
-    INTEGER, INTENT(in) :: iproc
-    INTEGER, INTENT(in) :: model_id
-    CHARACTER(LEN=*), INTENT(in) :: namelist_filename
+    INTEGER,          INTENT(in)  :: iproc
+    INTEGER,          INTENT(in)  :: model_id
+    CHARACTER(LEN=*), INTENT(in)  :: namelist_filename
+    INTEGER,          INTENT(in)  :: model_scheme
     CLASS(t_jsb_process), POINTER :: return_ptr
 
     ALLOCATE(t_jsb_process::return_ptr)
@@ -124,7 +132,12 @@ CONTAINS
     CASE (A2L_, L2A_)
       ! Do nothing for A2L and L2A: these processes currently have no tasks and no config
     CASE (RAD_)
-      CALL Register_rad_tasks(return_ptr, model_id)
+      SELECT CASE (model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL Register_rad_tasks_jsbach(return_ptr, model_id)
+      CASE (MODEL_QUINCY)
+        CALL Register_rad_tasks_quincy(return_ptr, model_id)
+      END SELECT
       ALLOCATE(t_rad_config::return_ptr%config)
     CASE (SEB_)
       CALL Register_seb_tasks(return_ptr, model_id)

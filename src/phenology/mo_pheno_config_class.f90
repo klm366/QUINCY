@@ -32,14 +32,14 @@ MODULE mo_pheno_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_pheno_config
     ! ----------------------------------------------------------------------------------------------------- !
     !> MODEL_JSBACH
-    !> 
+    !>
     LOGICAL             :: l_forestRegrowth           !< If TRUE, the maxLAI is derived from biomass via allometric relationships
     CHARACTER(len=15)   :: scheme_jsbach              !< Phenology scheme to use ('logrop', 'climatology')
-    !LOGICAL :: first_call_phenology_this_day         !< TRUE marks if a new day has just started and 
+    !LOGICAL :: first_call_phenology_this_day         !< TRUE marks if a new day has just started and
     !                                                 !< update_phenology is called for the top tile
     ! ----------------------------------------------------------------------------------------------------- !
     !> MODEL_QUINCY
-    !> 
+    !>
     ! ...
     CONTAINS
       PROCEDURE :: Init => Init_pheno_config

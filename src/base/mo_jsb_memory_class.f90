@@ -17,7 +17,6 @@ MODULE mo_jsb_memory_class
 
   USE mo_kind,              ONLY: wp, dp
   USE mo_exception,         ONLY: finish
-  USE mo_jsb_config_class,  ONLY: t_jsb_config
   USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
   USE mo_jsb_varlist,       ONLY: t_jsb_varlist, Get_varlist,                         &
 #ifdef __ICON__
@@ -38,7 +37,7 @@ MODULE mo_jsb_memory_class
 
 #ifdef _OPENACC
   use openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#define __acc_attach(ptr) CALL acc_attach(ptr)
 #else
 #define __acc_attach(ptr)
 #endif
@@ -46,10 +45,7 @@ MODULE mo_jsb_memory_class
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: t_jsb_memory_p, t_jsb_memory, t_jsb_param
-
-  TYPE, ABSTRACT :: t_jsb_param
-  END TYPE t_jsb_param
+  PUBLIC :: t_jsb_memory_p, t_jsb_memory
 
   ! This type contains the memory state for each tile for one process
   TYPE, ABSTRACT :: t_jsb_memory
@@ -65,10 +61,11 @@ MODULE mo_jsb_memory_class
     CHARACTER(len=SHORT_NAME_LEN) :: owner_tile_name
     INTEGER :: max_no_of_vars = 0
     INTEGER :: no_of_vars = 0
-    CLASS(t_jsb_pool), POINTER :: pools => NULL()
+    LOGICAL :: has_bgc_materials = .FALSE.
+    CLASS(t_jsb_pool), POINTER :: pools         => NULL()
+    CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()   ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
     CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
     TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)
-    CLASS(t_jsb_param), POINTER :: param => NULL()
     LOGICAL :: in_var_groups = .FALSE.
   CONTAINS
     PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init
@@ -101,17 +98,13 @@ MODULE mo_jsb_memory_class
   !       (of class t_jsb_var) contained in the memory structure.
   ABSTRACT INTERFACE
     SUBROUTINE Init_memory(mem, prefix, suffix, lct_ids, model_id)
-      IMPORT :: t_jsb_memory, t_jsb_config
+      IMPORT :: t_jsb_memory
       CLASS(t_jsb_memory), INTENT(inout), TARGET :: mem
       CHARACTER(LEN=*),    INTENT(in)    :: prefix, suffix
       INTEGER,             INTENT(in)    :: lct_ids(:)     !< Primary lct (1) and lcts of descendant tiles
       INTEGER,             INTENT(in)    :: model_id
     END SUBROUTINE Init_memory
   END INTERFACE
-
-!  INTERFACE t_jsb_memory
-!    PROCEDURE Create_process_memory
-!  END INTERFACE t_jsb_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_memory_class'
 
@@ -163,7 +156,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r1d'
 
     name_loc = TRIM(name)
@@ -314,7 +307,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r2d'
 
     name_loc = TRIM(name)
@@ -391,7 +384,7 @@ CONTAINS
     var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
     IF (PRESENT(lrestart)) var%is_in_restart = lrestart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
-  
+
     IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
     IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
 
@@ -464,7 +457,7 @@ CONTAINS
     INTEGER           :: no_groups                           ! number of additional groups this variable belongs to
     INTEGER           :: out_level, igroup                   ! loop variables
     CHARACTER(len=:), ALLOCATABLE :: out_level_name          ! loop variable
-    
+
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r3d'
 
@@ -545,6 +538,7 @@ CONTAINS
     var%full_name = TRIM(name_loc)
     var%unit = TRIM(cf%units)
     var%type = REAL3D
+    var%len_dim3 = vgrid%n_levels
     var%missval = missval_r_loc
     IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
     IF (loutput_loc) THEN
@@ -787,7 +781,7 @@ CONTAINS
       var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
       IF (PRESENT(lrestart)) var%is_in_restart = lrestart
       ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
-    
+
     var%owner_model_id = mem%owner_model_id
     var%owner_proc_id  = mem%owner_proc_id
 

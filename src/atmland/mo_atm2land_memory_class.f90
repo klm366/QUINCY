@@ -36,12 +36,12 @@ MODULE mo_a2l_memory_class
     !------------------------------------------------------------------------------------------------------ !
     !>1.0 jsbach4
     !>
-    
+
     TYPE(t_jsb_var_real2d) :: &
-      & DEBUG_VAR               , &  !< 
-      & fract_par_diffuse       , &  !< 
-      & CO2_air                 , &  !< 
-      & CO2_air_mol                  !< 
+      & DEBUG_VAR               , &  !<
+      & fract_par_diffuse       , &  !<
+      & CO2_air                 , &  !<
+      & CO2_air_mol                  !<
 
 
     !------------------------------------------------------------------------------------------------------ !
@@ -52,27 +52,27 @@ MODULE mo_a2l_memory_class
     !>
 
     TYPE(t_jsb_var_real2d) :: &
-      & t_air                   , &  !< 2m air temperature [K] 
-      & q_air                   , &  !< 2m air specific humidity [g g-1] 
+      & t_air                   , &  !< 2m air temperature [K]
+      & q_air                   , &  !< 2m air specific humidity [g g-1]
       & rain                    , &  !< liquid water precipitation [kg m-2 s-1]
       & snow                    , &  !< solid water precipitation [kg m-2 s-1]
-      & wind_air                , &  !< 2m air wind speed [m s-1] 
-      & wind_10m                , &  !< 10m air wind speed [m s-1] 
-      & lw_srf_down             , &  !< longwave surface downward flux [W m-2] 
+      & wind_air                , &  !< 2m air wind speed [m s-1]
+      & wind_10m                , &  !< 10m air wind speed [m s-1]
+      & lw_srf_down             , &  !< longwave surface downward flux [W m-2]
       & swvis_srf_down          , &  !< shortwave surface downward flux in the visible band [W m-2]
-      & swnir_srf_down          , &  !< shortwave surface downward flux in the near infrared band [W m-2] 
-      & swpar_srf_down          , &  !< shortwave surface downward flux in the PAR band [W m-2] 
+      & swnir_srf_down          , &  !< shortwave surface downward flux in the near infrared band [W m-2]
+      & swpar_srf_down          , &  !< shortwave surface downward flux in the PAR band [W m-2]
       & press_srf               , &  !< surface air pressure [Pa]
-      & drag_srf                , &  !< total surface drag [unitless] 
-      & t_acoef                 , &  !< Richtmeyer-Morten coefficient A for temperature [unitless] 
+      & drag_srf                , &  !< total surface drag [unitless]
+      & t_acoef                 , &  !< Richtmeyer-Morten coefficient A for temperature [unitless]
       & t_bcoef                 , &  !< Richtmeyer-Morten coefficient B for temperature [unitless]
-      & q_acoef                 , &  !< Richtmeyer-Morten coefficient A for specific humidity [unitless] 
+      & q_acoef                 , &  !< Richtmeyer-Morten coefficient A for specific humidity [unitless]
       & q_bcoef                 , &  !< Richtmeyer-Morten coefficient B for specific humidity [unitless]
-      & pch                     , &  !< total surface drag [unitless] 
+      & pch                     , &  !< total surface drag [unitless]
       & cos_zenith_angle             !< Cosine of solar zenith angle [unitless]
 
     ! For lakes
-    TYPE(t_jsb_var_real2d) :: &                              
+    TYPE(t_jsb_var_real2d) :: &
       & drag_wtr                , &  !< drag coefficient over water [unitless]
       & drag_ice                , &  !< drag coefficient over ice [unitless]
       & t_acoef_wtr             , &  !< Richtmeyer-Morten coefficient A for temperature over water [unitless]
@@ -84,14 +84,10 @@ MODULE mo_a2l_memory_class
       & q_acoef_ice             , &  !< Richtmeyer-Morten coefficient A for specific humidity over ice [unitless]
       & q_bcoef_ice                  !< Richtmeyer-Morten coefficient A for specific humidity over ice [unitless]
 
-    
+
     !------------------------------------------------------------------------------------------------------ !
     !>3.0 quincy
     !>
-
-    TYPE(t_jsb_var_real2d) :: &
-      & swpar_fdiffuse            !< fraction of shortwave surface downward flux that is diffuse [fraction]
-                                  !< in jsbach4 this variable is named: fract_par_diffuse
 
     ! CO2
     TYPE(t_jsb_var_real2d) :: &
@@ -107,7 +103,7 @@ MODULE mo_a2l_memory_class
       & ga                         !< aerodynamic conductance [m s-1]
 
     ! Deposition
-    TYPE(t_jsb_var_real2d) :: &                                                            
+    TYPE(t_jsb_var_real2d) :: &
       & nhx_deposition        , &  !< surface downward reduced nitrogen deposition velocity [mumol m-2 sec-1]
       & noy_deposition        , &  !< surface downward oxidised nitrogen deposition velocity [mumol m-2 sec-1]
       & nhx_n15_deposition    , &  !< surface downward reduced nitrogen-15 deposition velocity [mumol m-2 sec-1]
@@ -117,8 +113,10 @@ MODULE mo_a2l_memory_class
     ! For calculation of the timestep after local midnight (1st timestep of the new day)
     TYPE(t_jsb_var_real2d) :: &
       & prev_one_cos_zenith_angle   , &   !< cos_zenith_angle of the previous timestep [unitless]
-      & prev_two_cos_zenith_angle         !< cos_zenith_angle of the before previous timestep [unitless]
-    
+      & prev_two_cos_zenith_angle   , &   !< cos_zenith_angle of the before previous timestep [unitless]
+      & prev_three_cos_zenith_angle , &   !< cos_zenith_angle of the before before previous timestep [unitless]
+      & daytime_counter                   !< number of timesteps of current day with light available [#]
+
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
   END TYPE t_a2l_memory
@@ -171,7 +169,7 @@ CONTAINS
                 swvis_srf_down_init, &
                 swnir_srf_down_init, &
                 swpar_srf_down_init, &
-                swpar_fdiffuse_init, &
+                fract_par_diffuse_init, &
                 cos_zenith_angle_init, &
                 co2_mixing_ratio_init, &
                 co2_mixing_ratio_c13_init, &
@@ -186,7 +184,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! move to atm2land_init and init a2l variables there  @TODO
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      C13C12_mixing_ratio         = calc_mixing_ratio_C13C12(def_co2_deltaC13) 
+      C13C12_mixing_ratio         = calc_mixing_ratio_C13C12(def_co2_deltaC13)
       C14C_mixing_ratio           = calc_mixing_ratio_C14C(def_co2_deltaC13,def_co2_deltaC14)
       t_air_init                  = def_t_air
       press_srf_init              = standard_press_srf
@@ -198,11 +196,11 @@ CONTAINS
       swvis_srf_down_init         = def_swdown * frac_vis_swtot_srf
       swnir_srf_down_init         = def_swdown * (1._wp - frac_vis_swtot_srf)
       swpar_srf_down_init         = swvis_srf_down_init * frac_par_swvis_srf
-      swpar_fdiffuse_init         = def_fdiffuse
+      fract_par_diffuse_init      = def_fdiffuse !TODO: is this still required? Probably for QS?!
       cos_zenith_angle_init       = def_cos_angle
       co2_mixing_ratio_init       = def_co2_mixing_ratio
       co2_mixing_ratio_c13_init   = co2_mixing_ratio_init / (1._wp + 1._wp / C13C12_mixing_ratio)
-      co2_mixing_ratio_c14_init   = C14C_mixing_ratio * co2_mixing_ratio_init 
+      co2_mixing_ratio_c14_init   = C14C_mixing_ratio * co2_mixing_ratio_init
     END IF
 
     !! !$acc enter data create(mem)
@@ -249,9 +247,9 @@ CONTAINS
     ! --------------------------------------------------------------------------------------------------- !
     ! variables used with jsbach4 & quincy
     ! jsbach4 settings
-    ! 
+    !
     IF (model%config%model_scheme == MODEL_JSBACH) THEN
-    
+
     CALL mem%Add_var( 't_air', mem%t_air,                                    &
       & hgrid, surface,                                                      &
       & t_cf('air_temperature', 'K', ''),                                    &
@@ -514,11 +512,11 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ! quincy
     IF (model%config%model_scheme == MODEL_QUINCY) THEN
-      
+
       ! ------------------------------------------------------------------------------------------------- !
       ! variables used with jsbach4 & quincy
       ! quincy settings
-      ! 
+      !
       CALL mem%Add_var('t_air', mem%t_air, &
         & hgrid, surface, &
         & t_cf('t_air', 'K', '2m air temperature'), &
@@ -528,7 +526,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = t_air_init)
-  
+
       CALL mem%Add_var('q_air', mem%q_air, &
         & hgrid, surface, &
         & t_cf('q_air', 'g g-1', '2m air specific humidity'), &
@@ -538,7 +536,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = q_air_init)
-  
+
       CALL mem%Add_var('rain', mem%rain, &
         & hgrid, surface, &
         & t_cf('rain', 'kg m-2 s-1', 'liquid water precipitation'), &
@@ -548,7 +546,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('snow', mem%snow, &
         & hgrid, surface, &
         & t_cf('snow', 'kg m-2 s-1', 'solid water precipitation'), &
@@ -558,7 +556,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('wind_air', mem%wind_air, &
         & hgrid, surface, &
         & t_cf('wind_air', 'm s-1', '2m air wind speed'), &
@@ -568,7 +566,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = wind_air_init)
-  
+
       CALL mem%Add_var('wind_10m', mem%wind_10m, &
         & hgrid, surface, &
         & t_cf('wind_10m', 'm s-1', '10m air wind speed'), &
@@ -578,7 +576,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = wind_10m_init)
-  
+
       CALL mem%Add_var('lw_srf_down', mem%lw_srf_down, &
         & hgrid, surface, &
         & t_cf('lw_srf_down', 'W m-2', 'longwave surface downward flux'), &
@@ -588,7 +586,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('swvis_srf_down', mem%swvis_srf_down, &
         & hgrid, surface, &
         & t_cf('swvis_srf_down', 'W m-2', 'shortwave surface downward flux in the visible band'), &
@@ -598,7 +596,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = swvis_srf_down_init)
-  
+
       CALL mem%Add_var('swnir_srf_down', mem%swnir_srf_down, &
         & hgrid, surface, &
         & t_cf('swnir_srf_down', 'W m-2', 'shortwave surface downward flux in the near infrared band'), &
@@ -608,7 +606,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = swnir_srf_down_init)
-  
+
       CALL mem%Add_var('swpar_srf_down', mem%swpar_srf_down, &
         & hgrid, surface, &
         & t_cf('swpar_srf_down', 'W m-2', 'shortwave surface downward flux in the PAR band'), &
@@ -618,7 +616,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = swpar_srf_down_init)
-  
+
       CALL mem%Add_var('press_srf', mem%press_srf, &
         & hgrid, surface, &
         & t_cf('press_srf', 'Pa', 'surface air pressure'), &
@@ -628,7 +626,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = press_srf_init)
-  
+
       CALL mem%Add_var('drag_srf', mem%drag_srf, &
         & hgrid, surface, &
         & t_cf('drag_srf', 'unitless', 'total surface drag'), &
@@ -638,7 +636,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = drag_srf_init)
-  
+
       CALL mem%Add_var('t_acoef', mem%t_acoef, &
         & hgrid, surface, &
         & t_cf('t_acoef', 'unitless', 'Richtmeyer-Morten coefficient A for temperature'), &
@@ -648,7 +646,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('t_bcoef', mem%t_bcoef, &
         & hgrid, surface, &
         & t_cf('t_bcoef', 'unitless', 'Richtmeyer-Morten coefficient B for temperature'), &
@@ -658,7 +656,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('q_acoef', mem%q_acoef, &
         & hgrid, surface, &
         & t_cf('q_acoef', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity'), &
@@ -668,7 +666,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('q_bcoef', mem%q_bcoef, &
         & hgrid, surface, &
         & t_cf('q_bcoef', 'unitless', 'Richtmeyer-Morten coefficient B for specific humidity'), &
@@ -678,7 +676,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('pch', mem%pch, &
         & hgrid, surface, &
         & t_cf('pch', 'unitless', 'total surface drag'), &
@@ -688,7 +686,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('cos_zenith_angle', mem%cos_zenith_angle, &
         & hgrid, surface, &
         & t_cf('cos_zenith_angle', 'unitless', 'Cosine of solar zenith angle'), &
@@ -711,7 +709,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('drag_ice', mem%drag_ice, &
           & hgrid, surface, &
           & t_cf('drag_ice', 'unitless', 'drag coefficient over ice'), &
@@ -721,7 +719,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('t_acoef_wtr', mem%t_acoef_wtr, &
           & hgrid, surface, &
           & t_cf('t_acoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over water'), &
@@ -731,7 +729,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('t_bcoef_wtr', mem%t_bcoef_wtr, &
           & hgrid, surface, &
           & t_cf('t_bcoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over water'), &
@@ -741,7 +739,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('q_acoef_wtr', mem%q_acoef_wtr, &
           & hgrid, surface, &
           & t_cf('q_acoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over water'), &
@@ -751,7 +749,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('q_bcoef_wtr', mem%q_bcoef_wtr, &
           & hgrid, surface, &
           & t_cf('q_bcoef_wtr', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over water'), &
@@ -761,7 +759,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('t_acoef_ice', mem%t_acoef_ice, &
           & hgrid, surface, &
           & t_cf('t_acoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over ice'), &
@@ -771,7 +769,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('t_bcoef_ice', mem%t_bcoef_ice, &
           & hgrid, surface, &
           & t_cf('t_bcoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for temperature over ice'), &
@@ -781,7 +779,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('q_acoef_ice', mem%q_acoef_ice, &
           & hgrid, surface, &
           & t_cf('q_acoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over ice'), &
@@ -791,7 +789,7 @@ CONTAINS
           & loutput = .TRUE., &
           & lrestart = .TRUE., &
           & initval_r = 0.0_wp)
-  
+
         CALL mem%Add_var('q_bcoef_ice', mem%q_bcoef_ice, &
           & hgrid, surface, &
           & t_cf('q_bcoef_ice', 'unitless', 'Richtmeyer-Morten coefficient A for specific humidity over ice'), &
@@ -805,18 +803,8 @@ CONTAINS
       END IF ! lakes
 
       ! ------------------------------------------------------------------------------------------------- !
-      ! variables used only with quincy  
-      ! 
-      CALL mem%Add_var('swpar_fdiffuse', mem%swpar_fdiffuse, &
-        & hgrid, surface, &
-        & t_cf('swpar_fdiffuse', 'fraction', 'fraction of shortwave surface downward flux that is diffuse'), &
-        & t_grib1(table, 255, grib_bits), &
-        & t_grib2(255, 255, 255, grib_bits), &
-        & prefix, suffix, &
-        & loutput = .TRUE., &
-        & lrestart = .TRUE., &
-        & initval_r = swpar_fdiffuse_init)
-  
+      ! variables used only with quincy
+      !
       CALL mem%Add_var('co2_mixing_ratio', mem%co2_mixing_ratio, &
         & hgrid, surface, &
         & t_cf('co2_mixing_ratio', 'ppm', 'surface air co2 mixing ratio'), &
@@ -826,7 +814,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = co2_mixing_ratio_init)
-  
+
       CALL mem%Add_var('co2_mixing_ratio_c13', mem%co2_mixing_ratio_c13, &
         & hgrid, surface, &
         & t_cf('co2_mixing_ratio_C13', 'ppm', 'surface air 13co2 mixing ratio'), &
@@ -836,7 +824,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = co2_mixing_ratio_c13_init)
-  
+
       CALL mem%Add_var('co2_mixing_ratio_C14', mem%co2_mixing_ratio_c14, &
         & hgrid, surface, &
         & t_cf('co2_mixing_ratio_c14', 'scaled', 'surface air 14co2 mixing ratio'), &
@@ -846,7 +834,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = co2_mixing_ratio_c14_init)
-  
+
       CALL mem%Add_var('ga', mem%ga, &
         & hgrid, surface, &
         & t_cf('ga', 'm s-1', 'aerodynamic conductance'), &
@@ -856,7 +844,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = ga_init)
-  
+
       CALL mem%Add_var('nhx_deposition', mem%nhx_deposition, &
         & hgrid, surface, &
         & t_cf('nhx_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen deposition velocity'), &
@@ -866,7 +854,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('noy_deposition', mem%noy_deposition, &
         & hgrid, surface, &
         & t_cf('noy_deposition', 'mumol m-2 sec-1', 'surface downward oxidised nitrogen deposition velocity'), &
@@ -876,7 +864,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('nhx_n15_deposition', mem%nhx_n15_deposition, &
         & hgrid, surface, &
         & t_cf('nhx_n15_deposition', 'mumol m-2 sec-1', 'surface downward reduced nitrogen-15 deposition velocity'), &
@@ -886,7 +874,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('noy_n15_deposition', mem%noy_n15_deposition, &
         & hgrid, surface, &
         & t_cf('noy_n15_deposition', 'mumol m-2 sec-1', 'surface downward oxidised nitrogen-15 deposition velocity'), &
@@ -896,7 +884,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('p_deposition', mem%p_deposition, &
         & hgrid, surface, &
         & t_cf('p_deposition', 'mumol m-2 sec-1', 'surface downward reduced phosphoruns deposition velocity'), &
@@ -906,7 +894,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('prev_one_cos_zenith_angle', mem%prev_one_cos_zenith_angle, &
         & hgrid, surface, &
         & t_cf('prev_one_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the previous timestep'), &
@@ -916,7 +904,7 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
-  
+
       CALL mem%Add_var('prev_two_cos_zenith_angle', mem%prev_two_cos_zenith_angle, &
         & hgrid, surface, &
         & t_cf('prev_two_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the before previous timestep'), &
@@ -924,6 +912,27 @@ CONTAINS
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
         & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+        CALL mem%Add_var('prev_three_cos_zenith_angle', mem%prev_three_cos_zenith_angle, &
+        & hgrid, surface, &
+        & t_cf('prev_three_cos_zenith_angle', 'unitless', 'cos_zenith_angle of the before before previous timestep'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & loutput = .TRUE., &
+        & lrestart = .TRUE., &
+        & initval_r = 0.0_wp)
+
+      CALL mem%Add_var('daytime_counter', mem%daytime_counter, &
+        & hgrid, surface, &
+        & t_cf('daytime_counter', '', 'number of timesteps of current day with light available'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 

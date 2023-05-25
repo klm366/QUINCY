@@ -37,7 +37,7 @@ MODULE mo_l2a_memory_class
   !>Type definition for land2atm memory
   !>
   TYPE, EXTENDS(t_jsb_memory) :: t_l2a_memory
-    
+
     TYPE(t_jsb_var_real2d) :: &
       & t_srf                           , &  !< surface temperature [K]
       & t_eff_srf                       , &  !< effective surface temperature [K]
@@ -50,14 +50,14 @@ MODULE mo_l2a_memory_class
       & alb_nir_dif                     , &  !< surface albedo for diffuse radiation in the near infrared band [unitless]
       & alb_vis_dir                     , &  !< surface albedo for direct radiation in the visible band [unitless]
       & alb_nir_dir                          !< surface albedo for direct radiation in the near infrared band [unitless]
-    
+
     ! CARBON_
     TYPE(t_jsb_var_real2d) :: &
-      & carbon_conservation_test        , &  !< 
-      & yday_c_state_sum                     !< 
+      & carbon_conservation_test        , &  !<
+      & yday_c_state_sum                     !<
 
     ! For lakes
-    TYPE(t_jsb_var_real2d) :: &                              
+    TYPE(t_jsb_var_real2d) :: &
       & latent_hflx_wtr                 , &  !< latent heat flux over water [W m-2]
       & sensible_hflx_wtr               , &  !< sensible heat flux over water [W m-2]
       & latent_hflx_ice                 , &  !< latent heat flux over ice [W m-2]
@@ -101,8 +101,8 @@ CONTAINS
     table        = tables(1)
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
-    
-    
+
+
     CALL mem%Add_var('t_srf', mem%t_srf, &
       & hgrid, surface, &
       & t_cf('t_srf', 'K', 'surface temperature'), &
@@ -217,7 +217,7 @@ CONTAINS
 #else
     ! carbon
     IF (model%processes(CARBON_)%p%config%active) THEN
-      
+
       CALL mem%Add_var( 'carbon_conservation_test', mem%carbon_conservation_test,      &
         & hgrid, surface,                                                              &
         & t_cf('carbon_conservation_test', '', 'Carbon conservation test'),            &
@@ -233,13 +233,13 @@ CONTAINS
         & prefix, suffix,                                                                          &
         & output_level=BASIC, loutput = .TRUE., lrestart=.TRUE.,                                   &
         & initval_r=0.0_wp )
-        
+
     END IF
 #endif
 
-    ! lake 
+    ! lake
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
-      
+
       CALL mem%Add_var('latent_hflx_wtr', mem%latent_hflx_wtr, &
         & hgrid, surface, &
         & t_cf('latent_hflx_wtr', 'W m-2', 'latent heat flux over water'), &
