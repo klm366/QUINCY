@@ -146,7 +146,7 @@ CONTAINS
         & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-        & initval_r=280.0_wp )
+        & output_level=BASIC, initval_r=280.0_wp )
 
       ! CALL mem%Add_var( 't_ice', mem%t_ice,                                            &
       !   & hgrid, surface,                                                              &
