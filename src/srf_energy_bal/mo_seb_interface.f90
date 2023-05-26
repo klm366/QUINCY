@@ -298,8 +298,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: hcap_grnd_old
     dsl4jsb_Real3D_onChunk :: snow_depth_sl
     dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_freeze_sl
-    dsl4jsb_Real3D_onChunk :: w_ice_melt_sl
+    dsl4jsb_Real3D_onChunk :: wtr_freeze_sl
+    dsl4jsb_Real3D_onChunk :: ice_melt_sl
 
 
     INTEGER  :: iblk , ics, ice, nc, ic
@@ -356,8 +356,8 @@ CONTAINS
         dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
       END IF
       dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl)  ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_freeze_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_ice_melt_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_freeze_sl) ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_melt_sl) ! in
 
       IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
         !$ACC DATA CREATE(heat_cap)
@@ -371,15 +371,14 @@ CONTAINS
             heat_cap(ic) = vol_heat_cap_sl(ic,1) * dz1
             IF (l_snow_config) THEN
               IF (snow_depth_sl(ic,nsnow) < EPSILON(1._wp) .AND. heat_cap(ic) > 0._wp) THEN  ! No snow layers present
-              ! Correction for melting of ice in soil layers
-                t_unfilt(ic) = t_unfilt(ic) - w_ice_melt_sl   (ic,1) * dtime * alf / heat_cap(ic)
-                t_unfilt(ic) = t_unfilt(ic) + w_soil_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                ! Correction for melting of ice in soil layers
+                t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
+                t_unfilt(ic) = t_unfilt(ic) + wtr_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
               END IF
             ELSE   ! No snow layers present
               IF (heat_cap(ic) > 0._wp) THEN
                 ! Correction for melting of ice in soil layers
-                t_unfilt(ic) = t_unfilt(ic) - w_ice_melt_sl   (ic,1) * dtime * alf / heat_cap(ic)
-                t_unfilt(ic) = t_unfilt(ic) + w_soil_freeze_sl(ic,1) * dtime * alf / heat_cap(ic)
+                t_unfilt(ic) = t_unfilt(ic) - ice_melt_sl(ic,1)   * dtime * alf / heat_cap(ic)
               END IF
             END IF
           END IF

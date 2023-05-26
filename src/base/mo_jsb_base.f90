@@ -130,6 +130,16 @@ CONTAINS
         model%processes(iproc)%p => Create_process(iproc, model%id, TRIM(model%namelist_filename))
       END DO
 
+      ! Point from each associated process%config to the model_config
+      DO iproc = 1,max_no_of_processes
+        IF (ASSOCIATED(model%processes(iproc)%p)) THEN
+          IF (ASSOCIATED(model%processes(iproc)%p%config)) THEN
+            model%processes(iproc)%p%config%model_config => model%config
+          ENDIF
+        ENDIF
+      ENDDO
+
+      ! Configure processes: run 'Init_PROC_config'
       CALL model%Configure_processes()
 
       dsl4jsb_Get_config(SSE_)
@@ -185,6 +195,15 @@ CONTAINS
 
       IF (model%config%init_from_ifs) THEN
         CALL message(TRIM(routine), 'Initialize JSBACH from IFS analysis file '//TRIM(model%config%ifs_filename))
+      END IF
+
+      IF (.NOT. dsl4jsb_Config(SSE_)%l_snow) THEN
+        ! Don't allow infiltration at sub-zero soil temperature for old snow scheme
+        dsl4jsb_Config(HYDRO_)%l_infil_subzero = .FALSE.
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature (l_snow=false)')
+      ELSE IF (.NOT. dsl4jsb_Config(HYDRO_)%l_infil_subzero) THEN
+        ! Print message if infiltration at sub-zero temperature is switched off in namelist
+        CALL message(TRIM(routine), 'Not allowing infiltration at sub-zero soil temperature')
       END IF
 
       IF (dsl4jsb_Config(RAD_)%use_alb_canopy .OR. TRIM(model%config%usecase) == 'jsbach_lite') THEN

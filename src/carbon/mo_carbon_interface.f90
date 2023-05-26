@@ -440,7 +440,7 @@ CONTAINS
     ! Compute net primary production rate
     ! R: In JS4 ist fogende Zeile jetzt im assimi_process.f90: calc_NPP_pot_rate
     !    cbalance%NPP_pot_rate(kidx0:kidx1,:) = NPP_pot_rate_bethy(grossAssimilation(1:nidx,:),darkRespiration(1:nidx,:))
-    ! R: NPP_pot_Rate_acc unterscheidet sich in JS3 von NPP_pot_sum darin, daß NPP_pot_rate_acc zu jedem Zeitschritt eine
+    ! R: NPP_pot_Rate_acc unterscheidet sich in JS3 von NPP_pot_sum darin, dass NPP_pot_rate_acc zu jedem Zeitschritt eine
     !    momentane Aufaddierung vom NPP ist aber NPP_pot_sum immer eine Tagessumme ist.
     !    NPP_pot_Rate_acc wurde nur in den Output geschrieben aber nie weiter verwendet, daher habe ich es raus genommen.
     !    Wenn man es doch drin haben will:
@@ -608,24 +608,24 @@ CONTAINS
       ENDIF
 
 
-      ! R: In JSBACH3 wurden alle C-pools auf canopy Fläche gezogen gerechnet. Ebenso die C Fluxe.
-      !    Für den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
-      !    Besser wäre für JSBACH4 eigentlich auf Tile Fläche bezogen zu rechnen um alle variablen von JS4
-      !    konsistent auf dieselbe Fläche zu beziehen. Sonst machen wir den Code unnötig unübersichtlich.
-      !    Dadurch würde z.B. die Variablen-Verdopplung vermieden.
-      !    Ich habe die Assimilation zwar schon auf tile Fläche umgerechnet und könnte daher prinzipiell
-      !    die Cpools und Fluxe alle über das NPP-auf-Tile-Fläche rechnen.
-      !    ABER: in update_Cpools sind eine ganze Reihe von Berechnungen und Konstanten, die dazu ebenfalls angepaßt
-      !    werden müßten. Z.B: "Decomposition of slow soil pool" und evtl. "decomposition rate of green litter" und
+      ! R: In JSBACH3 wurden alle C-pools auf canopy Flaeche gezogen gerechnet. Ebenso die C Fluxe.
+      !    Fuer den Output wurden alle Variablen auch in grid box umgerechnet und entsprechend doppelt angelegt.
+      !    Besser waere fuer JSBACH4 eigentlich auf Tile Flaeche bezogen zu rechnen um alle variablen von JS4
+      !    konsistent auf dieselbe Flaeche zu beziehen. Sonst machen wir den Code unnoetig unuebersichtlich.
+      !    Dadurch wuerde z.B. die Variablen-Verdopplung vermieden.
+      !    Ich habe die Assimilation zwar schon auf tile Flaeche umgerechnet und koennte daher prinzipiell
+      !    die Cpools und Fluxe alle ueber das NPP-auf-Tile-Flaeche rechnen.
+      !    ABER: in update_Cpools sind eine ganze Reihe von Berechnungen und Konstanten, die dazu ebenfalls angepasst
+      !    werden muessten. Z.B: "Decomposition of slow soil pool" und evtl. "decomposition rate of green litter" und
       !    specific_leaf_area_C  (=> c_green_max und c_reserve_optimal), Max_C_content_woods. usw.
-      !    Dazu kommt, daß Yasso aufgerufen wird und auch hier alle Parametrisierungen durchgeschaut werden müssten.
-      !    Wie auch immer wenn später etwas wie "cbalone" verwendet werden soll, dann ist es besser auf canopy
-      !    Fläche zu bleiben.
-      !    => daher habe ich das doppelte Flächenkonzept von JSBACH3 übernommen.
+      !    Dazu kommt, dass Yasso aufgerufen wird und auch hier alle Parametrisierungen durchgeschaut werden muessten.
+      !    Wie auch immer wenn spaeter etwas wie "cbalone" verwendet werden soll, dann ist es besser auf canopy
+      !    Flaeche zu bleiben.
+      !    => daher habe ich das doppelte Flaechenkonzept von JSBACH3 uebernommen.
       !
-      !    Um die Benennungen wenigstens richtig zu machen müsste ich jede dieser 30 Variablen in allen
+      !    Um die Benennungen wenigstens richtig zu machen muesste ich jede dieser 30 Variablen in allen
       !    Files (Konsistenz!) mit _ca versehen. Da der Code hier aber ein Provisorium ist:
-      !    => C Pools und Fluxe sind ohne _ca benannt und bekommen stattdessen _ta wenn sie auf Tile Fläche bezogen sind.
+      !    => C Pools und Fluxe sind ohne _ca benannt und bekommen stattdessen _ta wenn sie auf Tile Flaeche bezogen sind.
 
       ! Compute carbon contents from canopy to tile box area by weighting pools with fractions of grid box covered by vegetation
       ! ------------------------------------------------------------------------------------------------------------------------
@@ -1600,13 +1600,12 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
 
-!    iblk  = options%iblk
+    ! Note: options is defined here as a local variable. It is needed in calculate_current_c_ta_state_sum
     options%ics = 1
     options%ice = grid%nproma
 
     ics = options%ics
     ice = options%ice
-    nc = ice - ics + 1
 
     ALLOCATE(C_flux_yday(nc))
 
@@ -1619,6 +1618,7 @@ CONTAINS
         ice = grid%npromz
         ! TODO: ics and ice should be retrieved for each iblk (are not necessarily constant for each block in ICON)
       END IF
+      options%nc = ice - ics + 1
 
       dsl4jsb_Get_var2D_onChunk(L2A_,  carbon_conservation_test )     ! inout
       dsl4jsb_Get_var2D_onChunk(L2A_,  yday_c_state_sum )             ! inout

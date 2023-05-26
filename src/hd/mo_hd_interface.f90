@@ -115,12 +115,16 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: overlflow_res
     dsl4jsb_Real3D_onChunk :: baseflow_res
     dsl4jsb_Real3D_onChunk :: riverflow_res
+    dsl4jsb_Real2D_onChunk :: local_fluxes
+    dsl4jsb_Real2D_onChunk :: local_budget
+    dsl4jsb_Real2D_onChunk :: local_wbal_error
 
     REAL(wp), POINTER :: area(:)
 
     REAL(wp), DIMENSION(options%nc) :: &
       & tile_fract, &
-      & inflow
+      & inflow,     &
+      & local_budget_old
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -181,9 +185,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_runoff)   ! out
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_drainage) ! out
     dsl4jsb_Get_var2D_onChunk(HD_, outflow_rivers)   ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, local_fluxes)     ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, local_budget)     ! out
+    dsl4jsb_Get_var2D_onChunk(HD_, local_wbal_error) ! out
 
     SELECT CASE (TRIM(routing_scheme))
     CASE ('full')
+
+      ! local reservoir content for water balance check
+      local_budget_old(:) = local_budget(:)
 
       ! unit conversions: [kg m-2 s-1] -> [m3/s]
       inflow(:) = runoff(:) * tile_fract(:) * area / rhoh2o
@@ -194,6 +204,25 @@ CONTAINS
 
       inflow(:) = discharge(:)
       CALL reservoir_cascade (inflow(:), nc, steplen, ret_riverflow(:), nres_riverflow(:), riverflow_res(:,:), outflow_rivers(:))
+
+
+      ! 1. Check water balance locally
+
+      ! Reservoir content  [m3]
+      local_budget(:) =  SUM(overlflow_res(:,:), DIM=2) & !< water in overland flow reservoirs
+        &              + SUM(baseflow_res (:,:), DIM=2) & !< water in baseflow reservoir
+        &              + SUM(riverflow_res(:,:), DIM=2)   !< water in riverflow reservoir
+
+      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
+        ! Water fluxes [m3/s]
+        local_fluxes(:) =  runoff(:)   * tile_fract(:) * area(:) / rhoh2o         &
+          &              + drainage(:) * tile_fract(:) * area(:) / rhoh2o         &
+          &              + discharge(:)                                           &
+          &              - outflow_runoff(:) - outflow_drainage(:) - outflow_rivers(:)
+
+        ! Local water balance error [m3]
+        local_wbal_error(:) = local_budget_old(:) + local_fluxes(:) * steplen - local_budget(:)
+      END IF
 
     CASE ('weighted_to_coast')
       !
@@ -262,8 +291,8 @@ CONTAINS
       & outflow_runoff,        &
       & outflow_drainage,      &
       & outflow_rivers,        &
-      !& outflow_resid,         &
-      !& outflow_count,         &
+      & outflow_resid,         &
+      !dbg & outflow_count,    &
       & discharge,             &
       & discharge_ocean,       &
       & internal_drain,        &
@@ -276,7 +305,6 @@ CONTAINS
     REAL(wp) ::                 &
       & global_discharge,       &  ! global sum of discharge to the ocean
       & global_outflow,         &
-      & global_outflow_resid,   &
       & global_internal_drain,  &
       & global_discharge_ocean, &
       & sum_weights
@@ -297,7 +325,9 @@ CONTAINS
     REAL(wp), ALLOCATABLE  :: &
       & in_domain       (:,:) ! 1: cell in domain, 0: halo cell
 
-    LOGICAL  :: debug_hd,use_bifurcated_rivers
+    REAL(wp) :: global_resid
+
+    LOGICAL  :: debug_hd, use_bifurcated_rivers
 
     IF (options%nc > 0) CONTINUE ! only to avoid compiler warnings
 
@@ -327,14 +357,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_runoff)   ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_drainage) ! IN
     dsl4jsb_Get_var2D_onDomain(HD_, outflow_rivers)   ! IN
-    !dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
-    !dsl4jsb_Get_var2D_onDomain(HD_, outflow_count)    ! OUT
     dsl4jsb_Get_var3D_onDomain(HD_, nidx_upstream)    ! IN
     dsl4jsb_Get_var3D_onDomain(HD_, bidx_upstream)    ! IN
-
-    dsl4jsb_Get_var2D_onDomain(HD_, coast_ocean) ! IN
-    dsl4jsb_Get_var2D_onDomain(HD_, nsplit) ! IN
-
+    dsl4jsb_Get_var2D_onDomain(HD_, coast_ocean)      ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, nsplit)           ! IN
+    dsl4jsb_Get_var2D_onDomain(HD_, outflow_resid)    ! OUT
+    !dbg dsl4jsb_Get_var2D_onDomain(HD_, outflow_count)    ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! OUT
     dsl4jsb_Get_var2D_onDomain(HYDRO_, internal_drain)  ! OUT
@@ -367,9 +395,23 @@ CONTAINS
       discharge_ocean(:,:) = 0._wp
       internal_drain(:,:) = 0._wp
       ! Enable the next line for debugging ... but this only works on one (!) processor, i.e. no halos
+      !dbg>>
       ! outflow_count(:,:) = nsplit(:,:)
+      !dbg<<
 
       global_outflow        = global_sum_array((outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:))*in_domain(:,:))
+
+      IF (debug_hd) THEN
+        ! Consistency check: There should not be outflow in pure ocean cells
+        WHERE (hd_mask(:,:) == -1._wp)
+          outflow_resid(:,:) = (outflow_runoff(:,:)+outflow_drainage(:,:)+outflow_rivers(:,:))*in_domain(:,:)
+        END WHERE
+        global_resid = global_sum_array(outflow_resid(:,:)*in_domain(:,:))
+        IF (global_resid /= 0._wp) THEN
+          WRITE (message_text,*) 'WARNING: Outflow to non-inflow ocean cells: ', global_resid, ' m3/s'
+          CALL message (routine, message_text)
+        END IF
+      END IF
 
       blks = grid%get_blk_start()
       blke = grid%get_blk_end()
@@ -383,8 +425,8 @@ CONTAINS
             jc_us  =  nidx_upstream(jc,n,blk)
             blk_us =  bidx_upstream(jc,n,blk)
             IF (jc_us > 0 .and. blk_us > 0) THEN
-            ! Workaround for NVIDIA compiler < 22.9 internal compiler error
-            ! Note that nsplit is set to 1._wp for use_bifurcated_rivers=false
+              ! Workaround for NVIDIA compiler 21.3 internal compiler error
+              ! Note that nsplit is set to 1._wp for use_bifurcated_rivers=false
 #if defined(__NVCOMPILER) && (__NVCOMPILER_MAJOR__ < 22  || (__NVCOMPILER_MAJOR__ == 22 && __NVCOMPILER_MINOR__ < 9))
               discharge(jc,blk) =  discharge(jc,blk)                      &
                                  + ( ( outflow_runoff(jc_us,blk_us)       &
@@ -405,19 +447,57 @@ CONTAINS
                                    + outflow_rivers(jc_us,blk_us)
               END IF
 #endif
-              ! Enable the next six lines for debugging ... but this only works on one (!) processor, i.e. no halos
-              !outflow_count(jc_us,blk_us) = outflow_count(jc_us,blk_us) - 1._wp
-              !IF (outflow_count(jc_us,blk_us) == 0) THEN
-              !  outflow_runoff  (jc_us,blk_us) = 0._wp
-              !  outflow_drainage(jc_us,blk_us) = 0._wp
-              !  outflow_rivers  (jc_us,blk_us) = 0._wp
-              !END IF
+              ! Enable this block for debugging ... but this only works on one (!) processor, i.e. no halos
+              !dbg>>
+              ! outflow_count(jc_us,blk_us) = outflow_count(jc_us,blk_us) - 1._wp
+              ! IF (outflow_count(jc_us,blk_us) == 0) THEN
+              !   outflow_runoff  (jc_us,blk_us) = 0._wp
+              !   outflow_drainage(jc_us,blk_us) = 0._wp
+              !   outflow_rivers  (jc_us,blk_us) = 0._wp
+              ! END IF
+              !dbg<<
             END IF
           END DO
         END DO
       END DO
 
-      WHERE (hd_mask(:,:) == 0._wp)
+      ! Enable this block for debugging ... but this only works on one (!) processor, i.e. no halos
+      !dbg>>
+      ! print*, 'Outflow residual from lateral flow:'
+      ! WHERE (hd_mask(:,:) == 2._wp)
+      !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
+      ! END WHERE
+      ! print*, '  o  internal drainage cells    : ', global_sum_array(outflow_resid(:,:)*in_domain(:,:))
+      ! outflow_resid(:,:) = 0._wp
+      ! WHERE (hd_mask(:,:) == 1._wp)
+      !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
+      ! END WHERE
+      ! print*, '  o  hd cells (mask=1)          : ', global_sum_array(outflow_resid(:,:)*in_domain(:,:))
+      ! outflow_resid(:,:) = 0._wp
+      ! WHERE (hd_mask(:,:) == 0._wp)
+      !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
+      ! END WHERE
+      ! print*, '  o  ocean inflow cells (mask=0): ', global_sum_array(outflow_resid(:,:)*in_domain(:,:))
+      ! outflow_resid(:,:) = 0._wp
+      ! WHERE (hd_mask(:,:) == -1._wp)
+      !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
+      ! END WHERE
+      ! print*, '  o  pure ocean cells (mask=-1) : ', global_sum_array(outflow_resid(:,:)*in_domain(:,:))
+      ! WHERE (hd_mask(:,:) == 1._wp)
+      !   outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
+      ! END WHERE
+      ! print*, '   => Problematic: mask = 1 : ', global_sum_array(outflow_resid(:,:)*in_domain(:,:))
+      ! DO blk = blks, blke
+      !   jcs = grid%get_col_start(blk)
+      !   jce = grid%get_col_end(blk)
+      !   DO jc = jcs, jce
+      !     IF (outflow_resid(jc,blk) /= 0._wp) print*, 'AAA outflow_resid: ', jc,blk, &
+      !       &      ' lon: ', grid%lon(jc,blk), 'lat: ', grid%lat(jc,blk), outflow_resid(jc,blk)
+      !   END DO
+      ! END DO
+      !dbg<<
+
+      WHERE (hd_mask(:,:) <= 0._wp)
         ! ocean inflow cells
         discharge_ocean(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + discharge(:,:)
         outflow_runoff(:,:) = 0._wp
@@ -431,33 +511,17 @@ CONTAINS
         discharge(:,:) = 0._wp
       END WHERE
 
-      ! Enable this block for debugging ... but this only works on one (!) processor, i.e. no halos
-      !outflow_resid(:,:) = outflow_runoff(:,:) + outflow_drainage(:,:) + outflow_rivers(:,:)
-      !DO blk = blks, blke
-      !  jcs = grid%get_col_start(blk)
-      !  jce = grid%get_col_end(blk)
-      !  DO jc = jcs, jce
-      !    IF (outflow_resid(jc,blk) /= 0._wp) print*,'AAA ', jc,blk, outflow_resid(jc,blk)
-      !    IF (outflow_count(jc,blk) /= 0._wp .AND. &
-      !             hd_mask(jc,blk) == 1._wp ) print*,'BBB ', jc,blk, outflow_count(jc,blk)
-      !  END DO
-      !END DO
-
       ! global integrals
-      ! Switch the next two lines for debugging ... but this only works on one (!) processor, i.e. no halos
-      ! global_outflow_resid  = global_sum_array(outflow_resid(:,:)*in_domain(:,:))
-      global_outflow_resid   = 0._wp
       global_discharge       = global_sum_array(discharge(:,:)*in_domain(:,:))
       global_internal_drain  = global_sum_array(internal_drain(:,:)*in_domain(:,:))
       global_discharge_ocean = global_sum_array(discharge_ocean(:,:)*in_domain(:,:))
 
       IF (debug_hd) THEN
-        ! water conservation test
+        !
+        ! 2. Check water conservation of lateral flow
+        !
         WRITE (message_text,*) 'outflow from reservoirs: ', global_outflow, ' m3/s'
         CALL message (routine, message_text)
-        ! Enable the next two lines for debugging ... but this only works on one (!) processor, i.e. no halos
-        ! WRITE (message_text,*) 'outflow residual: ', global_outflow_resid, ' m3/s'
-        ! CALL message (routine, message_text)
         WRITE (message_text,*) 'global discharge (land): ', global_discharge, ' m3/s'
         CALL message (routine, message_text)
         WRITE (message_text,*) 'discharge to the ocean : ', global_discharge_ocean, ' m3/s'
@@ -465,17 +529,17 @@ CONTAINS
         WRITE (message_text,*) 'internal drainage      : ', global_internal_drain, ' m3/s'
         CALL message (routine, message_text)
         WRITE (message_text,*) 'Water budget error     : ', &
-          & global_outflow - global_outflow_resid - global_discharge - global_discharge_ocean - global_internal_drain, ' m3/s'
+          & global_outflow - global_discharge - global_discharge_ocean - global_internal_drain, ' m3/s'
         CALL message (routine, message_text)
       END IF
 
       ! distribute internal drainage to ocean inflow cells (weighted with ocean inflow)
       IF (global_discharge_ocean > 0._wp) THEN
         discharge_ocean(:,:) = discharge_ocean(:,:) + &
-          & (discharge_ocean(:,:) * (global_internal_drain+global_outflow_resid) / global_discharge_ocean)
-      ELSE IF (global_internal_drain+global_outflow_resid > 0._wp) THEN
+          & (discharge_ocean(:,:) * global_internal_drain / global_discharge_ocean)
+      ELSE IF (global_internal_drain > 0._wp) THEN
         WRITE (message_text,*) 'no discharge to ocean! Internal drainage of ', &
-          & global_internal_drain+global_outflow_resid, ' m3/s will be lost.'
+          & global_internal_drain, ' m3/s will be lost.'
         CALL finish (routine, message_text)
       END IF
 
@@ -549,14 +613,10 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: &
       & runoff          , &
       & drainage        , &
-      !& outflow_resid   , &
-      !& outflow_count   , &
       & discharge       , &
       & discharge_ocean , &
       & water_budget    , &
-      & water_budget_old, &
-      & water_error     , &
-      & water_flux
+      & water_budget_change
 
     dsl4jsb_Real3D_onDomain :: &
       & overlflow_res ,        &
@@ -566,9 +626,11 @@ CONTAINS
     LOGICAL,  POINTER ::    &
       & is_in_domain (:,:)      ! T: cell in domain (not halo)
 
-    REAL(wp), ALLOCATABLE  ::  &
-      & tile_fract (:,:), &
-      & in_domain  (:,:) ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  ::     &
+      & tile_fract       (:,:),   &
+      & in_domain        (:,:),   &  ! 1: cell in domain, 0: halo cell
+      & water_budget_old (:,:),   &  ! water budget of previous time step
+      & water_flux       (:,:)       ! water fluxes within the time step
 
     REAL(wp) ::                   &
       & steplen,                  &
@@ -576,6 +638,8 @@ CONTAINS
       & global_water_budget_old,  &  ! water budget of previous step
       & global_water_error,       &  ! water budget change within the time step
       & global_water_flux            ! water fluxes changing the budget
+
+    REAL(wp), POINTER :: water_error_gsum(:)
 
     LOGICAL :: debug_hd, diag_water_budget
 
@@ -619,15 +683,13 @@ CONTAINS
 
     dsl4jsb_Get_var2D_onDomain(HYDRO_, runoff)          ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, drainage)        ! IN
-    !dsl4jsb_Get_var2D_onDomain(HD_   , outflow_resid)   ! IN
-    !dsl4jsb_Get_var2D_onDomain(HD_   , outflow_count)   ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge)       ! IN
     dsl4jsb_Get_var2D_onDomain(HYDRO_, discharge_ocean) ! IN
 
     dsl4jsb_Get_var2D_onDomain(HD_, water_budget)       ! out
-    dsl4jsb_Get_var2D_onDomain(HD_, water_budget_old)   ! out
-    dsl4jsb_Get_var2D_onDomain(HD_, water_flux)         ! out
-    dsl4jsb_Get_var2D_onDomain(HD_, water_error)        ! out
+    dsl4jsb_Get_var2D_onDomain(HD_, water_budget_change)    ! out
+
+    water_error_gsum => HD__mem%water_error_gsum%ptr(:) ! out
 
     ! Mask out all halo cells for the global sums (otherwise these cells are counted twice)
     ALLOCATE (in_domain(nproma, nblks))
@@ -645,10 +707,11 @@ CONTAINS
       RETURN
     END IF
 
+    ALLOCATE (water_budget_old(nproma, nblks))
     water_budget_old(:,:) = water_budget(:,:) * in_domain(:,:)
     global_water_budget_old = global_sum_array(water_budget_old(:,:))
 
-    ! re-calculate global land water budget
+    ! Calculate global land water budget
     !
     water_budget(:,:) = &  ! [m3]
       &   SUM(overlflow_res(:,:,:), DIM=2) * in_domain(:,:) & !< water in overland flow reservoirs
@@ -677,6 +740,7 @@ CONTAINS
 
     ALLOCATE(tile_fract(nproma, nblks))
     CALL tile%Get_fraction(fract=tile_fract(:,:))
+    ALLOCATE(water_flux(nproma, nblks))
     water_flux(:,:) = &
       &   runoff         (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< runoff   [kg m-2 s-1] -> [m3/s]
       & + drainage       (:,:) * area(:,:)/rhoh2o*tile_fract(:,:)*in_domain(:,:)  & !< drainage [kg m-2 s-1] -> [m3/s]
@@ -705,10 +769,11 @@ CONTAINS
 
     IF (is_time_experiment_start(options%current_datetime)) RETURN
 
-    ! water conservation test
     !
-    water_error(:,:) = water_budget_old(:,:) + water_flux(:,:) * steplen - water_budget(:,:)
-    global_water_error = global_sum_array(water_error(:,:))
+    ! 3. Global water balance check
+    !
+    water_budget_change(:,:) = water_budget_old(:,:) + water_flux(:,:) * steplen - water_budget(:,:)
+    global_water_error = global_sum_array(water_budget_change(:,:))
 
     IF (debug_hd) THEN
       WRITE (message_text,*) 'Water budget imbalance during time step: ', global_water_error,' m3'
@@ -727,7 +792,11 @@ CONTAINS
       END IF
     END IF
 
-    DEALLOCATE (in_domain)
+    ! No unit transformation [m3]: 1
+    IF (HD__mem%water_error_gsum%is_in_output) &
+      & water_error_gsum = global_water_error
+
+    DEALLOCATE (in_domain, tile_fract, water_budget_old, water_flux)
 
   END SUBROUTINE hd_check_water_budget
 

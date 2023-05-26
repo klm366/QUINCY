@@ -106,12 +106,12 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: rad_srf_net
     dsl4jsb_Real2D_onChunk :: grnd_hflx
     dsl4jsb_Real2D_onChunk :: hcap_grnd
-    dsl4jsb_Real2D_onChunk :: w_snow
+    dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: fract_snow
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_sl
-    dsl4jsb_Real3D_onChunk :: w_ice_sl
+    dsl4jsb_Real3D_onChunk :: wtr_soil_sl
+    dsl4jsb_Real3D_onChunk :: ice_soil_sl
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl
     dsl4jsb_Real3D_onChunk :: matrix_pot_sl
     dsl4jsb_Real3D_onChunk :: bclapp_sl
@@ -141,11 +141,11 @@ CONTAINS
      & has_snow_layer
 
     REAL(wp) :: &
-      & w_soil_critical_tmp, &
+      & w_soil_critical_config,       &
       & soil_depth_sl_vol_porosity_sl_tmp
-    LOGICAL  :: l_snow_tmp, l_freeze_tmp, l_supercool_tmp
+    LOGICAL  :: l_snow_config, l_freeze_config, l_supercool_config
 
-    INTEGER  :: iblk, ics, ice, nc, ic, i
+    INTEGER  :: iblk, ics, ice, nc, ic
     REAL(wp) :: steplen
     INTEGER  :: tmp_timesteps_per_day
     LOGICAL  :: l_is_newday
@@ -214,12 +214,12 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_q_air)     ! in
     dsl4jsb_Get_var2D_onChunk(TURB_,  fact_qsat_srf)  ! in
     dsl4jsb_Get_var2D_onChunk(RAD_,   rad_srf_net)    ! in
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, w_snow)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)  ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_soil_sl)      ! in
-    dsl4jsb_Get_var3D_onChunk(HYDRO_, w_ice_sl)       ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)    ! in
+    dsl4jsb_Get_var3D_onChunk(HYDRO_, ice_soil_sl)    ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, vol_porosity_sl) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, matrix_pot_sl)  ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)      ! in
@@ -274,36 +274,35 @@ CONTAINS
       ! In the moment, the calls of calc_previous_day_variables and calc_pseudo_soil_temp are only
       ! necessary for the phenology process
       t_air_in_Celcius = t_air(ic) - tmelt  ! convert Kelvin in Celcius
-      
+
       ! Sum up of the previous day temperatures
-      CALL calc_previous_day_variables(l_is_newday,               & ! Input
-                                      lstart,                    & ! Input
-                                      t_air_in_Celcius,          & ! Input
-                                      !dtime,                     & ! Input
-                                      tmp_timesteps_per_day,     & ! Input
-                                      previous_day_temp_mean(ic), & ! InOut (for summer- and evergreen)
-                                      day_temp_sum(ic),           & ! InOut
-                                      previous_day_temp_min(ic),  & ! InOut (for crop)
-                                      day_temp_min(ic),           & ! InOut
-                                      previous_day_temp_max(ic),  & ! InOut (for crop)
-                                      day_temp_max(ic) )            ! InOut
+      CALL calc_previous_day_variables(l_is_newday,                & ! Input
+                                       lstart,                     & ! Input
+                                       t_air_in_Celcius,           & ! Input
+                                       tmp_timesteps_per_day,      & ! Input
+                                       previous_day_temp_mean(ic), & ! InOut (for summer- and evergreen)
+                                       day_temp_sum(ic),           & ! InOut
+                                       previous_day_temp_min(ic),  & ! InOut (for crop)
+                                       day_temp_min(ic),           & ! InOut
+                                       previous_day_temp_max(ic),  & ! InOut (for crop)
+                                       day_temp_max(ic) )            ! InOut
 
       ! Update of pseudo-soil temperature for each time step
-      CALL calc_pseudo_soil_temp(t_air_in_Celcius    , & ! Input
-                                N_pseudo_soil_temp(ic), & ! Input
-                                F_pseudo_soil_temp(ic), & ! Input
-                                pseudo_soil_temp(ic)  )   ! InOut (for summer-, evergreen and crop)
+      CALL calc_pseudo_soil_temp(t_air_in_Celcius,       & ! Input
+                                 N_pseudo_soil_temp(ic), & ! Input
+                                 F_pseudo_soil_temp(ic), & ! Input
+                                 pseudo_soil_temp(ic)  )   ! InOut (for summer-, evergreen and crop)
 
     END DO
     !$ACC END PARALLEL LOOP
 
-    w_soil_critical_tmp = dsl4jsb_Config(SSE_)%w_soil_critical
-    l_snow_tmp = dsl4jsb_Config(SSE_)%l_snow
-    l_freeze_tmp = dsl4jsb_Config(SSE_)%l_freeze
-    l_supercool_tmp = dsl4jsb_Config(SSE_)%l_supercool
-                           
+    w_soil_critical_config = dsl4jsb_Config(SSE_)%w_soil_critical
+    l_snow_config          = dsl4jsb_Config(SSE_)%l_snow
+    l_freeze_config        = dsl4jsb_Config(SSE_)%l_freeze
+    l_supercool_config     = dsl4jsb_Config(SSE_)%l_supercool
+
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
-    DO ic=1,nc
+    DO ic = 1, nc
 
       IF (is_ocean(ic) .OR. is_lake(ic)) THEN
         ! Temporary fix for temperatures over complete ocean or lake boxes getting too warm or too cold,
@@ -316,39 +315,40 @@ CONTAINS
         t_old       (ic) = t(ic)
       END IF
 
-      ! t_unfilt_old(:) = MAX(MIN(t_unfilt(:), 380._wp), 100._wp)
-      ! t_old(:)        = MAX(MIN(t(:),        380._wp), 100._wp)
-
       qsat_srf_old(ic) = qsat(t_old(ic), press_srf(ic))
+
       ! The heat capacity of the surface layer is currently taken as the heat capacity of the upper soil layer
       heat_cap(ic) = hcap_grnd(ic)
+
       ! The last term of the rhs of the energy balance equation is the conductive heat flux from the ground below
       forc_hflx(ic) = grnd_hflx(ic)
 
-      ! Compute sensitivity of surface saturation specific humidity to temperature
+      ! Update surface temperature
+      !
+      ! 1. Compute sensitivity of surface saturation specific humidity to temperature
       dQdT(ic) = ( qsat(t(ic) + 0.001_wp, press_srf(ic)) - qsat_srf_old(ic) ) * 1000._wp
-      ! Old dry static energy
+
+      ! 2. Old dry static energy
       s_old(ic) = surface_dry_static_energy( &
         & t_old(ic), &
         & q_effective(qsat_srf_old(ic), q_air(ic), fact_qsat_srf(ic), fact_q_air(ic)))
+
       heat_tcoef(ic) = heat_transfer_coef(drag_srf(ic), steplen)
 
       t2s_conv(ic) = s_old(ic) / t_old(ic)
-
-      ! Update surface temperature
 
       ! Compute new surface temperature and saturation humidity
       IF (lstart) THEN
         s_star(ic) = s_old(ic)
       ELSE
-        CALL surface_temp_implicit(steplen,      & ! in
-          t2s_conv(ic),                           & ! in
-          t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), &  ! in
-          s_old(ic), qsat_srf_old(ic), dQdT(ic),    & ! in
-          rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),    &  ! in
-          fact_q_air(ic), fact_qsat_srf(ic),       & ! in
-          fract_snow(ic), heat_cap(ic),            & ! in
-          & s_star(ic))                             ! out
+        CALL surface_temp_implicit(steplen,                   & ! in
+          t2s_conv(ic),                                       & ! in
+          t_acoef(ic), t_bcoef(ic), q_acoef(ic), q_bcoef(ic), & ! in
+          s_old(ic), qsat_srf_old(ic), dQdT(ic),              & ! in
+          rad_srf_net(ic), forc_hflx(ic), heat_tcoef(ic),     & ! in
+          fact_q_air(ic), fact_qsat_srf(ic),                  & ! in
+          fract_snow(ic), heat_cap(ic),                       & ! in
+          & s_star(ic))                                         ! out
       END IF
 
       IF (is_ocean(ic) .OR. is_lake(ic)) THEN
@@ -366,10 +366,10 @@ CONTAINS
       ! @todo: shouldn't this also consider wether there is actually enough energy to melt water/ice or freeze water?
       t_star(ic) = s_star(ic) / t2s_conv(ic)
 
-      IF (l_snow_tmp) THEN
-        has_snow_layer(ic) = w_snow(ic) * rhoh2o / snow_soil_dens(ic) > snow_depth_min
+      IF (l_snow_config) THEN
+        has_snow_layer(ic) = weq_snow(ic) * rhoh2o / snow_soil_dens(ic) > snow_depth_min
       ELSE
-        has_snow_layer(ic) = w_snow(ic) > w_soil_critical_tmp
+        has_snow_layer(ic) = weq_snow(ic) > w_soil_critical_config
       END IF
 
       ! Actual snowmelt will be computed later in the hydrology process (update_surface_hydrology)
@@ -378,9 +378,9 @@ CONTAINS
         t_star(ic) = MIN(t_star(ic), tmelt)
       END IF
 
-      IF (l_freeze_tmp) THEN
+      IF (l_freeze_config) THEN
 
-        IF (l_supercool_tmp) THEN
+        IF (l_supercool_config) THEN
           soil_depth_sl_vol_porosity_sl_tmp = soil_depth_sl(ic,1) * vol_porosity_sl(ic,1)
 
           liquid_max(ic) = Get_liquid_max( &
@@ -394,11 +394,11 @@ CONTAINS
         END IF
 
         IF (.NOT. has_snow_layer(ic) .AND. .NOT. is_glacier(ic)) THEN
-          IF (w_soil_sl(ic,1) > MAX(liquid_max(ic), w_soil_critical_tmp)) THEN
+          IF (wtr_soil_sl(ic,1) > MAX(liquid_max(ic), w_soil_critical_config)) THEN
             ! Freezing of water in uppermost soil layer where no snow layers above surface and considerable amount of moisture
             t_star(ic) = MAX(t_star(ic), tmelt)
           END IF
-          IF (w_ice_sl(ic,1) > w_soil_critical_tmp ) THEN
+          IF (ice_soil_sl(ic,1) > w_soil_critical_config) THEN
             ! Ice melt in uppermost soil layer where no snow layers above surface and considerable amount of ice
             t_star(ic) = MIN(t_star(ic), tmelt)
           END IF
@@ -424,11 +424,12 @@ CONTAINS
     !$ACC END DATA
 
 #ifndef _OPENACC
+    ! Security prints for more meaningfull error message than "lookup table overflow"
     IF (ANY(4._wp * t_star(:) - 3._wp * t_old(:) <= 0._wp)) THEN
-       i = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
-       WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',     &
-            & '(', grid%lon(i,iblk), ';', grid%lat(i,iblk), '): t_star: ', t_star(i), 'K,  t_old: ' , t_old(i), 'K'
-       CALL finish(TRIM(routine), message_text)
+      ic = MINLOC(4._wp * t_star(:) - 3._wp * t_old(:), DIM=1)
+      WRITE (message_text,*) 'Instability: Extreme temperature difference from one time step to the next at ',         &
+            & '(', grid%lon(ic,iblk), ';', grid%lat(ic,iblk), '): t_star: ', t_star(ic), 'K,  t_old: ' , t_old(ic), 'K'
+      CALL finish(TRIM(routine), message_text)
     END IF
 #endif
 
@@ -472,7 +473,7 @@ CONTAINS
         !
     REAL(wp) :: zcolin, zcohfl, zcoind, zicp, zca, zcs
     REAL(wp) :: pdt
-    INTEGER :: nc, ic
+    !INTEGER :: nc, ic
     !REAL(wp) :: pc16
 
     ! nc = SIZE(psold)

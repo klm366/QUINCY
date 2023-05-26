@@ -24,6 +24,7 @@ MODULE mo_jsb_model_init
   dsl4jsb_Use_config(PHENO_)
   dsl4jsb_Use_config(CARBON_)
   dsl4jsb_Use_config(NLCC_)
+  dsl4jsb_Use_config(HYDRO_)
 
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
@@ -744,6 +745,7 @@ CONTAINS
     INTEGER                             :: no_omp_thread
 
     dsl4jsb_Def_config(CARBON_)
+    dsl4jsb_Def_config(HYDRO_)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_init_after_restart'
     ! -------------------------------------------------------------------------------------------------- !
@@ -757,6 +759,7 @@ CONTAINS
     model => Get_model(model_id)
 
     dsl4jsb_Get_config(CARBON_)
+    dsl4jsb_Get_config(HYDRO_)
 
     ! Iterate over tiles and call initialization if necessary
     CALL model%Reset_tiles()
@@ -779,7 +782,8 @@ CONTAINS
         IF (dsl4jsb_Config(CARBON_)%read_cpools) CALL carbon_read_cpools(tile)
       END IF
 
-      IF (one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
+      IF (dsl4jsb_Config(HYDRO_)%sanitize_restart .AND. &
+        & one_of(tile%process_action(HYDRO_), (/ON_LEAFS_,ON_TILE_,ON_SUBTREE_,AGGREGATE_/)) > 0) THEN
         CALL hydro_sanitize_state(tile)
       END IF
 
