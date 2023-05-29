@@ -961,20 +961,20 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primf),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4per),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_urban),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdf),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secma),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primn),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdn),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4ann),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_pastr),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_range),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3ann),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3nfx),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3per),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secmb)) )
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primf),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4per),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_urban),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdf),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secma),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primn),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdn),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4ann),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_pastr),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_range),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3ann),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3nfx),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3per),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secmb),                         &
           ! Input for lakes (optional)
           & t_lake_tile(:,:),                                                          &
           & fact_q_air_lake_tile(:,:),                                                 &
@@ -1031,21 +1031,21 @@ CONTAINS
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, fba_smooth),                             &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, population),                             &
           & dsl4jsb_var2D_onDomain(ANTHRO2L_, gdp),                                    &
-          & dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi))
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primf),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4per),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_urban),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdf),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secma),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primn),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdn),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4ann),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_pastr),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_range),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3ann),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3nfx),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3per),                         &
-          !& dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secmb)) )
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, hdi),                                    &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primf),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4per),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_urban),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdf),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secma),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_primn),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secdn),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c4ann),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_pastr),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_range),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3ann),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3nfx),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_c3per),                         &
+          & dsl4jsb_var2D_onDomain(ANTHRO2L_, land_use_secmb))
       END IF
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))

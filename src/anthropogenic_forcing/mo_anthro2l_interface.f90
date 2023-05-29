@@ -53,20 +53,20 @@ CONTAINS
     & population,                       &
     & gdp,                              &
     & hdi,                              &
-    !& land_use_primf,                   &
-    !& land_use_c4per,                   &
-    !& land_use_urban,                   &
-    !& land_use_secdf,                   &
-    !& land_use_secma,                   &
-    !& land_use_primn,                   &
-    !& land_use_secdn,                   &
-    !& land_use_c4ann,                   &
-    !& land_use_pastr,                   &
-    !& land_use_range,                   &
-    !& land_use_c3ann,                   &
-    !& land_use_c3nfx,                   &
-    !& land_use_c3per,                   &
-    !& land_use_secmb,                   &
+    & land_use_primf,                   &
+    & land_use_c4per,                   &
+    & land_use_urban,                   &
+    & land_use_secdf,                   &
+    & land_use_secma,                   &
+    & land_use_primn,                   &
+    & land_use_secdn,                   &
+    & land_use_c4ann,                   &
+    & land_use_pastr,                   &
+    & land_use_range,                   &
+    & land_use_c3ann,                   &
+    & land_use_c3nfx,                   &
+    & land_use_c3per,                   &
+    & land_use_secmb,                   &
     & DEBUG_VAR                         &
     & )
 
@@ -81,21 +81,21 @@ CONTAINS
       & fba_smooth,                                  &
       & population,                                  &
       & gdp,                                         &
-      & hdi
-      !& land_use_primf,                              &
-      !& land_use_c4per,                              &
-      !& land_use_urban,                              &
-      !& land_use_secdf,                              &
-      !& land_use_secma,                              &
-      !& land_use_primn,                              &
-      !& land_use_secdn,                              &
-      !& land_use_c4ann,                              &
-      !& land_use_pastr,                              &
-      !& land_use_range,                              &
-      !& land_use_c3ann,                              &
-      !& land_use_c3nfx,                              &
-      !& land_use_c3per,                              &
-      !& land_use_secmb                   
+      & hdi,                                         &
+      & land_use_primf,                              &
+      & land_use_c4per,                              &
+      & land_use_urban,                              &
+      & land_use_secdf,                              &
+      & land_use_secma,                              &
+      & land_use_primn,                              &
+      & land_use_secdn,                              &
+      & land_use_c4ann,                              &
+      & land_use_pastr,                              &
+      & land_use_range,                              &
+      & land_use_c3ann,                              &
+      & land_use_c3nfx,                              &
+      & land_use_c3per,                              &
+      & land_use_secmb                   
     
     dsl4jsb_Def_memory(ANTHRO2L_)
 
@@ -112,21 +112,21 @@ CONTAINS
       & fba_smooth_ptr,        &
       & population_ptr,        &
       & gdp_ptr,               &
-      & hdi_ptr
-      !& land_use_primf_ptr,    &
-      !& land_use_c4per_ptr,    &
-      !& land_use_urban_ptr,    &
-      !& land_use_secdf_ptr,    &
-      !& land_use_secma_ptr,    &
-      !& land_use_primn_ptr,    &
-      !& land_use_secdn_ptr,    &
-      !& land_use_c4ann_ptr,    &
-      !& land_use_pastr_ptr,    &
-      !& land_use_range_ptr,    &
-      !& land_use_c3ann_ptr,    &
-      !& land_use_c3nfx_ptr,    &
-      !& land_use_c3per_ptr,    &
-      !& land_use_secmb_ptr
+      & hdi_ptr,               &
+      & land_use_primf_ptr,    &
+      & land_use_c4per_ptr,    &
+      & land_use_urban_ptr,    &
+      & land_use_secdf_ptr,    &
+      & land_use_secma_ptr,    &
+      & land_use_primn_ptr,    &
+      & land_use_secdn_ptr,    &
+      & land_use_c4ann_ptr,    &
+      & land_use_pastr_ptr,    &
+      & land_use_range_ptr,    &
+      & land_use_c3ann_ptr,    &
+      & land_use_c3nfx_ptr,    &
+      & land_use_c3per_ptr,    &
+      & land_use_secmb_ptr
 
     iblk = options%iblk
     ics  = options%ics
@@ -163,48 +163,48 @@ CONTAINS
     IF (PRESENT(hdi)) THEN
       hdi_ptr                 => dsl4jsb_var2D_onChunk(ANTHRO2L_, hdi)
     END IF
-    !IF (PRESENT(land_use_primf)) THEN
-    !  land_use_primf_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_primf)
-    !END IF
-    !IF (PRESENT(land_use_c4per)) THEN
-    !  land_use_c4per_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c4per)
-    !END IF
-    !IF (PRESENT(land_use_urban)) THEN
-    !  land_use_urban_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_urban)
-    !END IF
-    !IF (PRESENT(land_use_secdf)) THEN
-    !  land_use_secdf_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_secdf)
-    !END IF
-    !IF (PRESENT(land_use_secma)) THEN
-    !  land_use_secma_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_secma)
-    !END IF
-    !IF (PRESENT(land_use_primn)) THEN
-    !  land_use_primn_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_primn)
-    !END IF
-    !IF (PRESENT(land_use_secdn)) THEN
-    !  land_use_secdn_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_secdn)
-    !END IF
-    !IF (PRESENT(land_use_c4ann)) THEN
-    !  land_use_c4ann_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c4ann)
-    !END IF
-    !IF (PRESENT(land_use_pastr)) THEN
-    !  land_use_pastr_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_pastr)
-    !END IF
-    !IF (PRESENT(land_use_range)) THEN
-    !  land_use_range_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_range)
-    !END IF
-    !IF (PRESENT(land_use_c3ann)) THEN
-    !  land_use_c3ann_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c3ann)
-    !END IF
-    !IF (PRESENT(land_use_c3nfx)) THEN
-    !  land_use_c3nfx_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c3nfx)
-    !END IF
-    !IF (PRESENT(land_use_c3per)) THEN
-    !  land_use_c3per_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c3per)
-    !END IF
-    !IF (PRESENT(land_use_secmb)) THEN
-    !  land_use_secmb_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_secmb)
-    !END IF
+    IF (PRESENT(land_use_primf)) THEN
+      land_use_primf_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_primf)
+    END IF
+    IF (PRESENT(land_use_c4per)) THEN
+      land_use_c4per_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c4per)
+    END IF
+    IF (PRESENT(land_use_urban)) THEN
+      land_use_urban_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_urban)
+    END IF
+    IF (PRESENT(land_use_secdf)) THEN
+      land_use_secdf_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_secdf)
+    END IF
+    IF (PRESENT(land_use_secma)) THEN
+      land_use_secma_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_secma)
+    END IF
+    IF (PRESENT(land_use_primn)) THEN
+      land_use_primn_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_primn)
+    END IF
+    IF (PRESENT(land_use_secdn)) THEN
+      land_use_secdn_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_secdn)
+    END IF
+    IF (PRESENT(land_use_c4ann)) THEN
+      land_use_c4ann_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c4ann)
+    END IF
+    IF (PRESENT(land_use_pastr)) THEN
+      land_use_pastr_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_pastr)
+    END IF
+    IF (PRESENT(land_use_range)) THEN
+      land_use_range_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_range)
+    END IF
+    IF (PRESENT(land_use_c3ann)) THEN
+      land_use_c3ann_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c3ann)
+    END IF
+    IF (PRESENT(land_use_c3nfx)) THEN
+      land_use_c3nfx_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c3nfx)
+    END IF
+    IF (PRESENT(land_use_c3per)) THEN
+      land_use_c3per_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_c3per)
+    END IF
+    IF (PRESENT(land_use_secmb)) THEN
+      land_use_secmb_ptr      => dsl4jsb_var2D_onChunk(ANTHRO2L_, land_use_secmb)
+    END IF
 
 
     !$acc parallel default(present)
@@ -265,103 +265,103 @@ CONTAINS
       END DO
     END IF
 
-    !IF (PRESENT(land_use_primf)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_primf_ptr(i) = land_use_primf(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_primf)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_primf_ptr(i) = land_use_primf(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_c4per)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_c4per_ptr(i) = land_use_c4per(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_c4per)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_c4per_ptr(i) = land_use_c4per(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_urban)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_urban_ptr(i) = land_use_urban(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_urban)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_urban_ptr(i) = land_use_urban(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_secdf)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_secdf_ptr(i) = land_use_secdf(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_secdf)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_secdf_ptr(i) = land_use_secdf(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_secma)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_secma_ptr(i) = land_use_secma(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_secma)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_secma_ptr(i) = land_use_secma(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_primn)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_primn_ptr(i) = land_use_primn(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_primn)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_primn_ptr(i) = land_use_primn(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_secdn)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_secdn_ptr(i) = land_use_secdn(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_secdn)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_secdn_ptr(i) = land_use_secdn(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_c4ann)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_c4ann_ptr(i) = land_use_c4ann(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_c4ann)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_c4ann_ptr(i) = land_use_c4ann(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_pastr)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_pastr_ptr(i) = land_use_pastr(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_pastr)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_pastr_ptr(i) = land_use_pastr(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_range)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_range_ptr(i) = land_use_range(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_range)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_range_ptr(i) = land_use_range(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_c3ann)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_c3ann_ptr(i) = land_use_c3ann(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_c3ann)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_c3ann_ptr(i) = land_use_c3ann(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_c3nfx)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_c3nfx_ptr(i) = land_use_c3nfx(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_c3nfx)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_c3nfx_ptr(i) = land_use_c3nfx(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_c3per)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_c3per_ptr(i) = land_use_c3per(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_c3per)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_c3per_ptr(i) = land_use_c3per(i)
+      END DO
+    END IF
 
-    !IF (PRESENT(land_use_secmb)) THEN
-    !  !$acc loop gang vector
-    !  DO i=1,nc
-    !    land_use_secmb_ptr(i) = land_use_secmb(i)
-    !  END DO
-    !END IF
+    IF (PRESENT(land_use_secmb)) THEN
+      !$acc loop gang vector
+      DO i=1,nc
+        land_use_secmb_ptr(i) = land_use_secmb(i)
+      END DO
+    END IF
     !$acc end parallel
 
   END SUBROUTINE update_anthro2l

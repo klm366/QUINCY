@@ -30,7 +30,7 @@ MODULE mo_disturb_memory_class
   PUBLIC :: t_disturb_memory, max_no_of_vars
 
   !INTEGER, PARAMETER :: max_no_of_vars = 40
-  INTEGER, PARAMETER :: max_no_of_vars = 80   ! < Rackhun Son >
+  INTEGER, PARAMETER :: max_no_of_vars = 95   ! < Rackhun Son >
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_disturb_memory
@@ -48,6 +48,7 @@ MODULE mo_disturb_memory_class
     max_wind_10m_act,         & ! for windbreak
 
     koppen,                   & ! for Fire <Rackhun Son>
+    latitude,                 & ! for Fire <Rackhun Son>
     burned_fract_infer,       & ! for Fire <Rackhun Son>
     burned_fract_test,        & ! for Fire <Rackhun Son>
     t_air_ave,                & ! for Fire <Rackhun Son>
@@ -115,6 +116,20 @@ MODULE mo_disturb_memory_class
     V37_memory,               & ! for Fire <Rackhun Son>
     V38_memory,               & ! for Fire <Rackhun Son>
     V39_memory,               & ! for Fire <Rackhun Son>
+    V40_memory,               & ! for Fire <Rackhun Son>
+    V41_memory,               & ! for Fire <Rackhun Son>
+    V42_memory,               & ! for Fire <Rackhun Son>
+    V43_memory,               & ! for Fire <Rackhun Son>
+    V44_memory,               & ! for Fire <Rackhun Son>
+    V45_memory,               & ! for Fire <Rackhun Son>
+    V46_memory,               & ! for Fire <Rackhun Son>
+    V47_memory,               & ! for Fire <Rackhun Son>
+    V48_memory,               & ! for Fire <Rackhun Son>
+    V49_memory,               & ! for Fire <Rackhun Son>
+    V50_memory,               & ! for Fire <Rackhun Son>
+    V51_memory,               & ! for Fire <Rackhun Son>
+    V52_memory,               & ! for Fire <Rackhun Son>
+    V53_memory,               & ! for Fire <Rackhun Son>
     RHC_memory,               & ! for Fire <Rackhun Son>
     Y_memory,                 & ! for Fire <Rackhun Son>
     R_memory,                 & ! for Fire <Rackhun Son>
@@ -754,6 +769,120 @@ CONTAINS
       & prefix, suffix,                                                     &
       & lrestart = .TRUE., initval_r = 0.0_wp)
 
+    CALL mem%Add_var('V40_memory', mem%V40_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V40_memory', '-',                                             &
+      &  'V40 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V41_memory', mem%V41_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V41_memory', '-',                                             &
+      &  'V41 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V42_memory', mem%V42_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V42_memory', '-',                                             &
+      &  'V42 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V43_memory', mem%V43_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V43_memory', '-',                                             &
+      &  'V43 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V44_memory', mem%V44_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V44_memory', '-',                                             &
+      &  'V44 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V45_memory', mem%V45_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V45_memory', '-',                                             &
+      &  'V45 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V46_memory', mem%V46_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V46_memory', '-',                                             &
+      &  'V46 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V47_memory', mem%V47_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V47_memory', '-',                                             &
+      &  'V47 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V48_memory', mem%V48_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V48_memory', '-',                                             &
+      &  'V48 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V49_memory', mem%V49_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V49_memory', '-',                                             &
+      &  'V49 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V50_memory', mem%V50_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V50_memory', '-',                                             &
+      &  'V50 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+    CALL mem%Add_var('V51_memory', mem%V51_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V51_memory', '-',                                             &
+      &  'V51 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+
+    CALL mem%Add_var('V52_memory', mem%V52_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V52_memory', '-',                                             &
+      &  'V52 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
+
+    CALL mem%Add_var('V53_memory', mem%V53_memory,                          &
+      & hgrid, memory,                                                      &
+      & t_cf('V53_memory', '-',                                             &
+      &  'V53 memory'),                                                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
+      & prefix, suffix,                                                     &
+      & lrestart = .TRUE., initval_r = 0.0_wp)
+
     CALL mem%Add_var('RHC_memory', mem%RHC_memory,                          &
       & hgrid, memory,                                                      &
       & t_cf('RHC_memory', '-',                                             &
@@ -805,6 +934,14 @@ CONTAINS
     CALL mem%Add_var( 'koppen', mem%koppen,                                             &
       & hgrid, surface,                                                                 &
       & t_cf('koppen', '-', 'Koppen-Geiger classification'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
+      & prefix, suffix,                                                                 &
+      & output_level=BASIC,                                                             &
+      & loutput = .TRUE., lrestart=.TRUE., initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'latitude', mem%latitude,                                         &
+      & hgrid, surface,                                                                 &
+      & t_cf('latitude', '-', 'latitude'),                                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),              &
       & prefix, suffix,                                                                 &
       & output_level=BASIC,                                                             &

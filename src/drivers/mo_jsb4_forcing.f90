@@ -135,20 +135,20 @@ MODULE mo_jsb4_forcing
   CHARACTER(len=*), PARAMETER :: popd_varname  = 'population'       ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: gdp_varname   = 'gdp'              ! < Rackhun Son >
   CHARACTER(len=*), PARAMETER :: hdi_varname   = 'hdi'              ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: primf_varname = 'primf'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: c4per_varname = 'c4per'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: urban_varname = 'urban'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: secdf_varname = 'secdf'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: secma_varname = 'secma'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: primn_varname = 'primn'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: secdn_varname = 'secdn'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: c4ann_varname = 'c4ann'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: pastr_varname = 'pastr'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: range_varname = 'range'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: c3ann_varname = 'c3ann'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: c3nfx_varname = 'c3nfx'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: c3per_varname = 'c3per'            ! < Rackhun Son >
-  !CHARACTER(len=*), PARAMETER :: secmb_varname = 'secmb'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: primf_varname = 'primf'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c4per_varname = 'c4per'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: urban_varname = 'urban'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: secdf_varname = 'secdf'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: secma_varname = 'secma'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: primn_varname = 'primn'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: secdn_varname = 'secdn'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c4ann_varname = 'c4ann'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: pastr_varname = 'pastr'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: range_varname = 'range'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c3ann_varname = 'c3ann'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c3nfx_varname = 'c3nfx'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: c3per_varname = 'c3per'            ! < Rackhun Son >
+  CHARACTER(len=*), PARAMETER :: secmb_varname = 'secmb'            ! < Rackhun Son >
 
   ! expected units in forcing files (units of precipitation and co2 are specified in the namelist parameters)
   CHARACTER(len=*), PARAMETER :: exp_unit_temperature = 'degC'
@@ -233,20 +233,20 @@ MODULE mo_jsb4_forcing
      TYPE(input_variable_type) :: population      !! population density from anthropogenic forcing 
      TYPE(input_variable_type) :: gdp             !! GDP from anthropogenic forcing 
      TYPE(input_variable_type) :: hdi             !! HDI from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_primf  !! primf land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_c4per  !! c4per land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_urban  !! urban land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_secdf  !! secdf land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_secma  !! secma land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_primn  !! primn land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_secdn  !! secdn land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_c4ann  !! c4ann land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_pastr  !! pastr land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_range  !! range land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_c3ann  !! c3ann land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_c3nfx  !! c3nfx land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_c3per  !! c3per land use from anthropogenic forcing
-     !TYPE(input_variable_type) :: land_use_secmb  !! secmb land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_primf  !! primf land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c4per  !! c4per land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_urban  !! urban land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_secdf  !! secdf land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_secma  !! secma land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_primn  !! primn land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_secdn  !! secdn land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c4ann  !! c4ann land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_pastr  !! pastr land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_range  !! range land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c3ann  !! c3ann land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c3nfx  !! c3nfx land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_c3per  !! c3per land use from anthropogenic forcing
+     TYPE(input_variable_type) :: land_use_secmb  !! secmb land use from anthropogenic forcing
   END TYPE forcing_input_type
   TYPE(forcing_input_type),SAVE :: forcing_input
 
@@ -268,8 +268,8 @@ CONTAINS
     & drag_srf, t_acoef, t_bcoef, q_acoef, q_bcoef, pch,                                   &
     & a_temperature, a_rel_humidity, fba, fba_smooth,                                      &   ! < Rackhun Son >
     & population, gdp, hdi,                                                                &
-    !& land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn, land_use_secdn, &
-    !& land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx, land_use_c3per, land_use_secmb)   ! < Rackhun Son >
+    & land_use_primf, land_use_c4per, land_use_urban, land_use_secdf, land_use_secma, land_use_primn, land_use_secdn, &
+    & land_use_c4ann, land_use_pastr, land_use_range, land_use_c3ann, land_use_c3nfx, land_use_c3per, land_use_secmb, &   ! < Rackhun Son >
     & t_srf_lake, fact_q_air_lake, fact_qsat_srf_lake, rough_h_srf_lake, rough_m_srf_lake, &
     & drag_wtr, t_acoef_wtr, t_bcoef_wtr, q_acoef_wtr, q_bcoef_wtr,                        &
     & drag_ice, t_acoef_ice, t_bcoef_ice, q_acoef_ice, q_bcoef_ice)
@@ -316,20 +316,20 @@ CONTAINS
     REAL(wp), INTENT(OUT) :: population(:,:)         ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: gdp(:,:)                ! < Rackhun Son >
     REAL(wp), INTENT(OUT) :: hdi(:,:)                ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_primf(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_c4per(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_urban(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_secdf(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_secma(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_primn(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_secdn(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_c4ann(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_pastr(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_range(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_c3ann(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_c3nfx(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_c3per(:,:)     ! < Rackhun Son >
-    !REAL(wp), INTENT(OUT) :: land_use_secmb(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_primf(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c4per(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_urban(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_secdf(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_secma(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_primn(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_secdn(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c4ann(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_pastr(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_range(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c3ann(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c3nfx(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_c3per(:,:)     ! < Rackhun Son >
+    REAL(wp), INTENT(OUT) :: land_use_secmb(:,:)     ! < Rackhun Son >
     
     ! Optional input for lakes
     REAL(wp), OPTIONAL, INTENT(IN)  :: t_srf_lake(:,:)
@@ -408,20 +408,20 @@ CONTAINS
     population(:,:)        = 0._wp      ! < Rackhun Son >
     gdp(:,:)               = 0._wp      ! < Rackhun Son >
     hdi(:,:)               = 0._wp      ! < Rackhun Son >
-    !land_use_primf(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_c4per(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_urban(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_secdf(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_secma(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_primn(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_secdn(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_c4ann(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_pastr(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_range(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_c3ann(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_c3nfx(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_c3per(:,:)    = 0._wp      ! < Rackhun Son >
-    !land_use_secmb(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_primf(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c4per(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_urban(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_secdf(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_secma(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_primn(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_secdn(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c4ann(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_pastr(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_range(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c3ann(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c3nfx(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_c3per(:,:)    = 0._wp      ! < Rackhun Son >
+    land_use_secmb(:,:)    = 0._wp      ! < Rackhun Son >
 
     ALLOCATE(help1(ice, nblks))
     ALLOCATE(help2(ice, nblks))
@@ -626,20 +626,20 @@ CONTAINS
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%population, population)
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%gdp, gdp)
     CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%hdi, hdi)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_primf, land_use_primf)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c4per, land_use_c4per)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_urban, land_use_urban)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secdf, land_use_secdf)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secma, land_use_secma)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_primn, land_use_primn)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secdn, land_use_secdn)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c4ann, land_use_c4ann)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_pastr, land_use_pastr)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_range, land_use_range)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3ann, land_use_c3ann)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3nfx, land_use_c3nfx)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3per, land_use_c3per)
-    !CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secmb, land_use_secmb)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_primf, land_use_primf)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c4per, land_use_c4per)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_urban, land_use_urban)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secdf, land_use_secdf)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secma, land_use_secma)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_primn, land_use_primn)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secdn, land_use_secdn)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c4ann, land_use_c4ann)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_pastr, land_use_pastr)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_range, land_use_range)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3ann, land_use_c3ann)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3nfx, land_use_c3nfx)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_c3per, land_use_c3per)
+    CALL get_data_and_update_field(nblks, ics, ice, current_datetime, model_id, forcing_input%land_use_secmb, land_use_secmb)
 
     ! --------------------------------------------------------------------------------------------------------------
 
@@ -1089,34 +1089,34 @@ CONTAINS
       & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%gdp)
     CALL init_forcing_input_variable(hdi_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
       & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%hdi)
-    !CALL init_forcing_input_variable(primf_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_primf)
-    !CALL init_forcing_input_variable(c4per_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c4per)
-    !CALL init_forcing_input_variable(urban_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_urban)
-    !CALL init_forcing_input_variable(secdf_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secdf)
-    !CALL init_forcing_input_variable(secma_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secma)
-    !CALL init_forcing_input_variable(primn_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_primn)
-    !CALL init_forcing_input_variable(secdn_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secdn)
-    !CALL init_forcing_input_variable(c4ann_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c4ann)
-    !CALL init_forcing_input_variable(pastr_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_pastr)
-    !CALL init_forcing_input_variable(range_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_range)
-    !CALL init_forcing_input_variable(c3ann_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3ann)
-    !CALL init_forcing_input_variable(c3nfx_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3nfx)
-    !CALL init_forcing_input_variable(c3per_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3per) 
-    !CALL init_forcing_input_variable(secmb_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
-    !  & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secmb)
+    CALL init_forcing_input_variable(primf_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_primf)
+    CALL init_forcing_input_variable(c4per_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c4per)
+    CALL init_forcing_input_variable(urban_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_urban)
+    CALL init_forcing_input_variable(secdf_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secdf)
+    CALL init_forcing_input_variable(secma_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secma)
+    CALL init_forcing_input_variable(primn_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_primn)
+    CALL init_forcing_input_variable(secdn_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secdn)
+    CALL init_forcing_input_variable(c4ann_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c4ann)
+    CALL init_forcing_input_variable(pastr_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_pastr)
+    CALL init_forcing_input_variable(range_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_range)
+    CALL init_forcing_input_variable(c3ann_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3ann)
+    CALL init_forcing_input_variable(c3nfx_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3nfx)
+    CALL init_forcing_input_variable(c3per_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_c3per) 
+    CALL init_forcing_input_variable(secmb_varname, forcing_anthro_frequ, forcing_anthro_ocean, &
+      & forcing_anthro_file_prefix, forcing_anthro_unit, forcing_anthro_const_anthro, forcing_input%land_use_secmb)
 
   END SUBROUTINE init_forcing
 

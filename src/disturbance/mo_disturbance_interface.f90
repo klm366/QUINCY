@@ -144,7 +144,7 @@ CONTAINS
   !
   SUBROUTINE update_damaged_area(tile, options)
     USE mo_disturb_process,       ONLY: burned_fract_jsbach, broken_woody_fract_jsbach, get_relative_humidity_air
-    USE mo_disturb_process,       ONLY: burned_fract_dl, get_relative_humidity_air_v2, Koppen_Geiger_classification ! <Rackhun Son>  
+    USE mo_disturb_process,       ONLY: burned_fract_dl, get_relative_humidity_air_v2, Koppen_Geiger_classification_lv2 ! <Rackhun Son>  
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_time,              ONLY: is_time_experiment_start, timesteps_per_day, is_newday
     USE mo_disturbance_constants, ONLY: persist_rel_hum, persist_wind_10m
@@ -265,6 +265,20 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: V37_memory             ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: V38_memory             ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: V39_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V40_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V41_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V42_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V43_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V44_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V45_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V46_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V47_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V48_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V49_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V50_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V51_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V52_memory             ! training memory <Rackhun Son>
+    dsl4jsb_Real3D_onChunk :: V53_memory             ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: RHC_memory             ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: Y_memory               ! training memory <Rackhun Son>
     dsl4jsb_Real3D_onChunk :: R_memory               ! training memory <Rackhun Son>
@@ -277,22 +291,23 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: population             ! daily population density <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: gdp                    ! daily GDP density <Rackhun Son>
     dsl4jsb_Real2D_onChunk :: hdi                    ! daily HDI density <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_primf         ! daily land_use_primf <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c4per         ! daily land_use_c4per <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_urban         ! daily land_use_urban <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_secdf         ! daily land_use_secdf <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_secma         ! daily land_use_secma <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_primn         ! daily land_use_primn <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_secdn         ! daily land_use_secdn <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c4ann         ! daily land_use_c4ann <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_pastr         ! daily land_use_pastr <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_range         ! daily land_use_range <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c3ann         ! daily land_use_c3ann <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c3nfx         ! daily land_use_c3nfx <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_c3per         ! daily land_use_c3per <Rackhun Son>
-    !dsl4jsb_Real2D_onChunk :: land_use_secmb         ! daily land_use_secmb <Rackhun Son> 
+    dsl4jsb_Real2D_onChunk :: land_use_primf         ! daily land_use_primf <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c4per         ! daily land_use_c4per <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_urban         ! daily land_use_urban <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_secdf         ! daily land_use_secdf <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_secma         ! daily land_use_secma <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_primn         ! daily land_use_primn <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_secdn         ! daily land_use_secdn <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c4ann         ! daily land_use_c4ann <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_pastr         ! daily land_use_pastr <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_range         ! daily land_use_range <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c3ann         ! daily land_use_c3ann <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c3nfx         ! daily land_use_c3nfx <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_c3per         ! daily land_use_c3per <Rackhun Son>
+    dsl4jsb_Real2D_onChunk :: land_use_secmb         ! daily land_use_secmb <Rackhun Son> 
 
     dsl4jsb_Real2D_onChunk :: koppen
+    dsl4jsb_Real2D_onChunk :: latitude
     dsl4jsb_Real2D_onChunk :: burned_fract
     dsl4jsb_Real2D_onChunk :: burned_fract_infer
     dsl4jsb_Real2D_onChunk :: burned_fract_test
@@ -322,8 +337,8 @@ CONTAINS
     REAL(wp), POINTER :: lat(:)
 
     INTEGER :: iteration, is_training, is_saving, is_infer, memory_idx, n, i_temporal, i_spatial, max_pft_idx
-    INTEGER :: save_batch
-    REAL(wp) :: weight, u, r, t, k
+    INTEGER :: save_batch, n_zero, n_nozero
+    REAL(wp) :: weight, u, r, t, k, y
     REAL(wp) :: threshold(14)
     CHARACTER(len=10) :: max_pft
 
@@ -397,20 +412,20 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  population)               ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  gdp)                      ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  hdi)                      ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_primf)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c4per)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_urban)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secdf)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secma)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_primn)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secdn)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c4ann)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_pastr)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_range)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3ann)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3nfx)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3per)           ! in <Rackhun Son>
-    !dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secmb)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_primf)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c4per)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_urban)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secdf)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secma)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_primn)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secdn)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c4ann)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_pastr)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_range)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3ann)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3nfx)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_c3per)           ! in <Rackhun Son>
+    dsl4jsb_Get_var2D_onChunk(ANTHRO2L_,  land_use_secmb)           ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   t_air_ave)                ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   q_ave)                    ! in <Rackhun Son>
@@ -475,12 +490,27 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   V37_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   V38_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   V39_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V40_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V41_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V42_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V43_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V44_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V45_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V46_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V47_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V48_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V49_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V50_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V51_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V52_memory)               ! in <Rackhun Son>
+    dsl4jsb_Get_var3D_onChunk(DISTURB_,   V53_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   RHC_memory)               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   Y_memory  )               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   R_memory  )               ! in <Rackhun Son>
     dsl4jsb_Get_var3D_onChunk(DISTURB_,   Koppen_memory  )          ! in <Rackhun Son>
     
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   koppen)                   ! out
+    dsl4jsb_Get_var2D_onChunk(DISTURB_,   latitude  )               ! in <Rackhun Son>
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract)             ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract_infer)       ! out
     dsl4jsb_Get_var2D_onChunk(DISTURB_,   burned_fract_test)        ! out
@@ -551,9 +581,9 @@ CONTAINS
     lai_ave(:)   = lai_ave(:)   + lai(:)          *(options%dtime/60._wp/60._wp/24._wp)
 
     IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
-      threshold(1)=0.5;    threshold(2)=-0.5;  threshold(3)=0.0;  threshold(4)=0.0;  threshold(5)=-0.5 
-      threshold(6)=0.5;    threshold(7)=-0.5;  threshold(8)=0.5;  threshold(9)=0.25;  threshold(10)=0.5 
-      threshold(11)=-0.5;  threshold(12)=0.5; threshold(13)=0.5; threshold(14)=0.5
+      threshold(1)=0.;   threshold(2)=-0.5;  threshold(3)=-0.5;  threshold(4)=0.;  threshold(5)=-0.5 
+      threshold(6)=0.;   threshold(7)=0.;  threshold(8)=0.75;  threshold(9)=0.75;  threshold(10)=0. 
+      threshold(11)=0.;  threshold(12)=0.; threshold(13)=0.; threshold(14)=0.
 
       ! calculate auxiliary variables for DL fire model   <Rackhun Son>
       IF (dsl4jsb_Config(DISTURB_)%fire_algorithm == 5) THEN
@@ -611,38 +641,134 @@ CONTAINS
           IF  (iyr .ge. 2002) THEN
             ! random sampling from memory
             r = SUM(R_memory)
+            y = SUM(Y_memory)
             !k = SUM(Koppen_memory)
             IF (tile%name .eq. max_pft) THEN
-            !IF ((tile%name .eq. max_pft) .and. (r .gt. 0.)) THEN
+              IF ((r .gt. 0.) .and. (y .gt. 0.)) THEN
             !IF ((tile%name .eq. max_pft) .and. (r .gt. 0.) .and. (k .gt. 0.)) THEN
-             n=1
-              DO WHILE ( n<=8 )
-                CALL RANDOM_NUMBER(u)
-                i_temporal = 1 + INT(FLOOR((730)*u))
-                CALL RANDOM_NUMBER(u)
-                i_spatial  = 1 + INT(FLOOR((128)*u))
+                n=1
+                n_zero=0
+                n_nozero=0
+                DO WHILE ( n<=8 )
+                  CALL RANDOM_NUMBER(u)
+                  i_temporal = 1 + INT(FLOOR((732)*u))
+                  CALL RANDOM_NUMBER(u)
+                  i_spatial  = 1 + INT(FLOOR((128)*u))
 
-                !IF ((R_memory(i_spatial,i_temporal) .ne. 0.))  THEN
-                !IF ((R_memory(i_spatial,i_temporal) .ne. 0.) .and. (Koppen_memory(i_spatial,i_temporal) .ne. 0.))  THEN
-                CALL update_pid_batch(                                                                                    &
-                  & V1_memory (i_spatial,i_temporal),  V2_memory(i_spatial,i_temporal),  V3_memory(i_spatial,i_temporal), &
-                  & V4_memory (i_spatial,i_temporal),  V5_memory(i_spatial,i_temporal),  V6_memory(i_spatial,i_temporal), &
-                  & V7_memory (i_spatial,i_temporal),  V8_memory(i_spatial,i_temporal),  V9_memory(i_spatial,i_temporal), &
-                  & V10_memory(i_spatial,i_temporal), V11_memory(i_spatial,i_temporal), V12_memory(i_spatial,i_temporal), &
-                  & V13_memory(i_spatial,i_temporal), V14_memory(i_spatial,i_temporal), V15_memory(i_spatial,i_temporal), &
-                  & V16_memory(i_spatial,i_temporal), V17_memory(i_spatial,i_temporal), V18_memory(i_spatial,i_temporal), &
-                  & V19_memory(i_spatial,i_temporal), V20_memory(i_spatial,i_temporal), V21_memory(i_spatial,i_temporal), &
-                  & V22_memory(i_spatial,i_temporal), V23_memory(i_spatial,i_temporal), V24_memory(i_spatial,i_temporal), &
-                  & V25_memory(i_spatial,i_temporal), V26_memory(i_spatial,i_temporal), V27_memory(i_spatial,i_temporal), &
-                  & V28_memory(i_spatial,i_temporal), V29_memory(i_spatial,i_temporal), V30_memory(i_spatial,i_temporal), &
-                  & V31_memory(i_spatial,i_temporal), V32_memory(i_spatial,i_temporal), V33_memory(i_spatial,i_temporal), &
-                  & V34_memory(i_spatial,i_temporal), V35_memory(i_spatial,i_temporal), V36_memory(i_spatial,i_temporal), &
-                  & V37_memory(i_spatial,i_temporal), V38_memory(i_spatial,i_temporal), V39_memory(i_spatial,i_temporal), &
-                  & RHC_memory(i_spatial,i_temporal), Y_memory  (i_spatial,i_temporal),   R_memory(i_spatial,i_temporal), &
-                  & Koppen_memory(i_spatial,i_temporal), n, iblk)
-                n = n+1
+                  !IF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
+                  !  n_nozero = n_nozero+1
+                  !  IF (n_nozero .le. 4) THEN
+                  !    save_batch = 1
+                  !  ELSE
+                  !    save_batch = 0
+                  !  ENDIF
+                  !ELSE
+                  !  n_zero = n_zero+1
+                  !  IF (n_zero .le. 4) THEN
+                  !    save_batch = 1
+                  !  ELSE
+                  !    save_batch = 0
+                  !  ENDIF
+                  !ENDIF
+                  save_batch = 1
+
+                  IF (save_batch .eq. 1) THEN
+                    CALL update_pid_batch(                                                                                    &
+                      & V1_memory (i_spatial,i_temporal),  V2_memory(i_spatial,i_temporal),  V3_memory(i_spatial,i_temporal), &
+                      & V4_memory (i_spatial,i_temporal),  V5_memory(i_spatial,i_temporal),  V6_memory(i_spatial,i_temporal), &
+                      & V7_memory (i_spatial,i_temporal),  V8_memory(i_spatial,i_temporal),  V9_memory(i_spatial,i_temporal), &
+                      & V10_memory(i_spatial,i_temporal), V11_memory(i_spatial,i_temporal), V12_memory(i_spatial,i_temporal), &
+                      & V13_memory(i_spatial,i_temporal), V14_memory(i_spatial,i_temporal), V15_memory(i_spatial,i_temporal), &
+                      & V16_memory(i_spatial,i_temporal), V17_memory(i_spatial,i_temporal), V18_memory(i_spatial,i_temporal), &
+                      & V19_memory(i_spatial,i_temporal), V20_memory(i_spatial,i_temporal), V21_memory(i_spatial,i_temporal), &
+                      & V22_memory(i_spatial,i_temporal), V23_memory(i_spatial,i_temporal), V24_memory(i_spatial,i_temporal), &
+                      & V25_memory(i_spatial,i_temporal), V26_memory(i_spatial,i_temporal), V27_memory(i_spatial,i_temporal), &
+                      & V28_memory(i_spatial,i_temporal), V29_memory(i_spatial,i_temporal), V30_memory(i_spatial,i_temporal), &
+                      & V31_memory(i_spatial,i_temporal), V32_memory(i_spatial,i_temporal), V33_memory(i_spatial,i_temporal), &
+                      & V34_memory(i_spatial,i_temporal), V35_memory(i_spatial,i_temporal), V36_memory(i_spatial,i_temporal), &
+                      & V37_memory(i_spatial,i_temporal), V38_memory(i_spatial,i_temporal), V39_memory(i_spatial,i_temporal), &
+                      & V40_memory(i_spatial,i_temporal), V41_memory(i_spatial,i_temporal), V42_memory(i_spatial,i_temporal), &
+                      & V43_memory(i_spatial,i_temporal), V44_memory(i_spatial,i_temporal), V45_memory(i_spatial,i_temporal), &
+                      & V46_memory(i_spatial,i_temporal), V47_memory(i_spatial,i_temporal), V48_memory(i_spatial,i_temporal), &
+                      & V49_memory(i_spatial,i_temporal), V50_memory(i_spatial,i_temporal), V51_memory(i_spatial,i_temporal), &
+                      & V52_memory(i_spatial,i_temporal), V53_memory(i_spatial,i_temporal),                                   &
+                      & RHC_memory(i_spatial,i_temporal), Y_memory  (i_spatial,i_temporal),   R_memory(i_spatial,i_temporal), &
+                      & Koppen_memory(i_spatial,i_temporal), n, iblk)
+                    n = n+1
+                  ENDIF
+                ENDDO
+
+              ELSE
+                DO n = 1,8
+                  CALL update_pid_batch(                                                                                    &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,  0._wp, &
+                    & 0._wp,  0._wp,         &
+                    & 0._wp, n, iblk)
+                ENDDO
+              ENDIF
+                !save_batch = 1
+                !t = threshold(INT(R_memory(i_spatial,i_temporal)))
+                !IF (t .ge. 0) THEN
+                !  IF (Y_memory(i_spatial,i_temporal) .gt. 0.) THEN
+                !    save_batch = 1
+                !  ELSE
+                !    CALL RANDOM_NUMBER(u)
+                !    IF (u .gt. t) THEN
+                !      save_batch = 1
+                !    ELSE
+                !      save_batch = 0
+                !    ENDIF
+                !  ENDIF
+                !ELSE
+                !  IF (Y_memory(i_spatial,i_temporal) .eq. 0.) THEN
+                !    save_batch = 1
+                !  ELSE
+                !    CALL RANDOM_NUMBER(u)
+                !    IF (u .gt. -t) THEN
+                !      save_batch = 1
+                !    ELSE
+                !      save_batch = 0
+                !    ENDIF
+                !  ENDIF
                 !ENDIF
-              ENDDO
+
+                !IF (save_batch .eq. 1) THEN
+                !  CALL update_pid_batch(                                                                                    &
+                !    & V1_memory (i_spatial,i_temporal),  V2_memory(i_spatial,i_temporal),  V3_memory(i_spatial,i_temporal), &
+                !    & V4_memory (i_spatial,i_temporal),  V5_memory(i_spatial,i_temporal),  V6_memory(i_spatial,i_temporal), &
+                !    & V7_memory (i_spatial,i_temporal),  V8_memory(i_spatial,i_temporal),  V9_memory(i_spatial,i_temporal), &
+                !    & V10_memory(i_spatial,i_temporal), V11_memory(i_spatial,i_temporal), V12_memory(i_spatial,i_temporal), &
+                !    & V13_memory(i_spatial,i_temporal), V14_memory(i_spatial,i_temporal), V15_memory(i_spatial,i_temporal), &
+                !    & V16_memory(i_spatial,i_temporal), V17_memory(i_spatial,i_temporal), V18_memory(i_spatial,i_temporal), &
+                !    & V19_memory(i_spatial,i_temporal), V20_memory(i_spatial,i_temporal), V21_memory(i_spatial,i_temporal), &
+                !    & V22_memory(i_spatial,i_temporal), V23_memory(i_spatial,i_temporal), V24_memory(i_spatial,i_temporal), &
+                !    & V25_memory(i_spatial,i_temporal), V26_memory(i_spatial,i_temporal), V27_memory(i_spatial,i_temporal), &
+                !    & V28_memory(i_spatial,i_temporal), V29_memory(i_spatial,i_temporal), V30_memory(i_spatial,i_temporal), &
+                !    & V31_memory(i_spatial,i_temporal), V32_memory(i_spatial,i_temporal), V33_memory(i_spatial,i_temporal), &
+                !    & V34_memory(i_spatial,i_temporal), V35_memory(i_spatial,i_temporal), V36_memory(i_spatial,i_temporal), &
+                !    & V37_memory(i_spatial,i_temporal), V38_memory(i_spatial,i_temporal), V39_memory(i_spatial,i_temporal), &
+                !    & RHC_memory(i_spatial,i_temporal), Y_memory  (i_spatial,i_temporal),   R_memory(i_spatial,i_temporal), &
+                !    & Koppen_memory(i_spatial,i_temporal), n, iblk)
+                !  n = n+1
+                !ENDIF
+              !ENDDO
             ENDIF
           ENDIF
           
@@ -752,11 +878,7 @@ CONTAINS
             & dsl4jsb_Config(DISTURB_)%layer3_weight,                   &
             & dsl4jsb_Config(DISTURB_)%layer3_bias,                     &
             & dsl4jsb_Config(DISTURB_)%layer4_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer4_bias,                     &
-            & dsl4jsb_Config(DISTURB_)%layer5_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer5_bias,                     &
-            & dsl4jsb_Config(DISTURB_)%layer6_weight,                   &
-            & dsl4jsb_Config(DISTURB_)%layer6_bias                      )
+            & dsl4jsb_Config(DISTURB_)%layer4_bias                      )
 
         !ELSEIF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
         ELSE
@@ -804,11 +926,7 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%layer3_weight_update,          &
               & dsl4jsb_Config(DISTURB_)%layer3_bias_update,            &
               & dsl4jsb_Config(DISTURB_)%layer4_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer4_bias_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer5_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer5_bias_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer6_weight_update,          &
-              & dsl4jsb_Config(DISTURB_)%layer6_bias_update             )
+              & dsl4jsb_Config(DISTURB_)%layer4_bias_update             )
             print*, dsl4jsb_Config(DISTURB_)%layer1_weight_update(10,128*2+20)
           ENDIF
 
@@ -841,15 +959,8 @@ CONTAINS
         t_air_annual(:,day_of_year) = t_air_ave(:)
         rain_annual (:,day_of_year) = rain_ave(:)
 
-        CALL Koppen_Geiger_classification(nc, t_air_annual, rain_annual, lat, koppen)
-
-        !IF (iyr .ge. 2001) THEN
-        !  DO n = 1,nc
-        !    IF ((gfed_region(n) .ne. 0) .and. (tile%name .eq. 'pft01')) THEN
-        !      print*, koppen(n)
-        !    ENDIF
-        !  ENDDO
-        !ENDIF
+        CALL Koppen_Geiger_classification_lv2(nc, t_air_annual, rain_annual, lat, koppen)
+        latitude(:) = lat(:)
 
       ENDIF
 
@@ -920,6 +1031,21 @@ CONTAINS
               & gdp(:),                                                   &
               & hdi(:),                                                   &
 
+              & land_use_c3ann(:),                                        & ! in
+              & land_use_c3nfx(:),                                        & ! in
+              & land_use_c3per(:),                                        & ! in
+              & land_use_c4ann(:),                                        & ! in
+              & land_use_c4per(:),                                        & ! in
+              & land_use_pastr(:),                                        & ! in
+              & land_use_primf(:),                                        & ! in
+              & land_use_primn(:),                                        & ! in
+              & land_use_range(:),                                        & ! in
+              & land_use_secdf(:),                                        & ! in
+              & land_use_secdn(:),                                        & ! in
+              & land_use_secma(:),                                        & ! in
+              & land_use_secmb(:),                                        & ! in
+              & land_use_urban(:),                                        & ! in
+
               !& t_air_annual(:,:),                                        &
               !& rain_annual(:,:),                                         &
               & koppen(:),                                                &
@@ -945,10 +1071,6 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%layer3_bias,                     &
               & dsl4jsb_Config(DISTURB_)%layer4_weight,                   &
               & dsl4jsb_Config(DISTURB_)%layer4_bias,                     &
-              & dsl4jsb_Config(DISTURB_)%layer5_weight,                   &
-              & dsl4jsb_Config(DISTURB_)%layer5_bias,                     &
-              & dsl4jsb_Config(DISTURB_)%layer6_weight,                   &
-              & dsl4jsb_Config(DISTURB_)%layer6_bias,                     &
 
               & dsl4jsb_Config(DISTURB_)%layer1_weight_update,            &
               & dsl4jsb_Config(DISTURB_)%layer1_bias_update,              &
@@ -958,10 +1080,6 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%layer3_bias_update,              &
               & dsl4jsb_Config(DISTURB_)%layer4_weight_update,            &
               & dsl4jsb_Config(DISTURB_)%layer4_bias_update,              &
-              & dsl4jsb_Config(DISTURB_)%layer5_weight_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer5_bias_update,              &
-              & dsl4jsb_Config(DISTURB_)%layer6_weight_update,            &
-              & dsl4jsb_Config(DISTURB_)%layer6_bias_update,              &
 
               & dsl4jsb_Config(DISTURB_)%mW1,                             &
               & dsl4jsb_Config(DISTURB_)%mb1,                             &
@@ -971,10 +1089,6 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%mb3,                             &
               & dsl4jsb_Config(DISTURB_)%mW4,                             &
               & dsl4jsb_Config(DISTURB_)%mb4,                             &
-              & dsl4jsb_Config(DISTURB_)%mW5,                             &
-              & dsl4jsb_Config(DISTURB_)%mb5,                             &
-              & dsl4jsb_Config(DISTURB_)%mW6,                             &
-              & dsl4jsb_Config(DISTURB_)%mb6,                             &
 
               & dsl4jsb_Config(DISTURB_)%vW1,                             &
               & dsl4jsb_Config(DISTURB_)%vb1,                             &
@@ -984,10 +1098,6 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%vb3,                             &
               & dsl4jsb_Config(DISTURB_)%vW4,                             &
               & dsl4jsb_Config(DISTURB_)%vb4,                             &
-              & dsl4jsb_Config(DISTURB_)%vW5,                             &
-              & dsl4jsb_Config(DISTURB_)%vb5,                             &
-              & dsl4jsb_Config(DISTURB_)%vW6,                             &
-              & dsl4jsb_Config(DISTURB_)%vb6,                             &
 
               & iteration,                                                &
               & is_training,                                              &
@@ -1008,6 +1118,11 @@ CONTAINS
               & V31_memory(:,:), V32_memory(:,:), V33_memory(:,:),        &
               & V34_memory(:,:), V35_memory(:,:), V36_memory(:,:),        &
               & V37_memory(:,:), V38_memory(:,:), V39_memory(:,:),        &
+              & V40_memory(:,:), V41_memory(:,:), V42_memory(:,:),        &
+              & V43_memory(:,:), V44_memory(:,:), V45_memory(:,:),        &
+              & V46_memory(:,:), V47_memory(:,:), V48_memory(:,:),        &
+              & V49_memory(:,:), V50_memory(:,:), V51_memory(:,:),        &
+              & V52_memory(:,:), V53_memory(:,:),                         &
               & RHC_memory(:,:),   Y_memory(:,:),   R_memory(:,:),        &
               & Koppen_memory(:,:),                                       &
 
@@ -1025,57 +1140,63 @@ CONTAINS
               IF (iyr == 2015) then
               !IF (iyr == 2005) then
 
-                open(1001,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/W1.bin', &
+                open(1001,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/W1.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_input*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(1002,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/W2.bin', &
+                open(1002,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/W2.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(1003,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/W3.bin', &
+                open(1003,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/W3.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(1004,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/W4.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(1005,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/W5.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(1006,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/W6.bin', &
+                open(1004,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/W4.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output_n_class*4)
+                !open(1004,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/W4.bin', &
+                !  access='direct', form='unformatted', &
+                !  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                !open(1005,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/W5.bin', &
+                !  access='direct', form='unformatted', &
+                !  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                !open(1006,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/W6.bin', &
+                !  access='direct', form='unformatted', &
+                !  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output_n_class*4)
 
-                open(2001,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/b1.bin', &
+                open(2001,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/b1.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(2002,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/b2.bin', &
+                open(2002,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/b2.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(2003,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/b3.bin', &
+                open(2003,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/b3.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(2004,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/b4.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(2005,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/b5.bin', &
-                  access='direct', form='unformatted', &
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                open(2006,file='/work/mj0143/b301058/fire_online_2_koppen_NN/saved_parameters/b6.bin', &
+                open(2004,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/b4.bin', &
                   access='direct', form='unformatted', &
                   recl=dsl4jsb_Config(DISTURB_)%d_output_n_class*4)
+                !open(2004,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/b4.bin', &
+                !  access='direct', form='unformatted', &
+                !  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                !open(2005,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/b5.bin', &
+                !  access='direct', form='unformatted', &
+                !  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                !open(2006,file='/work/mj0143/b301058/fire_online_2_koppen_lv2/saved_parameters/b6.bin', &
+                !  access='direct', form='unformatted', &
+                !  recl=dsl4jsb_Config(DISTURB_)%d_output_n_class*4)
 
                 write(1001,rec=1) layer1_weight_global
                 write(1002,rec=1) layer2_weight_global
                 write(1003,rec=1) layer3_weight_global
                 write(1004,rec=1) layer4_weight_global
-                write(1005,rec=1) layer5_weight_global
-                write(1006,rec=1) layer6_weight_global
+                !write(1005,rec=1) layer5_weight_global
+                !write(1006,rec=1) layer6_weight_global
 
                 write(2001,rec=1) layer1_bias_global
                 write(2002,rec=1) layer2_bias_global
                 write(2003,rec=1) layer3_bias_global
                 write(2004,rec=1) layer4_bias_global
-                write(2005,rec=1) layer5_bias_global
-                write(2006,rec=1) layer6_bias_global
+                !write(2005,rec=1) layer5_bias_global
+                !write(2006,rec=1) layer6_bias_global
 
                 print*, layer1_weight_global(10,128*2+20)
 
@@ -1165,6 +1286,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract_infer,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, burned_fract_test,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DISTURB_, koppen,                  weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(DISTURB_, latitude,                weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, damaged_fract,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(DISTURB_, q_rel_air_climbuf_yDay,  weighted_by_fract)

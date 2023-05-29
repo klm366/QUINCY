@@ -44,21 +44,21 @@ MODULE mo_anthro2l_memory_class
       & fba_smooth,               &
       & population,               &
       & gdp,                      &
-      & hdi
-      !& land_use_primf,           &
-      !& land_use_c4per,           &
-      !& land_use_urban,           &
-      !& land_use_secdf,           &
-      !& land_use_secma,           &
-      !& land_use_primn,           &
-      !& land_use_secdn,           &
-      !& land_use_c4ann,           &
-      !& land_use_pastr,           &
-      !& land_use_range,           &
-      !& land_use_c3ann,           &
-      !& land_use_c3nfx,           &
-      !& land_use_c3per,           &
-      !& land_use_secmb  
+      & hdi,                      &
+      & land_use_primf,           &
+      & land_use_c4per,           &
+      & land_use_urban,           &
+      & land_use_secdf,           &
+      & land_use_secma,           &
+      & land_use_primn,           &
+      & land_use_secdn,           &
+      & land_use_c4ann,           &
+      & land_use_pastr,           &
+      & land_use_range,           &
+      & land_use_c3ann,           &
+      & land_use_c3nfx,           &
+      & land_use_c3per,           &
+      & land_use_secmb  
 
   CONTAINS
     PROCEDURE :: Init => Init_anthro2l_memory
@@ -180,131 +180,131 @@ CONTAINS
     !  & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_primf', mem%land_use_primf,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_primf (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_primf', mem%land_use_primf,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_primf (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_c4per', mem%land_use_c4per,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_c4per (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_c4per', mem%land_use_c4per,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_c4per (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_urban', mem%land_use_urban,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_urban (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_urban', mem%land_use_urban,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_urban (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_secdf', mem%land_use_secdf,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_secdf (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_secdf', mem%land_use_secdf,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_secdf (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_secma', mem%land_use_secma,                      &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_secma (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_secma', mem%land_use_secma,                      &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_secma (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_primn', mem%land_use_primn,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_primn (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_primn', mem%land_use_primn,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_primn (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_secdn', mem%land_use_secdn,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_secdn (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_secdn', mem%land_use_secdn,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_secdn (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_c4ann', mem%land_use_c4ann,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_c4ann (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_c4ann', mem%land_use_c4ann,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_c4ann (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_pastr', mem%land_use_pastr,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_pastr (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_pastr', mem%land_use_pastr,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_pastr (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_range', mem%land_use_range,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_range (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_range', mem%land_use_range,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_range (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_c3ann', mem%land_use_c3ann,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_c3ann  (anthropogenic)', '', ''),                     &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_c3ann', mem%land_use_c3ann,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_c3ann  (anthropogenic)', '', ''),                     &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
     
-    !CALL mem%Add_var( 'land_use_c3nfx', mem%land_use_c3nfx,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_c3nfx (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_c3nfx', mem%land_use_c3nfx,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_c3nfx (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_c3per', mem%land_use_c3per,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_c3per (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_c3per', mem%land_use_c3per,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_c3per (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
-    !CALL mem%Add_var( 'land_use_secmb', mem%land_use_secmb,                  &
-    !  & hgrid, surface,                                                      &
-    !  & t_cf('land_use_secmb (anthropogenic)', '', ''),                      &
-    !  & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-    !  & prefix, suffix,                                                      &
-    !  & lrestart=.FALSE.,                                                    &
+    CALL mem%Add_var( 'land_use_secmb', mem%land_use_secmb,                  &
+      & hgrid, surface,                                                      &
+      & t_cf('land_use_secmb (anthropogenic)', '', ''),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
     !  & output_level=BASIC,                                                  &
-    !  & initval_r=0.0_wp )
+      & initval_r=0.0_wp )
 
     !END IF ! IF (model%config%model_scheme == MODEL_JSBACH_DLfire) THEN
 
