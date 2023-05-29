@@ -363,10 +363,12 @@ CONTAINS
       !lstm_o(nc, d_land_hidden),                        &
       !lstm_outputs(nc, d_output),                       &
       !lstm_outputs_sum(nc, d_output),                   &
-    INTEGER  :: i, j, k, idx
+    INTEGER  :: i, j, k, idx, pid, getpid
     real(wp) :: lr_rate, keep_prob, loss, u
     real(wp) :: q_rel_air_constraint(nc)
     real(wp) :: tr_q_rel_air_constraint(bs), tr_target(bs)
+
+    
 
     ! initialize
     nn_inputs(:,1) = (t_air(:)                     - minmax(1,1))       &
@@ -466,6 +468,9 @@ CONTAINS
       nn_layer6_out, nn_layer6_act, nn_layer6_mask,  &
       nc, d_input, d_hidden, d_output, keep_prob,    &
       q_rel_air_constraint)
+
+    pid=getpid()
+    print*, mod(pid,8)
 
     burned_fract(:) = fba_smooth(:)
     burned_fract_infer = nn_outputs(:,1)/100.
