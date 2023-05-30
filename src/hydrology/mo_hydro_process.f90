@@ -368,17 +368,27 @@ CONTAINS
       infilt(:) = water_to_soil(:)
 
     ELSE IF (runoff_scheme == QArctic_) THEN
+      ! If pond water or ice storage exceeds the maximum allowed pond content, add
+      ! overflow to water_to_soil
+      ! @todo this represents forced pond melt --> energy balance?
+      wtr_pond_overflow(:) = MAX(0._wp, wtr_pond(:) + ice_pond(:) - weq_pond_max(:))
+      weq_pond(:)          = wtr_pond(:) + ice_pond(:)
+      WHERE (wtr_pond_overflow(:) > 0._wp)
+        wtr_pond(:) = wtr_pond(:) * (weq_pond_max(:) / weq_pond(:))
+        ice_pond(:) = ice_pond(:) * (weq_pond_max(:) / weq_pond(:))
+      ENDWHERE
       i_infil    = 1
       manning(:) = manning_n
       CALL infiltration_new(nc, dt_sat, dtime, MAX(0._wp, weq_pond_max(:) - ice_pond(:)),       &
-                          & i_infil, soilhydmodel,          &
-                          & steepness(:), manning(:), soil_depth_sl1(:),                       &
-                          & pore_size_index_sl1(:), bclapp_sl1(:), vol_porosity_sl1(:),        &
-                          & vol_field_cap_sl1(:), vol_p_wilt_sl1(:), hyd_cond_sat_sl1(:),    &
-                          & wtr_soil_sl1(:), ice_soil_sl1(:), wtr_soil_pot_scool_sl1(:),     &
-                          & water_to_soil(:) + wtr_pond(:), wtr_pond(:),                                      &
+                          & i_infil, soilhydmodel,                                              &
+                          & steepness(:), manning(:), soil_depth_sl1(:),                        &
+                          & pore_size_index_sl1(:), bclapp_sl1(:), vol_porosity_sl1(:),         &
+                          & vol_field_cap_sl1(:), vol_p_wilt_sl1(:), hyd_cond_sat_sl1(:),       &
+                          & wtr_soil_sl1(:), ice_soil_sl1(:), wtr_soil_pot_scool_sl1(:),        &
+                          & water_to_soil(:) + wtr_pond(:) + wtr_pond_overflow(:), wtr_pond(:), &
                           & runoff_horton(:), infilt(:))
-      runoff(:) = runoff_horton(:)
+      runoff(:)   = runoff_horton(:)
+      weq_pond(:) = wtr_pond(:) + ice_pond(:)
 
     ELSE IF (runoff_scheme == Arno_) THEN
       ! Lateral water flows from ponds are connected to the choice of the surface runoff
