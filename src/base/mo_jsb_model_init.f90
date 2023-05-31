@@ -273,10 +273,6 @@ CONTAINS
         !***** Add LCC processes between pplcc_pre and pplcc_post *****
         ! order of tasks of course determines area available for change for the subsequent lcc tasks!
         ! suggestion: natural changes before anthropogenic changes; wind before fire (prev. order in disturb)
-        IF (model%config%use_dynlakes) THEN
-          CALL model%Queue_task(HD_, "dynlake")
-        END IF
-
         IF (model%processes(WLCC_)%p%config%active) THEN
           CALL model%Queue_task(WLCC_, "wlcc")
         END IF
@@ -295,6 +291,10 @@ CONTAINS
 
         IF (model%processes(TLCC_)%p%config%active) THEN
           CALL model%Queue_task(TLCC_, "tlcc")
+        END IF
+
+        IF (model%config%use_dynlakes) THEN
+          CALL model%Queue_task(HD_, "dynlake")
         END IF
 
         ! Do postprocessing after all LCC tasks were executed
