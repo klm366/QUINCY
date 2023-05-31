@@ -484,7 +484,7 @@ CONTAINS
     !$claw acc present(dz,mids,t_unfilt,vol_heat_cap,heat_cond,t_soil_sl, &
     !$claw acc t_soil_acoef,t_soil_bcoef,hcap_grnd,grnd_hflx,thaw_depth)
 
-    thaw_scheme = 1
+    thaw_scheme = 2
 
     !$claw acc parallel loop gang vector
     zbot(1) = dz(1)

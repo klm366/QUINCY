@@ -20,7 +20,7 @@ MODULE mo_mix_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion
+  PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion, calc_snow_redistribution
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_process'
 
@@ -615,6 +615,188 @@ CONTAINS
     diffus_dpr(:) = diffus_dpr(:) * rhoh2o / dtime
 
   END SUBROUTINE calc_intertile_diffusion
+
+  ! ===============================================================================================================================
+  !>
+  !! @brief   Compute intertile snow redistribution between tiles with different surface elevation (elevation/depression)
+  !!
+  SUBROUTINE calc_snow_redistribution(l_dynsnow,   &
+      &      dtime,                              &
+      &      h_offset,                           &
+      &      lvt_fract, dpr_fract,               &
+      &      weq_pond_lvt, weq_pond_dpr,         & 
+      &      snow_soil_lvt, snow_soil_dpr,       &
+      &      snow_new_lvt, snow_new_dpr,         &
+      &      snow_lvt, snow_dpr,                 &
+      &      snow_dens_lvt, snow_dens_dpr,       &
+      &      snow_rdst_lvt,snow_rdst_dpr         &
+      &      )
+
+    USE mo_jsb_physical_constants, ONLY: rhoh2o, dens_snow_min, dens_snow_max, dens_snow
+
+    LOGICAL,  INTENT(in)    :: l_dynsnow              !< Dynamic snow density
+
+    REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
+      &                        h_offset,            & !< Height difference between tiles
+      &                        lvt_fract,           & !< area fraction of water elevation tile
+      &                        dpr_fract              !< area fraction of water depression tile
+
+    REAL(wp), INTENT(in)    :: weq_pond_lvt,        & !< water & ice lvl in pond reservoir on lvt
+      &                        weq_pond_dpr           !< water & ice lvl in pond reservoir in dpr
+
+    REAL(wp), INTENT(inout) :: snow_soil_lvt,       & !< snow soil (WEQ) on elevation tile
+      &                        snow_soil_dpr,       & !< snow soil (WEQ) on depression tile
+      &                        snow_new_lvt,        & !< new snow soil (WEQ) on elevation tile
+      &                        snow_new_dpr,        & !< new snow soil (WEQ) on depression tile
+      &                        snow_lvt,            & !< snow (WEQ; can and soil) on elevation tile
+      &                        snow_dpr,            & !< snow (WEQ; can and soil) on depression tile
+      &                        snow_dens_lvt,       & !< snow density on elevation tile
+      &                        snow_dens_dpr          !< snow density on depression tile
+
+    REAL(wp), INTENT(out)   :: snow_rdst_lvt,       & !< Snow redistribution flux at elevation tile [kg m-2 s-1]
+      &                        snow_rdst_dpr          !< Snow redistribution flux at depression tile [kg m-2 s-1]
+
+
+
+    ! Local variables ------------------------------------------------------------------------------------
+
+    REAL(wp)                :: fr_lvt_rel,          &
+      &                        fr_dpr_rel,          &
+      &                        h_offset_snow_fix,   &
+      &                        snow_fix_lvt ,       &
+      &                        snow_fix_dpr ,       &
+      &                        snow_fix_rel_lvt,    &
+      &                        snow_fix_rel_dpr,    &
+      &                        snow_depth_mob_avg,  &
+      &                        snow_depth_mob_lvt,  &
+      &                        snow_depth_mob_dpr,  &
+      &                        snow_mob_lvt,        &
+      &                        snow_mob_dpr,        &
+      &                        snow_mob_upd_lvt,    &
+      &                        snow_mob_upd_dpr,    &
+      &                        snow_dens_max,       &
+      &                        snow_dens_min,       &      
+      &                        snow_dens_fix_lvt,   &    
+      &                        snow_dens_fix_dpr
+
+    ! Setting initial values to 0.0
+    snow_rdst_lvt = 0._wp
+    snow_rdst_dpr = 0._wp
+ 
+
+    ! Snow density paraeters depending on snow scheme
+    IF (l_dynsnow) THEN
+      snow_dens_max = dens_snow_max
+      snow_dens_min = dens_snow_min
+    ELSE
+      snow_dens_max = dens_snow
+      snow_dens_min = dens_snow     
+    END IF
+
+    ! Determine relative fractions from absolute fractions
+    fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
+    fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
+
+    ! Determine amount of fixed and mobile fractions of the snow cover 
+    ! (assuming that in the previous time step the old snow has melted before the new snow)    
+    snow_fix_lvt =  snow_soil_lvt - snow_new_lvt
+    snow_fix_dpr =  snow_soil_dpr - snow_new_dpr
+    snow_mob_lvt =  snow_new_lvt
+    snow_mob_dpr =  snow_new_dpr
+    
+    IF (snow_fix_lvt < 0._wp) THEN
+      snow_mob_lvt = snow_new_lvt + snow_fix_lvt
+      snow_fix_lvt = 0._wp
+    END IF
+    IF (snow_fix_dpr < 0._wp) THEN
+      snow_mob_dpr = snow_new_dpr + snow_fix_dpr
+      snow_fix_dpr = 0._wp
+    END IF
+    
+    ! Determine snow density of fixed snow    
+    IF (snow_fix_lvt > 0._wp) THEN      
+      snow_fix_rel_lvt  = snow_fix_lvt / snow_soil_lvt
+      snow_dens_fix_lvt = (snow_dens_lvt - (snow_dens_min * (1._wp - snow_fix_rel_lvt))) &
+                      & / snow_fix_rel_lvt
+    ELSE
+      snow_dens_fix_lvt = snow_dens_lvt
+    END IF
+    IF (snow_fix_dpr > 0._wp) THEN            
+      snow_fix_rel_dpr = snow_fix_dpr / snow_soil_dpr    
+      snow_dens_fix_dpr = (snow_dens_dpr - (snow_dens_min * (1._wp - snow_fix_rel_dpr))) &
+                      & / snow_fix_rel_dpr
+    ELSE
+      snow_dens_fix_dpr = snow_dens_dpr
+    END IF
+
+    !! Determine height differences of the top of fixed snow
+    h_offset_snow_fix = h_offset &
+                    & + weq_pond_lvt + snow_fix_lvt * (rhoh2o / snow_dens_fix_lvt) &
+                    & - weq_pond_dpr - snow_fix_dpr * (rhoh2o / snow_dens_fix_dpr)
+
+    ! Calculate snow redistribution for two cases (1) from elevation to depression or (2) from depression to elevation
+    ! Transport only applies if in the source tile there is fixed and mobile (new) snow
+    IF  ((h_offset_snow_fix > 0._wp .AND. snow_fix_lvt > 0.01_wp .AND. snow_mob_lvt > 0._wp) .OR. &
+         (h_offset_snow_fix < 0._wp .AND. snow_fix_dpr > 0.01_wp .AND. snow_mob_dpr > 0._wp))THEN
+
+      snow_depth_mob_avg = (snow_mob_lvt * fr_lvt_rel + snow_mob_dpr * fr_dpr_rel) * (rhoh2o / snow_dens_min)
+
+      !! 1. (Fixed) snow surface is lower in derpression and there is fixed and mobile snow on elevation    
+      IF  (h_offset_snow_fix > 0._wp .AND. snow_fix_lvt > 0.01_wp .AND. snow_mob_lvt > 0._wp)THEN
+        IF (snow_depth_mob_avg / fr_dpr_rel <= h_offset_snow_fix ) THEN ! New snow fits into depression
+          snow_depth_mob_dpr = snow_depth_mob_avg / fr_dpr_rel
+          snow_depth_mob_lvt = 0._wp
+        ELSE
+          snow_depth_mob_dpr = h_offset_snow_fix  &
+                           & + (snow_depth_mob_avg - h_offset_snow_fix * fr_dpr_rel)
+          snow_depth_mob_lvt =  snow_depth_mob_avg - h_offset_snow_fix * fr_dpr_rel
+        END IF   
+      !! 2. (Fixed) snow surface is lower on elevation and there is fixed and mobile snow in depression                                        
+      ELSE IF (h_offset_snow_fix < 0._wp .AND. snow_fix_dpr > 0.01_wp .AND. snow_mob_dpr > 0._wp) THEN
+        h_offset_snow_fix = - h_offset_snow_fix ! Inversing sign of height offset to simplify calculations  
+        IF (snow_depth_mob_avg / fr_lvt_rel <= h_offset_snow_fix ) THEN  ! New snow fits into elevation
+          snow_depth_mob_lvt = snow_depth_mob_avg / fr_lvt_rel
+          snow_depth_mob_dpr = 0._wp     
+        ELSE
+          snow_depth_mob_lvt = h_offset_snow_fix &
+                           & + (snow_depth_mob_avg - h_offset_snow_fix * fr_lvt_rel)
+          snow_depth_mob_dpr =  snow_depth_mob_avg - h_offset_snow_fix * fr_lvt_rel
+        END IF   
+      END IF
+
+      ! Recalculation of up snow weqs 
+      snow_mob_upd_dpr = snow_depth_mob_dpr / (rhoh2o / snow_dens_min)
+      snow_mob_upd_lvt = snow_depth_mob_lvt / (rhoh2o / snow_dens_min)
+
+      snow_rdst_dpr    = snow_mob_upd_dpr - snow_mob_dpr
+      snow_rdst_lvt    = snow_mob_upd_lvt - snow_mob_lvt  
+     
+      snow_soil_dpr    = snow_fix_dpr + snow_mob_upd_dpr  
+      snow_soil_lvt    = snow_fix_lvt + snow_mob_upd_lvt
+
+      snow_dpr         = snow_dpr + snow_rdst_dpr
+      snow_lvt         = snow_lvt + snow_rdst_lvt 
+      
+      snow_new_dpr     = snow_mob_upd_dpr
+      snow_new_lvt     = snow_mob_upd_lvt 
+      
+      ! Converting redistribution flux from m/step -> kg m-2 s-1 
+      snow_rdst_dpr    = snow_rdst_dpr * rhoh2o / dtime
+      snow_rdst_lvt    = snow_rdst_lvt * rhoh2o / dtime
+
+      ! Updating snow densities based on redistributed snow
+      IF (snow_rdst_dpr .NE. 0_wp .AND. snow_soil_dpr > 0._wp) THEN         
+        snow_dens_dpr = (snow_new_dpr * snow_dens_min &
+                    & + snow_fix_dpr * min(snow_dens_fix_dpr, snow_dens_max)) / snow_soil_dpr               
+      END IF
+    
+      IF (snow_rdst_lvt .NE. 0_wp .AND. snow_soil_lvt > 0._wp) THEN          
+        snow_dens_lvt = (snow_new_lvt * snow_dens_min &
+                    & + snow_fix_lvt * min(snow_dens_fix_lvt, snow_dens_max)) / snow_soil_lvt 
+      END IF
+    END IF
+
+  END SUBROUTINE calc_snow_redistribution
 
 #endif
 END MODULE mo_mix_process

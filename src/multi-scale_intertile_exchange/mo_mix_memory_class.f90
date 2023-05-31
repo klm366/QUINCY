@@ -39,6 +39,7 @@ MODULE mo_mix_memory_class
     ! Common variables independent of lct_type
     TYPE(t_jsb_var_real2d) ::   &
       & wtr_latflow,            & !< Lateral water flow between tiles               [kg m-2 s-1]
+      & snow_rdst,              & !< Snow redistribution                            [kg m-2 s-1]
       & runoff_retention          !< Runoff retention reservoir                     [m water equivalent]
     TYPE(t_jsb_var_real3d) ::   &
       & wtr_diflat_sl,          & !< Lateral diffusion flux between tiles           [kg m-2 s-1]
@@ -93,6 +94,14 @@ CONTAINS
     CALL mem%Add_var('wtr_latflow', mem%wtr_latflow,                                 &
       & hgrid, surface,                                                              &
       & t_cf('wtr_latflow', 'kg m-2 s-1', 'Lateral water flow between tiles'),       &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
+      & output_level=BASIC,                                                          &
+      & lrestart=.FALSE., initval_r=0.0_wp )
+
+    CALL mem%Add_var('snow_rdst', mem%snow_rdst,                                     &
+      & hgrid, surface,                                                              &
+      & t_cf('snow_rdst', 'kg m-2 s-1', 'Snow redistribution'),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix, l_aggregate_all=.TRUE.,                                      &
       & output_level=BASIC,                                                          &

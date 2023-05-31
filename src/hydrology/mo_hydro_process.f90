@@ -89,7 +89,7 @@ CONTAINS
     & weq_rootzone, weq_rootzone_max, weq_soil,                     &
     & wtr_skin, weq_snow_soil, weq_snow_can, snow_soil_dens,        &
     & wtr_pond, ice_pond, q_snocpymlt,                              &
-    & snow_accum, snowmelt_soil, pond_freeze, pond_melt,            &
+    & new_snow_soil, snow_accum, snowmelt_soil, pond_freeze, pond_melt,  &
     & evapotrans_soil, evapo_skin, evapo_snow, evapo_pond,          &
     & water_to_soil, evapo_deficit, infilt, runoff, runoff_horton)
 
@@ -114,11 +114,11 @@ CONTAINS
     REAL(wp), INTENT(inout) :: &
       & wtr_skin(:), weq_snow_soil(:), weq_snow_can(:), snow_soil_dens(:),  &
       & wtr_pond(:), ice_pond(:)
-    REAL(wp), INTENT(out)   ::                                              &
-      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), pond_freeze(:),    &
-      & pond_melt(:), evapotrans_soil(:), evapo_skin(:), evapo_snow(:),     &
-      & evapo_pond(:), water_to_soil(:), evapo_deficit(:),                  &
-      & infilt(:), runoff(:), runoff_horton(:)
+    REAL(wp), INTENT(out)   ::                                                    &
+      & q_snocpymlt(:), snow_accum(:), snowmelt_soil(:), new_snow_soil(:),        &
+      & pond_freeze(:),  pond_melt(:),                                            &
+      & evapotrans_soil(:), evapo_skin(:), evapo_snow(:),  evapo_pond(:),         &
+      & water_to_soil(:), evapo_deficit(:), infilt(:), runoff(:), runoff_horton(:)
     !$claw end model-data
     !
     !  local variables
@@ -138,7 +138,6 @@ CONTAINS
       & snowmelt_can(nc),         & !< snow melt from canopy [m]
       & snowmelt_pot_in_m(nc),    & !< potential amount of snow melt [m]
       & new_snow_can(nc),         & !< amount of snowfall on canopy within time step [m]
-      & new_snow_soil(nc),        & !< amount of snowfall to soil within time step [m]
       & exp_t(nc), exp_w(nc),     & !< exponents needed for unloading of snow due to temperature / wind
       & snow_blown(nc),           & !< amount of snow blown from canopy to the ground
       & canopy_pre_snow(nc),      & !< snow depth on the canopy prior to its update
@@ -576,7 +575,7 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
-    & soilhydmodel, interpol_mean, l_latdrain, l_pf_soil,                                &
+    & soilhydmodel, interpol_mean, l_latdrain, l_botdrain,                                &
     & w_soil_wilt_fract, slope, soil_depth_sl, root_depth_sl,                            &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
@@ -598,8 +597,7 @@ CONTAINS
       & soilhydmodel, interpol_mean
     REAL(wp), INTENT(in) :: &
       & dtime, w_soil_wilt_fract
-    LOGICAL, INTENT(in) :: l_latdrain
-    LOGICAL, INTENT(in), DIMENSION(:) :: l_pf_soil
+    LOGICAL, INTENT(in), DIMENSION(:) :: l_latdrain, l_botdrain
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
     LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! Tile fraction > 0
@@ -704,7 +702,7 @@ CONTAINS
     wtr_soilhyd_res(:) = 0._wp
 
     CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, soilhydmodel, interpol_mean,   &
-      &     l_latdrain, l_pf_soil,                                                   &
+      &     l_latdrain, l_botdrain,                                                   &
       &     w_soil_wilt_fract, slope, soil_depth_sl, wtr_field_cap_sl, wtr_wsat_sl,  &
       &     weq_field_cap_sl, weq_wsat_sl, weq_p_wilt_sl,                            &
       &     hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,           &
@@ -1101,7 +1099,7 @@ CONTAINS
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
   SUBROUTINE soilhyd(nc, l_fract, lat, lon, nsoil, dtime,           &
-    & soilhydmodel, interpol_mean, l_latdrain, l_pf_soil,           &
+    & soilhydmodel, interpol_mean, l_latdrain, l_botdrain,           &
     & w_soil_wilt_fract, slope, dsoil,                              &
     & wtr_field_cap_sl, wtr_wsat_sl, weq_field_cap_sl, weq_wsat_sl, &
     & weq_p_wilt_sl, hyd_cond_sat_sl,                               &
@@ -1121,8 +1119,8 @@ CONTAINS
     INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
     INTEGER,  INTENT(in)            :: soilhydmodel               ! hydrology model scheme
     INTEGER,  INTENT(in)            :: interpol_mean              ! lateral interpolation scheme
-    LOGICAL,  INTENT(in)            :: l_latdrain
-    LOGICAL,  INTENT(in)            :: l_pf_soil(:)
+    LOGICAL,  INTENT(in)            :: l_latdrain(:)
+    LOGICAL,  INTENT(in)            :: l_botdrain(:)
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
     REAL(wp), INTENT(in)            :: w_soil_wilt_fract          ! fractional plant wilting point [/]
     REAL(wp), INTENT(in)            :: slope(:)                   ! microslope, or some other ?
@@ -1251,7 +1249,7 @@ CONTAINS
     ! Only done if permafrost contained to bedrock layers
     ! Above a critical point, fast drainage occurs.
     DO i = 1,nc
-      IF (.NOT. l_pf_soil(i)) THEN
+      IF (l_botdrain(i)) THEN
         ! Hier könnte man sicher auch einfach:
         ! drain_sl(j) = MIN(hyd_cond_sl(j,i) * dtime, MAX(0._wp, wtr_soil_sl(j,i)-wtr_rsdl_sl(j,i)))
         ! nehmen, wie fst alle anderen Modelle auch ...
@@ -1480,7 +1478,7 @@ CONTAINS
         ! soil moisture above which drainage strongly increases
         ! 1.) Caluclate drainage for all soils
         drain_sl(i) = MIN(hyd_cond_sl(i,j) * SIN(slope(j)*pi/2._wp) * dtime, MAX(0._wp, wtr_soil_sl(i,j)-wtr_rsdl_sl(i,j)))
-        IF ((.NOT. ltpe_closed) .AND. l_latdrain) THEN
+        IF ((.NOT. ltpe_closed) .AND. l_latdrain(i)) THEN
           IF (wtr_soil_sl(i,j) > wtr_rsdl_sl(i,j)) THEN
             wtr_soil_sl(i,j)  = wtr_soil_sl(i,j)  - drain_sl(i) ! remove drainage of the layer from soil moisture
             drain_lat_sl(i,j) = drain_lat_sl(i,j) + drain_sl(i) ! and add to lateral drainage

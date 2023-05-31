@@ -54,7 +54,8 @@ MODULE mo_hydro_config_class
       & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
-      & l_ponds                 !< Additional surface water storage
+      & l_ponds,              & !< Additional surface water storage
+      & l_jsb_wet_test          !< Create idealized, wet jsb-setup
 
     INTEGER               ::  &
       & runoff_scheme,        & !< Choice of runoff and infiltration scheme: 'ARNO' (default), 'QArctic' (only with hydrotiles)
@@ -88,7 +89,7 @@ CONTAINS
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, runoff_scheme, soilhydmodel, interpol_mean
     LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
-      &                            l_ponds
+      &                            l_ponds, l_jsb_wet_test
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -111,6 +112,7 @@ CONTAINS
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
       & l_ponds,                    &
+      & l_jsb_wet_test,             &
       & runoff_scheme,              &
       & soilhydmodel,               &
       & interpol_mean
@@ -148,6 +150,7 @@ CONTAINS
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
     l_ponds                = .FALSE.
+    l_jsb_wet_test         = .FALSE.
     runoff_scheme          = "Arno"
     soilhydmodel           = "BrooksCorey"
     interpol_mean          = "upstream"
@@ -222,6 +225,7 @@ CONTAINS
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
     config%l_ponds = l_ponds
+
     IF (l_ponds) THEN
       CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not tested!!')
       config%max_pond_depth = max_pond_depth
@@ -230,6 +234,11 @@ CONTAINS
       config%max_pond_depth = 0._wp
       CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
     END IF
+
+    config%l_jsb_wet_test = l_jsb_wet_test
+    IF (l_jsb_wet_test) THEN
+      CALL message(TRIM(routine), '*** This is a WET run***') 
+    END IF  
 
     SELECT CASE(TRIM(tolower(runoff_scheme)))
     CASE("arno")

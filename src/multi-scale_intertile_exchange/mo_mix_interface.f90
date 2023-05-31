@@ -41,6 +41,7 @@ MODULE mo_mix_interface
   ! Use of process configurations
   dsl4jsb_Use_config(MIX_)
   dsl4jsb_Use_config(HYDRO_)
+  dsl4jsb_Use_config(SSE_)
 
   ! Use of process memories
   dsl4jsb_Use_memory(MIX_)
@@ -212,7 +213,8 @@ CONTAINS
     USE mo_hydro_process,          ONLY: get_soilhyd_cond_properties
     USE mo_mix_process,            ONLY: calc_runoff_transport,   &
       &                                  calc_drainage_transport, &
-      &                                  calc_intertile_diffusion
+      &                                  calc_intertile_diffusion, &
+      &                                  calc_snow_redistribution
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -236,6 +238,8 @@ CONTAINS
     ! Declare process memories
     dsl4jsb_Def_config(MIX_)
     dsl4jsb_Def_config(HYDRO_)
+    dsl4jsb_Def_config(SSE_)
+
     dsl4jsb_Def_memory(MIX_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(SSE_)
@@ -248,6 +252,14 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: micro_slope
     dsl4jsb_Real2D_onChunk :: wtr_latflow
     dsl4jsb_Real2D_onChunk :: wtr_pond
+    dsl4jsb_Real2D_onChunk :: weq_pond    
+
+    dsl4jsb_Real2D_onChunk :: snow_rdst
+    dsl4jsb_Real2D_onChunk :: weq_snow_new_soil
+    dsl4jsb_Real2D_onChunk :: weq_snow_soil
+    dsl4jsb_Real2D_onChunk :: weq_snow
+    dsl4jsb_Real2D_onChunk :: snow_soil_dens
+
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: runoff_retention
     dsl4jsb_Real2D_onChunk :: drainage
@@ -271,6 +283,13 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: wtr_latflow_sibl_tile
     dsl4jsb_Real2D_onChunk :: wtr_pond_sibl_tile
+    dsl4jsb_Real2D_onChunk :: weq_pond_sibl_tile    
+
+    dsl4jsb_Real2D_onChunk :: snow_rdst_sibl_tile
+    dsl4jsb_Real2D_onChunk :: weq_snow_new_soil_sibl_tile
+    dsl4jsb_Real2D_onChunk :: weq_snow_soil_sibl_tile
+    dsl4jsb_Real2D_onChunk :: weq_snow_sibl_tile
+    dsl4jsb_Real2D_onChunk :: snow_soil_dens_sibl_tile
 
     dsl4jsb_Real3D_onChunk :: soil_depth_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: vol_porosity_sl_sibl_tile
@@ -328,6 +347,7 @@ CONTAINS
 
     dsl4jsb_Get_config(MIX_)
     dsl4jsb_Get_config(HYDRO_)
+    dsl4jsb_Get_config(SSE_)
 
     ! Get process memories
     dsl4jsb_Get_memory(MIX_)
@@ -339,11 +359,20 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(MIX_,   wtr_diflat_sl)          ! inout
     dsl4jsb_Get_var2D_onChunk(MIX_,   runoff_retention)       ! inout
     dsl4jsb_Get_var3D_onChunk(MIX_,   drain_lat_retention_sl) ! inout
+    dsl4jsb_Get_var2D_onChunk(MIX_,   snow_rdst)              ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, micro_slope)            ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)                 ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)               ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)               ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)               ! in
+
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_new_soil)      ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)          ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)               ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)         ! inout
+
+
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)     ! in
     IF (tile%contains_soil) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_, wtr_soil_sl)          ! inout
@@ -397,6 +426,12 @@ CONTAINS
           l_pf_soil(i)=.FALSE.
         END IF
       END DO
+      !!!!!!! HERE IT WOULD BE POSSIBLE TO PRESCRIBE A l_pf_soil
+      !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
+      !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
+        l_pf_soil(:)=.TRUE.      
+      END IF 
 
       ! Source tiles are always either upland or ridge tiles
       IF (tile%contains_upland .OR. tile%contains_ridge) THEN
@@ -528,7 +563,13 @@ CONTAINS
             dsl4jsb_Get_memory_tile(HYDRO_, sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,              sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(MIX_,   wtr_diflat_sl,            sibl_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   snow_rdst,                sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, wtr_pond,                 sibl_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, weq_pond,                 sibl_tile) ! in
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, weq_snow_new_soil,        sibl_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, weq_snow_soil,            sibl_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, weq_snow,                 sibl_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, snow_soil_dens,           sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,              sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_fc_sl,           sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, soil_depth_sl,            sibl_tile)
@@ -630,6 +671,27 @@ CONTAINS
 
               END IF
             ENDDO
+            ! Lateral snow redistribution between ridge and depression tiles of the same macrotopography
+            DO i = 1, nc
+              IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp .AND. &
+                  wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
+
+
+                CALL calc_snow_redistribution(dsl4jsb_Config(SSE_)%l_dynsnow, & !< snow properties
+                   & dtime,                                                & !< time step                   [s]
+                   & dsl4jsb_Config(HYDRO_)%max_pond_depth,                & !< height difference between source and target tile [m]
+                   & source_fract(i),      target_fract(i),                & !< tile fractions              []
+                   & weq_pond(i),          weq_pond_sibl_tile(i),          & !< pond water storage          [m]
+                   & weq_snow_soil(i),     weq_snow_soil_sibl_tile(i),     & !< snow on soil                [m]
+                   & weq_snow_new_soil(i), weq_snow_new_soil_sibl_tile(i), & !< new snow on soil            [m]
+                   & weq_snow(i),          weq_snow_sibl_tile(i),          & !< snow (soil + can)           [m]
+                   & snow_soil_dens(i),    snow_soil_dens_sibl_tile(i),    & !< soil water storage          [m]
+                   & snow_rdst(i),         snow_rdst_sibl_tile(i)          & !< lateral snow redistribution flux  [kg m-2 s-1]
+                   & )
+
+              END IF
+            ENDDO
+
           END IF
         END DO
       END IF
@@ -695,6 +757,12 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(MIX_,   wtr_diflat_sl,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,            weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_soil,          weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_new_soil,      weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_,   snow_rdst,              weighted_by_fract)
+
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

@@ -48,6 +48,7 @@ MODULE mo_hydro_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & fract_snow,           & !< Snow fraction of tile                                                []
       & weq_snow,             & !< Water content of snow reservoir                                      [m water equivalent]
+      & weq_snow_new_soil,        & !< Water content of freshl snow                                         [m water equivalent]
       & evapo_snow,           & !< Evaporation from snow                                                [kg m-2 s-1]
       & snowmelt,             & !< Snow melt                                                            [kg m-2 s-1]
       & evapopot,             & !< Potential evaporation                                                [kg m-2 s-1]
@@ -559,6 +560,13 @@ CONTAINS
       CALL mem%Add_var( 'weq_snow_soil', mem%weq_snow_soil,                          &
         & hgrid, surface,                                                            &
         & t_cf('weq_snow_soil', 'm (water equivalent)', 'Snow amount on soil'),      &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
+        & prefix, suffix,                                                            &
+        & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+      CALL mem%Add_var( 'weq_snow_new_soil', mem%weq_snow_new_soil,                          &
+        & hgrid, surface,                                                            &
+        & t_cf('weq_snow_new_soil', 'm (water equivalent)', 'Fresh snow on soil'),       &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )

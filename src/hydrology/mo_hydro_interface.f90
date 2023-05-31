@@ -404,6 +404,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_skin
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
+    dsl4jsb_Real2D_onChunk :: weq_snow_new_soil
     dsl4jsb_Real2D_onChunk :: steepness
     dsl4jsb_Real2D_onChunk :: fract_pond
     dsl4jsb_Real2D_onChunk :: fract_pond_max
@@ -533,6 +534,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)      ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)       ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)  ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_new_soil)  ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens) ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_snow)     ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)     ! in
@@ -716,6 +718,7 @@ CONTAINS
         & ice_pond(:),                    & !< pond reservoir ice content [m]
         ! out
         & q_snocpymlt(:),                 & !< Heating due to snow melt on canopy [W m-2]
+        & weq_snow_new_soil(:),           & !< snow fall on soil [m water equivalent]
         & snow_accum(:),                  & !< snow budget change within time step [m water equivalent]
         & snowmelt(:),                    & !< snow/ice melt at land points (excluding canopy) [kg m-2 s-1]
         & pond_freeze(:),                 & !< Amount of water freezing within ponds [kg m-2 s-1]
@@ -791,6 +794,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_can,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_new_soil,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snowmelt,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, q_snocpymlt,     weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_glac,        weighted_by_fract)
@@ -1092,7 +1096,8 @@ CONTAINS
 
     LOGICAL  :: ltpe_open
     LOGICAL  :: ltpe_closed
-    LOGICAL  :: l_latdrain
+    LOGICAL  :: l_botdrain(options%nc)
+    LOGICAL  :: l_latdrain(options%nc)
     LOGICAL  :: l_pf_soil(options%nc)
 
     INTEGER  :: iblk, ics, ice, nc, i
@@ -1152,19 +1157,9 @@ CONTAINS
       wtr_pond_max(:) = 0.0_wp
     END IF
 
-    ! Latdrain drain flag
-    ! For testing purposes assuming no lateral drainage from lowland depression
-    IF (tile%contains_lowland .AND. tile%contains_depression) THEN
-      l_latdrain = .FALSE.
-    ELSE
-      l_latdrain = .TRUE.
-    END IF
     ! Simple diagnostic for permafrost reaching into the soil above the berock
     ! impeding fluxes into the "groundwater"
 
-    !!!!!!! HERE IT WOULD ALSO BE POSSIBLE TO PRESCRIBE A l_pf_soil
-    !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
-    !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1) ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)      ! in
     DO i = 1, nc
@@ -1173,6 +1168,37 @@ CONTAINS
         l_pf_soil(i)=.TRUE.
       ELSE
         l_pf_soil(i)=.FALSE.
+      END IF
+    END DO
+
+    !!!!!!! HERE IT WOULD BE POSSIBLE TO PRESCRIBE A l_pf_soil
+    !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
+    !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
+      l_pf_soil(:)=.TRUE.      
+    END IF 
+
+    ! Bottomdrain drain flag
+    ! No bottom drainage when permafrost within soil
+    DO i = 1, nc
+      IF (l_pf_soil(i)) THEN
+        l_botdrain(i) = .FALSE.
+      ELSE
+        l_botdrain(i) = .TRUE.        
+      END IF
+    END DO
+
+    ! Latdrain drain flag
+    ! No lateral drainage from lowland depression when permafrost within soil
+    DO i = 1, nc
+      IF (tile%contains_lowland .AND. tile%contains_depression) THEN
+        IF (l_pf_soil(i)) THEN
+          l_latdrain(i) = .FALSE.
+        ELSE
+          l_latdrain(i) = .TRUE.        
+        END IF
+      ELSE
+        l_latdrain(i) = .TRUE.
       END IF
     END DO
 
@@ -1188,8 +1214,8 @@ CONTAINS
       & ltpe_closed, ltpe_open,                                 &
       & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
-      & l_latdrain,                                             &
-      & l_pf_soil(:),                                           &
+      & l_latdrain(:),                                          &
+      & l_botdrain(:),                                          &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
       & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
@@ -2283,6 +2309,7 @@ CONTAINS
       & runoff, &
       & drainage, &
       & wtr_latflow, &
+      & snow_rdst, &
       & evapotrans, &
       & evapo_deficit, &
       & wtr_skin, &
@@ -2332,8 +2359,9 @@ CONTAINS
     lat  => grid%lat(ics:ice, iblk)
     lon  => grid%lon(ics:ice, iblk)
 
-    ALLOCATE(wtr_latflow(nc), retention_storage(nc))
+    ALLOCATE(wtr_latflow(nc), snow_rdst(nc), retention_storage(nc))
     wtr_latflow(:)       = 0._wp
+    snow_rdst(:)         = 0._wp
     retention_storage(:) = 0._wp
 
     dsl4jsb_Get_config(HYDRO_)
@@ -2352,6 +2380,7 @@ CONTAINS
       wtr_latflow(:)       = dsl4jsb_var2D_onChunk(MIX_, wtr_latflow)                        ! in
       retention_storage(:) = dsl4jsb_var2D_onChunk(MIX_, runoff_retention) &                 ! in
         &                  + SUM(dsl4jsb_var3D_onChunk(MIX_, drain_lat_retention_sl), DIM=2) ! in
+      snow_rdst(:)         = dsl4jsb_var2D_onChunk(MIX_, snow_rdst)                          ! in
     END IF
     IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
       dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_soil_sl)         ! in
@@ -2376,7 +2405,7 @@ CONTAINS
     END DO
 
     !$claw expand parallel update savepoint=ser_jsb_hydro_update_water_balance_expand_0 tile_name=tile%name
-    weq_fluxes(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:) + wtr_latflow(:)
+    weq_fluxes(:) = rain(:) + snow(:) + evapotrans(:) - runoff(:) - drainage(:) + wtr_latflow(:) + snow_rdst(:)
     weq_fluxes(:) = weq_fluxes(:) * tile_fract(:) * area(:) / rhoh2o                    ! kg m-2 s-1 -> m3/s
     !$claw end expand
 
@@ -2412,6 +2441,7 @@ CONTAINS
             & 'Runoff:               ', runoff(i)     * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Drainage:             ', drainage(i)   * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Lateral flow:         ', wtr_latflow(i)* tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
+            & 'Snow redistribution:  ', snow_rdst(i)  * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Skin reservoir:       ', wtr_skin(i)           * tile_area(i),          NEW_LINE('a'), &
             & 'Snow reservoir:       ', weq_snow(i)           * tile_area(i),          NEW_LINE('a'), &
             & 'Pond water reservoir: ', wtr_pond(i)           * tile_area(i),          NEW_LINE('a'), &
