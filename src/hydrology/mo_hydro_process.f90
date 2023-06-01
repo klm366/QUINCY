@@ -863,7 +863,7 @@ CONTAINS
     END DO
 
     !> Initialize surface runoff components
-    !$ACC LOOP GANG(STATIC: 1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       wtr_exinfcap(ic) = infilt(ic)
       wtr_exwsat(ic)   = 0._wp
@@ -883,7 +883,7 @@ CONTAINS
       END DO
     END DO
 
-    !$ACC LOOP GANG(STATIC: 1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       ws_inter_sl(ic,1) = wtr_soil_sl(ic,1) + infilt(ic)
     END DO
@@ -893,6 +893,7 @@ CONTAINS
         ws_inter_sl(ic,is) = wtr_soil_sl(ic,is)
       END DO
     END DO
+
     !$ACC END PARALLEL
 
     ! Determining hydraulic conductivity and diffusivity on layers and at layer interfaces
@@ -914,13 +915,14 @@ CONTAINS
 
     !< Diagnose evapotranspiration fluxes from the different soil layer based on the available
     !    mobile water
-    !$ACC PARALLEL LOOP VECTOR COLLAPSE(2)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
         wtr_soil_mobile_sl(ic,is) = wtr_soil_sl(ic,is) - wtr_rsdl_sl(ic,is)
       END DO
     END DO
     !$ACC END PARALLEL LOOP
+
     CALL diagnose_evapotrans(nc, l_fract, lat, lon, nsoil, w_soil_wilt_fract, root_depth_sl, &
       &                      dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m,   &
       &                      wtr_soil_mobile_sl, evapo_deficit, evapo_soil_sl1,              &
@@ -953,7 +955,6 @@ CONTAINS
       ! Determination of Vertical movement of mobile water through the soil.
       !   Note that normalized storage values (volumetric soil moisture and storage change) are
       !   needed for the transport and immobile water is temporarily removed from the soil.
-      !$ACC LOOP GANG VECTOR
       DO is = 1, nsoil
         IF (dsoil(ic,is) > 0._wp) THEN
           ws_vol_sl(ic,is) = (wtr_soil_sl(ic,is) - wtr_rsdl_sl(ic,is)) / dsoil(ic,is)
@@ -979,7 +980,6 @@ CONTAINS
                          & )
 
       ! Converting back to absolute water content
-      !$ACC LOOP GANG VECTOR
       DO is = 1, nsoil
         IF (dsoil(ic,is) > 0._wp) THEN
           wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) * dsoil(ic,is) + wtr_rsdl_sl(ic,is)
@@ -993,26 +993,34 @@ CONTAINS
     !< If lowest soil layer becomes negative, reduce bottom drainage
     !    In rare cases - when the bottom layer is very thin - also above layers might get negative.
     !    Generally, this only happens right after initialization.
+    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC LOOP GANG VECTOR
     DO ic = 1, nc
       IF (wtr_soil_sl(ic, nsoil_act(ic)) < 0._wp .AND. l_fract(ic)) THEN
+        !$ACC LOOP
         DO is = nsoil_act(ic), 1, -1
           IF (wtr_soil_sl(ic,is) < 0._wp) THEN
+#ifndef _OPENACC
             WRITE (message_text_long,*) 'Soil moisture correction needed at ',   &
               &  lat(ic),'N and ',lon(ic),'E:' ,         NEW_LINE('a'),          &
               &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
               &  'Bottom drainage: ', drain_rock(ic)
             CALL message('soilhyd', message_text_long, all_print=.TRUE.)
+#endif
             drain_rock(ic) = MAX((drain_rock(ic) + wtr_soil_sl(ic,is)), 0._wp)
             wtr_soil_sl(ic,is) = 0._wp
+#ifndef _OPENACC
             WRITE (message_text_long,*) 'After correction: wtr_soil_sl(ic,:): ', &
               &  lat(ic),'N and ',lon(ic),'E:' ,         NEW_LINE('a'),          &
               &  'Soil moisture:   ', wtr_soil_sl(ic,:), NEW_LINE('a'),          &
               &  'Bottom drainage: ', drain_rock(ic)
             CALL message('soilhyd', message_text_long, all_print=.TRUE.)
+#endif
           END IF
         END DO
       END IF
     END DO
+    !$ACC END PARALLEL
 
     !$ACC PARALLEL DEFAULT(PRESENT)
     !< Subtract new soil state and bottom drainage (lower boundary condition) from water balance
@@ -1108,7 +1116,6 @@ CONTAINS
         CALL message ('soilhyd', message_text, all_print=.TRUE.)
       END IF
 #endif
-      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO is = 1, nsoil
         IF (deficit_evapotrans(ic) < 0._wp .AND. weq_soil(ic) > 0._wp) THEN
           ! reduce soil moisture and ice relative to the water content of each layer

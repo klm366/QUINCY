@@ -776,11 +776,11 @@ CONTAINS
       ! Initial soil water overflow (used in terra planet experiments)
       dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow) = 0._wp
 
-      !$ACC UPDATE DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow)) &
+      !$ACC UPDATE &
+      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow))      &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, weq_snow_soil)) &
-      !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, wtr_soil_sl)) &
+      !$ACC   DEVICE(dsl4jsb_var3D_onDomain(HYDRO_, wtr_soil_sl))   &
       !$ACC   DEVICE(dsl4jsb_var2D_onDomain(HYDRO_, tpe_overflow))
-      ! avoid compiler warnings about pointers not being dereferenced
 
     END IF
 

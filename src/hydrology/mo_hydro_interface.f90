@@ -1100,6 +1100,7 @@ CONTAINS
 
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
+    LOGICAL :: l_fract(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1139,12 +1140,16 @@ CONTAINS
     dsl4jsb_Get_memory(HYDRO_)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)
 
+    !$ACC DATA CREATE(l_fract, tile_fract)
+
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
+    l_fract(:) = tile_fract(:) > 0._wp
+    !$ACC UPDATE DEVICE(l_fract, tile_fract)
 
     CALL calc_soil_hydrology( &
       ! in
       & nc, &
-      & tile_fract(:) > 0._wp, &
+      & l_fract(:), &
       & lat(:), &
       & lon(:), &
       & nsoil, &
@@ -1188,6 +1193,8 @@ CONTAINS
     DO ic = 1, nc
       wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
     END DO
+
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1380,8 +1387,9 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: water_stress
     dsl4jsb_Real2D_onChunk :: wtr_rootzone_rel       !< Relative root zone soil moisture
 
-    INTEGER :: iblk, ics, ice, nc, ic
+    INTEGER :: iblk, ics, ice, nc, ic, nsoil, is
     REAL(wp) :: config_w_soil_crit_fract, config_w_soil_wilt_fract
+    REAL(wp) :: wtr_soil_pot_scool_sl_min(options%nc,5)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_stress'
 
@@ -1389,6 +1397,7 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
+    nsoil = 5
 
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
@@ -1427,6 +1436,8 @@ CONTAINS
     config_w_soil_crit_fract = dsl4jsb_Config(HYDRO_)%w_soil_crit_fract
     config_w_soil_wilt_fract = dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract
 
+    !$ACC DATA CREATE(wtr_soil_pot_scool_sl_min)
+
     ! Calculate actual plant available water
     !   Meant here is all liquid water (without supercooled water) in the root zone. Water
     !   below the wilting point is not subtracted, so calling it available water might be misleading.
@@ -1441,9 +1452,17 @@ CONTAINS
       ! Supercooled water is not available to plants
       CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_pot(:))
-      CALL get_amount_in_rootzone(MIN(wtr_soil_pot_scool_sl(:,:), wtr_soil_sl(:,:)),  &
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      DO is=1,nsoil
+        DO ic=1,nc
+          wtr_soil_pot_scool_sl_min(ic,is) = MIN(wtr_soil_pot_scool_sl(ic,is), wtr_soil_sl(ic,is))
+        END DO
+      END DO
+      !$ACC END PARALLEL LOOP
+      CALL get_amount_in_rootzone(wtr_soil_pot_scool_sl_min(:,:),  &
                                &  soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone_scool_act(:))
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         wtr_rootzone_avail(ic) = MAX(wtr_rootzone(ic) - wtr_rootzone_scool_act(ic), 0._wp)
       END DO
@@ -1511,6 +1530,8 @@ CONTAINS
         wtr_rootzone_rel(ic) = 0._wp
       END IF
     END DO
+
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2323,6 +2344,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_land)            ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_balance_err)     ! out
 
+    !$ACC DATA CREATE(tile_fract, tile_area)
+
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG VECTOR PRIVATE(weq_land_new)
     DO ic=1,nc
@@ -2385,6 +2408,8 @@ CONTAINS
     END DO
     !$ACC END LOOP
     !$ACC END PARALLEL
+
+    !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
