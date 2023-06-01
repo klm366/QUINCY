@@ -771,14 +771,23 @@ CONTAINS
       snow_rdst_dpr    = snow_mob_upd_dpr - snow_mob_dpr
       snow_rdst_lvt    = snow_mob_upd_lvt - snow_mob_lvt  
      
-      snow_soil_dpr    = snow_fix_dpr + snow_mob_upd_dpr  
-      snow_soil_lvt    = snow_fix_lvt + snow_mob_upd_lvt
+      !snow_soil_dpr    = snow_fix_dpr + snow_mob_upd_dpr  
+      !snow_soil_lvt    = snow_fix_lvt + snow_mob_upd_lvt
+
+      !snow_dpr         = snow_dpr + snow_rdst_dpr
+      !snow_lvt         = snow_lvt + snow_rdst_lvt 
+      
+      !snow_new_dpr     = snow_mob_upd_dpr
+      !snow_new_lvt     = snow_mob_upd_lvt 
+
+      snow_soil_dpr    = snow_soil_dpr + snow_rdst_dpr
+      snow_soil_lvt    = snow_soil_lvt + snow_rdst_lvt
 
       snow_dpr         = snow_dpr + snow_rdst_dpr
       snow_lvt         = snow_lvt + snow_rdst_lvt 
       
-      snow_new_dpr     = snow_mob_upd_dpr
-      snow_new_lvt     = snow_mob_upd_lvt 
+      snow_new_dpr     = snow_new_dpr + snow_rdst_dpr
+      snow_new_lvt     = snow_new_lvt + snow_rdst_lvt
       
       ! Converting redistribution flux from m/step -> kg m-2 s-1 
       snow_rdst_dpr    = snow_rdst_dpr * rhoh2o / dtime

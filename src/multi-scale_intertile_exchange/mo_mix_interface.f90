@@ -228,7 +228,18 @@ CONTAINS
     LOGICAL  :: l_lag                  !< T: Apply lag time to lateral flow
     LOGICAL  :: l_latflow              !< T: Allow for lateral flow between sibling tiles
     REAL(wp) :: retention_time         !< retention time for lateral water flow, @todo: needs validation
+    
+    !>pdv
+    REAL(wp) :: snow_balance_err
+    REAL(wp) :: weq_snow_old
+    REAL(wp) :: weq_snow_soil_old
+    REAL(wp) :: weq_snow_new_soil_old
 
+    REAL(wp) :: weq_snow_old_sbl
+    REAL(wp) :: weq_snow_soil_old_sbl
+    REAL(wp) :: weq_snow_new_soil_old_sbl
+    CHARACTER(len=4096)         :: message_text_long
+    !<pdv
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_vgrid), POINTER          :: soil_w
     CLASS(t_jsb_tile_abstract), POINTER :: sibl_tile !< Sibling tile with MIX_ process running on them
@@ -668,15 +679,28 @@ CONTAINS
                    & wtr_soil_sl(i,:),     wtr_soil_sl_sibl_tile(i,:),     & !< soil water storage          [m]
                    & wtr_diflat_sl(i,:),   wtr_diflat_sl_sibl_tile(i,:)    & !< lateral diffusion flux      [kg m-2 s-1]
                    & )
-
+              ELSE
+                wtr_diflat_sl(i,:)           = 0._wp
+                wtr_diflat_sl_sibl_tile(i,:) = 0._wp
               END IF
             ENDDO
             ! Lateral snow redistribution between ridge and depression tiles of the same macrotopography
             DO i = 1, nc
-              IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp .AND. &
-                  wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
+              !>pdv
+              weq_snow_old              = weq_snow(i)
+              weq_snow_soil_old         = weq_snow_soil(i)
+
+              weq_snow_old_sbl          = weq_snow_sibl_tile(i)
+              weq_snow_soil_old_sbl     = weq_snow_soil_sibl_tile(i)
 
 
+              snow_balance_err = source_fract(i) * &
+              & (weq_snow(i)           + weq_snow_soil(i)) &
+              &                + target_fract(i) * &
+              & (weq_snow_sibl_tile(i) + weq_snow_soil_sibl_tile(i))
+              !<pdv 
+              IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp) THEN
+               
                 CALL calc_snow_redistribution(dsl4jsb_Config(SSE_)%l_dynsnow, & !< snow properties
                    & dtime,                                                & !< time step                   [s]
                    & dsl4jsb_Config(HYDRO_)%max_pond_depth,                & !< height difference between source and target tile [m]
@@ -685,11 +709,62 @@ CONTAINS
                    & weq_snow_soil(i),     weq_snow_soil_sibl_tile(i),     & !< snow on soil                [m]
                    & weq_snow_new_soil(i), weq_snow_new_soil_sibl_tile(i), & !< new snow on soil            [m]
                    & weq_snow(i),          weq_snow_sibl_tile(i),          & !< snow (soil + can)           [m]
-                   & snow_soil_dens(i),    snow_soil_dens_sibl_tile(i),    & !< soil water storage          [m]
+                   & snow_soil_dens(i),    snow_soil_dens_sibl_tile(i),    & !< snow density                [kg m-3]
                    & snow_rdst(i),         snow_rdst_sibl_tile(i)          & !< lateral snow redistribution flux  [kg m-2 s-1]
                    & )
-
+              ELSE
+                snow_rdst(i)           = 0._wp
+                snow_rdst_sibl_tile(i) = 0._wp
               END IF
+              !>pdv
+              snow_balance_err = - snow_balance_err &
+              &                + source_fract(i) *  &
+              & (weq_snow(i)           + weq_snow_soil(i)) &
+              &                + target_fract(i) *  &
+              & (weq_snow_sibl_tile(i) + weq_snow_soil_sibl_tile(i)) &
+              &                + 1._wp / rhoh2o * dtime * &
+              & (snow_rdst(i) * source_fract(i) + snow_rdst_sibl_tile(i) * target_fract(i))
+              IF (ABS(snow_balance_err) > 1.0e-10_wp) THEN
+                WRITE (message_text_long,*) 'Snow balance violation [m3 dt-1]',   NEW_LINE('a'), &
+              & 'SB Error:        ', snow_balance_err,                              NEW_LINE('a'), &
+              & 'Snow:            ', (weq_snow(i) - weq_snow_old)  * source_fract(i) &
+              & +  (weq_snow_sibl_tile(i) - weq_snow_old_sbl) * target_fract(i), NEW_LINE('a'), &
+              & 'Snow Soil:       ', (weq_snow_soil(i) - weq_snow_soil_old)  * source_fract(i) &
+              & +  (weq_snow_soil_sibl_tile(i) - weq_snow_soil_old_sbl) * target_fract(i), NEW_LINE('a'), &
+              & 'Snow redis.:     ', snow_rdst(i)           * source_fract(i) / rhoh2o * dtime, NEW_LINE('a'), &
+              & 'Snow redis. sibl:', snow_rdst_sibl_tile(i) * target_fract(i) / rhoh2o * dtime, NEW_LINE('a')
+
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+              !! Checking Error 2
+              snow_balance_err = weq_snow_old + snow_rdst(i) / rhoh2o * dtime - weq_snow(i) &
+                             & + weq_snow_soil_old + snow_rdst(i) / rhoh2o * dtime - weq_snow_soil(i)
+              IF (ABS(snow_balance_err) > 1.0e-10_wp) THEN
+                WRITE (message_text_long,*) 'Snow balance violation [m3 dt-1]',   NEW_LINE('a'), &
+              & 'SB Error source: ', snow_balance_err,                              NEW_LINE('a'), &
+              & 'Snow old:        ', weq_snow_old, NEW_LINE('a'), &
+              & 'Snow    :        ', weq_snow(i), NEW_LINE('a'), &
+              & 'Snow Soil old:   ', weq_snow_soil_old, NEW_LINE('a'), &
+              & 'Snow Soil:       ', weq_snow_soil(i), NEW_LINE('a'), &
+              & 'Snow rdst:       ', snow_rdst(i) / rhoh2o * dtime, NEW_LINE('a')
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+
+              snow_balance_err = weq_snow_old_sbl + snow_rdst_sibl_tile(i) / rhoh2o * dtime &
+                             & - weq_snow_sibl_tile(i) &
+                             & + weq_snow_soil_old_sbl + snow_rdst_sibl_tile(i) / rhoh2o * dtime &
+                             & - weq_snow_soil_sibl_tile(i)
+              IF (ABS(snow_balance_err) > 1.0e-10_wp) THEN
+                WRITE (message_text_long,*) 'Snow balance violation [m3 dt-1]',   NEW_LINE('a'), &
+              & 'SB Error target: ', snow_balance_err,                            NEW_LINE('a'), &
+              & 'Snow old:        ', weq_snow_old_sbl, NEW_LINE('a'), &
+              & 'Snow:            ', weq_snow_sibl_tile(i), NEW_LINE('a'), &
+              & 'Snow Soil old:   ', weq_snow_soil_old_sbl, NEW_LINE('a'), &
+              & 'Snow Soil:       ', weq_snow_soil_sibl_tile(i), NEW_LINE('a'), &
+              & 'Snow rdst:       ', snow_rdst_sibl_tile(i) / rhoh2o * dtime, NEW_LINE('a')
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+              !<pdv
             ENDDO
 
           END IF
@@ -757,7 +832,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(MIX_,   wtr_diflat_sl,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,            weighted_by_fract)
-
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_soil,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_new_soil,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,         weighted_by_fract)
