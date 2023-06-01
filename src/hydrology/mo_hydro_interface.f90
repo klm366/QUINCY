@@ -1175,8 +1175,8 @@ CONTAINS
     !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
     !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
-      l_pf_soil(:)=.TRUE.      
-    END IF 
+      l_pf_soil(:)=.TRUE.
+    END IF
 
     ! Bottomdrain drain flag
     ! No bottom drainage when permafrost within soil
@@ -1184,7 +1184,7 @@ CONTAINS
       IF (l_pf_soil(i)) THEN
         l_botdrain(i) = .FALSE.
       ELSE
-        l_botdrain(i) = .TRUE.        
+        l_botdrain(i) = .TRUE.
       END IF
     END DO
 
@@ -1195,7 +1195,7 @@ CONTAINS
         IF (l_pf_soil(i)) THEN
           l_latdrain(i) = .FALSE.
         ELSE
-          l_latdrain(i) = .TRUE.        
+          l_latdrain(i) = .TRUE.
         END IF
       ELSE
         l_latdrain(i) = .TRUE.

@@ -252,7 +252,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: micro_slope
     dsl4jsb_Real2D_onChunk :: wtr_latflow
     dsl4jsb_Real2D_onChunk :: wtr_pond
-    dsl4jsb_Real2D_onChunk :: weq_pond    
+    dsl4jsb_Real2D_onChunk :: weq_pond
 
     dsl4jsb_Real2D_onChunk :: snow_rdst
     dsl4jsb_Real2D_onChunk :: weq_snow_new_soil
@@ -283,7 +283,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: wtr_latflow_sibl_tile
     dsl4jsb_Real2D_onChunk :: wtr_pond_sibl_tile
-    dsl4jsb_Real2D_onChunk :: weq_pond_sibl_tile    
+    dsl4jsb_Real2D_onChunk :: weq_pond_sibl_tile
 
     dsl4jsb_Real2D_onChunk :: snow_rdst_sibl_tile
     dsl4jsb_Real2D_onChunk :: weq_snow_new_soil_sibl_tile
@@ -430,8 +430,8 @@ CONTAINS
       !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
       !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
-        l_pf_soil(:)=.TRUE.      
-      END IF 
+        l_pf_soil(:)=.TRUE.
+      END IF
 
       ! Source tiles are always either upland or ridge tiles
       IF (tile%contains_upland .OR. tile%contains_ridge) THEN
@@ -673,9 +673,7 @@ CONTAINS
             ENDDO
             ! Lateral snow redistribution between ridge and depression tiles of the same macrotopography
             DO i = 1, nc
-              IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp .AND. &
-                  wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
-
+              IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp) THEN
 
                 CALL calc_snow_redistribution(dsl4jsb_Config(SSE_)%l_dynsnow, & !< snow properties
                    & dtime,                                                & !< time step                   [s]
@@ -685,7 +683,7 @@ CONTAINS
                    & weq_snow_soil(i),     weq_snow_soil_sibl_tile(i),     & !< snow on soil                [m]
                    & weq_snow_new_soil(i), weq_snow_new_soil_sibl_tile(i), & !< new snow on soil            [m]
                    & weq_snow(i),          weq_snow_sibl_tile(i),          & !< snow (soil + can)           [m]
-                   & snow_soil_dens(i),    snow_soil_dens_sibl_tile(i),    & !< soil water storage          [m]
+                   & snow_soil_dens(i),    snow_soil_dens_sibl_tile(i),    & !< snow density                [m]
                    & snow_rdst(i),         snow_rdst_sibl_tile(i)          & !< lateral snow redistribution flux  [kg m-2 s-1]
                    & )
 
@@ -758,6 +756,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_pond,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soil_sl,            weighted_by_fract)
 
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow,               weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_soil,          weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_new_soil,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,         weighted_by_fract)

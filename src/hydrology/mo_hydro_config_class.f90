@@ -237,8 +237,8 @@ CONTAINS
 
     config%l_jsb_wet_test = l_jsb_wet_test
     IF (l_jsb_wet_test) THEN
-      CALL message(TRIM(routine), '*** This is a WET run***') 
-    END IF  
+      CALL message(TRIM(routine), '*** This is a WET run***')
+    END IF
 
     SELECT CASE(TRIM(tolower(runoff_scheme)))
     CASE("arno")
