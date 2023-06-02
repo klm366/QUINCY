@@ -43,6 +43,7 @@ MODULE mo_mix_memory_class
       & runoff_retention          !< Runoff retention reservoir                     [m water equivalent]
     TYPE(t_jsb_var_real3d) ::   &
       & wtr_diflat_sl,          & !< Lateral diffusion flux between tiles           [kg m-2 s-1]
+      & heat_flx_lat,           & !< Lateral heatflux between tiles                 [J m-2 s-1]
       & drain_lat_retention_sl    !< Lateral drainage retention reservoir           [m water equivalent]
 
   CONTAINS
@@ -67,7 +68,7 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface, soil_w              ! Vertical grids
+    TYPE(t_jsb_vgrid), POINTER :: surface, soil_w, soil_e      ! Vertical grids
 
     INTEGER :: table
     TYPE(t_grib2) :: grib2_desc
@@ -81,6 +82,7 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
     soil_w  => Get_vgrid('soil_depth_water')
+    soil_e  => Get_vgrid('soil_depth_energy')
 
     IF (TRIM(mem%owner_tile_name) == 'box') THEN
       grib2_desc = t_grib2(1,0,202, grib_bits)
@@ -122,6 +124,15 @@ CONTAINS
       & hgrid, soil_w,                                                               &
       & t_cf('wtr_diflat_sl', 'kg m-2 s-1',                                          &
       &      'Diffusion flux from neighbouring tile'),                               &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & output_level=BASIC,                                                          &
+      & lrestart=.FALSE., initval_r=0.0_wp)
+
+    CALL mem%Add_var( 'heat_flx_lat', mem%heat_flx_lat,                            &
+      & hgrid, soil_e,                                                               &
+      & t_cf('heat_flx_lat', 'J m-2 s-1',                                          &
+      &      'Heat flux from neighbouring tile'),                               &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & output_level=BASIC,                                                          &

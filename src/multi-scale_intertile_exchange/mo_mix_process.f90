@@ -20,7 +20,8 @@ MODULE mo_mix_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion, calc_snow_redistribution
+  PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion, calc_snow_redistribution, &
+          & diagnose_intertile_heatflux
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_process'
 
@@ -615,6 +616,158 @@ CONTAINS
     diffus_dpr(:) = diffus_dpr(:) * rhoh2o / dtime
 
   END SUBROUTINE calc_intertile_diffusion
+
+! ===============================================================================================================================
+  !>
+  !! @brief   Compute intertile lateral diffusion between tiles with different surface elevation (elevation/depression)
+  !!
+  SUBROUTINE diagnose_intertile_heatflux(nsoil, dtime,   &
+      &      h_offset, dz, lvt_fract, dpr_fract,         &
+      &      t_soil_lvt, t_soil_dpr,                     &
+      &      heat_cond_soil_lvt, heat_cond_soil_dpr,     &
+      &      heat_cap_soil_lvt, heat_cap_soil_dpr,       &
+      &      heat_flx_lat_lvt, heat_flx_lat_dpr          &
+      &      )
+
+    USE mo_jsb_math_constants,     ONLY: pi
+
+    INTEGER, INTENT(in)     :: nsoil
+
+    REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
+      &                        h_offset,            & !< height offset between tiles 
+      &                        lvt_fract,           & !< area fraction of elevation tile
+      &                        dpr_fract              !< area fraction of depression tile
+
+    REAL(wp), INTENT(in)    :: dz(:),                  &
+      &                        t_soil_lvt(:),          & !< soil tempertures of elevation tile
+      &                        t_soil_dpr(:),          & !< soil tempertures of depression tile
+      &                        heat_cond_soil_lvt(:),  & !< soil heat conductivity of elevation tile
+      &                        heat_cond_soil_dpr(:),  & !< soil heat conductivity of depression tile
+      &                        heat_cap_soil_lvt(:),   & !< soil heat capacity of elevation tile
+      &                        heat_cap_soil_dpr(:)      !< soil heat capacity of depression tile
+
+
+    REAL(wp), INTENT(out)   :: heat_flx_lat_lvt(:),    & !< Heat flux at elevation tile [J m-2 s-1]
+      &                        heat_flx_lat_dpr(:)       !< Heat flux at depression tile [J m-2 s-1]
+
+
+
+    ! Local variables ------------------------------------------------------------------------------------
+    INTEGER                 :: nrgrd, i, i_lvt, i_dpr
+
+    REAL(wp)                :: fr_lvt_rel,           &
+      &                        fr_dpr_rel,           &
+      &                        z_lvt,                &
+      &                        z_dpr,                &
+      &                        z_rgrd_top,           &
+      &                        z_rgrd_bot,           &
+      &                        len_inter,            &
+      &                        h,                    &
+      &                        a_inter,              &
+      &                        t_lvt_rgrd,           &
+      &                        t_dpr_rgrd,           &
+      &                        h_cond_soil_lvt_rgrd, &
+      &                        h_cond_soil_dpr_rgrd, &
+      &                        h_cap_soil_lvt_rgrd,  &
+      &                        h_cap_soil_dpr_rgrd,  &
+      &                        h_cond_inter,         &
+      &                        d_t,                  &
+      &                        heat_flx_lat,         &
+      &                        heat_flx_eq_lat
+
+
+    REAL(wp) ::     length_scale ! assumed diameter of depressions (could be input field / namelist para)
+
+    nrgrd         = nsoil * 2 + 3
+
+    ! Initilize fields for accumulating output
+    heat_flx_lat_lvt(:) = 0._wp 
+    heat_flx_lat_dpr(:) = 0._wp
+
+
+    ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
+    fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
+    fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
+
+    !Assumption of circular depression with A = 1m2 with in a circular elevation
+    !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
+    length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
+
+    ! Start setting up the interpolated grid
+    ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
+    i_lvt = 1
+    z_lvt = dz(i_lvt)
+    i_dpr = 1
+    IF (h_offset > 0._wp) THEN
+      i_dpr = 0
+      z_dpr = h_offset
+    ELSE
+      z_dpr = dz(i_dpr)
+    END IF
+
+    z_rgrd_top = 0._wp
+    z_rgrd_bot = MIN(z_lvt, z_dpr)
+
+    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m2 within elevation area x
+
+    DO i = 1, nrgrd
+      IF (i_lvt <= nsoil .AND. i_dpr <= nsoil) THEN ! Within the soil column of both tiles
+      
+        heat_flx_lat           = 0._wp
+        
+        IF (z_rgrd_bot > h_offset ) THEN ! Within the soil column of both tiles
+          h                    = z_rgrd_bot - z_rgrd_top
+          a_inter              = len_inter * h
+          
+          t_lvt_rgrd           = t_soil_lvt(i_lvt)
+          h_cond_soil_lvt_rgrd = heat_cond_soil_lvt(i_lvt)
+          h_cap_soil_lvt_rgrd  = heat_cap_soil_lvt(i_lvt)
+          
+          t_dpr_rgrd           = t_soil_dpr(i_dpr)
+          h_cond_soil_dpr_rgrd = heat_cond_soil_dpr(i_dpr)
+          h_cap_soil_dpr_rgrd  = heat_cap_soil_dpr(i_dpr)          
+          
+          ! Flux is determined by the difference in temperature between the two tiles       
+          h_cond_inter         =(h_cond_soil_lvt_rgrd * h_cond_soil_dpr_rgrd)**0.5_wp
+          d_t                  = t_lvt_rgrd - t_dpr_rgrd
+          heat_flx_lat         = h_cond_inter  * d_t / length_scale *  a_inter
+          
+          ! Limiting heat flux to avoid instablilities for ong time steps
+          ! Determine flux required to equilibriate Temps within timestep          
+          heat_flx_eq_lat = (t_lvt_rgrd * h_cap_soil_lvt_rgrd * fr_lvt_rel  &
+                    & -  t_dpr_rgrd * h_cap_soil_dpr_rgrd * fr_dpr_rel) &
+                    & *  a_inter * 0.5_wp / dtime
+          ! Limiting heat flux to equilibrium flux
+          IF (heat_flx_lat > 0._wp .AND. heat_flx_lat > ABS(heat_flx_eq_lat)) THEN
+            heat_flx_lat = ABS(heat_flx_eq_lat)
+          ELSE IF (heat_flx_lat < 0._wp .AND. heat_flx_lat < -ABS(heat_flx_eq_lat)) THEN
+            heat_flx_lat = -ABS(heat_flx_eq_lat)
+          END IF
+        END IF
+        
+        heat_flx_lat_lvt(i_lvt) = heat_flx_lat_lvt(i_lvt) - heat_flx_lat  / fr_lvt_rel
+        heat_flx_lat_dpr(i_dpr) = heat_flx_lat_dpr(i_dpr) + heat_flx_lat  / fr_dpr_rel
+        
+        ! Determening the top and bottem of the next layer of the regridded
+        IF (z_rgrd_bot == z_lvt) THEN
+          i_lvt = i_lvt + 1
+          IF (i_lvt <= nsoil) THEN
+            z_lvt = z_lvt + dz(i_lvt)          
+          END IF      
+        END IF
+        
+        IF (z_rgrd_bot == z_dpr) THEN
+          i_dpr = i_dpr + 1
+          IF (i_dpr <= nsoil) THEN
+            z_dpr = z_dpr + dz(i_dpr)          
+          END IF      
+        END IF
+        z_rgrd_top=z_rgrd_bot
+        z_rgrd_bot=MIN(z_lvt, z_dpr)              
+      END IF
+    END DO 
+
+  END SUBROUTINE diagnose_intertile_heatflux
 
   ! ===============================================================================================================================
   !>

@@ -209,12 +209,14 @@ CONTAINS
   !!
   SUBROUTINE update_hydro_mix(tile, options)
 
+    USE mo_jsb_math_constants,     ONLY: pi
     USE mo_jsb_physical_constants, ONLY: rhoh2o
     USE mo_hydro_process,          ONLY: get_soilhyd_cond_properties
     USE mo_mix_process,            ONLY: calc_runoff_transport,   &
       &                                  calc_drainage_transport, &
       &                                  calc_intertile_diffusion, &
-      &                                  calc_snow_redistribution
+      &                                  calc_snow_redistribution, &
+      &                                  diagnose_intertile_heatflux
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -238,10 +240,11 @@ CONTAINS
     REAL(wp) :: weq_snow_old_sbl
     REAL(wp) :: weq_snow_soil_old_sbl
     REAL(wp) :: weq_snow_new_soil_old_sbl
-    CHARACTER(len=4096)         :: message_text_long
+    CHARACTER(len=5000)         :: message_text_long
     !<pdv
     TYPE(t_jsb_model), POINTER          :: model
     TYPE(t_jsb_vgrid), POINTER          :: soil_w
+    TYPE(t_jsb_vgrid), POINTER          :: soil_e
     CLASS(t_jsb_tile_abstract), POINTER :: sibl_tile !< Sibling tile with MIX_ process running on them
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_hydro_mix'
@@ -257,6 +260,7 @@ CONTAINS
 
     dsl4jsb_Def_memory_tile(MIX_,   sibl_tile)
     dsl4jsb_Def_memory_tile(HYDRO_, sibl_tile)
+    dsl4jsb_Def_memory_tile(SSE_, sibl_tile)
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
@@ -292,6 +296,11 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: pore_size_index_sl
     dsl4jsb_Real3D_onChunk :: wtr_diflat_sl
 
+    dsl4jsb_Real3D_onChunk :: t_soil_sl
+    dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
+    dsl4jsb_Real3D_onChunk :: heat_cond_sl
+    dsl4jsb_Real3D_onChunk :: heat_flx_lat
+
     dsl4jsb_Real2D_onChunk :: wtr_latflow_sibl_tile
     dsl4jsb_Real2D_onChunk :: wtr_pond_sibl_tile
     dsl4jsb_Real2D_onChunk :: weq_pond_sibl_tile    
@@ -317,6 +326,12 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: bclapp_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: pore_size_index_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: wtr_diflat_sl_sibl_tile
+
+    dsl4jsb_Real3D_onChunk :: t_soil_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: heat_cond_sl_sibl_tile
+    dsl4jsb_Real3D_onChunk :: heat_flx_lat_sibl_tile
+
 
     REAL(wp), DIMENSION(options%nc) :: source_fract    !< Fractions of water source tile []
     REAL(wp), DIMENSION(options%nc) :: target_fract    !< Fractions of water target tile []
@@ -355,6 +370,8 @@ CONTAINS
     model => Get_model(tile%owner_model_id)
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
+    
+    soil_e => Get_vgrid('soil_depth_energy')
 
     dsl4jsb_Get_config(MIX_)
     dsl4jsb_Get_config(HYDRO_)
@@ -382,6 +399,11 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)          ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow)               ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snow_soil_dens)         ! inout
+
+    dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_sl)           ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)     ! in
+    dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)        ! in
+    dsl4jsb_Get_var3D_onChunk(MIX_, heat_flx_lat)        ! out
 
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)     ! in
@@ -572,6 +594,7 @@ CONTAINS
             ! Get memory MIX_ and HYDRO_ memory for target tile
             dsl4jsb_Get_memory_tile(MIX_,   sibl_tile)
             dsl4jsb_Get_memory_tile(HYDRO_, sibl_tile)
+            dsl4jsb_Get_memory_tile(SSE_, sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,              sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(MIX_,   wtr_diflat_sl,            sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   snow_rdst,                sibl_tile)
@@ -595,6 +618,11 @@ CONTAINS
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, matrix_pot_sl,            sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, bclapp_sl,                sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, pore_size_index_sl,       sibl_tile)
+
+            dsl4jsb_Get_var3d_onChunk_tile_name(SSE_, t_soil_sl,                  sibl_tile)! in
+            dsl4jsb_Get_var3d_onChunk_tile_name(SSE_, vol_heat_cap_sl,            sibl_tile)! in
+            dsl4jsb_Get_var3d_onChunk_tile_name(SSE_, heat_cond_sl,               sibl_tile)! in
+            dsl4jsb_Get_var3d_onChunk_tile_name(MIX_, heat_flx_lat,               sibl_tile)! out
 
             ! Compute soil ice impedance, diffusivity and matrix potential ...
             ! ... for source tile
@@ -766,7 +794,46 @@ CONTAINS
               END IF
               !<pdv
             ENDDO
+            DO i = 1, nc
+              IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp) THEN
 
+                CALL diagnose_intertile_heatflux(soil_e%n_levels, dtime,  &
+                   & dsl4jsb_Config(HYDRO_)%max_pond_depth, soil_e%dz(:), &
+                   & source_fract(i),      target_fract(i),               &
+                   & t_soil_sl(i,:),       t_soil_sl_sibl_tile(i,:),      &
+                   & heat_cond_sl(i,:),    heat_cond_sl_sibl_tile(i,:),   &
+                   & vol_heat_cap_sl(i,:), vol_heat_cap_sl_sibl_tile(i,:),&
+                   & heat_flx_lat(i,:),    heat_flx_lat_sibl_tile(i,:)    &
+                   & )
+              ELSE
+                heat_flx_lat(i,:)           = 0._wp
+                heat_flx_lat_sibl_tile(i,:) = 0._wp
+              END IF
+              
+              snow_balance_err = MAX(SUM(heat_flx_lat(i,:)), SUM(heat_flx_lat_sibl_tile(i,:)))
+              IF (ABS(snow_balance_err) > 1.0e4_wp) THEN
+                WRITE (message_text_long,*) 'huge heat flux',     NEW_LINE('a'), &
+              !& 'heat_flx:     ', heat_flx_lat(i,:),              NEW_LINE('a'), &
+              !& 'heat_flx_sbl: ', heat_flx_lat_sibl_tile(i,:),    NEW_LINE('a'), &
+              !& 'nlevs:        ', soil_e%n_levels,                NEW_LINE('a'), &
+              !& 'dtime:        ', dtime,                          NEW_LINE('a'), &
+              !& 'dz:           ', soil_e%dz(:),                   NEW_LINE('a'), &
+              !& 'h_offset:     ', dsl4jsb_Config(HYDRO_)%max_pond_depth, NEW_LINE('a'), &
+              & 'lvt_fract:    ', source_fract(i),                NEW_LINE('a'), &
+              & 'dpr_fract:    ', target_fract(i),                NEW_LINE('a'), &
+              & 'tsoil:        ', t_soil_sl(i,:),                 NEW_LINE('a'), &
+              & 'tsoil_sbl:    ', t_soil_sl_sibl_tile(i,:),       NEW_LINE('a'), &
+              & 'h_cond:       ', heat_cond_sl(i,:),              NEW_LINE('a'), &
+              & 'h_cond_slb:   ', heat_cond_sl_sibl_tile(i,:),    NEW_LINE('a'), &
+              & 'h_cap:        ', vol_heat_cap_sl(i,:),           NEW_LINE('a'), &
+              & 'hcap_slb:     ', vol_heat_cap_sl_sibl_tile(i,:), NEW_LINE('a'), &
+              & 'length_scale: ', ((1._wp/(target_fract(i)/(target_fract(i)+source_fract(i))))/pi)**0.5_wp, NEW_LINE('a'), &
+              & 'len_inter:     ',((4._wp * pi) ** 0.5_wp) * (target_fract(i)/(target_fract(i)+source_fract(i))), NEW_LINE('a')
+
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+
+            END DO
           END IF
         END DO
       END IF
@@ -837,6 +904,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, weq_snow_new_soil,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, snow_soil_dens,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MIX_,   snow_rdst,              weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(MIX_,   heat_flx_lat,           weighted_by_fract)
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
