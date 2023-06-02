@@ -44,7 +44,7 @@ MODULE mo_lentic_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model    
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -77,13 +77,13 @@ MODULE mo_lentic_interface
   !> Type definition for lentic task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_lentic_wbphysics
   CONTAINS
-    PROCEDURE, NOPASS :: Integrate => update_waterbody_physics     !< Advances task computation for one timestep
-    PROCEDURE, NOPASS :: Aggregate => aggregate_waterbody_physics  !< Aggregates computed task variables
+    PROCEDURE, NOPASS :: Integrate => update_lentic_wbphysics    !< Advances task computation for one timestep
+    PROCEDURE, NOPASS :: Aggregate => aggregate_lentic_wbphysics !< Aggregates computed task variables
   END TYPE tsk_lentic_wbphysics
   
-  !> Constructor interface for waterbody_physics
+  !> Constructor interface for lentic_wbphysics
   INTERFACE tsk_lentic_wbphysics
-    PROCEDURE Create_task_waterbody_physics                        !< Constructor function for task
+    PROCEDURE Create_task_lentic_wbphysics                        !< Constructor function for task
   END INTERFACE tsk_lentic_wbphysics
 
   !X Repeat here for each additional task of the process the two blocks above ...
@@ -115,15 +115,15 @@ CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for lentic process
   !!
-  !! @param[in,out] this      Instance of lentic process class  
+  !! @param[in,out] process      Instance of lentic process class  
   !! @param[in]     model_id  Model id  
   !!
-  SUBROUTINE Register_lentic_tasks(this, model_id)
+  SUBROUTINE Register_lentic_tasks(process, model_id)
 
-    CLASS(t_lentic_process), INTENT(inout) :: this
+    CLASS(t_jsb_process),    INTENT(inout) :: process
     INTEGER,                 INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_lentic_wbphysics(model_id))
+    CALL process%Register_task(tsk_lentic_wbphysics(model_id))
     !X Repeat the line above here for each additional task of the process ...
     
   END SUBROUTINE Register_lentic_tasks
@@ -150,9 +150,10 @@ CONTAINS
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
-    !X if necessary: REAL(wp) :: dtime, steplen
+    REAL(wp) :: steplen!, dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_lentic_wbphysics'
 
+    TYPE(t_jsb_model), POINTER :: model
 
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_config(LENTIC_)
@@ -206,7 +207,6 @@ CONTAINS
     !X if necessary: dtime   = options%dtime
     steplen = options%steplen
     
-    TYPE(t_jsb_model), POINTER :: model
 
     
 
@@ -376,10 +376,10 @@ CONTAINS
   !! @param[in,out] tile    Tile for which routine is executed.  
   !! @param[in]     options Additional run-time parameters.  
   !!
-  SUBROUTINE aggregate_lentic(tile, options)
+  SUBROUTINE aggregate_lentic_wbphysics(tile, options)
 
     ! Arguments
-    TYPE(t_jsb_model), POINTER :: model
+     TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
@@ -391,7 +391,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     !X if necessary: REAL(wp) :: dtime, steplen
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_lentic'
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_lentic_wbphysics'
     
     ! Get local variables from options argument
     iblk = options%iblk
@@ -412,7 +412,7 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
-  END SUBROUTINE aggregate_lentic
+  END SUBROUTINE aggregate_lentic_wbphysics
 
   
   ! ================================================================================================================================

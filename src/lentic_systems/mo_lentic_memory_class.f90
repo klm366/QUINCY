@@ -39,7 +39,12 @@ MODULE mo_lentic_memory_class
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_varlist,            ONLY: BASIC, MEDIUM, FULL
   !USE mo_jsb_physical_constants, ONLY: !X e.g: tmelt
+  
+  ! Use of prcesses in this module
+  dsl4jsb_Use_processes LENTIC_
 
+  ! Use process configurations
+  dsl4jsb_Use_config(LENTIC_)
   IMPLICIT NONE
   PRIVATE
 
@@ -49,17 +54,7 @@ MODULE mo_lentic_memory_class
 
   !> Type definition for memory
   TYPE, EXTENDS(t_jsb_memory) :: t_lentic_memory
-    
-    ! Common variables independent of lct_type
-    !TYPE(t_jsb_var_real2d) :: &
-      !X add your 2D variables here e.g: & t,                    & !< Surface temperature    [K]
 
-      
-    ! Additional variables for LAND lct_type
-    !TYPE(t_jsb_var_real2d) :: &
-      !X add your 2D variables here e.g: & s_star,               & !< Surface dry static energy (s^star, see manual)    [m2 s-2]
-
-      
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
       & T_sfc  !test
@@ -80,7 +75,7 @@ CONTAINS
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
-    CLASS(t_lentic_memory), INTENT(inout) :: mem
+    CLASS(t_lentic_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)    :: prefix
     CHARACTER(len=*),    INTENT(in)    :: suffix
     INTEGER,             INTENT(in)    :: lct_ids(:)
@@ -100,46 +95,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    IF (.NOT. ASSOCIATED(mem%t%ptr)) THEN
-    !X add your common variables here e.g:
-    !X    & hgrid, surface,                                                              &
-    !X    & t_cf('sfc_temp', 'K', 'surface temperature'),                                &
-    !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-    !X    & prefix, suffix,                                                              &
-    !X    & initval_r=280.0_wp )
-
-    !X  CALL mem%Add_var( 't_old', mem%t_old,                                            &
-    !X    & hgrid, surface,                                                              &
-    !X    & t_cf('sfc_temp_old', 'K', 'surface temperature at previous timestep'),       &
-    !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-    !X    & prefix, suffix,                                                              &
-    !X    & initval_r=280.0_wp )
-
-    END IF
-
-    ! Additional variables for LAND lct
-    !X add your LAND-lct variables here e.g:
-    !X IF (One_of(LAND_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%s_star%ptr)) THEN
-
-    !X  CALL mem%Add_var( 's_sfc', mem%s_star,                                                 &
-    !X    & hgrid, surface,                                                                    &
-    !X    & t_cf('sfc_dry_static_energy', 'm2 s-2', 'surface dry static energy'),              &
-    !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-    !X    & prefix, suffix,                                                                    &
-    !X    & initval_r=2.9E5_wp )
-
-    !X  CALL mem%Add_var( 'qsat_sfc', mem%qsat_star,                                           &
-    !X    & hgrid, surface,                                                                    &
-    !X    & t_cf('sfc_qsat', 'm2 s-2', 'surface specific humidity at saturation'),             &
-    !X    & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                 &
-    !X    & prefix, suffix,                                                                    &
-    !X    & initval_r=0.0075_wp )
-
-    !X END IF
-
     ! Additional variables for lakes
-    !X add your LAKE-lct variables here e.g:
-    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_wtr%ptr)) THEN
+    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
 
       CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                            &
         & hgrid, surface,                                                              &
@@ -147,13 +104,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC, initval_r=280.0_wp )
-
-      ! CALL mem%Add_var( 't_ice', mem%t_ice,                                            &
-      !   & hgrid, surface,                                                              &
-      !   & t_cf('sfc_temp_ice', 'K', 'lake surface temperature ice '),                  &
-      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      !   & prefix, suffix,                                                              &
-      !   & initval_r=tmelt )
 
      END IF
 

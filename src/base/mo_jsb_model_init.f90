@@ -358,7 +358,7 @@ CONTAINS
         CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
       END IF
       ! CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
-      CALL model%Queue_task(LENTIC_, "lake_physics")
+      CALL model%Queue_task(LENTIC_, "lentic_wbphysics")
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
