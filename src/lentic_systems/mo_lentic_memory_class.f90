@@ -51,18 +51,18 @@ MODULE mo_lentic_memory_class
   TYPE, EXTENDS(t_jsb_memory) :: t_lentic_memory
     
     ! Common variables independent of lct_type
-    TYPE(t_jsb_var_real2d) :: &
+    !TYPE(t_jsb_var_real2d) :: &
       !X add your 2D variables here e.g: & t,                    & !< Surface temperature    [K]
 
       
     ! Additional variables for LAND lct_type
-    TYPE(t_jsb_var_real2d) :: &
+    !TYPE(t_jsb_var_real2d) :: &
       !X add your 2D variables here e.g: & s_star,               & !< Surface dry static energy (s^star, see manual)    [m2 s-2]
 
       
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & T_sfc & !test
+      & T_sfc  !test
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]
 
   CONTAINS

@@ -21,7 +21,7 @@
 !!  At the moment, the Euler explicit scheme is used.
 
 MODULE mo_lentic_process
-  #ifndef __NO_JSBACH__
+#ifndef __NO_JSBACH__
   
     USE mo_kind,      ONLY: wp
   
@@ -783,7 +783,7 @@ MODULE mo_lentic_process
     ! END SUBROUTINE calc_lake_temp_stratification
 
 
-    PURE ELEMENTAL SUBROUTINE calc_surface_temperature(T_sfc )&
+    PURE ELEMENTAL SUBROUTINE calc_surface_temperature(T_sfc )!&
       ! & h_snow, & ! in
       ! & T_snow, & ! in
       ! & h_ice,  & ! in
@@ -818,3 +818,6 @@ MODULE mo_lentic_process
       !   T_sfc = T_wML                    ! No ice-snow cover, use the mixed-layer temperature
       ! END IF
     END SUBROUTINE calc_surface_temperature
+
+#endif
+END MODULE mo_lentic_process

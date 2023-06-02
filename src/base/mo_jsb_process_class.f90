@@ -28,7 +28,7 @@ MODULE mo_jsb_process_class
 
   PUBLIC :: t_jsb_process, t_jsb_process_p, Get_process_name, Get_process_id
   PUBLIC :: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_, CARBON_ , DISTURB_, FUEL_, &
-    &       PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
+    &       PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_, LENTIC_
   PUBLIC :: SKIP_, AGGREGATE_, ON_LEAFS_, ON_TILE_, ON_SUBTREE_, INHERIT_, Get_action_name
 
   TYPE t_jsb_process
@@ -52,7 +52,7 @@ MODULE mo_jsb_process_class
   END TYPE t_jsb_process_p
 
   ENUM, BIND(C)
-    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
+    ENUMERATOR :: A2L_=1, L2A_, SEB_, TURB_, SSE_, HYDRO_, LENTIC_, HD_, RAD_, ASSIMI_, PHENO_,  CARBON_ , DISTURB_, &
       &           FUEL_, PPLCC_, TLCC_, TCQ_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, VEG_, SB_, SPQ_
   END ENUM
 
@@ -83,7 +83,9 @@ CONTAINS
     CASE (SSE_)
       return_value = 'sse'
     CASE (HYDRO_)
-      return_value = 'hydro'
+      return_value = 'hydro'    
+    CASE (LENTIC_)
+      return_value = 'lentic'
     CASE (RAD_)
       return_value = 'rad'
     CASE (ASSIMI_)
@@ -146,6 +148,8 @@ CONTAINS
       return_value = SSE_
     CASE ('hydro')
       return_value = HYDRO_
+    CASE ('lentic')
+      return_value = LENTIC_
     CASE ('rad')
       return_value = RAD_
     CASE ('assimi')

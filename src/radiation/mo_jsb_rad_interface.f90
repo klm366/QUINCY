@@ -235,7 +235,7 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SEB_)
 
-swnir_srf_down    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down) ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down) ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)    ! in
 
     dsl4jsb_Get_var2D_onChunk(RAD_, sw_srf_net)     ! out

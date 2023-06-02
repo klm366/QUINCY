@@ -16,10 +16,10 @@
 !! @brief Contains structures and methods for lentic config
 !!
 !! @author
-!!  <FIRST NAME LAST NAME>, MPI-M Hamburg
+!!  Zoé Rehder, MPI-M Hamburg
 !!
 !! @par Revision History
-!! First version by <FIRST NAME LAST NAME> (<DATE>)
+!! First version by Zoé Rehder (2023-06-01)
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
@@ -40,14 +40,14 @@ MODULE mo_lentic_config_class
   ! Module variables 
   IMPLICIT NONE
   PRIVATE
-  !PUBLIC :: t_lentic_config
+  PUBLIC :: t_lentic_config
 
-  !TYPE, EXTENDS(t_jsb_config) :: t_lentic_config
+  TYPE, EXTENDS(t_jsb_config) :: t_lentic_config
      !X e.g: LOGICAL                     :: use_alb_veg_simple
 
-  !  CONTAINS
-  !    PROCEDURE :: Init => Init_lentic_config
-  ! END type t_lentic_config
+    CONTAINS
+      PROCEDURE :: Init => Init_lentic_config
+   END type t_lentic_config
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_lentic_config_class'
 
@@ -70,7 +70,7 @@ CONTAINS
     NAMELIST /jsb_lentic_nml/      &
          active,                      &
          ic_filename,                 &
-         bc_filename,                 &
+         bc_filename                 
          !X e.g: use_lentic_veg_simple
 
     INTEGER :: nml_handler, nml_unit, istat
