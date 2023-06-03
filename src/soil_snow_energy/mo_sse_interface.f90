@@ -29,13 +29,14 @@ MODULE mo_sse_interface
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, VEG_
+  dsl4jsb_Use_processes SSE_, SEB_, HYDRO_, VEG_, MIX_
   dsl4jsb_Use_config(SSE_)
   dsl4jsb_Use_config(HYDRO_)
   dsl4jsb_Use_memory(SSE_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
   dsl4jsb_Use_memory(VEG_)
+  dsl4jsb_Use_memory(MIX_)
 
   IMPLICIT NONE
   PRIVATE
@@ -149,6 +150,7 @@ CONTAINS
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(HYDRO_)
     dsl4jsb_Def_memory(VEG_)
+    dsl4jsb_Def_memory(MIX_)
 
     ! Pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: t_unfilt
@@ -185,6 +187,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
     dsl4jsb_Real2D_onChunk :: fract_snow_soil
+
+    dsl4jsb_Real3D_onChunk :: heat_flx_lat
 
     ! Locally allocated vectors
     !
@@ -244,6 +248,7 @@ CONTAINS
     dsl4jsb_Get_memory(SSE_)
     dsl4jsb_Get_memory(SEB_)
     dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(MIX_)
 
     dsl4jsb_Get_var2D_onChunk(HYDRO_, snowmelt)
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_soil)
@@ -255,6 +260,7 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, t_soil_bcoef)      ! inout
     dsl4jsb_Get_var3D_onChunk(SSE_, vol_heat_cap_sl)   ! in
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)      ! in
+    dsl4jsb_Get_var3D_onChunk(MIX_, heat_flx_lat)      ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, vol_heat_cap_snow) ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, heat_cond_snow)    ! in
     dsl4jsb_Get_var2D_onChunk(SSE_, hcap_grnd)         ! out
@@ -469,6 +475,7 @@ CONTAINS
         & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
+        & heat_flx_lat                        (:,:), &
         ! inout
         & t_soil_sl                           (:,:), &
         & t_soil_acoef                        (:,:), &
@@ -498,6 +505,7 @@ CONTAINS
         & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
         & heat_cond_sl                        (:,:), &
+        & heat_flx_lat                        (:,:), &
         ! inout
         & t_soil_sl                           (:,:), &
         & t_soil_acoef                        (:,:), &

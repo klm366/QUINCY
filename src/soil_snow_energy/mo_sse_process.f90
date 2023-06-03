@@ -365,6 +365,7 @@ CONTAINS
     & t_unfilt,                           &
     & dsoil,                              &
     & vol_heat_cap, heat_cond,            &
+    & heat_flx_lat,                       &
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
     & hcap_grnd, grnd_hflx,               &
@@ -446,6 +447,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  dsoil(:,:)               !! depth until bedrock per layer [m]
     REAL(wp), INTENT(in)    ::  vol_heat_cap(:,:)        !! soil heat capacity [J/m^3K]
     REAL(wp), INTENT(in)    ::  heat_cond(:,:)           !! soil thermal conductivity [J/m/s/K]
+    REAL(wp), INTENT(in)    ::  heat_flx_lat(:,:)        !! Lateral heat flux [J/m/s/K]
 
     REAL(wp), INTENT(inout) ::  t_soil_sl(:,:)           !! soil temperature [K]
     REAL(wp), INTENT(inout) ::  t_soil_acoef(:,:)        !! soil A coefficient of Richtmyer and Morton scheme
@@ -539,7 +541,10 @@ CONTAINS
       END DO
 
       !$claw acc end parallel
-
+      !pdv>
+      ! Adding later heat flux
+      t_soil_sl(:,:) = t_soil_sl(:,:) + heat_flx_lat(:,:) * delta_time / heat_cap(:,:)     
+      !pdv<
       ! Phase change calculations
       IF (l_freeze .AND. PRESENT(ws)) THEN
 
