@@ -534,12 +534,12 @@ CONTAINS
     WHERE (burned_fract_test < 0.) burned_fract_test = 0.
     WHERE (burned_fract_test > 1.) burned_fract_test = 1.
 
-    IF (is_infer .eq. 0) THEN
-      burned_fract(:) = fba_smooth(:)
-    ELSE
-      burned_fract(:) = burned_fract_test(:)
-    ENDIF
-    !burned_fract(:) = burned_fract_test(:)
+    !IF (is_infer .eq. 0) THEN
+    !  burned_fract(:) = fba_smooth(:)
+    !ELSE
+    !  burned_fract(:) = burned_fract_test(:)
+    !ENDIF
+    burned_fract(:) = burned_fract_test(:)
 
 
     ! saving in memory
@@ -617,11 +617,11 @@ CONTAINS
       tr_koppen(:) = batch_global(:,57)
 
       !DO i=1,bs
-      !  IF ((batch_global(i,42) .eq. 8) .or. (batch_global(i,42) .eq. 9) .or. &
+      !  IF ((batch_global(i,56) .eq. 8) .or. (batch_global(i,56) .eq. 9) .or. &
       !  IF ((batch_global(i,42) .eq. 8) .or. (batch_global(i,42) .eq. 9)) THEN!  .or. &
       !      (batch_global(i,42) .eq. 7) .or. (batch_global(i,42) .eq. 11) .or. &
-      !      (batch_global(i,42) .eq. 5)) THEN
-      !    tr_weights(i) = 500._wp
+      !      (batch_global(i,56) .eq. 5)) THEN
+      !    tr_weights(i) = 10._wp
       !  ELSE
       !    tr_weights(i) = 1._wp
       !  ENDIF
@@ -636,11 +636,14 @@ CONTAINS
 
       c_num(:) = 1e-8
       DO i = 1,bs
+
         c = INT(tr_koppen(i))
-        r = batch_global(i,42)
+        r = batch_global(i,56)
 
         !IF (c .ne. 0) THEN
-        IF ((c .ne. 0) .and. (r .ge. 1._wp)) THEN
+        !IF ((c .ne. 0) .and. (r .ge. 1._wp)) THEN
+        !IF ((c .ne. 0) .and. ((r .eq. 8) .or. (r .eq. 9) .or. (r .eq. 5))) THEN
+        IF ((c .ne. 0) .and. (r .eq. 8)) THEN
           c_num(c) = c_num(c) + 1._wp
 
           ! generate dropout mask
@@ -700,7 +703,7 @@ CONTAINS
       ENDDO
 
 
-      lr_rate = 1e-4
+      lr_rate = 5e-4
       DO c = 1, d_class
         dW1(:,d_hidden*(c-1)+1:d_hidden*c) = dW1(:,d_hidden*(c-1)+1:d_hidden*c) / c_num(c)
         dW2(:,d_hidden*(c-1)+1:d_hidden*c) = dW2(:,d_hidden*(c-1)+1:d_hidden*c) / c_num(c)
@@ -896,6 +899,7 @@ CONTAINS
     ! local
     REAL(wp) :: t_monthly(12), p_monthly(12)
     REAL(wp) :: t_cold, t_hot, t_ann, p_ann, p_summer, p_winter, p_threshold
+    REAL(wp) :: is_boreal, t_ondjfm, t_amjjas, p_threshold1, p_threshold2, p_threshold3
     REAL(wp) :: p_dry, p_sdry, p_swet, p_wdry, p_wwet
     REAL(wp) :: Am_or_w, Bw_or_s, Cw_or_f
     INTEGER  :: i
@@ -945,7 +949,39 @@ CONTAINS
 
       p_dry    = MINVAL(p_monthly)
 
-      IF (lat(i) .ge. 0) THEN 
+      !IF (lat(i) .ge. 0) THEN 
+      !  p_summer = SUM(p_monthly(1:6))
+      !  p_winter = SUM(p_monthly(7:12))
+      !  p_sdry   = MINVAL(p_monthly(1:6))
+      !  p_swet   = MAXVAL(p_monthly(1:6))
+      !  p_wdry   = MINVAL(p_monthly(7:12))
+      !  p_wwet   = MAXVAL(p_monthly(7:12))
+      !ELSE
+      !  p_summer = SUM(p_monthly(7:12))
+      !  p_winter = SUM(p_monthly(1:6))
+      !  p_sdry   = MINVAL(p_monthly(7:12))
+      !  p_swet   = MAXVAL(p_monthly(7:12))
+      !  p_wdry   = MINVAL(p_monthly(1:6))
+      !  p_wwet   = MAXVAL(p_monthly(1:6))
+      !ENDIF
+
+      !IF (p_summer .gt. SUM(p_monthly)*0.7) THEN
+      !  p_threshold = 2._wp*t_ann + 28._wp  
+      !ELSEIF (p_winter .gt. SUM(p_monthly)*0.7) THEN
+      !  p_threshold = 2._wp*t_ann
+      !ELSE
+      !  p_threshold = 2._wp*t_ann + 14._wp
+      !ENDIF
+
+      t_ondjfm = SUM(t_monthly(7:12))
+      t_amjjas = SUM(t_monthly(1:6))
+      IF (t_ondjfm .gt. t_amjjas) THEN
+        is_boreal = 1
+      ELSE
+        is_boreal = 0
+      ENDIF
+
+      IF (is_boreal .eq. 1) THEN
         p_summer = SUM(p_monthly(1:6))
         p_winter = SUM(p_monthly(7:12))
         p_sdry   = MINVAL(p_monthly(1:6))
@@ -961,13 +997,26 @@ CONTAINS
         p_wwet   = MAXVAL(p_monthly(1:6))
       ENDIF
 
-      IF (p_summer .gt. SUM(p_monthly)*0.7) THEN
-        p_threshold = 2._wp*t_ann + 28._wp  
-      ELSEIF (p_winter .gt. SUM(p_monthly)*0.7) THEN
-        p_threshold = 2._wp*t_ann
+      IF (p_winter .gt. SUM(p_monthly)*0.7) THEN
+        p_threshold1 = 2._wp*t_ann
       ELSE
-        p_threshold = 2._wp*t_ann + 14._wp
+        p_threshold1 = 0.
       ENDIF
+
+      IF (p_summer .gt. SUM(p_monthly)*0.7) THEN
+        p_threshold2 = 2._wp*t_ann + 28._wp
+      ELSE
+        p_threshold2 = 0.
+      ENDIF
+
+      IF ((p_winter .le. SUM(p_monthly)*0.7) .and. (p_summer .le. SUM(p_monthly)*0.7)) THEN
+        p_threshold3 = 2._wp*t_ann + 14._wp
+      ELSE
+        p_threshold3 = 0.
+      ENDIF
+
+      p_threshold = p_threshold1+p_threshold2+p_threshold3
+
 
       !!! classification
       ! Tropical

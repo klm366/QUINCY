@@ -644,24 +644,29 @@ CONTAINS
             y = SUM(Y_memory)
             !k = SUM(Koppen_memory)
             IF (tile%name .eq. max_pft) THEN
-              IF ((r .gt. 0.) .and. (y .gt. 0.)) THEN
+              !IF ((r .gt. 0.) .and. (y .gt. 0.)) THEN
             !IF ((tile%name .eq. max_pft) .and. (r .gt. 0.) .and. (k .gt. 0.)) THEN
-                n=1
-                n_zero=0
-                n_nozero=0
-                DO WHILE ( n<=8 )
-                  CALL RANDOM_NUMBER(u)
-                  i_temporal = 1 + INT(FLOOR((732)*u))
-                  CALL RANDOM_NUMBER(u)
-                  i_spatial  = 1 + INT(FLOOR((128)*u))
+                
+              n=1
+              n_zero=0
+              n_nozero=0
+              DO WHILE ( n<=8 )
+                CALL RANDOM_NUMBER(u)
+                i_temporal = 1 + INT(FLOOR((730)*u))
+                CALL RANDOM_NUMBER(u)
+                i_spatial  = 1 + INT(FLOOR((128)*u))
 
-                  !IF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
-                  !  n_nozero = n_nozero+1
-                  !  IF (n_nozero .le. 4) THEN
-                  !    save_batch = 1
-                  !  ELSE
-                  !    save_batch = 0
-                  !  ENDIF
+                IF (R_memory(i_spatial,i_temporal) .ge. 1) THEN
+                  IF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
+                    n_nozero = n_nozero+1
+                    IF (n_nozero .le. 8) THEN
+                      save_batch = 1
+                    ELSE
+                      save_batch = 0
+                    ENDIF
+                  ELSE
+                    save_batch = 1
+                  ENDIF
                   !ELSE
                   !  n_zero = n_zero+1
                   !  IF (n_zero .le. 4) THEN
@@ -670,7 +675,7 @@ CONTAINS
                   !    save_batch = 0
                   !  ENDIF
                   !ENDIF
-                  save_batch = 1
+                  !save_batch = 1
 
                   IF (save_batch .eq. 1) THEN
                     CALL update_pid_batch(                                                                                    &
@@ -696,33 +701,35 @@ CONTAINS
                       & Koppen_memory(i_spatial,i_temporal), n, iblk)
                     n = n+1
                   ENDIF
-                ENDDO
+                  !ENDDO
 
-              ELSE
-                DO n = 1,8
+                ELSE
+                  !DO n = 1,8
                   CALL update_pid_batch(                                                                                    &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,  0._wp, &
-                    & 0._wp,  0._wp,         &
+                    & 0._wp,  0._wp,  0._wp, & ! 1
+                    & 0._wp,  0._wp,  0._wp, & ! 2
+                    & 0._wp,  0._wp,  0._wp, & ! 3
+                    & 0._wp,  0._wp,  0._wp, & ! 4
+                    & 0._wp,  0._wp,  0._wp, & ! 5
+                    & 0._wp,  0._wp,  0._wp, & ! 6
+                    & 0._wp,  0._wp,  0._wp, & ! 7
+                    & 0._wp,  0._wp,  0._wp, & ! 8
+                    & 0._wp,  0._wp,  0._wp, & ! 9
+                    & 0._wp,  0._wp,  0._wp, & ! 10
+                    & 0._wp,  0._wp,  0._wp, & ! 11
+                    & 0._wp,  0._wp,  0._wp, & ! 12
+                    & 0._wp,  0._wp,  0._wp, & ! 13
+                    & 0._wp,  0._wp,  0._wp, & ! 14
+                    & 0._wp,  0._wp,  0._wp, & ! 15
+                    & 0._wp,  0._wp,  0._wp, & ! 16
+                    & 0._wp,  0._wp,  0._wp, & ! 17
+                    & 0._wp,  0._wp,         & ! 18
+
+                    & 0._wp,  0._wp,  0._wp, & ! 19
                     & 0._wp, n, iblk)
-                ENDDO
-              ENDIF
+                  n = n+1
+                  !ENDDO
+                ENDIF
                 !save_batch = 1
                 !t = threshold(INT(R_memory(i_spatial,i_temporal)))
                 !IF (t .ge. 0) THEN
@@ -768,7 +775,7 @@ CONTAINS
                 !    & Koppen_memory(i_spatial,i_temporal), n, iblk)
                 !  n = n+1
                 !ENDIF
-              !ENDDO
+              ENDDO
             ENDIF
           ENDIF
           
