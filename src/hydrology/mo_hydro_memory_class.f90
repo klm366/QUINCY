@@ -564,9 +564,9 @@ CONTAINS
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
-      CALL mem%Add_var( 'weq_snow_new_soil', mem%weq_snow_new_soil,                          &
+      CALL mem%Add_var( 'weq_snow_new_soil', mem%weq_snow_new_soil,                  &
         & hgrid, surface,                                                            &
-        & t_cf('weq_snow_new_soil', 'm (water equivalent)', 'Fresh snow on soil'),       &
+        & t_cf('weq_snow_new_soil', 'm (water equivalent)', 'Fresh snow on soil'),   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),         &
         & prefix, suffix,                                                            &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )

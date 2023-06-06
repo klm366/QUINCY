@@ -20,8 +20,7 @@ MODULE mo_mix_process
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion, calc_snow_redistribution, &
-          & diagnose_intertile_heatflux
+  PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion, calc_snow_redistribution
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_process'
 
@@ -371,8 +370,6 @@ CONTAINS
     fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
 
     !Assumption of circular depression with A = 1m2 with in a circular elevation
-    !Area of outer circle + inner circle = A/fract_dpr
-    !length_scale = ((A/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
     !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
     length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
 
@@ -619,165 +616,6 @@ CONTAINS
 
   END SUBROUTINE calc_intertile_diffusion
 
-! ===============================================================================================================================
-  !>
-  !! @brief   Compute intertile lateral diffusion between tiles with different surface elevation (elevation/depression)
-  !!
-  SUBROUTINE diagnose_intertile_heatflux(nsoil, dtime,   &
-      &      h_offset, dz, lvt_fract, dpr_fract,         &
-      &      t_soil_lvt, t_soil_dpr,                     &
-      &      heat_cond_soil_lvt, heat_cond_soil_dpr,     &
-      &      heat_cap_soil_lvt, heat_cap_soil_dpr,       &
-      &      heat_flx_lat_lvt, heat_flx_lat_dpr          &
-      &      )
-
-    USE mo_jsb_math_constants,     ONLY: pi
-
-    INTEGER, INTENT(in)     :: nsoil
-
-    REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
-      &                        h_offset,            & !< height offset between tiles 
-      &                        lvt_fract,           & !< area fraction of elevation tile
-      &                        dpr_fract              !< area fraction of depression tile
-
-    REAL(wp), INTENT(in)    :: dz(:),                  &
-      &                        t_soil_lvt(:),          & !< soil tempertures of elevation tile
-      &                        t_soil_dpr(:),          & !< soil tempertures of depression tile
-      &                        heat_cond_soil_lvt(:),  & !< soil heat conductivity of elevation tile
-      &                        heat_cond_soil_dpr(:),  & !< soil heat conductivity of depression tile
-      &                        heat_cap_soil_lvt(:),   & !< soil heat capacity of elevation tile
-      &                        heat_cap_soil_dpr(:)      !< soil heat capacity of depression tile
-
-
-    REAL(wp), INTENT(out)   :: heat_flx_lat_lvt(:),    & !< Heat flux at elevation tile [J m-2 s-1]
-      &                        heat_flx_lat_dpr(:)       !< Heat flux at depression tile [J m-2 s-1]
-
-
-
-    ! Local variables ------------------------------------------------------------------------------------
-    INTEGER                 :: nrgrd, i, i_lvt, i_dpr
-
-    REAL(wp)                :: fr_lvt_rel,           &
-      &                        fr_dpr_rel,           &
-      &                        z_lvt,                &
-      &                        z_dpr,                &
-      &                        z_rgrd_top,           &
-      &                        z_rgrd_bot,           &
-      &                        len_inter,            &
-      &                        h,                    &
-      &                        a_inter,              &
-      &                        t_lvt_rgrd,           &
-      &                        t_dpr_rgrd,           &
-      &                        h_cond_soil_lvt_rgrd, &
-      &                        h_cond_soil_dpr_rgrd, &
-      &                        h_cap_soil_lvt_rgrd,  &
-      &                        h_cap_soil_dpr_rgrd,  &
-      &                        h_cond_inter,         &
-      &                        d_t,                  &
-      &                        heat_flx_lat,         &
-      &                        t_eq,                 &
-      &                        heat_flx_eq_lat
-
-
-    REAL(wp) ::     length_scale ! assumed diameter of depressions (could be input field / namelist para)
-
-    nrgrd         = nsoil * 2 + 3
-
-    ! Initilize fields for accumulating output
-    heat_flx_lat_lvt(:) = 0._wp 
-    heat_flx_lat_dpr(:) = 0._wp
-
-
-    ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
-    fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
-    fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
-
-    !Assumption of circular depression with A = 1m2 with in a circular elevation
-    !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
-    length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
-
-    ! Start setting up the interpolated grid
-    ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
-    i_lvt = 1
-    z_lvt = dz(i_lvt)
-    i_dpr = 1
-    IF (h_offset > 0._wp) THEN
-      i_dpr = 0
-      z_dpr = h_offset
-    ELSE
-      z_dpr = dz(i_dpr)
-    END IF
-
-    z_rgrd_top = 0._wp
-    z_rgrd_bot = MIN(z_lvt, z_dpr)
-
-    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m2 within elevation area x
-
-    DO i = 1, nrgrd
-      IF (i_lvt <= nsoil .AND. i_dpr <= nsoil) THEN ! Within the soil column of both tiles
-      
-        heat_flx_lat           = 0._wp
-        
-        IF (z_rgrd_bot > h_offset ) THEN ! Within the soil column of both tiles
-          h                    = z_rgrd_bot - z_rgrd_top
-          a_inter              = len_inter * h
-          
-          t_lvt_rgrd           = t_soil_lvt(i_lvt)
-          h_cond_soil_lvt_rgrd = heat_cond_soil_lvt(i_lvt)
-          h_cap_soil_lvt_rgrd  = heat_cap_soil_lvt(i_lvt)
-          
-          t_dpr_rgrd           = t_soil_dpr(i_dpr)
-          h_cond_soil_dpr_rgrd = heat_cond_soil_dpr(i_dpr)
-          h_cap_soil_dpr_rgrd  = heat_cap_soil_dpr(i_dpr)          
-          
-          ! Flux is determined by the difference in temperature between the two tiles       
-          h_cond_inter         =(h_cond_soil_lvt_rgrd * h_cond_soil_dpr_rgrd)**0.5_wp
-          d_t                  = t_lvt_rgrd - t_dpr_rgrd
-          heat_flx_lat         = h_cond_inter  * d_t / length_scale *  a_inter
-          
-          ! Limiting heat flux to avoid instablilities for ong time steps
-          ! Determine flux required to equilibriate Temps within timestep
-          ! Equilibrium temperature
-          t_eq = (t_lvt_rgrd * h_cap_soil_lvt_rgrd * fr_lvt_rel  &
-           &   +  t_dpr_rgrd * h_cap_soil_dpr_rgrd * fr_dpr_rel) &
-           &   / (h_cap_soil_lvt_rgrd * fr_lvt_rel + h_cap_soil_dpr_rgrd * fr_dpr_rel)
-          ! Heat flux to reach equilibrium temp       
-          heat_flx_eq_lat = MIN( &
-                        & ABS((t_lvt_rgrd - t_eq)  * h_cap_soil_lvt_rgrd * fr_lvt_rel), & 
-                        & ABS((t_dpr_rgrd - t_eq)  * h_cap_soil_dpr_rgrd * fr_dpr_rel)) &
-                        & *  a_inter / dtime
-          ! Limiting heat flux to equilibrium flux
-          IF (heat_flx_lat > 0._wp .AND. heat_flx_lat > ABS(heat_flx_eq_lat)) THEN
-            heat_flx_lat = ABS(heat_flx_eq_lat)
-          ELSE IF (heat_flx_lat < 0._wp .AND. heat_flx_lat < -ABS(heat_flx_eq_lat)) THEN
-            heat_flx_lat = -ABS(heat_flx_eq_lat)
-          END IF
-        END IF
-        
-        heat_flx_lat_lvt(i_lvt) = heat_flx_lat_lvt(i_lvt) - heat_flx_lat  / fr_lvt_rel
-        heat_flx_lat_dpr(i_dpr) = heat_flx_lat_dpr(i_dpr) + heat_flx_lat  / fr_dpr_rel
-        
-        ! Determening the top and bottem of the next layer of the regridded
-        IF (z_rgrd_bot == z_lvt) THEN
-          i_lvt = i_lvt + 1
-          IF (i_lvt <= nsoil) THEN
-            z_lvt = z_lvt + dz(i_lvt)          
-          END IF      
-        END IF
-        
-        IF (z_rgrd_bot == z_dpr) THEN
-          i_dpr = i_dpr + 1
-          IF (i_dpr <= nsoil) THEN
-            z_dpr = z_dpr + dz(i_dpr)          
-          END IF      
-        END IF
-        z_rgrd_top=z_rgrd_bot
-        z_rgrd_bot=MIN(z_lvt, z_dpr)              
-      END IF
-    END DO 
-
-  END SUBROUTINE diagnose_intertile_heatflux
-
   ! ===============================================================================================================================
   !>
   !! @brief   Compute intertile snow redistribution between tiles with different surface elevation (elevation/depression)
@@ -786,7 +624,7 @@ CONTAINS
       &      dtime,                              &
       &      h_offset,                           &
       &      lvt_fract, dpr_fract,               &
-      &      weq_pond_lvt, weq_pond_dpr,         & 
+      &      weq_pond_lvt, weq_pond_dpr,         &
       &      snow_soil_lvt, snow_soil_dpr,       &
       &      snow_new_lvt, snow_new_dpr,         &
       &      snow_lvt, snow_dpr,                 &
@@ -837,14 +675,14 @@ CONTAINS
       &                        snow_mob_upd_lvt,    &
       &                        snow_mob_upd_dpr,    &
       &                        snow_dens_max,       &
-      &                        snow_dens_min,       &      
-      &                        snow_dens_fix_lvt,   &    
+      &                        snow_dens_min,       &
+      &                        snow_dens_fix_lvt,   &
       &                        snow_dens_fix_dpr
 
     ! Setting initial values to 0.0
     snow_rdst_lvt = 0._wp
     snow_rdst_dpr = 0._wp
- 
+
 
     ! Snow density paraeters depending on snow scheme
     IF (l_dynsnow) THEN
@@ -852,20 +690,20 @@ CONTAINS
       snow_dens_min = dens_snow_min
     ELSE
       snow_dens_max = dens_snow
-      snow_dens_min = dens_snow     
+      snow_dens_min = dens_snow
     END IF
 
     ! Determine relative fractions from absolute fractions
     fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
     fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
 
-    ! Determine amount of fixed and mobile fractions of the snow cover 
-    ! (assuming that in the previous time step the old snow has melted before the new snow)    
+    ! Determine amount of fixed and mobile fractions of the snow cover
+    ! (assuming that in the previous time step the old snow has melted before the new snow)
     snow_fix_lvt =  snow_soil_lvt - snow_new_lvt
     snow_fix_dpr =  snow_soil_dpr - snow_new_dpr
     snow_mob_lvt =  snow_new_lvt
     snow_mob_dpr =  snow_new_dpr
-    
+
     IF (snow_fix_lvt < 0._wp) THEN
       snow_mob_lvt = snow_new_lvt + snow_fix_lvt
       snow_fix_lvt = 0._wp
@@ -874,17 +712,17 @@ CONTAINS
       snow_mob_dpr = snow_new_dpr + snow_fix_dpr
       snow_fix_dpr = 0._wp
     END IF
-    
-    ! Determine snow density of fixed snow    
-    IF (snow_fix_lvt > 0._wp) THEN      
+
+    ! Determine snow density of fixed snow
+    IF (snow_fix_lvt > 0._wp) THEN
       snow_fix_rel_lvt  = snow_fix_lvt / snow_soil_lvt
       snow_dens_fix_lvt = (snow_dens_lvt - (snow_dens_min * (1._wp - snow_fix_rel_lvt))) &
                       & / snow_fix_rel_lvt
     ELSE
       snow_dens_fix_lvt = snow_dens_lvt
     END IF
-    IF (snow_fix_dpr > 0._wp) THEN            
-      snow_fix_rel_dpr = snow_fix_dpr / snow_soil_dpr    
+    IF (snow_fix_dpr > 0._wp) THEN
+      snow_fix_rel_dpr = snow_fix_dpr / snow_soil_dpr
       snow_dens_fix_dpr = (snow_dens_dpr - (snow_dens_min * (1._wp - snow_fix_rel_dpr))) &
                       & / snow_fix_rel_dpr
     ELSE
@@ -898,13 +736,13 @@ CONTAINS
 
     ! Calculate snow redistribution for two cases (1) from elevation to depression or (2) from depression to elevation
     ! Transport only applies if in the source tile there is fixed and mobile (new) snow
-    IF  ((h_offset_snow_fix > 0._wp .AND. snow_fix_lvt > 0.01_wp .AND. snow_mob_lvt > 0._wp) .OR. &
-         (h_offset_snow_fix < 0._wp .AND. snow_fix_dpr > 0.01_wp .AND. snow_mob_dpr > 0._wp))THEN
+    IF  ((h_offset_snow_fix > 1.0e-10_wp .AND. snow_fix_lvt > 0.01_wp .AND. snow_mob_lvt > 0._wp) .OR. &
+         (h_offset_snow_fix < -1.0e-10_wp .AND. snow_fix_dpr > 0.01_wp .AND. snow_mob_dpr > 0._wp))THEN
 
       snow_depth_mob_avg = (snow_mob_lvt * fr_lvt_rel + snow_mob_dpr * fr_dpr_rel) * (rhoh2o / snow_dens_min)
 
       !! 1. (Fixed) snow surface is lower in derpression and there is fixed and mobile snow on elevation    
-      IF  (h_offset_snow_fix > 0._wp .AND. snow_fix_lvt > 0.01_wp .AND. snow_mob_lvt > 0._wp)THEN
+      IF  (h_offset_snow_fix > 1.0e-10_wp .AND. snow_fix_lvt > 0.01_wp .AND. snow_mob_lvt > 0._wp)THEN
         IF (snow_depth_mob_avg / fr_dpr_rel <= h_offset_snow_fix ) THEN ! New snow fits into depression
           snow_depth_mob_dpr = snow_depth_mob_avg / fr_dpr_rel
           snow_depth_mob_lvt = 0._wp
@@ -912,13 +750,13 @@ CONTAINS
           snow_depth_mob_dpr = h_offset_snow_fix  &
                            & + (snow_depth_mob_avg - h_offset_snow_fix * fr_dpr_rel)
           snow_depth_mob_lvt =  snow_depth_mob_avg - h_offset_snow_fix * fr_dpr_rel
-        END IF   
-      !! 2. (Fixed) snow surface is lower on elevation and there is fixed and mobile snow in depression                                        
-      ELSE IF (h_offset_snow_fix < 0._wp .AND. snow_fix_dpr > 0.01_wp .AND. snow_mob_dpr > 0._wp) THEN
-        h_offset_snow_fix = - h_offset_snow_fix ! Inversing sign of height offset to simplify calculations  
+        END IF
+      !! 2. (Fixed) snow surface is lower on elevation and there is fixed and mobile snow in depression
+      ELSE IF (h_offset_snow_fix < -1.0e-10_wp .AND. snow_fix_dpr > 0.01_wp .AND. snow_mob_dpr > 0._wp) THEN
+        h_offset_snow_fix = - h_offset_snow_fix ! Inversing sign of height offset to simplify calculations
         IF (snow_depth_mob_avg / fr_lvt_rel <= h_offset_snow_fix ) THEN  ! New snow fits into elevation
           snow_depth_mob_lvt = snow_depth_mob_avg / fr_lvt_rel
-          snow_depth_mob_dpr = 0._wp     
+          snow_depth_mob_dpr = 0._wp
         ELSE
           snow_depth_mob_lvt = h_offset_snow_fix &
                            & + (snow_depth_mob_avg - h_offset_snow_fix * fr_lvt_rel)
