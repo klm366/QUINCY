@@ -485,7 +485,7 @@ CONTAINS
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
-    !< set CF speicification
+    !< set CF specification
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
