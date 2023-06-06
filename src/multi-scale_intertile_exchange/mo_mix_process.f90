@@ -21,7 +21,7 @@ MODULE mo_mix_process
   PRIVATE
 
   PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion, calc_snow_redistribution, &
-          & diagnose_intertile_heatflux
+          & diagnose_intertile_heatflux, get_geometry
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_process'
 
@@ -232,7 +232,8 @@ CONTAINS
   !! @brief   Compute intertile lateral diffusion between tiles with different surface elevation (elevation/depression)
   !!
   SUBROUTINE calc_intertile_diffusion(nsoil, soilhydmodel, dtime,   &
-      &      h_offset, lvt_fract, dpr_fract, dsoil_lvt,dsoil_dpr,          &
+      &      h_offset, length_scale, len_inter,                     &
+      &      lvt_fract, dpr_fract, dsoil_lvt,dsoil_dpr,          &
       &      field_cap_lvt, field_cap_dpr, wsat_lvt, wsat_dpr,   &
       &      pwp_lvt, pwp_dpr, mpot_sat_lvt, mpot_sat_dpr,       &
       &      k_sat_lvt, k_sat_dpr, bclapp_lvt, bclapp_dpr, ps_index_lvt, ps_index_dpr,             &
@@ -241,7 +242,6 @@ CONTAINS
       &      wtr_latflow_lvt, wtr_latflow_dpr, wtr_soil_lvt, wtr_soil_dpr, diffus_lvt, diffus_dpr  &
       &      )
 
-    USE mo_jsb_math_constants,     ONLY: pi
     USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     INTEGER, INTENT(in)     :: nsoil,               & !< number of soil layers
@@ -249,6 +249,8 @@ CONTAINS
 
     REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
       &                        h_offset,            &
+      &                        length_scale,        &
+      &                        len_inter,           &
       &                        lvt_fract,           & !< area fraction of water elevation tile
       &                        dpr_fract              !< area fraction of water depression tile
 
@@ -303,7 +305,6 @@ CONTAINS
       &                        wtr_pond_total,   &
       &                        z_lvt,            &
       &                        z_dpr,            &
-      &                        len_inter,        &
       &                        h,                &
       &                        a_inter,          &
       &                        k_inter,          &
@@ -345,14 +346,7 @@ CONTAINS
       &                        wtr_lat
 
 
-
-!    REAL(wp), PARAMETER ::     length_scale = 1.0_wp,        & ! assumed diameter of depressions (could be input field / namelist para)
-!      &                        h_offset     = 0.1_wp,        & ! hight difference between ridge and depression (should later be input field)
-!      &                        ck           = 8.0_wp           ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
-
-    REAL(wp) ::     length_scale,    & ! assumed diameter of depressions (could be input field / namelist para)
-!      &             h_offset,        & ! hight difference between ridge and depression (should later be input field)
-      &             ck                 ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
+    REAL(wp) ::  ck                 ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
 
     nrgrd         = nsoil * 2 + 3
 
@@ -369,12 +363,6 @@ CONTAINS
     ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
     fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
     fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
-
-    !Assumption of circular depression with A = 1m2 with in a circular elevation
-    !Area of outer circle + inner circle = A/fract_dpr
-    !length_scale = ((A/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
-    !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
-    length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
 
     ! Fist calculate the standing water at the surface of both tiles ... with the assumption that runoff is instant
     wtr_pond_total = wtr_pond_lvt * fr_lvt_rel + wtr_pond_dpr * fr_dpr_rel
@@ -432,7 +420,6 @@ CONTAINS
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_lvt, z_dpr)
 
-    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m2 within elevation area x
 
     DO i = 1, nrgrd
       IF (i_lvt <= nsoil .AND. i_dpr <= nsoil .AND. dsoil_lvt(MIN(i_lvt,nsoil)) > 0._wp &
@@ -624,19 +611,21 @@ CONTAINS
   !! @brief   Compute intertile lateral diffusion between tiles with different surface elevation (elevation/depression)
   !!
   SUBROUTINE diagnose_intertile_heatflux(nsoil, dtime,   &
-      &      h_offset, dz, lvt_fract, dpr_fract,         &
+      &      dz, h_offset,                               &
+      &      length_scale, len_inter,                    &
+      &      lvt_fract, dpr_fract,                       &
       &      t_soil_lvt, t_soil_dpr,                     &
       &      heat_cond_soil_lvt, heat_cond_soil_dpr,     &
       &      heat_cap_soil_lvt, heat_cap_soil_dpr,       &
       &      heat_flx_lat_lvt, heat_flx_lat_dpr          &
       &      )
 
-    USE mo_jsb_math_constants,     ONLY: pi
-
     INTEGER, INTENT(in)     :: nsoil
 
     REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
-      &                        h_offset,            & !< height offset between tiles 
+      &                        h_offset,            & !< height offset between tiles
+      &                        length_scale,        & 
+      &                        len_inter,           &
       &                        lvt_fract,           & !< area fraction of elevation tile
       &                        dpr_fract              !< area fraction of depression tile
 
@@ -663,7 +652,6 @@ CONTAINS
       &                        z_dpr,                &
       &                        z_rgrd_top,           &
       &                        z_rgrd_bot,           &
-      &                        len_inter,            &
       &                        h,                    &
       &                        a_inter,              &
       &                        t_lvt_rgrd,           &
@@ -678,9 +666,6 @@ CONTAINS
       &                        t_eq,                 &
       &                        heat_flx_eq_lat
 
-
-    REAL(wp) ::     length_scale ! assumed diameter of depressions (could be input field / namelist para)
-
     nrgrd         = nsoil * 2 + 3
 
     ! Initilize fields for accumulating output
@@ -691,10 +676,6 @@ CONTAINS
     ! Determine relative fractions from absolute fractions -- don't forget to scale fluxes afterwards
     fr_lvt_rel = lvt_fract / (lvt_fract+dpr_fract)
     fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
-
-    !Assumption of circular depression with A = 1m2 with in a circular elevation
-    !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
-    length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
 
     ! Start setting up the interpolated grid
     ! As ponded water / ice do not have a heat content we only account for energy exchange in the soil:
@@ -710,8 +691,6 @@ CONTAINS
 
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_lvt, z_dpr)
-
-    len_inter = ((4._wp * pi) ** 0.5_wp) * fr_dpr_rel ! base assumption is the circumference of circle with area 1m2 within elevation area x
 
     DO i = 1, nrgrd
       IF (i_lvt <= nsoil .AND. i_dpr <= nsoil) THEN ! Within the soil column of both tiles
@@ -959,6 +938,68 @@ CONTAINS
     END IF
 
   END SUBROUTINE calc_snow_redistribution
+
+  ! ===============================================================================================================================
+  !>
+  !! @brief   Get the geometry characteristic lenghts scales of the interface between tiles given relative to 1m^2
+  !!
+  SUBROUTINE get_geometry(                       &
+      &      fract, fract_sibl_tile,             &
+      &      A_char, A_char_sibl_tile,           &
+      &      h_surf, h_surf_sibl_tile,           &
+      &      h_offset,                           &
+      &      length_scale,                       &
+      &      length_inter                        &
+      &      )
+
+    USE mo_jsb_math_constants,     ONLY: pi
+
+    REAL(wp), INTENT(in)    :: fract,            & !< area fraction of water elevation tile
+      &                        fract_sibl_tile,  & !< area fraction of water depression tile
+      &                        A_char,           & !< Charateristic area of surface features
+      &                        A_char_sibl_tile, & !< Charateristic area of surface features 
+      &                        h_surf,           & !< Charateristic height of surface features
+      &                        h_surf_sibl_tile    !< Charateristic height of surface features
+
+    REAL(wp), INTENT(out)   :: h_offset,      & !< difference in surface heights
+      &                        length_scale,  & !< characetristic length scale of lateral fluxes
+      &                        length_inter     !< length of interface between tiles relative to 1m^2
+
+
+    REAL(wp)                :: fr_rel,          &
+      &                        fr_rel_sibl_tile
+
+    h_offset = h_surf - h_surf_sibl_tile
+
+    ! Determine relative fractions from absolute fractions
+    fr_rel           = fract           / (fract+fract_sibl_tile)
+    fr_rel_sibl_tile = fract_sibl_tile / (fract+fract_sibl_tile)
+    
+    !Length scales and interface length based on the geometry of the smaller tile
+
+    IF (fract >= fract_sibl_tile) THEN
+      ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char_sibl_tile 
+      ! within elevation area A_char_sibl_tile * ( fract / fract_sibl_tile)
+      length_inter = ((4._wp * pi * A_char_sibl_tile) ** 0.5_wp) &
+                 & / A_char_sibl_tile * fr_rel_sibl_tile
+
+      ! Determine characteristic length scale: base assumption is the radius of the circle 
+      ! that contains A_char_sibl_tile and surrounding A_char 
+      !Area of outer circle + inner circle = A_char_sibl_tile/fr_rel_sibl_tile
+      length_scale = ((A_char_sibl_tile/fr_rel_sibl_tile)/pi)**0.5_wp                      ! From center to outer rim
+    ELSE
+      ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char 
+      ! within elevation area A_char * ( fract_sibl_tile / fract)
+      length_inter = ((4._wp * pi * A_char) ** 0.5_wp) &
+                 & / A_char * fr_rel
+
+      ! Determine characteristic length scale: base assumption is the radius of the circle 
+      ! that contains A_char and surrounding A_char_sibl_tile 
+      !Area of outer circle + inner circle = A_char/fr_rel
+      length_scale = ((A_char/fr_rel)/pi)**0.5_wp                      ! From center to outer rim
+    END IF 
+
+  END SUBROUTINE get_geometry
 
 #endif
 END MODULE mo_mix_process
