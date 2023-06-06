@@ -371,6 +371,8 @@ CONTAINS
     fr_dpr_rel = dpr_fract / (lvt_fract+dpr_fract)
 
     !Assumption of circular depression with A = 1m2 with in a circular elevation
+    !Area of outer circle + inner circle = A/fract_dpr
+    !length_scale = ((A/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
     !length_scale = ((1._wp/pi)**0.5_wp+((1._wp/fr_dpr_rel)/pi)**0.5_wp)/2._wp ! From center depression to half of outer rim
     length_scale = ((1._wp/fr_dpr_rel)/pi)**0.5_wp                      ! From center to outer rim
 
@@ -673,6 +675,7 @@ CONTAINS
       &                        h_cond_inter,         &
       &                        d_t,                  &
       &                        heat_flx_lat,         &
+      &                        t_eq,                 &
       &                        heat_flx_eq_lat
 
 
@@ -733,10 +736,16 @@ CONTAINS
           heat_flx_lat         = h_cond_inter  * d_t / length_scale *  a_inter
           
           ! Limiting heat flux to avoid instablilities for ong time steps
-          ! Determine flux required to equilibriate Temps within timestep          
-          heat_flx_eq_lat = (t_lvt_rgrd * h_cap_soil_lvt_rgrd * fr_lvt_rel  &
-                    & -  t_dpr_rgrd * h_cap_soil_dpr_rgrd * fr_dpr_rel) &
-                    & *  a_inter * 0.5_wp / dtime
+          ! Determine flux required to equilibriate Temps within timestep
+          ! Equilibrium temperature
+          t_eq = (t_lvt_rgrd * h_cap_soil_lvt_rgrd * fr_lvt_rel  &
+           &   +  t_dpr_rgrd * h_cap_soil_dpr_rgrd * fr_dpr_rel) &
+           &   / (h_cap_soil_lvt_rgrd * fr_lvt_rel + h_cap_soil_dpr_rgrd * fr_dpr_rel)
+          ! Heat flux to reach equilibrium temp       
+          heat_flx_eq_lat = MIN( &
+                        & ABS((t_lvt_rgrd - t_eq)  * h_cap_soil_lvt_rgrd * fr_lvt_rel), & 
+                        & ABS((t_dpr_rgrd - t_eq)  * h_cap_soil_dpr_rgrd * fr_dpr_rel)) &
+                        & *  a_inter / dtime
           ! Limiting heat flux to equilibrium flux
           IF (heat_flx_lat > 0._wp .AND. heat_flx_lat > ABS(heat_flx_eq_lat)) THEN
             heat_flx_lat = ABS(heat_flx_eq_lat)
