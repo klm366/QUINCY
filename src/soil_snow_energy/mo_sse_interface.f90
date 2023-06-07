@@ -654,7 +654,15 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth,            weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1,    weighted_by_fract)
-
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_diag1,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_diag1,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1_diag1,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_diag2,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_diag2,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1_diag2,    weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_diag3,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_diag3,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(SSE_,   thaw_depth_max_ym1_diag3,    weighted_by_fract)
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_soil_and_snow_temperature

@@ -610,7 +610,8 @@ CONTAINS
 
 !pdv > Thaw depths caluclation needs to be checked carefully .. for now 2 options
 ! -----------------------------------------------------------------------------------------------------
-      IF (i_thaw == 1 .AND. l_freeze .AND. PRESENT(ws)) THEN
+!pdv      IF (i_thaw == 1 .AND. l_freeze .AND. PRESENT(ws)) THEN
+      IF (l_freeze .AND. PRESENT(ws)) THEN
         ! 1) This is the minimum thaw depth that we can get with jsb.
         !    But I am not really a fan of calculating between mid layers,
         !    the energy calculated above always pertains to entire layers ...
@@ -653,7 +654,9 @@ CONTAINS
             END IF
           END DO
         END DO
-      ELSE IF (i_thaw == 2 .AND. l_freeze .AND. PRESENT(ws)) THEN
+!pdv      ELSE IF (i_thaw == 2 .AND. l_freeze .AND. PRESENT(ws)) THEN
+      END IF
+      IF (l_freeze .AND. PRESENT(ws)) THEN
 ! -----------------------------------------------------------------------------------------------------
         ! 2) I prefer calculation for full layers,
         !    howver, thaw depths are quite large (but this could be an issue related to offline runs)
@@ -697,7 +700,8 @@ CONTAINS
             END IF
           END DO
         END DO
-      ELSE
+!pdv      ELSE
+       END IF
 ! -----------------------------------------------------------------------------------------------------
         DO jl=1,nidx
           thaw_depth_diag3(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
@@ -715,7 +719,7 @@ CONTAINS
             END IF
           END DO
         END DO
-      END IF
+!pdv      END IF
       !$claw acc end parallel
       ! Selecting thaw deth that is used for computations
       IF (i_thaw == 1 .AND. l_freeze .AND. PRESENT(ws)) THEN
