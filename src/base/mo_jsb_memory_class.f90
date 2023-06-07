@@ -470,29 +470,29 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':t_jsb_memory_add_var_r3d'
 
-    !< set output variable name
+    !> set output variable name
     name_loc = TRIM(name)
     IF (prefix /= '') name_loc = TRIM(prefix)//'_'//TRIM(name_loc)
     IF (suffix /= '') name_loc = TRIM(name_loc)//'_'//TRIM(suffix)
 
-    !< set loutput
+    !> set loutput
     loutput_loc = .TRUE.
     IF (PRESENT(loutput)) loutput_loc = loutput
 
-    !< set missing value
+    !> set missing value
     lmiss_loc = .TRUE.
     IF (PRESENT(lmiss)) lmiss_loc = lmiss
     missval_r_loc = missval
     IF (PRESENT(missval_r)) missval_r_loc = missval_r
 
-    !< set CF specification
+    !> set CF specification
     cf_loc = t_cf_var(cf%standard_name, cf%units, cf%long_name, cf%datatype)
     grib2_loc = grib2_var(grib2%discipline, grib2%category, grib2%number, grib2%bits, GRID_UNSTRUCTURED, GRID_CELL)
 
-    !< ldims : local dimension (dimension of chunk block)
-    !< gdims : global dimension for output file (netcdf, hdf, grip ... etc) grid format
-    ldims(1) = hgrid%nproma
-    gdims(1) = hgrid%dims_g(1)
+    
+    
+    ldims(1) = hgrid%nproma           !< local dimension (dimension of chunk block)
+    gdims(1) = hgrid%dims_g(1)        !< global dimension for output file (netcdf, hdf, grip ... etc) grid format
     IF (PRESENT(extra_dim_n)) THEN
       IF (PRESENT(loutput)) THEN
         IF (loutput) CALL finish(TRIM(routine), 'extra_dim_n not possible with loutput=TRUE')
