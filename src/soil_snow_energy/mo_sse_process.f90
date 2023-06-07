@@ -362,6 +362,7 @@ CONTAINS
     & nidx, nsoil, dz, mids,              &
     & delta_time, lstart,                 &
     & l_freeze, l_supercool,              &
+    & i_thaw,                             &
     & t_unfilt,                           &
     & dsoil,                              &
     & vol_heat_cap, heat_cond,            &
@@ -369,7 +370,8 @@ CONTAINS
     & t_soil_sl,                          &
     & t_soil_acoef, t_soil_bcoef,         &
     & hcap_grnd, grnd_hflx,               &
-    & thaw_depth,                         &
+    & thaw_depth, thaw_depth_diag1,       &
+    & thaw_depth_diag2, thaw_depth_diag3, &
     ! optional
     & ws_max, matrix_pot, bclapp, ws,     &
     & ice, frozen, melt, liquid_max       &
@@ -441,6 +443,7 @@ CONTAINS
     REAL(wp), INTENT(in)    ::  delta_time               !! Time step
     LOGICAL,  INTENT(in)    ::  lstart                   !! if T, start of experiment
     LOGICAL,  INTENT(in)    ::  l_freeze, l_supercool
+    INTEGER,  INTENT(in)    ::  i_thaw                   !! Scheme to diagnose thaw depth
     REAL(wp), INTENT(in)    ::  dz(:)                    !! soil layer thickness [m]
     REAL(wp), INTENT(in)    ::  mids(:)                  !! depth of mids of soil layers [m]
     REAL(wp), INTENT(in)    ::  t_unfilt(:)              !! surface temperature at top of soil [K]
@@ -456,6 +459,9 @@ CONTAINS
     REAL(wp), INTENT(out)   ::  hcap_grnd(:)             !! heat capacity of the ground [J m-2 K-1]
     REAL(wp), INTENT(out)   ::  grnd_hflx(:)             !! ground heat flux [J m-2 s-1]
     REAL(wp), INTENT(out)   ::  thaw_depth(:)            !! Thawing depth [m]
+    REAL(wp), INTENT(out)   ::  thaw_depth_diag1(:)      !! Thawing depth [m]
+    REAL(wp), INTENT(out)   ::  thaw_depth_diag2(:)      !! Thawing depth [m]
+    REAL(wp), INTENT(out)   ::  thaw_depth_diag3(:)      !! Thawing depth [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  ws_max(:,:)       !! Maximum water storage [m]
     REAL(wp), INTENT(in), OPTIONAL    ::  matrix_pot(:,:)   !! Matrix potential
     REAL(wp), INTENT(in), OPTIONAL    ::  bclapp(:,:)       !! Clapp and Hornberger parameter
@@ -468,7 +474,7 @@ CONTAINS
     !------------------------------------------------------------------
     !  local Variables
 
-    INTEGER  :: jl, jk, thaw_scheme
+    INTEGER  :: jl, jk
     REAL(wp) :: z1(nidx,nsoil)
     REAL(wp) :: zd1(nsoil),zbot(nsoil)
     REAL(wp) :: zdz1(nidx,nsoil), zdz2(nidx,nsoil)
@@ -484,9 +490,7 @@ CONTAINS
 
     !$claw acc data create(z1,zd1,zdz1,zdz2,heat_cap,liquid_max) &
     !$claw acc present(dz,mids,t_unfilt,vol_heat_cap,heat_cond,t_soil_sl, &
-    !$claw acc t_soil_acoef,t_soil_bcoef,hcap_grnd,grnd_hflx,thaw_depth)
-
-    thaw_scheme = 2
+    !$claw acc t_soil_acoef,t_soil_bcoef,hcap_grnd,grnd_hflx,thaw_depth,thaw_depth_diag1, ,thaw_depth_diag2, ,thaw_depth_diag3)
 
     !$claw acc parallel loop gang vector
     zbot(1) = dz(1)
@@ -519,7 +523,10 @@ CONTAINS
       !$claw end expand
     END IF
     !$claw expand parallel update
-    thaw_depth(:) = 0._wp
+    thaw_depth(:)       = 0._wp
+    thaw_depth_diag1(:) = 0._wp
+    thaw_depth_diag2(:) = 0._wp
+    thaw_depth_diag3(:) = 0._wp
 
     IF (.NOT. lstart) THEN
 
@@ -601,119 +608,123 @@ CONTAINS
       !$claw acc parallel
       !$claw acc loop gang vector
 
-      IF (l_freeze .AND. PRESENT(ws)) THEN
 !pdv > Thaw depths caluclation needs to be checked carefully .. for now 2 options
 ! -----------------------------------------------------------------------------------------------------
-      IF (thaw_scheme == 1) THEN
-      ! 1) This is the minimum thaw depth that we can get with jsb.
-      !    But I am not really a fan of calculating between mid layers,
-      !    the energy calculated above always pertains to entire layers ...
-      DO jl=1,nidx
-        thaw_depth(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
-        IF (t_soil_sl(jl,1) < tmelt) THEN ! Top soil layer is frozen
-          thaw_depth(jl) = 0._wp
-        ELSE IF (t_soil_sl(jl,1) == tmelt) THEN ! Top soil layer is thawing
-          ! in case water is present we diagnose thaw depth using ration of liquid / total water
-          IF (ice(jl,1) > 0._wp) THEN
-            thaw_depth(jl) = zbot(1) * ws(jl,1) / (ws(jl,1) + ice(jl,1))
-          ELSE
-            thaw_depth(jl) = zbot(1)
-          END IF
-        END IF
-        !$claw acc loop seq
-        DO jk=2,nsoil
-          IF (thaw_depth(jl) == mids(nsoil)) THEN
-          !IF (       t_soil_sl(jl,jk-1) > tmelt &
-          !  &  .AND. t_soil_sl(jl,jk  ) > tmelt &
-          !  & ) THEN
-          !    ! in case water is present this would increase the energy required to bring temperatures above the melting point
-          !    thaw_depth(jl) = mids(jk)
-            IF  ( t_soil_sl(jl,jk-1) > tmelt &
-            &    .AND. t_soil_sl(jl,jk  ) == tmelt &
-            & ) THEN ! Lower layer is at zero degrees
-              IF (ice(jl,jk) > 0._wp) THEN
-              ! in case water is present we diagnose thaw depth using ration of liquid / total water
-                thaw_depth(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * ws(jl,jk) / (ws(jl,jk) + ice(jl,jk))
-              ELSE
-                thaw_depth(jl) = mids(jk)
-              END IF
-            ELSE IF (  t_soil_sl(jl,jk-1) > tmelt &
-              &  .AND. t_soil_sl(jl,jk  ) < tmelt &
-              & ) THEN
-              ! in case water is present this would increase the energy required to bring temperatures above the melting point
-                thaw_depth(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * (t_soil_sl(jl,jk-1) - &
-                  & tmelt) / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk) + ice(jl,jk) * alf * rhoi / heat_cap(jl,jk))
+      IF (i_thaw == 1 .AND. l_freeze .AND. PRESENT(ws)) THEN
+        ! 1) This is the minimum thaw depth that we can get with jsb.
+        !    But I am not really a fan of calculating between mid layers,
+        !    the energy calculated above always pertains to entire layers ...
+        DO jl=1,nidx
+          thaw_depth_diag1(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
+          IF (t_soil_sl(jl,1) < tmelt) THEN ! Top soil layer is frozen
+            thaw_depth_diag1(jl) = 0._wp
+          ELSE IF (t_soil_sl(jl,1) == tmelt) THEN ! Top soil layer is thawing
+            ! in case water is present we diagnose thaw depth using ration of liquid / total water
+            IF (ice(jl,1) > 0._wp) THEN
+              thaw_depth_diag1(jl) = zbot(1) * ws(jl,1) / (ws(jl,1) + ice(jl,1))
+            ELSE
+              thaw_depth_diag1(jl) = zbot(1)
             END IF
           END IF
-        END DO
-      END DO
-      ELSE
-! -----------------------------------------------------------------------------------------------------
-      ! 2) I prefer calculation for full layers,
-      !    howver, thaw depths are quite large (but this could be an issue related to offline runs)
-      DO jl=1,nidx
-        thaw_depth(jl) = zbot(nsoil)   ! Initialize with maximum thawing depth
-        IF (t_soil_sl(jl,1) < tmelt) THEN ! Top soil layer is frozen
-          thaw_depth(jl) = 0._wp
-        ELSE IF (t_soil_sl(jl,1) == tmelt) THEN ! Top soil layer is thawing
-          ! in case water is present we diagnose thaw depth using ration of liquid / total water
-          IF (ice(jl,1) > 0._wp) THEN
-            thaw_depth(jl) = dsoil(jl,1) * ws(jl,1) / (ws(jl,1) + ice(jl,1))
-          ELSE
-            thaw_depth(jl) = dz(1)
-          END IF
-        END IF
-        !$claw acc loop seq
-        DO jk=2,nsoil
-          IF (thaw_depth(jl) == zbot(nsoil)) THEN
-            ! Alternativly one could also go through the ground and see where there are still positive temperatures
+          !$claw acc loop seq
+          DO jk=2,nsoil
+            IF (thaw_depth_diag1(jl) == mids(nsoil)) THEN
             !IF (       t_soil_sl(jl,jk-1) > tmelt &
             !  &  .AND. t_soil_sl(jl,jk  ) > tmelt &
             !  & ) THEN
             !    ! in case water is present this would increase the energy required to bring temperatures above the melting point
-            !    thaw_depth(jl) = zbot(jk)
-            IF  ( t_soil_sl(jl,jk-1) > tmelt &
-            &    .AND. t_soil_sl(jl,jk  ) == tmelt &
-            & ) THEN ! Lower layer is at zero degrees
-              IF (ice(jl,jk) > 0._wp) THEN
-              ! in case water is present we diagnose thaw depth using ration of liquid / total water
-                thaw_depth(jl) = zbot(jk-1) + dsoil(jl,jk) * ws(jl,jk) / (ws(jl,jk) + ice(jl,jk))
-              ELSE
-                thaw_depth(jl) = zbot(jk)
-              END IF
-            ELSE IF (  t_soil_sl(jl,jk-1) > tmelt &
-              &  .AND. t_soil_sl(jl,jk  ) < tmelt &
-              & ) THEN
+            !    thaw_depth_diag1(jl) = mids(jk)
+              IF  ( t_soil_sl(jl,jk-1) > tmelt &
+              &    .AND. t_soil_sl(jl,jk  ) == tmelt &
+              & ) THEN ! Lower layer is at zero degrees
+                IF (ice(jl,jk) > 0._wp) THEN
+                ! in case water is present we diagnose thaw depth using ration of liquid / total water
+                  thaw_depth_diag1(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * ws(jl,jk) / (ws(jl,jk) + ice(jl,jk))
+                ELSE
+                  thaw_depth_diag1(jl) = mids(jk)
+                END IF
+              ELSE IF (  t_soil_sl(jl,jk-1) > tmelt &
+                &  .AND. t_soil_sl(jl,jk  ) < tmelt &
+                & ) THEN
                 ! in case water is present this would increase the energy required to bring temperatures above the melting point
-                thaw_depth(jl) = zbot(jk-1) + (zbot(jk)-zbot(jk-1)) * (t_soil_sl(jl,jk-1) - &
-                  & tmelt) / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk) + ice(jl,jk) * alf * rhoi / heat_cap(jl,jk))
+                  thaw_depth_diag1(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * (t_soil_sl(jl,jk-1) - &
+                    & tmelt) / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk) + ice(jl,jk) * alf * rhoi / heat_cap(jl,jk))
+              END IF
+            END IF
+          END DO
+        END DO
+      ELSE IF (i_thaw == 2 .AND. l_freeze .AND. PRESENT(ws)) THEN
+! -----------------------------------------------------------------------------------------------------
+        ! 2) I prefer calculation for full layers,
+        !    howver, thaw depths are quite large (but this could be an issue related to offline runs)
+        DO jl=1,nidx
+          thaw_depth_diag2(jl) = zbot(nsoil)   ! Initialize with maximum thawing depth
+          IF (t_soil_sl(jl,1) < tmelt) THEN ! Top soil layer is frozen
+            thaw_depth_diag2(jl) = 0._wp
+          ELSE IF (t_soil_sl(jl,1) == tmelt) THEN ! Top soil layer is thawing
+            ! in case water is present we diagnose thaw depth using ration of liquid / total water
+            IF (ice(jl,1) > 0._wp) THEN
+              thaw_depth_diag2(jl) = dsoil(jl,1) * ws(jl,1) / (ws(jl,1) + ice(jl,1))
+            ELSE
+              thaw_depth_diag2(jl) = dz(1)
             END IF
           END IF
+          !$claw acc loop seq
+          DO jk=2,nsoil
+            IF (thaw_depth_diag2(jl) == zbot(nsoil)) THEN
+              ! Alternativly one could also go through the ground and see where there are still positive temperatures
+              !IF (       t_soil_sl(jl,jk-1) > tmelt &
+              !  &  .AND. t_soil_sl(jl,jk  ) > tmelt &
+              !  & ) THEN
+              !    ! in case water is present this would increase the energy required to bring temperatures above the melting point
+              !    thaw_depth_diag2(jl) = zbot(jk)
+              IF  ( t_soil_sl(jl,jk-1) > tmelt &
+              &    .AND. t_soil_sl(jl,jk  ) == tmelt &
+              & ) THEN ! Lower layer is at zero degrees
+                IF (ice(jl,jk) > 0._wp) THEN
+                ! in case water is present we diagnose thaw depth using ration of liquid / total water
+                  thaw_depth_diag2(jl) = zbot(jk-1) + dsoil(jl,jk) * ws(jl,jk) / (ws(jl,jk) + ice(jl,jk))
+                ELSE
+                  thaw_depth_diag2(jl) = zbot(jk)
+                END IF
+              ELSE IF (  t_soil_sl(jl,jk-1) > tmelt &
+                &  .AND. t_soil_sl(jl,jk  ) < tmelt &
+                & ) THEN
+                  ! in case water is present this would increase the energy required to bring temperatures above the melting point
+                  thaw_depth_diag2(jl) = zbot(jk-1) + (zbot(jk)-zbot(jk-1)) * (t_soil_sl(jl,jk-1) - &
+                    & tmelt) / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk) + ice(jl,jk) * alf * rhoi / heat_cap(jl,jk))
+              END IF
+            END IF
+          END DO
         END DO
-      END DO
-      END IF
-! -----------------------------------------------------------------------------------------------------
-
       ELSE
-      DO jl=1,nidx
-        thaw_depth(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
-        IF (t_soil_sl(jl,1) <= tmelt) THEN ! Top soil layer is frozen
-          thaw_depth(jl) = 0._wp
-        END IF
-        !$claw acc loop seq
-        DO jk=2,nsoil
-          IF  (       thaw_depth(jl)  == mids(nsoil) & ! still the inital value
-            &   .AND. t_soil_sl(jl,jk-1) >  tmelt &
-            &   .AND. t_soil_sl(jl,jk  ) <= tmelt &
-            & ) THEN
-            thaw_depth(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * (t_soil_sl(jl,jk-1) - &
-              & tmelt) / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk))
+! -----------------------------------------------------------------------------------------------------
+        DO jl=1,nidx
+          thaw_depth_diag3(jl) = mids(nsoil)   ! Initialize with maximum thawing depth
+          IF (t_soil_sl(jl,1) <= tmelt) THEN ! Top soil layer is frozen
+            thaw_depth_diag3(jl) = 0._wp
           END IF
+          !$claw acc loop seq
+          DO jk=2,nsoil
+            IF  (       thaw_depth_diag3(jl)  == mids(nsoil) & ! still the inital value
+              &   .AND. t_soil_sl(jl,jk-1) >  tmelt &
+              &   .AND. t_soil_sl(jl,jk  ) <= tmelt &
+              & ) THEN
+              thaw_depth_diag3(jl) = mids(jk-1) + (mids(jk)-mids(jk-1)) * (t_soil_sl(jl,jk-1) - &
+                & tmelt) / (t_soil_sl(jl,jk-1) - t_soil_sl(jl,jk))
+            END IF
+          END DO
         END DO
-      END DO
       END IF
       !$claw acc end parallel
-
+      ! Selecting thaw deth that is used for computations
+      IF (i_thaw == 1 .AND. l_freeze .AND. PRESENT(ws)) THEN
+        thaw_depth(:) = thaw_depth_diag1(:)
+      ELSE IF (i_thaw == 2 .AND. l_freeze .AND. PRESENT(ws)) THEN
+        thaw_depth(:) = thaw_depth_diag2(:)
+      ELSE
+        thaw_depth(:) = thaw_depth_diag3(:)
+      END IF
     ELSE ! lstart
       IF (l_freeze .AND. PRESENT(ws)) THEN
         !$claw expand parallel update

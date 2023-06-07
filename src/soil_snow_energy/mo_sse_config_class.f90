@@ -42,6 +42,7 @@ MODULE mo_sse_config_class
     LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
+    INTEGER  :: i_thaw          !< Scheme for diagnosing thaw depths
     REAL(wp) :: w_soil_critical !< Critical water/ice content in upper soil layer for correction of new surface
                                 !! temperature for freezing/melting [m water equivalent]
     !! quincy
@@ -82,7 +83,7 @@ CONTAINS
 
     LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_freeze, l_supercool
     REAL(wp) :: w_soil_critical
-    INTEGER  :: nsnow
+    INTEGER  :: nsnow, i_thaw
     REAL(wp) :: dz_snow(max_snow_layers)
     !! quincy
     ! INTEGER                     :: nsoil_energy    , &
@@ -111,7 +112,8 @@ CONTAINS
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
-      & l_freeze, l_supercool, w_soil_critical, &
+      & l_freeze, l_supercool, i_thaw,          &
+      & w_soil_critical,                        &
       & ic_filename, bc_filename
 
     !! quincy
@@ -160,6 +162,7 @@ CONTAINS
     l_heat_cond_map  = .FALSE.
     l_freeze         = .TRUE.
     l_supercool      = .TRUE.
+    i_thaw           = 1
     w_soil_critical  = 5.85036E-3_wp
     ic_filename      = 'ic_land_soil.nc'
     bc_filename      = 'bc_land_soil.nc'
@@ -227,6 +230,7 @@ CONTAINS
     config%l_heat_cond_map = l_heat_cond_map
     config%l_freeze        = l_freeze
     config%l_supercool     = l_supercool
+    config%i_thaw          = i_thaw
 
     config%w_soil_critical     = w_soil_critical
     CALL message(TRIM(routine), 'Critical water/ice content in upper soil layer for correction of '// &

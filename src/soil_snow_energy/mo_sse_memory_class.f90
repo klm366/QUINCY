@@ -62,7 +62,16 @@ MODULE mo_sse_memory_class
       & grnd_hflx_old,        & !< ground heat flux (old)
       & thaw_depth,           & !< Thawing depth [m]
       & thaw_depth_max,       & !< Maximum thaw depth [m]
-      & thaw_depth_max_ym1      !< Last year's maximum thaw depth [m]
+      & thaw_depth_max_ym1,   & !< Last year's maximum thaw depth [m]
+      & thaw_depth_diag1,           & !< Thawing depth [m]
+      & thaw_depth_max_diag1,       & !< Maximum thaw depth [m]
+      & thaw_depth_max_ym1_diag1,   & !< Last year's maximum thaw depth [m]
+      & thaw_depth_diag2,           & !< Thawing depth [m]
+      & thaw_depth_max_diag2,       & !< Maximum thaw depth [m]
+      & thaw_depth_max_ym1_diag2,   & !< Last year's maximum thaw depth [m]
+      & thaw_depth_diag3,           & !< Thawing depth [m]
+      & thaw_depth_max_diag3,       & !< Maximum thaw depth [m]
+      & thaw_depth_max_ym1_diag3      !< Last year's maximum thaw depth [m]
 
   CONTAINS
     PROCEDURE :: Init => Init_sse_memory
@@ -284,6 +293,87 @@ CONTAINS
     CALL mem%Add_var( 'thaw_depth_max_ym1', mem%thaw_depth_max_ym1,          &
       & hgrid, surface,                                                      &
       & t_cf('thaw_depth_max_ym1', 'm', 'Last years maximum thaw depth'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=BASIC, &
+      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_diag1', mem%thaw_depth_diag1,              &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_diag1', 'm', 'Thawing depth'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=MEDIUM, &
+      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_max_diag1', mem%thaw_depth_max_diag1,      &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_max_diag1', 'm', 'Maximum thaw depth'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_max_ym1_diag1', mem%thaw_depth_max_ym1_diag1, &
+      & hgrid, surface,                                                         &
+      & t_cf('thaw_depth_max_ym1_diag1', 'm', 'Last years maximum thaw depth'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=BASIC, &
+      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_diag2', mem%thaw_depth_diag2,              &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_diag2', 'm', 'Thawing depth'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=MEDIUM, &
+      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_max_diag2', mem%thaw_depth_max_diag2,      &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_max_diag2', 'm', 'Maximum thaw depth'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_max_ym1_diag2', mem%thaw_depth_max_ym1_diag2, &
+      & hgrid, surface,                                                         &
+      & t_cf('thaw_depth_max_ym1_diag2', 'm', 'Last years maximum thaw depth'), &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=BASIC, &
+      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_diag3', mem%thaw_depth_diag3,              &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_diag3', 'm', 'Thawing depth'),                      &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=MEDIUM, &
+      & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_max_diag3', mem%thaw_depth_max_diag3,      &
+      & hgrid, surface,                                                      &
+      & t_cf('thaw_depth_max_diag3', 'm', 'Maximum thaw depth'),             &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.TRUE.,                                                     &
+      & output_level=BASIC, &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'thaw_depth_max_ym1_diag3', mem%thaw_depth_max_ym1_diag3, &
+      & hgrid, surface,                                                         &
+      & t_cf('thaw_depth_max_ym1_diag3', 'm', 'Last years maximum thaw depth'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.TRUE.,                                                     &

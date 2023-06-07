@@ -182,6 +182,15 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: thaw_depth
     dsl4jsb_Real2D_onChunk :: thaw_depth_max
     dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
+    dsl4jsb_Real2D_onChunk :: thaw_depth_diag1
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_diag1
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1_diag1
+    dsl4jsb_Real2D_onChunk :: thaw_depth_diag2
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_diag2
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1_diag2
+    dsl4jsb_Real2D_onChunk :: thaw_depth_diag3
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_diag3
+    dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1_diag3
     dsl4jsb_Real2D_onChunk :: heat_cond
     dsl4jsb_Real2D_onChunk :: vol_heat_cap
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
@@ -287,6 +296,15 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max)      ! out
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)  ! out
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_diag1)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1_diag1)  ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_diag1)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_diag2)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1_diag2)  ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_diag2)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_diag3)      ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1_diag3)  ! out
+    dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_diag3)      ! out
     dsl4jsb_Get_var2D_onChunk(SSE_,   heat_cond)
     dsl4jsb_Get_var2D_onChunk(SSE_,   vol_heat_cap)
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)        ! in
@@ -471,6 +489,7 @@ CONTAINS
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
+        & dsl4jsb_Config(SSE_)%i_thaw              , &
         & t_soil_top                          (:  ), &
         & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
@@ -483,7 +502,10 @@ CONTAINS
         ! out
         & hcap_grnd_soil                      (:  ), &
         & grnd_hflx_soil                      (:  ), &
-        & thaw_depth                          (:  )  &
+        & thaw_depth                          (:  ),  &
+        & thaw_depth_diag1                          (:  ),  &
+        & thaw_depth_diag2                          (:  ),  &
+        & thaw_depth_diag3                          (:  )   &
         & )
     ELSE
       ALLOCATE(ws_max_sl(nc,nsoil))
@@ -501,6 +523,7 @@ CONTAINS
         & lstart                                   , &
         & dsl4jsb_Config(SSE_)%l_freeze            , &
         & dsl4jsb_Config(SSE_)%l_supercool         , &
+        & dsl4jsb_Config(SSE_)%i_thaw              , &
         & t_soil_top                          (:  ), &
         & soil_depth_sl                       (:,:), &
         & vol_heat_cap_sl                     (:,:), &
@@ -513,7 +536,10 @@ CONTAINS
         ! out
         & hcap_grnd_soil                      (:  ), &
         & grnd_hflx_soil                      (:  ), &
-        & thaw_depth                          (:  ), &
+        & thaw_depth                          (:  ),  &
+        & thaw_depth_diag1                          (:  ),  &
+        & thaw_depth_diag2                          (:  ),  &
+        & thaw_depth_diag3                          (:  ),  &
         ! optional, in
         & ws_max_sl                           (:,:), &
         & matrix_pot_sl                       (:,:), &
@@ -536,6 +562,27 @@ CONTAINS
       thaw_depth_max(:) = 0._wp
     ELSE
       thaw_depth_max(:) = MAX(thaw_depth_max(:),thaw_depth(:))
+    END IF
+
+    IF ((.NOT. lstart) .AND. is_newyear(options%current_datetime, options%dtime)) THEN
+      thaw_depth_max_ym1_diag1(:) = thaw_depth_max_diag1(:)
+      thaw_depth_max_diag1(:) = 0._wp
+    ELSE
+      thaw_depth_max_diag1(:) = MAX(thaw_depth_max_diag1(:),thaw_depth_diag1(:))
+    END IF
+
+    IF ((.NOT. lstart) .AND. is_newyear(options%current_datetime, options%dtime)) THEN
+      thaw_depth_max_ym1_diag2(:) = thaw_depth_max_diag2(:)
+      thaw_depth_max_diag2(:) = 0._wp
+    ELSE
+      thaw_depth_max_diag2(:) = MAX(thaw_depth_max_diag2(:),thaw_depth_diag2(:))
+    END IF
+
+    IF ((.NOT. lstart) .AND. is_newyear(options%current_datetime, options%dtime)) THEN
+      thaw_depth_max_ym1_diag3(:) = thaw_depth_max_diag3(:)
+      thaw_depth_max_diag3(:) = 0._wp
+    ELSE
+      thaw_depth_max_diag3(:) = MAX(thaw_depth_max_diag3(:),thaw_depth_diag3(:))
     END IF
     !pdv <
 

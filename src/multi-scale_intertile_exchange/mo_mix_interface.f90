@@ -338,6 +338,7 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc) :: wtr_pond_tmp    !< Temporary pond water storage   [m]
     REAL(wp), DIMENSION(options%nc) :: fr_dpr_rel      !< ???
     LOGICAL,  DIMENSION(options%nc) :: l_pf_soil       !< Permafrost mask                []
+    LOGICAL,  DIMENSION(options%nc) :: l_pf_soil_pi    !< Permafrost mask
     LOGICAL,  DIMENSION(options%nc) :: l_latdrain      !< T: allow lateral drainage      []
 
     REAL(wp), ALLOCATABLE, DIMENSION(:) ::           &
@@ -466,12 +467,15 @@ CONTAINS
           l_pf_soil(i)=.FALSE.
         END IF
       END DO
-      !!!!!!! HERE IT WOULD BE POSSIBLE TO PRESCRIBE A l_pf_soil
-      !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
-      !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
-        l_pf_soil(:)=.TRUE.
-      END IF
+    !!!!!!! HERE IT WOULD BE POSSIBLE TO PRESCRIBE A l_pf_soil
+    !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
+    !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!!!!! l_pf_soil_pi JUST A DUMMY FOR NOW
+    l_pf_soil_pi(:)=.TRUE.
+    
+    IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
+      l_pf_soil(:)=l_pf_soil_pi(:)
+    END IF
 
       ! Source tiles are always either upland or ridge tiles
       IF (tile%contains_upland .OR. tile%contains_ridge) THEN
