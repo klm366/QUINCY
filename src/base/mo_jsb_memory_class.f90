@@ -531,7 +531,7 @@ CONTAINS
         igroup = 4
         !> Any variable that occures in 'basic' output level has to be also present in 'medium' and 'full'
         DO out_level=output_level,3
-          out_level_name = Get_var_group_name(out_level)                      !< resolve enum
+          out_level_name = Get_var_group_name(out_level)                      !< resolve level code through output group registry
           groups(igroup)   = 'jsb_all_'//out_level_name                       !< land model
           groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name !< land process
           igroup = igroup + 2
@@ -539,11 +539,11 @@ CONTAINS
       END IF
     ELSE
       ALLOCATE(groups(1))
-      groups(1) = 'ALL'                                         !< only present in HOST model
+      groups(1) = 'ALL'                                          !< only present in HOST model
     END IF
 
     !> Add 3D variable as element to the list
-    !> Use the generic routines of host model in mo_jsb_varlist 
+    !> Use the generic routines of HOST model in mo_jsb_varlist 
     CALL add_var_list_element_r3d( &
       this_list, TRIM(name_loc), var%ptr3d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
@@ -562,7 +562,8 @@ CONTAINS
     var%len_dim3 = vgrid%n_levels
     var%missval = missval_r_loc
     
-    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all !< Set optional variable
+    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all !< Aggregation is optional
+    !> Test if variable is requested in output (defined in output namelist) else it is not put out
     IF (loutput_loc) THEN
       IF (mem%in_var_groups) THEN
         var%is_in_output = is_variable_in_output(var%full_name, groups(:))
@@ -570,20 +571,22 @@ CONTAINS
         var%is_in_output = is_variable_in_output(var%full_name)
       END IF
     END IF
-    var%is_in_restart = .TRUE.  ! All jsbach var_lists have lrestart=.TRUE. by default
-    IF (PRESENT(lrestart)) var%is_in_restart = lrestart
+
+    var%is_in_restart = .TRUE.                                  !< All jsbach var_lists are in restart by default
+    IF (PRESENT(lrestart)) var%is_in_restart = lrestart         !< explicitly exclude variable list from restart
     ! var%is_in_restart = var%is_in_restart .OR. .TRUE.  ! TODO
 
-    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan
-    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id
+    IF (PRESENT(l_conserve_quan)) var%is_conserved_quan = l_conserve_quan       !< Set if quantity is conserved
+    IF (PRESENT(cons_quan_type_id)) var%cons_quan_type_id = cons_quan_type_id   !< Set type of conservation
 
-    var%owner_model_id = mem%owner_model_id
-    var%owner_proc_id  = mem%owner_proc_id
+    var%owner_model_id = mem%owner_model_id                     !< model that owns variable is identical owner of memory
+    var%owner_proc_id  = mem%owner_proc_id                      !< process that owns variable is identical to owner of memory
 
-    ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
-    var%owner_tile_path(:) = mem%owner_tile_path(:)
+    ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))    !< allocate tile_path (structure in memory to reach tile) 
+    var%owner_tile_path(:) = mem%owner_tile_path(:)             !< tile_path of variable is identical to memory
 
-    pos_of_var = mem%no_of_vars + 1
+    !> Add variable to list of variables in memory (for aggrigator) and check if maximum number of variables is exeeded
+    pos_of_var = mem%no_of_vars + 1                             
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
@@ -591,6 +594,7 @@ CONTAINS
       mem%no_of_vars = pos_of_var
     END IF
 
+    !> Send the data to the CPU
     !$acc enter data copyin(var)
     !$acc update device(var%ptr3d)
     __acc_attach(var%ptr3d)
