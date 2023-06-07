@@ -78,7 +78,8 @@ CONTAINS
   !
   SUBROUTINE calc_surface_hydrology_land (                          &
     & nc, lstart, dtime, ltpe_closed, l_dynsnow, l_infil_subzero,   &
-    & snow_depth_max, runoff_scheme, soilhydmodel, manning_n, dt_sat, steepness,  &
+    & snow_depth_max, runoff_scheme, soilhydmodel, i_infil,         &
+    & manning_n, dt_sat, steepness,  &
     & t_soil_sl1, soil_depth_sl1, pore_size_index_sl1, bclapp_sl1,  &
     & vol_porosity_sl1, vol_field_cap_sl1, vol_p_wilt_sl1,          &
     & hyd_cond_sat_sl1, wtr_soil_sl1, ice_soil_sl1,                 &
@@ -100,7 +101,7 @@ CONTAINS
     INTEGER,  INTENT(in) :: nc
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
     REAL(wp), INTENT(in) :: dtime, snow_depth_max, manning_n, dt_sat
-    INTEGER,  INTENT(in) :: runoff_scheme, soilhydmodel
+    INTEGER,  INTENT(in) :: runoff_scheme, soilhydmodel, i_infil
     !$claw model-data
     REAL(wp), INTENT(in) ::                                                 &
       & steepness(:), t_soil_sl1(:), soil_depth_sl1(:), pore_size_index_sl1(:), &
@@ -123,7 +124,6 @@ CONTAINS
     !
     !  local variables
     !
-    INTEGER  :: i_infil             !< type of infiltration scheme
     REAL(wp) ::                   &
       & rain_in_m(nc),            & !< amount of rainfall within time step [m]
       & new_snow(nc),             & !< amount of snowfall within time step [m]
@@ -376,7 +376,7 @@ CONTAINS
         wtr_pond(:) = wtr_pond(:) * (weq_pond_max(:) / weq_pond(:))
         ice_pond(:) = ice_pond(:) * (weq_pond_max(:) / weq_pond(:))
       ENDWHERE
-      i_infil    = 1
+
       manning(:) = manning_n
       CALL infiltration_new(nc, dt_sat, dtime, MAX(0._wp, weq_pond_max(:) - ice_pond(:)),       &
                           & i_infil, soilhydmodel,                                              &
@@ -585,7 +585,7 @@ CONTAINS
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
-    & soilhydmodel, interpol_mean, l_latdrain, l_botdrain,                                &
+    & soilhydmodel, interpol_mean, l_latdrain, l_botdrain, i_botdrain,                   &
     & w_soil_wilt_fract, slope, soil_depth_sl, root_depth_sl,                            &
     & hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, vol_porosity_sl,    &
     & vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl,                            &
@@ -604,7 +604,7 @@ CONTAINS
     INTEGER,  INTENT(in) :: &
       & nc, nsoil
     INTEGER, INTENT(in) :: &
-      & soilhydmodel, interpol_mean
+      & soilhydmodel, interpol_mean, i_botdrain
     REAL(wp), INTENT(in) :: &
       & dtime, w_soil_wilt_fract
     LOGICAL, INTENT(in), DIMENSION(:) :: l_latdrain, l_botdrain
@@ -712,7 +712,7 @@ CONTAINS
     wtr_soilhyd_res(:) = 0._wp
 
     CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, soilhydmodel, interpol_mean,   &
-      &     l_latdrain, l_botdrain,                                                   &
+      &     l_latdrain, l_botdrain, i_botdrain,                                      &
       &     w_soil_wilt_fract, slope, soil_depth_sl, wtr_field_cap_sl, wtr_wsat_sl,  &
       &     weq_field_cap_sl, weq_wsat_sl, weq_p_wilt_sl,                            &
       &     hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, pore_size_index_sl,           &
@@ -1051,9 +1051,7 @@ CONTAINS
     ELSE IF (i_infil == 4) THEN
       !!---Assuming the wetting front moves with the speed of ksat
       !!     and in frozen soils water can enter until pore space of top layer is saturated
-      k_end(:) = MIN(hyd_cond_sat(:),                                  &
-                     MAX(ice_impede(:) * hyd_cond_sat(:),              &
-                         (fc(:) - ws_incl_ice(:)) / dtime))
+      k_end(:) = MAX(ice_impede(:) * hyd_cond_sat(:), (fc(:) - ws_incl_ice(:)) / dtime)
     END IF
 
     WHERE (water_to_soil(:) <= 0._wp)
@@ -1109,7 +1107,7 @@ CONTAINS
   !!   Revised by Tobias Stacke (MPI-M) in September 2022
 
   SUBROUTINE soilhyd(nc, l_fract, lat, lon, nsoil, dtime,           &
-    & soilhydmodel, interpol_mean, l_latdrain, l_botdrain,           &
+    & soilhydmodel, interpol_mean, l_latdrain, l_botdrain, i_botdrain, &
     & w_soil_wilt_fract, slope, dsoil,                              &
     & wtr_field_cap_sl, wtr_wsat_sl, weq_field_cap_sl, weq_wsat_sl, &
     & weq_p_wilt_sl, hyd_cond_sat_sl,                               &
@@ -1131,6 +1129,7 @@ CONTAINS
     INTEGER,  INTENT(in)            :: interpol_mean              ! lateral interpolation scheme
     LOGICAL,  INTENT(in)            :: l_latdrain(:)
     LOGICAL,  INTENT(in)            :: l_botdrain(:)
+    INTEGER,  INTENT(in)            :: i_botdrain                 ! Bottom drainage scheme
     REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
     REAL(wp), INTENT(in)            :: w_soil_wilt_fract          ! fractional plant wilting point [/]
     REAL(wp), INTENT(in)            :: slope(:)                   ! microslope, or some other ?
@@ -1269,26 +1268,31 @@ CONTAINS
             ! no drainage without mobile water
             drain_sl(i) = 0._wp
         ELSE
-          ! Slow drainage of mobile water
-          IF (weq_field_cap_sl(i,nsoil_act(i)) > wtr_rsdl_sl(i,nsoil_act(i))) THEN
-            ! slow drainage = slow drainage factor * relative soil moisture
-            drain_sl(i) = zdrmin * (wtr_soil_sl(i,nsoil_act(i)) - wtr_rsdl_sl(i,nsoil_act(i))) &
+          IF (i_botdrain == 1) THEN ! Free drainage assumption
+              drain_sl(i) = hyd_cond_sl(i,nsoil_act(i))
+          ELSE IF (i_botdrain == 2) THEN! Old JSB3 Drainage scheme
+            ! Slow drainage of mobile water
+            IF (weq_field_cap_sl(i,nsoil_act(i)) > wtr_rsdl_sl(i,nsoil_act(i))) THEN
+              ! slow drainage = slow drainage factor * relative soil moisture
+              drain_sl(i) = zdrmin * (wtr_soil_sl(i,nsoil_act(i)) - wtr_rsdl_sl(i,nsoil_act(i))) &
                      &  / (weq_field_cap_sl(i,nsoil_act(i)) - wtr_rsdl_sl(i,nsoil_act(i)))
-          ELSE
-            drain_sl(i) = 0._wp
-          END IF
+            ELSE
+              drain_sl(i) = 0._wp
+            END IF
 
-          ! Fast drainage of mobile water
+            ! Fast drainage of mobile water
 
-          ! Note: here we use weq_wsat_sl (from porosity, reduced by amount of soil ice) and no longer
-          !    weq_field_cap_sl as in the above drainage calculations.
+            ! Note: here we use weq_wsat_sl (from porosity, reduced by amount of soil ice) and no longer
+            !    weq_field_cap_sl as in the above drainage calculations.
 
-          IF (wtr_soil_sl(i,nsoil_act(i)) - wtr_soil_pot_scool_sl(i,nsoil_act(i)) > ws_crit(i)) THEN
-            ! enough liquid water for fast drainage
-            drain_crit(i) = (zdrmax-zdrmin) * ((wtr_soil_sl(i,nsoil_act(i))-wtr_soil_pot_scool_sl(i,nsoil_act(i))-ws_crit(i)) &
-             &                             / (weq_wsat_sl(i,nsoil_act(i)) - ws_crit(i)))**zdrexp
-            drain_sl(i) = drain_sl(i) &
-                      & + MIN(drain_crit(i), (wtr_soil_sl(i,nsoil_act(i))-wtr_soil_pot_scool_sl(i,nsoil_act(i))-ws_crit(i))/dtime)
+            IF (wtr_soil_sl(i,nsoil_act(i)) - wtr_soil_pot_scool_sl(i,nsoil_act(i)) > ws_crit(i)) THEN
+              ! enough liquid water for fast drainage
+              drain_crit(i) = (zdrmax-zdrmin) &
+               &            * ((wtr_soil_sl(i,nsoil_act(i))-wtr_soil_pot_scool_sl(i,nsoil_act(i))-ws_crit(i)) &
+               &            / (weq_wsat_sl(i,nsoil_act(i)) - ws_crit(i)))**zdrexp
+              drain_sl(i) = drain_sl(i) + MIN(drain_crit(i), &
+               &            (wtr_soil_sl(i,nsoil_act(i))-wtr_soil_pot_scool_sl(i,nsoil_act(i))-ws_crit(i))/dtime)
+            END IF
           END IF
         END IF
         ! drainage is limited by the available water of the layer and impeded by ice

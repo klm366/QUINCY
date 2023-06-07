@@ -676,6 +676,7 @@ CONTAINS
         & dsl4jsb_Config(HYDRO_)%snow_depth_max,  & !< Snow depth limit [m water equivalent]; -1. for no limit
         & dsl4jsb_Config(HYDRO_)%runoff_scheme,   & !< Scheme used to compute infiltration excess surface runoff
         & dsl4jsb_Config(HYDRO_)%soilhydmodel,    & !< Scheme used to compute soil hydraulic conductivity and diffusivity
+        & dsl4jsb_Config(HYDRO_)%i_infil,         & !< Scheme used to compute soil hydraulic conductivity and diffusivity
         & dsl4jsb_Config(HYDRO_)%manning_n,       & !< Manning coefficient for surface roughness [m]
         & dsl4jsb_Config(HYDRO_)%dt_sat,          & !< Time required for hydraulic conductivity to reach max [sec]
         & steepness,                      & !< Shape parameter describing orography    [/]
@@ -1099,6 +1100,7 @@ CONTAINS
     LOGICAL  :: l_botdrain(options%nc)
     LOGICAL  :: l_latdrain(options%nc)
     LOGICAL  :: l_pf_soil(options%nc)
+    LOGICAL  :: l_pf_soil_pi(options%nc)
 
     INTEGER  :: iblk, ics, ice, nc, i
     REAL(wp) :: dtime
@@ -1174,8 +1176,11 @@ CONTAINS
     !!!!!!! HERE IT WOULD BE POSSIBLE TO PRESCRIBE A l_pf_soil
     !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
     !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !!!!!!! l_pf_soil_pi JUST A DUMMY FOR NOW
+    l_pf_soil_pi(:)=.TRUE.
+    
     IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
-      l_pf_soil(:)=.TRUE.
+      l_pf_soil(:)=l_pf_soil_pi(:)
     END IF
 
     ! Bottomdrain drain flag
@@ -1216,6 +1221,7 @@ CONTAINS
       & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
       & l_latdrain(:),                                          &
       & l_botdrain(:),                                          &
+      & dsl4jsb_Config(HYDRO_)%i_botdrain,                      &
       & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
       & dsl4jsb_var2D_onChunk (HYDRO_, steepness         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &

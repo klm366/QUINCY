@@ -60,7 +60,9 @@ MODULE mo_hydro_config_class
     INTEGER               ::  &
       & runoff_scheme,        & !< Choice of runoff and infiltration scheme: 'ARNO' (default), 'QArctic' (only with hydrotiles)
       & soilhydmodel,         & !< Choice of soil hydrological model: 'BrooksCorey' (default), 'ClappHornberger' or 'VanGenuchten'
-      & interpol_mean           !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean
+      & interpol_mean,        & !< Interpolation scheme, to optain K & D at layer interface: 'upstream' (default) or 'arithmetic' mean
+      & i_infil,              & !< Scheme for infiltration
+      & i_botdrain              !< Scheme for bottom drainage (1=free drainage, 2=JSB3)
 
   CONTAINS
     PROCEDURE             :: Init => Init_hydro_config
@@ -88,6 +90,7 @@ CONTAINS
     REAL(wp)                    :: manning_n, dt_sat, max_slope, max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, runoff_scheme, soilhydmodel, interpol_mean
+    INTEGER                     :: i_botdrain, i_infil
     LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
       &                            l_ponds, l_jsb_wet_test
 
@@ -115,7 +118,9 @@ CONTAINS
       & l_jsb_wet_test,             &
       & runoff_scheme,              &
       & soilhydmodel,               &
-      & interpol_mean
+      & interpol_mean,              &
+      & i_infil,                    &
+      & i_botdrain
 
     INTEGER :: nml_handler, nml_unit, istat
     TYPE(t_input_file) :: input_file
@@ -154,6 +159,8 @@ CONTAINS
     runoff_scheme          = "Arno"
     soilhydmodel           = "BrooksCorey"
     interpol_mean          = "upstream"
+    i_botdrain             = 1
+    i_infil                = 1
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
 
@@ -240,6 +247,25 @@ CONTAINS
       CALL message(TRIM(routine), '*** This is a WET run***')
     END IF
 
+    config%i_botdrain = i_botdrain
+    IF (i_botdrain == 1) THEN
+      CALL message(TRIM(routine), 'Using free drainage assumption at bedrock boundary')
+    ELSE IF (i_botdrain == 2) THEN
+      CALL message(TRIM(routine), 'Using JSB3 formulation for drainage at bedrock boundary')
+    END IF
+
+    config%i_infil = i_infil
+    IF (i_infil == 1) THEN
+      CALL message(TRIM(routine), 'Using infiltration scheme 1')
+    ELSE IF (i_infil == 2) THEN
+      CALL message(TRIM(routine), 'Using infiltration scheme 2')
+    IF (i_infil == 3) THEN
+      CALL message(TRIM(routine), 'Using infiltration scheme 3')
+    ELSE IF (i_infil == 4) THEN
+      CALL message(TRIM(routine), 'Using infiltration scheme 4')
+    END IF
+
+    END IF
     SELECT CASE(TRIM(tolower(runoff_scheme)))
     CASE("arno")
       config%runoff_scheme = Arno_
