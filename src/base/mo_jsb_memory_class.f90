@@ -539,6 +539,8 @@ CONTAINS
       groups(1) = 'ALL'
     END IF
 
+    !> Add 3D variable as element to the list
+    !> Use the generic routines of host model in mo_jsb_varlist 
     CALL add_var_list_element_r3d( &
       this_list, TRIM(name_loc), var%ptr3d, GRID_UNSTRUCTURED_CELL, vgrid%ZaxisID, &
       cf_loc, grib2_loc, code=grib1%PARAMETER, table=grib1%table, &
@@ -548,6 +550,7 @@ CONTAINS
       ! lmiss=lmiss_loc, missval_r=missval_r_loc)
       lmiss=lmiss_loc, missval_r=missval_r_loc, in_groups=groups, verbose=verbose)
 
+    !> JSB specific variables have to be set explicitly
     var%ptr => var%ptr3d
     var%name = TRIM(name)
     var%full_name = TRIM(name_loc)
@@ -555,7 +558,8 @@ CONTAINS
     var%type = REAL3D
     var%len_dim3 = vgrid%n_levels
     var%missval = missval_r_loc
-    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all
+    
+    IF (PRESENT(l_aggregate_all)) var%l_aggregate_all = l_aggregate_all !< Set optional variable
     IF (loutput_loc) THEN
       IF (mem%in_var_groups) THEN
         var%is_in_output = is_variable_in_output(var%full_name, groups(:))
