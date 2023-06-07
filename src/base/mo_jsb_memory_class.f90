@@ -513,30 +513,33 @@ CONTAINS
 
     this_list => Get_varlist(TRIM(mem%varlist_name), hgrid%host_patch_id)
 
+    !> If output_level is set determine number of output groups for this variable; 
+    !> global max output level is currently 3 [defined as enum in mo_jsb_varlist]
+    !> TODO: Hardcoded "4" in this block -> defined "invalid" output level as variable?
     IF (PRESENT(output_level)) THEN
-      no_groups = 2 * (4 - output_level)
+      no_groups = 2 * (4 - output_level)    
     ELSE
       no_groups = 0
     END IF
-    IF (mem%in_var_groups) THEN                                  ! Should this tile memory be part of any var groups?
+    IF (mem%in_var_groups) THEN                                  !< Check if this memory is part of any variable group
       ALLOCATE(groups(3 + no_groups))
-      ! All variables are put into these three catch-all groups
-      groups(1) = 'ALL'
-      groups(2) = 'jsb_all'
-      ! var group jsb_<process>_all
-      groups(3) = 'jsb_'//mem%owner_proc_name//'_all'
-      IF (PRESENT(output_level)) THEN                            ! Variable specific setting of output level
+      !> By default all variables are put into three 'all' groups 
+      groups(1) = 'ALL'                                          !< HOST model
+      groups(2) = 'jsb_all'                                      !< land model
+      groups(3) = 'jsb_'//mem%owner_proc_name//'_all'            !< land process
+      IF (PRESENT(output_level)) THEN                            !< Variable specific setting of output level
         igroup = 4
+        !> Any variable that occures in 'basic' output level has to be also present in 'medium' and 'full'
         DO out_level=output_level,3
-          out_level_name = Get_var_group_name(out_level)
-          groups(igroup)   = 'jsb_all_'//out_level_name ! var group jsb_all_<level>
-          groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name ! var group jsb_<process>_<level>
+          out_level_name = Get_var_group_name(out_level)                      !< resolve enum
+          groups(igroup)   = 'jsb_all_'//out_level_name                       !< land model
+          groups(igroup+1) = 'jsb_'//mem%owner_proc_name//'_'//out_level_name !< land process
           igroup = igroup + 2
         END DO
       END IF
     ELSE
       ALLOCATE(groups(1))
-      groups(1) = 'ALL'
+      groups(1) = 'ALL'                                         !< only present in HOST model
     END IF
 
     !> Add 3D variable as element to the list
