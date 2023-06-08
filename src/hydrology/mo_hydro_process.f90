@@ -766,8 +766,9 @@ CONTAINS
   !!   Written by Tobias Stacke (MPI-M) in January 2023 based on the
   !!   ARNO Scheme infiltration routine and extented for HydroTiles usecase
 
-  SUBROUTINE calc_orographic_features(nc, nlat, l_hydrotiles, l_upland, &
-    & max_slope, oro_stddev, weq_pond_max, source_fract, target_fract,  &
+  SUBROUTINE calc_orographic_features(nc, nlat, l_hydrotiles,    &
+    & l_upland, max_slope, oro_stddev,                           &
+    & h_offset, length_scale, source_fract, target_fract,        &
     & steepness, micro_slope, macro_slope)
 
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
@@ -780,7 +781,8 @@ CONTAINS
 
     REAL(wp), INTENT(in)  :: max_slope             !< Maximum slope threshold                           [m/m]
     REAL(wp), INTENT(in)  :: oro_stddev(:)         !< standard deviation of orography                   [m]
-    REAL(wp), INTENT(in)  :: weq_pond_max(:)       !< Maximum pond/depression depth                     [m]
+    REAL(wp), INTENT(in)  :: h_offset(:)           !< Maximum pond/depression depth                     [m]
+    REAL(wp), INTENT(in)  :: length_scale(:)       !< Horizontal length scale pond/depression depth     [m]
     REAL(wp), INTENT(in)  :: source_fract(:)       !< Hydrotiles source tile fraction                   []
     REAL(wp), INTENT(in)  :: target_fract(:)       !< Hydrotiles target tile fraction                   []
     REAL(wp), INTENT(out) :: steepness(:)          !< parameter defining the subgrid slope distribution [/]
@@ -824,10 +826,13 @@ CONTAINS
       ! Micro-slope depends on some made up relation between source and target file
       DO i = 1, nc
         IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp) THEN
-          fr_dpr_rel  = target_fract(i) / (source_fract(i) + target_fract(i))
-          micro_slope(i) = weq_pond_max(i) / ((1._wp / fr_dpr_rel) / pi)**0.5_wp
+          IF (h_offset(i) >= 0._wp) THEN
+            micro_slope(i) = h_offset(i) / length_scale(i)
+          ELSE
+            micro_slope(i) = 0._wp
+          END IF
         ELSE
-          micro_slope(:) = 0._wp
+          micro_slope(i) = 0._wp
         END IF
       END DO
 
@@ -1449,11 +1454,47 @@ CONTAINS
         WRITE (message_text,*) 'ET deficit cannot be compensated with the soil moisture storage'
         CALL message ('soilhyd', message_text, all_print=.TRUE.)
       END IF
+      !DO j = 1, nsoil
+      !  IF (deficit_evapotrans(i) < 0._wp .AND. weq_soil(i) > 0._wp) THEN
+      !    ! reduce soil moisture and ice relative to the water content of each layer
+      !    wtr_soil_sl(i,j) = MAX(0._wp, wtr_soil_sl(i,j) + deficit_evapotrans(i) * wtr_soil_sl(i,j) / weq_soil(i))
+      !    ice_soil_sl(i,j) = MAX(0._wp, ice_soil_sl(i,j) + deficit_evapotrans(i) * ice_soil_sl(i,j) / weq_soil(i))
+      !  END IF
+      !END DO
+      ! First use liquid water above the wilting point starting at the top of the soil column 
       DO j = 1, nsoil
-        IF (deficit_evapotrans(i) < 0._wp .AND. weq_soil(i) > 0._wp) THEN
-          ! reduce soil moisture and ice relative to the water content of each layer
-          wtr_soil_sl(i,j) = MAX(0._wp, wtr_soil_sl(i,j) + deficit_evapotrans(i) * wtr_soil_sl(i,j) / weq_soil(i))
-          ice_soil_sl(i,j) = MAX(0._wp, ice_soil_sl(i,j) + deficit_evapotrans(i) * ice_soil_sl(i,j) / weq_soil(i))
+        IF (deficit_evapotrans(i) < 0._wp .AND. wtr_soil_sl(i,j) > wtr_rsdl_sl(i,j)) THEN
+          IF (ABS(deficit_evapotrans(i)) >=  wtr_soil_sl(i,j) - wtr_rsdl_sl(i,j)) THEN
+            deficit_evapotrans(i) = deficit_evapotrans(i) + wtr_soil_sl(i,j) - wtr_rsdl_sl(i,j)
+            wtr_soil_sl(i,j) = wtr_rsdl_sl(i,j)
+          ELSE
+            wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + deficit_evapotrans(i)
+            deficit_evapotrans(i) = 0._wp        
+          END IF
+        END IF
+      END DO
+      !Then use all liquid water starting at the top of the soil column  
+      DO j = 1, nsoil
+        IF (deficit_evapotrans(i) < 0._wp .AND. wtr_soil_sl(i,j) > 0._wp) THEN
+          IF (ABS(deficit_evapotrans(i)) >=  wtr_soil_sl(i,j)) THEN
+            deficit_evapotrans(i) = deficit_evapotrans(i) + wtr_soil_sl(i,j)
+            wtr_soil_sl(i,j) = 0._wp
+          ELSE
+            wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + deficit_evapotrans(i)
+            deficit_evapotrans(i) = 0._wp        
+          END IF
+        END IF
+      END DO
+      !Then use ice
+      DO j = 1, nsoil
+        IF (deficit_evapotrans(i) < 0._wp .AND. ice_soil_sl(i,j) > 0._wp) THEN
+          IF (ABS(deficit_evapotrans(i)) >=  ice_soil_sl(i,j)) THEN
+            deficit_evapotrans(i) = deficit_evapotrans(i) + ice_soil_sl(i,j)
+            ice_soil_sl(i,j) = 0._wp
+          ELSE
+            ice_soil_sl(i,j) = ice_soil_sl(i,j) + deficit_evapotrans(i)
+            deficit_evapotrans(i) = 0._wp        
+          END IF
         END IF
       END DO
     END DO
@@ -1945,9 +1986,11 @@ CONTAINS
         &                          )
     END IF
 
-    ! Combine the different wet surface fractions assuming that skin and pond locations
-    ! would always coincide.
-    fract_wet = MAX(fract_skin, fract_pond)
+    ! Combine the different wet surface fractions assuming that:
+    ! skin and pond locations would always coincide.
+    !fract_wet = MAX(fract_skin, fract_pond)
+    ! That both are evenly distributed
+    fract_wet = fract_pond + fract_skin * (1._wp - fract_pond) 
 
   END SUBROUTINE calc_wet_fractions_veg
 
@@ -2048,9 +2091,11 @@ CONTAINS
         &                          )
     END IF
 
-    ! Combine the different wet surface fractions assuming that skin and pond locations
-    ! would always coincide.
-    fract_wet = MAX(fract_skin, fract_pond)
+    ! Combine the different wet surface fractions assuming that:
+    ! skin and pond locations would always coincide.
+    !fract_wet = MAX(fract_skin, fract_pond)
+    ! That both are evenly distributed
+    fract_wet = fract_pond + fract_skin * (1._wp - fract_pond) 
 
   END SUBROUTINE calc_wet_fractions_bare
 

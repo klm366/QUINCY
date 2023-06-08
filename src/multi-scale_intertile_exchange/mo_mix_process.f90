@@ -975,29 +975,41 @@ CONTAINS
     fr_rel           = fract           / (fract+fract_sibl_tile)
     fr_rel_sibl_tile = fract_sibl_tile / (fract+fract_sibl_tile)
     
-    !Length scales and interface length based on the geometry of the smaller tile
 
-    IF (fract >= fract_sibl_tile) THEN
-      ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char_sibl_tile 
-      ! within elevation area A_char_sibl_tile * ( fract / fract_sibl_tile)
-      length_inter = ((4._wp * pi * A_char_sibl_tile) ** 0.5_wp) &
+    ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char_sibl_tile 
+    ! within elevation area A_char_sibl_tile * ( fract / fract_sibl_tile)
+    length_inter = ((4._wp * pi * A_char_sibl_tile) ** 0.5_wp) &
                  & / A_char_sibl_tile * fr_rel_sibl_tile
 
-      ! Determine characteristic length scale: base assumption is the radius of the circle 
-      ! that contains A_char_sibl_tile and surrounding A_char 
-      !Area of outer circle + inner circle = A_char_sibl_tile/fr_rel_sibl_tile
-      length_scale = ((A_char_sibl_tile/fr_rel_sibl_tile)/pi)**0.5_wp                      ! From center to outer rim
-    ELSE
-      ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char 
-      ! within elevation area A_char * ( fract_sibl_tile / fract)
-      length_inter = ((4._wp * pi * A_char) ** 0.5_wp) &
-                 & / A_char * fr_rel
+    ! Determine characteristic length scale: base assumption is the radius of the circle 
+    ! that contains A_char_sibl_tile and surrounding A_char 
+    !Area of outer circle + inner circle = A_char_sibl_tile/fr_rel_sibl_tile
+    length_scale = ((A_char_sibl_tile/fr_rel_sibl_tile)/pi)**0.5_wp                      ! From center to outer rim
 
-      ! Determine characteristic length scale: base assumption is the radius of the circle 
-      ! that contains A_char and surrounding A_char_sibl_tile 
-      !Area of outer circle + inner circle = A_char/fr_rel
-      length_scale = ((A_char/fr_rel)/pi)**0.5_wp                      ! From center to outer rim
-    END IF 
+    !Length scales and interface length based on the geometry of the smaller tile
+    
+    !!!!!!! For later when we know A_char of elevation
+    !IF (fract >= fract_sibl_tile) THEN
+    !  ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char_sibl_tile 
+    !  ! within elevation area A_char_sibl_tile * ( fract / fract_sibl_tile)
+    !  length_inter = ((4._wp * pi * A_char_sibl_tile) ** 0.5_wp) &
+    !             & / A_char_sibl_tile * fr_rel_sibl_tile
+    !
+    !  ! Determine characteristic length scale: base assumption is the radius of the circle 
+    !  ! that contains A_char_sibl_tile and surrounding A_char 
+    !  !Area of outer circle + inner circle = A_char_sibl_tile/fr_rel_sibl_tile
+    !  length_scale = ((A_char_sibl_tile/fr_rel_sibl_tile)/pi)**0.5_wp                      ! From center to outer rim
+    !ELSE
+    !  ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char 
+    !  ! within elevation area A_char * ( fract_sibl_tile / fract)
+    !  length_inter = ((4._wp * pi * A_char) ** 0.5_wp) &
+    !             & / A_char * fr_rel
+    !
+    !  ! Determine characteristic length scale: base assumption is the radius of the circle 
+    !  ! that contains A_char and surrounding A_char_sibl_tile 
+    !  !Area of outer circle + inner circle = A_char/fr_rel
+    !  length_scale = ((A_char/fr_rel)/pi)**0.5_wp                      ! From center to outer rim
+    !END IF 
 
   END SUBROUTINE get_geometry
 
