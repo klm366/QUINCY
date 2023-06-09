@@ -828,8 +828,8 @@ CONTAINS
   FUNCTION Get_var(this, name) RESULT(var_ptr)
 
     CLASS(t_jsb_memory),     INTENT(in) :: this
-    CHARACTER(len=*),        INTENT(in) :: name
-    CLASS(t_jsb_var),        POINTER    :: var_ptr
+    CHARACTER(len=*),        INTENT(in) :: name     !< variable name to search
+    CLASS(t_jsb_var),        POINTER    :: var_ptr  !< return variable
 
     INTEGER :: i
 
@@ -838,9 +838,9 @@ CONTAINS
     IF (.NOT. ASSOCIATED(this%vars(1)%p)) CALL finish(TRIM(routine), 'Invalid vector of vars')
 
     var_ptr => NULL()
-    DO i=1,this%no_of_vars
-      IF (TRIM(this%vars(i)%p%name) == TRIM(name)) THEN
-        var_ptr => this%vars(i)%p
+    DO i=1,this%no_of_vars ! for all variables
+      IF (TRIM(this%vars(i)%p%name) == TRIM(name)) THEN ! found?
+        var_ptr => this%vars(i)%p ! assign to variable
         EXIT
       END IF
     END DO
@@ -848,11 +848,12 @@ CONTAINS
     ! Note: Not finding the variable in this memory, i.e. returning NULL(), should only happen because
     !       the variable belongs to an LCT that's not handled by this tile.
 
-    !IF (.NOT. ASSOCIATED(var_ptr)) &
-    !  & CALL finish(TRIM(routine), 'Variable '//TRIM(name)//' on tile '//TRIM(this%owner_tile_name)//' not found')
-
   END FUNCTION Get_var
 
+  ! ====================================================================================================== !
+  !
+  !> It returns the position from the vector of variables
+  !
   FUNCTION Get_var_position(this, name) RESULT(pos)
 
     CLASS(t_jsb_memory),     INTENT(in) :: this
@@ -876,11 +877,12 @@ CONTAINS
     ! Note: Not finding the variable in this memory, i.e. returning 0, should only happen because
     !       the variable belongs to an LCT that's not handled by this tile.
 
-    !IF (.NOT. ASSOCIATED(var_ptr)) &
-    !  & CALL finish(TRIM(routine), 'Variable '//TRIM(name)//' on tile '//TRIM(this%owner_tile_name)//' not found')
-
   END FUNCTION Get_var_position
 
+  ! ====================================================================================================== !
+  !
+  !> Collect 'var' data from all the childrens and place them into an array
+  !
   FUNCTION Collect_var_real2d(this, ics, ice, iblk, no_children,  var) RESULT(var_collected)
 
     CLASS(t_jsb_memory),    INTENT(in)     :: this        ! mem_process of the parent tile
@@ -895,19 +897,24 @@ CONTAINS
 
     ALLOCATE(var_collected(ice-ics+1,no_children))
 
-    DO i=1,no_children
-       var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice,iblk)
+    DO i=1,no_children ! for each child
+       var_collected(:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice,iblk) ! get the data
     END DO
 
   END FUNCTION Collect_var_real2d
 
 
+  ! ====================================================================================================== !
+  !
+  !> Collect 'var' data from all the childrens and place them into an array
+  !> The 3d includes a dimensions with layers.
+  !
   FUNCTION Collect_var_real3d(this, ics, ice, iblk, no_children,  var) RESULT(var_collected)
 
-    CLASS(t_jsb_memory),    INTENT(in)     :: this        ! mem_process of the parent tile
+    CLASS(t_jsb_memory),    INTENT(in)     :: this        !< mem_process of the parent tile
     INTEGER,                INTENT(in)     :: ics, ice, iblk
-    INTEGER,                INTENT(in)     :: no_children ! of the parent tile
-    TYPE(t_jsb_var_real3d), INTENT(in)     :: var         ! of the parent tile: tile%mem(iproc)%p%var
+    INTEGER,                INTENT(in)     :: no_children !< of the parent tile
+    TYPE(t_jsb_var_real3d), INTENT(in)     :: var         !< of the parent tile: tile%mem(iproc)%p%var
     REAL(wp), POINTER                      :: var_collected(:,:,:)
 
     INTEGER :: i !, iproc
@@ -915,36 +922,41 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_var_real3d'
 
     ALLOCATE(var_collected(ice - ics + 1, &
-      &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%ptr3d, DIM=2), &
+      &                    SIZE(this%children(1)%p%vars(var%child_idx(1))%p%ptr3d, DIM=2), & ! number of layers
       &                    no_children))
 
-    DO i=1,no_children
-       ! R: Unterschied zu %ptr(ics:ice,iblk) ???
-       var_collected(:,:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr3d(ics:ice,:, iblk)
+    DO i=1,no_children ! for each child
+       var_collected(:,:,i) = this%children(i)%p%vars(var%child_idx(i))%p%ptr3d(ics:ice,:, iblk) ! get the data
     END DO
 
   END FUNCTION Collect_var_real3d
 
 
+  ! ====================================================================================================== !
+  !
+  !> The array 'var_handdown' places its data into the variable 'var' for each children.
+  !> It is the opposite of Collect_var_read2d.
+  !
   SUBROUTINE HandDown_var_real2d(this, ics, ice, iblk, no_children,  var, var_handdown)
 
-    CLASS(t_jsb_memory), INTENT(inout)  :: this        ! mem_process of the parent tile: tile%mem(iproc)%p
+    CLASS(t_jsb_memory), INTENT(inout)  :: this               !< mem_process of the parent tile: tile%mem(iproc)%p
     INTEGER,             INTENT(in)     :: ics, ice, iblk
-    INTEGER,             INTENT(in)     :: no_children ! of the parent tile
-    CLASS(t_jsb_var),    INTENT(in)     :: var         ! of the parent tile only to find child memories
-    REAL(wp),            INTENT(in)     :: var_handdown(:,:) ! e.g. corresponds to (ics:ice,no_children)
+    INTEGER,             INTENT(in)     :: no_children        !< of the parent tile
+    CLASS(t_jsb_var),    INTENT(in)     :: var                !< of the parent tile only to find child memories
+    REAL(wp),            INTENT(in)     :: var_handdown(:,:)  !< e.g. corresponds to (ics:ice,no_children)
 
     INTEGER :: i !, iproc
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':HandDown_var_real2d'
 
-    DO i=1,no_children
+    DO i=1,no_children ! for each children
       this%children(i)%p%vars(var%child_idx(i))%p%ptr2d(ics:ice, iblk) = var_handdown(:,i)
     END DO
 
   END SUBROUTINE HandDown_var_real2d
 
 
+  ! TODO: not used anywhere, ask to julia if it should be deleted
   FUNCTION Average_over_children_real2d(this, ics, ice, iblk, no_children,  var, fract_st) RESULT(var_averaged)
 
     CLASS(t_jsb_memory), INTENT(in)     :: this          ! mem_process of the parent tile: tile%mem(iproc)%p
