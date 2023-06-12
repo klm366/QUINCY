@@ -20,6 +20,11 @@
 !> - Init_vars => [[Init_vars_on_tile]]
 !> - Handler => [[Process_task_on_tile]]
 !>
+!> BSD 3-Clause
+!> spdx-id: BSD-3-Clause
+!>
+!>
+
 
 !NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
 
@@ -262,12 +267,6 @@ CONTAINS
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE IF (iproc == L2A_) THEN
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
-          ! if there is no process action defined, then we assume that the parent tile has defined it as on_leaves
-          !   otherwise the process would
-          ! after finish contructing the tiles we know how the tile tree is structured -> ON_LEAFS_ is not needed anymore then
-          !   then, after tile tree construction (with init tile),
-          !      the AGGREGATE ON_TILE INHERIT SKIP are the process actions used for the tiles
-          !   i.e., the SKIP and ON_LEAFS_ process actions are transformed in one of the above for four process actions
           ELSE
             CALL return_ptr%Set_process_action(iproc, ON_LEAFS_, action_to_parents=AGGREGATE_)
           END IF
@@ -599,6 +598,7 @@ CONTAINS
       ELSE
         tmp_fract(:,:) = 1._wp
       END IF
+      ! Set the fraction of the tile
       CALL this%Set_fraction(fract=tmp_fract(:,:))
     ELSEIF (this%fract_varname == 'allFirst') THEN
         IF(ASSOCIATED(this%parent)) THEN
@@ -610,7 +610,8 @@ CONTAINS
           tmp_fract(:,:) = 1._wp
         END IF
         CALL this%Set_fraction(fract=tmp_fract(:,:))
-    ELSE
+    ELSE ! fract_varname /= 'equal' OR 'allFirst' ==> fraction of the tile is read from input file
+      ! Open the input file
       input_file = jsb_netcdf_open_input(TRIM(this%fract_filename), this%grid_id)
       ! Determine the name of the tile fraction variable in the input file
       IF (TRIM(this%fract_varname) == '') THEN
@@ -697,6 +698,9 @@ CONTAINS
   END SUBROUTINE Init_fractions_on_tile
 
   ! ======================================================================================================= !
+  !> 
+  !> Initialise the child_idx vector for each variable on each process running on child tiles
+  !> - this vector then collects the process memory position of the according var on each child of the tile
   !>
   !> Initialise the child_idx vector for each variable on each process running on child tiles
   !> - this vector then collects the process memory position of the according var on each child of the tile
@@ -1014,13 +1018,13 @@ CONTAINS
     ! Loop over all processes
     DO i_proc = 1, max_no_of_processes
 
-      ! if the current process is not on the current tile exit DO loop
+      ! If the current process is not on the current tile exit DO loop
       SELECT CASE (this%process_action(i_proc))
       CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
         CYCLE
       END SELECT
 
-      ! also exit the Do loop if this process has no memory
+      ! Also exit the Do loop if this process has no memory
       IF (.NOT. ASSOCIATED(this%mem(i_proc)%p)) CYCLE
 
       ! Only processes are relevant here that have any bgc material in their process memory
@@ -1118,13 +1122,13 @@ CONTAINS
 
     ! Loop over all processes
     DO i_proc=1,max_no_of_processes
-      ! if the current process is not on the current tile exit DO loop
+      ! If the current process is not on the current tile exit DO loop
       SELECT CASE (this%process_action(i_proc))
       CASE (SKIP_, ON_LEAFS_, INHERIT_, AGGREGATE_, ON_SUBTREE_)
         CYCLE
       END SELECT
 
-      ! also exit the DO loop if this process has no memory
+      ! Also exit the DO loop if this process has no memory
       IF (.NOT. ASSOCIATED(this%mem(i_proc)%p)) CYCLE
 
       ! Only processes are relevant here that have any bgc material in their process memory

@@ -2756,4 +2756,3 @@ CONTAINS
     !$ACC WAIT(1)
     !$ACC END DATA
 
-  END SUBROUTINE get_soilhyd_properties

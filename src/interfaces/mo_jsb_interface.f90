@@ -634,6 +634,7 @@ CONTAINS
     NULLIFY(tile)
 
     ! Run tasks in queue
+    ! This is the basic call that initiates all process updates (tasks, s. mo_jsb_model_class.f90)
     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
     ! Finally, give the required variables back to the atmosphere
