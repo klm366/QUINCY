@@ -31,6 +31,7 @@ MODULE mo_mix_config_class
   TYPE, EXTENDS(t_jsb_config) :: t_mix_config
      LOGICAL                  :: &
        & l_hydro_mix,            & !< enable lateral transport of water between grid tiles
+       & l_itdiff,               & !< calculating intertile diffusive fluxes
        & l_macrotrans_subsurf      !< enable long distance lateral drainage
 
    CONTAINS
@@ -51,12 +52,13 @@ CONTAINS
 
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
-    LOGICAL                     :: l_hydro_mix,         &
+    LOGICAL                     :: l_hydro_mix, l_itdiff,        &
       &                            l_macrotrans_subsurf
 
     NAMELIST /jsb_mix_nml/       &
          active,                 &
          l_hydro_mix,            &
+         l_itdiff,               &
          l_macrotrans_subsurf
 
     INTEGER :: nml_handler, nml_unit, istat
@@ -68,6 +70,7 @@ CONTAINS
     ! Set defaults
     active               = .TRUE.
     l_hydro_mix          = .FALSE.
+    l_itdiff             = .TRUE.
     l_macrotrans_subsurf = l_hydro_mix
 
     nml_handler = open_nml(TRIM(config%namelist_filename))
@@ -83,6 +86,12 @@ CONTAINS
       CALL message(TRIM(routine), 'Lateral water flow between tiles is enabled')
     ELSE
       CALL message(TRIM(routine), 'Lateral water flow between tiles is disabled')
+    END IF
+    config%l_itdiff            = l_itdiff
+    IF (l_itdiff) THEN
+      CALL message(TRIM(routine), 'Intertile diffusive fluxes (heat, h2o) are enabled')
+    ELSE
+      CALL message(TRIM(routine), 'Intertile diffusive fluxes (heat, h2o) are disabled')
     END IF
     config%l_macrotrans_subsurf = l_macrotrans_subsurf
     IF (l_macrotrans_subsurf) THEN

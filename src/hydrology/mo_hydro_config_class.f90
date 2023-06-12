@@ -231,8 +231,7 @@ CONTAINS
     config%l_infil_subzero      = l_infil_subzero
     IF (l_infil_subzero) CALL message(TRIM(routine), 'Allow infiltration at sub-zero temperatures')
 
-    config%l_ponds = l_ponds
-
+    config%l_ponds = l_ponds 
     IF (l_ponds) THEN
       CALL message(TRIM(routine), '*** WARNING: Use of ponds is still experimental and not tested!!')
       config%max_pond_depth = max_pond_depth

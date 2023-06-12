@@ -769,7 +769,8 @@ CONTAINS
 
             ! Lateral soil water diffusion between ridge and depression tiles of the same macrotopography
             DO i = 1, nc
-              IF (fract(i) > 1.0e-10_wp .AND. fract_sibl_tile(i) > 1.0e-10_wp .AND. &
+              IF (dsl4jsb_Config(MIX_)%l_itdiff .AND. &
+                  fract(i) > 1.0e-10_wp .AND. fract_sibl_tile(i) > 1.0e-10_wp .AND. &
                   wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
 
                 IF (h_offset(i) >= 0._wp) THEN
@@ -863,7 +864,8 @@ CONTAINS
               END IF
             ENDDO
             DO i = 1, nc
-              IF (fract(i) > 1.0e-10_wp .AND. fract_sibl_tile(i) > 1.0e-10_wp) THEN
+              IF (dsl4jsb_Config(MIX_)%l_itdiff .AND. &
+                  fract(i) > 1.0e-10_wp .AND. fract_sibl_tile(i) > 1.0e-10_wp) THEN
                 IF (h_offset(i) >= 0._wp) THEN
                   CALL diagnose_intertile_heatflux(soil_e%n_levels, dtime,       &
                      & soil_e%dz(:),         abs(h_offset(i)),                   &

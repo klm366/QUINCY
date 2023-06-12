@@ -592,6 +592,10 @@ CONTAINS
         z_rgrd_top=z_rgrd_bot
         z_rgrd_bot=z_dpr
 
+      ELSE IF (i_dpr == 0 ) THEN   ! Still at the surface in depression but in bedrock in elevation
+        i_dpr=1
+        z_rgrd_top=z_dpr
+        z_rgrd_bot=z_rgrd_bot+dsoil_dpr(i_dpr)
       END IF
     END DO
 
@@ -691,6 +695,11 @@ CONTAINS
 
     z_rgrd_top = 0._wp
     z_rgrd_bot = MIN(z_lvt, z_dpr)
+
+    IF(h_offset > SUM(dz(:))) THEN
+      i_lvt = nsoil + 1
+    END IF
+      
 
     DO i = 1, nrgrd
       IF (i_lvt <= nsoil .AND. i_dpr <= nsoil) THEN ! Within the soil column of both tiles
