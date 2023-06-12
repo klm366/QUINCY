@@ -45,52 +45,49 @@ MODULE mo_jsb_memory_class
   IMPLICIT NONE
   PRIVATE
 
-  !< t_jsb_memory   : basic type to define memory for each tile and process
-  !< t_jsb_memory_p : vector of pointers 
-  PUBLIC :: t_jsb_memory_p, t_jsb_memory
+  PUBLIC :: t_jsb_memory_p, t_jsb_memory, t_jsb_param
 
-  ! This type contains the memory state for each tile for one process
+  !> Abstract type for the memory state of each tile and process (to be extended by each process)
   TYPE, ABSTRACT :: t_jsb_memory
     INTEGER :: id = 0
-    INTEGER :: grid_id = 0                                   !< grid ID of defined memory
-    INTEGER :: owner_model_id = 0                            !< model ID of defined memory
-    INTEGER :: owner_proc_id = 0                             !< process ID of defined memory
-    CHARACTER(LEN=:), ALLOCATABLE :: owner_proc_name         !< process name of defined memory
-    INTEGER :: no_of_children = 0                            !< number of children
-    TYPE(t_jsb_memory_p), POINTER :: children(:) => NULL()   !< vector of pointers for children memory
-    CLASS(t_jsb_memory) , POINTER :: parent => NULL()        !< points for parent memory
-    INTEGER, ALLOCATABLE :: owner_tile_path(:)               !< tile location (in tile tree) of defined memory
-    CHARACTER(len=SHORT_NAME_LEN) :: owner_tile_name         !< tile name of defined memory
-    INTEGER :: max_no_of_vars = 0                            !< maximum number of allocating variables in memory
-    INTEGER :: no_of_vars = 0
-    LOGICAL :: has_bgc_materials = .FALSE.
-    CLASS(t_jsb_pool), POINTER :: pools         => NULL()    ! TODO? This is old pool implementation and will be modified by new updates (Jan Engle)
-    CLASS(t_jsb_pool), POINTER :: bgc_material  => NULL()    ! TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
-    CHARACTER(LEN=:), ALLOCATABLE :: varlist_name
-    TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)                !< vector of variables in memory
-    LOGICAL :: in_var_groups = .FALSE.                       !< whether this memory belongs any part of variable groups
+    INTEGER :: grid_id = 0                                    !< grid ID of defined memory
+    INTEGER :: owner_model_id = 0                             !< model ID of defined memory
+    INTEGER :: owner_proc_id = 0                              !< process ID of defined memory
+    CHARACTER(LEN=:), ALLOCATABLE  :: owner_proc_name         !< process name of defined memory
+    INTEGER                        :: no_of_children = 0      !< counter for the number of children of the tile on which the mem lives
+    TYPE(t_jsb_memory_p), POINTER  :: children(:) => NULL()   !< vector of pointers for children memory
+    CLASS(t_jsb_memory) , POINTER  :: parent => NULL()        !< points for parent memory
+    INTEGER, ALLOCATABLE           :: owner_tile_path(:)      !< tile location (in tile tree) of defined memory
+    CHARACTER(len=SHORT_NAME_LEN)  :: owner_tile_name         !< tile name of defined memory
+    !
+    TYPE(t_jsb_var_p), ALLOCATABLE :: vars(:)                 !< collection of variables in a memory
+    INTEGER                        :: max_no_of_vars = 0      !< max number of variables allowed in collection
+    INTEGER                        :: no_of_vars = 0          !< counter for how many variables actually are allocated for this memory
+    !
+    CHARACTER(LEN=:), ALLOCATABLE  :: varlist_name            !< Name of varlist for the variables in memory instance
+    LOGICAL                        :: in_var_groups = .FALSE. !< Whether variables of this memory are in any var group
+    !
+    LOGICAL                        :: has_bgc_materials = .FALSE.
+    CLASS(t_jsb_pool), POINTER     :: pools         => NULL() !< TODO? This is old pool implementation and will be modified by new updates (Jan Engle)
+    CLASS(t_jsb_pool), POINTER     :: bgc_material  => NULL() !< TODO t_jsb_memory rename 't_jsb_pool' -> 't_lnd_bgc_material'
   CONTAINS
-    PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init                       !< Initial function to be implemented in each instance of tile memory
-                                                                               !< PASS(mem) -> pass memory object as the first argument 'mem'
+    PROCEDURE (Init_memory), DEFERRED, PASS(mem) :: Init                          !< Initial function to be implemented in each instance of tile memory
+                                                                                  !< PASS(mem) -> pass memory object as the first argument 'mem'
     PROCEDURE                                    :: Get_var
-    PROCEDURE                                    :: t_jsb_memory_add_var_r1d   !< to add 1-dimension variable in a speified memory
-    PROCEDURE                                    :: t_jsb_memory_add_var_r2d   !< to add 2-dimension variable in a speified memory
-    PROCEDURE                                    :: t_jsb_memory_add_var_r3d   !< to add 3-dimension variable in a speified memory
-    PROCEDURE                                    :: t_jsb_memory_add_pool      !< to add pool
-                                                    !< Add a (hierarchical) pool structure to memory
-                                                    !< (sub-pools and elements)
-    PROCEDURE                                    :: t_jsb_memory_add_pool_var_r2d
-                                                    !< Add a 2d variable to pool (non-elements)
+    PROCEDURE                                    :: t_jsb_memory_add_var_r1d      !< to add 1-dimension variable in a speified memory
+    PROCEDURE                                    :: t_jsb_memory_add_var_r2d      !< to add 2-dimension variable in a speified memory
+    PROCEDURE                                    :: t_jsb_memory_add_var_r3d      !< to add 3-dimension variable in a speified memory
+    PROCEDURE                                    :: t_jsb_memory_add_pool         !< Add a (hierarchical) pool structure to memory
+                                                                                  !< (sub-pools and elements)
+    PROCEDURE                                    :: t_jsb_memory_add_pool_var_r2d !< Add a 2d variable to pool (non-elements)
     GENERIC                                      :: Add_var => t_jsb_memory_add_var_r1d, t_jsb_memory_add_var_r2d, &
       &                                                        t_jsb_memory_add_var_r3d, &
       &                                                        t_jsb_memory_add_pool, t_jsb_memory_add_pool_var_r2d
-    PROCEDURE                                    :: Get_var_position
-    PROCEDURE, PUBLIC                            :: Collect_var_real2d  ! Collect var from its child tiles
-                                                                        ! R: Note, we do not want to keep a "var collection" in the memory
-                                                                        !    because we already have all child values in the memory.
-    PROCEDURE, PUBLIC                            :: Collect_var_real3d  ! Collect var from its child tiles
-    PROCEDURE, PUBLIC                            :: HandDown_var_real2d ! Hand back var to child tiles
-    PROCEDURE                                    :: Average_over_children_real2d ! Average var over the child tiles
+    PROCEDURE                                    :: Get_var_position              !< Get position of a variable in list of variables `vars`
+    PROCEDURE, PUBLIC                            :: Collect_var_real2d            !< Collect 2d var from its child tiles
+    PROCEDURE, PUBLIC                            :: Collect_var_real3d            !< Collect 3d var from its child tiles
+    PROCEDURE, PUBLIC                            :: HandDown_var_real2d           !< Hand back 2d var to child tiles
+    PROCEDURE                                    :: Average_over_children_real2d  !< Average 2d var over the child tiles
   END TYPE t_jsb_memory
 
   TYPE t_jsb_memory_p
@@ -246,11 +243,13 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
+    ! if we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
       mem%no_of_vars = pos_of_var
     END IF
 
@@ -403,11 +402,13 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
     var%owner_tile_path(:) = mem%owner_tile_path(:)
 
+    ! if we want to add a variable we need to store it in the next position in vars
     pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
       mem%no_of_vars = pos_of_var
     END IF
 
@@ -585,12 +586,18 @@ CONTAINS
     ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))    !< allocate tile_path (structure in memory to reach tile) 
     var%owner_tile_path(:) = mem%owner_tile_path(:)             !< tile_path of variable is identical to memory
 
-    !> Add variable to list of variables in memory (for aggrigator) and check if maximum number of variables is exeeded
-    pos_of_var = mem%no_of_vars + 1                             
+    var%owner_proc_id  = mem%owner_proc_id
+
+    ALLOCATE(var%owner_tile_path(SIZE(mem%owner_tile_path)))
+    var%owner_tile_path(:) = mem%owner_tile_path(:)
+
+    ! if we want to add a variable we need to store it in the next position in vars
+    pos_of_var = mem%no_of_vars + 1
+    ! Assert that we still have space for another variable
     IF (pos_of_var > mem%max_no_of_vars) THEN
       CALL finish(TRIM(routine), 'Maximum number of vars exceeded: '//TRIM(mem%varlist_name)//', '//TRIM(name))
     ELSE
-      mem%vars(pos_of_var)%p => var
+      mem%vars(pos_of_var)%p => var ! Collect the pointer to the newly added variable
       mem%no_of_vars = pos_of_var
     END IF
 
