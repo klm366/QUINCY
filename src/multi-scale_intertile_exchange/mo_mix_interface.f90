@@ -27,8 +27,8 @@ MODULE mo_mix_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
-  USE mo_jsb_grid,           ONLY: Get_vgrid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
+  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: ON_TILE_
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
@@ -217,7 +217,7 @@ CONTAINS
       &                                  calc_intertile_diffusion, &
       &                                  calc_snow_redistribution, &
       &                                  diagnose_intertile_heatflux, &
-      &                                  get_geometry
+      &                                  get_geometry, calc_slopes_tiles
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -246,6 +246,8 @@ CONTAINS
     TYPE(t_jsb_vgrid), POINTER          :: soil_e
     CLASS(t_jsb_tile_abstract), POINTER :: sibl_tile !< Sibling tile with MIX_ process running on them
 
+    TYPE(t_jsb_grid),  POINTER :: grid
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_hydro_mix'
 
     ! Declare process memories
@@ -263,7 +265,6 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
-    dsl4jsb_Real2D_onChunk :: micro_slope
     dsl4jsb_Real2D_onChunk :: wtr_latflow
     dsl4jsb_Real2D_onChunk :: wtr_pond
     dsl4jsb_Real2D_onChunk :: weq_pond
@@ -300,6 +301,17 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: heat_cond_sl
     dsl4jsb_Real3D_onChunk :: heat_flx_lat
 
+    dsl4jsb_Real2D_onChunk :: fract_perm_ref
+
+    dsl4jsb_Real2D_onChunk :: area
+    dsl4jsb_Real2D_onChunk :: h_surf
+    dsl4jsb_Real2D_onChunk :: oro_stddev
+
+    dsl4jsb_Real2D_onChunk :: steepness
+    dsl4jsb_Real2D_onChunk :: micro_slope
+    dsl4jsb_Real2D_onChunk :: macro_slope
+
+
     dsl4jsb_Real2D_onChunk :: wtr_latflow_sibl_tile
     dsl4jsb_Real2D_onChunk :: wtr_pond_sibl_tile
     dsl4jsb_Real2D_onChunk :: weq_pond_sibl_tile
@@ -331,7 +343,9 @@ CONTAINS
     dsl4jsb_Real3D_onChunk :: heat_cond_sl_sibl_tile
     dsl4jsb_Real3D_onChunk :: heat_flx_lat_sibl_tile
 
-
+    dsl4jsb_Real2D_onChunk :: area_sibl_tile
+    dsl4jsb_Real2D_onChunk :: h_surf_sibl_tile
+   
     REAL(wp), DIMENSION(options%nc) :: fract           !< Fractions of water source tile []
     REAL(wp), DIMENSION(options%nc) :: fract_sibl_tile !< Fractions of water target tile []
     REAL(wp), DIMENSION(options%nc) :: wtr_pond_max    !< Maximum pond water depth       [m]
@@ -373,6 +387,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+    grid   => Get_grid(model%grid_id)
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
     
@@ -393,7 +408,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(MIX_,   runoff_retention)       ! inout
     dsl4jsb_Get_var3D_onChunk(MIX_,   drain_lat_retention_sl) ! inout
     dsl4jsb_Get_var2D_onChunk(MIX_,   snow_rdst)              ! out
-    dsl4jsb_Get_var2D_onChunk(HYDRO_, micro_slope)            ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)                 ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)               ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl)           ! inout
@@ -410,6 +424,14 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SSE_, heat_cond_sl)        ! in
     dsl4jsb_Get_var3D_onChunk(MIX_, heat_flx_lat)        ! out
 
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_perm_ref)         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, area          )         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, h_surf        )         ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, oro_stddev    )         ! in
+   
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)              ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, micro_slope)            ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, macro_slope)            ! out
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1)     ! in
     IF (tile%contains_soil) THEN
@@ -428,8 +450,6 @@ CONTAINS
       dsl4jsb_Get_var3D_onChunk(HYDRO_, bclapp_sl)
       dsl4jsb_Get_var3D_onChunk(HYDRO_, pore_size_index_sl)
     END IF
-
-    micro_slope(:) = 0._wp
 
     ! Transport water from between tiles
     ! @todo currently, lateral transport is only considered on tiles that contain soil
@@ -455,7 +475,29 @@ CONTAINS
       IF (tile%process_action(HYDRO_) /= ON_TILE_) THEN
         CALL finish(routine, 'MIX_ processes must be activate on the same tiles as HYDRO_')
       END IF
-
+      
+      !Initiaizing / Updating features of subgrid scale topography
+      ! Do not forget lakes maximum pond depth !!!
+      dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max) = MAX(0._wp, - h_surf(:))
+      dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max) = dsl4jsb_var2D_onChunk (HYDRO_, fract_pond_max)
+      ! Compute steepness parameter for surface runoff and lateral drainage
+      ! Part I: First for depressions (only macro slope)
+      ! Ridges are calculated below when memory of corresponding sibl tile exists
+      IF (tile%contains_depression) THEN
+        CALL calc_slopes_tiles(                             &
+          ! in
+          & nc,                                             & !< Number of gridcells
+          & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
+          & tile%contains_upland,                           & !< T: Upland HydroTile
+          & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
+          & oro_stddev(:),                                  & !< Standard deviation of orography [m]
+          ! out
+          & steepness(:),                                   & !< parameter defining the subgrid slope distribution [m/m]
+          & micro_slope(:),                                 & !< slope on microtopography tiles [m/m]
+          & macro_slope(:)                                  & !< slope on macrotopography tiles [m/m]
+          & )
+      END IF
+        
       wtr_pond_max(:) = MAX(0._wp, dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max) &
         &                        - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
 
@@ -467,15 +509,20 @@ CONTAINS
           l_pf_soil(i)=.FALSE.
         END IF
       END DO
-    !!!!!!! HERE IT WOULD BE POSSIBLE TO PRESCRIBE A l_pf_soil
-    !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
-    !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !!!!!!! l_pf_soil_pi JUST A DUMMY FOR NOW
-    l_pf_soil_pi(:)=.TRUE.
+
+      !!!!!!! HERE IT WOULD BE POSSIBLE TO PRESCRIBE A l_pf_soil
+      !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
+      !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !!!!!!! l_pf_soil_pi JUST A DUMMY FOR NOW
+      WHERE (fract_perm_ref(:) > 0.5_wp)    
+        l_pf_soil_pi(:)=.TRUE.
+      ELSEWHERE
+        l_pf_soil_pi(:)=.FALSE.
+      END WHERE
     
-    IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
-      l_pf_soil(:)=l_pf_soil_pi(:)
-    END IF
+      IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
+        l_pf_soil(:)=l_pf_soil_pi(:)
+      END IF
 
       ! Source tiles are always either upland or ridge tiles
       IF (tile%contains_upland .OR. tile%contains_ridge) THEN
@@ -561,7 +608,7 @@ CONTAINS
               IF (tile%contains_upland .AND. tile%contains_depression) THEN    ! Long-distance and
                 IF (dsl4jsb_Config(MIX_)%l_macrotrans_subsurf .OR. &           ! Switch true or
                   &  l_pf_soil(i)) THEN                                        ! Permafrost
-                l_latdrain(i) = .TRUE.
+                  l_latdrain(i) = .TRUE.
                 ELSE                                                           ! Long-distance but not allowed
                   l_latdrain(i) = .FALSE.
                 END IF
@@ -635,6 +682,42 @@ CONTAINS
             dsl4jsb_Get_var3d_onChunk_tile_name(SSE_, heat_cond_sl,               sibl_tile)! in
             dsl4jsb_Get_var3d_onChunk_tile_name(MIX_, heat_flx_lat,               sibl_tile)! out
 
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, area,                     sibl_tile)
+            dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, h_surf,                   sibl_tile)
+
+           ! Initiaizing / Updating features of subgrid scale topography
+           ! Part II: For ridges
+           ! Get geometric relation between surface features
+            DO i = 1, nc
+              CALL get_geometry(fract(i),              &
+                fract_sibl_tile(i),                    &
+                area(i),                               &
+                area_sibl_tile(i),                     &
+                h_surf(i),                             &
+                h_surf_sibl_tile(i),                   &
+                h_offset(i),                           &
+                length_scale(i),                       &
+                length_inter(i)                        &
+                )
+            END DO
+          ! Calculating steepness based on macro an dmicro slopes
+            CALL calc_slopes_tiles(                      &
+            ! in
+              & nc,                                             & !< Number of gridcells
+              & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
+              & tile%contains_upland,                           & !< T: Upland HydroTile
+              & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
+              & oro_stddev(:),        & !< Standard deviation of orography [m]
+              ! out
+              & steepness(:),                                   & !< parameter defining the subgrid slope distribution [m/m]
+              & micro_slope(:),                                 & !< slope on microtopography tiles [m/m]
+              & macro_slope(:),                                 & !< slope on macrotopography tiles [m/m]
+              ! optional
+              & h_offset(:),                                    & !< Maximum pond / depression depth [m]
+              & length_scale(:),                                & !< Characteristic length scale of surface features (Radius circle (depression + elevation)
+              & fract(:), fract_sibl_tile(:)                    & !< Fractions of source and target tile []
+              & )
+
             ! Compute soil ice impedance, diffusivity and matrix potential ...
             ! ... for source tile
             weq_wsat_sl     (:,:) = MAX(vol_porosity_sl (:,:) * soil_depth_sl(:,:), 0._wp)
@@ -684,27 +767,11 @@ CONTAINS
               mpot_act=mpot_act_sibl_tile(:,:)      & !< matrix potential
             )
 
-            DO i = 1, nc
-              CALL get_geometry(fract(i),             &
-                fract_sibl_tile(i),                   &
-                100._wp,                              &
-                1._wp,                                &
-                0._wp,                                &
-                -dsl4jsb_Config(HYDRO_)%max_pond_depth,  &
-                h_offset(i),                          &
-                length_scale(i),                      &
-                length_inter(i)                       &
-                )
-            END DO
             ! Lateral soil water diffusion between ridge and depression tiles of the same macrotopography
             DO i = 1, nc
               IF (fract(i) > 1.0e-10_wp .AND. fract_sibl_tile(i) > 1.0e-10_wp .AND. &
                   wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
 
-                ! ! Is this needed anywhere?
-                ! fr_dpr_rel(i)  = fract_sibl_tile(i)/(fract(i) + fract_sibl_tile(i))
-                ! micro_slope(i) = dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max)(i) &
-                !              & / ((1._wp/fr_dpr_rel(i))/pi)**0.5_wp
                 IF (h_offset(i) >= 0._wp) THEN
                   CALL calc_intertile_diffusion(nsoil,                       & !< Number of soil layers
                      & dsl4jsb_Config(HYDRO_)%soilhydmodel,                  & !< Soil hydrology model
@@ -897,6 +964,15 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(MIX_,   snow_rdst,              weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MIX_,   heat_flx_lat,           weighted_by_fract)
 
+    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_perm_ref,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, area,                   weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, h_surf,                 weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, micro_slope,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, macro_slope,            weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, steepness,              weighted_by_fract)
+
+    dsl4jsb_Aggregate_onChunk(HYDRO_, weq_pond_max,           weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, fract_pond_max,         weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

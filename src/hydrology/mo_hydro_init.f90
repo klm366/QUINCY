@@ -59,7 +59,10 @@ MODULE mo_hydro_init
       & wtr_soil_sl  (:,:,:) => NULL(), &
       & fract_org_sl (:,:,:) => NULL(), &
       & ifs_smi_sl   (:,:,:) => NULL(), &
-      & ifs_weq_snow   (:,:) => NULL()
+      & ifs_weq_snow   (:,:) => NULL(), &
+      & area_dpr       (:,:) => NULL(), &
+      & depth_dpr      (:,:) => NULL(), &
+      & fract_perm     (:,:) => NULL()
   END TYPE t_hydro_init_vars
 
   TYPE(t_hydro_init_vars) :: hydro_init_vars
@@ -111,8 +114,11 @@ CONTAINS
       & hydro_init_vars%root_depth      ,       &
       & hydro_init_vars%fract_org_sl    ,       &
       & hydro_init_vars%fract_pond_max  ,       &
-      & hydro_init_vars%weq_snow_soil)
-
+      & hydro_init_vars%weq_snow_soil   ,       &
+      & hydro_init_vars%area_dpr        ,       &
+      & hydro_init_vars%depth_dpr       ,       &
+      & hydro_init_vars%fract_perm              &
+      & )
     IF (ASSOCIATED(hydro_init_vars%wtr_soil_sl))  DEALLOCATE(hydro_init_vars%wtr_soil_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_smi_sl))   DEALLOCATE(hydro_init_vars%ifs_smi_sl)
     IF (ASSOCIATED(hydro_init_vars%ifs_weq_snow)) DEALLOCATE(hydro_init_vars%ifs_weq_snow)
@@ -169,7 +175,10 @@ CONTAINS
       & hydro_init_vars%vol_p_wilt      (nproma, nblks),       &
       & hydro_init_vars%root_depth      (nproma, nblks),       &
       & hydro_init_vars%fract_pond_max  (nproma, nblks),       &
-      & hydro_init_vars%weq_snow_soil   (nproma, nblks)        &
+      & hydro_init_vars%weq_snow_soil   (nproma, nblks),       &
+      & hydro_init_vars%area_dpr        (nproma, nblks),       &
+      & hydro_init_vars%depth_dpr       (nproma, nblks),       &
+      & hydro_init_vars%fract_perm      (nproma, nblks)        &
       & )
 
       hydro_init_vars%elevation      (:,:)   = missval
@@ -185,6 +194,9 @@ CONTAINS
       hydro_init_vars%root_depth     (:,:)   = missval
       hydro_init_vars%fract_pond_max (:,:)   = missval
       hydro_init_vars%weq_snow_soil  (:,:)   = missval
+      hydro_init_vars%area_dpr     (:,:)   = missval
+      hydro_init_vars%depth_dpr    (:,:)   = missval
+      hydro_init_vars%fract_perm   (:,:)   = missval
 
     ALLOCATE(hydro_init_vars%fract_org_sl(nproma, nsoil, nblks))
     hydro_init_vars%fract_org_sl(:,:,:) = missval
@@ -335,6 +347,31 @@ CONTAINS
         hydro_init_vars%fract_pond_max(:,:) = 0._wp
       END IF
 
+      ! Subgrid-scale topography for QARCTIC model
+      IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+        ptr_2D => input_file%Read_2d(  &
+          & variable_name='depth_dpr',    &
+          & fill_array = hydro_init_vars%depth_dpr)
+        hydro_init_vars%depth_dpr = MERGE(ptr_2D, 0._wp, ptr_2D <= 0._wp)
+        !hydro_init_vars%depth_dpr = -0.1_wp
+
+        ptr_2D => input_file%Read_2d(  &
+          & variable_name='area_dpr',    &
+          & fill_array = hydro_init_vars%area_dpr)
+        hydro_init_vars%area_dpr = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        !hydro_init_vars%area_dpr = 1.0_wp
+        IF (dsl4jsb_Config(HYDRO_)%l_jsb_wet_test ) THEN
+          ptr_2D => input_file%Read_2d(  &
+            & variable_name='fract_perm',    &
+            & fill_array = hydro_init_vars%fract_perm)
+          hydro_init_vars%fract_perm = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+         !hydro_init_vars%fract_perm = 1._wp
+        END IF
+      ELSE
+         hydro_init_vars%depth_dpr  = 0.0_wp
+         hydro_init_vars%area_dpr   = 100000.0_wp  
+         hydro_init_vars%fract_perm = 0._wp      
+      END IF
       CALL input_file%Close()
 
     END IF
@@ -399,9 +436,7 @@ CONTAINS
     TYPE(t_jsb_model), POINTER        :: model
     TYPE(t_jsb_grid),  POINTER        :: grid
     TYPE(t_jsb_vgrid), POINTER        :: soil_w
-    INTEGER                           :: i, j, nsoil, nsibl
-    REAL(wp), ALLOCATABLE             :: source_fract(:,:), target_fract(:,:), &
-                                       & h_offset(:,:), length_scale(:,:), length_inter(:,:)
+    INTEGER                           :: i, j, nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
 
@@ -431,88 +466,36 @@ CONTAINS
     !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_,elevation), &
     !$acc dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev)
 
-    ! Get source and target tile fractions for qarctic usecase
-    ALLOCATE(source_fract(SIZE(tile%fract,1), SIZE(tile%fract,2)))
-    ALLOCATE(target_fract(SIZE(tile%fract,1), SIZE(tile%fract,2)))
+    ! QArctic topographic features
 
-    ALLOCATE(h_offset(SIZE(tile%fract,1), SIZE(tile%fract,2)))
-    ALLOCATE(length_scale(SIZE(tile%fract,1), SIZE(tile%fract,2)))
-    ALLOCATE(length_inter(SIZE(tile%fract,1), SIZE(tile%fract,2)))
-
-
-
-    IF (TRIM(model%config%usecase) == 'jsbach_qarctic' .AND. &
-      & (tile%contains_upland .OR. tile%contains_lowland)) THEN
-      CALL tile%Get_fraction(fract=source_fract(:,:))
-      target_fract(:,:) = source_fract(:,:) ! For those tiles without target cell
-      ! Get number of tiles in this hierarchy level and loop over then
-      nsibl = tile%parent_tile%Get_no_of_children()
-      DO i = 1, nsibl
-        IF (i == 1) THEN
-          sibl_tile => tile%parent_tile%Get_first_child_tile()
-        ELSE
-          sibl_tile => sibl_tile%Get_next_sibling_tile()
-        END IF
-        ! Identify correct downhill target sibling for runoff
-        IF ( (tile%contains_upland       .AND. tile%contains_ridge      .AND.       &
-          &   sibl_tile%contains_upland  .AND. sibl_tile%contains_depression) .OR.  &
-          &  (tile%contains_upland       .AND. tile%contains_depression .AND.       &
-          &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR.  &
-          &  (tile%contains_lowland      .AND. tile%contains_ridge      .AND.       &
-          &   sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) ) THEN
-          CALL sibl_tile%Get_fraction(fract=target_fract(:,:))
-          exit
-        END IF
-      END DO
+    IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+      dsl4jsb_var2D_onDomain(HYDRO_,fract_perm_ref)   = hydro_init_vars%fract_perm
+      IF (tile%contains_depression) THEN
+        dsl4jsb_var2D_onDomain(HYDRO_,area)           = hydro_init_vars%area_dpr
+        dsl4jsb_var2D_onDomain(HYDRO_,h_surf)         = hydro_init_vars%depth_dpr
+      ELSE
+        dsl4jsb_var2D_onDomain(HYDRO_,area)           = 10000._wp
+        dsl4jsb_var2D_onDomain(HYDRO_,h_surf)         = 0._wp
+      END IF
     ELSE
-      ! Fractions are not used non-qarctic setups
-      source_fract(:,:) = 1._wp
-      target_fract(:,:) = 1._wp
+        dsl4jsb_var2D_onDomain(HYDRO_,area)           = 10000._wp
+        dsl4jsb_var2D_onDomain(HYDRO_,h_surf)         = 0._wp      
     END IF
 
-    ! Compute steepness parameter for surface runoff and lateral drainage
-    ! Get characteristic length scale for depression/elevation
-    DO i = 1, grid%Get_nblks()
-      DO j = 1, grid%Get_nproma()
-        IF (.NOT. tile%contains_depression) THEN
-          CALL get_geometry(source_fract(j,i),       &
-            target_fract(j,i),                       &
-            100._wp,                                 &
-            1._wp,                                   &
-            0._wp,                                   &
-            -dsl4jsb_Config(HYDRO_)%max_pond_depth,  &
-            h_offset(j,i),                           &
-            length_scale(j,i),                       &
-            length_inter(j,i)                        &
-            )
-        ELSE
-            h_offset(j,i)     = -9999._wp
-            length_scale(j,i) = -9999._wp
-            length_inter(j,i) = -9999._wp
-        END IF
-      END DO
-    END DO
-
-    ! Calculating steepness based on macro an dmicro slopes
+    ! Initializing steepness with macro_slope
     DO i = 1, grid%Get_nblks()
       CALL calc_orographic_features(                      &
         ! in
         & grid%Get_nproma(),                              & !< Number of gridcells
         & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
-        & TRIM(model%config%usecase) == 'jsbach_qarctic', & !< T: HydroTiles setup is active
-        & tile%contains_upland,                           & !< T: Upland HydroTile
         & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
         & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),      & !< Standard deviation of orography [m]
-        & h_offset(:,i),                                  & !< Maximum pond / depression depth [m]
-        & length_scale(:,i),                              & !< Characteristic length scale of surface features (Radius circle (depression + elevation)
-        & source_fract(:,i), target_fract(:,i),           & !< Fractions of source and target tile []
         ! out
         & dsl4jsb_var_ptr(HYDRO_, steepness  )(:,i),      & !< parameter defining the subgrid slope distribution [m/m]
         & dsl4jsb_var_ptr(HYDRO_, micro_slope)(:,i),      & !< slope on microtopography tiles [m/m]
         & dsl4jsb_var_ptr(HYDRO_, macro_slope)(:,i)       & !< slope on macrotopography tiles [m/m]
         & )
     END DO
-    DEALLOCATE(source_fract, target_fract, h_offset, length_scale, length_inter)
 
     IF (tile%contains_soil) THEN
 
@@ -584,7 +567,7 @@ CONTAINS
             dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0.0_wp
           ELSE
             dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 1.0_wp
-            dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = dsl4jsb_Config(HYDRO_)%max_pond_depth !!!!! muss h_dpr * -1
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = -hydro_init_vars%depth_dpr !!!!! muss h_dpr * -1
           END IF
         ELSE
           ! Default model maximum pond fraction from init data or computed

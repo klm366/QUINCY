@@ -84,7 +84,10 @@ MODULE mo_hydro_memory_class
       & oro_stddev,           & !< Standard deviation of orography
       & steepness,            & !< parameter defining the subgrid slope distribution [/]
       & macro_slope,          & !< Standard deviation of orography
-      & micro_slope             !< Standard deviation of orography
+      & micro_slope,          & !< Standard deviation of orography
+      & area,                 &                
+      & h_surf,               &
+      & fract_perm_ref
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -510,38 +513,72 @@ CONTAINS
       & t_cf('steepness', '/', 'subgrid slope distribution shape parameter'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'fract_pond_max', mem%fract_pond_max,                               &
       & hgrid, surface,                                                                   &
       & t_cf('fract_pond_max', '-', 'Maximum surface fraction available for inundation'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT  )
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'weq_pond_max', mem%weq_pond_max,                                   &
       & hgrid, surface,                                                                   &
       & t_cf('weq_pond_max', 'm (water equivalent)', 'Maximum surface pond reservoir'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
-      & prefix, suffix,                                                                   &
-      & initval_r=0.0_wp, l_aggregate_all=.TRUE., isteptype=TSTEP_CONSTANT )
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'micro_slope', mem%micro_slope,                                &
       & hgrid, surface,                                                              &
       & t_cf('micro_slope', '/', 'Slope within micro-topography tiles'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp )
+       & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     CALL mem%Add_var( 'macro_slope', mem%macro_slope,                                &
       & hgrid, surface,                                                              &
       & t_cf('macro_slope', '/', 'Slope within macro-topography tiles'),             &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
-      & lrestart=.FALSE.,                                                            &
-      & initval_r=0.0_wp )
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'area', mem%area,                                              &
+      & hgrid, surface,                                                              &
+      & t_cf('area', '/', 'characteristic area of topography tiles'),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'h_surf', mem%h_surf,                                          &
+      & hgrid, surface,                                                              &
+      & t_cf('h_surf', '/', 'characteristic height of topography tiles'),            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'fract_perm_ref', mem%fract_perm_ref,                          &
+      & hgrid, surface,                                                              &
+      & t_cf('fract_perm_ref', '/', 'reference pf area'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
     ! Additional variables for land type
     IF ( (     One_of(VEG_TYPE,     lct_ids(:)) > 0 &

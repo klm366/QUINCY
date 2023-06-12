@@ -21,7 +21,7 @@ MODULE mo_mix_process
   PRIVATE
 
   PUBLIC :: calc_runoff_transport, calc_drainage_transport, calc_intertile_diffusion, calc_snow_redistribution, &
-          & diagnose_intertile_heatflux, get_geometry
+          & diagnose_intertile_heatflux, get_geometry, calc_slopes_tiles
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_mix_process'
 
@@ -1012,6 +1012,81 @@ CONTAINS
     !END IF 
 
   END SUBROUTINE get_geometry
+
+  !------------------------------------------------------------------------------------------------
+  !! @brief   Calculation of subgrid orographic features
+  !!
+
+  SUBROUTINE calc_slopes_tiles(nc, nlat,     &
+    & l_upland, max_slope, oro_stddev,       &
+    & steepness, micro_slope, macro_slope,   &
+    & h_offset, length_scale, source_fract, target_fract        &
+    )
+
+    USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
+    USE mo_jsb_math_constants,     ONLY: pi
+
+    INTEGER,  INTENT(in)  :: nc                    !< Number of gridcells
+    INTEGER,  INTENT(in)  :: nlat                  !< (Effective) number of latitudes for steepness parameter
+
+    LOGICAL,  INTENT(in)  :: l_upland              !< Tile belongs to upland fraction
+    REAL(wp), INTENT(in)  :: max_slope             !< Maximum slope threshold                           [m/m]
+    REAL(wp), INTENT(in)  :: oro_stddev(:)         !< standard deviation of orography                   [m]
+    REAL(wp), INTENT(out) :: steepness(:)          !< parameter defining the subgrid slope distribution [/]
+    REAL(wp), INTENT(out) :: micro_slope(:)        !< slope on microtopography tiles
+    REAL(wp), INTENT(out) :: macro_slope(:)        !< slope on macrotopography tiles
+    REAL(wp), INTENT(in),  OPTIONAL :: h_offset(:)           !< Maximum pond/depression depth                     [m]
+    REAL(wp), INTENT(in),  OPTIONAL :: length_scale(:)       !< Horizontal length scale pond/depression depth     [m]
+    REAL(wp), INTENT(in),  OPTIONAL :: source_fract(:)       !< Hydrotiles source tile fraction                   []
+    REAL(wp), INTENT(in),  OPTIONAL :: target_fract(:)       !< Hydrotiles target tile fraction                   []
+
+
+    ! Local variables
+    INTEGER  :: i
+    REAL(wp) ::                       &
+      & sigma_0,                      &            !< minimum value (100 m); below b = 0.01
+      & sigma_max                                  !< resolution-dependent maximum
+    !
+    ! steepness b: shape parameter, defining the sub-gid scale steepness of the orographie:
+    !
+    ! b = (oro_stddev - sigma_0) / (oro_stddev + sigma_max)
+    !
+    sigma_0   = oro_var_min
+    sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
+
+    ! Compute tile specific steepness for HydroTiles setup
+
+    ! Macroslope depends on orographic features
+    IF (l_upland) THEN
+      macro_slope(:) = MIN(max_slope, MAX(0.01_wp, &
+        & (oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max) ))
+    ELSE
+      macro_slope(:) = 0.01_wp
+    END IF
+    
+    IF (PRESENT(source_fract)) THEN
+      ! Micro-slope depends on some made up relation between source and target file
+      DO i = 1, nc
+        IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp) THEN
+          IF (h_offset(i) > 0._wp) THEN
+            micro_slope(i) = h_offset(i) / length_scale(i)
+          ELSE
+            micro_slope(i) = 0._wp
+          END IF
+        ELSE
+          micro_slope(i) = 0._wp
+        END IF
+      END DO
+    ELSE
+      micro_slope(:) = 0._wp 
+    END IF
+
+    ! Add micro and macro slopes
+    steepness(:) = MIN(0.5_wp, macro_slope(:) + micro_slope(:))
+
+
+  END SUBROUTINE calc_slopes_tiles
+
 
 #endif
 END MODULE mo_mix_process
