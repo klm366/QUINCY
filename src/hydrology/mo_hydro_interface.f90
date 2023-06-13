@@ -1081,6 +1081,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
+    dsl4jsb_Real2D_onChunk :: fract_perm_ref
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
     ! Local variables
@@ -1163,6 +1164,7 @@ CONTAINS
     ! impeding fluxes into the "groundwater"
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_perm_ref)     ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)      ! in
     DO i = 1, nc
       IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth below soil depth ...
@@ -1177,11 +1179,16 @@ CONTAINS
     !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
     !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !!!!!!! l_pf_soil_pi JUST A DUMMY FOR NOW
-    l_pf_soil_pi(:)=.TRUE.
-    
+    WHERE (fract_perm_ref(:) > 0.5_wp)    
+      l_pf_soil_pi(:)=.TRUE.
+    ELSEWHERE
+      l_pf_soil_pi(:)=.FALSE.
+    END WHERE
+  
     IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
       l_pf_soil(:)=l_pf_soil_pi(:)
     END IF
+
 
     ! Bottomdrain drain flag
     ! No bottom drainage when permafrost within soil
