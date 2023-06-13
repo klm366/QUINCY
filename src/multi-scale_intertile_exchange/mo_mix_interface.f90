@@ -231,7 +231,7 @@ CONTAINS
     LOGICAL  :: l_lag                  !< T: Apply lag time to lateral flow
     LOGICAL  :: l_latflow              !< T: Allow for lateral flow between sibling tiles
     REAL(wp) :: retention_time         !< retention time for lateral water flow, @todo: needs validation
-    
+
     REAL(wp) :: weq_snow_old
     REAL(wp) :: weq_snow_soil_old
     REAL(wp) :: weq_snow_new_soil_old
@@ -345,7 +345,7 @@ CONTAINS
 
     dsl4jsb_Real2D_onChunk :: area_sibl_tile
     dsl4jsb_Real2D_onChunk :: h_surf_sibl_tile
-   
+
     REAL(wp), DIMENSION(options%nc) :: fract           !< Fractions of water source tile []
     REAL(wp), DIMENSION(options%nc) :: fract_sibl_tile !< Fractions of water target tile []
     REAL(wp), DIMENSION(options%nc) :: wtr_pond_max    !< Maximum pond water depth       [m]
@@ -390,7 +390,7 @@ CONTAINS
     grid   => Get_grid(model%grid_id)
     soil_w => Get_vgrid('soil_depth_water')
     nsoil = soil_w%n_levels
-    
+
     soil_e => Get_vgrid('soil_depth_energy')
 
     dsl4jsb_Get_config(MIX_)
@@ -428,7 +428,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, area          )         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, h_surf        )         ! in
     dsl4jsb_Get_var2D_onChunk(HYDRO_, oro_stddev    )         ! in
-   
+
     dsl4jsb_Get_var2D_onChunk(HYDRO_, steepness)              ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, micro_slope)            ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, macro_slope)            ! out
@@ -457,7 +457,7 @@ CONTAINS
       ! Allocate local variables
       ALLOCATE(h_offset(nc))
       ALLOCATE(length_scale(nc))
-      ALLOCATE(length_inter(nc))      
+      ALLOCATE(length_inter(nc))
       ALLOCATE(ice_imp(nc,nsoil))
       ALLOCATE(ice_imp_sibl_tile(nc,nsoil))
       ALLOCATE(hyd_cond(nc,nsoil))
@@ -470,12 +470,12 @@ CONTAINS
       ALLOCATE(weq_field_cap_sl_sibl_tile(nc,nsoil))
       ALLOCATE(weq_p_wilt_sl(nc,nsoil))
       ALLOCATE(weq_p_wilt_sl_sibl_tile(nc,nsoil))
-      
+
       ! This check should be moved to init routine as soon as enough stuff is there to justify one
       IF (tile%process_action(HYDRO_) /= ON_TILE_) THEN
         CALL finish(routine, 'MIX_ processes must be activate on the same tiles as HYDRO_')
       END IF
-      
+
       !Initiaizing / Updating features of subgrid scale topography
       ! Do not forget lakes maximum pond depth !!!
       dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max) = MAX(0._wp, - h_surf(:))
@@ -497,7 +497,7 @@ CONTAINS
           & macro_slope(:)                                  & !< slope on macrotopography tiles [m/m]
           & )
       END IF
-        
+
       wtr_pond_max(:) = MAX(0._wp, dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max) &
         &                        - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
 
@@ -514,12 +514,12 @@ CONTAINS
       !!!!!!! TO MAINTAIN SOME OF THE KEY EFFECTS OF FROZEN SOILS
       !!!!!!! EVEN AFTER PF HAS THAWED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !!!!!!! l_pf_soil_pi JUST A DUMMY FOR NOW
-      WHERE (fract_perm_ref(:) > 0.5_wp)    
+      WHERE (fract_perm_ref(:) > 0.5_wp)
         l_pf_soil_pi(:)=.TRUE.
       ELSEWHERE
         l_pf_soil_pi(:)=.FALSE.
       END WHERE
-    
+
       IF(dsl4jsb_Config(HYDRO_)%l_jsb_wet_test) THEN
         l_pf_soil(:)=l_pf_soil_pi(:)
       END IF
@@ -652,7 +652,7 @@ CONTAINS
             ! Get memory MIX_ and HYDRO_ memory for target tile
             dsl4jsb_Get_memory_tile(MIX_,   sibl_tile)
             dsl4jsb_Get_memory_tile(HYDRO_, sibl_tile)
-            dsl4jsb_Get_memory_tile(SSE_, sibl_tile)
+            dsl4jsb_Get_memory_tile(SSE_,   sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,              sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(MIX_,   wtr_diflat_sl,            sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   snow_rdst,                sibl_tile)
@@ -685,22 +685,25 @@ CONTAINS
             dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, area,                     sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, h_surf,                   sibl_tile)
 
-           ! Initiaizing / Updating features of subgrid scale topography
-           ! Part II: For ridges
-           ! Get geometric relation between surface features
             DO i = 1, nc
-              CALL get_geometry(fract(i),              &
-                fract_sibl_tile(i),                    &
-                area(i),                               &
-                area_sibl_tile(i),                     &
-                h_surf(i),                             &
-                h_surf_sibl_tile(i),                   &
-                h_offset(i),                           &
-                length_scale(i),                       &
-                length_inter(i)                        &
-                )
+              IF (fract(i) > 1.0e-10_wp .AND. fract_sibl_tile(i) > 1.0e-10_wp) THEN
+             ! Initiaizing / Updating features of subgrid scale topography
+             ! Part II: For ridges
+             ! Get geometric relation between surface features
+                CALL get_geometry(fract(i),              &
+                  fract_sibl_tile(i),                    &
+                  area(i),                               &
+                  area_sibl_tile(i),                     &
+                  h_surf(i),                             &
+                  h_surf_sibl_tile(i),                   &
+                  h_offset(i),                           &
+                  length_scale(i),                       &
+                  length_inter(i)                        &
+                  )
+              END IF
             END DO
-          ! Calculating steepness based on macro an dmicro slopes
+
+            ! Calculating steepness based on macro an dmicro slopes
             CALL calc_slopes_tiles(                      &
             ! in
               & nc,                                             & !< Number of gridcells
@@ -860,7 +863,7 @@ CONTAINS
                      & snow_soil_dens_sibl_tile(i),    snow_soil_dens(i),    & !< snow density                [m]
                      & snow_rdst_sibl_tile(i),         snow_rdst(i)          & !< lateral snow redistribution flux  [kg m-2 s-1]
                      & )
-                END IF 
+                END IF
               END IF
             ENDDO
             DO i = 1, nc
@@ -869,7 +872,7 @@ CONTAINS
                 IF (h_offset(i) >= 0._wp) THEN
                   CALL diagnose_intertile_heatflux(soil_e%n_levels, dtime,       &
                      & soil_e%dz(:),         abs(h_offset(i)),                   &
-                     & length_scale(i),      length_inter(i),                    & 
+                     & length_scale(i),      length_inter(i),                    &
                      & fract(i),             fract_sibl_tile(i),                 &
                      & t_soil_sl(i,:),       t_soil_sl_sibl_tile(i,:),           &
                      & heat_cond_sl(i,:),    heat_cond_sl_sibl_tile(i,:),        &
@@ -879,7 +882,7 @@ CONTAINS
                 ELSE
                   CALL diagnose_intertile_heatflux(soil_e%n_levels, dtime,       &
                      & soil_e%dz(:),                   abs(h_offset(i)),         &
-                     & length_scale(i),                length_inter(i),          & 
+                     & length_scale(i),                length_inter(i),          &
                      & fract_sibl_tile(i),             fract(i),                 &
                      & t_soil_sl_sibl_tile(i,:),       t_soil_sl(i,:),           &
                      & heat_cond_sl_sibl_tile(i,:),    heat_cond_sl(i,:),        &
@@ -890,7 +893,7 @@ CONTAINS
               ELSE
                 heat_flx_lat(i,:)           = 0._wp
                 heat_flx_lat_sibl_tile(i,:) = 0._wp
-              END IF              
+              END IF
 
             END DO
           END IF

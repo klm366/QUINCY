@@ -628,7 +628,7 @@ CONTAINS
 
     REAL(wp), INTENT(in)    :: dtime,               & !< timestep length
       &                        h_offset,            & !< height offset between tiles
-      &                        length_scale,        & 
+      &                        length_scale,        &
       &                        len_inter,           &
       &                        lvt_fract,           & !< area fraction of elevation tile
       &                        dpr_fract              !< area fraction of depression tile
@@ -673,7 +673,7 @@ CONTAINS
     nrgrd         = nsoil * 2 + 3
 
     ! Initilize fields for accumulating output
-    heat_flx_lat_lvt(:) = 0._wp 
+    heat_flx_lat_lvt(:) = 0._wp
     heat_flx_lat_dpr(:) = 0._wp
 
 
@@ -699,39 +699,39 @@ CONTAINS
     IF(h_offset > SUM(dz(:))) THEN
       i_lvt = nsoil + 1
     END IF
-      
+
 
     DO i = 1, nrgrd
       IF (i_lvt <= nsoil .AND. i_dpr <= nsoil) THEN ! Within the soil column of both tiles
-      
+
         heat_flx_lat           = 0._wp
-        
+
         IF (z_rgrd_bot > h_offset ) THEN ! Within the soil column of both tiles
           h                    = z_rgrd_bot - z_rgrd_top
           a_inter              = len_inter * h
-          
+
           t_lvt_rgrd           = t_soil_lvt(i_lvt)
           h_cond_soil_lvt_rgrd = heat_cond_soil_lvt(i_lvt)
           h_cap_soil_lvt_rgrd  = heat_cap_soil_lvt(i_lvt)
-          
+
           t_dpr_rgrd           = t_soil_dpr(i_dpr)
           h_cond_soil_dpr_rgrd = heat_cond_soil_dpr(i_dpr)
-          h_cap_soil_dpr_rgrd  = heat_cap_soil_dpr(i_dpr)          
-          
-          ! Flux is determined by the difference in temperature between the two tiles       
+          h_cap_soil_dpr_rgrd  = heat_cap_soil_dpr(i_dpr)
+
+          ! Flux is determined by the difference in temperature between the two tiles
           h_cond_inter         =(h_cond_soil_lvt_rgrd * h_cond_soil_dpr_rgrd)**0.5_wp
           d_t                  = t_lvt_rgrd - t_dpr_rgrd
           heat_flx_lat         = h_cond_inter  * d_t / length_scale *  a_inter
-          
+
           ! Limiting heat flux to avoid instablilities for ong time steps
           ! Determine flux required to equilibriate Temps within timestep
           ! Equilibrium temperature
           t_eq = (t_lvt_rgrd * h_cap_soil_lvt_rgrd * fr_lvt_rel  &
            &   +  t_dpr_rgrd * h_cap_soil_dpr_rgrd * fr_dpr_rel) &
            &   / (h_cap_soil_lvt_rgrd * fr_lvt_rel + h_cap_soil_dpr_rgrd * fr_dpr_rel)
-          ! Heat flux to reach equilibrium temp       
+          ! Heat flux to reach equilibrium temp
           heat_flx_eq_lat = MIN( &
-                        & ABS((t_lvt_rgrd - t_eq)  * h_cap_soil_lvt_rgrd * fr_lvt_rel), & 
+                        & ABS((t_lvt_rgrd - t_eq)  * h_cap_soil_lvt_rgrd * fr_lvt_rel), &
                         & ABS((t_dpr_rgrd - t_eq)  * h_cap_soil_dpr_rgrd * fr_dpr_rel)) &
                         & *  a_inter / dtime
           ! Limiting heat flux to equilibrium flux
@@ -740,29 +740,30 @@ CONTAINS
           ELSE IF (heat_flx_lat < 0._wp .AND. heat_flx_lat < -ABS(heat_flx_eq_lat)) THEN
             heat_flx_lat = -ABS(heat_flx_eq_lat)
           END IF
+
+          ! Moving energy from lvt to dpr tile
+          heat_flx_lat_lvt(i_lvt) = heat_flx_lat_lvt(i_lvt) - heat_flx_lat  / fr_lvt_rel
+          heat_flx_lat_dpr(i_dpr) = heat_flx_lat_dpr(i_dpr) + heat_flx_lat  / fr_dpr_rel
         END IF
-        
-        heat_flx_lat_lvt(i_lvt) = heat_flx_lat_lvt(i_lvt) - heat_flx_lat  / fr_lvt_rel
-        heat_flx_lat_dpr(i_dpr) = heat_flx_lat_dpr(i_dpr) + heat_flx_lat  / fr_dpr_rel
-        
+
         ! Determening the top and bottem of the next layer of the regridded
         IF (z_rgrd_bot == z_lvt) THEN
           i_lvt = i_lvt + 1
           IF (i_lvt <= nsoil) THEN
-            z_lvt = z_lvt + dz(i_lvt)          
-          END IF      
+            z_lvt = z_lvt + dz(i_lvt)
+          END IF
         END IF
-        
+
         IF (z_rgrd_bot == z_dpr) THEN
           i_dpr = i_dpr + 1
           IF (i_dpr <= nsoil) THEN
-            z_dpr = z_dpr + dz(i_dpr)          
-          END IF      
+            z_dpr = z_dpr + dz(i_dpr)
+          END IF
         END IF
         z_rgrd_top=z_rgrd_bot
-        z_rgrd_bot=MIN(z_lvt, z_dpr)              
+        z_rgrd_bot=MIN(z_lvt, z_dpr)
       END IF
-    END DO 
+    END DO
 
   END SUBROUTINE diagnose_intertile_heatflux
 
@@ -891,7 +892,7 @@ CONTAINS
 
       snow_depth_mob_avg = (snow_mob_lvt * fr_lvt_rel + snow_mob_dpr * fr_dpr_rel) * (rhoh2o / snow_dens_min)
 
-      !! 1. (Fixed) snow surface is lower in derpression and there is fixed and mobile snow on elevation    
+      !! 1. (Fixed) snow surface is lower in derpression and there is fixed and mobile snow on elevation
       IF  (h_offset_snow_fix > 1.0e-10_wp .AND. snow_fix_lvt > 0.01_wp .AND. snow_mob_lvt > 0._wp)THEN
         IF (snow_depth_mob_avg / fr_dpr_rel <= h_offset_snow_fix ) THEN ! New snow fits into depression
           snow_depth_mob_dpr = snow_depth_mob_avg / fr_dpr_rel
@@ -911,38 +912,38 @@ CONTAINS
           snow_depth_mob_lvt = h_offset_snow_fix &
                            & + (snow_depth_mob_avg - h_offset_snow_fix * fr_lvt_rel)
           snow_depth_mob_dpr =  snow_depth_mob_avg - h_offset_snow_fix * fr_lvt_rel
-        END IF   
+        END IF
       END IF
 
-      ! Recalculation of up snow weqs 
+      ! Recalculation of up snow weqs
       snow_mob_upd_dpr = snow_depth_mob_dpr / (rhoh2o / snow_dens_min)
       snow_mob_upd_lvt = snow_depth_mob_lvt / (rhoh2o / snow_dens_min)
 
       snow_rdst_dpr    = snow_mob_upd_dpr - snow_mob_dpr
-      snow_rdst_lvt    = snow_mob_upd_lvt - snow_mob_lvt  
+      snow_rdst_lvt    = snow_mob_upd_lvt - snow_mob_lvt
 
       snow_soil_dpr    = snow_soil_dpr + snow_rdst_dpr
       snow_soil_lvt    = snow_soil_lvt + snow_rdst_lvt
 
       snow_dpr         = snow_dpr + snow_rdst_dpr
-      snow_lvt         = snow_lvt + snow_rdst_lvt 
-      
+      snow_lvt         = snow_lvt + snow_rdst_lvt
+
       snow_new_dpr     = snow_new_dpr + snow_rdst_dpr
       snow_new_lvt     = snow_new_lvt + snow_rdst_lvt
-      
-      ! Converting redistribution flux from m/step -> kg m-2 s-1 
+
+      ! Converting redistribution flux from m/step -> kg m-2 s-1
       snow_rdst_dpr    = snow_rdst_dpr * rhoh2o / dtime
       snow_rdst_lvt    = snow_rdst_lvt * rhoh2o / dtime
 
       ! Updating snow densities based on redistributed snow
-      IF (snow_rdst_dpr .NE. 0_wp .AND. snow_soil_dpr > 0._wp) THEN         
+      IF (snow_rdst_dpr .NE. 0_wp .AND. snow_soil_dpr > 0._wp) THEN
         snow_dens_dpr = (snow_new_dpr * snow_dens_min &
-                    & + snow_fix_dpr * min(snow_dens_fix_dpr, snow_dens_max)) / snow_soil_dpr               
+                    & + snow_fix_dpr * min(snow_dens_fix_dpr, snow_dens_max)) / snow_soil_dpr
       END IF
-    
-      IF (snow_rdst_lvt .NE. 0_wp .AND. snow_soil_lvt > 0._wp) THEN          
+
+      IF (snow_rdst_lvt .NE. 0_wp .AND. snow_soil_lvt > 0._wp) THEN
         snow_dens_lvt = (snow_new_lvt * snow_dens_min &
-                    & + snow_fix_lvt * min(snow_dens_fix_lvt, snow_dens_max)) / snow_soil_lvt 
+                    & + snow_fix_lvt * min(snow_dens_fix_lvt, snow_dens_max)) / snow_soil_lvt
       END IF
     END IF
 
@@ -966,7 +967,7 @@ CONTAINS
     REAL(wp), INTENT(in)    :: fract,            & !< area fraction of water elevation tile
       &                        fract_sibl_tile,  & !< area fraction of water depression tile
       &                        A_char,           & !< Charateristic area of surface features
-      &                        A_char_sibl_tile, & !< Charateristic area of surface features 
+      &                        A_char_sibl_tile, & !< Charateristic area of surface features
       &                        h_surf,           & !< Charateristic height of surface features
       &                        h_surf_sibl_tile    !< Charateristic height of surface features
 
@@ -983,42 +984,42 @@ CONTAINS
     ! Determine relative fractions from absolute fractions
     fr_rel           = fract           / (fract+fract_sibl_tile)
     fr_rel_sibl_tile = fract_sibl_tile / (fract+fract_sibl_tile)
-    
 
-    ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char_sibl_tile 
+
+    ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char_sibl_tile
     ! within elevation area A_char_sibl_tile * ( fract / fract_sibl_tile)
     length_inter = ((4._wp * pi * A_char_sibl_tile) ** 0.5_wp) &
                  & / A_char_sibl_tile * fr_rel_sibl_tile
 
-    ! Determine characteristic length scale: base assumption is the radius of the circle 
-    ! that contains A_char_sibl_tile and surrounding A_char 
+    ! Determine characteristic length scale: base assumption is the radius of the circle
+    ! that contains A_char_sibl_tile and surrounding A_char
     !Area of outer circle + inner circle = A_char_sibl_tile/fr_rel_sibl_tile
     length_scale = ((A_char_sibl_tile/fr_rel_sibl_tile)/pi)**0.5_wp                      ! From center to outer rim
 
     !Length scales and interface length based on the geometry of the smaller tile
-    
+
     !!!!!!! For later when we know A_char of elevation
     !IF (fract >= fract_sibl_tile) THEN
-    !  ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char_sibl_tile 
+    !  ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char_sibl_tile
     !  ! within elevation area A_char_sibl_tile * ( fract / fract_sibl_tile)
     !  length_inter = ((4._wp * pi * A_char_sibl_tile) ** 0.5_wp) &
     !             & / A_char_sibl_tile * fr_rel_sibl_tile
     !
-    !  ! Determine characteristic length scale: base assumption is the radius of the circle 
-    !  ! that contains A_char_sibl_tile and surrounding A_char 
+    !  ! Determine characteristic length scale: base assumption is the radius of the circle
+    !  ! that contains A_char_sibl_tile and surrounding A_char
     !  !Area of outer circle + inner circle = A_char_sibl_tile/fr_rel_sibl_tile
     !  length_scale = ((A_char_sibl_tile/fr_rel_sibl_tile)/pi)**0.5_wp                      ! From center to outer rim
     !ELSE
-    !  ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char 
+    !  ! Determine length of interface between tiles: base assumption is the circumference of circle with area A_char
     !  ! within elevation area A_char * ( fract_sibl_tile / fract)
     !  length_inter = ((4._wp * pi * A_char) ** 0.5_wp) &
     !             & / A_char * fr_rel
     !
-    !  ! Determine characteristic length scale: base assumption is the radius of the circle 
-    !  ! that contains A_char and surrounding A_char_sibl_tile 
+    !  ! Determine characteristic length scale: base assumption is the radius of the circle
+    !  ! that contains A_char and surrounding A_char_sibl_tile
     !  !Area of outer circle + inner circle = A_char/fr_rel
     !  length_scale = ((A_char/fr_rel)/pi)**0.5_wp                      ! From center to outer rim
-    !END IF 
+    !END IF
 
   END SUBROUTINE get_geometry
 
@@ -1072,7 +1073,7 @@ CONTAINS
     ELSE
       macro_slope(:) = 0.01_wp
     END IF
-    
+
     IF (PRESENT(source_fract)) THEN
       ! Micro-slope depends on some made up relation between source and target file
       DO i = 1, nc
@@ -1087,7 +1088,7 @@ CONTAINS
         END IF
       END DO
     ELSE
-      micro_slope(:) = 0._wp 
+      micro_slope(:) = 0._wp
     END IF
 
     ! Add micro and macro slopes
