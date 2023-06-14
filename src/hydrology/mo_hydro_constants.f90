@@ -80,7 +80,9 @@ MODULE mo_hydro_constants
                                                  ! (values (roughy) from Chadburn 2022)
     & pore_size_index_org_below = 0.7_wp,      & !< Pore size distribution index of organic part of soil layer []
     & thresh_org              = 0.5_wp,        & !< Threshold of organic material above which connected flow pathways form
-    & beta_perc               = 0.139_wp         !< Parameter from percolation theory
+    & beta_perc               = 0.139_wp,      & !< Parameter from percolation theory
+    ! Parameters for bedrock
+    & k_brock                 = 1.E-6_wp         !< Hydrologic conductivity (fractured) bedrock
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_sse_constants'
 

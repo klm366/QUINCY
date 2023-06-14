@@ -1088,6 +1088,7 @@ CONTAINS
     & ltpe_closed, ltpe_open)
 
     USE mo_jsb_math_constants,     ONLY: pi
+    USE mo_hydro_constants,        ONLY: k_brock
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     LOGICAL,  INTENT(IN)            :: l_fract(:)                 ! Tile fraction > 0
@@ -1239,6 +1240,8 @@ CONTAINS
         ELSE
           IF (i_botdrain == 1) THEN ! Free drainage assumption
               drain_sl(i) = hyd_cond_sl(i,nsoil_act(i))
+          ELSE IF (i_botdrain == 3) THEN ! Free drainage assumption limited by bedrock k_sat
+              drain_sl(i) = MIN(hyd_cond_sl(i,nsoil_act(i)), k_brock)
           ELSE IF (i_botdrain == 2) THEN! Old JSB3 Drainage scheme
             ! Slow drainage of mobile water
             IF (weq_field_cap_sl(i,nsoil_act(i)) > wtr_rsdl_sl(i,nsoil_act(i))) THEN

@@ -211,6 +211,7 @@ CONTAINS
 
     USE mo_jsb_math_constants,     ONLY: pi
     USE mo_jsb_physical_constants, ONLY: rhoh2o
+    USE mo_hydro_constants,        ONLY: k_brock
     USE mo_hydro_process,          ONLY: get_soilhyd_cond_properties
     USE mo_mix_process,            ONLY: calc_runoff_transport,   &
       &                                  calc_drainage_transport, &
@@ -226,7 +227,7 @@ CONTAINS
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
     INTEGER  :: nsibl, ic              !< Counter variables for sibling tiles
-    INTEGER  :: nsoil, i               !< Counter variables for soil layers
+    INTEGER  :: nsoil, i, j            !< Counter variables for soil layers
     REAL(wp) :: dtime                  !< Model time step [s]
     LOGICAL  :: l_lag                  !< T: Apply lag time to lateral flow
     LOGICAL  :: l_latflow              !< T: Allow for lateral flow between sibling tiles
@@ -278,6 +279,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: runoff
     dsl4jsb_Real2D_onChunk :: runoff_retention
     dsl4jsb_Real2D_onChunk :: drainage
+    dsl4jsb_Real2D_onChunk :: drain_rock
     dsl4jsb_Real3D_onChunk :: drain_lat_sl
     dsl4jsb_Real3D_onChunk :: drain_lat_retention_sl
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
@@ -356,6 +358,7 @@ CONTAINS
     LOGICAL,  DIMENSION(options%nc) :: l_latdrain      !< T: allow lateral drainage      []
 
     REAL(wp), ALLOCATABLE, DIMENSION(:) ::           &
+    & drain_bot_retention,                           & !< bottom_drainage from retention reservoir
     & h_offset,                                      & !< surface height difference between tiles
     & length_scale,                                  & !< Characteristic length scale of gradients between tiles
     & length_inter                                     !< Length of interface between tiles
@@ -410,6 +413,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(MIX_,   snow_rdst)              ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, runoff)                 ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)               ! inout
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, drain_rock)             ! inout
     dsl4jsb_Get_var3D_onChunk(HYDRO_, drain_lat_sl)           ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_pond)               ! inout
     dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_pond)               ! in
@@ -455,6 +459,7 @@ CONTAINS
     ! @todo currently, lateral transport is only considered on tiles that contain soil
     IF (dsl4jsb_Config(MIX_)%l_hydro_mix .AND. tile%contains_soil) THEN
       ! Allocate local variables
+      ALLOCATE(drain_bot_retention(nc))
       ALLOCATE(h_offset(nc))
       ALLOCATE(length_scale(nc))
       ALLOCATE(length_inter(nc))
@@ -618,7 +623,29 @@ CONTAINS
             END DO
 
             ! Move lateral drainage from source to target tile
+            WHERE (l_pf_soil(:))
+              drain_bot_retention(:) = 0._wp
+            ELSEWHERE
+              drain_bot_retention(:) = k_brock * dtime
+            END WHERE
             DO i = 1, nsoil
+              !First bottom drainage is removed from reservoir
+              DO j = 1, nc
+                IF (drain_bot_retention(j) > 0._wp) THEN
+                  IF (drain_bot_retention(j)   >= drain_lat_retention_sl(j,i)) THEN
+                    drain_bot_retention(j)      = drain_bot_retention(j) - drain_lat_retention_sl(j,i)
+                    drainage(j)                 = drainage(j)   + drain_lat_retention_sl(j,i) * rhoh2o / dtime
+                    drain_rock(j)               = drain_rock(j) + drain_lat_retention_sl(j,i) * rhoh2o / dtime
+                    drain_lat_retention_sl(j,i) = 0._wp
+                  ELSE
+                    drain_lat_retention_sl(j,i) = drain_lat_retention_sl(j,i) - drain_bot_retention(j)
+                    drainage(j)                 = drainage(j)   + drain_bot_retention(j) * rhoh2o / dtime
+                    drain_rock(j)               = drain_rock(j) + drain_bot_retention(j) * rhoh2o / dtime
+                    drain_bot_retention(j)      = 0._wp
+                  END IF
+                END IF
+              END DO
+              !! Now water is moved between tiles
               CALL calc_drainage_transport( &
                 ! in
                 & l_lag,                                 & !< T: Apply lag
@@ -956,6 +983,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(MIX_,   runoff_retention,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, runoff,                 weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drainage,               weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, drain_rock,             weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl,           weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MIX_,   drain_lat_retention_sl, weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(MIX_,   wtr_diflat_sl,          weighted_by_fract)
