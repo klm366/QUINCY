@@ -442,7 +442,7 @@ CONTAINS
 
     ! Read parameters min/max normalization  <Rackhun Son>
     ptr_1D => input_file%Read_1d(variable_name='min_max')
-    min_max = RESHAPE(ptr_1D, (/39, 24/), order=(/2, 1/))
+    min_max = RESHAPE(ptr_1D, (/39, 26/), order=(/2, 1/))
     DEALLOCATE(ptr_1D)
 
     !training_memory(:,:) = 0.s

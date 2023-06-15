@@ -404,21 +404,21 @@ CONTAINS
       nn_inputs(i,18)= (swl5(i)-swl5_clim_m(i)       - minmax(18,min_idx))      &
                      / (minmax(18,max_idx)           - minmax(18,min_idx)+1e-8) 
 
-      nn_inputs(i,19)= (lai(i)                       - minmax(19,1))      &
+      nn_inputs(i,19)= (lai(i)                       - minmax(19,min_idx))      &
                      / (minmax(19,max_idx)           - minmax(19,min_idx)+1e-8)
-      nn_inputs(i,20)= (lai(i)-lai_clim_m(i)         - minmax(20,1))      &
+      nn_inputs(i,20)= (lai(i)-lai_clim_m(i)         - minmax(20,min_idx))      &
                      / (minmax(20,max_idx)           - minmax(20,min_idx)+1e-8)
-      nn_inputs(i,21)= (fuel(i)                      - minmax(21,1))      &
+      nn_inputs(i,21)= (fuel(i)                      - minmax(21,min_idx))      &
                      / (minmax(21,max_idx)           - minmax(21,min_idx)+1e-8)
-      nn_inputs(i,22)= (lightning_climatology(i)     - minmax(22,1))      &
+      nn_inputs(i,22)= (lightning_climatology(i)     - minmax(22,min_idx))      &
                      / (minmax(22,max_idx)           - minmax(22,min_idx)+1e-8)
-      nn_inputs(i,23)= (LOG(gdp(i)+1._wp)            - minmax(23,1))      &
+      nn_inputs(i,23)= (LOG(gdp(i)+1._wp)            - minmax(23,min_idx))      &
                      / (minmax(23,max_idx)           - minmax(23,min_idx)+1e-8)
-      nn_inputs(i,24)= (hdi(i)                       - minmax(24,1))      &
+      nn_inputs(i,24)= (hdi(i)                       - minmax(24,min_idx))      &
                      / (minmax(24,max_idx)           - minmax(24,min_idx)+1e-8)
-      nn_inputs(i,25)= (LOG(population(i)+1._wp)     - minmax(25,1))      &
+      nn_inputs(i,25)= (LOG(population(i)+1._wp)     - minmax(25,min_idx))      &
                      / (minmax(25,max_idx)           - minmax(25,min_idx)+1e-8)
-      nn_inputs(i,26)= (elevation(i)                 - minmax(26,1))      &
+      nn_inputs(i,26)= (elevation(i)                 - minmax(26,min_idx))      &
                      / (minmax(26,max_idx)           - minmax(26,min_idx)+1e-8)
     ENDDO 
 
@@ -449,7 +449,7 @@ CONTAINS
     ! RH constraint
     q_rel_air_constraint(:) = q_rel_air(:)
     CALL modified_sigmoid(q_rel_air_constraint, nc)
-    WHERE (q_rel_air_constraint > 0.7) q_rel_air_constraint = 1._wp
+    WHERE (q_rel_air_constraint > 0.6) q_rel_air_constraint = 1._wp
 
     DO c = 1,d_class
       CALL forward(                                                   &
@@ -616,17 +616,31 @@ CONTAINS
       tr_target(:) = batch_global(:,55)
       tr_koppen(:) = batch_global(:,57)
 
-      !DO i=1,bs
+      DO i=1,bs
+      !  IF (((batch_global(i,56) .eq. 8) .or. (batch_global(i,56) .eq. 9) .or. (batch_global(i,56) .eq. 14)) &
+      !    .and. (tr_target(i) .gt. 0) &
+      !  IF ((batch_global(i,56) .eq. 8) .and. (tr_target(i) .gt. 0)) THEN
       !  IF ((batch_global(i,56) .eq. 8) .or. (batch_global(i,56) .eq. 9) .or. &
       !  IF ((batch_global(i,42) .eq. 8) .or. (batch_global(i,42) .eq. 9)) THEN!  .or. &
       !      (batch_global(i,42) .eq. 7) .or. (batch_global(i,42) .eq. 11) .or. &
-      !      (batch_global(i,56) .eq. 5)) THEN
-      !    tr_weights(i) = 10._wp
-      !  ELSE
-      !    tr_weights(i) = 1._wp
-      !  ENDIF
-      !ENDDO
-      tr_weights(:) = 1._wp
+      !    ) THEN
+      !    tr_weights(i) = 4._wp
+
+        IF ((batch_global(i,56) .eq. 8) .and. (batch_global(i,57) .eq. 4) .and. (batch_global(i,55) .gt. 0)) THEN
+          tr_weights(i) = 20._wp
+        ELSEIF ((batch_global(i,56) .eq. 9) .and. (batch_global(i,57) .eq. 3) .and. (batch_global(i,55) .gt. 0)) THEN
+          tr_weights(i) = 20._wp
+        ELSEIF ((batch_global(i,56) .eq. 5) .and. (batch_global(i,57) .eq. 3) .and. (batch_global(i,55) .eq. 0)) THEN
+          tr_weights(i) = 10._wp
+        ELSEIF ((batch_global(i,57) .eq. 5) .and. (batch_global(i,55) .eq. 0)) THEN
+          tr_weights(i) = 10._wp
+        ELSEIF ((batch_global(i,57) .eq. 6) .and. (batch_global(i,55) .eq. 0)) THEN
+          tr_weights(i) = 10._wp
+        ELSE
+          tr_weights(i) = 1._wp
+        ENDIF
+      ENDDO
+      !tr_weights(:) = 1._wp
 
       ! clear gradients
       dW1(:,:) = 0._wp;  db1(:) = 0._wp
@@ -641,9 +655,9 @@ CONTAINS
         r = batch_global(i,56)
 
         !IF (c .ne. 0) THEN
-        !IF ((c .ne. 0) .and. (r .ge. 1._wp)) THEN
+        IF ((c .ne. 0) .and. (r .ge. 1._wp)) THEN
         !IF ((c .ne. 0) .and. ((r .eq. 8) .or. (r .eq. 9) .or. (r .eq. 5))) THEN
-        IF ((c .ne. 0) .and. (r .eq. 8)) THEN
+        !IF ((r .ge. 1) .and. ((c .ge. 4) .and. (c .le. 6))) THEN
           c_num(c) = c_num(c) + 1._wp
 
           ! generate dropout mask
@@ -703,7 +717,7 @@ CONTAINS
       ENDDO
 
 
-      lr_rate = 5e-4
+      lr_rate = 1e-4
       DO c = 1, d_class
         dW1(:,d_hidden*(c-1)+1:d_hidden*c) = dW1(:,d_hidden*(c-1)+1:d_hidden*c) / c_num(c)
         dW2(:,d_hidden*(c-1)+1:d_hidden*c) = dW2(:,d_hidden*(c-1)+1:d_hidden*c) / c_num(c)
@@ -902,7 +916,7 @@ CONTAINS
     REAL(wp) :: is_boreal, t_ondjfm, t_amjjas, p_threshold1, p_threshold2, p_threshold3
     REAL(wp) :: p_dry, p_sdry, p_swet, p_wdry, p_wwet
     REAL(wp) :: Am_or_w, Bw_or_s, Cw_or_f
-    INTEGER  :: i
+    INTEGER  :: i, Aw_or_s
 
     ! Koppen Geiger classification
     ! Tropical
@@ -975,7 +989,7 @@ CONTAINS
 
       t_ondjfm = SUM(t_monthly(7:12))
       t_amjjas = SUM(t_monthly(1:6))
-      IF (t_ondjfm .gt. t_amjjas) THEN
+      IF (t_amjjas .gt. t_ondjfm) THEN
         is_boreal = 1
       ELSE
         is_boreal = 0
@@ -1027,34 +1041,39 @@ CONTAINS
         ELSEIF (p_dry .ge. Am_or_w) THEN
           koppen(i) = 2._wp
         ELSE
-          koppen(i) = 3._wp
+          Aw_or_s = MINLOC(p_monthly, dim=1)
+          IF (Aw_or_s .le. 6) THEN
+            koppen(i) = 3._wp
+          ELSE
+            koppen(i) = 4._wp
+          ENDIF
         ENDIF
 
       ! Temperate
-      ELSEIF ((t_hot .ge. 10) .and. (t_cold .gt. -3) .and. (t_cold .lt. 18)) THEN
+      ELSEIF ((t_hot .ge. 10) .and. (t_cold .gt. 0) .and. (t_cold .lt. 18)) THEN
         Cw_or_f = p_swet/10
         IF ((p_sdry .lt. 40) .and. (p_sdry .lt. p_wwet/3)) THEN
-          koppen(i) = 6._wp
-        ELSEIF (p_wdry .lt. Cw_or_f) THEN
           koppen(i) = 7._wp
-        ELSE
+        ELSEIF (p_wdry .lt. Cw_or_f) THEN
           koppen(i) = 8._wp
+        ELSE
+          koppen(i) = 9._wp
         ENDIF
 
       ! Cold
-      ELSEIF ((t_hot .ge. 10) .and. (t_cold .le. -3)) THEN
+      ELSEIF ((t_hot .ge. 10) .and. (t_cold .le. 0)) THEN
         IF ((p_sdry .lt. 40) .and. (p_sdry .lt. p_wwet/3)) THEN
-          koppen(i) = 9._wp
-        ELSEIF (p_wdry .lt. p_swet/10) THEN
           koppen(i) = 10._wp
-        ELSE
+        ELSEIF (p_wdry .lt. p_swet/10) THEN
           koppen(i) = 11._wp
+        ELSE
+          koppen(i) = 12._wp
         ENDIF
 
       ! Polar 
       ELSEIF (t_hot .lt. 10) THEN
         !IF (t_hot .gt. 0) THEN
-        koppen(i) = 12._wp
+        koppen(i) = 13._wp
         !ELSE
         !  koppen(i) = 13._wp
         !ENDIF
@@ -1064,9 +1083,9 @@ CONTAINS
       IF (p_ann .lt. 10*p_threshold) THEN
         Bw_or_s = 5*p_threshold
         IF (p_ann .lt. Bw_or_s) THEN
-          Koppen(i) = 4._wp
-        ELSE
           Koppen(i) = 5._wp
+        ELSE
+          Koppen(i) = 6._wp
         ENDIF
       ENDIF
 
@@ -1347,8 +1366,8 @@ CONTAINS
     REAL(wp) :: dinput_     (batch_size, d_in )
 
     !dlayer6_act_(:,1) = 2.*(output(:,1)-target_y(:)*100)    ! MSE
-    !dlayer6_act_(:,1) = weights(:)*2.*(output(:,1)-target_y(:)*100)    ! MSE
     dlayer4_act_(:,1) = weights(:)*2.*(output(:,1)-target_y(:)*100)    ! MSE
+    !dlayer4_act_(:,1) = weights(:)*2.*(output(:,1)-target_y(:)*100)/(target_y(:)*100)    ! MSE
     !dlayer6_act_(:,1) = weights(:)*100.*0.5/SQRT(ABS(output(:,1)-target_y(:)))    ! MSE
 
     ! constraints

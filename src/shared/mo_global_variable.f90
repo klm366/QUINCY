@@ -21,10 +21,10 @@ MODULE mo_global_variable
   PUBLIC :: update_pid_batch, load_global_batch, update_trainable_parameters, load_trained_parameters
 
   REAL(wp) ::                                                      &
-    & layer1_weight_global(53, 64*12), layer1_bias_global(64*12),  &
-    & layer2_weight_global(64, 64*12), layer2_bias_global(64*12),  &
-    & layer3_weight_global(64, 64*12), layer3_bias_global(64*12),  &
-    & layer4_weight_global(64,  1*12), layer4_bias_global( 1*12)
+    & layer1_weight_global(53, 64*13), layer1_bias_global(64*13),  &
+    & layer2_weight_global(64, 64*13), layer2_bias_global(64*13),  &
+    & layer3_weight_global(64, 64*13), layer3_bias_global(64*13),  &
+    & layer4_weight_global(64,  1*13), layer4_bias_global( 1*13)
 
   REAL(wp) :: batch_global(1280, 57)   ! 160*8
   REAL(wp) :: batch_pid   (160,  57)   ! 
@@ -161,10 +161,10 @@ CONTAINS
 
     ! Input Arguments
     REAL(wp), INTENT(in) ::                          &
-      & layer1_weight(53,64*12), layer1_bias(64*12), &
-      & layer2_weight(64,64*12), layer2_bias(64*12), &
-      & layer3_weight(64,64*12), layer3_bias(64*12), &
-      & layer4_weight(64, 1*12), layer4_bias( 1*12)
+      & layer1_weight(53,64*13), layer1_bias(64*13), &
+      & layer2_weight(64,64*13), layer2_bias(64*13), &
+      & layer3_weight(64,64*13), layer3_bias(64*13), &
+      & layer4_weight(64, 1*13), layer4_bias( 1*13)
 
     INTEGER :: pid, getpid, i
     INTEGER :: file_idx_, file_idx_w
@@ -190,15 +190,15 @@ CONTAINS
     213 format('b3.bin'); write(b3, 213)
     214 format('b4.bin'); write(b4, 214)
 
-    open(201,file=path//w1, access='direct', form='unformatted', recl=53*64*12*4)
-    open(202,file=path//w2, access='direct', form='unformatted', recl=64*64*12*4)
-    open(203,file=path//w3, access='direct', form='unformatted', recl=64*64*12*4)
-    open(204,file=path//w4, access='direct', form='unformatted', recl=64* 1*12*4)
+    open(201,file=path//w1, access='direct', form='unformatted', recl=53*64*13*4)
+    open(202,file=path//w2, access='direct', form='unformatted', recl=64*64*13*4)
+    open(203,file=path//w3, access='direct', form='unformatted', recl=64*64*13*4)
+    open(204,file=path//w4, access='direct', form='unformatted', recl=64* 1*13*4)
 
-    open(211,file=path//b1, access='direct', form='unformatted', recl=64*12*4)
-    open(212,file=path//b2, access='direct', form='unformatted', recl=64*12*4)
-    open(213,file=path//b3, access='direct', form='unformatted', recl=64*12*4)
-    open(214,file=path//b4, access='direct', form='unformatted', recl= 1*12*4)
+    open(211,file=path//b1, access='direct', form='unformatted', recl=64*13*4)
+    open(212,file=path//b2, access='direct', form='unformatted', recl=64*13*4)
+    open(213,file=path//b3, access='direct', form='unformatted', recl=64*13*4)
+    open(214,file=path//b4, access='direct', form='unformatted', recl= 1*13*4)
 
     DO i = 1,8
       write(201,rec=i) layer1_weight
@@ -233,10 +233,10 @@ CONTAINS
 
     ! Input Arguments
     REAL(wp), INTENT(inout) ::                       &
-      & layer1_weight(53,64*12), layer1_bias(64*12), &
-      & layer2_weight(64,64*12), layer2_bias(64*12), &
-      & layer3_weight(64,64*12), layer3_bias(64*12), &
-      & layer4_weight(64, 1*12), layer4_bias( 1*12)
+      & layer1_weight(53,64*13), layer1_bias(64*13), &
+      & layer2_weight(64,64*13), layer2_bias(64*13), &
+      & layer3_weight(64,64*13), layer3_bias(64*13), &
+      & layer4_weight(64, 1*13), layer4_bias( 1*13)
 
     INTEGER :: pid, getpid, i
     CHARACTER(len=200) :: w1, w2, w3 ,w4
@@ -255,15 +255,15 @@ CONTAINS
     313 format('b3.bin'); write(b3, 313)
     314 format('b4.bin'); write(b4, 314)
 
-    open(301,file=path//w1, access='direct', form='unformatted', recl=53*64*12*4)
-    open(302,file=path//w2, access='direct', form='unformatted', recl=64*64*12*4)
-    open(303,file=path//w3, access='direct', form='unformatted', recl=64*64*12*4)
-    open(304,file=path//w4, access='direct', form='unformatted', recl=64* 1*12*4)
+    open(301,file=path//w1, access='direct', form='unformatted', recl=53*64*13*4)
+    open(302,file=path//w2, access='direct', form='unformatted', recl=64*64*13*4)
+    open(303,file=path//w3, access='direct', form='unformatted', recl=64*64*13*4)
+    open(304,file=path//w4, access='direct', form='unformatted', recl=64* 1*13*4)
 
-    open(311,file=path//b1, access='direct', form='unformatted', recl=64*12*4)
-    open(312,file=path//b2, access='direct', form='unformatted', recl=64*12*4)
-    open(313,file=path//b3, access='direct', form='unformatted', recl=64*12*4)
-    open(314,file=path//b4, access='direct', form='unformatted', recl= 1*12*4)
+    open(311,file=path//b1, access='direct', form='unformatted', recl=64*13*4)
+    open(312,file=path//b2, access='direct', form='unformatted', recl=64*13*4)
+    open(313,file=path//b3, access='direct', form='unformatted', recl=64*13*4)
+    open(314,file=path//b4, access='direct', form='unformatted', recl= 1*13*4)
 
     read(301,rec=pid) layer1_weight
     read(302,rec=pid) layer2_weight
