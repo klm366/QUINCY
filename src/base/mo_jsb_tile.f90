@@ -255,7 +255,6 @@ CONTAINS
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
           ELSE IF (iproc == L2A_) THEN
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
-<<<<<<< HEAD
             
           ELSE IF (iproc == ANTHRO2L_) THEN     ! < Rackhun Son >
             CALL return_ptr%Set_process_action(iproc, ON_TILE_, action_to_parents=AGGREGATE_)
@@ -266,8 +265,6 @@ CONTAINS
           !   then, after tile tree construction (with init tile),
           !      the AGGREGATE ON_TILE INHERIT SKIP are the process actions used for the tiles
           !   i.e., the SKIP and ON_LEAFS_ process actions are transformed in one of the above for four process actions
-=======
->>>>>>> dev
           ELSE
             CALL return_ptr%Set_process_action(iproc, ON_LEAFS_, action_to_parents=AGGREGATE_)
           END IF
