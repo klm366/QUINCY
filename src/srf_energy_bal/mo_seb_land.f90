@@ -442,6 +442,7 @@ CONTAINS
           & )
         !$claw end expand
       ELSE
+        !$claw expand parallel update
         liquid_max(:) = 0._wp
       END IF
 
