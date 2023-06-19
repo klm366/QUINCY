@@ -316,7 +316,7 @@ CONTAINS
       & nn_layer2_out(nc, d_hidden*d_class), nn_layer2_act(nc, d_hidden*d_class), &
       & nn_layer3_out(nc, d_hidden*d_class), nn_layer3_act(nc, d_hidden*d_class), &
       & nn_layer4_out(nc, d_output*d_class), nn_layer4_act(nc, d_output*d_class), &
-      & nn_outputs   (nc, d_output),                              &
+      & nn_outputs   (nc, d_output*d_class),                      &
 
       & nn_layer1_mask(nc, d_hidden*d_class),                     &  ! dropout
       & nn_layer2_mask(nc, d_hidden*d_class),                     &
@@ -631,11 +631,11 @@ CONTAINS
         ELSEIF ((batch_global(i,56) .eq. 9) .and. (batch_global(i,57) .eq. 3) .and. (batch_global(i,55) .gt. 0)) THEN
           tr_weights(i) = 20._wp
         ELSEIF ((batch_global(i,56) .eq. 5) .and. (batch_global(i,57) .eq. 3) .and. (batch_global(i,55) .eq. 0)) THEN
-          tr_weights(i) = 10._wp
+          tr_weights(i) = 5._wp
         ELSEIF ((batch_global(i,57) .eq. 5) .and. (batch_global(i,55) .eq. 0)) THEN
-          tr_weights(i) = 10._wp
+          tr_weights(i) = 5._wp
         ELSEIF ((batch_global(i,57) .eq. 6) .and. (batch_global(i,55) .eq. 0)) THEN
-          tr_weights(i) = 10._wp
+          tr_weights(i) = 5._wp
         ELSE
           tr_weights(i) = 1._wp
         ENDIF

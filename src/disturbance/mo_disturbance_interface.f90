@@ -659,13 +659,18 @@ CONTAINS
                 IF (R_memory(i_spatial,i_temporal) .ge. 1) THEN
                   IF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
                     n_nozero = n_nozero+1
-                    IF (n_nozero .le. 8) THEN
+                    !IF (n_nozero .le. 8) THEN
+                    save_batch = 1
+                    !ELSE
+                    !  save_batch = 0
+                    !ENDIF
+                  ELSE
+                    CALL RANDOM_NUMBER(u)
+                    IF (u .gt. 0.5) THEN
                       save_batch = 1
                     ELSE
                       save_batch = 0
                     ENDIF
-                  ELSE
-                    save_batch = 1
                   ENDIF
                   !ELSE
                   !  n_zero = n_zero+1
