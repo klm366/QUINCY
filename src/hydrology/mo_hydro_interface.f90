@@ -1076,6 +1076,7 @@ CONTAINS
   SUBROUTINE update_soil_hydrology(tile, options)
 
     USE mo_hydro_process,          ONLY: calc_soil_hydrology
+    USE mo_jsb_physical_constants, ONLY: rhoh2o
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -1110,6 +1111,23 @@ CONTAINS
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
     REAL(wp) :: wtr_pond_max(options%nc)
+
+    REAL(wp) :: wbal(options%nc), wbal_pre(options%nc), wbal_fluxes(options%nc)
+
+    REAL(wp) :: wtr_pond_pre(options%nc),sum_wtr_soil_sl_pre(options%nc), &
+              & sum_ice_soil_sl_pre(options%nc), infilt_pre(options%nc), &
+              & runoff_pre(options%nc),drainage_pre(options%nc), &
+              & evapotrans_soil_pre(options%nc), &
+              & et_def_pre(options%nc)
+
+    REAL(wp) :: wtr_pond(options%nc),sum_wtr_soil_sl(options%nc), &
+              & sum_ice_soil_sl(options%nc), infilt(options%nc), &
+              & runoff(options%nc),drainage(options%nc), &
+              & evapotrans_soil(options%nc), &
+              & et_def(options%nc), weq_et_act(options%nc), wb_threshold(options%nc)
+
+
+    CHARACTER(len=5000)         :: message_text_long
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_hydrology'
 
@@ -1214,6 +1232,21 @@ CONTAINS
       END IF
     END DO
 
+
+    wtr_pond_pre(:)=dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          )
+    sum_wtr_soil_sl_pre(:)=SUM(dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ), DIM=2)
+    sum_ice_soil_sl_pre(:)=SUM(dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ), DIM=2)
+    infilt_pre(:)=dsl4jsb_var2D_onChunk (HYDRO_, infilt            )!* dtime / rhoh2o
+    runoff_pre(:)=dsl4jsb_var2D_onChunk (HYDRO_, runoff            )* dtime / rhoh2o
+    drainage_pre(:)=0.0
+    evapotrans_soil_pre(:)=dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   )* dtime / rhoh2o
+    et_def_pre(:) = dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit   )!* dtime / rhoh2o
+
+    wbal_pre(:) =   &
+      & + wtr_pond_pre(:)      &  
+      & + sum_wtr_soil_sl_pre(:)     &
+      & + sum_ice_soil_sl_pre(:)
+
     !$claw sca forward update savepoint=ser_jsb_hydro_calc_soil_hydrology_1 tile_name=tile%name
     CALL calc_soil_hydrology( &
       ! in
@@ -1263,8 +1296,65 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl      ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
-      & )
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
+      & weq_et_act(:))
+
+
+    wtr_pond(:)=dsl4jsb_var2D_onChunk (HYDRO_, wtr_pond          )
+    sum_wtr_soil_sl(:)=SUM(dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ), DIM=2)
+    sum_ice_soil_sl(:)=SUM(dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ), DIM=2)
+    infilt(:)=dsl4jsb_var2D_onChunk (HYDRO_, infilt            )* dtime / rhoh2o
+    runoff(:)=dsl4jsb_var2D_onChunk (HYDRO_, runoff            )* dtime / rhoh2o
+    drainage(:)=dsl4jsb_var2D_onChunk (HYDRO_, drainage        )* dtime / rhoh2o
+    evapotrans_soil(:)=dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   )* dtime / rhoh2o
+    et_def(:) = dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit   )* dtime / rhoh2o
+
+    wbal(:) =   &
+      & + wtr_pond(:)      &  
+      & + sum_wtr_soil_sl(:)     &
+      & + sum_ice_soil_sl(:)
+
+
+    wbal_fluxes(:) = infilt_pre(:) &
+                   - drainage(:)   &
+                   - runoff(:) + runoff_pre(:)
+
+
+    !WHERE (evapotrans_soil(:) < 0._wp)
+    WHERE (weq_et_act(:) < 0._wp)
+      !wbal_fluxes(:) = wbal_fluxes(:) + evapotrans_soil(:)! - et_def(:)
+      wbal_fluxes(:) = wbal_fluxes(:) + weq_et_act(:)
+    END WHERE  
+
+    wb_threshold(:) = dsl4jsb_Config(HYDRO_)%wbv_trsh / dtime
+
+    DO i = 1, nc
+      IF ( (.NOT. is_time_experiment_start(options%current_datetime)) .AND. &
+       & ABS(wbal(i)-wbal_pre(i)-wbal_fluxes(i)) >  wb_threshold(i) &
+       & .AND. sum_wtr_soil_sl(i)+sum_ice_soil_sl(i) > 1.0e-10_wp) THEN 
+        WRITE (message_text_long,*) 'WB violation after soilhyd [m dt-1]',     NEW_LINE('a'), &
+        & 'Low & Dpr:', tile%contains_lowland, tile%contains_depression, NEW_LINE('a'), &
+        & 'WBL:', wbal(i)-wbal_fluxes(i), wbal_pre(i), &
+        & wbal(i) - wbal_pre(i) -wbal_fluxes(i),   NEW_LINE('a'), &
+        & 'WB thresh:    ', wb_threshold(i),       NEW_LINE('a'), &
+        & 'WS:' ,sum_wtr_soil_sl(i), sum_wtr_soil_sl_pre(i), &
+        & sum_wtr_soil_sl(i) - sum_wtr_soil_sl_pre(i), NEW_LINE('a'), &
+        & 'ICE:',sum_ice_soil_sl(i), sum_ice_soil_sl_pre(i), &
+        & sum_ice_soil_sl(i) - sum_ice_soil_sl_pre(i), NEW_LINE('a'), &
+        & 'PND:',wtr_pond(i), wtr_pond_pre(i), &
+        & wtr_pond(i) - wtr_pond_pre(i), NEW_LINE('a'), &
+        & 'InF:',infilt(i), infilt_pre(i),&
+        & infilt(i) - infilt_pre(i), NEW_LINE('a'), &
+        & 'EVP:',evapotrans_soil(i), evapotrans_soil_pre(i),&
+        & evapotrans_soil(i) - evapotrans_soil_pre(i),NEW_LINE('a'), &
+        & 'RnF:',runoff(i), runoff_pre(i), &
+        & runoff(i) - runoff_pre(i), NEW_LINE('a'), &
+        & 'DRN:',drainage(i), drainage_pre(i),drainage(i) - drainage_pre(i), NEW_LINE('a'), &
+        & 'ETD1:',et_def(i), et_def_pre(i),et_def(i) - et_def_pre(i), NEW_LINE('a'), & 
+        & 'ETD2:',weq_et_act(i)
+        CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+      END IF
+    END DO
 
     ! Update weq_pond storage due to potential soil infiltration overflow
     dsl4jsb_var2D_onChunk(HYDRO_, weq_pond) = dsl4jsb_var2D_onChunk(HYDRO_, wtr_pond) &
@@ -2352,7 +2442,7 @@ CONTAINS
     REAL(wp) :: dtime
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_water_balance'
-    CHARACTER(len=4096)         :: message_text_long
+    CHARACTER(len=5000)         :: message_text_long
 
     iblk  = options%iblk
     ics   = options%ics
@@ -2439,7 +2529,7 @@ CONTAINS
 
     ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
     ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
-    wb_threshold(:) = 1.0e-11_wp * tile_area(:) / dtime
+    wb_threshold(:) = dsl4jsb_Config(HYDRO_)%wbv_trsh * tile_area(:) / dtime
 
     !$claw acc parallel loop gang vector
     DO i=1,nc
@@ -2448,6 +2538,8 @@ CONTAINS
           WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',             NEW_LINE('a'), &
             & 'on ',TRIM(tile%name),' tile at', lat(i),'N and ',lon(i),'E:',           NEW_LINE('a'), &
             & 'WB Error:             ', weq_balance_err(i),                            NEW_LINE('a'), &
+            & 'WB thresh:    ', wb_threshold(i),                                       NEW_LINE('a'), &
+            & 'tile fraction:        ', tile_fract(i),                                 NEW_LINE('a'), &
             & 'Rainfall:             ', rain(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Snowfall:             ', snow(i)       * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Evapotranspiration:   ', evapotrans(i) * tile_area(i) / rhoh2o * dtime, NEW_LINE('a'), &

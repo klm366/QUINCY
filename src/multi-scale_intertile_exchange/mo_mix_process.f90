@@ -16,6 +16,7 @@ MODULE mo_mix_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
+  USE mo_exception,       ONLY: finish, message
 
   IMPLICIT NONE
   PRIVATE
@@ -678,6 +679,9 @@ CONTAINS
 
     ! Local variables ------------------------------------------------------------------------------------
 
+
+    CHARACTER(len=5000)         :: message_text_long
+
     INTEGER                 :: nrgrd, i, i_lvt, i_dpr, i_start, setter_lvt, setter_dpr
 
     REAL(wp)                :: fr_lvt_rel,       &
@@ -798,9 +802,35 @@ CONTAINS
     DO i = i_start, nrgrd
       IF (z_bot_lvt >= z_rgrd_bot .AND. z_bot_dpr >= z_rgrd_bot ) THEN ! Above Bedrock in both tiles
         
+        IF (i_lvt > nsoil) THEN
+            WRITE (message_text_long,*) 'Trying use fields with i_lvt > nsoil',       NEW_LINE('a'), &
+                       & 'setter_dpr:           ', setter_dpr,                            NEW_LINE('a'), &
+                       & 'setter_lvt:           ', setter_lvt,                            NEW_LINE('a'), &
+                       & 'i_dpr:                ', i_dpr,                                 NEW_LINE('a'), &
+                       & 'i_lvt:                ', i_lvt,                                 NEW_LINE('a'), &
+                       & 'z_bot_dpr:            ', z_bot_dpr,                             NEW_LINE('a'), &
+                       & 'z_bot_lvt:            ', z_bot_lvt,                             NEW_LINE('a'), &
+                       & 'z_rgrd_bot:           ', z_rgrd_bot,                            NEW_LINE('a'), &
+                       & 'h_offset:             ', h_offset
+
+            CALL finish ('inter_tile_diffusion:', message_text_long)
+        END IF 
         h                   = z_rgrd_bot - z_rgrd_top
         a_inter             = len_inter * h
 
+        IF (dsoil_lvt(i_lvt) == 0._wp) THEN
+          WRITE (message_text_long,*) 'Zero depth',     NEW_LINE('a'), &
+                       & 'z_dpr:           ', z_dpr,                            NEW_LINE('a'), &
+                       & 'z_lvt:           ', z_lvt,                            NEW_LINE('a'), &
+                       & 'i_dpr:                ', i_dpr,                                 NEW_LINE('a'), &
+                       & 'i_lvt:                ', i_lvt,                                 NEW_LINE('a'), &
+                       & 'z_bot_dpr:            ', z_bot_dpr,                             NEW_LINE('a'), &
+                       & 'z_bot_lvt:            ', z_bot_lvt,                             NEW_LINE('a'), &
+                       & 'z_rgrd_bot:           ', z_rgrd_bot,                            NEW_LINE('a'), &
+                       & 'h:             ', h
+
+            CALL finish ('inter_tile_diffusion:', message_text_long)
+        END IF
         wtr_soil_lvt_rgrd   = wtr_soil_lvt(i_lvt)      * h / dsoil_lvt(i_lvt)
         ice_soil_lvt_rgrd   = ice_soil_lvt(i_lvt)      * h / dsoil_lvt(i_lvt)
         wsat_lvt_rgrd       = wsat_wi_lvt(i_lvt)       * h / dsoil_lvt(i_lvt)
@@ -816,6 +846,48 @@ CONTAINS
 
         ELSE ! Within the soil column of both tiles
           ! Flux is determined by the difference in matric potential between the two tiles
+
+          IF (i_dpr > nsoil) THEN
+            WRITE (message_text_long,*) 'Trying use fields with i_dpr > nsoil (pt1)',     NEW_LINE('a'), &
+                       & 'setter_dpr:           ', setter_dpr,                            NEW_LINE('a'), &
+                       & 'setter_lvt:           ', setter_lvt,                            NEW_LINE('a'), &
+                       & 'i_dpr:                ', i_dpr,                                 NEW_LINE('a'), &
+                       & 'i_lvt:                ', i_lvt,                                 NEW_LINE('a'), &
+                       & 'z_bot_dpr:            ', z_bot_dpr,                             NEW_LINE('a'), &
+                       & 'z_bot_lvt:            ', z_bot_lvt,                             NEW_LINE('a'), &
+                       & 'z_rgrd_bot:           ', z_rgrd_bot,                            NEW_LINE('a'), &
+                       & 'h_offset:             ', h_offset
+
+            CALL finish ('inter_tile_diffusion:', message_text_long)
+          END IF
+          IF (i_dpr == 0) THEN
+            WRITE (message_text_long,*) 'Trying use fields with i_dpr = 0 (pt1)',       NEW_LINE('a'), &
+                       & 'setter_dpr:           ', setter_dpr,                            NEW_LINE('a'), &
+                       & 'setter_lvt:           ', setter_lvt,                            NEW_LINE('a'), &
+                       & 'i_dpr:                ', i_dpr,                                 NEW_LINE('a'), &
+                       & 'i_lvt:                ', i_lvt,                                 NEW_LINE('a'), &
+                       & 'z_bot_dpr:            ', z_bot_dpr,                             NEW_LINE('a'), &
+                       & 'z_bot_lvt:            ', z_bot_lvt,                             NEW_LINE('a'), &
+                       & 'z_rgrd_bot:           ', z_rgrd_bot,                            NEW_LINE('a'), &
+                       & 'h_offset:             ', h_offset
+
+            CALL finish ('inter_tile_diffusion:', message_text_long)
+          END IF
+
+          IF (dsoil_dpr(i_dpr) == 0._wp) THEN
+            WRITE (message_text_long,*) 'Zero depth dpr',     NEW_LINE('a'), &
+                       & 'z_dpr:           ', z_dpr,                            NEW_LINE('a'), &
+                       & 'z_lvt:           ', z_lvt,                            NEW_LINE('a'), &
+                       & 'i_dpr:                ', i_dpr,                                 NEW_LINE('a'), &
+                       & 'i_lvt:                ', i_lvt,                                 NEW_LINE('a'), &
+                       & 'z_bot_dpr:            ', z_bot_dpr,                             NEW_LINE('a'), &
+                       & 'z_bot_lvt:            ', z_bot_lvt,                             NEW_LINE('a'), &
+                       & 'z_rgrd_bot:           ', z_rgrd_bot,                            NEW_LINE('a'), &
+                       & 'h:             ', h
+
+              CALL finish ('inter_tile_diffusion:', message_text_long)
+          END IF
+
 
           wtr_soil_dpr_rgrd = wtr_soil_dpr(i_dpr) * h / dsoil_dpr(i_dpr)
           ice_soil_dpr_rgrd = ice_soil_dpr(i_dpr) * h / dsoil_dpr(i_dpr)
@@ -907,6 +979,20 @@ CONTAINS
       ELSE IF (z_bot_lvt >= z_rgrd_bot) THEN ! Above Bedrock in lvt tile only 
         ! hence there are no fluxes and wtr is just mapped to wtr_updt
 
+        IF (i_lvt > nsoil) THEN
+          WRITE (message_text_long,*) 'Trying use fields with i_lvt > nsoil',             NEW_LINE('a'), &
+                       & 'setter_dpr:           ', setter_dpr,                            NEW_LINE('a'), &
+                       & 'setter_lvt:           ', setter_lvt,                            NEW_LINE('a'), &
+                       & 'i_dpr:                ', i_dpr,                                 NEW_LINE('a'), &
+                       & 'i_lvt:                ', i_lvt,                                 NEW_LINE('a'), &
+                       & 'z_bot_dpr:            ', z_bot_dpr,                             NEW_LINE('a'), &
+                       & 'z_bot_lvt:            ', z_bot_lvt,                             NEW_LINE('a'), &
+                       & 'z_rgrd_bot:           ', z_rgrd_bot,                            NEW_LINE('a'), &
+                       & 'h_offset:             ', h_offset
+
+          CALL finish ('inter_tile_diffusion:', message_text_long)
+        END IF
+
         h                        = z_rgrd_bot - z_rgrd_top
         wtr_soil_lvt_rgrd        = wtr_soil_lvt(i_lvt) * h / dsoil_lvt(i_lvt)
         wtr_soil_lvt_updt(i_lvt) = wtr_soil_lvt_updt(i_lvt) + wtr_soil_lvt_rgrd
@@ -929,6 +1015,20 @@ CONTAINS
         z_rgrd_bot=z_lvt
       ELSE IF (z_bot_dpr >= z_rgrd_bot) THEN   ! Above Bedrock in dpr tile only
         ! hence there are no fluxes and wtr is just mapped to wtr_updt
+
+        IF (i_dpr > nsoil) THEN
+          WRITE (message_text_long,*) 'Trying use fields with i_dpr > nsoil (pt2)',       NEW_LINE('a'), &
+                       & 'setter_dpr:           ', setter_dpr,                            NEW_LINE('a'), &
+                       & 'setter_lvt:           ', setter_lvt,                            NEW_LINE('a'), &
+                       & 'i_dpr:                ', i_dpr,                                 NEW_LINE('a'), &
+                       & 'i_lvt:                ', i_lvt,                                 NEW_LINE('a'), &
+                       & 'z_bot_dpr:            ', z_bot_dpr,                             NEW_LINE('a'), &
+                       & 'z_bot_lvt:            ', z_bot_lvt,                             NEW_LINE('a'), &
+                       & 'z_rgrd_bot:           ', z_rgrd_bot,                            NEW_LINE('a'), &
+                       & 'h_offset:             ', h_offset
+
+          CALL finish ('inter_tile_diffusion:', message_text_long)
+        END IF
 
         h                        = z_rgrd_bot - z_rgrd_top
         wtr_soil_dpr_rgrd        = wtr_soil_dpr(i_dpr) * h / dsoil_dpr(i_dpr)

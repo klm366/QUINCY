@@ -231,6 +231,8 @@ CONTAINS
     INTEGER  :: nsibl, ic              !< Counter variables for sibling tiles
     INTEGER  :: nsoil, i, j            !< Counter variables for soil layers
     REAL(wp) :: dtime                  !< Model time step [s]
+    REAL(wp) :: wbv_trsh
+
     LOGICAL  :: l_lag                  !< T: Apply lag time to lateral flow
     LOGICAL  :: l_latflow              !< T: Allow for lateral flow between sibling tiles
     REAL(wp) :: retention_time         !< retention time for lateral water flow, @todo: needs validation
@@ -353,6 +355,19 @@ CONTAINS
     LOGICAL,  DIMENSION(options%nc) :: l_pf_soil_pi    !< Permafrost mask
     LOGICAL,  DIMENSION(options%nc) :: l_latdrain      !< T: allow lateral drainage      []
 
+    REAL(wp), DIMENSION(options%nc) :: wbal_lvt_pre, wbal_dpr_pre, wbal_sum_pre &
+                                  &  , wbal_lvt, wbal_dpr, wbal_sum, wbal_err
+
+
+    REAL(wp), DIMENSION(options%nc) :: wtr_pond_pre, wtr_pond_sibl_tile_pre, &
+                                     & runoff_retention_pre, runoff_pre,     &
+                                     & wtr_latflow_pre, wtr_latflow_sibl_tile_pre, &
+                                     & weq_snow_pre, weq_snow_sibl_tile_pre
+
+    REAL(wp), DIMENSION(options%nc) :: wb_threshold
+    REAL(wp), POINTER :: lat(:), lon(:)
+
+
     REAL(wp), ALLOCATABLE, DIMENSION(:) ::           &
     & drain_bot_retention,                           & !< bottom_drainage from retention reservoir
     & h_offset,                                      & !< surface height difference between tiles
@@ -371,8 +386,9 @@ CONTAINS
     & weq_field_cap_sl,                              & !< Field capacity of soil layer on source tile [m]
     & weq_field_cap_sl_sibl_tile,                    & !< Field capacity of soil layer on target tile [m]
     & weq_p_wilt_sl,                                 & !< Wilting point of soil layer on source tile [m]
-    & weq_p_wilt_sl_sibl_tile                          !< Wilting point of soil layer on target tile [m]
-
+    & weq_p_wilt_sl_sibl_tile, &                       !< Wilting point of soil layer on target tile [m]
+    & ws_pre_sl_sibl_tile, &
+    & ws_pre_sl
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -391,6 +407,9 @@ CONTAINS
     nsoil = soil_w%n_levels
 
     soil_e => Get_vgrid('soil_depth_energy')
+
+    lat  => grid%lat(ics:ice, iblk)
+    lon  => grid%lon(ics:ice, iblk)
 
     dsl4jsb_Get_config(MIX_)
     dsl4jsb_Get_config(HYDRO_)
@@ -472,6 +491,12 @@ CONTAINS
       ALLOCATE(weq_field_cap_sl_sibl_tile(nc,nsoil))
       ALLOCATE(weq_p_wilt_sl(nc,nsoil))
       ALLOCATE(weq_p_wilt_sl_sibl_tile(nc,nsoil))
+
+      ALLOCATE(ws_pre_sl(nc,nsoil))
+      ALLOCATE(ws_pre_sl_sibl_tile(nc,nsoil))
+
+
+      wbv_trsh = dsl4jsb_Config(HYDRO_)%wbv_trsh
 
       ! This check should be moved to init routine as soon as enough stuff is there to justify one
       IF (tile%process_action(HYDRO_) /= ON_TILE_) THEN
@@ -561,6 +586,26 @@ CONTAINS
             l_lag = tile%contains_upland .AND. sibl_tile%contains_lowland
             retention_time = 36000._wp   ! Ten hours retention time (
                                          ! outflow = h_re * dt/retention_time)
+            wbal_lvt_pre(:) = wtr_pond(:) &
+                          & + runoff_retention(:)     &
+                          & + runoff(:)      * dtime / rhoh2o &
+                          & - wtr_latflow(:) * dtime / rhoh2o
+
+
+            wbal_dpr_pre(:) = wtr_pond_sibl_tile(:) &
+                          & - wtr_latflow_sibl_tile(:) * dtime / rhoh2o 
+
+            wbal_sum_pre(:) = fract(:) * (wbal_lvt_pre)   &
+                          & + fract_sibl_tile(:) * (wbal_dpr_pre)
+
+
+            wtr_pond_pre(:) =  wtr_pond(:)
+            wtr_pond_sibl_tile_pre(:) = wtr_pond_sibl_tile(:)
+            runoff_retention_pre(:) = runoff_retention(:)
+            runoff_pre(:) = runoff(:)
+            wtr_latflow_pre(:) = wtr_latflow(:)
+            wtr_latflow_sibl_tile_pre(:) = wtr_latflow_sibl_tile(:)
+
 
             ! Move surface runoff from source to target tile
             CALL calc_runoff_transport(   &
@@ -579,6 +624,81 @@ CONTAINS
               & wtr_pond_sibl_tile(:),    & !< pond storage at target tile  [m]
               & runoff_retention(:)       & !< runoff retention storage     [m]
               & )
+
+            wbal_lvt(:) = wtr_pond(:) &
+                      & + runoff_retention(:)     &
+                      & + runoff(:)      * dtime / rhoh2o &
+                      & - wtr_latflow(:) * dtime / rhoh2o
+
+
+            wbal_dpr(:) = wtr_pond_sibl_tile(:) &
+                      & - wtr_latflow_sibl_tile(:) * dtime / rhoh2o 
+
+            wbal_sum(:) = fract(:) * wbal_lvt(:) + fract_sibl_tile(:) * wbal_dpr(:)
+
+            wbal_err(:) = wbal_sum_pre(:) - wbal_sum(:)
+
+            wb_threshold(:) = wbv_trsh * (fract(:)+fract_sibl_tile(:))  / dtime
+
+            DO j = 1, nc
+              IF (ABS(wbal_err(j)) >  wb_threshold(j)) THEN 
+                WRITE (message_text_long,*) 'WB violation after runoff [m dt-1]',     NEW_LINE('a'), &
+                & 'At lat / lon  ', lat(j), lon(j),                                 NEW_LINE('a'), & 
+                & 'WB Error:     ', wbal_err(j),                                    NEW_LINE('a'), &
+                & 'WB thresh:    ', wb_threshold(j),                                NEW_LINE('a'), &
+                & 'fract tile:   ', fract(j),                                   NEW_LINE('a'), &
+                & 'fract  sblt:  ', fract_sibl_tile(j),                         NEW_LINE('a'), &
+                & 'pond tile:    ', wtr_pond(j) * fract(j),  &
+                & wtr_pond_pre(j) * fract(j),                                   NEW_LINE('a'), &
+                & 'pond  sblt:   ', wtr_pond_sibl_tile(j) * fract_sibl_tile(j), &
+                & wtr_pond_sibl_tile_pre(j)* fract_sibl_tile(j),                NEW_LINE('a'), &
+                & 'runoff res:   ', runoff_retention(j) * fract(j),  &
+                & runoff_retention_pre(j)* fract(j),                            NEW_LINE('a'), &
+                & 'runoff:       ', runoff(j)* dtime / rhoh2o * fract(j), &
+                & runoff_pre(j)* dtime / rhoh2o * fract(j),                     NEW_LINE('a'), &
+                & 'wtr_latflow:  ', wtr_latflow(j) * dtime / rhoh2o * fract(j), &
+                & wtr_latflow_pre(j) * dtime / rhoh2o* fract(j),                NEW_LINE('a'), &
+                & 'latflow sblt: ', wtr_latflow_sibl_tile(j) * dtime / rhoh2o * fract_sibl_tile(j), &
+                & wtr_latflow_sibl_tile_pre(j) * dtime / rhoh2o * fract_sibl_tile(j)
+
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+              wb_threshold(j) = wbv_trsh  / dtime
+              IF (ABS(wbal_lvt_pre(j) - wbal_lvt(j)) >  wb_threshold(j)) THEN
+                WRITE (message_text_long,*) 'lvt: WBV after runoff [m dt-1]', NEW_LINE('a'), &
+                & 'At lat / lon  ', lat(j), lon(j),                                 NEW_LINE('a'), & 
+                & 'WB Error:     ', wbal_lvt_pre(j) - wbal_lvt(j),                         NEW_LINE('a'), &
+                & 'WB thresh:    ', wb_threshold(j),                                NEW_LINE('a'), &
+                & 'fract tile:   ', fract(j),                                   NEW_LINE('a'), &
+                & 'fract  sblt:  ', fract_sibl_tile(j),                         NEW_LINE('a'), &
+                & 'pond tile:    ', wtr_pond(j),  &
+                & wtr_pond_pre(j),                                   NEW_LINE('a'), &
+                & 'runoff res:   ', runoff_retention(j),  &
+                & runoff_retention_pre(j),                            NEW_LINE('a'), &
+                & 'runoff:       ', runoff(j)* dtime / rhoh2o, &
+                & runoff_pre(j)* dtime / rhoh2o,                     NEW_LINE('a'), &
+                & 'wtr_latflow:  ', wtr_latflow(j) * dtime / rhoh2o, &
+                & wtr_latflow_pre(j) * dtime / rhoh2o* fract(j)
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+              wb_threshold(j) = wbv_trsh / dtime
+              IF (ABS(wbal_dpr_pre(j) - wbal_dpr(j)) >  wb_threshold(j)) THEN
+                WRITE (message_text_long,*) 'dpr: WBV after runoff [m dt-1]', NEW_LINE('a'), &
+                & 'At lat / lon  ', lat(j), lon(j),                                 NEW_LINE('a'), & 
+                & 'WB Error:     ', wbal_dpr_pre(j) - wbal_dpr(j),                  NEW_LINE('a'), &
+                & 'WB thresh:    ', wb_threshold(j),                                NEW_LINE('a'), &
+                & 'fract tile:   ', fract(j),                                   NEW_LINE('a'), &
+                & 'fract  sblt:  ', fract_sibl_tile(j),                         NEW_LINE('a'), &
+                & 'pond  sblt:   ', wtr_pond_sibl_tile(j), &
+                & wtr_pond_sibl_tile_pre(j),                NEW_LINE('a'), &
+                & 'latflow sblt: ', wtr_latflow_sibl_tile(j) * dtime / rhoh2o, &
+                & wtr_latflow_sibl_tile_pre(j) * dtime / rhoh2o
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              
+              END IF
+            END DO
+
+
           END IF
 
           ! Identify correct downhill target sibling for drainage
@@ -629,6 +749,22 @@ CONTAINS
             ELSEWHERE
               drain_bot_retention(:) = k_brock * dtime
             END WHERE
+
+            DO j = 1, nc
+              wbal_lvt_pre(j) = SUM(wtr_soil_sl(j,:))     &
+                          & + SUM(drain_lat_retention_sl(j,:))   &
+                          & + drainage(j)    * dtime / rhoh2o &
+                          & - wtr_latflow(j) * dtime / rhoh2o
+
+              wbal_dpr_pre(j) = SUM(wtr_soil_sl_sibl_tile(j,:)) &
+                            & + wtr_pond_sibl_tile(j)           &
+                            & - wtr_latflow_sibl_tile(j) * dtime / rhoh2o 
+
+
+              wbal_sum_pre(j) = fract(j) * wbal_lvt_pre(j)   &
+                            & + fract_sibl_tile(j) * wbal_dpr_pre(j)
+            END DO
+
             DO i = 1, nsoil
               !First bottom drainage is removed from reservoir
               DO j = 1, nc
@@ -682,6 +818,73 @@ CONTAINS
                    & + wtr_soil_sl_sibl_tile(:,1) - wtr_soil_sat_sl_sibl_tile(:,1)
               wtr_soil_sl_sibl_tile(:,1) = wtr_soil_sat_sl_sibl_tile(:,1)
             END WHERE
+
+            ! Checking if water balance is closed 
+            DO j = 1, nc
+
+              wbal_lvt(j) = SUM(wtr_soil_sl(j,:))     &
+                        & + SUM(drain_lat_retention_sl(j,:))   &
+                        & + drainage(j)    * dtime / rhoh2o    &
+                        & - wtr_latflow(j) * dtime / rhoh2o
+
+              wbal_dpr(j) = SUM(wtr_soil_sl_sibl_tile(j,:)) &
+                        & + wtr_pond_sibl_tile(j)           &
+                        & - wtr_latflow_sibl_tile(j) * dtime / rhoh2o 
+
+
+              wbal_sum(j) = fract(j) * wbal_lvt(j)   &
+                        & + fract_sibl_tile(j) * wbal_dpr(j)
+
+
+              wbal_err(j) = wbal_sum_pre(j) - wbal_sum(j)
+
+              wb_threshold(j) = wbv_trsh * (fract(j)+fract_sibl_tile(j))  / dtime
+              IF (ABS(wbal_err(j)) >  wb_threshold(j)) THEN 
+                WRITE (message_text_long,*) 'WB violation after drain lat [m dt-1]',     NEW_LINE('a'), &
+                & 'At lat / lon  ', lat(j), lon(j),                                 NEW_LINE('a'), & 
+                & 'WB Error:     ', wbal_err(j),                                       NEW_LINE('a'), &
+                & 'WB thresh:    ', wb_threshold(j),                                NEW_LINE('a'), &
+                & 'fract tile:   ', fract(j),                                      NEW_LINE('a'), &
+                & 'fract  sblt:  ', fract_sibl_tile(j),                            NEW_LINE('a'), &
+                & 'WS tile:      ', wtr_soil_sl(j,:),                              NEW_LINE('a'), &
+                & 'WS  sblt:     ', wtr_soil_sl_sibl_tile(j,:),                    NEW_LINE('a'), &
+                & 'drain_lat res:', drain_lat_retention_sl(j,:),                   NEW_LINE('a'), &
+                & 'drainage:     ', drainage(j)* dtime / rhoh2o,                   NEW_LINE('a'), &
+                & 'wtr_latflow:  ', wtr_latflow(j) * dtime / rhoh2o,               NEW_LINE('a'), &
+                & 'latflow sblt: ', wtr_latflow_sibl_tile(j) * dtime / rhoh2o
+
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+              wb_threshold(j) = wbv_trsh / dtime
+              IF (ABS(wbal_lvt_pre(j) - wbal_lvt(j)) >  wb_threshold(j)) THEN
+                WRITE (message_text_long,*) 'lvt: WBV after drain lat [m dt-1]', NEW_LINE('a'), &
+                & 'At lat / lon  ', lat(j), lon(j),                                 NEW_LINE('a'), & 
+                & 'WB Error:     ', wbal_lvt_pre(j) - wbal_lvt(j),                 NEW_LINE('a'), &
+                & 'WB thresh:    ', wb_threshold(j),                                NEW_LINE('a'), &
+                & 'fract tile:   ', fract(j),                                   NEW_LINE('a'), &
+                & 'fract  sblt:  ', fract_sibl_tile(j),                         NEW_LINE('a'), &
+                & 'WS tile:      ', SUM(wtr_soil_sl(j,:)),                         NEW_LINE('a'), &
+                & 'drain_lat res:', drain_lat_retention_sl(j,:),                   NEW_LINE('a'), &
+                & 'drainage:     ', drainage(j)* dtime / rhoh2o,                   NEW_LINE('a'), &
+                & 'wtr_latflow:  ', wtr_latflow(j) * dtime / rhoh2o
+
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+              wb_threshold(j) = wbv_trsh / dtime
+              IF (ABS(wbal_dpr_pre(j) - wbal_dpr(j)) >  wb_threshold(j)) THEN
+                WRITE (message_text_long,*) 'dpr: WBV after drain lat [m dt-1]', NEW_LINE('a'), &
+                & 'At lat / lon  ', lat(j), lon(j),                                 NEW_LINE('a'), & 
+                & 'WB Error:     ', wbal_dpr_pre(j) - wbal_dpr(j),                      NEW_LINE('a'), &
+                & 'WB thresh:    ', wb_threshold(j),                                NEW_LINE('a'), &
+                & 'fract tile:   ', fract(j),                                   NEW_LINE('a'), &
+                & 'fract  sblt:  ', fract_sibl_tile(j),                         NEW_LINE('a'), &
+                & 'WS  sblt:     ', SUM(wtr_soil_sl_sibl_tile(j,:)),                    NEW_LINE('a'), &
+                & 'latflow sblt: ', wtr_latflow_sibl_tile(j) * dtime / rhoh2o
+
+                CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+              END IF
+            END DO
+
           END IF
 
           ! Identify correct downhill target sibling for lateral diffusion
@@ -820,6 +1023,21 @@ CONTAINS
                   fract(i) > 1.0e-10_wp .AND. fract_sibl_tile(i) > 1.0e-10_wp .AND. &
                   wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
 
+
+                wbal_lvt_pre(i) = wtr_pond(i)  &
+                          & + SUM(ice_soil_sl(i,:))    &
+                          & + SUM(wtr_soil_sl(i,:))    &
+                          & - wtr_latflow(i) * dtime / rhoh2o 
+
+                wbal_dpr_pre(i) = wtr_pond_sibl_tile(i) &
+                          & + SUM(ice_soil_sl_sibl_tile(i,:)) &
+                          & + SUM(wtr_soil_sl_sibl_tile(i,:)) &
+                          & - wtr_latflow_sibl_tile(i) * dtime / rhoh2o 
+
+                wbal_sum_pre(i) = fract(i) * wbal_lvt_pre(i)   &
+                            & + fract_sibl_tile(i) * wbal_dpr_pre(i)
+
+                
                 IF (dsl4jsb_Config(MIX_)%l_diffinone) THEN
                   IF (h_offset(i) >= 0._wp) THEN
                     CALL calc_intertile_diffusion(nsoil,                       & !< Number of soil layers
@@ -897,6 +1115,69 @@ CONTAINS
                      & wtr_diflat_sl(i,:)    & !< lateral diffusion flux      [kg m-2 s-1]
                      & )
 
+                     wbal_lvt(i) = wtr_pond(i)  &
+                          & + SUM(ice_soil_sl(i,:))    &
+                          & + SUM(wtr_soil_sl(i,:))    &
+                          & - wtr_latflow(i) * dtime / rhoh2o 
+
+                     wbal_dpr(i) = wtr_pond_sibl_tile(i) &
+                          & + SUM(ice_soil_sl_sibl_tile(i,:)) &
+                          & + SUM(wtr_soil_sl_sibl_tile(i,:)) &
+                          & - wtr_latflow_sibl_tile(i) * dtime / rhoh2o 
+
+                     wbal_sum(i) = fract(i) * wbal_lvt(i)   &
+                               & + fract_sibl_tile(i) * wbal_dpr(i)
+
+                     wbal_err(i) = wbal_sum_pre(i) - wbal_sum(i)
+
+                    wb_threshold(i) = wbv_trsh * (fract(i)+fract_sibl_tile(i))  / dtime                     
+                    IF (ABS(wbal_err(i)) >  wb_threshold(i)) THEN 
+                       WRITE (message_text_long,*) 'WB violation after pond 2 soil [m dt-1]',     NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                       & 'WB Error:     ', wbal_err(i),                                       NEW_LINE('a'), &
+                       & 'WB thresh:    ', wb_threshold(i),                               NEW_LINE('a'), &
+                       & 'fract tile:   ', fract(i),                                      NEW_LINE('a'), &
+                       & 'fract  sblt:  ', fract_sibl_tile(i),                            NEW_LINE('a'), &
+                       & 'WS tile:      ', wtr_soil_sl(i,:),                              NEW_LINE('a'), &
+                       & 'WS  sblt:     ', wtr_soil_sl_sibl_tile(i,:),                    NEW_LINE('a'), &
+                       & 'ICE tile:     ', ice_soil_sl(i,:),                              NEW_LINE('a'), &
+                       & 'ICE  sblt:    ', ice_soil_sl_sibl_tile(i,:),                    NEW_LINE('a'), &
+                       & 'wtr_latflow:  ', wtr_latflow(i) * dtime / rhoh2o,               NEW_LINE('a'), &
+                       & 'latflow sblt: ', wtr_latflow_sibl_tile(i) * dtime / rhoh2o
+
+                      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                    END IF
+                    wb_threshold(i) = wbv_trsh / dtime  
+                    IF (ABS(wbal_lvt_pre(i) - wbal_lvt(i)) >  wb_threshold(i)) THEN
+                      WRITE (message_text_long,*) 'lvt: WBV after pond 2 soil [m dt-1]', NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                      & 'WB Error:     ', wbal_lvt_pre(i) - wbal_lvt(i),                 NEW_LINE('a'), &
+                      & 'WB thresh:    ', wb_threshold(i),                               NEW_LINE('a'), &
+                       & 'fract tile:   ', fract(i),                                      NEW_LINE('a'), &
+                       & 'fract  sblt:  ', fract_sibl_tile(i),                            NEW_LINE('a'), &
+                      & 'WS tile:      ', SUM(wtr_soil_sl(i,:)),                         NEW_LINE('a'), &
+                      & 'ICE tile:     ', SUM(ice_soil_sl(i,:)),                        NEW_LINE('a'), &
+                      & 'wtr_latflow:  ', wtr_latflow(i) * dtime / rhoh2o
+
+                      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                    END IF
+                    wb_threshold(i) = wbv_trsh / dtime 
+                    IF (ABS(wbal_dpr_pre(i) - wbal_dpr(i)) >  wb_threshold(i)) THEN
+                      WRITE (message_text_long,*) 'dpr: WBV after pond 2 soil [m dt-1]', NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                      & 'WB Error:     ', wbal_dpr_pre(i) - wbal_dpr(i),            NEW_LINE('a'), &
+                      & 'WB thresh:    ', wb_threshold(i),                               NEW_LINE('a'), &
+                       & 'fract tile:   ', fract(i),                                      NEW_LINE('a'), &
+                       & 'fract  sblt:  ', fract_sibl_tile(i),                            NEW_LINE('a'), &
+                      & 'WS  sblt:     ', SUM(wtr_soil_sl_sibl_tile(i,:)),          NEW_LINE('a'), &
+                       & 'ICE  sblt:    ', SUM(ice_soil_sl_sibl_tile(i,:)),         NEW_LINE('a'), &
+                       & 'latflow sblt: ', wtr_latflow_sibl_tile(i) * dtime / rhoh2o
+
+                      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                    END IF
+
+                    ws_pre_sl(i,:) = wtr_soil_sl(i,:)
+                    ws_pre_sl_sibl_tile(i,:) = wtr_soil_sl_sibl_tile(i,:)
                     CALL calc_intertile_diffusion_soil(nsoil,                & !< Number of soil layers
                      & dtime,                                                & !< time step                                        [s]
                      & abs(h_offset(i)),                                     & !< height difference between source and target tile [m]
@@ -921,6 +1202,67 @@ CONTAINS
                      & wtr_soil_sl(i,:),     wtr_soil_sl_sibl_tile(i,:),     & !< soil water storage          [m]
                      & wtr_diflat_sl(i,:),   wtr_diflat_sl_sibl_tile(i,:)    & !< lateral diffusion flux      [kg m-2 s-1]
                      & )
+
+
+                    wbal_lvt(i) = wtr_pond(i)  &
+                          & + SUM(ice_soil_sl(i,:))    &
+                          & + SUM(wtr_soil_sl(i,:))    &
+                          & - wtr_latflow(i) * dtime / rhoh2o 
+
+                    wbal_dpr(i) = wtr_pond_sibl_tile(i) &
+                          & + SUM(ice_soil_sl_sibl_tile(i,:)) &
+                          & + SUM(wtr_soil_sl_sibl_tile(i,:)) &
+                          & - wtr_latflow_sibl_tile(i) * dtime / rhoh2o 
+
+                    wbal_sum(i) = fract(i) * wbal_lvt(i)   &
+                               & + fract_sibl_tile(i) * wbal_dpr(i)
+
+                    wbal_err(i) = wbal_sum_pre(i) - wbal_sum(i)
+
+                    wb_threshold(i) = wbv_trsh * (fract(i)+fract_sibl_tile(i))  / dtime                      
+                    IF (ABS(wbal_err(i)) >  wb_threshold(i)) THEN 
+                      WRITE (message_text_long,*) 'WB violation after soil diff [m dt-1]',    NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                       & 'WB Error:     ', wbal_err(i),                                       NEW_LINE('a'), &
+                       & 'WB thresh:    ', wb_threshold(i),                               NEW_LINE('a'), &
+                       & 'fract tile:   ', fract(i),                                      NEW_LINE('a'), &
+                       & 'fract  sblt:  ', fract_sibl_tile(i),                            NEW_LINE('a'), &
+                       & 'WS tile:      ', wtr_soil_sl(i,:),                              NEW_LINE('a'), &
+                       & 'WS  sblt:     ', wtr_soil_sl_sibl_tile(i,:),                    NEW_LINE('a'), &
+                       & 'ICE tile:     ', ice_soil_sl(i,:),                              NEW_LINE('a'), &
+                       & 'ICE  sblt:    ', ice_soil_sl_sibl_tile(i,:),                    NEW_LINE('a'), &
+                       & 'wtr_latflow:  ', wtr_latflow(i) * dtime / rhoh2o,               NEW_LINE('a'), &
+                       & 'latflow sblt: ', wtr_latflow_sibl_tile(i) * dtime / rhoh2o
+                      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                    END IF
+                    wb_threshold(i) = wbv_trsh / dtime 
+                    IF (ABS(wbal_lvt_pre(i) - wbal_lvt(i)) >  wb_threshold(i)) THEN
+                      WRITE (message_text_long,*) 'lvt: WBV after soil diff [m dt-1]', NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                      & 'WB Error:     ', wbal_lvt_pre(i) - wbal_lvt(i),                 NEW_LINE('a'), &
+                      & 'WB thresh:    ', wb_threshold(i),                               NEW_LINE('a'), &
+                       & 'fract tile:   ', fract(i),                                      NEW_LINE('a'), &
+                       & 'fract  sblt:  ', fract_sibl_tile(i),                            NEW_LINE('a'), &
+                      & 'WS tile:      ', SUM(wtr_soil_sl(i,:)),                         NEW_LINE('a'), &
+                      & 'ICE tile:     ', SUM(ice_soil_sl(i,:)),                        NEW_LINE('a'), &
+                      & 'wtr_latflow:  ', wtr_latflow(i) * dtime / rhoh2o
+
+                      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                    END IF
+                    wb_threshold(i) = wbv_trsh / dtime 
+                    IF (ABS(wbal_dpr_pre(i) - wbal_dpr(i)) >  wb_threshold(i)) THEN
+                      WRITE (message_text_long,*) 'dpr: WBV after soil diff [m dt-1]', NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                      & 'WB Error:     ', wbal_dpr_pre(i) - wbal_dpr(i),            NEW_LINE('a'), &
+                      & 'WB thresh:    ', wb_threshold(i),                          NEW_LINE('a'), &
+                       & 'fract tile:   ', fract(i),                                      NEW_LINE('a'), &
+                       & 'fract  sblt:  ', fract_sibl_tile(i),                            NEW_LINE('a'), &
+                      & 'WS  sblt:     ', SUM(wtr_soil_sl_sibl_tile(i,:)),          NEW_LINE('a'), &
+                       & 'ICE  sblt:    ', SUM(ice_soil_sl_sibl_tile(i,:)),         NEW_LINE('a'), &
+                       & 'latflow sblt: ', wtr_latflow_sibl_tile(i) * dtime / rhoh2o
+                      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                    END IF
+
                   ELSE
                     CALL calc_lat_pond_soil_flux(nsoil, & !< Number of soil layers
                      & dtime,                             & !< time step                                        [s]
@@ -975,6 +1317,16 @@ CONTAINS
             ! Lateral snow redistribution between ridge and depression tiles of the same macrotopography
             DO i = 1, nc
               IF (fract(i) > 1.0e-10_wp .AND. fract_sibl_tile(i) > 1.0e-10_wp) THEN
+                weq_snow_pre(i) = weq_snow(i)
+                weq_snow_sibl_tile_pre(i) = weq_snow_sibl_tile(i)
+
+                wbal_lvt_pre(i) = weq_snow(i) 
+
+                wbal_dpr_pre(i) = weq_snow_sibl_tile(i) 
+
+                wbal_sum_pre(i) = fract(i) * wbal_lvt_pre(i)   &
+                            & + fract_sibl_tile(i) * wbal_dpr_pre(i)
+
                 IF (h_offset(i) >= 0._wp) THEN
                   CALL calc_snow_redistribution(dsl4jsb_Config(SSE_)%l_dynsnow, & !< snow properties
                      & dtime,                                                & !< time step                   [s]
@@ -1000,6 +1352,58 @@ CONTAINS
                      & snow_rdst_sibl_tile(i),         snow_rdst(i)          & !< lateral snow redistribution flux  [kg m-2 s-1]
                      & )
                 END IF
+
+                wbal_lvt(i) = weq_snow(i)  &
+                          & - snow_rdst(i) * dtime / rhoh2o 
+
+                wbal_dpr(i) = weq_snow_sibl_tile(i) &
+                          & - snow_rdst_sibl_tile(i) * dtime / rhoh2o 
+
+                wbal_sum(i) = fract(i) * wbal_lvt_pre(i)   &
+                            & + fract_sibl_tile(i) * wbal_dpr_pre(i)
+
+                wbal_err(i) = wbal_sum_pre(i) - wbal_sum(i)
+
+                wb_threshold(i) = wbv_trsh * (fract(i)+fract_sibl_tile(i))  / dtime   
+                IF (ABS(wbal_err(i)) >  wb_threshold(i)) THEN 
+                  WRITE (message_text_long,*) 'WB violation after snow [m dt-1]',    NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                       & 'WB Error:     ', wbal_err(i),                               NEW_LINE('a'), &
+                       & 'WB thresh:    ', wb_threshold(i),                               NEW_LINE('a'), &
+                       & 'fract tile:   ', fract(i),                                  NEW_LINE('a'), &
+                       & 'fract  sblt:  ', fract_sibl_tile(i),                        NEW_LINE('a'), &
+                       & 'weq_snow tile: ', weq_snow(i),                              NEW_LINE('a'), &
+                       & 'weq_snow sblt: ', weq_snow_sibl_tile(i),                    NEW_LINE('a'), &
+                       & 'snow_rdst tile:', snow_rdst(i) * dtime / rhoh2o,            NEW_LINE('a'), &
+                       & 'snow_rdst sblt:', snow_rdst_sibl_tile(i) * dtime / rhoh2o
+                      CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                END IF
+                wb_threshold(i) = wbv_trsh / dtime
+                IF (ABS(wbal_lvt_pre(i) - wbal_lvt(i)) >  wb_threshold(i)) THEN
+                  WRITE (message_text_long,*) 'lvt: WBV after snow [m dt-1]', NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                  & 'WB Error:     ', wbal_lvt_pre(i) - wbal_lvt(i),          NEW_LINE('a'), &
+                  & 'WB thresh:    ', wb_threshold(i),                        NEW_LINE('a'), &
+                       & 'fract tile:   ', fract(i),                                      NEW_LINE('a'), &
+                       & 'fract  sblt:  ', fract_sibl_tile(i),                            NEW_LINE('a'), &
+                  & 'weq_snow tile: ', weq_snow(i),  weq_snow_pre(i),          NEW_LINE('a'), &
+                  & 'snow_rdst tile:', snow_rdst(i) * dtime / rhoh2o
+
+                  CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                END IF
+                wb_threshold(i) = wbv_trsh / dtime
+                IF (ABS(wbal_dpr_pre(i) - wbal_dpr(i)) >  wb_threshold(i)) THEN
+                  WRITE (message_text_long,*) 'dpr: WBV after snow [m dt-1]', NEW_LINE('a'), &
+                       & 'At lat / lon  ', lat(i), lon(i),                                 NEW_LINE('a'), & 
+                  & 'WB Error:     ', wbal_dpr_pre(i) - wbal_dpr(i),            NEW_LINE('a'), &
+                  & 'WB thresh:    ', wb_threshold(i),                               NEW_LINE('a'), &
+                  & 'fract tile:   ', fract(i),                                      NEW_LINE('a'), &
+                  & 'fract  sblt:  ', fract_sibl_tile(i),                            NEW_LINE('a'), &
+                  & 'weq_snow sblt: ', weq_snow_sibl_tile(i), weq_snow_sibl_tile_pre(i), NEW_LINE('a'), &
+                  & 'snow_rdst sblt:', snow_rdst_sibl_tile(i) * dtime / rhoh2o
+                  CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+                END IF
+
               END IF
             ENDDO
             DO i = 1, nc

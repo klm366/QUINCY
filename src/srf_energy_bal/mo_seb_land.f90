@@ -155,6 +155,10 @@ CONTAINS
     TYPE(t_jsb_model), POINTER :: model
     TYPE(t_jsb_grid),  POINTER :: grid
 
+    REAL(wp), POINTER :: lat(:), lon(:)
+
+    CHARACTER(len=5000)         :: message_text_long
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy_land'
 
     iblk = options%iblk
@@ -168,6 +172,9 @@ CONTAINS
 
     model => Get_model(tile%owner_model_id)
     grid => Get_grid(model%grid_id)
+
+    lat => grid%lat(ics:ice, iblk)
+    lon => grid%lon(ics:ice, iblk)
 
     l_is_newday = is_newday(options%current_datetime, options%dtime)
     tmp_timesteps_per_day = timesteps_per_day(options%dtime)
@@ -385,6 +392,27 @@ CONTAINS
     ELSE
       t_unfilt(:) = s_star(:) / t2s_conv(:)
     END IF
+
+    DO i=1, size(t_unfilt,dim=1)
+      IF (t_unfilt(i) > 373.15_wp) THEN
+        WRITE (message_text_long,*) 'Getting hot at (lat/lon): ',lat(i),lon(i),  NEW_LINE('a'), &
+        & 'Low & Dpr:', tile%contains_lowland, tile%contains_depression, NEW_LINE('a'), & 
+        & 't_unfilt:', t_unfilt(i), NEW_LINE('a'), & 
+        & 't_old:', s_old(i)/ t2s_conv(i), NEW_LINE('a'), &
+        & 't2s_conv:', t2s_conv(i), NEW_LINE('a'), &
+        & 't_ac, t_bc, q_ac, q_bc:',t_acoef(i), t_bcoef(i), q_acoef(i), q_bcoef(i), NEW_LINE('a'), &
+        & 'qsat_srf_old:', qsat_srf_old(i), NEW_LINE('a'), &
+        & 'dQdT:', dQdT(i), NEW_LINE('a'), &
+        & 'rad_srf_net:', rad_srf_net(i), NEW_LINE('a'), &
+        & 'forc_hflx:', forc_hflx(i), NEW_LINE('a'), &
+        & 'heat_tcoef:', heat_tcoef(i), NEW_LINE('a'), &
+        & 'fact_q_air:', fact_q_air(i), NEW_LINE('a'), &
+        & 'fact_qsat_srf:',  fact_qsat_srf(i), NEW_LINE('a'), &
+        & 'frozen_fract:',frozen_fract(i), NEW_LINE('a'), &
+        & ' heat_cap:',  heat_cap(i)
+        CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+      END IF
+    END DO 
 
     ! Correct new dry static energy for melting of snow on the surface, melting/freezing of surface water
     ! and (if l_freeze=.TRUE.) melting/freezing ofice/water in the top soil layer

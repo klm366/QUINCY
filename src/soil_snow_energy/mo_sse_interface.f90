@@ -22,7 +22,9 @@ MODULE mo_sse_interface
   USE mo_jsb_time,        ONLY: is_time_experiment_start
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_class,          ONLY: Get_model
+  USE mo_jsb_grid,           ONLY: Get_grid
   USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid
   USE mo_jsb_grid,           ONLY: Get_vgrid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
@@ -145,6 +147,8 @@ CONTAINS
     ! Local variables
     !
     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: grid
+
     dsl4jsb_Def_config(SSE_)
     dsl4jsb_Def_memory(SSE_)
     dsl4jsb_Def_memory(SEB_)
@@ -229,6 +233,10 @@ CONTAINS
     INTEGER                    :: nsoil, nsnow
     INTEGER                    :: nsoil_sb
 
+    REAL(wp), POINTER :: lat(:), lon(:)
+
+    CHARACTER(len=5000)         :: message_text_long
+
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_temperature'
 
     iblk  = options%iblk
@@ -241,6 +249,8 @@ CONTAINS
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     model => Get_model(tile%owner_model_id)
+    grid => Get_grid(model%grid_id)
+
     dsl4jsb_Get_config(SSE_)
 
     soil_e => Get_vgrid('soil_depth_energy')
@@ -251,6 +261,9 @@ CONTAINS
     END IF
     vgrid_soil_sb => Get_vgrid('soil_layer_sb')
     nsoil_sb      = vgrid_soil_sb%n_levels
+
+    lat => grid%lat(ics:ice, iblk)
+    lon => grid%lon(ics:ice, iblk)
 
     ! Get reference to variables for current block
     !
@@ -601,6 +614,28 @@ CONTAINS
         hcap_grnd(i) = hcap_grnd_soil(i)
       END IF
     END DO
+
+    DO i = 1, size(snow_depth_sl, dim=1)
+      IF (abs(grnd_hflx(i)) > 1000._wp) THEN
+        WRITE (message_text_long,*) 'Getting weird grnd_hflx at (lat/lon): ',lat(i),lon(i),  NEW_LINE('a'), &
+        & 'Low & Dpr:', tile%contains_lowland, tile%contains_depression, NEW_LINE('a'), & 
+        & 'grnd_hflx:', grnd_hflx(i), NEW_LINE('a'), &
+        & 'hcap_grnd:',hcap_grnd(i), NEW_LINE('a'), &
+        & 'snow_fract:', snow_fract(i), NEW_LINE('a'), &
+        & 'grnd_hflx_soil:', grnd_hflx_soil(i), NEW_LINE('a'), &
+        & 'grnd_hflx_snow:',grnd_hflx_snow(i), NEW_LINE('a'), &
+        & 't_soil_sl:', t_soil_sl(i,:), NEW_LINE('a'), &
+        & 'vol_heat_cap_sl:', vol_heat_cap_sl(i,:), NEW_LINE('a'), &
+        & 'heat_cond_sl:', heat_cond_sl(i,:), NEW_LINE('a'), &
+        & 'wtr_soil_sl:', wtr_soil_sl(i,:), NEW_LINE('a'), &
+        & 'ice_soil_sl:', ice_soil_sl(i,:), NEW_LINE('a'), &
+        & 'wtr_freeze_sl:', wtr_freeze_sl(i,:), NEW_LINE('a'), &
+        & 'ice_melt_sl:',  ice_melt_sl(i,:)
+        CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+      END IF
+    END DO 
+
+
     !$claw acc end data
 
     !$claw acc exit data delete(snow_depth,snow_fract,t_unfilt_corrected,t_soil_top,hcap_grnd_snow,hcap_grnd_soil,grnd_hflx_snow,grnd_hflx_soil,ldglac,itop,itop_old)
@@ -732,6 +767,7 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc, i, j
     INTEGER  :: nsoil
 
+    CHARACTER(len=5000)         :: message_text_long
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_soil_and_snow_properties'
 
     iblk  = options%iblk
@@ -847,6 +883,17 @@ CONTAINS
         !&                        SPREAD( soil_e%dz(:),                    DIM=1, ncopies=nc) &
         &                                soil_e_dz_tmp(:,:)          &
         & )
+
+      DO i = 1, size(soil_depth_sl, dim=1)
+        IF (ANY(fract_water(i,:) > 1._wp) .OR. ANY(fract_ice(i,:) > 1._wp)) THEN
+          WRITE (message_text_long,*) 'Ice or water exceed soil porosity: ',  NEW_LINE('a'), &
+            & 'Low & Dpr:', tile%contains_lowland, tile%contains_depression, NEW_LINE('a'), & 
+            & 'fract_water:', fract_water(i,:), NEW_LINE('a'), &
+            & 'fract_ice:',fract_ice(i,:), NEW_LINE('a'), &
+            & 'vol_heat_cap_sl:', vol_heat_cap_sl(i,:)
+          CALL message (TRIM(routine), message_text_long, all_print=.TRUE.)
+        END IF
+      END DO
 
       !$claw acc exit data delete(fract_water,fract_ice,vol_heat_cap_tmp, vol_heat_cap_org_tmp,soil_e_dz_tmp)
       DEALLOCATE(fract_water, fract_ice, vol_heat_cap_tmp, vol_heat_cap_org_tmp, soil_e_dz_tmp)

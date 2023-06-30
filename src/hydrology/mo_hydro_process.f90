@@ -595,7 +595,7 @@ CONTAINS
     & evapo_deficit, &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, runoff_dunne, drainage, &
-    & drain_rock, drain_lat, drain_lat_sl, wtr_soilhyd_res                               &
+    & drain_rock, drain_lat, drain_lat_sl, wtr_soilhyd_res, weq_et_act             &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -623,7 +623,7 @@ CONTAINS
       & wtr_soil_sl, ice_soil_sl
     REAL(wp), INTENT(out), DIMENSION(:) ::      &
       & infilt_over, runoff_dunne, drainage,    &
-      & drain_rock, drain_lat, wtr_soilhyd_res
+      & drain_rock, drain_lat, wtr_soilhyd_res, weq_et_act
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
       & drain_lat_sl, wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
 
@@ -719,7 +719,8 @@ CONTAINS
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
       &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
-      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
+      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, weq_et_act,          &
+      &     ltpe_closed, ltpe_open)
 
     ! Aggregate or distribute the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
@@ -1084,7 +1085,7 @@ CONTAINS
     & wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,              &
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,           &
     & infilt, infilt_over, drain_rock, drain_lat_sl,                &
-    & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                 &
+    & tpe_overflow, evapo_deficit, wtr_soilhyd_res, weq_et_act, &
     & ltpe_closed, ltpe_open)
 
     USE mo_jsb_math_constants,     ONLY: pi
@@ -1126,6 +1127,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
     REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           ! Water evaporated from unintended sources [m]
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
+    REAL(wp), INTENT(OUT)           :: weq_et_act(:)        ! Evapotrans requirements that can not be met by soil water or ice (independant of surfce budgets)
 
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
@@ -1170,6 +1172,8 @@ CONTAINS
     !$claw acc         remoist, wtr_transp_residual, wtr_transp_corr, wtr_exinfcap, wtr_exwsat)
 
     !$claw acc parallel loop gang vector collapse(2)
+
+    weq_et_act(:) = 0._wp
 
     DO i = 1, nc
       IF (ANY(wtr_soil_sl(i,:) < 0._wp) .AND. l_fract(i)) THEN
@@ -1221,6 +1225,8 @@ CONTAINS
       &                      wtr_soil_sl - wtr_rsdl_sl, evapo_deficit, evapo_soil_sl1,       &
       &                      transpiration_sl, deficit_sevap, deficit_trans)
 
+
+    weq_et_act(:) = evapo_soil_sl1(:) + SUM(transpiration_sl(:,:),DIM=2)
     !
     !> Drainage pt.1
     !
@@ -1399,8 +1405,10 @@ CONTAINS
     DO i = 1, nc
       IF (deficit_sevap(i) < 0._wp) THEN                               ! remaining soil evaporation demand
         wtr_soil_sl(i,1) = wtr_soil_sl(i,1) + deficit_sevap(i)         ! take water from uppermost soil layer
+        weq_et_act(i) = weq_et_act(i) + deficit_sevap(i)
         IF (wtr_soil_sl(i,1) < 0._wp) THEN                             ! if there is not enough liquid soil water
           deficit_sevap(i) = wtr_soil_sl(i,1)                          ! this is the amount of water missing
+          weq_et_act(i) = weq_et_act(i) - wtr_soil_sl(i,1)
           wtr_soil_sl(i,1) = 0._wp                                     ! soil moisture cannot be negative
         ELSE                                                           ! no deficit remains
           deficit_sevap(i) = 0._wp
@@ -1433,9 +1441,11 @@ CONTAINS
         IF (deficit_evapotrans(i) < 0._wp .AND. wtr_soil_sl(i,j) > wtr_rsdl_sl(i,j)) THEN
           IF (ABS(deficit_evapotrans(i)) >=  wtr_soil_sl(i,j) - wtr_rsdl_sl(i,j)) THEN
             deficit_evapotrans(i) = deficit_evapotrans(i) + wtr_soil_sl(i,j) - wtr_rsdl_sl(i,j)
+            weq_et_act(i) = weq_et_act(i) - wtr_soil_sl(i,j) + wtr_rsdl_sl(i,j)
             wtr_soil_sl(i,j) = wtr_rsdl_sl(i,j)
           ELSE
             wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + deficit_evapotrans(i)
+            weq_et_act(i) = weq_et_act(i) + deficit_evapotrans(i)
             deficit_evapotrans(i) = 0._wp        
           END IF
         END IF
@@ -1445,9 +1455,11 @@ CONTAINS
         IF (deficit_evapotrans(i) < 0._wp .AND. wtr_soil_sl(i,j) > 0._wp) THEN
           IF (ABS(deficit_evapotrans(i)) >=  wtr_soil_sl(i,j)) THEN
             deficit_evapotrans(i) = deficit_evapotrans(i) + wtr_soil_sl(i,j)
+            weq_et_act(i) = weq_et_act(i) - wtr_soil_sl(i,j)
             wtr_soil_sl(i,j) = 0._wp
           ELSE
             wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + deficit_evapotrans(i)
+            weq_et_act(i) = weq_et_act(i) + deficit_evapotrans(i)
             deficit_evapotrans(i) = 0._wp        
           END IF
         END IF
@@ -1457,9 +1469,11 @@ CONTAINS
         IF (deficit_evapotrans(i) < 0._wp .AND. ice_soil_sl(i,j) > 0._wp) THEN
           IF (ABS(deficit_evapotrans(i)) >=  ice_soil_sl(i,j)) THEN
             deficit_evapotrans(i) = deficit_evapotrans(i) + ice_soil_sl(i,j)
+            weq_et_act(i) = weq_et_act(i) - ice_soil_sl(i,j)
             ice_soil_sl(i,j) = 0._wp
           ELSE
             ice_soil_sl(i,j) = ice_soil_sl(i,j) + deficit_evapotrans(i)
+            weq_et_act(i) = weq_et_act(i) + deficit_evapotrans(i)
             deficit_evapotrans(i) = 0._wp        
           END IF
         END IF
