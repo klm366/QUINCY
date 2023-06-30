@@ -43,6 +43,7 @@ MODULE mo_hydro_config_class
       & manning_n,            & ! Manning cefficient for surface roughness: 0.035 -> floodplains - pasture,
                                 ! 0.05 -> floodplains - light brush, 0.075 -> floodplains - heavy brush, 0.15 -> floodplains - trees
       & dt_sat,               & !< Time required for hydraulic conductivity to reach max [sec]
+      & wbv_trsh,            & !< Threshold above which water balance violations trigger message / finish
       & max_slope,            & !< maximum slope considered for infiltration/runoff estimation
       & max_pond_depth          !< prescribed maximum surface pond depth
 
@@ -55,6 +56,7 @@ MODULE mo_hydro_config_class
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
       & l_ponds,              & !< Additional surface water storage
+      & l_ini_geo_simple,     & 
       & l_jsb_wet_test          !< Create idealized, wet jsb-setup
 
     INTEGER               ::  &
@@ -87,12 +89,12 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
-    REAL(wp)                    :: manning_n, dt_sat, max_slope, max_pond_depth
+    REAL(wp)                    :: manning_n, dt_sat, wbv_trsh, max_slope, max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, runoff_scheme, soilhydmodel, interpol_mean
     INTEGER                     :: i_botdrain, i_infil
     LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, &
-      &                            l_ponds, l_jsb_wet_test
+      &                            l_ponds, l_ini_geo_simple, l_jsb_wet_test
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -106,6 +108,7 @@ CONTAINS
       & snow_depth_max,             &
       & manning_n,                  &
       & dt_sat,                     &
+      & wbv_trsh,                  &
       & max_slope,                  &
       & max_pond_depth,             &
       & scheme_stom_cond,           &
@@ -115,6 +118,7 @@ CONTAINS
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
       & l_ponds,                    &
+      & l_ini_geo_simple,           &
       & l_jsb_wet_test,             &
       & runoff_scheme,              &
       & soilhydmodel,               &
@@ -146,6 +150,7 @@ CONTAINS
     snow_depth_max         = -1.0_wp             ! -1: no limitation
     manning_n              = 0.075_wp
     dt_sat                 = 600._wp             ! [sec]
+    wbv_trsh               = 1.E-11_wp           ! [m dt-1]
     max_slope              = 0.45_wp             ! [m/m]
     max_pond_depth         = 0.1_wp              ! [m]
     scheme_stom_cond       = 'echam5'
@@ -155,6 +160,7 @@ CONTAINS
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
     l_ponds                = .FALSE.
+    l_ini_geo_simple       = .FALSE.
     l_jsb_wet_test         = .FALSE.
     runoff_scheme          = "Arno"
     soilhydmodel           = "BrooksCorey"
@@ -201,6 +207,10 @@ CONTAINS
     config%dt_sat         = dt_sat
     CALL message(TRIM(routine), 'Time required for hydraulic conductivity to reach max [sec]: '//TRIM(real2string(dt_sat)))
 
+    config%wbv_trsh      = wbv_trsh
+    CALL message(TRIM(routine), 'Water balance violations trigger message / finish if larger than [m dt-1]: '&
+      & //TRIM(real2string(wbv_trsh)))
+
     config%max_slope      = max_slope
     CALL message(TRIM(routine), 'Maximum slope considered in runoff and infiltration computation [sec]: '&
       & //TRIM(real2string(max_slope)))
@@ -241,6 +251,8 @@ CONTAINS
       CALL message(TRIM(routine), 'Experimental pond scheme is disabled.')
     END IF
 
+
+    config%l_ini_geo_simple = l_ini_geo_simple
     config%l_jsb_wet_test = l_jsb_wet_test
     IF (l_jsb_wet_test) THEN
       CALL message(TRIM(routine), '*** This is a WET run***')

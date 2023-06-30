@@ -349,6 +349,12 @@ CONTAINS
 
       ! Subgrid-scale topography for QARCTIC model
       IF (TRIM(model%config%usecase) == 'jsbach_qarctic') THEN
+        
+        IF (dsl4jsb_Config(HYDRO_)%l_ini_geo_simple) THEN
+          hydro_init_vars%depth_dpr  = -0.1
+          hydro_init_vars%area_dpr   = 1.0_wp
+          hydro_init_vars%fract_perm = 0._wp
+        ELSE
 
         ptr_2D => input_file%Read_2d(  &
           & variable_name='depth_dpr',    &
@@ -358,18 +364,19 @@ CONTAINS
         hydro_init_vars%depth_dpr = MAX(hydro_init_vars%depth_dpr, &
                                        -hydro_init_vars%soil_depth*0.75_wp)
 
-        ptr_2D => input_file%Read_2d(  &
-          & variable_name='area_dpr',    &
-          & fill_array = hydro_init_vars%area_dpr)
-        hydro_init_vars%area_dpr = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-
-        IF (dsl4jsb_Config(HYDRO_)%l_jsb_wet_test ) THEN
           ptr_2D => input_file%Read_2d(  &
-            & variable_name='fract_perm',    &
-            & fill_array = hydro_init_vars%fract_perm)
-          hydro_init_vars%fract_perm = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
-        END IF
+            & variable_name='area_dpr',    &
+            & fill_array = hydro_init_vars%area_dpr)
+          hydro_init_vars%area_dpr = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+        
 
+          IF (dsl4jsb_Config(HYDRO_)%l_jsb_wet_test ) THEN
+            ptr_2D => input_file%Read_2d(  &
+              & variable_name='fract_perm',    &
+              & fill_array = hydro_init_vars%fract_perm)
+            hydro_init_vars%fract_perm = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)          
+          END IF
+        END IF
       ELSE
          hydro_init_vars%depth_dpr  = 0.0_wp
          hydro_init_vars%area_dpr   = 100000.0_wp  

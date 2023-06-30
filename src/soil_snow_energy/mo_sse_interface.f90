@@ -477,6 +477,10 @@ CONTAINS
       !$claw end expand
     END IF
 
+    IF (.NOT. dsl4jsb_Config(SSE_)%l_heat_lat) THEN
+      heat_flx_lat(:,:) = 0._wp
+    END IF
+
     ! @todo: move water/ice calculations to HYDRO_ process
     IF (tile%is_glacier) THEN
       CALL calc_soil_temperature( &

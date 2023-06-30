@@ -40,6 +40,7 @@ MODULE mo_sse_config_class
     !
     LOGICAL  :: l_heat_cap_map  !< T: Use soil heat capacity from input map, F: derive from FAO
     LOGICAL  :: l_heat_cond_map !< T: Use soil heat conductivity from input map, F: derive from heat cap. and FAO thermal diff.
+    LOGICAL  :: l_heat_lat
     LOGICAL  :: l_freeze        !< T: Consider freezing and thawing of soil water
     LOGICAL  :: l_supercool     !< T: Allow for supercooled soil water
     INTEGER  :: i_thaw          !< Scheme for diagnosing thaw depths
@@ -81,7 +82,8 @@ CONTAINS
 
     CLASS(t_sse_config), INTENT(inout) :: config
 
-    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, l_freeze, l_supercool
+    LOGICAL  :: active, l_snow, l_dynsnow, l_heat_cap_dyn, l_heat_cond_dyn, l_heat_cap_map, l_heat_cond_map, &
+              & l_heat_lat, l_freeze, l_supercool
     REAL(wp) :: w_soil_critical
     INTEGER  :: nsnow, i_thaw
     REAL(wp) :: dz_snow(max_snow_layers)
@@ -112,8 +114,8 @@ CONTAINS
       & nsnow, dz_snow, l_snow, l_dynsnow,      &
       & l_heat_cap_dyn, l_heat_cond_dyn,        &
       & l_heat_cap_map, l_heat_cond_map,        &
-      & l_freeze, l_supercool, i_thaw,          &
-      & w_soil_critical,                        &
+      & l_heat_lat, l_freeze, l_supercool,      &
+      & i_thaw, w_soil_critical,                &
       & ic_filename, bc_filename
 
     !! quincy
@@ -160,6 +162,7 @@ CONTAINS
     l_heat_cond_dyn  = .TRUE.
     l_heat_cap_map   = .FALSE.
     l_heat_cond_map  = .FALSE.
+    l_heat_lat       = .TRUE.
     l_freeze         = .TRUE.
     l_supercool      = .TRUE.
     i_thaw           = 1
@@ -228,6 +231,7 @@ CONTAINS
     END IF
     config%l_heat_cap_map  = l_heat_cap_map
     config%l_heat_cond_map = l_heat_cond_map
+    config%l_heat_lat      = l_heat_lat
     config%l_freeze        = l_freeze
     config%l_supercool     = l_supercool
     config%i_thaw          = i_thaw
