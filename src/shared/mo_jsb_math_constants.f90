@@ -10,7 +10,7 @@
 MODULE mo_jsb_math_constants
  
   USE mo_kind,                  ONLY: wp
-  USE mo_math_constants
+  USE mo_math_constants,        ONLY: pi, deg2rad
 
   IMPLICIT NONE
   PUBLIC

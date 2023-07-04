@@ -12,6 +12,8 @@
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
 !!
 
+!NEC$ options "-finline-file=externals/jsbach/src/base/mo_jsb_control.pp-jsb.f90"
+
 MODULE mo_jsb_interface
 #ifndef __NO_JSBACH__
 
@@ -515,10 +517,6 @@ CONTAINS
   ! ====================================================================================================== !
   !
   !> Routine to be called from host model in order to inquire a variable (section) on a specified tile
-  !
-  !  Note: this routine does not work with the nvidia compiler 22.9 on balfrin CPU for unknown reasons; it complains
-  !        that the optional keyword arguments are not allowed in current context. As a workaround, an explicit
-  !        routine for 2d-arrays on domain is implemented below this.
   !
   SUBROUTINE jsbach_get_var( &
     & var_name,              &
