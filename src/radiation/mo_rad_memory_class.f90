@@ -224,8 +224,6 @@ CONTAINS
 
     dsl4jsb_Get_config(SEB_)
 
-    !! !$acc enter data pcreate(mem)
-
     CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                        &
       & hgrid, surface,                                                    &
       & t_cf('sw_srf_net', '', 'Net surface shortwave radiation'),         &

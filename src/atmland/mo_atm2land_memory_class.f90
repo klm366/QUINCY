@@ -135,8 +135,6 @@ CONTAINS
     hgrid => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    !! !$acc enter data create(mem)
-
     CALL mem%Add_var( 'DEBUG_VAR', mem%DEBUG_VAR,                            &
       & hgrid, surface,                                                      &
       & t_cf('DEBUG_VAR', '', ''),                                           &

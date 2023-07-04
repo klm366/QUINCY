@@ -23,7 +23,7 @@ MODULE mo_jsbach_model
     &                     mtime_strerror, timedeltaToString, deallocateDatetime, deallocateTimedelta, &
     &                     OPERATOR(+), OPERATOR(==), OPERATOR(<), OPERATOR(>), OPERATOR(>=), &
     &                     event, eventGroup, newEvent, addEventToEventGroup, &
-    &                     NO_ERROR, MAX_DATETIME_STR_LEN, MAX_TIMEDELTA_STR_LEN, MAX_MTIME_ERROR_STR_LEN    
+    &                     NO_ERROR, MAX_DATETIME_STR_LEN, MAX_TIMEDELTA_STR_LEN, MAX_MTIME_ERROR_STR_LEN
   USE mo_timer,     ONLY: init_timer, timer_start, timer_stop, timers_level,    &
     &                     timer_model_init, print_timer,                        &
     &                     timer_domain_decomp, timer_compute_coeffs,            &
@@ -706,11 +706,10 @@ CONTAINS
     USE mo_jsb_tile_class,             ONLY: t_jsb_tile_abstract
     USE mo_jsb_interface,              ONLY: jsbach_start_timestep, jsbach_finish_timestep
     USE mo_jsb4_forcing,               ONLY: forcing_options, get_interface_variables_from_external_forcing
-    USE mo_radiation_orbit,            ONLY: orbit_kepler, orbit_vsop87, get_orbit_times
-    USE mo_radiation_solar_parameters, ONLY: solar_parameters
-    USE mo_aes_rad_config,             ONLY: aes_rad_config
+    USE mo_orbit_solar,                ONLY: compute_cos_zenith_angle
     USE mo_jsb_physical_constants,     ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,               ONLY: Get_omp_thread
+    USE mo_jsb_subset,                 ONLY: ON_CHUNK
 
     dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
@@ -734,24 +733,31 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
-    CLASS(t_jsb_tile_abstract), POINTER  :: tile
+    CLASS(t_jsb_tile_abstract), POINTER  :: tile, land_tile, lake_tile
 
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(TURB_)
     dsl4jsb_Def_memory(HYDRO_)
-  
+
+    dsl4jsb_Def_memory_tile(SEB_, land_tile)
+    dsl4jsb_Real2D_onDomain :: t_land_tile
+    dsl4jsb_Def_memory_tile(TURB_, land_tile)
+    dsl4jsb_Real2D_onDomain :: fact_q_air_land_tile
+    dsl4jsb_Real2D_onDomain :: fact_qsat_srf_land_tile
+    dsl4jsb_Real2D_onDomain :: rough_h_land_tile
+    dsl4jsb_Real2D_onDomain :: rough_m_land_tile
+
+    dsl4jsb_Def_memory_tile(SEB_, lake_tile)
+    dsl4jsb_Real2D_onDomain :: t_lake_tile
+    dsl4jsb_Def_memory_tile(TURB_, lake_tile)
+    dsl4jsb_Real2D_onDomain :: fact_q_air_lake_tile
+    dsl4jsb_Real2D_onDomain :: fact_qsat_srf_lake_tile
+    dsl4jsb_Real2D_onDomain :: rough_h_lake_tile
+    dsl4jsb_Real2D_onDomain :: rough_m_lake_tile
+
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
-    LOGICAL               :: lyr_perp = .FALSE. ! This switch has no effect on the results but we need it as a dummmy.
-    INTEGER               :: yr_perp  = -99999  ! Year if (lyr_perp == .TRUE.). We need it as a dummy.
-    REAL(wp)              :: time_of_day, orbit_date, rasc_sun, decl_sun, dist_sun
-    REAL(wp), ALLOCATABLE :: daylight_frc(:,:) ! daylight fraction (0 or 1) with diurnal cycle
-    REAL(wp), POINTER     :: cecc, cobld, clonp
-    INTEGER , POINTER     :: icosmu0
-    LOGICAL , POINTER     :: l_orbvsop87
-    REAL(wp)              :: dt_ext
-    LOGICAL, POINTER      :: ldiur, l_sph_symm_irr
-  
+
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
 
     LOGICAL :: l_force_from_obs
@@ -759,7 +765,7 @@ CONTAINS
     LOGICAL :: l_shift_one_timestep    = .TRUE.
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
-    INTEGER :: nc
+    INTEGER :: nc, nt, it
     INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':perform_jsbach_for_timestep'
@@ -787,7 +793,7 @@ CONTAINS
 
     datetime_forcing => newDatetime(datetime_old)
     IF (l_first_forcing_file) THEN
-      IF (forcing_options%forcing_steps_per_file == 1  .AND. .NOT. l_force_from_obs ) THEN
+      IF (forcing_options%forcing_steps_per_day == 1  .AND. .NOT. l_force_from_obs ) THEN
         ! Go to next time step of next file
         CALL getPTStringFromSeconds(forcing_options%forcing_synchron_factor * dtime, dtime_string)
         dtime_mtime  => newTimedelta(dtime_string)
@@ -809,6 +815,47 @@ CONTAINS
     nblks  = grid%Get_nblks()
 
     CALL model%Get_top_tile(tile)
+    IF (tile%contains_lake) THEN
+      ! We need separate variables for the land and the lake tile and cannot use the box tile.
+
+      ! Get pointer to the land tile
+      nt = tile%Get_no_of_children()
+      DO it=1,nt
+        IF (it == 1) THEN
+          land_tile => tile%Get_first_child_tile()
+        ELSE
+          land_tile => land_tile%Get_next_sibling_tile()
+        END IF
+        ! Exit if the land tile was found
+        IF (TRIM(land_tile%name) == 'land') EXIT
+      END DO
+      dsl4jsb_Get_memory_tile(SEB_, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             land_tile)
+      dsl4jsb_Get_memory_tile(TURB_, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       land_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       land_tile)
+
+      ! Get pointer to the lake tile
+      nt = tile%Get_no_of_children()
+      DO it=1,nt
+        IF (it == 1) THEN
+          lake_tile => tile%Get_first_child_tile()
+        ELSE
+          lake_tile => lake_tile%Get_next_sibling_tile()
+        END IF
+        ! Exit if the lake tile was found
+        IF (TRIM(lake_tile%name) == 'lake') EXIT
+      END DO
+      dsl4jsb_Get_memory_tile(SEB_, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(SEB_,  t,             lake_tile)
+      dsl4jsb_Get_memory_tile(TURB_, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_q_air,    lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, fact_qsat_srf, lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_h,       lake_tile)
+      dsl4jsb_Get_var2d_onDomain_tile_name(TURB_, rough_m,       lake_tile)
+    END IF
 
     IF (l_force_from_obs) THEN
 
@@ -817,44 +864,13 @@ CONTAINS
       dsl4jsb_Get_memory(TURB_)
       dsl4jsb_Get_memory(HYDRO_)
 
-      l_orbvsop87   => aes_rad_config(1)% l_orbvsop87 ! Default: .TRUE.
-      cecc          => aes_rad_config(1)% cecc
-      cobld         => aes_rad_config(1)% cobld
-      clonp         => aes_rad_config(1)% clonp
-
-      CALL get_orbit_times(l_orbvsop87, datetime_old, lyr_perp, yr_perp, & ! in
-        &                  time_of_day, orbit_date)                        ! out.
-
-      IF (l_orbvsop87) THEN
-        CALL orbit_vsop87(orbit_date, rasc_sun, decl_sun, dist_sun) ! in, out, out, out
-      ELSE
-        CALL orbit_kepler(cecc, cobld, clonp, orbit_date, & ! in 
-          &               rasc_sun, decl_sun, dist_sun)     ! out
-      END IF
-
-      ! Get the solar zenith angle
       lon => grid%lon
       lat => grid%lat
       coslat => grid%coslat
       sinlat => grid%sinlat
 
-      icosmu0        => aes_rad_config(1)% icosmu0        ! defines if and how cosmu0 is defined for extended sunlit areas
-      ldiur          => aes_rad_config(1)% ldiur          ! .TRUE.
-      l_sph_symm_irr => aes_rad_config(1)% l_sph_symm_irr ! .FALSE.
-      dt_ext         =  0.0_wp                              ! time interval over which the insolated area is extended, for us =0
-
-      ALLOCATE(daylight_frc(nproma,nblks))
-
-      CALL solar_parameters(decl_sun,         time_of_day,     & ! in
-        &                   icosmu0,          dt_ext,          & ! in
-        &                   ldiur,            l_sph_symm_irr,  & ! in
-        &                   grid%patch,                        & ! in 
-        &                   dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle), & ! out
-        &                   daylight_frc)      ! out
-
-      dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle) = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle) * daylight_frc(:,:)
-
-      DEALLOCATE(daylight_frc)
+      CALL compute_cos_zenith_angle(datetime_old, grid%patch, dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle))
+      ! Note: inquire_declination should only be called each time step after compute_cos_zenith_angle
 
       ! TODO: if really required calculate daily sums of evapotrans and evapopot in jsbach and get them here (see comment below)
       ALLOCATE(evapo_act2pot(nproma, nblks))
@@ -867,36 +883,86 @@ CONTAINS
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_forcing(model%id))
 
-      CALL get_interface_variables_from_external_forcing( &
-        ! in
-        & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
-        & evapo_act2pot,                                                             &
-        & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
-        & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &
-        & dsl4jsb_var2D_onDomain(TURB_, fact_qsat_srf),                              &
-        & dsl4jsb_var2D_onDomain(TURB_, rough_h),                                    &
-        & dsl4jsb_var2D_onDomain(TURB_, rough_m),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
-        ! out
-        & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
-        & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
-        & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_air), &
-        & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
-        & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              & 
-        & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
-        & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
-        & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
-        & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
-        & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
-        & dsl4jsb_var2D_onDomain(A2L_, pch))
+      IF (model%config%use_lakes) THEN
+        CALL get_interface_variables_from_external_forcing( &
+          ! in
+          & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
+          & evapo_act2pot,                                                             &
+          & t_land_tile(:,:),                                                          &
+          & fact_q_air_land_tile(:,:),                                                 &
+          & fact_qsat_srf_land_tile(:,:),                                              &
+          & rough_h_land_tile(:,:),                                                    &
+          & rough_m_land_tile(:,:),                                                    &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
+          & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, pch),                                         &
+          ! Input for lakes (optional)
+          & t_lake_tile(:,:),                                                          &
+          & fact_q_air_lake_tile(:,:),                                                 &
+          & fact_qsat_srf_lake_tile(:,:),                                              &
+          & rough_h_lake_tile(:,:),                                                    &
+          & rough_m_lake_tile(:,:),                                                    &
+          ! Output for lakes (optional)
+          & dsl4jsb_var2D_onDomain(A2L_, drag_wtr),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_wtr),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, drag_ice),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef_ice),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef_ice))
+      ELSE
+        CALL get_interface_variables_from_external_forcing( &
+          ! in
+          & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
+          & evapo_act2pot,                                                             &
+          & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
+          & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &
+          & dsl4jsb_var2D_onDomain(TURB_, fact_qsat_srf),                              &
+          & dsl4jsb_var2D_onDomain(TURB_, rough_h),                                    &
+          & dsl4jsb_var2D_onDomain(TURB_, rough_m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_,  cos_zenith_angle),                           &
+          ! out
+          & dsl4jsb_var2D_onDomain(A2L_, CO2_air),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, q_air),                                       &
+          & dsl4jsb_var2D_onDomain(A2L_, rain),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, snow),                                        &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_air),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, wind_10m),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, lw_srf_down),                                 &
+          & dsl4jsb_var2D_onDomain(A2L_, swvis_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swnir_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, swpar_srf_down),                              &
+          & dsl4jsb_var2D_onDomain(A2L_, fract_par_diffuse),                           &
+          & dsl4jsb_var2D_onDomain(A2L_, press_srf),                                   &
+          & dsl4jsb_var2D_onDomain(A2L_, drag_srf),                                    &
+          & dsl4jsb_var2D_onDomain(A2L_, t_acoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, t_bcoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, q_acoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, q_bcoef),                                     &
+          & dsl4jsb_var2D_onDomain(A2L_, pch))
+      END IF
 
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_forcing(model%id))
 
@@ -924,13 +990,15 @@ CONTAINS
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model%id))
 
       no_omp_thread = Get_omp_thread()
-  
+
       nc = ice - ics + 1
-  
+
       IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
       ! Update options
       CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
+      CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
+      CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
     ! Run tasks in queue
       CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
@@ -946,7 +1014,7 @@ CONTAINS
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model%id))
 
     END DO
-!$OMP END PARALLEL DO 
+!$OMP END PARALLEL DO
 
     CALL jsbach_finish_timestep(1, datetime_old, dtime)
 
