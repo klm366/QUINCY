@@ -23,12 +23,12 @@
 MODULE mo_lentic_process
 #ifndef __NO_JSBACH__
   
-    USE mo_kind,      ONLY: wp
+    USE mo_kind,              ONLY: wp
   
     IMPLICIT NONE
     PRIVATE
     PUBLIC ::                           &
-    !  &   calc_radflux,                  &
+      &   calc_radflux,                  &
     !  &   calc_ice_water_heatfluxes,     &
     !  &   calc_buoypar,                  &
     !  &   calc_lake_ice,                 &
@@ -39,144 +39,143 @@ MODULE mo_lentic_process
     
   CONTAINS
   
-    ! PURE ELEMENTAL SUBROUTINE calc_radflux ( &
-    !   & depth_w,        & ! in
-    !   & albedo_water,   & ! in
-    !   & albedo_ice,     & ! in
-    !   & albedo_snow,    & ! in
-    !   & h_ice,          & ! in 
-    !   & h_ML,           & ! in 
-    !   & h_snow,         & ! in
-    !   & I_atm,          & ! in
-    !   & opticpar_water, & ! in 
-    !   & opticpar_ice,   & ! in 
-    !   & opticpar_snow,  & ! in 
-    !   & I_bot,          & ! out
-    !   & I_h,            & ! out
-    !   & I_ice,          & ! out
-    !   & I_intm_0_h,     & ! out
-    !   & I_intm_h_D,     & ! out
-    !   & I_snow,         & ! out (but maybe not needed) 
-    !   & I_w             & ! out
-    !   )       
+    PURE ELEMENTAL SUBROUTINE calc_radflux ( &  !    & depth_w,        & ! in
+      & albedo_water,   & ! in
+      & albedo_ice,     & ! in
+      & albedo_snow,    & ! in
+      & h_ice,          & ! in # rename ice -> lice?
+      & h_ML,           & ! in 
+      & h_snow,         & ! in
+      & I_atm,          & ! in
+      & I_bot,          & ! out
+      & I_h,            & ! out
+      & I_ice,          & ! out
+      & I_intm_0_h,     & ! out
+      & I_intm_h_D,     & ! out
+      & I_snow,         & ! out (but maybe not needed) 
+      & I_w             & ! out
+      )       
 
-    !   ! Description:
-    !   !
-    !   !  Computes the radiation fluxes 
-    !   !  at the snow-ice, ice-water, air-water, 
-    !   !  mixed layer-thermocline and water column-bottom sediment interfaces,
-    !   !  the mean radiation flux over the mixed layer,
-    !   !  and the mean radiation flux over the thermocline.
+      ! Description:
+      !
+      !  Computes the radiation fluxes 
+      !  at the snow-ice, ice-water, air-water, 
+      !  mixed layer-thermocline and water column-bottom sediment interfaces,
+      !  the mean radiation flux over the mixed layer,
+      !  and the mean radiation flux over the thermocline.
 
-    !   USE mo_lentic_constants , ONLY : & 
-    !     h_Snow_min            , & ! Minimum snow thickness [m]
-    !     h_Ice_min             , & ! Minimum ice thickness [m]
-    !     h_ML_min                  ! Minimum mixed-layer depth [m]
+      USE mo_lentic_constants , ONLY : & 
+        depth_w               , & ! lake depth, constant as a first attempt
+        h_Snow_min            , & ! Minimum snow thickness [m]
+        h_Ice_min             , & ! Minimum ice thickness [m]
+        h_ML_min              , &  ! Minimum mixed-layer depth [m]
+        frac_optic_water      , & ! Optical characteristics of water
+        frac_optic_ice        , & ! Optical characteristics of ice
+        frac_optic_snow       , & ! Optical characteristics of snow   
+        extincoef_optic_water , & ! Optical characteristics of water
+        extincoef_optic_ice   , & ! Optical characteristics of ice
+        extincoef_optic_snow      ! Optical characteristics of snow 
 
-    !   !$claw model-data
-    !   REAL (KIND = wp), INTENT(IN) ::   &
-    !     depth_w       , & ! The lake depth [m]
-    !     albedo_water  , & ! Albedo of the water surface 
-    !     albedo_ice    , & ! Albedo of the ice surface
-    !     albedo_snow   , & ! Albedo of the snow surface
-    !     h_ice         , & ! Ice thickness [m]
-    !     h_ML          , & ! Thickness of the mixed-layer [m] 
-    !     h_snow_p      , & ! Snow thickness [m]
-    !     I_atm           & ! Radiation flux at the lower boundary of the atmosphere [W m^{-2}],
-    !                       ! i.e. the incident radiation flux with no regard for the surface albedo
+      !$claw model-data
+      REAL (KIND = wp), INTENT(IN) ::   &
+        ! depth_w       , & ! The lake depth [m]
+        albedo_water  , & ! Albedo of the water surface 
+        albedo_ice    , & ! Albedo of the ice surface
+        albedo_snow   , & ! Albedo of the snow surface
+        h_ice         , & ! Ice thickness [m]
+        h_ML          , & ! Thickness of the mixed-layer [m] 
+        h_snow      , & ! Snow thickness [m]
+        I_atm             ! Radiation flux at the lower boundary of the atmosphere [W m^{-2}],
+                          ! i.e. the incident radiation flux with no regard for the surface albedo
 
-    !   TYPE (opticpar_medium), INTENT(IN) :: & 
-    !     opticpar_water , & ! Optical characteristics of water
-    !     opticpar_ice   , & ! Optical characteristics of ice
-    !     opticpar_snow    & ! Optical characteristics of snow 
       
-    !   REAL(wp),  INTENT(out) :: &
-    !     I_bot,      & ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
-    !     I_h,        & ! Radiation flux through the mixed-layer-thermocline interface [W m^{-2}]
-    !     I_ice,      & ! Radiation flux through the snow-ice or air-ice interface [W m^{-2}]
-    !     I_intm_0_h, & ! Mean radiation flux over the mixed layer [W m^{-1}]
-    !     I_intm_h_D, & ! Mean radiation flux over the thermocline [W m^{-1}]
-    !     I_snow,     & ! Radiation flux through the air-snow interface [W m^{-2}] (but maybe not needed) 
-    !     I_w,        & ! Radiation flux through the ice-water or air-water interface [W m^{-2}]
-    !   !$claw end model-data
+      REAL(wp),  INTENT(out) :: &
+        I_bot,      & ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
+        I_h,        & ! Radiation flux through the mixed-layer-thermocline interface [W m^{-2}]
+        I_ice,      & ! Radiation flux through the snow-ice or air-ice interface [W m^{-2}]
+        I_intm_0_h, & ! Mean radiation flux over the mixed layer [W m^{-1}]
+        I_intm_h_D, & ! Mean radiation flux over the thermocline [W m^{-1}]
+        I_snow,     & ! Radiation flux through the air-snow interface [W m^{-2}] (but maybe not needed) 
+        I_w           ! Radiation flux through the ice-water or air-water interface [W m^{-2}]
+      !$claw end model-data
 
 
-    !   !  Local variables of type INTEGER
-    !   INTEGER (KIND = iintegers) :: & ! Help variable(s)
-    !   i                               ! DO loop index
+      !  Local variables of type INTEGER
+      INTEGER  :: & ! Help variable(s)
+      i                               ! DO loop index
 
-    !   ! ---------------------------
-    !   ! Go
+      ! ---------------------------
+      ! Go
 
-    !   IF(h_ice.GE.h_Ice_min) THEN            ! Ice exists
-    !     IF(h_snow_p.GE.h_Snow_min) THEN        ! There is snow above the ice
-    !       I_snow = I_atm*(1._wp-albedo_snow) 
-    !       I_bot = 0._wp
-    !       DO i=1, opticpar_snow%nband_optic
-    !         I_bot = I_bot +                    & 
-    !         opticpar_snow%frac_optic(i)*EXP(-opticpar_snow%extincoef_optic(i)*h_snow_p) 
-    !       END DO 
-    !       I_ice  = I_snow*I_bot
-    !     ELSE                                           ! No snow above the ice 
-    !       I_snow = I_atm  
-    !       I_ice  = I_atm*(1._wp-albedo_ice)
-    !     END IF 
-    !     I_bot = 0._wp
-    !     DO i=1, opticpar_ice%nband_optic
-    !       I_bot = I_bot +                      & 
-    !       opticpar_ice%frac_optic(i)*EXP(-opticpar_ice%extincoef_optic(i)*h_ice) 
-    !     END DO 
-    !     I_w      = I_ice*I_bot
-    !   ELSE                                             ! No ice-snow cover
-    !     I_snow   = I_atm  
-    !     I_ice    = I_atm
-    !     I_w      = I_atm*(1._wp-albedo_water)
-    !   END IF 
+      IF(h_ice.GE.h_Ice_min) THEN            ! Ice exists
+        IF(h_snow.GE.h_Snow_min) THEN        ! There is snow above the ice
+          I_snow = I_atm*(1._wp-albedo_snow) 
+          I_bot = 0._wp
+          DO i=1, SIZE(frac_optic_snow)
+            I_bot = I_bot +                    & 
+            frac_optic_snow(i)*EXP(-extincoef_optic_snow(i)*h_snow) 
+          END DO 
+          I_ice  = I_snow*I_bot
+        ELSE                                           ! No snow above the ice 
+          I_snow = I_atm  
+          I_ice  = I_atm*(1._wp-albedo_ice)
+        END IF 
+        I_bot = 0._wp
+        DO i=1, SIZE(frac_optic_ice)
+          I_bot = I_bot +                      & 
+          frac_optic_ice(i)*EXP(-extincoef_optic_ice(i)*h_ice) 
+        END DO 
+        I_w      = I_ice*I_bot
+      ELSE                                             ! No ice-snow cover
+        I_snow   = I_atm  
+        I_ice    = I_atm
+        I_w      = I_atm*(1._wp-albedo_water)
+      END IF 
 
-    !   IF(h_ML.GE.h_ML_min) THEN           ! Radiation flux at the bottom of the mixed layer
-    !     I_bot = 0._wp
-    !     DO i=1, opticpar_water%nband_optic
-    !       I_bot = I_bot +            & 
-    !       opticpar_water%frac_optic(i)*EXP(-opticpar_water%extincoef_optic(i)*h_ML) 
-    !     END DO 
-    !     I_h = I_w*I_bot
-    !   ELSE                                          ! Mixed-layer depth is less then a minimum value
-    !     I_h = I_w
-    !   END IF
+      IF(h_ML.GE.h_ML_min) THEN           ! Radiation flux at the bottom of the mixed layer
+        I_bot = 0._wp
+        DO i=1, SIZE(frac_optic_water)
+          I_bot = I_bot +            & 
+          frac_optic_water(i)*EXP(-extincoef_optic_water(i)*h_ML) 
+        END DO 
+        I_h = I_w*I_bot
+      ELSE                                          ! Mixed-layer depth is less then a minimum value
+        I_h = I_w
+      END IF
 
-    !   I_bot = 0._wp                         ! Radiation flux at the lake bottom
-    !   DO i=1, opticpar_water%nband_optic
-    !     I_bot = I_bot +              & 
-    !     opticpar_water%frac_optic(i)*EXP(-opticpar_water%extincoef_optic(i)*depth_w) 
-    !   END DO 
-    !   I_bot = I_w*I_bot
+      I_bot = 0._wp                         ! Radiation flux at the lake bottom
+      DO i=1, SIZE(frac_optic_water)
+        I_bot = I_bot +              & 
+        frac_optic_water(i)*EXP(-extincoef_optic_water(i)*depth_w) 
+      END DO 
+      I_bot = I_w*I_bot
 
-    !   IF(h_ML.GE.h_ML_min) THEN           ! Integral-mean radiation flux over the mixed layer
-    !     I_intm_0_h = 0._wp
-    !     DO i=1, opticpar_water%nband_optic
-    !       I_intm_0_h = I_intm_0_h +                                &
-    !       opticpar_water%frac_optic(i)/opticpar_water%extincoef_optic(i)*  &
-    !       (1._wp - EXP(-opticpar_water%extincoef_optic(i)*h_ML))
-    !     END DO 
-    !     I_intm_0_h = I_w*I_intm_0_h/h_ML
-    !   ELSE
-    !     I_intm_0_h = I_h
-    !   END IF
+      IF(h_ML.GE.h_ML_min) THEN           ! Integral-mean radiation flux over the mixed layer
+        I_intm_0_h = 0._wp
+        DO i=1, SIZE(frac_optic_water)
+          I_intm_0_h = I_intm_0_h +                                &
+          frac_optic_water(i)/extincoef_optic_water(i)*  &
+          (1._wp - EXP(-extincoef_optic_water(i)*h_ML))
+        END DO 
+        I_intm_0_h = I_w*I_intm_0_h/h_ML
+      ELSE
+        I_intm_0_h = I_h
+      END IF
 
-    !   IF(h_ML.LE.depth_w-h_ML_min) THEN   ! Integral-mean radiation flux over the thermocline
-    !     I_intm_h_D = 0._wp 
-    !     DO i=1, opticpar_water%nband_optic
-    !       I_intm_h_D = I_intm_h_D +                                &
-    !       opticpar_water%frac_optic(i)/opticpar_water%extincoef_optic(i)*  &
-    !       ( EXP(-opticpar_water%extincoef_optic(i)*h_ML)             &
-    !       - EXP(-opticpar_water%extincoef_optic(i)*depth_w) )
-    !     END DO 
-    !     I_intm_h_D = I_w*I_intm_h_D/(depth_w-h_ML)
-    !   ELSE
-    !     I_intm_h_D = I_h
-    !   END IF
+      IF(h_ML.LE.depth_w-h_ML_min) THEN   ! Integral-mean radiation flux over the thermocline
+        I_intm_h_D = 0._wp 
+        DO i=1, SIZE(frac_optic_water)
+          I_intm_h_D = I_intm_h_D +                                &
+          frac_optic_water(i)/extincoef_optic_water(i)*  &
+          ( EXP(-extincoef_optic_water(i)*h_ML)             &
+          - EXP(-extincoef_optic_water(i)*depth_w) )
+        END DO 
+        I_intm_h_D = I_w*I_intm_h_D/(depth_w-h_ML)
+      ELSE
+        I_intm_h_D = I_h
+      END IF
 
-    ! END SUBROUTINE flake_radflux
+    END SUBROUTINE calc_radflux
 
     ! PURE ELEMENTAL SUBROUTINE calc_buoypar (&
     !   & T_water,       & ! in
@@ -215,7 +214,6 @@ MODULE mo_lentic_process
     !   & I_w,        & ! in
     !   & I_h,        & ! in
     !   & I_intm_0_h, & ! in
-    !   & depth_w,    & ! in
     !   & I_bot,      & ! inout
     !   & Q_w,        & ! out
     !   & Q_star,     & ! out
@@ -475,7 +473,8 @@ MODULE mo_lentic_process
     !   !$claw model-data
     !   REAL(wp), INTENT(in) :: del_time,             & ! The model time step [s]
     !                         & depth_w,              & ! The waterbody depth [m]
-    !                         & extincoef_water_typ,  & ! "Typical" extinction coefficient of the lake water [m^{-1}], used to compute the equilibrium CBL depth
+    !                         & extincoef_water_typ,  & ! "Typical" extinction coefficient of the lake water [m^{-1}], 
+                                                         ! used to compute the equilibrium CBL depth
     !                         & l_ice_create,         & ! Switch, .TRUE. = ice does not exist but should be created
     !                         & h_ice,                & ! Ice thickness [m]
     !                         & I_bot,                & ! Radiation flux through the water-bottom sediment interface [W m^{-2}]

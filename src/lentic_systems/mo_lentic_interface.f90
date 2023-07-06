@@ -138,7 +138,14 @@ CONTAINS
   !!
   SUBROUTINE update_lentic_wbphysics(tile, options)
 
-    USE mo_lentic_process, ONLY: calc_surface_temperature
+    USE mo_lentic_process, ONLY: calc_surface_temperature, calc_radflux
+
+    USE mo_lentic_constants , ONLY : & 
+      albedo_water_ref, &
+      albedo_blueice_ref  , & ! Blue ice
+      albedo_whiteice_ref , & ! White ice
+      c_albice_MR         , & ! Constant in the interpolation formula for the ice albedo (Mironov and Ritter 2004)
+      tpl_T_f           ! Fresh water freezing point [K]
 
 !!#ifdef SERIALIZE
     !$claw verbatim USE mo_ser_common, ONLY: init
@@ -160,6 +167,8 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(LENTIC_) 
 
+
+
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
     ! ! atmospheric forcing
@@ -167,9 +176,9 @@ CONTAINS
     !   & t_air,                &
     !   & q_air,                &
     !   & press_srf,            &
-    !   & lw_srf_down,          &
-    !   & swvis_srf_down,       &
-    !   & swnir_srf_down,       &
+      & lw_srf_down,          &
+      & swvis_srf_down,       &
+      & swnir_srf_down,       &
     ! ! topography and location
     !   & depth_w,              &
     !   & fetch,                &
@@ -182,22 +191,28 @@ CONTAINS
     !   & t_wml,                &
     !   & t_bot,                &
     !   & c_t,                  &
-    !   & h_ice,                &
-    !   & h_ml,                 &
+      & h_ice,                &
+      & h_snow,               &
+      & h_ml,                 &
       & t_sfc
 
-    ! REAL(wp) ::                 &
+     REAL(wp) ::                 &
+        & albedo_water,   & 
+        & albedo_ice(options%nc),     & 
+        & albedo_snow(options%nc),    & 
     !   & w_star(options%nc),     &
     !   & u_star(options%nc),     &
-    !   & I_bot(options%nc),      &
-    !   & I_h(options%nc),        &
-    !   & I_ice(options%nc),      &
-    !   & I_intm_0_h(options%nc), &
-    !   & I_intm_h_D(options%nc), &
-    !   & I_snow(options%nc),     & ! might not be needed
-    !   & I_w(options%nc),        & 
+        & I_atm(options%nc),      &
+        & I_bot(options%nc),      &
+        & I_h(options%nc),        &
+        & I_ice(options%nc),      &
+        & I_intm_0_h(options%nc), &
+        & I_intm_h_D(options%nc), &
+        & I_snow(options%nc),     & ! might not be needed
+        & I_w(options%nc)!,        & 
     !   & Q_watvap(options%nc),   &
     !   & steplen
+    
     
     ! Get local variables from options argument
     iblk    = options%iblk
@@ -206,8 +221,6 @@ CONTAINS
     nc      = options%nc
     !X if necessary: dtime   = options%dtime
     steplen = options%steplen
-    
-
     
 
     ! If process is not active on this tile, do nothing
@@ -226,9 +239,9 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(A2L_, t_air)              ! in
     ! dsl4jsb_Get_var2D_onChunk(A2L_, q_air)              ! in
     ! dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)          ! in
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)        ! in
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)     ! in
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)     ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)        ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)     ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)     ! in
 
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
@@ -241,82 +254,29 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_wml)           ! inout
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_bot)           ! inout
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, c_t)             ! inout
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ice)           ! inout
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ice)           ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_snow)           ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_sfc)           ! inout
 
     ! USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
-
-    ! USE flake_parameters , ONLY :   &
-    !   tpl_T_f                     , & 
-    !   tpl_rho_w_r                 , & 
-    !   h_Snow_min_flk              , & 
-    !   h_Ice_min_flk                   
-    ! USE flake_paramoptic_ref       
-
-! OLD FLAKE INITIALIZATION
-    !   REAL(wp), DIMENSION(options%nc)   :: 
-    !    &  T_snow_p_flk, T_snow_n_flk  , &
-    !    &  T_ice_p_flk, T_ice_n_flk    , & 
-    !    &  T_mnw_p_flk, T_mnw_n_flk    , & 
-    !    &  T_wML_p_flk, T_wML_n_flk    , & 
-    !    &  T_bot_p_flk, T_bot_n_flk    , & 
-    !    ! &  T_B1_p_flk, T_B1_n_flk      , & 
-    !    &  C_T_p_flk, C_T_n_flk        , & 
-    !    ! &  h_snow_p_flk, h_snow_n_flk  , & 
-    !    &  h_ice_p_flk, h_ice_n_flk    , & 
-    !    &  h_ML_p_flk, h_ML_n_flk      , & 
-    !    ! &  H_B1_p_flk, H_B1_n_flk      , & 
-    !    &  Q_snow_flk                  , & 
-    !    &  Q_ice_flk                   , & 
-    !    &  Q_w_flk                     , & 
-    !    &  Q_bot_flk                   , & 
-    !    &  I_atm_flk                   , & 
-    !    !&  I_snow_flk                  , & 
-    !   ! &  I_ice_flk                   , & 
-    !  !  &  I_w_flk                     , & 
-    !    !&  I_h_flk                     , & 
-    !   ! &  I_bot_flk                   , & 
-    !    !&  I_intm_0_h_flk              , & 
-    !    !&  I_intm_h_D_flk              , & 
-    !    &  Q_star_flk                  , & 
-    !    &  u_star_w_flk                , & 
-    !    &  w_star_sfc_flk              , & 
-    !    &  dMsnowdt_flk                , &
-    !    &  H_Ice_max
-    ! USE SfcFlx          , ONLY :    &
-    !   SfcFlx_lwradwsfc            , & 
-    !   SfcFlx_momsenlat  
-
+   
     ! ---------------------------
     ! Go    
 
     !  Set albedos of the lake water, lake ice and snow
 
-    ! albedo_water = albedo_water_ref
-    ! ! Use empirical formulation proposed by Mironov and Ritter (2004) for GME 
-    ! !_nu albedo_ice   = albedo_whiteice_ref 
-    ! albedo_ice   = EXP(-c_albice_MR*(tpl_T_f-T_sfc_p)/tpl_T_f)
-    ! albedo_ice   = albedo_whiteice_ref*(1._ireals-albedo_ice) + albedo_blueice_ref*albedo_ice
-    ! ! Snow is not considered
-    ! albedo_snow  = albedo_ice
+    albedo_water = albedo_water_ref
+    ! Use empirical formulation proposed by Mironov and Ritter (2004) for GME 
+    !_nu albedo_ice   = albedo_whiteice_ref 
+    albedo_ice   = EXP(-c_albice_MR*(tpl_T_f-T_sfc)/tpl_T_f)
+    albedo_ice   = albedo_whiteice_ref*(1._wp-albedo_ice) + albedo_blueice_ref*albedo_ice
+    ! Snow is not considered
+    albedo_snow  = albedo_ice
     
-    ! IF (pondtype == 'iw') THEN
-    !     opticpar_water = opticpar_water_iwponds
-    ! ELSE 
-    !     IF (pondtype == 'mp') THEN
-    !         opticpar_water = opticpar_water_mpponds
-    !     ELSE
-    !         opticpar_water = opticpar_water_pcponds
-    !     ENDIF    
-    ! ENDIF
-    
-    ! ! Use default values
-    ! opticpar_ice   = opticpar_ice_opaque   ! Opaque ice
-    ! opticpar_snow  = opticpar_snow_opaque  ! Opaque snow
-
 
     !  Set initial values
+    I_atm = lw_srf_down + swvis_srf_down + swnir_srf_down
     ! T_snow_p_flk = t_snow
     ! T_ice_p_flk  = t_lice
     ! T_mnw_p_flk  = t_mnw
@@ -330,26 +290,23 @@ CONTAINS
     ! I_atm_flk = I_atm_in
     ! Q_bot_flk = Q_bot_in
 
-    ! call calc_radflux ( &
-    !                     & depth_w,        & ! in
-    !                     & albedo_water,   & ! in
-    !                     & albedo_ice,     & ! in
-    !                     & albedo_snow,    & ! in
-    !                     & h_ice,          & ! in 
-    !                     & h_ML,           & ! in 
-    !                     & h_snow,         & ! in
-    !                     & I_atm,          & ! in
-    !                     & opticpar_water, & ! in 
-    !                     & opticpar_ice,   & ! in 
-    !                     & opticpar_snow,  & ! in 
-    !                     & I_bot,          & ! out
-    !                     & I_h,            & ! out
-    !                     & I_ice,          & ! out
-    !                     & I_intm_0_h,     & ! out
-    !                     & I_intm_h_D,     & ! out
-    !                     & I_snow,         & ! out (but maybe not needed) 
-    !                     & I_w             & ! out
-    !                     )
+    call calc_radflux ( &
+                        !& depth_w,        & ! in
+                        & albedo_water,   & ! in
+                        & albedo_ice,     & ! in
+                        & albedo_snow,    & ! in
+                        & h_ice,          & ! in 
+                        & h_ML,           & ! in 
+                        & h_snow,         & ! in
+                        & I_atm,          & ! in
+                        & I_bot,          & ! out
+                        & I_h,            & ! out
+                        & I_ice,          & ! out
+                        & I_intm_0_h,     & ! out
+                        & I_intm_h_D,     & ! out
+                        & I_snow,         & ! out (but maybe not needed) 
+                        & I_w             & ! out
+                        )
 
     ! TODO: COMPARE THE CONSTANTS!
     !  Compute long-wave radiation fluxes (positive downward)
@@ -364,7 +321,7 @@ CONTAINS
     ! zlw_net = lwnet_from_lwdown(lw_down, t)
 
     ! TEST
-    call calc_surface_temperature(T_sfc )
+    !call calc_surface_temperature(T_sfc )
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
   END SUBROUTINE update_lentic_wbphysics
@@ -408,6 +365,9 @@ CONTAINS
     model             => Get_model(tile%owner_model_id)    
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
 
+    dsl4jsb_Aggregate_onChunk(LENTIC_, h_ice,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, h_ml,         weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, h_snow,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, T_sfc,        weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

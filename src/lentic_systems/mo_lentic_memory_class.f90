@@ -57,7 +57,10 @@ MODULE mo_lentic_memory_class
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
-      & T_sfc  !test
+      & T_sfc, &  !< lake surface temperature wtr
+      & h_ice, &  !< lake ice height
+      & h_ML,  &  !< lake mixed-layer height
+      & h_snow    !< lake snow-layer height
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]
 
   CONTAINS
@@ -98,14 +101,41 @@ CONTAINS
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
 
-      CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                            &
+      ! CALL mem%Add_var( 'depth_w', mem%depth_w,                                            &
+      !   & hgrid, surface,                                                              &
+      !   & t_cf('lake_depth', 'm', 'lake mean wtr depth'),                  &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      !   & prefix, suffix,                                                              &
+      !   & output_level=BASIC, initval_r=280.0_wp )
+
+      CALL mem%Add_var( 'h_ice', mem%h_ice,                                          &
         & hgrid, surface,                                                              &
-        & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr '),                  &
+        & t_cf('lice_height', 'm', 'lake ice height'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC, initval_r=280.0_wp )
 
-     END IF
+      CALL mem%Add_var( 'h_ML', mem%h_ML,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('lake_mixedLayer', 'm', 'lake mixed-layer height'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=BASIC, initval_r=280.0_wp )
+        
+      CALL mem%Add_var( 'h_snow', mem%h_snow,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('lake_snowthickness', 'm', 'lake snow-layer height'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=BASIC, initval_r=280.0_wp )
+
+      CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=BASIC, initval_r=280.0_wp )
+    END IF
 
   END SUBROUTINE Init_lentic_memory
 
