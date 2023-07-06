@@ -1082,6 +1082,7 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Real2D_onChunk :: thaw_depth_max_ym1
+    dsl4jsb_Real2D_onChunk :: pf_hydro_bnd
     dsl4jsb_Real2D_onChunk :: fract_perm_ref
     dsl4jsb_Real3D_onChunk :: soil_depth_sl
 
@@ -1182,14 +1183,18 @@ CONTAINS
     ! impeding fluxes into the "groundwater"
 
     dsl4jsb_Get_var2D_onChunk(SSE_,   thaw_depth_max_ym1) ! in
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, pf_hydro_bnd)       ! out
     dsl4jsb_Get_var2D_onChunk(HYDRO_, fract_perm_ref)     ! in
     dsl4jsb_Get_var3D_onChunk(HYDRO_, soil_depth_sl)      ! in
     DO i = 1, nc
-      IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth below soil depth ...
-       &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! ... but not at maximum.
+      IF ((thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth below soil depth ...
+       &  thaw_depth_max_ym1(i)  < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) .OR. & ! ... but not at maximum.
+       &  thaw_depth_max_ym1(i)  < dsl4jsb_Config(HYDRO_)%min_thw_drn) THEN ! or below minimum threshold
         l_pf_soil(i)=.TRUE.
+        pf_hydro_bnd(i)  = 1.0_wp
       ELSE
         l_pf_soil(i)=.FALSE.
+        pf_hydro_bnd(i)  = 0.0_wp
       END IF
     END DO
 
@@ -1415,6 +1420,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, pf_hydro_bnd,    weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

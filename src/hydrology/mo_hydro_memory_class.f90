@@ -87,7 +87,8 @@ MODULE mo_hydro_memory_class
       & micro_slope,          & !< Standard deviation of orography
       & area,                 &                
       & h_surf,               &
-      & fract_perm_ref
+      & fract_perm_ref,       &
+      & pf_hydro_bnd
 
     ! Additional variables for land type
     TYPE(t_jsb_var_real2d) :: &
@@ -574,6 +575,15 @@ CONTAINS
     CALL mem%Add_var( 'fract_perm_ref', mem%fract_perm_ref,                          &
       & hgrid, surface,                                                              &
       & t_cf('fract_perm_ref', '/', 'reference pf area'),                            &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      & prefix, suffix,                                                              &
+      & lrestart=.TRUE.,                                                             &
+      & loutput=.TRUE., output_level=BASIC,                                          &
+      & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
+
+    CALL mem%Add_var( 'pf_hydro_bnd', mem%pf_hydro_bnd,                              &
+      & hgrid, surface,                                                              &
+      & t_cf('pf_hydro_bnd', '/', 'permafrost as hydrological boundary'),            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.TRUE.,                                                             &

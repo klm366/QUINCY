@@ -529,8 +529,9 @@ CONTAINS
         &                        - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
 
       DO i = 1, nc
-        IF (thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth < soil depth ...
-         &  thaw_depth_max_ym1(i) < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) THEN ! ... but not at maximum.
+        IF ((thaw_depth_max_ym1(i) < SUM(soil_depth_sl(i,:)) .AND. &  ! Thaw depth below soil depth ...
+         &  thaw_depth_max_ym1(i)  < SUM(soil_w%dz(:)) - soil_w%dz(nsoil)/2._wp - 0.01_wp) .OR. & ! ... but not at maximum.
+         &  thaw_depth_max_ym1(i)  < dsl4jsb_Config(HYDRO_)%min_thw_drn) THEN ! or below minimum threshold
           l_pf_soil(i)=.TRUE.
         ELSE
           l_pf_soil(i)=.FALSE.

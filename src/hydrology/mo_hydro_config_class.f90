@@ -45,7 +45,8 @@ MODULE mo_hydro_config_class
       & dt_sat,               & !< Time required for hydraulic conductivity to reach max [sec]
       & wbv_trsh,            & !< Threshold above which water balance violations trigger message / finish
       & max_slope,            & !< maximum slope considered for infiltration/runoff estimation
-      & max_pond_depth          !< prescribed maximum surface pond depth
+      & max_pond_depth,       & !< prescribed maximum surface pond depth
+      & min_thw_drn             !< Mininum thaw depth before bottom drainage can occour 
 
     CHARACTER(len=10)     ::  &
       & scheme_stom_cond        !< Scheme to use for computation of stomatal conductance (echam5 only for now)
@@ -89,7 +90,7 @@ CONTAINS
     LOGICAL                     :: active
     CHARACTER(len=filename_max) :: ic_filename, bc_filename, bc_sso_filename
     REAL(wp)                    :: w_skin_max, snow_depth_max
-    REAL(wp)                    :: manning_n, dt_sat, wbv_trsh, max_slope, max_pond_depth
+    REAL(wp)                    :: manning_n, dt_sat, wbv_trsh, max_slope, max_pond_depth, min_thw_drn
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, runoff_scheme, soilhydmodel, interpol_mean
     INTEGER                     :: i_botdrain, i_infil
@@ -111,6 +112,7 @@ CONTAINS
       & wbv_trsh,                  &
       & max_slope,                  &
       & max_pond_depth,             &
+      & min_thw_drn,                &
       & scheme_stom_cond,           &
       & enforce_water_budget,       &
       & l_organic,                  &
@@ -153,6 +155,7 @@ CONTAINS
     wbv_trsh               = 1.E-11_wp           ! [m dt-1]
     max_slope              = 0.45_wp             ! [m/m]
     max_pond_depth         = 0.1_wp              ! [m]
+    min_thw_drn            = 0.0_wp              ! [m]
     scheme_stom_cond       = 'echam5'
     enforce_water_budget   = config%model_config%enforce_water_budget
     l_organic              = .TRUE.
@@ -218,6 +221,8 @@ CONTAINS
     config%max_pond_depth = max_pond_depth
     CALL message(TRIM(routine), 'Prescribed maximum pond depth [m]: '//TRIM(real2string(max_pond_depth)))
 
+    config%min_thw_drn = min_thw_drn
+    CALL message(TRIM(routine), 'Minimum thaw depth for bottom drainage to occour [m]: '//TRIM(real2string(min_thw_drn)))
     config%scheme_stom_cond       = scheme_stom_cond
 
     config%enforce_water_budget   = enforce_water_budget
