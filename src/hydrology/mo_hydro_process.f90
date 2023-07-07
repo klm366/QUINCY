@@ -421,34 +421,11 @@ CONTAINS
 
   END SUBROUTINE calc_surface_hydrology_glacier
 
-  ! ===============================================================================================================================
+  ! ======================================================================================================= !
+  !> calculate vertical water movement through the soil column
   !>
-  !! @brief   Calculates vertical water movement through the soil column
-  !
-  ! @param [in]      nc                  Vector lenth
-  ! @param [in]      nsoil               Number of soil layers
-  ! @param [in]      dtime               Time step [s]
-  ! @param [in]      l_infil_subzero     Allow infiltration at soil temperatures below 0degC
-  ! @param [in]      soil_depth_sl       Thicknesses of soil layers until bedrocj [m]
-  ! @param [in]      root_depth_sl       Thicknesses of soil layers until rooting depth [m]
-  ! @param [in]      hyd_cond_sat_sl     Hydraulic conductivity of saturated soil [m/s]
-  ! @param [in]      matrix_pot_sl       Soil matrix potential [m]
-  ! @param [in]      bclapp_sl           Exponent B in Clapp and Hornberger
-  ! @param [in]      pore_size_index_sl  Soil pore size distribution index used in Van Genuchten method
-  ! @param [in]      vol_porosity_sl     Soil porosity                      - ice not considered [m/m]
-  ! @param [in]      vol_field_cap_sl    Volumetric field capacity          - ice not considered [m/m]
-  ! @param [in]      vol_p_wilt_sl       Volumetric permanent wilting point - ice not considered [m/m]
-  ! @param [in]      evapotrans_soil     Evapotranspiration from the soil (w/o snow or canopy) [kg m-2 s-1]
-  ! @param [in]      transpiration       Evapotranspiration [kg m-2 s-1]
-  ! @param [in]      wtr_soil_pot_scool_sl Amount of potentially supercooled water [m]
-  ! @param [in,out]  wtr_soil_sl         Content un-frozen water of soil layers in rooting zone  [m]
-  ! @param [in,out]  ice_soil_sl         Content of frozen water of soil layers in rooting zone  [m]
-  ! @param [out]     wsat_sl             Maximum possible amount of water in soil layer          [m]
-  ! @param [out]     field_cap_sl        Water content at field capacity in soil layer           [m]
-  ! @param [out]     p_wilt_sl           Water content at permanent wilting point in soil layers [m]
-  ! @param [out]     runoff              Runoff
-  ! @param [out]     drainage            Drainage
-  !
+  !> @TODO some argument names migth not match routine call
+  !>
   SUBROUTINE calc_soil_hydrology(                                                        &
     ! in
     & nc, l_fract, lat, lon, nsoil, dtime, ltpe_closed, ltpe_open,                       &
@@ -475,7 +452,7 @@ CONTAINS
       & dtime, w_soil_wilt_fract
     LOGICAL, INTENT(in) :: ltpe_closed
     LOGICAL, INTENT(in) :: ltpe_open
-    LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! Tile fraction > 0
+    LOGICAL, INTENT(in), DIMENSION(:) :: l_fract      ! if tile fraction is > 0
     REAL(wp), INTENT(in), DIMENSION(:,:) :: &
       & soil_depth_sl, root_depth_sl, hyd_cond_sat_sl, matrix_pot_sl, bclapp_sl, pore_size_index_sl, &
       & vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl, wtr_soil_pot_scool_sl
@@ -503,7 +480,7 @@ CONTAINS
       & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
 
     REAL(wp) ::              &
-      & drain_lat_sl(nc,nsoil)
+      & drain_lat_sl(nc,nsoil)  !< lateral drainage per soil layer
 
     REAL(wp) ::              &
       & hlp_2d(nc,nsoil)       ! helper array needed with openacc
@@ -517,12 +494,15 @@ CONTAINS
     !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, weq_rootzone_max, wtr_rootzone, ice_rootzone) &
     !$ACC   CREATE(drain_lat_sl, hlp_2d)
 
-    !
-    !> Calculation of soil saturation, field capacity and wilting point
-    !
+    !> 1.0 Calculation of soil saturation, field capacity and wilting point
+    !>
 
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+    ! wtr_wsat_sl: max water that fits into soil layer
+    ! wtr_field_cap_sl: water field capacity
+    ! wtr_p_wilt_sl: wilting point
+    ! soil ice is not considered as it cannot move and hence is not considered
     DO is = 1, nsoil
       DO ic = 1, nc
         ! Note: here we are calculating soil saturation (this does not correspond to weq_rootzone_max, which was
@@ -541,10 +521,15 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
-    ! Note: weq_rootzone_max calculated here (based on field capacity) is different from wsat calculated
-    !       below (based on saturation).
+    ! calc root zone variables
+    !    Note: weq_rootzone_max calculated here (based on field capacity) is different from wsat calculated
+    !          below (based on saturation).
+    ! calc maximum soil water based on field capacity (volumetric field capacity), i.e., water + ice
+    ! weq_rootzone_max = ice_rootzone + wtr_rootzone | might change 
     CALL get_amount_in_rootzone(hlp_2d(:,:),      soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
+    ! current soil ice
     CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
+    ! current soil water
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
     !$ACC PARALLEL DEFAULT(PRESENT)
@@ -558,6 +543,7 @@ CONTAINS
       END DO
       ! Note: any dew is removed from these fluxes, as dew is already applied
       !       during the surface hydrology computation
+      ! evaporation (calc on if less than 0, i.e., evaporation is a negative value, positive would be TAU - calculated elsewhere)
       evapo_soil_in_m(ic)    = MIN(0._wp, evapotrans_soil(ic) - transpiration(ic)) * dtime / rhoh2o
       transpiration_in_m(ic) = MIN(0._wp, transpiration(ic))  * dtime / rhoh2o
 
@@ -572,6 +558,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
+    ! Calculation of vertical soil water movement for multiple soil layers
     CALL soilhyd(nc, l_fract, lat, lon, nsoil, dtime, soilhydmodel, interpol_mean,   &
       &     w_soil_wilt_fract, soil_depth_sl, wtr_field_cap_sl, wtr_wsat_sl,         &
       &     hyd_cond_sat_sl, vol_porosity_sl, vol_field_cap_sl, vol_p_wilt_sl,       &
@@ -584,6 +571,7 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT)
 
     ! Aggregate the different runoff flux components
+    ! sum up values over soil layers
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO is = 1, nsoil
       DO ic = 1, nc
@@ -597,11 +585,14 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    ! recalculate soil moisture from the soil moisture of the individual levels
+    ! recalculate soil moisture from the soil moisture of the individual levels, after 'soilhyd()' was called
+    ! 
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    ! [m / timestep] -> [kg / m^2 / s]
+    ! @TODO check ([kg / m^2 / s] -> [m / timestep]) and make consistent
     DO ic = 1, nc
       infilt(ic)        = infilt       (ic) * rhoh2o / dtime
       runoff(ic)        = runoff       (ic) * rhoh2o / dtime
@@ -740,15 +731,15 @@ CONTAINS
 
   END SUBROUTINE arno_scheme
 
-  !------------------------------------------------------------------------------------------------
-  !! @brief   Calculation of vertical soil water movement for multiple soil layers
-  !!
-  !! @par Revision History
-  !!   Routine based on the soil hydrology proposed by Christian Reick (MPI-M) and written
-  !!   by Philipp de Vrese (MPI-M)
-  !!   Revised by Tobias Stacke (MPI-M) in September 2022
-
-  SUBROUTINE soilhyd(nc, l_fract, lat, lon, nsoil, dtime,          &
+  ! ======================================================================================================= !
+  !> Calculation of vertical soil water movement for multiple soil layers
+  !>
+  !>   Routine based on the soil hydrology proposed by Christian Reick (MPI-M) and written
+  !>     by Philipp de Vrese (MPI-M)
+  !>     Revised by Tobias Stacke (MPI-M) in September 2022
+  !>
+  SUBROUTINE soilhyd(                                              &
+    & nc, l_fract, lat, lon, nsoil, dtime,                         &
     & soilhydmodel, interpol_mean,                                 &
     & w_soil_wilt_fract, dsoil,                                    &
     & wtr_field_cap_sl, wtr_wsat_sl, hyd_cond_sat_sl,              &
@@ -760,79 +751,82 @@ CONTAINS
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                &
     & ltpe_closed, ltpe_open)
 
-    INTEGER,  INTENT(IN)            :: nc                         ! vector length
-    LOGICAL,  INTENT(IN)            :: l_fract(:)                 ! Tile fraction > 0
-    REAL(wp), INTENT(IN)            :: lat(:)                     ! Grid cell latitudes
-    REAL(wp), INTENT(IN)            :: lon(:)                     ! Grid cell longitudes
-    INTEGER,  INTENT(IN)            :: nsoil                      ! number of soil layers
-    INTEGER,  INTENT(in)            :: soilhydmodel               ! hydrology model scheme
-    INTEGER,  INTENT(in)            :: interpol_mean              ! lateral interpolation scheme
-    REAL(wp), INTENT(IN)            :: dtime                      ! model time step legth [s]
-    REAL(wp), INTENT(in)            :: w_soil_wilt_fract       ! fractional plant wilting point [/]
-    REAL(wp), INTENT(IN)            :: dsoil(:,:)                 ! soil depth until bedrock within each layer [m]
-    REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      ! field capacity of the soil layer (reduced by ice) [m]
-    REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           ! saturation capacity of the soil layer (reduced by ice) [m]
-    REAL(wp), INTENT(IN)            :: hyd_cond_sat_sl(:,:)       ! hydraulic conductivity of saturated soil [m/s]
-    REAL(wp), INTENT(IN)            :: vol_porosity_sl(:,:)       ! Soil porosity                      - ice not considered [m/m]
-    REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      ! Volumetric field capacity          - ice not considered [m/m]
-    REAL(wp), INTENT(IN)            :: vol_p_wilt_sl(:,:)         ! Volumetric permanent wilting point - ice not considered [m/m]
-    REAL(wp), INTENT(IN)            :: bclapp_sl(:,:)             ! exponent B in Clapp and Hornberger
-    REAL(wp), INTENT(IN)            :: matrix_pot_sl(:,:)         ! matrix potential [m]
-    REAL(wp), INTENT(IN)            :: pore_size_index_sl(:,:)    ! soil pore size distribution index used in Van Genuchten
-    REAL(wp), INTENT(IN)            :: wtr_soil_pot_scool_sl(:,:) ! potentially supercooled water [m]
-    REAL(wp), INTENT(IN)            :: root_depth_sl(:,:)         ! thicknesses of soil layers until rooting depth [m]
-    REAL(wp), INTENT(IN)            :: transpiration_in_m(:)      ! amount of transpiration within timestep [m]
-    REAL(wp), INTENT(IN)            :: evapo_soil_in_m(:)         ! amount of soil evaporation within timestep [m]
-    REAL(wp), INTENT(INOUT)         :: infilt(:)                  ! amount of infiltration within timestep [m]
-    REAL(wp), INTENT(INOUT)         :: ice_soil_sl(:,:)           ! amount of ice in the soil [m]
-    REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           ! soil moisture of each layer [m]
-    REAL(wp), INTENT(INOUT)         :: infilt_over(:)             ! amount of infiltration overflow (Horton + Dunne) [m]
-    REAL(wp), INTENT(INOUT)         :: drain_rock(:)              ! drainage from lowest soil layer [m]
-    REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             ! overflow from subsurface soil layers [m]
-    REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
-    REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           ! Water evaporated from unintended sources [m]
-    REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
-
-    LOGICAL, INTENT(IN) :: ltpe_closed
-    LOGICAL, INTENT(IN) :: ltpe_open
+    INTEGER,  INTENT(IN)            :: nc                         !< vector length
+    LOGICAL,  INTENT(IN)            :: l_fract(:)                 !< Tile fraction > 0
+    REAL(wp), INTENT(IN)            :: lat(:)                     !< Grid cell latitudes
+    REAL(wp), INTENT(IN)            :: lon(:)                     !< Grid cell longitudes
+    INTEGER,  INTENT(IN)            :: nsoil                      !< number of soil layers
+    INTEGER,  INTENT(in)            :: soilhydmodel               !< hydrology model scheme
+    INTEGER,  INTENT(in)            :: interpol_mean              !< lateral interpolation scheme
+    REAL(wp), INTENT(IN)            :: dtime                      !< model time step legth [s]
+    REAL(wp), INTENT(in)            :: w_soil_wilt_fract          !< fractional plant wilting point [/]
+    REAL(wp), INTENT(IN)            :: dsoil(:,:)                 !< soil depth until bedrock within each layer [m]
+    REAL(wp), INTENT(IN)            :: wtr_field_cap_sl(:,:)      !< field capacity of the soil layer (reduced by ice) [m]
+    REAL(wp), INTENT(IN)            :: wtr_wsat_sl(:,:)           !< saturation capacity of the soil layer (reduced by ice) [m]
+    REAL(wp), INTENT(IN)            :: hyd_cond_sat_sl(:,:)       !< hydraulic conductivity of saturated soil [m/s]
+    REAL(wp), INTENT(IN)            :: vol_porosity_sl(:,:)       !< Soil porosity                      - ice not considered [m/m]
+    REAL(wp), INTENT(IN)            :: vol_field_cap_sl(:,:)      !< Volumetric field capacity          - ice not considered [m/m]
+    REAL(wp), INTENT(IN)            :: vol_p_wilt_sl(:,:)         !< Volumetric permanent wilting point - ice not considered [m/m]
+    REAL(wp), INTENT(IN)            :: bclapp_sl(:,:)             !< exponent B in Clapp and Hornberger
+    REAL(wp), INTENT(IN)            :: matrix_pot_sl(:,:)         !< matrix potential [m]
+    REAL(wp), INTENT(IN)            :: pore_size_index_sl(:,:)    !< soil pore size distribution index used in Van Genuchten
+    REAL(wp), INTENT(IN)            :: wtr_soil_pot_scool_sl(:,:) !< potentially supercooled water [m]
+    REAL(wp), INTENT(IN)            :: root_depth_sl(:,:)         !< thicknesses of soil layers until rooting depth [m]
+    REAL(wp), INTENT(IN)            :: transpiration_in_m(:)      !< amount of transpiration within timestep [m]
+    REAL(wp), INTENT(IN)            :: evapo_soil_in_m(:)         !< amount of soil evaporation within timestep [m]
+    REAL(wp), INTENT(INOUT)         :: infilt(:)                  !< amount of infiltration within timestep [m]
+    REAL(wp), INTENT(INOUT)         :: ice_soil_sl(:,:)           !< amount of ice in the soil [m]
+    REAL(wp), INTENT(INOUT)         :: wtr_soil_sl(:,:)           !< soil moisture of each layer [m]
+    REAL(wp), INTENT(INOUT)         :: infilt_over(:)             !< amount of infiltration overflow (Horton + Dunne) [m]
+    REAL(wp), INTENT(INOUT)         :: drain_rock(:)              !< drainage from lowest soil layer [m]
+    REAL(wp), INTENT(INOUT)         :: drain_lat(:,:)             !< overflow from subsurface soil layers [m]
+    REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)            !< error with Terra-World setup
+    REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           !< Water evaporated from unintended sources [m]
+    REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         !< Residual error of the vertical transport scheme
+    LOGICAL, INTENT(IN) :: ltpe_closed    ! @TODO move up to the other "IN" arguments
+    LOGICAL, INTENT(IN) :: ltpe_open      ! @TODO move up to the other "IN" arguments
 
     ! Local variables
-    INTEGER  :: ic, is                       ! looping index (cells index and soil layer))
-    INTEGER  :: nsoil_act(nc)                ! deepest soil layer index (above the bedrock boundary)
-    CHARACTER(len=4096) :: message_text_long ! long string for soil hydrology checks
+    INTEGER  :: ic                           !< looping index (cells index)
+    INTEGER  :: is                           !< looping index (soil layer)
+    INTEGER  :: last_soil_layer(nc)          !< number of last (potentially incomplete) soil layer above the bedrock boundary
+                                             !<   important for drain_rock calculation
+    CHARACTER(len=4096) :: message_text_long !< temporary bugfix for long string for soil hydrology checks needed for ECHAM infrastructure @TODO
 
-    REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice)
-    REAL(wp) :: ws_inter_sl(nc,nsoil)        ! soil moisture with infiltration added to first layer
-    REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil mositure
-    REAL(wp) :: ice_impeda_sl(nc,nsoil)      ! ice impedance factor on all soil layers
-    REAL(wp) :: hyd_cond_sl(nc,nsoil)        ! hydraulic conductivity of a layer [m/s]
-    REAL(wp) :: diffus_sl(nc,nsoil)          ! diffusivity at mid-depth of the layer[m2/s]
-    REAL(wp) :: hyd_cond_li(nc,nsoil)        ! hydraulic conductivity at upper layer interface
-    REAL(wp) :: diffus_li(nc,nsoil)          ! diffusivity at upper layer interface
-    REAL(wp) :: drain_sl(nc)                 ! drainage from the current layer
-    REAL(wp) :: evapo_soil_sl1(nc)           ! bare soil evaporation extracted from top layer (mobile part)
-    REAL(wp) :: transpiration_sl(nc,nsoil)   ! transpiration extracted from every soil layer
-    REAL(wp) :: deficit_evapotrans(nc)       ! water that could not be extracted from the soil [m]
-    REAL(wp) :: deficit_trans(nc)            ! transpiration that could not be extracted from the soil [m]
-    REAL(wp) :: deficit_sevap(nc)            ! soil evaporation that could not be extracted from the soil [m]
-    REAL(wp) :: remoist(nc)                  ! for TPE
-    REAL(wp) :: zmvg_sl(nc,nsoil)            ! exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
-    REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        ! residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
-    REAL(wp) :: weq_wsat_sl(nc,nsoil)        ! Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
-    REAL(wp) :: weq_field_cap_sl(nc,nsoil)   ! field capacity of the soil layer (not reduced by ice) [m]
-    REAL(wp) :: weq_p_wilt_sl(nc,nsoil)      ! wilting point - not reduced relative to soil ice fraction [m]
-    REAL(wp) :: wtr_transp_residual(nc)      ! numerical error caused by the vertical transport scheme [m]
-    REAL(wp) :: wtr_transp_corr(nc)          ! uncorrected part of the transport residual [m]
-    REAL(wp) :: wtr_exinfcap(nc)             ! surface runoff due to exceeding the soil infiltration capacity [m]
-    REAL(wp) :: wtr_exwsat(nc)               ! surface runoff due to exceeding the soil moisture saturation [m]
-    REAL(wp) :: wtr_soil_mobile_sl(nc,nsoil) ! mobile soil water (needed with ACC)
+!! ===>> go on here at next meeting 2023-07-14 !!
+
+    REAL(wp) :: weq_soil(nc)                 !< total column soil moisture (water + ice)
+    REAL(wp) :: ws_inter_sl(nc,nsoil)        !< soil moisture with infiltration added to first layer
+    REAL(wp) :: ws_vol_sl(nc,nsoil)          !< volumetric soil mositure
+    REAL(wp) :: ice_impeda_sl(nc,nsoil)      !< ice impedance factor on all soil layers
+    REAL(wp) :: hyd_cond_sl(nc,nsoil)        !< hydraulic conductivity of a layer [m/s]
+    REAL(wp) :: diffus_sl(nc,nsoil)          !< diffusivity at mid-depth of the layer[m2/s]
+    REAL(wp) :: hyd_cond_li(nc,nsoil)        !< hydraulic conductivity at upper layer interface
+    REAL(wp) :: diffus_li(nc,nsoil)          !< diffusivity at upper layer interface
+    REAL(wp) :: drain_sl(nc)                 !< drainage from the current layer
+    REAL(wp) :: evapo_soil_sl1(nc)           !< bare soil evaporation extracted from top layer (mobile part)
+    REAL(wp) :: transpiration_sl(nc,nsoil)   !< transpiration extracted from every soil layer
+    REAL(wp) :: deficit_evapotrans(nc)       !< water that could not be extracted from the soil [m]
+    REAL(wp) :: deficit_trans(nc)            !< transpiration that could not be extracted from the soil [m]
+    REAL(wp) :: deficit_sevap(nc)            !< soil evaporation that could not be extracted from the soil [m]
+    REAL(wp) :: remoist(nc)                  !< for TPE
+    REAL(wp) :: zmvg_sl(nc,nsoil)            !< exponent M in Van Genuchten scheme = pore_size_index / (pore_size_index + 1)
+    REAL(wp) :: wtr_rsdl_sl(nc,nsoil)        !< residual liquid water that can not move through the soil (supercooled or < pwilt_sl)
+    REAL(wp) :: weq_wsat_sl(nc,nsoil)        !< Maximum storage in each soil layer (porosity) (not reduced by ice) [m]
+    REAL(wp) :: weq_field_cap_sl(nc,nsoil)   !< field capacity of the soil layer (not reduced by ice) [m]
+    REAL(wp) :: weq_p_wilt_sl(nc,nsoil)      !< wilting point - not reduced relative to soil ice fraction [m]
+    REAL(wp) :: wtr_transp_residual(nc)      !< numerical error caused by the vertical transport scheme [m]
+    REAL(wp) :: wtr_transp_corr(nc)          !< uncorrected part of the transport residual [m]
+    REAL(wp) :: wtr_exinfcap(nc)             !< surface runoff due to exceeding the soil infiltration capacity [m]
+    REAL(wp) :: wtr_exwsat(nc)               !< surface runoff due to exceeding the soil moisture saturation [m]
+    REAL(wp) :: wtr_soil_mobile_sl(nc,nsoil) !< mobile soil water (needed with ACC)
 
     !$ACC DATA &
     !$ACC   CREATE(weq_soil, ws_inter_sl, ws_vol_sl, ice_impeda_sl, hyd_cond_sl, diffus_sl) &
     !$ACC   CREATE(hyd_cond_li, diffus_li, drain_sl, evapo_soil_sl1, transpiration_sl) &
     !$ACC   CREATE(deficit_evapotrans, deficit_trans, deficit_sevap, remoist, zmvg_sl) &
     !$ACC   CREATE(wtr_rsdl_sl, weq_wsat_sl, weq_field_cap_sl, weq_p_wilt_sl, wtr_transp_residual) &
-    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, wtr_soil_mobile_sl, nsoil_act)
+    !$ACC   CREATE(wtr_transp_corr, wtr_exinfcap, wtr_exwsat, wtr_soil_mobile_sl, last_soil_layer)
 
     !$ACC PARALLEL DEFAULT(PRESENT)
 
@@ -871,9 +865,9 @@ CONTAINS
 
     !$ACC LOOP GANG VECTOR
     DO ic = 1, nc
-      nsoil_act(ic) = 0
+      last_soil_layer(ic) = 0
       DO is = 1, nsoil
-        IF (dsoil(ic,is) > 0._wp) nsoil_act(ic) = nsoil_act(ic) + 1
+        IF (dsoil(ic,is) > 0._wp) last_soil_layer(ic) = last_soil_layer(ic) + 1
         zmvg_sl(ic,is) = pore_size_index_sl(ic,is) / (pore_size_index_sl(ic,is)+1._wp)
         ! supercooled water in the soil should not be able to move vertically
         ! @todo at some point p_wilt has to be renamed to something more appropriate, as it
@@ -903,7 +897,7 @@ CONTAINS
           & soilhydmodel, interpol_mean,                                    &
           & dtime,                                                          &
           & nc,nsoil,                                                       &
-          & nsoil_act(:), dsoil(:,:),                                       &
+          & last_soil_layer(:), dsoil(:,:),                                 &
           & ws_inter_sl(:,:), ice_soil_sl(:,:), wtr_soil_pot_scool_sl(:,:), &
           & weq_wsat_sl(:,:), weq_field_cap_sl(:,:), weq_p_wilt_sl(:,:),    &
           & hyd_cond_sat_sl(:,:), matrix_pot_sl(:,:),                       &
@@ -946,7 +940,7 @@ CONTAINS
       wtr_exinfcap(ic) = MAX(wtr_exinfcap(ic) - infilt(ic), 0._wp)
 
       ! Prescribe drainage from hydraulic conductivity of the lowest layer [m s-1] --> [m]
-      drain_rock(ic) = hyd_cond_sl(ic,nsoil_act(ic)) * dtime
+      drain_rock(ic) = hyd_cond_sl(ic,last_soil_layer(ic)) * dtime
 
       !< store actual soil water state, infiltration (upper boundary condition) and evaporation
       !  to compute the residual transport error
@@ -967,16 +961,16 @@ CONTAINS
 
       ! CALL calc_vertical_transport(nc, n, d, alpha, dzf, top_bound, bot_bound, S, C, P, Q, X_old)
       !   *-bound, S are fluxes i.e. x/sec
-      ws_vol_sl(ic,1:nsoil_act(ic))  = calc_vertical_transport(           &
-                         & nsoil_act(ic), dtime, 1._wp,                  &
-                         & dsoil(ic,1:nsoil_act(ic)),                     & ! Layer thickness
-                         & (infilt(ic) + evapo_soil_sl1(ic)) / dtime,     & ! Upper boundary condition
-                         & drain_rock(ic) / dtime,                       & ! Lower boundary condition
-                         & transpiration_sl(ic, 1:nsoil_act(ic)) / dtime, & ! Normalized storage change term (Transpiration)
-                         & SPREAD(1._wp, DIM=1, ncopies=nsoil_act(ic)),  &
-                         & diffus_li(ic,1:nsoil_act(ic)),                 & ! Diffusivity
-                         & hyd_cond_li(ic,1:nsoil_act(ic)),               & ! Hydraulic conductivity
-                         & ws_vol_sl(ic,1:nsoil_act(ic))                  & ! Normalized soil moisture
+      ws_vol_sl(ic,1:last_soil_layer(ic))  = calc_vertical_transport(           &
+                         & last_soil_layer(ic), dtime, 1._wp,                   &
+                         & dsoil(ic, 1:last_soil_layer(ic)),                    & ! Layer thickness
+                         & (infilt(ic) + evapo_soil_sl1(ic)) / dtime,           & ! Upper boundary condition
+                         & drain_rock(ic) / dtime,                              & ! Lower boundary condition
+                         & transpiration_sl(ic, 1:last_soil_layer(ic)) / dtime, & ! Normalized storage change term (Transpiration)
+                         & SPREAD(1._wp, DIM=1, ncopies=last_soil_layer(ic)),   &
+                         & diffus_li(ic, 1:last_soil_layer(ic)),                & ! Diffusivity
+                         & hyd_cond_li(ic, 1:last_soil_layer(ic)),              & ! Hydraulic conductivity
+                         & ws_vol_sl(ic, 1:last_soil_layer(ic))                 & ! Normalized soil moisture
                          & )
 
       ! Converting back to absolute water content
@@ -996,9 +990,9 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG VECTOR
     DO ic = 1, nc
-      IF (wtr_soil_sl(ic, nsoil_act(ic)) < 0._wp .AND. l_fract(ic)) THEN
+      IF (wtr_soil_sl(ic, last_soil_layer(ic)) < 0._wp .AND. l_fract(ic)) THEN
         !$ACC LOOP
-        DO is = nsoil_act(ic), 1, -1
+        DO is = last_soil_layer(ic), 1, -1
           IF (wtr_soil_sl(ic,is) < 0._wp) THEN
 #ifndef _OPENACC
             WRITE (message_text_long,*) 'Soil moisture correction needed at ',   &
@@ -1873,7 +1867,7 @@ CONTAINS
   SUBROUTINE get_soilhyd_cond_properties(           &
             & soilhydmodel, interpol_mean,          &
             & dt,                                   &
-            & nc, nsoil, nsoil_act, dsoil,          &
+            & nc, nsoil, last_soil_layer, dsoil,    &
             & ws, is, wscools,                      &
             & wsat, fc, pwp,                        &
             & k_sat, mpot_sat, bclapp, mvgn,        &
@@ -1888,7 +1882,7 @@ CONTAINS
     REAL(wp), INTENT(in)            :: dt                 !> time step length
     INTEGER,  INTENT(in)            :: nc                 !> vector length
     INTEGER,  INTENT(in)            :: nsoil              !> number of below ground layers
-    INTEGER,  INTENT(in)            :: nsoil_act(:)       !> index of deepest soil layers (above bedrock)
+    INTEGER,  INTENT(in)            :: last_soil_layer(:) !> number of last soil layer (potentially incomplete) above bedrock
     REAL(wp), INTENT(in)            :: dsoil(:,:)         !> soil depth (until bedrock) per layer
     REAL(wp), INTENT(in)            :: ws(:,:)            !> water content
     REAL(wp), INTENT(in)            :: is(:,:)            !> ice content
@@ -1943,7 +1937,7 @@ CONTAINS
     ! Compute impedance factor due to soil ice
     DO i = 1, nc
       DO j = 1, nsoil
-        IF (j <= nsoil_act(i)) THEN
+        IF (j <= last_soil_layer(i)) THEN
           IF (fc_vol(i,j) + ice_vol(i,j) > 1.0e-10_wp) THEN
             ice_imp(i,j)  = 10._wp**(-6._wp * (ice_vol(i,j) + scool_vol(i,j) ) &
               & / (fc_vol(i,j) + ice_vol(i,j)))
@@ -2035,7 +2029,7 @@ CONTAINS
     ! 1) Upstream mean [K_lev; Dmax(x_lev, x_lev-1)}
     ! 2) Adjusted arithmetic mean A (of k, D)
     ! Note that in the vertical transport scheme the notation refers to the upper interface of a level.
-    ! Hence the loop goes from nsoil_act to 2
+    ! Hence the loop goes from last_soil_layer to 2
 
     IF (PRESENT(K_inter)) THEN
 
@@ -2046,7 +2040,7 @@ CONTAINS
 
       DO i = 1, nc
         DO j = nsoil, 2, -1
-          IF (j <= nsoil_act(i)) THEN
+          IF (j <= last_soil_layer(i)) THEN
             IF (interpol_mean == Upstream_) THEN
               K_inter(i,j)  =   K(i,j-1)
             ELSE IF (interpol_mean == Arithmetic_) THEN
@@ -2070,7 +2064,7 @@ CONTAINS
       END IF
       DO i = 1, nc
         DO j = nsoil, 2, -1
-          IF (j <= nsoil_act(i)) THEN
+          IF (j <= last_soil_layer(i)) THEN
             IF (interpol_mean == Upstream_) THEN
               D_inter(i,j)  = MAX(D(i,j),D(i,j-1))
             ELSE IF (interpol_mean == Arithmetic_) THEN

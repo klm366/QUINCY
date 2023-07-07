@@ -1098,6 +1098,8 @@ CONTAINS
     REAL(wp) :: dtime
     INTEGER  :: nsoil
 
+    ! + area: used together with l_fract - avoid calculation over ocean
+    ! + lat & lon: diagnostics
     REAL(wp), POINTER :: area(:), lat(:), lon(:)
     REAL(wp) :: tile_fract(options%nc)
     LOGICAL :: l_fract(options%nc)
@@ -1112,10 +1114,11 @@ CONTAINS
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
+    ! no soil with lakes
     IF (tile%is_lake) RETURN
 
     ! Runoff and drainage for glaciers already computed in update_surface_hydrology
-    ! Glaciers have no water in soil
+    ! no soil with glaciers
     IF (tile%is_glacier) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -1132,16 +1135,22 @@ CONTAINS
 
     dsl4jsb_Get_config(HYDRO_)
 
+    ! Terra-Planet setup (pure terra planet)
+    !  switch: water balance may be forced to be closed
     ltpe_open = .FALSE.
     ltpe_closed = .FALSE.
     IF (model%config%tpe_scheme == 'open')   ltpe_open = .TRUE.
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
     dsl4jsb_Get_memory(HYDRO_)
+    ! there is always a numerical error with water transport
+    ! this variable stores this error
     dsl4jsb_Get_var2D_onChunk(HYDRO_, wtr_soilhyd_res)
 
     !$ACC DATA CREATE(l_fract, tile_fract)
 
+    ! avoid calculation over ocean
+    ! l_fract - fraction must be larger zero
     CALL tile%Get_fraction(ics, ice, iblk, fract=tile_fract(:))
     l_fract(:) = tile_fract(:) > 0._wp
     !$ACC UPDATE DEVICE(l_fract, tile_fract)
@@ -1155,11 +1164,11 @@ CONTAINS
       & nsoil, &
       & dtime, &
       & ltpe_closed, ltpe_open,                                 &
-      & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    &
-      & dsl4jsb_Config(HYDRO_)%interpol_mean,                   &
-      & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               &
-      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     &
+      & dsl4jsb_Config(HYDRO_)%soilhydmodel,                    & !< different ways to calculate soil parameters
+      & dsl4jsb_Config(HYDRO_)%interpol_mean,                   & !< how to avrg parameter over soil layers
+      & dsl4jsb_Config(HYDRO_)%w_soil_wilt_fract,               & !< plant 'wilting point' - needed to cover outdated code implementation with field capacity and wilting point
+      & dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl     ),     & !< soil layer thickness
+      & dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl     ),     & !< root depth across soil layers
       & dsl4jsb_var3D_onChunk (HYDRO_, hyd_cond_sat_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, matrix_pot_sl     ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, bclapp_sl         ),     &
@@ -1167,28 +1176,28 @@ CONTAINS
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_porosity_sl   ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_field_cap_sl  ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, vol_p_wilt_sl     ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), &
-      & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pot_scool_sl ), & !< potentially supercooled water
+      & dsl4jsb_var2D_onChunk (HYDRO_, evapotrans_soil   ),     & !< evaporation - already calculated
+      & dsl4jsb_var2D_onChunk (HYDRO_, transpiration     ),     & !< transpiration - already calculated
       ! inout
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     &
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt            ),     & !< migth be corrected in this routine
+      & dsl4jsb_var2D_onChunk (HYDRO_, runoff            ),     & !< migth be corrected in this routine
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sl       ),     & !< soil water
+      & dsl4jsb_var3D_onChunk (HYDRO_, ice_soil_sl       ),     & !< soil ice
+      & dsl4jsb_var2D_onChunk (HYDRO_, tpe_overflow      ),     & !< error with Terra-World setup
+      & dsl4jsb_var2D_onChunk (HYDRO_, evapo_deficit     ),     & !< diagnostic (all water forced to transpire from soil to match transpiration & evapotranspiration input)
       ! out
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     &
-      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_sat_sl   ),     & !< saturtation
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_fc_sl    ),     & !< field capacity
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_soil_pwp_sl   ),     & !< 
+      & dsl4jsb_var2D_onChunk (HYDRO_, infilt_over       ),     & !< infiltration overflow - water that does not fit into soil layers
+      & dsl4jsb_var2D_onChunk (HYDRO_, drainage          ),     & !< = drain_rock + drain_lat; over all soil layers
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     & !< water outflow vertical into rock
+      & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     & !< water outflow horizontally
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      & !< numerical error with water transport
       & )
 
-    ! Convert soil hydrology balance error to volume
+    ! Convert soil hydrology balance error to volume (as all other variables are in volume unit too)
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
     DO ic = 1, nc
       wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
