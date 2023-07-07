@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_seb_init
 #ifndef __NO_JSBACH__
 
@@ -36,8 +41,8 @@ CONTAINS
   !> Intialize soil process (after memory has been set up)
   !
   SUBROUTINE seb_init(tile)
-    USE mo_jsb_time,        ONLY: timeStep_in_days
-    USE mo_pheno_constants, ONLY: PhenoParam
+    USE mo_jsb_time,          ONLY: timestep_in_days
+    USE mo_pheno_parameters,  ONLY: pheno_param_jsbach
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
@@ -60,8 +65,10 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(SEB_, N_pseudo_soil_temp) ! OUT
       dsl4jsb_Get_var2D_onDomain(SEB_, F_pseudo_soil_temp) ! OUT
 
-      F_pseudo_soil_temp = EXP(-timeStep_in_days()/PhenoParam%EG_SG%tau_pseudo_soil)
+      F_pseudo_soil_temp = EXP(- timestep_in_days(model_id=tile%owner_model_id)/pheno_param_jsbach%EG_SG%tau_pseudo_soil)
       N_pseudo_soil_temp = 1._wp / (1._wp - F_pseudo_soil_temp)
+
+      !$acc update device(F_pseudo_soil_temp, N_pseudo_soil_temp)
     END IF
 
   END SUBROUTINE seb_init
@@ -79,13 +86,15 @@ CONTAINS
 
   END SUBROUTINE seb_init_bc
 
-  RECURSIVE SUBROUTINE seb_init_ic(tile)
+  SUBROUTINE seb_init_ic(tile)
 
     !USE mo_jsb_time, ONLY: get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
-    dsl4jsb_Def_config(SEB_)
+    ! TYPE(t_jsb_model),       POINTER :: model
+
+    ! dsl4jsb_Def_config(SEB_)
     !dsl4jsb_Def_memory(SEB_)
 
     !REAL(wp), POINTER :: &
@@ -97,18 +106,20 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':seb_init_ic'
 
-    ! Get seb config
-    !dsl4jsb_Get_config(SEB_)
+    !model => get_model(tile%owner_model_id)
 
-    IF (.NOT. dsl4jsb_Config(SEB_)%active) RETURN
+    ! Get seb config
+    ! dsl4jsb_Get_config(SEB_)
+
+    ! IF (.NOT. model%Is_process_enabled(SEB_)) RETURN
 
     ! Get seb memory of the tile
     !dsl4jsb_Get_memory(SEB_)
 
     ! Initialize parameters
     !
-    IF (debug_on()) CALL message(TRIM(routine), 'Setting initial state of seb memory for tile '// &
-      &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(SEB_)%ic_filename))
+    ! IF (debug_on()) CALL message(TRIM(routine), 'Setting initial state of seb memory for tile '// &
+      ! &                          TRIM(tile%name)//' from '//TRIM(dsl4jsb_Config(SEB_)%ic_filename))
 
     ! Initial surface temperature
     ! Is initialized in sse_init_ic together with soil temperatures

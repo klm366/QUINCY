@@ -22,7 +22,7 @@ import hashlib
 
 # Search pattern to find lines with dsl4jsb macros and extract macro name
 re_function = re.compile(r'dsl4jsb_(.*?) *( *$|,|\)| |\()', re.IGNORECASE)
-
+# re_function2 = re.compile(r'\$(.*?): *(.*?) *\$', re.IGNORECASE)
 # Search pattern to find hash value of original file in processed file
 re_hash = re.compile(r'with md5 hash:\s*(\S*)\s*', re.IGNORECASE)
 
@@ -35,6 +35,12 @@ macros = {
     'use_processes': [re.compile(
         r'dsl4jsb_Use_processes (.*)', re.IGNORECASE),
         r'USE mo_jsb_process_class, ONLY: \1'],
+    'use_pools':
+        [re.compile(r'dsl4jsb_Use_pools *\((.*)_ *\) (.*)', re.IGNORECASE),
+         r'USE mo_\1_memory_class, ONLY: \2'],
+    'use_elements':
+        [re.compile(r'dsl4jsb_Use_elements *\((.*)_ *\) (.*)', re.IGNORECASE),
+         r'USE mo_\1_memory_class, ONLY: \2'],
     'use_memory':
         [re.compile(r'dsl4jsb_Use_memory *\((.*)_ *\)', re.IGNORECASE),
          r'USE mo_\1_memory_class, ONLY: t_\1_memory'],
@@ -65,6 +71,9 @@ macros = {
     'config': [re.compile(
         r'dsl4jsb_Config *\((.*?)_ *\)', re.IGNORECASE),
         r'\1__conf'],
+    'get_lcc_relocations': [re.compile(
+        r'dsl4jsb_Get_lcc_relocations *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => tile%lcc_processes(\1_)%p'],
     'lctlib': [re.compile(
         r'dsl4jsb_Lctlib', re.IGNORECASE),
         r'model%lctlib(tile%lcts(1)%lib_id)'],
@@ -104,6 +113,12 @@ macros = {
     'get_var2d_ondomain': [re.compile(
         r'dsl4jsb_Get_var2D_onDomain *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:)'],
+    'get_var2d_ondomain_tile': [re.compile(
+        r'dsl4jsb_Get_var2D_onDomain_tile *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2 => \1__mem__\3%\2%ptr(:,:)'],
+    'get_var2d_ondomain_tile_name': [re.compile(
+        r'dsl4jsb_Get_var2D_onDomain_tile_name *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\2_\3 => \1__mem__\3%\2%ptr(:,:)'],
     'get_var3d_ondomain': [re.compile(
         r'dsl4jsb_Get_var3D_onDomain *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\2 => \1__mem%\2%ptr(:,:,:)'],
@@ -116,6 +131,21 @@ macros = {
     'var_ptr': [re.compile(
         r'dsl4jsb_var_ptr *\((.*?)_ *, *(.*?) *\)', re.IGNORECASE),
         r'\1__mem%\2%ptr'],
+    'def_pool': [re.compile(
+        r'dsl4jsb_Def_pool *\((.*?) *\)', re.IGNORECASE),
+        r'TYPE(\1), POINTER'],
+    'get_pool': [re.compile(
+        r'dsl4jsb_Get_pool *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\3 => \1__mem%\2'],
+    'get_pool_var2d_onchunk': [re.compile(
+        r'dsl4jsb_Get_pool_var2D_onChunk *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\3 => \1__mem%\2%\3%ptr(ics:ice,iblk)'],
+    'get_pool_var3d_onchunk': [re.compile(
+        r'dsl4jsb_Get_pool_var3D_onChunk *\((.*?)_ *, *(.*?) *, *(.*?) *\)', re.IGNORECASE),
+        r'\3 => \1__mem%\2%\3%ptr(ics:ice,:,iblk)'],
+    'pool': [re.compile(
+        r'dsl4jsb_pool *\((.*?)_ *, *(.*?) * *\)', re.IGNORECASE),
+        r'\1__mem%pools%\2'],
     'aggregate_onchunk': [re.compile(
         r'dsl4jsb_Aggregate_onChunk *\((.*?)_ *, *(.*?) *, *(.*?)\)', re.IGNORECASE),
         r'CALL \3%Aggregate(tile, \1__mem%\2,ics,ice,iblk,routine)']
@@ -125,15 +155,17 @@ help_text = """
     dsl4jsb.py [-h] [OPTION...]
 
         -h                usage
-        -v, --verbose     print list of conversions
+        -v, --verbose     print list of conversions (use twice for message for files not processed)
         -i, --ifile=FILE  input file (test.f90 if missing and input directory (-d) not given)
         -o, --ofile=FILE  output file (stdout if missing)
         -d, --idir=DIR    directory with source files
         -t, --odir=DIR    target directory for output files (must exist)
         -k, --keep-dirs   keep directory tree structure of files in input directory (if -d and -t given)
         -p, --pp-add=STR  add string STR before .suffix in processed files (pp = pre-processed)
+        -n, --no-header   don't create header with hash of source file
     """
 
+__current_file = ""
 
 def get_input_files(root):
     for dir, subdirs, files in os.walk(root):
@@ -147,8 +179,69 @@ def get_input_files(root):
 def tolower(match):
     return match.group(1).lower() + '_'
 
+def replace_dollar_function(match):
+    global __current_file
+    if match.group(1):
+        match1 = match.group(1)
+        if match1.find(':') >= 0:
+            match1 = match1[:-1]
+    else:
+        if (__current_file.find('_interface.f90') > 0 or __current_file.find('_init.f90') > 0
+            or __current_file.find('_veg.f90') > 0
+            or __current_file.find('_land.f90') > 0 or __current_file.find('_lake.f90') > 0):
+            match1 = __current_file.split('_')[1] # Get the process name after mo_
+        elif __current_file == 'test.f90':
+            match1 = 'carbon@sub'
+        else:
+            match1 = None
+    subset = None
+    if match1.find('@') >= 0:
+        process, subset = match1.split('@')
+    # elif match1 == 'loop':
+    #     subset = 'loop'
+    else:
+        process = match1
+        if re.search('_interface(_.*)*\.f90', __current_file) \
+            or __current_file.find('_land.f90') > 0 or __current_file.find('_lake.f90') > 0:
+            subset = 'sub'
+        elif re.search('_init(_.*)*\.f90', __current_file):
+            subset = 'dom'
+        elif re.search('_process(_.*)*\.f90', __current_file) or __current_file.find('_veg.f90') > 0:
+            # subset = 'loop'
+            subset = 'sub'
+            process = 'local'
+        elif __current_file == 'test.f90':
+            subset = 'sub'
+            process = 'local'
+        else:
+            print('subset unspecified and no default')
+            sys.exit()
+    variable = match.group(2)
+    if variable.find('(') > 0:
+        var, index, dummy = re.split('(\(.*\))', variable)
+    else:
+        var = variable
+        index = None
+    if subset == 'dom':
+        if process == 'local':
+            result = var + '%ptr'
+        else:
+            result = process + '__mem%' + var + '%ptr'
+    elif subset == 'sub':
+        if process == 'local':
+            result = var + '%ptrm1'
+        else:
+            result = process + '__mem%' + var + '%ptrm1'
+    # elif subset == 'loop':
+    #     return variable + '%ptrm1(ic)'
+    else:
+        print('Unknown specifier in subset specifier')
+        sys.exit()
+    if index:
+        result = result + index
+    return result
 
-def process_file(inputfile, outputfile, verbose=False, cwd=None):
+def process_file(inputfile, outputfile, header=True, verbose=False, verbose_more=False, cwd=None):
     # Compute hash value of input file
     hasher = hashlib.md5()
     with io.open(inputfile, 'rb') as infile:
@@ -170,23 +263,27 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
         # Since input file hasn't changed, reset its modification time to the one
         # of the output file, so that make doesn't think the input file is newer
         os.utime(inputfile, (os.path.getatime(inputfile), os.path.getmtime(outputfile)))
-        if verbose:
+        if verbose_more:
             print('File hasn"t changed: ' + os.path.realpath(os.path.abspath(inputfile)))
         return
 
     with io.open(inputfile, 'r', encoding="utf-8") as infile:
         with (io.open(outputfile, 'w', encoding="utf-8") if outputfile != '' else sys.stdout) as outfile:
-            outfile.write(u'!\n! This file was automatically generated from:\n')
-            outfile.write(u'!    ' + os.path.realpath(os.path.abspath(inputfile)) + u'\n')
-            outfile.write(u'!    with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
+            if header:
+                outfile.write(u'!\n! This file was automatically generated from JSBACH source file:\n')
+                outfile.write(u'!    ' + re.sub(r'.*/src', 'src', os.path.realpath(os.path.abspath(inputfile))) + u'\n')
+                outfile.write(u'! with md5 hash: ' + hasher.hexdigest() + u'\n!\n')
             if verbose:
                 if cwd:
                     print('   Pre-processing: ' + os.path.relpath(os.path.realpath(os.path.abspath(inputfile)), cwd) + ' => ' + os.path.relpath(outputfile, cwd))
                 else:
                     print('   Pre-processing: ' + os.path.realpath(inputfile) + ' => ' + outputfile)
             for line in infile:
-                if outputfile == '':
-                    outfile.write(u'! ' + line)
+                if outputfile == '' and inputfile == 'test.f90':
+                    if (sys.version_info > (3, 0)):
+                        outfile.write(u'! ' + line)
+                    else:
+                        outfile.write(u'! ' + line.encode('utf-8'))
                 matches = re.finditer(re_function, line)
                 if matches:
                     for match in matches:         # match.groupt(1) contains the macro name without "dsl4jsb_"
@@ -196,21 +293,52 @@ def process_file(inputfile, outputfile, verbose=False, cwd=None):
                             line = pat.sub(replace, line)
                             line = re.sub(r'([A-Z2]*?)_', tolower, line)
                         except:
-                            print('ERROR in ' + inputfile + ': dsl4jsb macro not found: ' + match.group(1).lower())
+                            print('ERROR in ' + inputfile + ': dsl4jsb macro not found: $' + match.group(1).lower())
                             sys.exit()
-                outfile.write(line)
-
+                # matches = re.finditer(re_function2, line)
+                # if matches:
+                #     for match in matches:
+                #         try:
+                #             pat = re.compile(r'\$(.*?): *(.*?) *\$', re.IGNORECASE)
+                #             line = pat.sub(replace_dollar_function, line)
+                #             line = re.sub(r'([A-Z]*?)_', tolower, line)
+                #         except:
+                #             print('ERROR in ' + inputfile + ': dsl4jsb macro not found: $' + match.group(1) )
+                #             sys.exit()
+                # pat = re.compile(r'\$(.*?:)? *(.*?) *\$', re.IGNORECASE)
+                pat = re.compile(r'\$([^(]*?:)? *(.*?) *\$', re.IGNORECASE)
+                line = pat.sub(replace_dollar_function, line)
+                #line = re.sub(r'([A-Z]*?)_', tolower, line)
+                if len(re.sub(r"!.*$",'',line)) > 132:
+                    print(line)
+                    print(re.sub(r"!.*$",'',line))
+                    print('Line too long after replacing macro')
+                    sys.exit()
+                if outputfile == '':
+                    if (sys.version_info > (3, 0)):
+                        outfile.write(line)
+                    else:
+                        outfile.write(line.encode('utf-8'))
+                else:
+                    outfile.write(line)
+    if outputfile != '':
+        os.utime(outputfile, (os.path.getatime(outputfile), os.path.getmtime(inputfile)))
 
 def main(argv):
+
+    global __current_file
+
     inputfile = ''
     outputfile = ''
     inputdir = ''
     outputdir = ''
     verbose = False
+    verbose_more = False
     keep = False
+    header = True
     pp_add = None
     try:
-        opts, args = getopt.getopt(argv,"hvki:o:d:t:p:",["ifile=","ofile=","idir=","odir=","pp-add="])
+        opts, args = getopt.getopt(argv,"hvkni:o:d:t:p:",["ifile=","ofile=","idir=","odir=","pp-add="])
     except getopt.GetoptError:
         print(help_text)
         sys.exit(2)
@@ -219,9 +347,14 @@ def main(argv):
             print(help_text)
             sys.exit()
         elif opt in ("-v", "--verbose"):
-            verbose = True
+            if not verbose:
+                verbose = True
+            else:
+                verbose_more = True
         elif opt in ("-k", "--keep-dirs"):
             keep = True
+        elif opt in ("-n", "--no-header"):
+            header = False
         elif opt in ("-p", "--pp-add"):
             pp_add = arg
         elif opt in ("-i", "--ifile"):
@@ -272,10 +405,12 @@ def main(argv):
                     ofile = os.path.join(outputdir, root + pp_add + ext)
                 else:
                     ofile = os.path.join(outputdir, os.path.basename(ifile))
-            process_file(os.path.join(inputdir, ifile), ofile, verbose, cwd)
+            __current_file = os.path.basename(ifile)
+            process_file(os.path.join(inputdir, ifile), ofile, verbose, verbose_more, cwd)
         os.chdir(cwd)
     else:
-        process_file(inputfile, outputfile, verbose, cwd)
+        __current_file = os.path.basename(inputfile)
+        process_file(inputfile, outputfile, verbose, verbose_more, cwd)
 
     return 0
 

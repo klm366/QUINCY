@@ -7,9 +7,15 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2015-06-01)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_hsm_class
 
-  USE mo_exception, ONLY: message, message_text, finish, em_warn
+  USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
+  USE mo_exception,          ONLY: message, message_text, finish, em_warn
   ! USE mo_util,      ONLY: int2string
 #ifdef _OPENMP
   USE omp_lib,      ONLY: omp_get_max_threads, omp_get_thread_num
@@ -30,7 +36,7 @@ MODULE mo_hsm_class
   END ENUM
 
   TYPE t_Action
-    CHARACTER(len=10) :: name = ""
+    CHARACTER(len=SHORT_NAME_LEN) :: name = ""
   CONTAINS
     PROCEDURE :: Is_equal        => Is_equal_action
     GENERIC   :: OPERATOR(==)    => Is_equal
@@ -56,20 +62,20 @@ MODULE mo_hsm_class
   !! This derived type defines the state class
   !!
   TYPE, ABSTRACT :: t_State
-    CHARACTER(len=10)           :: name
-    CHARACTER(len=50)           :: description
+    CHARACTER(len=SHORT_NAME_LEN) :: name
+    CHARACTER(len=50)             :: description
 !!$    INTEGER                     :: id
-    INTEGER                     :: level = 0                      ! Level in hierarchy (top=1)
-    INTEGER                     :: path(MAX_STATE_NESTING) = -1
-    INTEGER, PRIVATE            :: no_of_children = -1
+    INTEGER                       :: level = 0                      ! Level in hierarchy (top=1)
+    INTEGER                       :: path(MAX_STATE_NESTING) = -1
+    INTEGER, PRIVATE              :: no_of_children = -1
     !
-    LOGICAL,        ALLOCATABLE :: visited(:)
-    CLASS(t_State), POINTER     :: parent       => NULL()
-    CLASS(t_State), POINTER     :: first_child  => NULL()
-    CLASS(t_State), POINTER     :: last_child   => NULL()
+    LOGICAL,        ALLOCATABLE   :: visited(:)
+    CLASS(t_State), POINTER       :: parent       => NULL()
+    CLASS(t_State), POINTER       :: first_child  => NULL()
+    CLASS(t_State), POINTER       :: last_child   => NULL()
     !
-    CLASS(t_State), POINTER     :: next_sibling => NULL()
-    CLASS(t_State), POINTER     :: prev_sibling => NULL()
+    CLASS(t_State), POINTER       :: next_sibling => NULL()
+    CLASS(t_State), POINTER       :: prev_sibling => NULL()
   CONTAINS
     PROCEDURE :: Init_state
     PROCEDURE :: Get_parent         => Get_parent_state
@@ -81,6 +87,7 @@ MODULE mo_hsm_class
     PROCEDURE :: Has_siblings       => Has_siblings_state
     PROCEDURE :: Is_first_child     => Is_first_child_state
     PROCEDURE :: Is_last_child      => Is_last_child_state
+    PROCEDURE :: Is_last_leaf       => Is_last_leaf_state
     PROCEDURE :: Reset_all          => Reset_all_state
     PROCEDURE :: Print_state
     PROCEDURE :: Is_equal           => Is_equal_state
@@ -105,15 +112,15 @@ MODULE mo_hsm_class
   !! This derived type defines the structure of a basic Hierarchical State Machine
   !!
   TYPE, ABSTRACT :: t_Hsm
-    CHARACTER(len=30)           :: name
-    CLASS(t_State), POINTER     :: top     => NULL()    !< Topmost state
+    CHARACTER(len=30)            :: name
+    CLASS(t_State), POINTER      :: top     => NULL()    !< Topmost state
     !
-    CLASS(t_State_p), ALLOCATABLE :: current(:)     !< Current state
-    CLASS(t_State_p), ALLOCATABLE :: next(:)        !< Next state (non_null if transition taken)
-    CLASS(t_State_p), ALLOCATABLE :: source(:)      !< Source state during last transition
-    TYPE(t_Action),   ALLOCATABLE :: actions(:)         !< List of possible actions (events)
-    INTEGER,          ALLOCATABLE :: levels_to_lca(:)   !< Temporary storage
-    INTEGER                       :: mode               !< HSM_full or HSM_simple
+    TYPE(t_State_p), ALLOCATABLE :: current(:)     !< Current state
+    TYPE(t_State_p), ALLOCATABLE :: next(:)        !< Next state (non_null if transition taken)
+    TYPE(t_State_p), ALLOCATABLE :: source(:)      !< Source state during last transition
+    TYPE(t_Action),  ALLOCATABLE :: actions(:)         !< List of possible actions (events)
+    INTEGER,         ALLOCATABLE :: levels_to_lca(:)   !< Temporary storage
+    INTEGER                      :: mode               !< HSM_full or HSM_simple
   CONTAINS
     PROCEDURE :: Init_hsm
     PROCEDURE :: Set_mode          => Set_mode_hsm
@@ -296,8 +303,8 @@ CONTAINS
 
   FUNCTION Get_parent_name_state(this) RESULT(return_value)
 
-    CLASS(t_State), INTENT(in) :: this
-    CHARACTER(LEN=10)          :: return_value
+    CLASS(t_State), INTENT(in)    :: this
+    CHARACTER(len=SHORT_NAME_LEN) :: return_value
 
     CLASS(*), POINTER :: p
 
@@ -339,6 +346,20 @@ CONTAINS
     return_value = .NOT. ASSOCIATED(this%next_sibling)
 
   END FUNCTION Is_last_child_state
+
+  ! TODO This only works if the tree is walked through downwards!
+  FUNCTION Is_last_leaf_state(this) RESULT(return_value)
+
+    CLASS(t_State), INTENT(in) :: this
+    LOGICAL                   :: return_value
+
+    IF (ASSOCIATED(this%parent)) THEN
+      return_value = .NOT. this%Has_children() .AND. this%Is_last_child() .AND. this%parent%Is_last_child()
+    ELSE
+      return_value = .NOT. this%Has_children() .AND. this%Is_last_child()
+    END IF
+
+  END FUNCTION Is_last_leaf_state
 
   FUNCTION Is_first_child_state(this) RESULT(return_value)
 
@@ -1039,12 +1060,13 @@ CONTAINS
 
       !DEALLOCATE(start_msg%action)
       DEALLOCATE(start_msg)
-      IF (ASSOCIATED(new_msg)) THEN
-        !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
-        DEALLOCATE(new_msg)
-      END IF
 
     END SELECT
+
+    IF (ASSOCIATED(new_msg)) THEN
+      !IF (ASSOCIATED(new_msg%action)) DEALLOCATE(new_msg%action)
+      DEALLOCATE(new_msg)
+    END IF
 
     IF (l_debug) THEN
       IF (ASSOCIATED(new_msg)) THEN

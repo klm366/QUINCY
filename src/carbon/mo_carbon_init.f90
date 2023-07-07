@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2017-04-12)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_carbon_init
 #ifndef __NO_JSBACH__
 
@@ -57,11 +62,10 @@ CONTAINS
     dsl4jsb_Get_memory(CARBON_)
     !dsl4jsb_Get_config(CARBON_)
 
-    dtime = get_time_dt()
+    dtime = get_time_dt(tile%owner_model_id)
 
     !CALL carbon_init_ic(tile)
     !CALL carbon_init_bc(tile)
-
 
     ! R: This should stand here because these variables are more technical constants (only depending on dtime)
     !    than a part of the carbon process parametrization. Furthermore they should be calculated only once when a simulation
@@ -183,10 +187,10 @@ CONTAINS
     model => get_model(tile%owner_model_id)
 
     ! Get carbon memory and config  of the tile
-    !dsl4jsb_Get_memory(CARBON_)
+    dsl4jsb_Get_memory(CARBON_)
     dsl4jsb_Get_config(CARBON_)
 
-    IF (.NOT. dsl4jsb_Config(CARBON_)%active) RETURN
+    IF (.NOT. model%Is_process_enabled(CARBON_)) RETURN
 
     ! Initialize the C Pools
 

@@ -1,6 +1,7 @@
 # Changelog for JSBACH4+
 
 - [Changelog for JSBACH4+](#changelog-for-jsbach4)
+  - [jsbach-4.20p9](#jsbach-420p9)
   - [jsbach-4.20p8](#jsbach-420p8)
   - [jsbach-4.20p7](#jsbach-420p7)
   - [jsbach-4.20p6](#jsbach-420p6)
@@ -10,6 +11,16 @@
   - [jsbach-4.20p2](#jsbach-420p2)
   - [jsbach-4.20p1](#jsbach-420p1)
   - [jsbach-4.20](#jsbach-420)
+
+## jsbach-4.20p9
+
+_Release Date: 5 March 2019_
+
+- Bug fixes in `mo_jsb_tile` (missing TRIM around strings)
+- Changes in `mo_jsb_grid_class`
+  - Bug fix in `new_vgrid` for lbounds in one of the cases
+  - Don't allow the case in `new_vgrid` that levels and dz are given but neither lbounds nor ubounds
+  - Remove unnecessary TRIM's
 
 ## jsbach-4.20p8
 
@@ -43,8 +54,8 @@ _Release Date: 18 February 2019_
     - if switched on, the MaxLai of pfts with ForestFlag is derived from the available biomass
   - Bug fix in mo_pheno_init.f90
 - Added daily carbon conservation test on box tile
-  - Carbon conservation test for each new day in `start_timestep`
-  - Added calls to `start_timestep` and `finish_timestep` to driver
+  - Carbon conservation test for each new day in `jsbach_start_timestep`
+  - Added calls to `jsbach_start_timestep` and `jsbach_finish_timestep` to driver
   - Corrected unit of fire atm flux `cflux_fire_all_2_atm`
 - Changes to output behaviour
   - Append domain (model) ID to stream names only if more than one domain (model)

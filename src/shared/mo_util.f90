@@ -1,5 +1,9 @@
 !>
-!! @brief Contains utility functions
+!! @par Copyright
+!!  This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!!  Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+!! @brief diverse subroutines and functions for tile & forcing variables
 !!
 !! @author
 !!  Reiner Schnur, MPI-M Hamburg
@@ -7,15 +11,18 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2014-03-17)
 !!
+
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
-  USE mo_kind, ONLY: wp
+  USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: message, finish
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: soil_depth_to_layers_2d, one_of, toupper, int2string, real2string, logical2string
+  PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
+    &       report_memory_usage
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -26,14 +33,14 @@ MODULE mo_util
 
 CONTAINS
 
-  !!
-  ! @brief      Compute soil layer depths from (fixed) layer thicknesses and total depth
-  !
-  ! @param      depth    Total soil depth
-  ! @param      dz       Fixed layer thicknesses
-  !
-  ! @return     Layer thicknesses until soil depth
-  !!
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION return the site-specific soil profile as vector of soil-layer thicknesses
+  !! 
+  !! in: soil_depth (until bedrock) and soil-layer thicknesses
+  !! 
+  !! out: site-specific soil-layer thicknesses, soil_depth_sl as 3D variable "dsl4jsb_var3D_onDomain()"
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION soil_depth_to_layers_2d(depth, dz) RESULT(depth_l)
 
     REAL(wp), INTENT(in) :: depth(:,:)
@@ -42,7 +49,6 @@ CONTAINS
 
     REAL(wp) :: bottom, bottom_m1
     INTEGER  :: nsoil, i
-
     CHARACTER(len=*), PARAMETER :: routine = modname//':soil_depth_to_layer_2d'
 
     nsoil = SIZE(dz)
@@ -59,8 +65,115 @@ CONTAINS
       END WHERE
       bottom_m1 = bottom_m1 + dz(i)
     END DO
-
+  
   END FUNCTION soil_depth_to_layers_2d
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> conversion: uppercase -> lowercase
+  !! 
+  !! implemented based on mo_util:toupper in jsbach4.1
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION tolower(string) RESULT(stringlower)
+
+    IMPLICIT NONE
+    ! ---------------------------
+    ! 0.1 InOut    
+    CHARACTER(len=*), INTENT(in) :: string
+    CHARACTER(len=LEN_TRIM(string)) :: stringlower
+    ! ---------------------------
+    ! 0.2 Local
+    INTEGER, PARAMETER :: idel = ICHAR('a')-ICHAR('A')  ! = 32
+    INTEGER :: i
+
+    DO i = 1, LEN_TRIM(string)
+      IF (ICHAR(string(i:i)) >= ICHAR('A') .AND. ICHAR(string(i:i)) <= ICHAR('Z')) THEN
+        stringlower(i:i) = CHAR( ICHAR(string(i:i)) + idel )
+      ELSE
+        stringlower(i:i) = string(i:i)
+      ENDIF
+    ENDDO
+  END FUNCTION tolower
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> conversion: lowercase -> uppercase
+  !! 
+  !! Copied from ICON module shared/mo_util_string
+  !! 
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
+
+    REAL(wp), INTENT(in) :: &
+      & ifs_3d (:,:,:),     &
+      & ifs_depth(:),       &
+      & soil_depth(:)
+    REAL(wp), OPTIONAL, INTENT(in) :: &
+      & ifs_sfc(:,:)
+
+    REAL(wp), INTENT(out) :: &
+      & soil_3d(:,:,:)
+
+    REAL(wp) :: ifs(SIZE(ifs_3d,1),0:SIZE(ifs_depth)+1,SIZE(ifs_3d,3)), zifs(0:SIZE(ifs_depth)+1), zsoil(0:SIZE(soil_depth))
+    REAL(wp) :: zwt, zwt_sum
+    INTEGER  :: nsoil_in, nsoil_out, isoil_in, isoil_out, ik1
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':ifs2soil'
+
+    nsoil_in  = SIZE(ifs_depth)
+    nsoil_out = SIZE(soil_depth)
+
+    zsoil(1:nsoil_out) = soil_depth(:)
+    zsoil(0)           = 0._wp
+    zifs(1:nsoil_in) = ifs_depth(:)
+    zifs(0)          = 0._wp
+    zifs(nsoil_in+1) = soil_depth(nsoil_out)
+    ifs(:,1:nsoil_in,:) = ifs_3d(:,:,:)
+    IF (PRESENT(ifs_sfc)) THEN
+      ifs(:,0         ,:) = ifs_sfc(:,:)
+    ELSE
+      ifs(:,0         ,:) = ifs_3d(:,1,:)
+    END IF
+    ifs(:,nsoil_in+1,:) = ifs_3d(:,nsoil_in,:)
+
+    soil_3d(:,:,:) = 0._wp
+
+    IF (PRESENT(ifs_sfc)) THEN
+      soil_3d(:,1,:) = ifs_sfc(:,:)
+      ik1 = 2
+    ELSE
+      ik1 = 1
+    END IF
+    DO isoil_out = ik1, nsoil_out
+      zwt_sum        = 0._wp
+      DO isoil_in = 1,nsoil_in+1
+        IF (zifs(isoil_in) <= zsoil(isoil_out-1)) THEN
+          ! Do nothing
+          zwt = 0._wp
+        ELSE IF (zifs(isoil_in-1) > zsoil(isoil_out)) THEN
+          ! Do nothing
+          zwt = 0._wp
+        ELSE IF (zifs(isoil_in-1) > zsoil(isoil_out-1) .AND. zifs(isoil_in) <= zsoil(isoil_out)) THEN
+          zwt = 1._wp
+          zwt_sum = zwt_sum + zwt
+          soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) + zwt * ifs(:,isoil_in,:)
+        ELSE IF (zifs(isoil_in) > zsoil(isoil_out-1) .AND. zifs(isoil_in) <= zsoil(isoil_out)) THEN
+          zwt = (zifs(isoil_in) - zsoil(isoil_out-1)) / (zsoil(isoil_out) - zsoil(isoil_out-1))
+          zwt_sum = zwt_sum + zwt
+          soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) + zwt * ifs(:,isoil_in,:)
+        ELSE IF (zifs(isoil_in) > zsoil(isoil_out) .AND. zifs(isoil_in-1) <= zsoil(isoil_out)) THEN
+          zwt = (zsoil(isoil_out) - zifs(isoil_in-1)) / (zsoil(isoil_out) - zsoil(isoil_out-1))
+          zwt_sum = zwt_sum + zwt
+          soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) + zwt * ifs(:,isoil_in,:)
+        END IF
+        ! print*, 'AAA isoil_out, isoil_in, zwt, zwt_sum', isoil_out, isoil_in, zwt, zwt_sum
+      END DO
+      IF (zwt_sum < EPSILON(1._wp)) CALL finish(routine, 'zwt_sum = 0 (should not happen)!')
+      soil_3d(:,isoil_out,:) = soil_3d(:,isoil_out,:) / zwt_sum
+    END DO
+
+  END SUBROUTINE ifs2soil
   !
   !> Conversion: Lowercase -> Uppercase
   !
@@ -95,11 +208,26 @@ CONTAINS
     CHARACTER(len=*), INTENT(IN)           :: in_str    ! input string
     CHARACTER(len=*), INTENT(IN)           :: arg(:)
     ! local variables:
-    INTEGER :: i
+    INTEGER :: i, ipos, len_in_str
 
+    len_in_str = LEN_TRIM(in_str)
     one_of_str = -1
     DO i=1,SIZE(arg)
-      IF (toupper(TRIM(in_str)) == toupper(TRIM(arg(i))))  one_of_str=i
+      ipos = SCAN(arg(i), '*')
+      IF (ipos == 0) THEN
+        ipos = LEN_TRIM(arg(i))
+      ELSE
+        ipos = ipos - 1
+      END IF
+      IF (ipos > 0) THEN
+        IF ( ADJUSTL(toupper(in_str(1:MIN(ipos,len_in_str)))) == ADJUSTL(toupper(arg(i)(1:ipos))) ) THEN
+          one_of_str=i
+          EXIT
+        END IF
+      ELSE
+        one_of_str=i
+        EXIT
+      END IF
     END DO
   END FUNCTION one_of_str
 
@@ -112,7 +240,10 @@ CONTAINS
 
     one_of_int = -1
     DO i=1,SIZE(arg)
-      IF (in_int == arg(i))  one_of_int=i
+      IF (in_int == arg(i)) THEN
+        one_of_int=i
+        EXIT
+      END IF
     END DO
   END FUNCTION one_of_int
 
@@ -122,41 +253,43 @@ CONTAINS
   ! Copied from ICON module shared/mo_util_string
   !
   FUNCTION int2string(n, opt_fmt)
-    CHARACTER(len=10) :: int2string ! result
+    CHARACTER(len=:), ALLOCATABLE :: int2string ! result
     INTEGER, INTENT(in) :: n
     CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
     !
-    CHARACTER(len=10) :: fmt
+    CHARACTER(len=:), ALLOCATABLE :: fmt
+    CHARACTER(len=30) :: string
 
     IF (PRESENT(opt_fmt)) THEN
       fmt = opt_fmt
     ELSE
       fmt = '(I10)'
     END IF
-    WRITE(int2string,fmt) n
-    int2string = ADJUSTL(int2string)
+    WRITE(string,fmt) n
+    int2string = TRIM(ADJUSTL(string))
     !
   END FUNCTION int2string
 
   FUNCTION real2string(x, opt_fmt)
-    CHARACTER(len=10) :: real2string ! result
+    CHARACTER(len=:), ALLOCATABLE :: real2string ! result
     REAL(wp), INTENT(in) :: x
     CHARACTER(len=*), INTENT(in), OPTIONAL :: opt_fmt
     !
-    CHARACTER(len=10) :: fmt
+    CHARACTER(len=:), ALLOCATABLE :: fmt
+    CHARACTER(len=30) :: string
 
     IF (PRESENT(opt_fmt)) THEN
       fmt = opt_fmt
     ELSE
       fmt = '(E10.4)'
     END IF
-    WRITE(real2string,fmt) x
-    real2string = ADJUSTL(real2string)
+    WRITE(string,fmt) x
+    real2string = TRIM(ADJUSTL(string))
     !
   END FUNCTION real2string
 
   FUNCTION logical2string(value)
-    CHARACTER(len=7) :: logical2string ! result
+    CHARACTER(len=:), ALLOCATABLE :: logical2string ! result
     LOGICAL, INTENT(in) :: value
     !
     IF (value) THEN
@@ -166,6 +299,29 @@ CONTAINS
     END IF
     !
   END FUNCTION logical2string
+
+  SUBROUTINE report_memory_usage()
+
+    INTEGER           :: size=0, resident=0, share=0, text=0, lib=0, data=0, dt=0, oom_score=0
+    INTEGER           :: ierr=0
+
+    OPEN(unit=1, file='/proc/self/statm', form='formatted', status='OLD', action='READ', iostat=ierr)
+    READ(unit=1, fmt=*, iostat=ierr) size, resident, share, text, lib, data, dt
+    CLOSE(unit=1)
+    OPEN(unit=1, file='/proc/self/oom_score', form='formatted', status='OLD', action='READ', iostat=ierr)
+    READ(unit=1, fmt=*, iostat=ierr) oom_score
+    CLOSE(unit=1)
+
+    IF (ierr < 0) THEN
+      CALL message('', 'Problem reading /proc/self/statm')
+    ELSE
+      CALL message('INFO -- Memory usage in pages and OOM score', ' size='//TRIM(int2string(size))// &
+        &                             ' resident='//TRIM(int2string(resident))// &
+        &                             ' data='//TRIM(int2string(data))// &
+        &                             ' oom_score='//TRIM(int2string(oom_score)))
+    END IF
+
+  END SUBROUTINE report_memory_usage
 
 #endif
 END MODULE mo_util

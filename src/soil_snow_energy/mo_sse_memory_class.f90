@@ -7,32 +7,36 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_sse_memory_class
 #ifndef __NO_JSBACH__
 
-  USE mo_kind,      ONLY: wp
-  USE mo_exception, ONLY: finish
-
-  USE mo_jsb_model_class,  ONLY: t_jsb_model
-  USE mo_jsb_class,        ONLY: Get_model
-  USE mo_jsb_memory_class, ONLY: t_jsb_memory
-  USE mo_jsb_var_class,    ONLY: t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_kind,                   ONLY: wp
+  USE mo_exception,              ONLY: finish
+  USE mo_util,                   ONLY: One_of
+  USE mo_jsb_memory_class,       ONLY: t_jsb_memory
+  USE mo_jsb_lct_class,          ONLY: VEG_TYPE, LAND_TYPE, BARE_TYPE
+  USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
 
   ! Use of prcesses in this module
   dsl4jsb_Use_processes SSE_
-
-  ! Use process configurations
-  dsl4jsb_Use_config(SSE_)
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_sse_memory, max_no_of_vars
 
-  INTEGER, PARAMETER :: max_no_of_vars = 20
+  INTEGER, PARAMETER :: max_no_of_vars = 80
 
+  ! ======================================================================================================= !
+  !>Type definition for soil_snow_energy memory
+  !>
   TYPE, EXTENDS(t_jsb_memory) :: t_sse_memory
-    !
+
     ! Parameters
     TYPE(t_jsb_var_real2d) :: &
       & vol_heat_cap,         & !< Volumetric heat capacity of soil solids (from input file) [J m-3 K-1]
@@ -44,7 +48,7 @@ MODULE mo_sse_memory_class
     TYPE(t_jsb_var_real3d) :: &
       & vol_heat_cap_sl,      & !< (dynamic) Volumetric heat capacity of dry soil [J m-3 K-1]
       & heat_cond_sl,         & !< (dynamic) Thermal conductivity of soil [J m-1 s-1 K-1]
-      & t_soil,               & !< Temperature of soil layers [K]
+      & t_soil_sl,            & !< Temperature of soil layers [K]
       & t_soil_acoef,         & !< Soil A coefficient of Richtmeyer and Morton scheme
       & t_soil_bcoef,         & !< Soil B coefficient of Richtmeyer and Morton scheme
       & snow_depth_sl,        & !< Depth of snow layers [m]
@@ -66,48 +70,52 @@ MODULE mo_sse_memory_class
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>initialize memory (variables) for the process: soil_snow_energy
+  !>
   SUBROUTINE Init_sse_memory(mem, prefix, suffix, lct_ids, model_id)
 
-    USE mo_jsb_varlist,       ONLY: jsb_add_var, BASIC, MEDIUM !, FULL
-    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, &
-                                    TSTEP_CONSTANT, tables
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
+    USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, TSTEP_CONSTANT, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
-
+    USE mo_jsb_model_class,   ONLY: t_jsb_model
+    USE mo_jsb_class,         ONLY: Get_model
+    dsl4jsb_Use_config(SSE_)
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_sse_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),     INTENT(in)    :: prefix
-    CHARACTER(len=*),     INTENT(in)    :: suffix
-    INTEGER,              INTENT(in)    :: lct_ids(:)
-    INTEGER,              INTENT(in)    :: model_id
-
+    CHARACTER(len=*),    INTENT(in)            :: prefix
+    CHARACTER(len=*),    INTENT(in)            :: suffix
+    INTEGER,             INTENT(in)            :: lct_ids(:)
+    INTEGER,             INTENT(in)            :: model_id
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SSE_)
-
-    TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
-    TYPE(t_jsb_vgrid), POINTER :: surface, soil_e, snow_e      ! Vertical grids
-    INTEGER :: table
-
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER  :: surface, soil_e, snow_e      ! Vertical grids
+    INTEGER                     :: table
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_sse_memory'
-
+    ! ----------------------------------------------------------------------------------------------------- !
     IF (SIZE(lct_ids) < 1) CALL finish(routine, 'lcd_ids not specified')
-
-    model => Get_model(model_id)
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    model         => Get_model(model_id)
     dsl4jsb_Get_Config(SSE_)
-
-    table = tables(1)
-
-    hgrid => Get_grid(mem%grid_id)
-
-    surface => Get_vgrid('surface')
-    soil_e  => Get_vgrid('soil_depth_energy')
+    table         = tables(1)
+    hgrid         => Get_grid(mem%grid_id)
+    surface       => Get_vgrid('surface')
+    soil_e        => Get_vgrid('soil_depth_energy')
     IF( dsl4jsb_Config(SSE_)%l_snow) THEN
       snow_e  => Get_vgrid('snow_depth_energy')
     END IF
 
-    IF (ASSOCIATED(mem%vol_heat_cap%ptr)) RETURN
 
-    CALL jsb_add_var( mem, 'vol_heat_cap', mem%vol_heat_cap,                 &
+    !! !$acc enter data pcreate(mem)
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! jsbach4 memory
+    ! 
+
+    CALL mem%Add_var( 'vol_heat_cap', mem%vol_heat_cap,                 &
       & hgrid, surface,                                                      &
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -115,7 +123,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, 'vol_heat_cap_sl', mem%vol_heat_cap_sl,           &
+    CALL mem%Add_var( 'vol_heat_cap_sl', mem%vol_heat_cap_sl,           &
       & hgrid, soil_e,                                                       &
       & t_cf('vol_heat_capacity_soil', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -123,7 +131,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'vol_heat_cap_snow', mem%vol_heat_cap_snow,       &
+    CALL mem%Add_var( 'vol_heat_cap_snow', mem%vol_heat_cap_snow,       &
       & hgrid, surface,                                                      &
       & t_cf('vol_heat_capacity_snow', 'J m-3 K-1', ''),                     &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -131,7 +139,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'heat_cond', mem%heat_cond,                       &
+    CALL mem%Add_var( 'heat_cond', mem%heat_cond,                       &
       & hgrid, surface,                                                      &
       & t_cf('heat_cond_soil', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -139,7 +147,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, 'heat_cond_sl', mem%heat_cond_sl,                 &
+    CALL mem%Add_var( 'heat_cond_sl', mem%heat_cond_sl,                 &
       & hgrid, soil_e,                                                       &
       & t_cf('heat_cond_soil', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -147,7 +155,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'heat_cond_snow', mem%heat_cond_snow,             &
+    CALL mem%Add_var( 'heat_cond_snow', mem%heat_cond_snow,             &
       & hgrid, surface,                                                      &
       & t_cf('heat_cond_snow', 'J m-1 s-1 K-1', ''),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -155,7 +163,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 'thermal_diffusivity', mem%thermal_diffusivity,   &
+    CALL mem%Add_var( 'thermal_diffusivity', mem%thermal_diffusivity,        &
       & hgrid, surface,                                                      &
       & t_cf('thermal_diffusivity_soil', 'm2 s-1', ''),                      &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -163,7 +171,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
 
-    CALL jsb_add_var( mem, 't_soil', mem%t_soil,                             &
+    CALL mem%Add_var( 't_soil_sl', mem%t_soil_sl,                            &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature', 'K', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -171,22 +179,23 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=280.0_wp )
 
-    CALL jsb_add_var( mem, 't_soil_acoef', mem%t_soil_acoef,                 &
+    CALL mem%Add_var( 't_soil_acoef', mem%t_soil_acoef,                      &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature_acoef', '', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
-    CALL jsb_add_var( mem, 't_soil_bcoef', mem%t_soil_bcoef,                 &
+    CALL mem%Add_var( 't_soil_bcoef', mem%t_soil_bcoef,                      &
       & hgrid, soil_e,                                                       &
       & t_cf('soil_temperature_bcoef', '', ''),                              &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & initval_r=0.0_wp )
 
+    ! snow
     IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-      CALL jsb_add_var( mem, 'snow_depth_sl', mem%snow_depth_sl,               &
+      CALL mem%Add_var( 'snow_depth_sl', mem%snow_depth_sl,                    &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_depth_sl', 'm', 'Depth of snow layers'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -195,7 +204,7 @@ CONTAINS
         & output_level=MEDIUM,                                                 &
         & initval_r=0._wp, l_aggregate_all=.TRUE. )
 
-      CALL jsb_add_var( mem, 't_snow', mem%t_snow,                             &
+      CALL mem%Add_var( 't_snow', mem%t_snow,                                  &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_temperature', 'K', ''),                                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -203,14 +212,14 @@ CONTAINS
         & output_level=BASIC,                                                  &
         & initval_r=273.15_wp )
 
-      CALL jsb_add_var( mem, 't_snow_acoef', mem%t_snow_acoef,                 &
+      CALL mem%Add_var( 't_snow_acoef', mem%t_snow_acoef,                      &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_temperature_acoef', '', ''),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
         & initval_r=0.0_wp )
 
-      CALL jsb_add_var( mem, 't_snow_bcoef', mem%t_snow_bcoef,                 &
+      CALL mem%Add_var( 't_snow_bcoef', mem%t_snow_bcoef,                      &
         & hgrid, snow_e,                                                       &
         & t_cf('snow_temperature_bcoef', '', ''),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -218,7 +227,7 @@ CONTAINS
         & initval_r=0.0_wp )
     END IF
 
-    CALL jsb_add_var( mem, 'hcap_grnd', mem%hcap_grnd,                       &
+    CALL mem%Add_var( 'hcap_grnd', mem%hcap_grnd,                            &
       & hgrid, surface,                                                      &
       & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -226,7 +235,7 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=1.3e5_wp )
 
-    CALL jsb_add_var( mem, 'hcap_grnd_old', mem%hcap_grnd_old,                       &
+    CALL mem%Add_var( 'hcap_grnd_old', mem%hcap_grnd_old,                            &
       & hgrid, surface,                                                              &
       & t_cf('heat_capacity_ground_old', 'J m-2 K-1', 'Ground heat capacity (old)'), &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
@@ -235,24 +244,24 @@ CONTAINS
       & output_level=BASIC,                                                          &
       & initval_r=1.3e5_wp )
 
-    CALL jsb_add_var( mem, 'grnd_hflx', mem%grnd_hflx,                       &
+    CALL mem%Add_var( 'grnd_hflx', mem%grnd_hflx,                            &
       & hgrid, surface,                                                      &
-      & t_cf('grnd_hflx', '', 'Ground heat flux'),                           &
+      & t_cf('grnd_hflx', 'J m-2 s-1', 'Ground heat flux'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & output_level=BASIC,                                                  &
       & initval_r=10.0_wp )
 
-    CALL jsb_add_var( mem, 'grnd_hflx_old', mem%grnd_hflx_old,               &
+    CALL mem%Add_var( 'grnd_hflx_old', mem%grnd_hflx_old,                    &
       & hgrid, surface,                                                      &
-      & t_cf('grnd_hflx_old', '', 'Ground heat flux (old)'),                 &
+      & t_cf('grnd_hflx_old', 'J m-2 s-1', 'Ground heat flux (old)'),        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC,                                                  &
       & initval_r=10.0_wp )
 
-    CALL jsb_add_var( mem, 'thaw_depth', mem%thaw_depth,                     &
+    CALL mem%Add_var( 'thaw_depth', mem%thaw_depth,                          &
       & hgrid, surface,                                                      &
       & t_cf('thaw_depth', 'm', 'Thawing depth'),                            &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
@@ -261,7 +270,7 @@ CONTAINS
       & output_level=MEDIUM, &
       & initval_r=10.0_wp, l_aggregate_all=.TRUE. )
 
-    END SUBROUTINE Init_sse_memory
+  END SUBROUTINE Init_sse_memory
 
 #endif
 END MODULE mo_sse_memory_class

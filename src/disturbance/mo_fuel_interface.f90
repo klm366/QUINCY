@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2017-05-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_fuel_interface
 #ifndef __NO_JSBACH__
 
@@ -103,9 +108,9 @@ CONTAINS
   !!
   SUBROUTINE update_fuel(tile, options)
 
-    USE mo_fuel_process,   ONLY: calc_fuel_jsbach
-    USE mo_jsb_time,       ONLY: is_newday
-    USE mo_jsb_tile_class, ONLY: t_jsb_tile_abstract
+    USE mo_fuel_process,     ONLY: calc_fuel_jsbach
+    USE mo_jsb_time,         ONLY: is_newday
+    USE mo_jsb_tile_class,   ONLY: t_jsb_tile_abstract
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
@@ -135,7 +140,6 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: c_water_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_ethanol_ag2_ta
     dsl4jsb_Real2D_onChunk :: c_nonsoluble_ag2_ta
-    dsl4jsb_Real2D_onChunk :: fract_fpc_max
     !
     ! Locally allocated vectors
     !
@@ -144,10 +148,10 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
 
-    ! If process is not active on this tile, do nothing
-    IF (.NOT. tile%Is_process_active(FUEL_)) RETURN
+    ! If process is not to be calculated on this tile, do nothing
+    IF (.NOT. tile%Is_process_calculated(FUEL_)) RETURN
 
-    IF (.NOT. tile%Is_process_active(CARBON_)) &
+    IF (.NOT. tile%Has_process_memory(CARBON_)) &
       & CALL finish(TRIM(routine), 'FUEL process depends on CARBON process')
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
@@ -172,7 +176,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_water_ag2_ta)        ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_ethanol_ag2_ta)      ! in
     dsl4jsb_Get_var2D_onChunk(CARBON_,  c_nonsoluble_ag2_ta)   ! in
-    dsl4jsb_Get_var2D_onChunk(PHENO_,   fract_fpc_max)         ! in
     dsl4jsb_Get_var2D_onChunk(FUEL_,    fuel)                  ! out
 
 
@@ -180,11 +183,11 @@ CONTAINS
     ! ---------------------------
     ! Go
 
-    IF (is_newday()) THEN ! only once per day
+    IF (is_newday(options%current_datetime, options%dtime)) THEN ! only once per day
 
       SELECT CASE (dsl4jsb_Config(FUEL_)%fuel_algorithm)
         CASE (1) !! jsbach algorithm
-
+  
           CALL calc_fuel_jsbach(       &
             & c_acid_ag1_ta(:),        & ! in
             & c_water_ag1_ta(:),       & ! in
@@ -194,7 +197,6 @@ CONTAINS
             & c_water_ag2_ta(:),       & ! in
             & c_ethanol_ag2_ta(:),     & ! in
             & c_nonsoluble_ag2_ta(:),  & ! in
-            & fract_fpc_max(:),        & ! in
             & fuel(:)                  & ! out
             & )
 

@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2015-09-01)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_task_class
 #ifndef __NO_JSBACH__
 
@@ -19,6 +24,7 @@ MODULE mo_jsb_task_class
   ! USE mo_hsm_class,       ONLY: t_jsb_task_msg => t_Message
   USE mo_hsm_class,       ONLY: t_Message
   USE mo_jsb_tile_class,  ONLY: t_jsb_tile_abstract
+  USE mo_jsb_time,        ONLY: t_datetime
 
   IMPLICIT NONE
   PRIVATE
@@ -27,12 +33,13 @@ MODULE mo_jsb_task_class
   PUBLIC :: t_jsb_process_task, t_jsb_process_task_p, t_Task_queue, t_jsb_task_options
 
   TYPE t_jsb_task_options
-    REAL(wp) :: dtime   = -1._wp
-    REAL(wp) :: steplen = -1._wp
-    INTEGER  :: iblk    = -1  ! Number of current block (chunk)
-    INTEGER  :: ics     = -1  ! Index of chunk start
-    INTEGER  :: ice     = -1  ! Index of chunk end
-    INTEGER  :: nc      = -1  ! Length of chunk
+    REAL(wp)                  :: dtime   = -1._wp
+    REAL(wp)                  :: steplen = -1._wp
+    TYPE(t_datetime), POINTER :: current_datetime
+    INTEGER                   :: iblk    = -1  ! Number of current block (chunk)
+    INTEGER                   :: ics     = -1  ! Index of chunk start
+    INTEGER                   :: ice     = -1  ! Index of chunk end
+    INTEGER                   :: nc      = -1  ! Length of chunk
   END TYPE t_jsb_task_options
 
 !!$  TYPE, EXTENDS(t_Message) :: t_jsb_task_msg
@@ -109,7 +116,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Do_it'
 
-    ! If process the task belongs to is not active on this tile, do nothing.
+    ! If process the task belongs to is not to be calculated or aggregated on this tile, do nothing.
     IF (.NOT. tile%Is_process_active(this%process_id)) RETURN
 
     SELECT TYPE (this)

@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_jsb_grid_class
 #ifndef __NO_JSBACH__
 
@@ -24,23 +29,26 @@ MODULE mo_jsb_grid_class
   USE mo_jsb_grid_iface,     ONLY: get_lon_domain           => get_lon,           &
                                    get_lat_domain           => get_lat,           &
                                    get_area_domain          => get_area
+  USE mo_jsb_impl_constants, ONLY: SHORT_NAME_LEN
 
   IMPLICIT NONE
   PRIVATE
 
   PUBLIC :: t_jsb_grid, t_jsb_grid_ptr, t_jsb_vgrid, t_jsb_vgrid_ptr
   PUBLIC :: new_grid, delete_grid, new_vgrid, delete_vgrid
-  PUBLIC :: get_nblks, get_nproma, t_jsb_subset
-  PUBLIC :: get_blk_start, get_blk_end, get_col_start, get_col_end
 
   TYPE t_jsb_grid
     INTEGER                       :: id = 0
-    CHARACTER(LEN=10)             :: name = ''
+    CHARACTER(LEN=SHORT_NAME_LEN) :: name = ''
     CHARACTER(LEN=filename_max)   :: filename = ''
     INTEGER                       :: ntotal = 0          !< Number of cells on this PE
     INTEGER                       :: nland = 0
-    REAL(wp), POINTER             :: lon(:,:) => NULL()
-    REAL(wp), POINTER             :: lat(:,:) => NULL()
+    REAL(wp), POINTER             :: lon(:,:) => NULL()  !< Longitudes of grid in degrees
+    REAL(wp), POINTER             :: lat(:,:) => NULL()  !< Latitudes of grid in degrees
+    REAL(wp), POINTER             :: coslat(:,:) => NULL()
+    REAL(wp), POINTER             :: sinlat(:,:) => NULL()
+    REAL(wp), POINTER             :: coslon(:,:) => NULL()
+    REAL(wp), POINTER             :: sinlon(:,:) => NULL()
     REAL(wp), POINTER             :: area(:,:) => NULL()
     LOGICAL,  POINTER             :: lsm(:,:) => NULL()
     REAL(wp), POINTER             :: lsf(:,:) => NULL()
@@ -55,18 +63,19 @@ MODULE mo_jsb_grid_class
     TYPE(t_patch), POINTER        :: patch => NULL()
     INTEGER                       :: host_patch_id
   CONTAINS
+    PROCEDURE :: Get_nblks
+    PROCEDURE :: Get_nproma
+    PROCEDURE :: Get_npromz
+    PROCEDURE :: Get_blk_start
+    PROCEDURE :: Get_blk_end
+    PROCEDURE :: Get_col_start
+    PROCEDURE :: Get_col_end
     PROCEDURE :: Print             => Print_grid
   END TYPE t_jsb_grid
 
   TYPE t_jsb_grid_ptr
     TYPE(t_jsb_grid), POINTER :: p => NULL()
   END TYPE t_jsb_grid_ptr
-
-  TYPE t_jsb_subset
-    INTEGER :: block
-    INTEGER :: start_index
-    INTEGER :: end_index
-  END TYPE t_jsb_subset
 
   TYPE t_jsb_vgrid
     INTEGER ::           id           = 0
@@ -104,6 +113,8 @@ CONTAINS
 
   FUNCTION new_grid_from_host(patch, type) RESULT(grid)
 
+    USE mo_jsb_math_constants, ONLY: pi
+
     TYPE(t_patch),    TARGET, INTENT(in) :: patch
     CHARACTER(LEN=*),         INTENT(in) :: type
     TYPE(t_jsb_grid),         POINTER    :: grid
@@ -112,7 +123,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_host'
 
-    ! CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from host model')
+    ! CALL message(routine, 'starting construction of new JSBACH grid instance from host model')
 
     ALLOCATE(new)
 
@@ -140,16 +151,23 @@ CONTAINS
     new%npromz   = new%ntotal - new%nproma * (new%nblks - 1)
     new%lon     => get_lon_domain          (patch)
     new%lat     => get_lat_domain          (patch)
+    ALLOCATE(new%coslat(new%nproma,new%nblks), new%sinlat(new%nproma,new%nblks), &
+      &      new%coslon(new%nproma,new%nblks), new%sinlon(new%nproma,new%nblks))
+    new%coslat(:,:) = COS(pi * new%lat(:,:) / 180._wp)
+    new%sinlat(:,:) = SIN(pi * new%lat(:,:) / 180._wp)
+    new%coslon(:,:) = COS(pi * new%lon(:,:) / 180._wp)
+    new%sinlon(:,:) = SIN(pi * new%lon(:,:) / 180._wp)
     new%area    => get_area_domain         (patch)
     ALLOCATE(new%lsm(new%nproma,new%nblks), new%lsf(new%nproma,new%nblks))
     new%lsm(:,:) = .TRUE.
     new%lsf(:,:) = 1.0_wp
 
     new%configured = .TRUE.
+    !$acc enter data copyin(new%lat)
 
     grid => new
 
-    ! CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
+    ! CALL message(routine, 'construction of JSBACH grid completed.')
 
   END FUNCTION new_grid_from_host
 
@@ -166,7 +184,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_grid_from_file'
 
-    CALL message(TRIM(routine), 'starting construction of new JSBACH grid instance from file:')
+    CALL message(routine, 'starting construction of new JSBACH grid instance from file:')
     CALL message('     ', TRIM(filename))
 
     ALLOCATE(new)
@@ -191,7 +209,7 @@ CONTAINS
 
     grid => new
 
-    CALL message(TRIM(routine), 'construction of JSBACH grid completed.')
+    CALL message(routine, 'construction of JSBACH grid completed.')
 
   END FUNCTION new_grid_from_file
 
@@ -222,16 +240,20 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':delete_grid'
 
-    CALL message(TRIM(routine), 'starting destruction of JSBACH grid instance.')
+    CALL message(routine, 'starting destruction of JSBACH grid instance.')
 
     IF (ASSOCIATED(self%lsm)) DEALLOCATE(self%lsm)
     IF (ASSOCIATED(self%lsf)) DEALLOCATE(self%lsf)
     IF (ASSOCIATED(self%lon)) DEALLOCATE(self%lon)
     IF (ASSOCIATED(self%lat)) DEALLOCATE(self%lat)
+    IF (ASSOCIATED(self%coslat)) DEALLOCATE(self%coslat)
+    IF (ASSOCIATED(self%sinlat)) DEALLOCATE(self%sinlat)
+    IF (ASSOCIATED(self%coslon)) DEALLOCATE(self%coslon)
+    IF (ASSOCIATED(self%sinlon)) DEALLOCATE(self%sinlon)
 
     DEALLOCATE(self)
 
-    CALL message(TRIM(routine), 'destruction of JSBACH grid completed.')
+    CALL message(routine, 'destruction of JSBACH grid completed.')
 
   END SUBROUTINE delete_grid
 
@@ -246,13 +268,13 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Print_grid'
 
-    CALL message(TRIM(routine), 'print JSBACH grid description')
+    CALL message(routine, 'print JSBACH grid description')
 
     WRITE(message_text,'(A,I2,A,A)') 'Grid id: ', this%id, ', grid name: ', TRIM(this%name)
     CALL message('  ', message_text)
 
     IF (.NOT. this%configured) THEN
-      CALL message(TRIM(routine), 'Grid not configured yet!')
+      CALL message(routine, 'Grid not configured yet!')
       RETURN
     END IF
 
@@ -271,9 +293,9 @@ CONTAINS
   INTEGER FUNCTION get_nblks(self)
 
 #ifdef HAVE_F2003
-    TYPE(t_jsb_grid), POINTER, INTENT(in) :: self
+    CLASS(t_jsb_grid), INTENT(in) :: self
 #else
-    TYPE(t_jsb_grid), POINTER             :: self
+    CLASS(t_jsb_grid)             :: self
 #endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_nblks'
@@ -285,9 +307,9 @@ CONTAINS
   INTEGER FUNCTION get_nproma(self)
 
 #ifdef HAVE_F2003
-    TYPE(t_jsb_grid), POINTER, INTENT(in) :: self
+    CLASS(t_jsb_grid), INTENT(in) :: self
 #else
-    TYPE(t_jsb_grid), POINTER             :: self
+    CLASS(t_jsb_grid)             :: self
 #endif
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_nproma'
@@ -296,11 +318,25 @@ CONTAINS
 
   END FUNCTION get_nproma
 
+  INTEGER FUNCTION get_npromz(self)
+
+#ifdef HAVE_F2003
+    CLASS(t_jsb_grid), INTENT(in) :: self
+#else
+    CLASS(t_jsb_grid)             :: self
+#endif
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':get_npromz'
+
+    get_npromz = self%npromz
+
+  END FUNCTION get_npromz
+
   INTEGER FUNCTION get_blk_start(grid)
 
     USE mo_jsb_domain_iface, ONLY: get_blk_start_domain => get_blk_start
 
-    TYPE(t_jsb_grid), INTENT(in) :: grid
+    CLASS(t_jsb_grid), INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_start'
 
@@ -312,7 +348,7 @@ CONTAINS
 
     USE mo_jsb_domain_iface, ONLY: get_blk_end_domain => get_blk_end
 
-    TYPE(t_jsb_grid), INTENT(in) :: grid
+    CLASS(t_jsb_grid), INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_blk_end'
 
@@ -320,12 +356,12 @@ CONTAINS
 
   END FUNCTION get_blk_end
 
-  INTEGER FUNCTION get_col_start(iblk, grid)
+  INTEGER FUNCTION get_col_start(grid, iblk)
 
     USE mo_jsb_domain_iface, ONLY: get_col_start_domain => get_col_start
 
+    CLASS(t_jsb_grid), INTENT(in) :: grid
     INTEGER,          INTENT(in) :: iblk
-    TYPE(t_jsb_grid), INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_start'
 
@@ -333,12 +369,12 @@ CONTAINS
 
   END FUNCTION get_col_start
 
-  INTEGER FUNCTION get_col_end(iblk, grid)
+  INTEGER FUNCTION get_col_end(grid, iblk)
 
     USE mo_jsb_domain_iface, ONLY: get_col_end_domain => get_col_end
 
+    CLASS(t_jsb_grid), INTENT(in) :: grid
     INTEGER,          INTENT(in) :: iblk
-    TYPE(t_jsb_grid), INTENT(in) :: grid
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':get_col_end'
 
@@ -365,8 +401,8 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':new_vgrid'
 
-    IF (TRIM(name) == '') CALL finish(TRIM(routine), 'Must specify axis name')
-    IF (length < 1) CALL finish(TRIM(routine), TRIM(name)//' - length < 1')
+    IF (TRIM(name) == '') CALL finish(routine, 'Must specify axis name')
+    IF (length < 1) CALL finish(routine, TRIM(name)//' - length < 1')
 
     ALLOCATE(new)
 
@@ -390,19 +426,20 @@ CONTAINS
     new%lbounds(:) = 0._wp
     new%ubounds(:) = 0._wp
     new%dz     (:) = 0._wp
+    !$acc enter data pcreate(new%levels, new%lbounds, new%ubounds, new%dz)
 
     IF (PRESENT(levels))  new%levels (:) = levels(:)
     IF (PRESENT(lbounds)) new%lbounds(:) = lbounds(:)
     IF (PRESENT(ubounds)) new%ubounds(:) = ubounds(:)
     IF (PRESENT(dz)) THEN
-      IF (ANY(dz(:) <= 0._wp)) CALL finish(TRIM(routine), 'Dz must be larger than zero')
+      IF (ANY(dz(:) <= 0._wp)) CALL finish(routine, 'Dz must be larger than zero')
       new%dz     (:) = dz(:)
     END IF
 
     IF (PRESENT(lbounds) .AND. PRESENT(ubounds)) THEN
-      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(TRIM(routine), 'Ubounds must be larger than Lbounds')
+      IF (ANY(ubounds(:) < lbounds(:))) CALL finish(routine, 'Ubounds must be larger than Lbounds')
       IF (PRESENT(dz)) THEN
-        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(TRIM(routine), 'Dz != Ubounds-Lbounds')
+        IF (ANY(ABS((ubounds(:)-lbounds(:))-dz(:)) > EPSILON(1._wp))) CALL finish(routine, 'Dz != Ubounds-Lbounds')
       ELSE
         new%dz(:) = ubounds(:) - lbounds(:)
       END IF
@@ -419,7 +456,7 @@ CONTAINS
         new%ubounds(:) = levels(:) + (levels(:) - lbounds(:))
         new%dz(:) = new%ubounds(:) - lbounds(:)
       ELSE
-        CALL finish(TRIM(routine), 'Lbounds present ... specify either Levels or Dz!')
+        CALL finish(routine, 'Lbounds present ... specify either Levels or Dz!')
       END IF
     ELSE IF (PRESENT(ubounds)) THEN
       IF (PRESENT(dz)) THEN
@@ -431,15 +468,18 @@ CONTAINS
         new%lbounds(:) = levels(:) - (ubounds(:) - levels(:))
         new%dz(:) = ubounds(:) - new%lbounds(:)
       ELSE
-        CALL finish(TRIM(routine), 'Ubounds present ... specify either Levels or Dz!')
+        CALL finish(routine, 'Ubounds present ... specify either Levels or Dz!')
       END IF
     ELSE
       IF (PRESENT(levels) .AND. PRESENT(dz)) THEN
-        new%lbounds(:) = levels
+        CALL finish(routine, 'Levels and dz given ... please specify lbounds and/or ubounds')
       ELSE IF (PRESENT(dz)) THEN
         new%lbounds(1) = 0._wp
-        new%lbounds(2:length) = dz(1:length-1)
+        DO i=2,length
+          new%lbounds(i) = new%lbounds(i-1) + dz(i-1)
+        END DO
         new%ubounds(:) = new%lbounds(:) + dz(:)
+        new%levels(:) = 0.5_wp * (new%lbounds(:) + new%ubounds(:))
       ELSE IF (PRESENT(levels)) THEN
         IF (length > 1) THEN ! Multi-level axis
           new%lbounds(1) = 0._wp
@@ -469,7 +509,10 @@ CONTAINS
         END IF
       END IF
     END IF
-
+    !$acc update device(new%levels) if(present(levels))
+    !$acc update device(new%lbounds) if(present(lbounds))
+    !$acc update device(new%ubounds) if(present(ubounds))
+    !$acc update device(new%dz) if(present(dz))
   END FUNCTION new_vgrid
 
   SUBROUTINE delete_vgrid(self)
@@ -486,8 +529,12 @@ CONTAINS
 
     IF (self%id == 0) RETURN
 
-    CALL message(TRIM(routine), 'starting destruction of JSBACH vgrid instance.')
+    CALL message(routine, 'starting destruction of JSBACH vgrid instance.')
 
+    !$acc exit data delete(self%levels) if (allocated(self%levels))
+    !$acc exit data delete(self%lbounds) if (allocated(self%lbounds))
+    !$acc exit data delete(self%ubounds) if (allocated(self%ubounds))
+    !$acc exit data delete(self%dz) if (allocated(self%dz))
     IF (ALLOCATED(self%levels))  DEALLOCATE(self%levels)
     IF (ALLOCATED(self%lbounds)) DEALLOCATE(self%lbounds)
     IF (ALLOCATED(self%ubounds)) DEALLOCATE(self%ubounds)
@@ -495,7 +542,7 @@ CONTAINS
 
     DEALLOCATE(self)
 
-    CALL message(TRIM(routine), 'destruction of JSBACH vgrid completed.')
+    CALL message(routine, 'destruction of JSBACH vgrid completed.')
 
   END SUBROUTINE delete_vgrid
 

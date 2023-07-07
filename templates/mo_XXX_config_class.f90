@@ -21,6 +21,11 @@
 !! @par Revision History
 !! First version by <FIRST NAME LAST NAME> (<DATE>)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
@@ -49,8 +54,6 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
 CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Initialize <PROCESS_NAME_LOWER_CASE> process
-  !!
-  !! @param[inout]     config     Configuration type of process (t_<PROCESS_NAME_LOWER_CASE>_config)
   !!  
   SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_config(config)
 

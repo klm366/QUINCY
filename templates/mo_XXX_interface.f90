@@ -1,11 +1,11 @@
 ! ===============================================================================================================================
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
-! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
-! === ... <DATE>                    with the present date in YYYY-MM-DD format, e.g. "2016-04-30"                             ===
-! === ... <PROCESS_NAME_UPPER_CASE> with your process name, e.g. "ALBEDO"                                                     ===
-! === ... <PROCESS_NAME_LOWER_CASE> with your process name, e.g. "albedo"                                                     ===
-! === ... <TASK>                    with the name of a task of the process, e.g. "snow_albedo"                                ===
-! === ... <EXPLANATIION_OF_PROCESS> with a short explanation line, e.g.                                                       ===
+! === ... <FIRST NAME LAST NAME>     with your name e.g. "Martin Mustermann"                                                  ===
+! === ... <DATE>                     with the present date in YYYY-MM-DD format, e.g. "2016-04-30"                            ===
+! === ... <PROCESS_NAME_UPPER_CASE>_ with your process name, e.g. "ALBEDO_"                                                   ===
+! === ... <PROCESS_NAME_LOWER_CASE>  with your process name, e.g. "albedo"                                                    ===
+! === ... <TASK>                     with the name of a task of the process, e.g. "snow_albedo"                               ===
+! === ... <EXPLANATIION_OF_PROCESS>  with a short explanation line, e.g.                                                      ===
 ! ===     "computes the surface temperature from latent and sensible heat flux, net radiation and below ground sensible heat" ===
 ! ===                                                                                                                         ===
 ! === Then go through the code line by line to adapt it to your needs:                                                        ===
@@ -26,6 +26,11 @@
 !! @par Revision History
 !! First version by <FIRST NAME LAST NAME> (<DATE>)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
 #ifndef __NO_JSBACH__
 
@@ -39,20 +44,19 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model    
-  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
+  USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes <PROCESS_NAME_UPPER_CASE>
+  dsl4jsb_Use_processes <PROCESS_NAME_UPPER_CASE>_
 
   ! Use of process configurations
-  dsl4jsb_Use_config(<PROCESS_NAME_UPPER_CASE>)
+  dsl4jsb_Use_config(<PROCESS_NAME_UPPER_CASE>_)
 
   ! Use of process memories
-  USE mo_atmland_memory_class, ONLY: t_atm2land_memory
-  dsl4jsb_Use_memory(<PROCESS_NAME_UPPER_CASE>)
+  dsl4jsb_Use_memory(<PROCESS_NAME_UPPER_CASE>_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables 
@@ -91,16 +95,13 @@ CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Constructor for <PROCESS_NAME_LOWER_CASE> task
   !!
-  !! @param[in]     model_id     Model id
-  !! @return        return_ptr   Instance of process task "<PROCESS_NAME_LOWER_CASE>"
-  !!
   FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>(model_id) RESULT(return_ptr)
 
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>::return_ptr)
-    CALL return_ptr%Construct(name='<PROCESS_NAME_LOWER_CASE>_<TASK>', process_id=<PROCESS_NAME_UPPER_CASE>, owner_model_id=model_id)
+    CALL return_ptr%Construct(name='<PROCESS_NAME_LOWER_CASE>_<TASK>', process_id=<PROCESS_NAME_UPPER_CASE>_, owner_model_id=model_id)
 
   END FUNCTION Create_task_<PROCESS_NAME_LOWER_CASE>_<TASK>
   
@@ -109,15 +110,12 @@ CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Register tasks for <PROCESS_NAME_LOWER_CASE> process
   !!
-  !! @param[in,out] this      Instance of <PROCESS_NAME_LOWER_CASE> process class  
-  !! @param[in]     model_id  Model id  
-  !!
-  SUBROUTINE Register_<PROCESS_NAME_LOWER_CASE>_tasks(this, model_id)
+  SUBROUTINE Register_<PROCESS_NAME_LOWER_CASE>_tasks(process, model_id)
 
-    CLASS(t_<PROCESS_NAME_LOWER_CASE>_process), INTENT(inout) :: this
+    CLASS(t_<PROCESS_NAME_LOWER_CASE>_process), INTENT(inout) :: process
     INTEGER,               INTENT(in)    :: model_id
 
-    CALL this%Register_task(tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>(model_id))
+    CALL process%Register_task(tsk_<PROCESS_NAME_LOWER_CASE>_<TASK>(model_id))
     !X Repeat the line above here for each additional task of the process ...
     
   END SUBROUTINE Register_<PROCESS_NAME_LOWER_CASE>_tasks
@@ -127,9 +125,6 @@ CONTAINS
   !! @brief Implementation of "update" for task "<PROCESS_NAME_LOWER_CASE>"
   !! Task "<PROCESS_NAME_LOWER_CASE>" <EXPLANATIION_OF_PROCESS>.
   !!
-  !! @param[in,out] tile    Tile for which routine is executed.
-  !! @param[in]     options Additional run-time parameters.
-  !!
   SUBROUTINE update_<PROCESS_NAME_LOWER_CASE>(tile, options)
 
     ! Arguments
@@ -138,12 +133,14 @@ CONTAINS
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
+
+    TYPE(t_jsb_model), POINTER :: model
     !X if necessary: REAL(wp) :: dtime, steplen
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_<PROCESS_NAME_LOWER_CASE>'
 
 
     ! Declare process memories
-    dsl4jsb_Def_memory(<PROCESS_NAME_UPPER_CASE>)
+    dsl4jsb_Def_memory(<PROCESS_NAME_UPPER_CASE>_)
 
     ! Declare pointers to variables in memory
     !X e.g: dsl4jsb_Real2D_onChunk :: t_srf
@@ -157,17 +154,17 @@ CONTAINS
     !X if necessary: steplen = options%steplen
     
     ! If process is not active on this tile, do nothing
-    !IF (.NOT. tile%Is_process_active(<PROCESS_NAME_UPPER_CASE>)) RETURN
+    !IF (.NOT. tile%Is_process_calculated(<PROCESS_NAME_UPPER_CASE>_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
     
     ! Get process memories
-    dsl4jsb_Get_memory(<PROCESS_NAME_UPPER_CASE>)
+    dsl4jsb_Get_memory(<PROCESS_NAME_UPPER_CASE>_)
 
     ! Get process variables
-    !X e.g: dsl4jsb_Get_var2D_onChunk(<PROCESS_NAME_UPPER_CASE>, t_srf)     ! IN
+    !X e.g: dsl4jsb_Get_var2D_onChunk(<PROCESS_NAME_UPPER_CASE>_, t_srf)     ! IN
 
     !X Implementation: Start your process scheme here...
     
@@ -179,15 +176,14 @@ CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !>
   !! Implementation of "aggregate" for task "<PROCESS_NAME_LOWER_CASE>"
-  !! 
-  !! @param[in,out] tile    Tile for which routine is executed.  
-  !! @param[in]     options Additional run-time parameters.  
   !!
   SUBROUTINE aggregate_<PROCESS_NAME_LOWER_CASE>(tile, options)
 
     ! Arguments
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    !X if necessary CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     ! Local variables
     INTEGER  :: iblk, ics, ice, nc
@@ -207,6 +203,10 @@ CONTAINS
     model => Get_model(tile%owner_model_id)    
     !X Implementation: Start your process scheme here...
     
+    !X aggregation example (note that currently `weighted_by_fract` is the only implemented aggregator)
+    !X weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+
+    !X dsl4jsb_Aggregate_onChunk(<PROCESS_NAME_UPPER_CASE>_, t_srf, weighted_by_fract)
     
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -216,9 +216,6 @@ CONTAINS
   ! ================================================================================================================================
   !>
   !! @brief Another task for "<PROCESS_NAME_LOWER_CASE>"
-  !!
-  !! @param[in]     options Additional run-time parameters.  
-  !! @param[in,out] tile    Tile for which routine is executed.
   !  ....
   
 #endif

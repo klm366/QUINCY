@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_disturb_process
 #ifndef __NO_JSBACH__
 
@@ -29,7 +34,7 @@ CONTAINS
     & fire_tau,                                  & ! in
     & q_rel_air_climbuf,                         & ! in
     & fuel,                                      & ! in
-    & burned_fract                               & ! out
+    & burned_fract                               & ! inout
     & )
 
     ! Input Arguments
@@ -42,7 +47,7 @@ CONTAINS
       & fuel
 
     ! Output Arguments
-    REAL(wp), INTENT(out) :: burned_fract
+    REAL(wp), INTENT(inout) :: burned_fract
 
     ! Locals
     REAL(wp) :: delta_time_yr
@@ -74,7 +79,7 @@ CONTAINS
     & cover_fract_pot,                                 & ! in
     & prev_day_max_wind_10m,                           & ! in
     & max_wind_10m,                                    & ! in
-    & damaged_fract                                    & ! out
+    & damaged_fract                                    & ! inout
     & )
 
     ! Arguments
@@ -85,7 +90,7 @@ CONTAINS
       & prev_day_max_wind_10m, &
       & max_wind_10m
 
-    REAL(wp), INTENT(out) ::   &
+    REAL(wp), INTENT(inout) :: &
       & damaged_fract
 
     ! Locals
@@ -140,15 +145,15 @@ CONTAINS
   ! R: TBD: I copied this subroutine from MO_JSB4_FORCING, because
   !    this mo is not compiled with icon/echam.
   !    Reiner has to decide if we change config or the place of this procedure.
-  !    I made some changes because the dimensions (vector lenghts) were unnecessary
+  !    I made some changes because the dimensions (vector lengths) were unnecessary
   !    cryptic. We could even skip "nc" if we would change the DO loop below...
   SUBROUTINE sat_specific_humidity(nc, temp, pressure, qsat)
     ! Returns saturation specific humidity for given temperature and pressure (at some atmospheric level or at surface)
     ! Uses Eq. 2.27 of Fundamentals of Atmospheric Modeling for the saturated case, but the saturation vapor pressure
     ! of water over a liquid surface resp. ice (see pp 32-34 of Ref.) is computed as in ECHAM5 (mo_convect_tables)
-    USE mo_exception,              ONLY: message_text
-    USE mo_echam_convect_tables,   ONLY: tlucua, jptlucu1, jptlucu2
-    USE mo_jsb_physical_constants, ONLY: rvd1
+    USE mo_exception,                ONLY: message_text
+    USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
+    USE mo_jsb_physical_constants,   ONLY: rvd1
 
     INTEGER,  INTENT(IN) :: nc
     REAL(wp), INTENT(IN) :: temp(nc)      ! Air temperature at level [K]

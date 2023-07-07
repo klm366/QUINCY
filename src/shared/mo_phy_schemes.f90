@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_phy_schemes
 #ifndef __NO_JSBACH__
 
@@ -29,8 +34,8 @@ CONTAINS
   !
   REAL(wp) ELEMENTAL FUNCTION qsat(temperature, pressure)
 
-    USE mo_echam_convect_tables, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
-                                 jptlucu1, jptlucu2
+    USE mo_jsb_convect_tables_iface, ONLY: tlucua, &                       ! Table for water vapor pressure e_s multiplied by R_d/R_v
+      &                                    jptlucu1, jptlucu2
     USE mo_jsb_physical_constants, ONLY: rvd1                    ! = R_v/R_d - 1
 
     REAL(wp), INTENT(in) :: temperature      ! Air temperature [K]
@@ -38,6 +43,8 @@ CONTAINS
 
     INTEGER :: it
     REAL(wp) :: tluc
+
+    !$claw sca routine
 
     it = NINT(temperature*1000._wp)
 !!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
@@ -51,6 +58,12 @@ CONTAINS
 
   END FUNCTION qsat
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION q_effective
+  !! 
+  !! out: q_effective
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION q_effective(qsat, qair, fsat, fair)
 
     REAL(wp), INTENT(in) :: &
@@ -58,10 +71,18 @@ CONTAINS
       & qair,               & !< Air specific humidity
       & fsat, fair            !< Weighing factors for qsat and qair accounting for only partially wet surface.
 
+    !$claw sca routine
+
     q_effective = fsat * qsat + (1._wp -fair) * qair
 
   END FUNCTION q_effective
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION surface_dry_static_energy
+  !! 
+  !! out: surface_dry_static_energy
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION surface_dry_static_energy(t_srf, qsat_srf)
 
     USE mo_jsb_physical_constants, ONLY: &
@@ -72,10 +93,18 @@ CONTAINS
       & t_srf,                      & !< Surface temperature
       & qsat_srf                      !< Surface saturation specific humidity
 
+      !$claw sca routine
+
       surface_dry_static_energy = t_srf * cpd * ( 1._wp + cpvd1 * qsat_srf)
 
   END FUNCTION surface_dry_static_energy
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION thermal_radiation
+  !! 
+  !! out: thermal_radiation
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION thermal_radiation(t_srf)
 
     USE mo_jsb_physical_constants, ONLY: &
@@ -84,23 +113,37 @@ CONTAINS
 
     REAL(wp), INTENT(in) :: t_srf
 
-    thermal_radiation = stbo * zemiss_def * t_srf**4
+    thermal_radiation = stbo * zemiss_def * t_srf**4._wp
 
   END FUNCTION thermal_radiation
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION lwnet_from_lwdown
+  !! 
+  !! out: lwnet_from_lwdown
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION lwnet_from_lwdown(lwdown, t_srf)
 
-    USE mo_physical_constants, ONLY: &
+    USE mo_jsb_physical_constants, ONLY: &
       stbo,       &  !< Stefan-Boltzmann constant
       zemiss_def     !< Surface emissivity
 
     REAL(wp), INTENT(in) :: lwdown   ! downward longwave radiation
     REAL(wp), INTENT(in) :: t_srf    ! surface temperature
 
-    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4)
+    !$claw sca routine
+
+    lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
 
   END FUNCTION lwnet_from_lwdown
 
+
+  !-----------------------------------------------------------------------------------------------------
+  !> FUNCTION heat_transfer_coef
+  !! 
+  !! out: heat_transfer_coef
+  !-----------------------------------------------------------------------------------------------------
   REAL(wp) ELEMENTAL FUNCTION heat_transfer_coef(drag, steplen)
 
     USE mo_jsb_physical_constants, ONLY: grav, cvdifts
@@ -108,6 +151,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: &
       & drag,      &
       & steplen
+
+    !$claw sca routine
 
     heat_transfer_coef = drag / (cvdifts * grav * steplen)
 

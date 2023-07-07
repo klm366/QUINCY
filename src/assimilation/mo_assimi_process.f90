@@ -7,6 +7,11 @@
 !! @par Revision History
 !! First version by Rainer Schneck (2015-07-29)
 !!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_assimi_process
 #ifndef __NO_JSBACH__
 
@@ -16,7 +21,7 @@ MODULE mo_assimi_process
   PRIVATE
 
   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation_waterunlimited, &
-    &       calc_assimilation_waterlimited, calc_NPP_pot_rate
+    &       calc_assimilation_waterlimited, calc_NPP_pot_rate, calc_NPPbuf
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_process'
 
@@ -27,33 +32,38 @@ CONTAINS
     & canopy_bound_lai,                                   & ! in
     & lai,                                                & ! in
     & lat,                                                & ! in
-    & assimi_scaling_fact_cl                              & ! out
+    & scaling_fact_cl                                     & ! out
     & )
 
     ! Declarations
-    USE mo_rad_constants,     ONLY: LaiLimit
-    USE mo_math_constants,    ONLY: pi
+    USE mo_rad_constants,      ONLY: LaiLimit
+    USE mo_jsb_math_constants, ONLY: deg2rad
 
     ! Arguments
     REAL(wp), INTENT(in) :: &
       & declination,        & ! Solar Declination angle
-      & canopy_bound_lai,   &
+      & canopy_bound_lai
+    !$claw model-data
+    REAL(wp), INTENT(in) :: &
       & lai,                & ! Leaf area index [-]
       & lat
 
     REAL(wp), INTENT(out) :: &
-      & assimi_scaling_fact_cl
+      & scaling_fact_cl
+    !$claw end model-data  
 
     ! Local variables
     REAL(wp) ::         &
       & k12,            &
       & cos_zenith_noon
 
+    !$claw sca
+
     ! initialize local arguments and variables
-    assimi_scaling_fact_cl = 1._wp
+    scaling_fact_cl = 1._wp
 
     ! Cosine of zenith angle at local noon:
-    cos_zenith_noon = COS(declination) * COS(pi * lat / 180._wp) +  SIN(declination) * SIN(pi * lat / 180._wp)
+    cos_zenith_noon = COS(declination) * COS(deg2rad * lat) +  SIN(declination) * SIN(deg2rad * lat)
 
     ! Extinction factor
     k12 = 0.5_wp / MAX(cos_zenith_noon, 1.E-3_wp) ! K = 1 / 2mue , Knorr (119c)
@@ -68,7 +78,7 @@ CONTAINS
     IF (lai >= LaiLimit) THEN
       ! R: Note this could be packed into an ELEMENTAL procedure, but I think it would make things only complicated without
       ! improving security
-      assimi_scaling_fact_cl = MAX(1.e-10_wp,EXP( -k12 * canopy_bound_lai * lai)) !! see Eqs. (107), (108) in Knorr
+      scaling_fact_cl = MAX(1.e-10_wp,EXP( -k12 * canopy_bound_lai * lai)) !! see Eqs. (107), (108) in Knorr
     END IF
 
   END SUBROUTINE calc_assimilation_scaling_factors
@@ -96,7 +106,9 @@ CONTAINS
       & C4Flag
     REAL(wp), INTENT(in) ::   &
       & CarboxRate,           &
-      & ETransport,           &
+      & ETransport
+    !$claw model-data
+    REAL(wp), INTENT(in) ::   &
       & t_air,                &  ! Atmosphere temperature (lowest layer) in Kelvin
       & press_srf,            &  ! Surface pressure
       & par_down_mol,         &  ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -105,6 +117,7 @@ CONTAINS
       & N_scaling_factors        ! Enzymatic scaling with canopy height
     REAL(wp), INTENT(out) ::  &
       & canopy_cond_cl           ! Canopy conductance per canopy layer for water-unlimited case
+    !$claw end model-data
 
     ! Local variables
 
@@ -144,6 +157,8 @@ CONTAINS
 
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_assimilation_waterunlimited'
+
+    !$claw sca
 
     ! Prepare CO2_conc_leaf_cl
     ! R: siehe mo_bethy.f90, Zeile 709
@@ -189,7 +204,7 @@ CONTAINS
                                                                 ! R: Abweichungen des Ergebnisses im Vergl. zu JSBACH3 ab 14. 
                                                                 !    Stelle nach dem Komma, obwohl Inputs (R_gas, T0, T1, t_air)
                                                                 !    genau gleich. Ursache: epsilon ist 2.22E-16 (JSBACH3
-                                                                !    und JSBACH4) und EXP verstärkt Fehler.
+                                                                !    und JSBACH4) und EXP verstaerkt Fehler.
       KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1)  * t_air**(-1)) ! see above
 
       !---------------------------------------------------------------------------------!
@@ -409,7 +424,7 @@ CONTAINS
     !-----------------------------------------------------------------------
     !  DECLARATIONS
     USE mo_assimi_constants                                      ! we need all of them, except of f_aut_leaf and cCost.
-    USE mo_physical_constants, ONLY: tmelt, R_gas => argas       ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
+    USE mo_jsb_physical_constants, ONLY: tmelt, R_gas => argas   ! tmelt =273.15_wp;  argas =Universal gas constant [J/(mole*K)]
 
     !-----------------------------------------------------------------------
     !  ARGUMENTS
@@ -417,7 +432,10 @@ CONTAINS
       & C4Flag
     REAL(wp), INTENT(in) ::      &
       & CarboxRate,              &
-      & ETransport,              &
+      & ETransport
+
+    !$claw model-data
+    REAL(wp), INTENT(in) ::      &
       & t_air,                   & ! Atmosphere temperature (lowest layer) in Kelvin
       & press_srf,               & ! Surface pressure
       & par_down_mol,            & ! Downward PAR flux in mol (photons)/(m^2 s)
@@ -437,6 +455,7 @@ CONTAINS
       & e_transport_rate_max_cl, & !
       & carbox_rate_cl,          & !
       & e_transport_rate_cl        !
+    !$claw end model-data
 
     !-----------------------------------------------------------------------
     ! Local variables
@@ -489,6 +508,8 @@ CONTAINS
     ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
     ! IF (one_of('calc_assimilation', tile%components) < 1) RETURN
 
+    !$claw sca
+
     !-----------------------------------------------------------------------
     ! CONTENT
 
@@ -517,11 +538,11 @@ CONTAINS
       !---------------------------------------------------------------------------------
       KC = KC0 * EXP(EC / R_gas * T0 * T1**(-1) * t_air**(-1) )  ! R: Abweichung ab der 13. Stelle nach dem Komma,
                                                                  !    obwohl T0 und T1 und t_air genau gleich. Ursache:
-                                                                 !    epsilon ist 2.22E-16 (JSBACH3 und JSBACH4) und EXP verstärkt
+                                                                 !    epsilon ist 2.22E-16 (JSBACH3 und JSBACH4) und EXP verstaerkt
                                                                  !    Fehler.
       KO = KO0 * EXP(EO / R_gas * T0 * T1**(-1) * t_air**(-1) )  ! R: Abweichung ab der 9. Stelle nach dem Komma, obwohl T0 und T1
-                                                                 !    und t_air genau gleich. (Grund warum hier Abweichung größer
-                                                                 !    als oben: KO0 ist um Faktor 3 größer als KC0.)
+                                                                 !    und t_air genau gleich. (Grund warum hier Abweichung groesser
+                                                                 !    als oben: KO0 ist um Faktor 3 groesser als KC0.)
       GAM = MAX (1.7E-6_wp * TC, 0._wp)                          ! R: Keine Abweichungen
       VCMAX = CarboxRate * N_scaling_factors &
                 * EXP(EV * T0 / R_gas * T1**(-1) * t_air**(-1) ) ! PVM=PVM0*N_scaling_factors*EXP(Energy scaled relative 25C)
@@ -535,7 +556,7 @@ CONTAINS
       JMAX = ETransport * N_scaling_factors       &  ! PJM=PJM0*N_scaling_factors*EXP(Energy scaled relative 25C)
                 * TC / 25._wp                        ! R: bis hierher keinerlei Abweichung. N_scaling_factors und ETransport genau
                                                      !    gleich.
-      JMAX = MAX(JMAX, minOfMaxCarboxrate) ! R: Abweichung nur für Fall minOfmaxCarboxrate und dann ab der 13. Stelle nach dem
+      JMAX = MAX(JMAX, minOfMaxCarboxrate) ! R: Abweichung nur fuer Fall minOfmaxCarboxrate und dann ab der 13. Stelle nach dem
                                            !    Komma weil minOfMaxCarboxrate = 1.0e-12 ist
 
       !---------------------------------------------------------------------------------
@@ -570,7 +591,7 @@ CONTAINS
       !---------------------------------------------------------------------------------
       !if (R_gas < 0.1 .OR. t_air < 0.1 .OR. press_srf < 0.1) &
       !print*,iGP,R_gas,t_air,press_srf
-      G0 = canopy_cond_cl / 1.6_wp / R_gas * t_air**(-1) * press_srf ! R: Die folgenden Berechnungen führen zu keinen Abweichungen
+      G0 = canopy_cond_cl / 1.6_wp / R_gas * t_air**(-1) * press_srf ! R: Die folgenden Berechnungen fuehren zu keinen Abweichungen
                                                                      !    im Ergebnis CO2_conc_leaf_cl und bei GASS zu einer
                                                                      !    Abweichung ab der 16. Stelle nach Komma
       !---------------------------------------------------------------------------------
@@ -738,6 +759,7 @@ CONTAINS
     USE mo_assimi_constants,    ONLY: f_aut_leaf, cCost
 
     ! Arguments
+    !$claw model-data
     REAL(wp),  INTENT(in) ::   &
       & gross_assimilation_ca, & ! Gross primary product (where photorespiration has already  ..
                                  ! .. been accounted for) [mol(CO2)/(m^2 (canopy ground) s)]
@@ -745,6 +767,7 @@ CONTAINS
 
     REAL(wp),  INTENT(out) :: &
       & NPP_pot_rate_ca            ! Net primary production rate [mol(CO2)/(m^2 (canopy ground) s)]
+    !$claw end model-data  
 
     ! Local variables
     CHARACTER(len=*), PARAMETER :: routine = modname//':calc_NPP_pot_rate'
@@ -752,6 +775,8 @@ CONTAINS
     REAL(wp),PARAMETER   :: hlp =  (cCost -1._wp) / cCost
     REAL(wp)             :: maintenanceRespiration ! R_m
     REAL(wp)             :: growthRespiration      ! R_g
+
+    !$claw sca
 
     !-----------------------------------------------------------------------
     ! DOES THIS PROCESS EXIST FOR THE CURRENT TILE?
@@ -765,6 +790,50 @@ CONTAINS
     NPP_pot_rate_ca = gross_assimilation_ca - maintenanceRespiration - growthRespiration
 
   END SUBROUTINE calc_NPP_pot_rate
+
+  !
+  ! ===============================================================================================================================
+  !>
+  !! @brief   Compute running average of NPP for NLCC process
+  !!
+  !! @par Revision History
+  !!   Routine based on the former JSBACH3 routine update_climbuf
+  !!   Adapted for JSBACH4 in August 2020 by T. Raddatz
+  !!
+
+  PURE ELEMENTAL SUBROUTINE calc_NPPbuf (lstart, init_running_means, new_year, delta_time, NPP, &
+                                         seconds_year, NPP_sum_year, NPP_mean_5year)
+
+    LOGICAL,  INTENT(in)    :: lstart             ! first time step in a simulation
+    LOGICAL,  INTENT(in)    :: init_running_means ! initialize the min/max temperature climatology
+    LOGICAL,  INTENT(in)    :: new_year           ! first time step in a year
+    REAL(wp), INTENT(in)    :: delta_time         ! time step length [s]
+    REAL(wp), INTENT(in)    :: NPP                ! potential NPP [mol(C)m-2(canopy)s-1]
+    REAL(wp), INTENT(inout) :: seconds_year       ! sum of seconds till new_year
+    REAL(wp), INTENT(inout) :: NPP_sum_year       ! 
+    REAL(wp), INTENT(inout) :: NPP_mean_5year     ! NPP
+
+!   local variables
+    REAL(wp) :: prev_year_mean_NPP ! NPP of previous year
+
+   ! update NPP_sum_year and NPP_mean_5year
+   IF (.NOT. new_year .OR. lstart) THEN
+      NPP_sum_year = NPP_sum_year + NPP * delta_time
+   ELSE
+      prev_year_mean_NPP = NPP_sum_year / seconds_year
+      NPP_sum_year = NPP * delta_time
+      IF (init_running_means) THEN
+         NPP_mean_5year = prev_year_mean_NPP
+      ELSE
+         NPP_mean_5year = (NPP_mean_5year * 4._wp + prev_year_mean_NPP) / 5._wp
+      END IF
+   ENDIF
+
+   ! count time in seconds that has passed till summing of NPP started
+   seconds_year = seconds_year + delta_time
+   IF (new_year) seconds_year = delta_time
+
+  END SUBROUTINE calc_NPPbuf
 
 #endif
 END MODULE mo_assimi_process

@@ -1,13 +1,18 @@
-  !>
-  !! @brief Contains the interfaces for the surface energy balance process.
-  !!
-  !! @author
-  !!  Reiner Schnur, MPI-M Hamburg
-  !!
-  !! @par Revision History
-  !! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
-  !! Separated out the surface energy balance part by Reiner Schnur (2016-03-22)
-  !!
+!>
+!! @brief Contains the interfaces for the surface energy balance process.
+!!
+!! @author
+!!  Reiner Schnur, MPI-M Hamburg
+!!
+!! @par Revision History
+!! First version in mo_srf_interface.f90 by Reiner Schnur (2013-04-04)
+!! Separated out the surface energy balance part by Reiner Schnur (2016-03-22)
+!!
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_seb_interface
 #ifndef __NO_JSBACH__
 
@@ -28,7 +33,7 @@ MODULE mo_seb_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   dsl4jsb_Use_processes SEB_, HYDRO_, SSE_
-  !dsl4jsb_Use_config(SEB_)
+  dsl4jsb_Use_config(SEB_)
   dsl4jsb_Use_config(SSE_)
 
   dsl4jsb_Use_memory(SEB_)
@@ -41,7 +46,7 @@ MODULE mo_seb_interface
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: Register_seb_tasks !,t_seb_process
+  PUBLIC :: Register_seb_tasks, global_seb_diagnostics
 
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_surface_energy
   CONTAINS
@@ -191,7 +196,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_energy'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%is_lake) THEN
       CALL update_surface_energy_lake(tile, options)
@@ -215,7 +220,9 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     dsl4jsb_Def_memory(SEB_)
+    dsl4jsb_Def_config(SEB_)
 
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_energy'
@@ -228,6 +235,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -240,13 +250,17 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap,      weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_, heat_cap_old,  weighted_by_fract)
 
-    dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, t_lice,     weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_wtr,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, s_ice,      weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_, fract_lice, weighted_by_fract)
+    IF (model%config%use_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_, t_lwtr,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, s_lwtr,     weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, qsat_lwtr,  weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_, fract_lice, weighted_by_fract)
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Aggregate_onChunk(SEB_, t_lice,     weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(SEB_, s_lice,     weighted_by_fract)
+        dsl4jsb_Aggregate_onChunk(SEB_, qsat_lice,  weighted_by_fract)
+      END IF
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -282,11 +296,11 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: hcap_grnd_old
     dsl4jsb_Real3D_onChunk :: snow_depth_sl
     dsl4jsb_Real3D_onChunk :: vol_heat_cap_sl
-    dsl4jsb_Real3D_onChunk :: w_soil_freeze_sl
-    dsl4jsb_Real3D_onChunk :: w_ice_melt_sl
+    dsl4jsb_Real3D_onChunk :: wtr_freeze_sl
+    dsl4jsb_Real3D_onChunk :: ice_melt_sl
 
 
-    INTEGER  :: iblk , ics, ice
+    INTEGER  :: iblk , ics, ice, i
     REAL(wp) :: dtime
 
     REAL(wp), DIMENSION(options%nc) :: &
@@ -297,7 +311,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_snowmelt_correction'
 
-    IF (.NOT. tile%Is_process_active(SEB_) .OR. .NOT. tile%is_land) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_) .OR. .NOT. tile%is_land) RETURN
 
     iblk  = options%iblk
     ics   = options%ics
@@ -333,31 +347,47 @@ CONTAINS
         dsl4jsb_Get_var3D_onChunk(SSE_,      snow_depth_sl)    ! in
       END IF
       dsl4jsb_Get_var3D_onChunk(SSE_,      vol_heat_cap_sl)  ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_soil_freeze_sl) ! in
-      dsl4jsb_Get_var3D_onChunk(HYDRO_,    w_ice_melt_sl)    ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    wtr_freeze_sl) ! in
+      dsl4jsb_Get_var3D_onChunk(HYDRO_,    ice_melt_sl) ! in
 
-      IF (.NOT. is_time_experiment_start()) THEN
+      IF (.NOT. is_time_experiment_start(options%current_datetime)) THEN
+        !$claw acc data create(heat_cap)
 
         ! Correction for snowmelt
+        !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_0 tile_name=tile%name
         t_unfilt(:) = t_unfilt(:) - snowmelt(:) * dtime * alf / hcap_grnd_old(:)
 
         IF (dsl4jsb_Config(SSE_)%l_freeze) THEN
+          !$claw expand parallel update savepoint=ser_jsb_seb_update_snowmelt_correction_expand_1 tile_name=tile%name
           heat_cap(:) = vol_heat_cap_sl(:,1) * soil_e%dz(1)
           IF (dsl4jsb_Config(SSE_)%l_snow) THEN
-            WHERE (snow_depth_sl(:,nsnow) < EPSILON(1._wp) .AND. heat_cap(:) > 0._wp)  ! No snow layers present
+            !$claw acc data present(t_unfilt,snow_depth_sl,heat_cap,ice_melt_sl,wtr_freeze_sl)
+            !$claw acc parallel loop gang vector
+            DO i = 1,  size(t_unfilt, dim=1)
+              IF (snow_depth_sl(i,nsnow) < EPSILON(1._wp) .AND. heat_cap(i) > 0._wp) THEN  ! No snow layers present
               ! Correction for melting of ice in soil layers
-              t_unfilt(:) = t_unfilt(:) - w_ice_melt_sl   (:,1) * dtime * alf / heat_cap(:)
-              t_unfilt(:) = t_unfilt(:) + w_soil_freeze_sl(:,1) * dtime * alf / heat_cap(:)
-            END WHERE
+                t_unfilt(i) = t_unfilt(i) - ice_melt_sl(i,1)   * dtime * alf / heat_cap(i)
+                t_unfilt(i) = t_unfilt(i) + wtr_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+              END IF
+            END DO
+            !$claw acc end data
           ELSE   ! No snow layers present
-            WHERE (heat_cap(:) > 0._wp)
-              ! Correction for melting of ice in soil layers
-              t_unfilt(:) = t_unfilt(:) - w_ice_melt_sl   (:,1) * dtime * alf / heat_cap(:)
-              t_unfilt(:) = t_unfilt(:) + w_soil_freeze_sl(:,1) * dtime * alf / heat_cap(:)
-            END WHERE
+            !$claw acc data present(t_unfilt,heat_cap,ice_melt_sl,wtr_freeze_sl)
+            !$claw acc parallel loop gang vector
+            DO i = 1, size(t_unfilt,dim=1)
+              IF (heat_cap(i) > 0._wp) THEN
+                ! Correction for melting of ice in soil layers
+                t_unfilt(i) = t_unfilt(i) - ice_melt_sl(i,1)   * dtime * alf / heat_cap(i)
+                t_unfilt(i) = t_unfilt(i) + wtr_freeze_sl(i,1) * dtime * alf / heat_cap(i)
+              END IF
+            END DO
+            !$claw acc end data
           END IF
         END IF
+        !$claw acc end data
       END IF
+
+      
 
     ELSE
 
@@ -422,7 +452,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_asselin'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%contains_lake) THEN
       ! No Asselin filter for lake tile
@@ -487,7 +517,7 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_surface_fluxes'
 
-    IF (.NOT. tile%Is_process_active(SEB_)) RETURN
+    IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%contains_lake) THEN
       CALL update_surface_fluxes_lake(tile, options)
@@ -510,8 +540,10 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
+    dsl4jsb_Def_config(SEB_)
     dsl4jsb_Def_memory(SEB_)
 
+    TYPE(t_jsb_model),       POINTER :: model
     CLASS(t_jsb_aggregator), POINTER :: weighted_by_fract
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_surface_fluxes'
@@ -524,6 +556,9 @@ CONTAINS
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
+    model => Get_model(tile%owner_model_id)
+
+    dsl4jsb_Get_config(SEB_)
     dsl4jsb_Get_memory(SEB_)
 
     weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
@@ -535,12 +570,100 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_lnd,  weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_wtr,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_wtr,  weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
+    IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+      dsl4jsb_Aggregate_onChunk(SEB_,   latent_hflx_ice,    weighted_by_fract)
+      dsl4jsb_Aggregate_onChunk(SEB_,   sensible_hflx_ice,  weighted_by_fract)
+    END IF
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_surface_fluxes
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Calculations of diagnostic global land mean output
+  !!
+  !! The routine is called from jsbach_finish_timestep, after the loop over the nproma blocks.
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE global_seb_diagnostics(tile)
+
+#ifndef __ICON__
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
+    IF (debug_on()) CALL message(TRIM(routine), 'Global diagnostics only available with ICON')
+#else
+
+    USE mo_sync,                  ONLY: global_sum_array
+    USE mo_jsb_grid,              ONLY: Get_grid
+    USE mo_jsb_grid_class,        ONLY: t_jsb_grid
+
+    ! Argument
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: tile
+
+    ! Local variables
+    !
+    dsl4jsb_Def_memory(SEB_)
+
+    CHARACTER(len=*),  PARAMETER  :: routine = modname//':global_seb_diagnostics'
+
+    ! Pointers to variables in memory
+
+    dsl4jsb_Real2D_onDomain :: t
+
+    REAL(wp), POINTER       :: t_gmean(:)
+
+    TYPE(t_jsb_model), POINTER      :: model
+    TYPE(t_jsb_grid),  POINTER      :: grid
+
+    REAL(wp), POINTER      :: area(:,:)
+    REAL(wp), POINTER      :: notsea(:,:)
+    LOGICAL,  POINTER      :: is_in_domain(:,:) ! T: cell in domain (not halo)
+    REAL(wp), ALLOCATABLE  :: in_domain (:,:)   ! 1: cell in domain, 0: halo cell
+    REAL(wp), ALLOCATABLE  :: scaling (:,:)
+    REAL(wp)               :: global_land_area
+    dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_var2D_onDomain(SEB_,  t)        ! in
+
+    t_gmean        => SEB__mem%t_gmean%ptr(:)   ! out
+
+    model => Get_model(tile%owner_model_id)
+    grid  => Get_grid(model%grid_id)
+    area         => grid%area(:,:)
+    is_in_domain => grid%patch%cells%decomp_info%owner_mask(:,:)
+    notsea       => tile%fract(:,:)   ! fraction of the box tile: notsea
+
+
+    IF (debug_on()) CALL message(TRIM(routine), 'Starting routine')
+
+
+    IF (ASSOCIATED(tile%parent)) CALL finish(TRIM(routine), 'Should only be called for the root tile')
+
+    IF (SEB__mem%t_gmean%is_in_output) THEN
+
+      ! Domain Mask - to mask all halo cells for global sums (otherwise these
+      ! cells are counted twice)
+      ALLOCATE (in_domain(grid%nproma,grid%nblks))
+      WHERE (is_in_domain(:,:))
+        in_domain = 1._wp
+      ELSEWHERE
+        in_domain = 0._wp
+      END WHERE
+
+      ALLOCATE (scaling(grid%nproma,grid%nblks))
+
+      ! Calculate global land mean seb variables
+      global_land_area = global_sum_array(area(:,:) * notsea(:,:) * in_domain(:,:))
+      scaling(:,:) = notsea(:,:) * area(:,:) * in_domain(:,:)
+      t_gmean      = global_sum_array(t(:,:) * scaling(:,:)) / global_land_area
+
+      DEALLOCATE (scaling, in_domain)
+    END IF
+
+#endif
+  END SUBROUTINE global_seb_diagnostics
+
   !
   ! ================================================================================================================================
   !

@@ -6,11 +6,16 @@
 !! @par Revision History
 !! First version by Veronika Gayler (2013-06-29)
 
+!! @par Copyright
+!! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
+!! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!!
+
 MODULE mo_interface_hd_ocean
 #if !defined(__NO_JSBACH__) && !defined(__NO_JSBACH_HD__)
 
   USE mo_kind,                ONLY: wp
-  USE mo_exception,           ONLY: finish, warning
+  USE mo_exception,           ONLY: finish, message
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model
   USE mo_jsb_class,           ONLY: Get_model
@@ -40,19 +45,19 @@ MODULE mo_interface_hd_ocean
 CONTAINS
 
 #ifdef YAC_coupling
-  SUBROUTINE jsb_fdef_hd_fields(comp_id, domain_id, cell_point_ids, cell_mask_ids)
+  SUBROUTINE jsb_fdef_hd_fields(comp_id, cell_point_ids, cell_mask_id)
 
-    INTEGER, INTENT(in) :: comp_id, domain_id
-    INTEGER, INTENT(in) :: cell_point_ids(:), cell_mask_ids(:)
+    INTEGER, INTENT(in) :: comp_id
+    INTEGER, INTENT(in) :: cell_point_ids(:)
+    INTEGER, INTENT(in) :: cell_mask_id(:)
 
     INTEGER :: field_id
 
-    CALL yac_fdef_field (      &
+    CALL yac_fdef_field_mask ( &
       & 'river_runoff',        &
       & comp_id,               &
-      & domain_id,             &
       & cell_point_ids,        &
-      & cell_mask_ids,         &
+      & cell_mask_id,          &
       & 1,                     &
       & field_id )
 
@@ -130,12 +135,12 @@ CONTAINS
     nbr_pointsets   = 1
     nbr_subdomains  = 1
 #ifdef YAC_coupling
-    CALL yac_fput(field_id, nbr_hor_cells, collection_size, nbr_pointsets, nbr_subdomains, buffer, info, ierror)
+    CALL yac_fput(field_id, nbr_hor_cells, collection_size, buffer, info, ierror)
 #endif
     IF ( info > 1 .AND. info < 7 ) write_coupler_restart = .TRUE.
 
     IF ( write_coupler_restart ) THEN
-       CALL warning(TRIM(routine), 'YAC says it is put for restart')
+       CALL message(TRIM(routine), 'YAC says it is put for restart')
     ENDIF
 
     DEALLOCATE(buffer)
