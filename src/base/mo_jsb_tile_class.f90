@@ -1,38 +1,50 @@
+!> Summary: Contains abstract class and methods for tiles
 !>
-!> @brief Contains abstract tile class that contains the surface structure (tiles)
-!> and memory state that is owned by each tile.
+!>### Definition of abstract class and methods for tiles 
+!> The most important components of a tile instance are
 !>
-!> @author
-!>  Reiner Schnur, MPI-M Hamburg
+!> - the fraction of a grid box that the tile occupies
+!> - the memories of all processes (i.e. variables) owned by this tile
+!> - a list of LCT (land cover type) id's that are represented on this tile
+!> - a store pointing to the element variables of all BGC materials across all processes
+!> - a list of actions to be applied on this tile for the different processes
+!> - a list of aggregators used to aggregate variables of the child tiles to this tile
 !>
-!> @par Revision History
-!> First version by Reiner Schnur (2013-04-04)
+!>#### Revision History
+!> 2013-04-04 First version, but heavily modified over time afterwards, by Reiner Schnur  
+!> 2015-10-01 Major re-structuring of infrastructure, fully object-oriented and polymorphic memory and tile
+!>            structure, by Reiner Schnur
 !>
-!> @par Copyright
-!> This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
-!> Please see URL http://www.mpimet.mpg.de/en/science/models/license .
+!>#### Copyright and License
+!>
+!> Copyright 2013 to 2023, MPI-M, MPI-BGC, Reiner Schnur, Julia Nabel
+!>
+!> BSD 3-Clause
+!> spdx-id: BSD-3-Clause
+!>
 !>
 
 MODULE mo_jsb_tile_class
 #ifndef __NO_JSBACH__
 
-  USE mo_jsb_control,         ONLY: debug_on
-  USE mo_kind,                ONLY: wp, dp
-  USE mo_exception,           ONLY: message, finish
-  USE mo_io_units,            ONLY: filename_max
-  USE mo_jsb_impl_constants,  ONLY: SHORT_NAME_LEN
+  USE mo_jsb_control,          ONLY: debug_on
+  USE mo_kind,                 ONLY: wp, dp
+  USE mo_exception,            ONLY: message, finish
+  USE mo_io_units,             ONLY: filename_max
+  USE mo_jsb_impl_constants,   ONLY: SHORT_NAME_LEN
 
-  USE mo_hsm_class,           ONLY: t_Hsm, t_State, t_Message
-  USE mo_jsb_memory_class,    ONLY: t_jsb_memory_p, t_jsb_memory
-  USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
-    &                               LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
-  USE mo_jsb_var_class,       ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
-  USE mo_jsb_cqt_class,       ONLY: t_jsb_consQuan_p
-  USE mo_jsb_lcc_class,       ONLY: t_jsb_lcc_proc_p
+  USE mo_hsm_class,            ONLY: t_Hsm, t_State, t_Message
+  USE mo_jsb_memory_class,     ONLY: t_jsb_memory_p, t_jsb_memory
+  USE mo_jsb_lct_class,        ONLY: t_jsb_lct, &
+    &                                LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE
+  USE mo_jsb_var_class,        ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
+  USE mo_jsb_cqt_class,        ONLY: t_jsb_consQuan_p
+  USE mo_jsb_lcc_class,        ONLY: t_jsb_lcc_proc_p
+  USE mo_lnd_bgcm_store,       ONLY: t_lnd_bgcm_store
 
 #ifdef _OPENACC
   USE openacc
-#define __acc_attach(ptr) CALL acc_attach(ptr)  
+#define __acc_attach(ptr) CALL acc_attach(ptr)
 #else
 #define __acc_attach(ptr)
 #endif
@@ -43,26 +55,24 @@ MODULE mo_jsb_tile_class
   PUBLIC :: t_jsb_tile_abstract
   PUBLIC :: t_jsb_aggregator, t_jsb_aggregator_p, t_jsb_aggregator_weighted_by_fract
 
-!!$  INTEGER, PARAMETER :: max_depth_of_tile_tree = 3
-
   ! Declarations for aggregators
+
+  !> Abstract type for aggregator operators
   TYPE, ABSTRACT :: t_jsb_aggregator
-    CHARACTER(len=25) :: name
+    CHARACTER(len=25) :: name    !< Aggregators are distinguished by using unique names
   CONTAINS
-    PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d
-    PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d
+    PROCEDURE(aggregate_interface_2d), DEFERRED             :: Aggregate_2d !< Aggregate operator for 2d variables
+    PROCEDURE(aggregate_interface_3d), DEFERRED             :: Aggregate_3d !< Aggregate operator for 3d variables
     GENERIC                                                 :: Aggregate => Aggregate_2d, Aggregate_3d
-    ! PROCEDURE(aggregate_interface_setopt_logical), DEFERRED :: Set_aggregator_option_logical
-    ! GENERIC                                                 :: Set_option => Set_aggregator_option_logical
   END TYPE t_jsb_aggregator
 
+  !> A type to hold vectors of pointers to t_jsb_aggregator objects
   TYPE t_jsb_aggregator_p
     CLASS(t_jsb_aggregator), POINTER :: p => NULL()
   END TYPE t_jsb_aggregator_p
 
-  ! Declarations for tile
+  ! Declarations for tiles
   !
-  ! Used to cache some pointers on the GPU
   TYPE :: real_2d_p
     REAL(wp), POINTER :: p(:,:) => NULL()
   END TYPE
@@ -71,76 +81,77 @@ MODULE mo_jsb_tile_class
   END TYPE
   !
   TYPE, ABSTRACT, EXTENDS(t_State) :: t_jsb_tile_abstract
-    TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:)              !< List of land cover types for tile
-                                                                   !< The first entry is always the primary LCT for this tile;
-                                                                   !< the remaining lcts are those inherited for aggregation
+    TYPE(t_jsb_lct),        ALLOCATABLE    :: lcts(:) !< List of land cover types for tile;
+                                                      !< the first entry is always the primary LCT for this tile;
+                                                      !< the remaining lcts are those inherited for aggregation
     ! Convinience settings to easily check primary LCT types and those of the child tiles
-    LOGICAL                                :: is_vegetation = .FALSE.         !< whether primary lct is VEG_TYPE
-    LOGICAL                                :: is_bare = .FALSE.               !< whether primary lct is BARE_TYPE
-    LOGICAL                                :: is_land = .FALSE.               !< whether primary lct is LAND_TYPE
-    LOGICAL                                :: is_glacier = .FALSE.            !< whether primary lct is GLACIER_TYPE
-    LOGICAL                                :: is_lake = .FALSE.               !< whether primary lct is LAKE_TYPE
-    LOGICAL                                :: contains_vegetation = .FALSE.   !< whether any lct of tile is VEG_TYPE
-    LOGICAL                                :: contains_bare = .FALSE.         !< whether any lct of tile is BARE_TYPE
-    LOGICAL                                :: contains_land = .FALSE.         !< whether any lct of tile is LAND_TYPE
-    LOGICAL                                :: contains_glacier = .FALSE.      !< whether any lct of tile is GLACIER_TYPE
-    LOGICAL                                :: contains_lake = .FALSE.         !< whether any lct of tile is LAKE_TYPE
-    LOGICAL                                :: contains_soil = .FALSE.         !< whether any lct of tile is one that has soil
+    LOGICAL                                :: is_vegetation = .FALSE.       !< whether primary lct is VEG_TYPE
+    LOGICAL                                :: is_bare = .FALSE.             !< whether primary lct is BARE_TYPE
+    LOGICAL                                :: is_land = .FALSE.             !< whether primary lct is LAND_TYPE
+    LOGICAL                                :: is_glacier = .FALSE.          !< whether primary lct is GLACIER_TYPE
+    LOGICAL                                :: is_lake = .FALSE.             !< whether primary lct is LAKE_TYPE
+    LOGICAL                                :: contains_vegetation = .FALSE. !< whether any lct of tile is VEG_TYPE
+    LOGICAL                                :: contains_bare = .FALSE.       !< whether any lct of tile is BARE_TYPE
+    LOGICAL                                :: contains_land = .FALSE.       !< whether any lct of tile is LAND_TYPE
+    LOGICAL                                :: contains_glacier = .FALSE.    !< whether any lct of tile is GLACIER_TYPE
+    LOGICAL                                :: contains_lake = .FALSE.       !< whether any lct of tile is LAKE_TYPE
+    LOGICAL                                :: contains_soil = .FALSE.       !< whether any lct of tile is one that has soil
     !
-    INTEGER,                ALLOCATABLE    :: process_action(:)
-    REAL(wp),                   POINTER    :: fract     (:,:)      !< Fraction of this tile (relative to grid box)
-    REAL(wp),                   POINTER    :: fract_old (:,:)      !< Old fract
-    CHARACTER(LEN=filename_max)            :: fract_filename       !< Name of file to read tile fractions from. The variable names
-                                                                   !< must be either "fract[_max]_"//tile%name, or specified by
-                                                                   !< fract_varname (in the use case).
-    CHARACTER(LEN=20)                      :: fract_varname        !< Name of variable containing fractions for this tile
-    LOGICAL,                ALLOCATABLE    :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed
-    TYPE(t_jsb_aggregator_p), ALLOCATABLE  :: aggregators(:)
-
-    INTEGER                                :: nr_of_cqts = 0          !< number of conserved quantity types in use on the tile 
-    TYPE(t_jsb_consQuan_p), ALLOCATABLE    :: conserved_quantities(:) !< list of conserved quantities sort by type
-    TYPE(t_jsb_lcc_proc_p), ALLOCATABLE    :: lcc_processes(:)        !< list of lcc structures indexed by proc id
-    !CLASS(t_jsb_param_p),       POINTER    :: param(:)
-    TYPE(t_jsb_memory_p),       POINTER    :: mem(:)                  !< Memory for all processes on the tile
-    CLASS(t_jsb_tile_abstract), POINTER    :: self_tile => NULL()     !< pointer to the tile to enable assigning it as target
-
-    ! The next three pointers basically repeat what's already in the base type, but they save time-consuming "SELECT TYPE"s
-    CLASS(t_jsb_tile_abstract), POINTER    :: parent_tile => NULL()        !< pointer to navigate through the tile tree to the parent file
-    CLASS(t_jsb_tile_abstract), POINTER    :: first_child_tile => NULL()   !< pointer to navigate through the tile tree to the first child tile
-    CLASS(t_jsb_tile_abstract), POINTER    :: next_sibling_tile => NULL()  !< pointer to navigate through the tile tree to the next sibling tile
+    INTEGER :: owner_model_id = 0 !< ID of the jsbach model instance (needed e.g. for nesting)
+    INTEGER :: grid_id = -1       !< ID of the grid used for the tile
     !
-    TYPE(real_2d_p), POINTER :: ptrs2d_cache(:,:,:) => NULL()  !< used for GPU porting
-    TYPE(real_3d_p), POINTER :: ptrs3d_cache(:,:,:) => NULL()  !< used for GPU porting
+    INTEGER,                  ALLOCATABLE :: process_action(:)             !< List of `action` for all processes
+    REAL(wp),                     POINTER :: fract     (:,:)               !< Fraction of this tile (relative to grid box)
+    REAL(wp),                     POINTER :: fract_old (:,:)               !< Old fractions of this tile (relative to grid box)
+    CHARACTER(LEN=filename_max)           :: fract_filename                !< Name of file to read tile fractions from. The variable
+                                                                           !< names must be either "fract[_max]_"//tile%name,
+                                                                           !< or specified by fract_varname (in the use case).
+    CHARACTER(LEN=20)                     :: fract_varname                 !< Name of variable containing fractions for this tile
+    LOGICAL,                  ALLOCATABLE :: l_fract_children_changed(:,:) !< indicates whether the fraction is changed
+    TYPE(t_jsb_aggregator_p), ALLOCATABLE :: aggregators(:)                !< List of possible aggregators for this tile
     !
-    INTEGER                                :: grid_id = -1       !< ID of the grid used for the tile
-    INTEGER                                :: owner_model_id = 0 !< ID of the jsbach model instance (needed e.g. for nesting)
-  CONTAINS
-    PROCEDURE                              :: Add_lct
-    PROCEDURE                              :: Add_lct_to_parents
-    PROCEDURE                              :: Get_parent_memory
-    PROCEDURE                              :: Set_process_action => Set_process_action_tile
-    PROCEDURE                              :: Set_process_action_parents
-    PROCEDURE                              :: Register_aggregator
-    PROCEDURE                              :: Get_aggregator
-    PROCEDURE                              :: Set_fraction_1d
-    PROCEDURE                              :: Set_fraction_2d
-    GENERIC                                :: Set_fraction => Set_fraction_1d, Set_fraction_2d
-    !PROCEDURE                              :: Set_fractions_max
-    PROCEDURE                              :: Get_fraction_1d
-    PROCEDURE                              :: Get_fraction_2d
-    GENERIC                                :: Get_fraction => Get_fraction_1d, Get_fraction_2d
-    PROCEDURE                              :: Set_fract_ptr
-    PROCEDURE                              :: Set_fract_old_ptr
-    PROCEDURE                              :: Get_first_child_tile
-    PROCEDURE                              :: Get_next_sibling_tile
-    PROCEDURE                              :: Get_prev_sibling_tile
-    PROCEDURE                              :: Get_children_names
-    PROCEDURE                              :: Has_conserved_quantities
+    INTEGER                               :: nr_of_cqts = 0                !< number of conserved quantity types in use on the tile 
+    TYPE(t_jsb_consQuan_p),   ALLOCATABLE :: conserved_quantities(:)       !< list of conserved quantities sort by type
+    TYPE(t_jsb_lcc_proc_p),   ALLOCATABLE :: lcc_processes(:)              !< list of lcc structures indexed by proc id
+    TYPE(t_lnd_bgcm_store),       POINTER :: bgcm_store          => NULL() !< the bgcm store collecting pools and their elements on this tile
+    TYPE(t_jsb_memory_p),         POINTER :: mem(:)                        !< Memory for all processes on the tile
     !
-    PROCEDURE                              :: Cache_GPU_pointers
+    CLASS(t_jsb_tile_abstract),   POINTER :: self_tile           => NULL() !< pointer to the tile to enable assigning it as target
+    ! The next three pointers basically repeat what's already in the base type, but they save "SELECT TYPE"s
+    CLASS(t_jsb_tile_abstract),   POINTER :: parent_tile         => NULL() !< pointer to the parent file
+    CLASS(t_jsb_tile_abstract),   POINTER :: first_child_tile    => NULL() !< pointer to the first child tile
+    CLASS(t_jsb_tile_abstract),   POINTER :: next_sibling_tile   => NULL() !< pointer to the next sibling tile
+    !
+    TYPE(real_2d_p),              POINTER :: ptrs2d_cache(:,:,:) => NULL() !< cache of pointers to 2d variables used for GPU porting
+    TYPE(real_3d_p),              POINTER :: ptrs3d_cache(:,:,:) => NULL() !< cache of pointers to 3d variables used for GPU porting
+    !
+  CONTAINS       
+    PROCEDURE :: Add_lct
+    PROCEDURE :: Add_lct_to_parents
+    PROCEDURE :: Get_parent_memory
+    PROCEDURE :: Set_process_action => Set_process_action_tile
+    PROCEDURE :: Set_process_action_parents
+    PROCEDURE :: Register_aggregator
+    PROCEDURE :: Get_aggregator
+    PROCEDURE :: Set_fraction_1d                                  !< Set fractions on tile (chunk)
+    PROCEDURE :: Set_fraction_2d                                  !< Set fractions on tile (domain)
+    GENERIC   :: Set_fraction => Set_fraction_1d, Set_fraction_2d !< Set fractions on tile
+    PROCEDURE :: Get_fraction_1d
+    PROCEDURE :: Get_fraction_2d
+    GENERIC   :: Get_fraction => Get_fraction_1d, Get_fraction_2d
+    PROCEDURE :: Set_fract_ptr
+    PROCEDURE :: Set_fract_old_ptr
+    PROCEDURE :: Get_first_child_tile
+    PROCEDURE :: Get_next_sibling_tile
+    PROCEDURE :: Get_prev_sibling_tile
+    PROCEDURE :: Get_children_names
+    PROCEDURE :: Has_conserved_quantities
+    PROCEDURE :: Cache_GPU_pointers
     !
     PROCEDURE(Init_interface),           DEFERRED :: Init
     PROCEDURE(Init_vars_interface),      DEFERRED :: Init_vars
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Count_and_classify_bgc_materials
+    PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_bgc_materials
     PROCEDURE(Init_vars_interface),      DEFERRED :: Count_conserved_quantities
     PROCEDURE(Init_vars_interface),      DEFERRED :: Collect_conserved_variables
     PROCEDURE(Init_fractions_interface), DEFERRED :: Init_fractions
@@ -152,10 +163,10 @@ MODULE mo_jsb_tile_class
     PROCEDURE                                     :: Is_last_process_tile
   END type t_jsb_tile_abstract
 
-  !< Deferred subroutine interfaces (must be provided as part of t_jsb_tile_abstract).
-  !< The subroutines themselves are located in the jsb_tile module.
-
+  ! Deferred subroutine interfaces (must be provided as part of t_jsb_tile_abstract).
+  ! The subroutines themselves are located in the jsb_tile module.
   ABSTRACT INTERFACE
+    !> Interface for deferred subroutine `Init`
     SUBROUTINE Init_interface(this, varlist_name, prefix, suffix, grid_id, in_var_groups)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
@@ -165,9 +176,8 @@ MODULE mo_jsb_tile_class
       INTEGER,                    INTENT(in)    :: grid_id
       LOGICAL,                    INTENT(in)    :: in_var_groups
     END SUBROUTINE Init_interface
-  END INTERFACE
 
-  ABSTRACT INTERFACE
+    !> Interface for deferred subroutine `Init_fractions`
     SUBROUTINE Init_fractions_interface(this, varlist_name, prefix, suffix, l_fixed_fractions, l_rel_fractions)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
@@ -177,82 +187,79 @@ MODULE mo_jsb_tile_class
       LOGICAL,                    INTENT(in)    :: l_fixed_fractions
       LOGICAL,                    INTENT(in)    :: l_rel_fractions
     END SUBROUTINE Init_fractions_interface
-  END INTERFACE
 
-  ABSTRACT INTERFACE
+    !> Interface for varous deferred subroutines
     SUBROUTINE Init_vars_interface(this)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: this
     END SUBROUTINE Init_vars_interface
-  END INTERFACE
 
-  ABSTRACT INTERFACE
+    !> Interface for various deferred functions
     LOGICAL FUNCTION Check_on_process(this, iproc)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(in) :: this
       INTEGER, INTENT(in) :: iproc
     END FUNCTION Check_on_process
-  END INTERFACE
 
-  ABSTRACT INTERFACE
+    !> Interface for deferred function `Handler`
     FUNCTION Handler_interface(this, msg_in) RESULT(return_ptr)
       IMPORT :: t_jsb_tile_abstract, t_Hsm, t_Message
       CLASS(t_jsb_tile_abstract),  INTENT(inout) :: this
       CLASS(t_Message),            INTENT(in)    :: msg_in
       CLASS(t_Message),            POINTER       :: return_ptr
     END FUNCTION Handler_interface
-  END INTERFACE
 
-  ABSTRACT INTERFACE
+    !> Interface for deferred subroutine `Print`
     SUBROUTINE Print_interface(this)
       IMPORT :: t_jsb_tile_abstract
       CLASS(t_jsb_tile_abstract), INTENT(in) :: this
     END SUBROUTINE Print_interface
+
   END INTERFACE
 
+  ! Interfaces for deferred subroutines of abstract t_jsb_aggregator type
+
   ABSTRACT INTERFACE
+    !> Interface for deferred subroutine `Aggregate_2d` of `t_jsb_aggregator`
     SUBROUTINE aggregate_interface_2d(this, tile, var, ics, ice, iblk, caller)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real2d
-      CLASS(t_jsb_aggregator),    INTENT(inout) :: this
+      CLASS(t_jsb_aggregator),    INTENT(inout) :: this            !< Aggregator
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-      TYPE(t_jsb_var_real2d),     INTENT(inout) :: var
-      INTEGER,                    INTENT(in)    :: ics, ice, iblk
-      CHARACTER(len=*),           INTENT(in)    :: caller
+      TYPE(t_jsb_var_real2d),     INTENT(inout) :: var             !< Variable with 2 dimensions
+      INTEGER,                    INTENT(in)    :: ics, ice, iblk  !< Array indices of current chunk
+      CHARACTER(len=*),           INTENT(in)    :: caller          !< For debugging: Where was aggregator called?
     END SUBROUTINE aggregate_interface_2d
+
+    !> Interface for deferred subroutine `Aggregate_3d` of `t_jsb_aggregator`
     SUBROUTINE aggregate_interface_3d(this, tile, var, ics, ice, iblk,caller)
       IMPORT :: t_jsb_aggregator, t_jsb_tile_abstract, t_jsb_var_real3d
       CLASS(t_jsb_aggregator),    INTENT(inout) :: this
       CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
-      TYPE(t_jsb_var_real3d),     INTENT(inout) :: var
-      INTEGER,                    INTENT(in)    :: ics, ice, iblk
-      CHARACTER(len=*),           INTENT(in)    :: caller
+      TYPE(t_jsb_var_real3d),     INTENT(inout) :: var             !< Variable with 3 dimensions
+      INTEGER,                    INTENT(in)    :: ics, ice, iblk  !< Array indices of current chunk
+      CHARACTER(len=*),           INTENT(in)    :: caller          !< For debugging: Where was aggregator called?
     END SUBROUTINE aggregate_interface_3d
-    SUBROUTINE aggregate_interface_setopt_logical(this, name, value)
-      IMPORT :: t_jsb_aggregator
-      CLASS(t_jsb_aggregator), INTENT(inout) :: this
-      CHARACTER(len=*)       , INTENT(in)    :: name
-      LOGICAL,                 INTENT(in)    :: value
-    END SUBROUTINE aggregate_interface_setopt_logical
+
   END INTERFACE
 
+  !> Implementation of a concrete aggregator for aggregation by weighted fractions
   TYPE, EXTENDS(t_jsb_aggregator) :: t_jsb_aggregator_weighted_by_fract
-    REAL(wp), ALLOCATABLE :: fractions(:,:,:) ! R: (grid%nproma, grid%nblks, no_children))
-    REAL(wp), ALLOCATABLE :: fract_sum(:,:)
-    REAL(wp), ALLOCATABLE :: data_sum(:,:)
+    !> Variables needed to calculate aggregation weights
+    REAL(wp), ALLOCATABLE :: fractions(:,:,:) !< Weighting fraction for each child of tile @domain (nproma, nblock, no_children)
+    REAL(wp), ALLOCATABLE :: fract_sum(:,:)   !< Sum of fractions for fraction weighted averaging
+    REAL(wp), ALLOCATABLE :: data_sum(:,:)    !< Sum of data*fraction for fraction weighted averaging
   CONTAINS
-  PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d
-  PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d
-  GENERIC   :: Set_fractions => Set_fractions_1d, Set_fractions_2d
-!    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_2d
-!    PROCEDURE :: Aggregate => Aggregate_weighted_by_fract_3d
-    PROCEDURE :: Aggregate_2d                  => Aggregate_weighted_by_fract_2d
-    PROCEDURE :: Aggregate_3d                  => Aggregate_weighted_by_fract_3d
-    ! PROCEDURE :: Set_aggregator_option_logical => Aggregate_weighted_by_fract_set_option_logical
-    FINAL     :: Finalize_aggregator_weighted_by_fract
+    !> Functions to make use of the aggregator
+    PROCEDURE :: Set_fractions_1d => Set_fractions_aggregator_1d        !< Set fraction field for chunk. TODO: Rename "1d" to "chunk"
+    PROCEDURE :: Set_fractions_2d => Set_fractions_aggregator_2d        !< Set fraction field for entire domain. TODO: "2d"=>"domain"
+    GENERIC   :: Set_fractions    => Set_fractions_1d, Set_fractions_2d !< Generic function to set tile fractions
+    PROCEDURE :: Aggregate_2d     => Aggregate_weighted_by_fract_2d     !< Specific implementation of agg. of 2d vars
+    PROCEDURE :: Aggregate_3d     => Aggregate_weighted_by_fract_3d     !< Specific implementation of agg. of 3d vars
+    FINAL     :: Finalize_aggregator_weighted_by_fract                  !< Destructor to deallocate fields when aggregator is deallocated
   END TYPE t_jsb_aggregator_weighted_by_fract
 
   INTERFACE t_jsb_aggregator_weighted_by_fract
-    PROCEDURE Create_aggregator_weighted_by_fract
+    PROCEDURE Create_aggregator_weighted_by_fract                       !< Constructor of aggregator (call to initialize)
   END INTERFACE
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_tile_class'
@@ -417,7 +424,7 @@ CONTAINS
     REAL(wp), OPTIONAL,         INTENT(in)    :: &
       & fract(:),        &
       & fract_old(:)
-      
+
 
     INTEGER :: ilct
 
@@ -564,10 +571,10 @@ CONTAINS
   END SUBROUTINE Get_fraction_2d
 
   ! ======================================================================================================= !
-  !> 
+  !>
   !> Sets the pointer on the tile to the passed pointer AND also updates the GPU pointer address
   !>
-  ! this is an example why the encapsulation within the setter is important: not only the fract 
+  ! This is an example why the encapsulation within the setter is important: not only the fraction
   ! on the tile needs to be set but also the GPU pointer
   SUBROUTINE Set_fract_ptr(this, ptr)
     ! -------------------------------------------------------------------------------------------------- !
@@ -589,35 +596,45 @@ CONTAINS
 
   END SUBROUTINE Set_fract_old_ptr
 
+  ! ======================================================================================================= !
+  !>
+  !> Registers a new aggregator for use on this tile
+  !>
   SUBROUTINE Register_aggregator(this, aggregator)
 
-    CLASS(t_jsb_tile_abstract), INTENT(inout)        :: this
-    CLASS(t_jsb_aggregator),    INTENT(in),   TARGET :: aggregator
+    CLASS(t_jsb_tile_abstract), INTENT(inout)        :: this       !< Tile to which to associate new aggregator
+    CLASS(t_jsb_aggregator),    INTENT(in),   TARGET :: aggregator !< Aggregator to associate
 
     TYPE(t_jsb_aggregator_p), ALLOCATABLE :: temp_aggregators(:)
     INTEGER :: n
     CHARACTER(len=*), PARAMETER :: routine = modname//':Register_aggregator'
 
+    ! Extend tile's list of aggregators by one entry
     IF (ALLOCATED(this%aggregators)) THEN
       n = SIZE(this%aggregators)
     ELSE
       n = 0
     END IF
     ALLOCATE(temp_aggregators(n+1))
-    IF (ALLOCATED(this%aggregators)) temp_aggregators(1:n) = this%aggregators
-    temp_aggregators(n+1) = t_jsb_aggregator_p(aggregator)
-    CALL move_ALLOC(temp_aggregators, this%aggregators)
+    IF (ALLOCATED(this%aggregators)) temp_aggregators(1:n) = this%aggregators ! Copy all old aggregators to temporaray array
+    temp_aggregators(n+1) = t_jsb_aggregator_p(aggregator)                    ! Put new aggregator in the new entry of the list
+    CALL move_ALLOC(temp_aggregators, this%aggregators)                       ! Replace list with temporary and deallocate temporary
 
     IF (debug_on()) CALL message(TRIM(routine), 'Registered aggregator '//TRIM(aggregator%name)//' for tile '//TRIM(this%name))
 
   END SUBROUTINE Register_aggregator
 
+  ! ======================================================================================================= !
+  !>
+  !> Returns an aggregator specified by it's name in the tile's aggregator list
+  !> If one suitable is found either a pointer to it (default) or a copy of it is returned
+  !>
   FUNCTION Get_aggregator(this, name, copy) RESULT(aggregator)
 
-    CLASS(t_jsb_tile_abstract), INTENT(in) :: this
-    CHARACTER(len=*),           INTENT(in) :: name
-    LOGICAL, OPTIONAL,          INTENT(in) :: copy
-    CLASS(t_jsb_aggregator),    POINTER    :: aggregator
+    CLASS(t_jsb_tile_abstract), INTENT(in) :: this        !< Tile to obtain valid aggregator for
+    CHARACTER(len=*),           INTENT(in) :: name        !< Name of requested aggregator
+    LOGICAL, OPTIONAL,          INTENT(in) :: copy        !< Return a copy instead of a pointer (default: .FALSE.)
+    CLASS(t_jsb_aggregator),    POINTER    :: aggregator  !< Returned aggregator (NULL if no aggregator with given name found)
 
     INTEGER :: i
     LOGICAL :: l_copy
@@ -644,14 +661,20 @@ CONTAINS
 
   END FUNCTION Get_aggregator
 
+  ! ======================================================================================================= !
+  !>
+  !> Constructs the "weighted_by_fract" aggregator by allocating its internal fields
+  !>
+  !> Uses the size of the domain and the number of children of the tile
+  !>
   FUNCTION Create_aggregator_weighted_by_fract(grid_id, no_of_children) RESULT(aggregator)
 
     USE mo_jsb_grid_class, ONLY: t_jsb_grid
     USE mo_jsb_grid,       ONLY: Get_grid
 
-    INTEGER, INTENT(in) :: grid_id
-    INTEGER, INTENT(in) :: no_of_children
-    TYPE(t_jsb_aggregator_weighted_by_fract), POINTER :: aggregator
+    INTEGER,                                  INTENT(in) :: grid_id        !< Id # of horizontal grid to get domain size from
+    INTEGER,                                  INTENT(in) :: no_of_children !< number of child tiles which are to be aggregated on this tile
+    TYPE(t_jsb_aggregator_weighted_by_fract), POINTER    :: aggregator     !< Constructed "weighted_by_fract" aggregator
 
     TYPE(t_jsb_grid), POINTER :: grid
 
@@ -669,9 +692,13 @@ CONTAINS
     !$acc enter data create(aggregator, aggregator%fractions, aggregator%data_sum, aggregator%fract_sum)
   END FUNCTION Create_aggregator_weighted_by_fract
 
+  ! ======================================================================================================= !
+  !>
+  !> Destructs an "weighted_by_fract" aggregator by deallocating its internal fields
+  !>
   SUBROUTINE Finalize_aggregator_weighted_by_fract(aggregator)
 
-    TYPE(t_jsb_aggregator_weighted_by_fract) :: aggregator
+    TYPE(t_jsb_aggregator_weighted_by_fract) :: aggregator !< Aggregator to destruct
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Finalize_aggregator_weighted_by_fract'
 
@@ -692,11 +719,16 @@ CONTAINS
 
   END SUBROUTINE Finalize_aggregator_weighted_by_fract
 
+  ! ====================================================================================================== !
+  !
+  !> Updates the part of the fraction field of an aggregator belonging to the specified chunk for all child tiles
+  !
+  ! TODO: Change name to Set_fractions_aggregator_chunk
   SUBROUTINE Set_fractions_aggregator_1d(this, tile, ics, ice, iblk)
 
-    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
-    INTEGER,                                   INTENT(in)    :: ics, ice, iblk
+    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator to set fractions for
+    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< "Parent tile" of aggregator
+    INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< Array indices of chunk
 
     INTEGER :: no_children, i
     CLASS(t_jsb_tile_abstract), POINTER :: current
@@ -716,6 +748,10 @@ CONTAINS
 
       !$acc update device( this%fractions(ics:ice,iblk,:) )
 
+      !! Section for debugging
+      !! It needs to be adapted to absolute tile fractions!
+      !!   => replace 1._wp by parent%fract
+      !
       ! ALLOCATE(fract(ice-ics+1))
       ! ALLOCATE(fract_sum(ice-ics+1))
       ! fract(:) = tile%fract(ics:ice,iblk)
@@ -733,10 +769,15 @@ CONTAINS
 
   END SUBROUTINE Set_fractions_aggregator_1d
 
+  ! ====================================================================================================== !
+  !
+  !> Updates the fraction field of an aggregator for the entire domain for all child tiles
+  !
+  ! TODO: Change name to Set_fractions_aggregator_domain
   SUBROUTINE Set_fractions_aggregator_2d(this, tile)
 
-    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
+    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this !< Aggregator to set fractions for
+    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile !< Tile of this aggregator instance
 
     INTEGER :: no_children, i
     CLASS(t_jsb_tile_abstract), POINTER :: current
@@ -774,13 +815,17 @@ CONTAINS
 
   END SUBROUTINE Set_fractions_aggregator_2d
 
+  ! ====================================================================================================== !
+  !>
+  !> Aggregation of a 2d variable from the child tiles by weighted fractions
+  !>
   SUBROUTINE Aggregate_weighted_by_fract_2d(this, tile, var, ics, ice, iblk, caller)
 
-    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
-    TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var
-    INTEGER,                                   INTENT(in)    :: ics, ice, iblk
-    CHARACTER(len=*),                          INTENT(in)    :: caller
+    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
+    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
+    TYPE(t_jsb_var_real2d),                    INTENT(inout) :: var            !< to be aggregated 2d variable
+    INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
+    CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
 
     REAL(wp), POINTER :: ptr(:,:)
     TYPE(real_2d_p), POINTER :: tile_ptrs2d_cache(:,:,:)
@@ -800,51 +845,74 @@ CONTAINS
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(routine, 'This should never happen!')
 
+    ! Set the fractions of the child tiles (on the current chunk)
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
+    ! Assure the current variable belongs to a process
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
     IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
 
+    ! Check, that the bookkeeping for this variable on its child tiles has been conducted,
+    ! and that number of children matches the child indices.
     IF (.NOT. ALLOCATED(var%child_idx)) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
     ELSE IF (SIZE(var%child_idx) /= no_children) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    tile_ptrs2d_cache => tile%ptrs2d_cache
+    ! Needed for GPUs
+    tile_ptrs2d_cache => tile%ptrs2d_cache ! the 2d var pointer cache on this tile
 
     ! print*, routine//": working on var ", var%full_name
 
     !$acc parallel default(none) present(this, tile_ptrs2d_cache, var) private(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
+      ! If there is only one child nothing needs to be aggregated ...
+
       !$acc loop gang vector
       DO j = ics, ice
+        ! ... and the variable on the current tile equals the var on the child tile.
         var%ptr(j,iblk) = tile_ptrs2d_cache(1,var%child_idx(1),iproc)%p(j,iblk)
       END DO
     ELSE IF (no_children > 1) THEN
+      ! With more then one child tile we need to do the weighted averaging.
       !$acc loop gang vector
       DO j = ics, ice
         this%data_sum (j,iblk) = 0._wp
         this%fract_sum(j,iblk) = 0._wp
       END DO
 
-      icount = 0
-      ichild = 0
+      icount = 0 ! Counter: How many children have been considered
+      ichild = 0 ! index of the last child -> used if only one child had the variable
       !$acc loop seq
+
+      ! Calculate the (weighted) sum of the data and the sum up the fractions
+      !
       DO i=1,no_children
+        ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF ( var%child_idx(i) > 0 ) THEN
+          ! The variable exists on the child tile
           !$acc loop gang vector
           DO j = ics, ice
+            ! Multilply variable of the child with the weight and add it to the data sum
             this%data_sum(j,iblk) = this%data_sum(j,iblk) &
               & + this%fractions(j,iblk,i) * tile_ptrs2d_cache(i,var%child_idx(i),iproc)%p(j,iblk)
+            ! -> the cache is a huge array of pointers with i iterating over the number of children,
+            !    second dim: number of variables, third dim: number of processes
+            ! => without gpu we would use
+            !      tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr2d(j,iblk)
+
+            ! Add weight to the weight sum
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
           icount = icount + 1
           ichild = i
         ELSE IF (var%l_aggregate_all) THEN
+          ! The variable is not defined on the this child tile, but we still want to consider its fraction
+          ! (e.g. for fluxes in m-2, that are not calculated on all child tiles; same as adding value zero).
           !$acc loop gang vector
           DO j = ics, ice
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
@@ -865,17 +933,22 @@ CONTAINS
       !   CALL finish(TRIM(routine),  '    ... this should not happen')
       ! END IF
 
-      IF (icount == 1) THEN
+
+      ! Calculate the weighted average
+      !
+      IF (icount == 1) THEN  ! Only one child tile needs to be considered.
         !$acc loop gang vector
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            ! ichild: the only child that contained the variable
             var%ptr(j,iblk) = tile_ptrs2d_cache(ichild,var%child_idx(ichild),iproc)%p(j,iblk)
           END IF
         END DO
-      ELSE IF (icount > 1) THEN
+      ELSE IF (icount > 1) THEN  ! Several child tiles need to be considered
         !$acc loop gang vector
         DO j = ics, ice
           IF (this%fract_sum(j,iblk) > 0._wp) THEN
+            ! Divide the data sum by the sum of the fractions
             var%ptr(j,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
           ! ELSE
           !   IF (TRIM(tile%name) == 'box') var%ptr(j,iblk) = -1.e4
@@ -897,13 +970,18 @@ CONTAINS
 
   END SUBROUTINE Aggregate_weighted_by_fract_2d
 
+
+  ! ====================================================================================================== !
+  !>
+  !> Aggregation of a 3d variable from the child tiles by weighted fractions
+  !>
   SUBROUTINE Aggregate_weighted_by_fract_3d(this, tile, var, ics, ice, iblk, caller)
 
-    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile
-    TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var
-    INTEGER,                                   INTENT(in)    :: ics, ice, iblk
-    CHARACTER(len=*),                          INTENT(in)    :: caller
+    CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this           !< Aggregator
+    CLASS(t_jsb_tile_abstract),                INTENT(inout) :: tile           !< Tile of this aggregator instance
+    TYPE(t_jsb_var_real3d),                    INTENT(inout) :: var            !< to be aggregated 3d variable
+    INTEGER,                                   INTENT(in)    :: ics, ice, iblk !< chunk info
+    CHARACTER(len=*),                          INTENT(in)    :: caller         !< calling aggregation routine
 
     CLASS(t_jsb_var), POINTER :: ptr
     TYPE(real_3d_p), POINTER :: tile_ptrs3d_cache(:,:,:)
@@ -923,45 +1001,53 @@ CONTAINS
     no_children = tile%Get_no_of_children()
     IF (no_children == 0) CALL finish(routine, 'This should never happen!')
 
+    ! Set the fractions of the child tiles (on the current chunk)
     CALL this%Set_fractions(tile, ics, ice, iblk)
 
+    ! Assure the current variable belongs to a process
     iproc = var%owner_proc_id
     IF (iproc < 0) CALL finish(TRIM(routine), 'Unknown process for variable '//TRIM(var%name)//' on tile '//TRIM(tile%name))
 
     IF (.NOT. ASSOCIATED(tile%mem(iproc)%p)) RETURN
 
+    ! Check, that the bookkeeping for this variable on its child tiles has been conducted,
+    ! and that number of children matches the child indices.
     IF (.NOT. ALLOCATED(var%child_idx)) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' not allocated')
     ELSE IF (SIZE(var%child_idx) /= no_children) THEN
       CALL finish(TRIM(routine), 'ERROR - child_idx of '//TRIM(var%name)//' on tile '//TRIM(tile%name)//' has wrong size')
     END IF
 
-    tile_ptrs3d_cache => tile%ptrs3d_cache
+    ! Needed for GPUs
+    tile_ptrs3d_cache => tile%ptrs3d_cache ! the 3d var pointer cache on this tile
 
     ! print*, routine//": working on var ", var%full_name
 
     !$acc parallel default(none) present(this, tile_ptrs3d_cache, var) private(icount, ichild)
 
     IF (no_children == 1 .AND. var%child_idx(1) > 0) THEN
+      ! If there is only one child nothing needs to be aggregated ...
 
       !$acc loop seq
       DO ilev=1,SIZE(var%ptr,2)
         !$acc loop gang vector
         DO j = ics, ice
+          ! ... and the variable on the current tile equals the var on the child tile.
           var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(1,var%child_idx(1),iproc)%p(j,ilev,iblk)
         END DO
       END DO
 
     ELSE IF (no_children > 1) THEN
-
+      ! With more then one child tile we need to do the weighted averaging.
       !$acc loop gang vector
       DO j = ics, ice
         this%fract_sum(j,iblk) = 0._wp
       END DO
-      icount = 0
-      ichild = 0
+      icount = 0 ! Counter: How many children have been considered
+      ichild = 0 ! index of the last child -> used if only one child had the variable
       !$acc loop seq
       DO i=1,no_children
+        ! Check if the var exists on this tile (could be a tile on which the according process is not running)
         IF (var%child_idx(i) > 0) THEN
           !$acc loop gang vector
           DO j = ics, ice
@@ -970,8 +1056,11 @@ CONTAINS
           icount = icount + 1
           ichild = i
         ELSE IF (var%l_aggregate_all) THEN
+          ! The variable is not defined on the this child tile, but we still want to consider its fraction
+          ! (e.g. for fluxes in m-2, that are not calculated on all child tiles; same as adding value zero).
           !$acc loop gang vector
           DO j = ics, ice
+            ! Add weight for this child i to the weight sum
             this%fract_sum(j,iblk) = this%fract_sum(j,iblk) + this%fractions(j,iblk,i)
           END DO
           icount = icount + 1
@@ -991,23 +1080,32 @@ CONTAINS
           IF (var%child_idx(i) > 0) THEN
             !$acc loop gang vector
             DO j = ics, ice
+              ! Multilply variable of the child with the weight and add it to the data sum
               this%data_sum(j,iblk) = this%data_sum(j,iblk) &
                 & + this%fractions(j,iblk,i) * tile_ptrs3d_cache(i,var%child_idx(i),iproc)%p(j,ilev,iblk) 
+              ! -> the cache is a huge array of pointers with i iterating over the number of children,
+              !    second dim: number of variables, third dim: number of processes
+              ! => without gpu we would use 
+              !      tile%mem(iproc)%p%children(i)%p%vars(var%child_idx(i))%p%ptr3d(j,ilev,iblk)
             END DO
           END IF
         END DO
 
-        IF (icount == 1) THEN
+        ! Calculate the weighted average
+        !
+        IF (icount == 1) THEN ! Only one child tile needs to be considered.
           !$acc loop gang vector
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              ! ichild: the only child that contained the variable
               var%ptr(j,ilev,iblk) = tile_ptrs3d_cache(ichild,var%child_idx(ichild),iproc)%p(j,ilev,iblk)
             END IF
           END DO
-        ELSE IF (icount > 1) THEN
+        ELSE IF (icount > 1) THEN ! Several child tiles need to be considered
           !$acc loop gang vector
           DO j = ics, ice
             IF (this%fract_sum(j,iblk) > 0._wp) THEN
+              ! Divide the data sum by the sum of the fractions
               var%ptr(j,ilev,iblk) = this%data_sum(j,iblk) / this%fract_sum(j,iblk)
             END IF
           END DO
@@ -1020,13 +1118,6 @@ CONTAINS
 
     !$acc end parallel
 
-    ! IF (ANY(fract_sum(:) > 1._wp + EPSILON(1._wp))) THEN
-    !   CALL message(TRIM(routine), 'On tile '//TRIM(tile%name)//': fract_sum > 1 - '// &
-    !     &                         real2string(MINVAL(fract_sum(:)))//' - '//real2string(MAXVAL(fract_sum(:))), &
-    !     &          all_print=.TRUE.)
-    !   CALL finish(TRIM(routine),  '    ... this should not happen')
-    ! END IF
-
     IF (var%l_aggregate_all) THEN
       IF (debug_on() .AND. iblk==1) CALL message('     ... ', TRIM(var%name)//' ('//TRIM(this%name)//'; all_tiles)')
     ELSE
@@ -1034,19 +1125,6 @@ CONTAINS
     END IF
 
   END SUBROUTINE Aggregate_weighted_by_fract_3d
-
-  ! SUBROUTINE Aggregate_weighted_by_fract_set_option_logical(this, name, value)
-
-  !   CLASS(t_jsb_aggregator_weighted_by_fract), INTENT(inout) :: this
-  !   CHARACTER(len=*),                          INTENT(in)    :: name
-  !   LOGICAL,                                   INTENT(in)    :: value
-
-  !   SELECT CASE (TRIM(name))
-  !   CASE ('option')
-  !     this%option = value
-  !   END SELECT
-
-  ! END SUBROUTINE Aggregate_weighted_by_fract_set_option_logical
 
   FUNCTION Get_first_child_tile(this) RESULT(return_ptr)
 
@@ -1112,7 +1190,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Returns the previous sibling of this tile, if it has a previous sibling 
+  !> Returns the previous sibling of this tile, if it has a previous sibling
   !
   FUNCTION Get_prev_sibling_tile(this) RESULT(return_ptr)
     ! -------------------------------------------------------------------------------------------------- !
@@ -1148,7 +1226,7 @@ CONTAINS
 
   ! ====================================================================================================== !
   !
-  !> Collect the names of the children of this tile 
+  !> Collect the names of the children of this tile
   !
   SUBROUTINE Get_children_names(this, children_names)
     ! -------------------------------------------------------------------------------------------------- !
@@ -1206,7 +1284,7 @@ CONTAINS
 
   ! Cache pointers to variables for aggregation (in order to get it to work on GPUs).
   ! Note: This is called during initialization from model_init for each tile that is not a leaf. If var
-  !       pointers get reallocated from time to time, the second part of this routine must be called from 
+  !       pointers get reallocated from time to time, the second part of this routine must be called from
   !       within the time loop. But be mindful of OpenMP threads ... do this only once on each processor!
   !
   SUBROUTINE Cache_GPU_pointers(this)
@@ -1233,6 +1311,7 @@ CONTAINS
       IF (this%process_action(iproc) == 2) THEN
         IF ( ASSOCIATED(this%mem(iproc)%p) ) THEN
           DO i=1,no_children
+            ! Collect the actual number of variables of all procs on all children
             IF ( ASSOCIATED(this%mem(iproc)%p%children(i)%p) ) &
               & sizes(i,iproc) = this%mem(iproc)%p%children(i)%p%no_of_vars
           END DO
@@ -1257,6 +1336,7 @@ CONTAINS
                   IF (ASSOCIATED(this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d)) THEN
                     IF ( .NOT. ASSOCIATED(this%ptrs2d_cache(i,j,iproc)%p, &
                                           this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d) ) THEN
+                      ! 2d cache pointer to proc iproc, child i, 2d variable j
                       this%ptrs2d_cache(i,j,iproc)%p => this%mem(iproc)%p%children(i)%p%vars(j)%p%ptr2d
                       __acc_attach(this%ptrs2d_cache(i,j,iproc)%p)
                     END IF

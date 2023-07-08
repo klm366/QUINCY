@@ -53,7 +53,7 @@ CONTAINS
     USE mo_load_restart,            ONLY: read_restart_header, read_restart_files
     USE mo_restart_nml_and_att,     ONLY: getAttributesForRestarting
     USE mo_key_value_store,         ONLY: t_key_value_store
-  
+
     USE mo_read_namelists_iface,    ONLY: read_infrastructure_namelists_for_jsbach
     USE mo_namelist,                ONLY: open_nml_output, close_nml_output
     USE mo_nml_annotate,            ONLY: log_nml_settings
@@ -89,7 +89,7 @@ CONTAINS
     USE mo_jsb4_forcing,            ONLY: init_forcing, finalize_external_forcing
 
     USE mo_build_decomposition,     ONLY: build_decomposition
-  
+
     ! I/O
     USE mo_restart,                 ONLY: t_RestartDescriptor, createRestartDescriptor, deleteRestartDescriptor, detachRestartProcs
     USE mo_name_list_output,        ONLY: name_list_io_main_proc, write_name_list_output, close_name_list_output, &
@@ -171,10 +171,10 @@ CONTAINS
     TYPE(t_sim_step_info) :: sim_step_info
     LOGICAL                                :: lret, lwrite_checkpoint
     LOGICAL                                :: l_isStartdate, l_isRestart, l_isExpStopdate, l_isCheckpoint, l_doWriteRestart
-    CHARACTER(LEN=MAX_DATETIME_STR_LEN)    :: dt_string, dstring                                                         
+    CHARACTER(LEN=MAX_DATETIME_STR_LEN)    :: dt_string, dstring
     CHARACTER(LEN=MAX_TIMEDELTA_STR_LEN)   :: td_string
     LOGICAL                                :: lprint_timestep, l_nml_output
-  
+
     INTEGER, ALLOCATABLE :: output_jfile(:) ! number of output files
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_model'
@@ -234,7 +234,7 @@ CONTAINS
     CALL compute_restart_settings()
     CALL compute_date_settings("jsbach", dt_restart, nsteps)
     CALL initEventManager(time_config%tc_exp_refdate)
-  
+
     !---------------------------------------------------------------------
     ! 2. Call configure_run to finish filling the run_config state.
     !    This needs to be done very early (but anyway after atm_crosscheck)
@@ -251,7 +251,7 @@ CONTAINS
     CALL set_mpi_work_communicators(p_test_run, l_test_openmp, &
          &                          num_io_procs, dedicatedRestartProcs, &
          &                          jsbach_process, num_prefetch_proc, num_test_pe,      &
-         &                          pio_type, num_dio_procs=0) 
+         &                          pio_type, num_dio_procs=0)
 #ifdef _OPENACC
     CALL update_nproma_on_device( my_process_is_work() )
 #endif
@@ -336,11 +336,11 @@ CONTAINS
     ! Initialize icon_comm_lib
     !-------------------------------------------------------------------
     CALL construct_icon_communication(p_patch, n_dom)
-    
+
     !--------------------------------------------
     ! Setup the information for the physical patches
     CALL setup_phys_patches
-    
+
     ! Constructing data for lon-lat interpolation
     ! CALL compute_lonlat_intp_coeffs(p_patch(1:), p_int_state(1:)) ! inout, inout
 
@@ -429,26 +429,26 @@ CONTAINS
     !------------------------------------------------------------------
     mtime_current => time_config%tc_current_date
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
-  
+
       CALL update_statistics ! R: notwendig siehe Rechnertext
-  
+
       IF (output_mode%l_nml) THEN
         CALL write_name_list_output(jstep=0)
       END IF
-  
+
     END IF ! not isRestart()
-  
+
     IF (ltimer) CALL timer_start(timer_total)
-  
+
     ! calculate elapsed simulation time in seconds
-    sim_time = getElapsedSimTimeInSeconds(mtime_current) 
-  
+    sim_time = getElapsedSimTimeInSeconds(mtime_current)
+
     ! allocate temporary variable for restarting purposes
     IF (output_mode%l_nml) THEN
       ALLOCATE(output_jfile(SIZE(output_file)), STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'ALLOCATE failed!')
     ENDIF
-   
+
     mtime_old     => newDatetime(mtime_current) ! in
 
     restartDescriptor => createRestartDescriptor("jsbach")
@@ -458,10 +458,10 @@ CONTAINS
       ! get start counter for time loop from restart file:
       CALL restartAttributes%get("jstep", jstep0)
     END IF
-  
+
     ! for debug purposes print var lists: for msg_level >= 13 short and for >= 20 long format
     IF  (msg_level >= 13) CALL vlr_print_vls(lshort=(msg_level < 20))
-    
+
     ! set events, group and the events
     CALL message('','')
     eventStartDate => time_config%tc_exp_startdate
@@ -517,7 +517,7 @@ CONTAINS
 
     ! set time loop properties
     model_time_step => time_config%tc_dt_model
-  
+
     CALL message('','')
     CALL datetimeToString(mtime_current, dstring)
     WRITE(message_text,'(a,a)') 'Start date of this run: ', dstring
@@ -526,9 +526,9 @@ CONTAINS
     WRITE(message_text,'(a,a)') 'Stop date of this run:  ', dstring
     CALL message('',message_text)
     CALL message('','')
-  
+
     jstep = jstep0+1
-  
+
     TIME_LOOP: DO
 
       ! optional memory loggin
@@ -552,8 +552,8 @@ CONTAINS
       ENDIF
       ! always print the first and the last time step
       lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
-  
-      IF (lprint_timestep) THEN  
+
+      IF (lprint_timestep) THEN
         WRITE(message_text,'(a,i8,a,i0,a,5(i2.2,a),i3.3)') &
               &             'Time step: ', jstep, ' model time ',                                &
               &             mtime_current%date%year,   '-', mtime_current%date%month,    '-',    &
@@ -562,7 +562,7 @@ CONTAINS
               &             mtime_current%time%ms
         CALL message('',message_text)
       ENDIF
-  
+
       ! set namelist output flag
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
 
@@ -574,7 +574,7 @@ CONTAINS
       IF (l_nml_output) THEN
         CALL write_name_list_output(jstep)
       ENDIF
-  
+
       ! re-initialize MAX/MIN fields with 'resetval'
       ! must be done AFTER output
       CALL reset_act%execute(slack=dtime, mtime_date=mtime_current)
@@ -590,16 +590,16 @@ CONTAINS
       ! if thwe model is not supposed to write output, do not write checkpoints
       IF (.NOT. output_mode%l_none ) THEN
         ! to clarify the decision tree we use shorter and more expressive names:
-  
+
         l_isStartdate    = (time_config%tc_startdate == mtime_current)
         l_isExpStopdate  = (time_config%tc_exp_stopdate == mtime_current)
         l_isRestart      = is_event_active(restartEvent, mtime_current, proc0_offloading)
         l_isCheckpoint   = is_event_active(checkpointEvent, mtime_current, proc0_offloading)
         l_doWriteRestart = time_config%tc_write_restart
-  
+
         IF ( &
               !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
-              &         (l_isRestart .OR. l_isCheckpoint)           & 
+              &         (l_isRestart .OR. l_isCheckpoint)           &
               &  .AND.                                                        &
               !  and the current date differs from the start date
               &        .NOT. l_isStartdate                                    &
@@ -610,9 +610,9 @@ CONTAINS
           lwrite_checkpoint = .TRUE.
         END IF
       END IF
-  
+
       IF (lwrite_checkpoint) THEN
-        
+
         ! For multifile restart (restart_write_mode = "joint procs multifile")
         ! the domain flag must be set to .TRUE. in order to activate the domain,
         ! even though we have one currently in the ocean. Without this the
@@ -620,38 +620,38 @@ CONTAINS
         p_patch(1)%ldom_active = .TRUE.
         !
         CALL restartDescriptor%updatePatch(p_patch(1), opt_ndom=1)
-  
+
         ! finally write restart file
         CALL restartDescriptor%writeRestart(mtime_current, jstep, opt_output_jfile = output_jfile)
       END IF  ! lwrite_checkpoint
-  
+
       IF (mtime_current >= time_config%tc_stopdate) THEN
         ! leave time loop
         EXIT TIME_LOOP
       END IF
-  
+
       jstep = jstep + 1
       ! step_in_forcing_file = step_in_forcing_file + 1
-      sim_time = getElapsedSimTimeInSeconds(mtime_current) 
-  
+      sim_time = getElapsedSimTimeInSeconds(mtime_current)
+
     END DO TIME_LOOP
     !---------------------------------------------------------------------------------------
     ! End of time loop
     !---------------------------------------------------------------------------------------
-  
+
     CALL deleteRestartDescriptor(restartDescriptor)
-  
+
     IF (ltimer) CALL timer_stop(timer_total)
-  
+
     IF (output_mode%l_nml) THEN
       DEALLOCATE(output_jfile, STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'DEALLOCATE failed!')
     ENDIF
-  
+
     ! TODO CALL deallocateDatetime(mtime_forcing)
     CALL deallocateDatetime(mtime_old)
     ! TODO CALL deallocateDatetime(mtime_old_jsb)
-  
+
     ! print performance timers:
     IF (ltimer) CALL print_timer
 
@@ -713,6 +713,7 @@ CONTAINS
     USE mo_jsb_physical_constants,    ONLY: molarMassDryAir, molarMassCO2
     USE mo_jsb_parallel,              ONLY: Get_omp_thread
     USE mo_jsb_subset,                ONLY: ON_CHUNK
+    USE mo_jsb_math_constants,        ONLY: eps8
 
     dsl4jsb_Use_processes A2L_, SEB_, TURB_, HYDRO_
     dsl4jsb_Use_memory(A2L_)
@@ -759,6 +760,14 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: rough_h_lake_tile
     dsl4jsb_Real2D_onDomain :: rough_m_lake_tile
 
+    ! quincy
+    dsl4jsb_Real2D_onDomain :: swpar_srf_down
+    dsl4jsb_Real2D_onDomain :: prev_one_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: prev_two_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: prev_three_cos_zenith_angle
+    dsl4jsb_Real2D_onDomain :: daytime_counter
+
+
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
 
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)
@@ -768,7 +777,7 @@ CONTAINS
     LOGICAL :: l_shift_one_timestep    = .TRUE.
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
-    INTEGER :: nc, nt, it
+    INTEGER :: nc, nt, it, ic
     INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':perform_jsbach_for_timestep'
@@ -971,9 +980,36 @@ CONTAINS
 
       ! Convert CO2 mass mixing ratio [kg/kg] to particle mixing ratio [mol/mol]
       dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) = dsl4jsb_var2D_onDomain(A2L_, CO2_air) * molarMassDryAir / molarMassCO2
+
+      ! Do QUINCY specific stuff
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_QUINCY)
+        ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv"
         dsl4jsb_var2D_onDomain(A2L_, CO2_mixing_ratio) = dsl4jsb_var2D_onDomain(A2L_, CO2_air_mol) * 1000000._wp
+
+        dsl4jsb_Get_var2d_onDomain(A2L_, daytime_counter)
+        dsl4jsb_Get_var2d_onDomain(A2L_, prev_one_cos_zenith_angle)
+        dsl4jsb_Get_var2d_onDomain(A2L_, prev_two_cos_zenith_angle)
+        dsl4jsb_Get_var2d_onDomain(A2L_, prev_three_cos_zenith_angle)
+
+        ! the timestep right after midnight is identified by the changes in cos_zenith_angle (turning from negative to positive)7
+        WHERE(prev_one_cos_zenith_angle(:,:) - prev_two_cos_zenith_angle(:,:) > eps8 .AND. &
+            & prev_two_cos_zenith_angle(:,:) - prev_three_cos_zenith_angle(:,:) <= eps8)
+          ! zero the counter for number of accumulated values per day
+          daytime_counter(:,:) = 0.0_wp
+        END WHERE
+
+        dsl4jsb_Get_var2d_onDomain(A2L_, swpar_srf_down)
+        WHERE(swpar_srf_down(:,:) > eps8)
+          ! count number of daytime values
+          daytime_counter(:,:) = daytime_counter(:,:) + 1.0_wp
+        END WHERE
+
+        ! shift for cos_zenith_angle tracing for midnight identification
+        prev_three_cos_zenith_angle = prev_two_cos_zenith_angle
+        prev_two_cos_zenith_angle = prev_one_cos_zenith_angle
+        prev_one_cos_zenith_angle = dsl4jsb_var2D_onDomain(A2L_, cos_zenith_angle)
+
       END SELECT
 
       DEALLOCATE(evapo_act2pot)
@@ -1001,7 +1037,8 @@ CONTAINS
       IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
       ! Update options
-      CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, dtime=dtime, steplen=dtime)
+      CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=datetime_old, &
+        &                    dtime=dtime, steplen=dtime, alpha=1._wp)
       CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
       CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
@@ -1015,11 +1052,11 @@ CONTAINS
 
       IF (debug_on('basic') .AND. iblk == 1) &
         & CALL message(TRIM(routine), 'Updating of '//TRIM(model%name)//' completed.')
-  
+
       IF (timer_on() .OR. l_timer_host) CALL timer_stop(timer_jsbach(model%id))
 
     END DO
-!$OMP END PARALLEL DO 
+!$OMP END PARALLEL DO
 
     CALL jsbach_finish_timestep(1, datetime_old, dtime)
 

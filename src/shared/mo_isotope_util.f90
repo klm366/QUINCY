@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,11 +16,11 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!! 
-!! @brief Contains functions and subroutines to calculate isotope discrimination 
+!!
+!! @brief Contains functions and subroutines to calculate isotope discrimination
 !!
 !! @author
-!!  Soenke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
 !! First version by Soenke Zaehle (2016-05-27)
@@ -28,20 +28,20 @@
 !!
 MODULE mo_isotope_util
 #ifndef __NO_JSBACH__
- 
+
   USE mo_kind,                 ONLY: wp
   USE mo_jsb_math_constants,   ONLY: eps8
 
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: calc_delta_C13, calc_mixing_ratio_C13C12,   &
-            calc_delta_C14, calc_mixing_ratio_C14C,     & 
+            calc_delta_C14, calc_mixing_ratio_C14C,     &
             calc_delta_N15, calc_mixing_ratio_N15N14,   &
             calc_fractionation
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_isotope_util'
 
-CONTAINS 
+CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> Calculates the isotopic enrichment of C13 in delta notation
@@ -75,7 +75,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> Calculates the isotopic mixing ratio of C13 for a given delta 
+  !> Calculates the isotopic mixing ratio of C13 for a given delta
   !!
   !! Input: delta C13 relative to PDB standard
   !!
@@ -84,12 +84,12 @@ CONTAINS
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C13C12(delta) RESULT(mixing_ratio)
 
     USE mo_jsb_physical_constants, ONLY: PDB_STANDARD_C13
-    
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
-    REAL(wp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C 
+    REAL(wp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C13C12'
@@ -111,8 +111,8 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_delta_C14(element, isotope, delta_C13) RESULT(delta)
 
-    USE mo_jsb_physical_constants,    ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
-    
+    USE mo_jsb_physical_constants,    ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -126,8 +126,8 @@ CONTAINS
 
 
     IF(element > eps8 .AND. (element * isotope) > 0._wp) THEN
-       Delta = (AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * & 
-               (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) - 1._wp) * 1000._wp  
+       Delta = (AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) * isotope / scale_correction_C14 / element * &
+               (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) - 1._wp) * 1000._wp
     ELSE
        Delta = 0.0_wp
     ENDIF
@@ -136,7 +136,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> Calculates the isotopic mixing ratio of C14 
+  !> Calculates the isotopic mixing ratio of C14
   !!
   !! Input: delta C13, and Delta C14
   !!
@@ -146,23 +146,23 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_C14C(delta_C13,Delta_C14) RESULT(mixing_ratio)
 
-    USE mo_jsb_physical_constants,        ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14 
-    
+    USE mo_jsb_physical_constants,        ONLY: AvogadroC_times_lambda_C14, molar_mass_C, AAB_STANDARD_C14, scale_correction_C14
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: delta_C13           !< delta C13 of the pool/flux
     REAL(wp), INTENT(in) :: Delta_C14           !< Delta C14 of the pool/flux
-    REAL(wp)             :: mixing_ratio        !< isotope molar mixing ratio 14C / C 
+    REAL(wp)             :: mixing_ratio        !< isotope molar mixing ratio 14C / C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_C14C'
 
 
-    mixing_ratio = ( Delta_C14 / 1000._wp + 1._wp ) / & 
-                   ( ( AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) ) * & 
-                     (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) ) * & 
-                   scale_correction_C14 
+    mixing_ratio = ( Delta_C14 / 1000._wp + 1._wp ) / &
+                   ( ( AvogadroC_times_lambda_C14 / ( AAB_STANDARD_C14 * molar_mass_C ) ) * &
+                     (1._wp - (2._wp* (25._wp + delta_C13)) /1000._wp) ) * &
+                   scale_correction_C14
 
   END FUNCTION calc_mixing_ratio_C14C
 
@@ -177,7 +177,7 @@ CONTAINS
   PURE ELEMENTAL FUNCTION calc_delta_N15(element, isotope) RESULT(delta)
 
     USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
-    
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
@@ -199,7 +199,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> Calculates the isotopic mixing ratio of N15 for a given delta 
+  !> Calculates the isotopic mixing ratio of N15 for a given delta
   !!
   !! Input: delta N15 relative to ATM standard
   !!
@@ -208,12 +208,12 @@ CONTAINS
   PURE ELEMENTAL FUNCTION calc_mixing_ratio_N15N14(delta) RESULT(mixing_ratio)
 
     USE mo_jsb_physical_constants, ONLY: ATM_STANDARD_N15
-    
+
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: delta               !< isotope ratio in delta notation (per mill)
-    REAL(wp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C 
+    REAL(wp)             :: mixing_ratio        !< isotopic mixing ratio 13C / 12C
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_mixing_ratio_N15N14'
@@ -227,7 +227,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   !> Calculates fractionation of a processes given the process' discrimination value
   !!
-  !! Input: molar masses of the sum of all isotopes of an element and the isotope of the source pool, 
+  !! Input: molar masses of the sum of all isotopes of an element and the isotope of the source pool,
   !!   as well as the process discrimination
   !!
   !! Output: fraction of the transfer flux that will be the isotope
@@ -250,34 +250,34 @@ CONTAINS
 
      !> 1.0 normal mixing model
      !!
-     IF(.NOT.PRESENT(source_isotope2)) THEN 
+     IF(.NOT.PRESENT(source_isotope2)) THEN
         ! molar mixing ratio of the source pool
         IF((source_element - source_isotope) > eps8) THEN
            Rsource = source_isotope / ( source_element - source_isotope )
-        ELSE 
+        ELSE
            Rsource = 0.0_wp
         ENDIF
 
         ! molar mixing ratio of the isotope with the main element in the product of the reaction
         ! from Discrimination = ( Rsource/Rsink - 1 ) * 1000
-        Rsink = Rsource / (discrimination/1000._wp + 1._wp) 
-   
+        Rsink = Rsource / (discrimination/1000._wp + 1._wp)
+
         ! Since here the processes fluxes F are represented as the sum of all isotopes of an element
         ! (main: E and its isotope: I)
         ! F = E + I, with I/E = Rsink follows that
         !   = I/Rsink + I = ( 1/ Rsink + 1 ) * I => I = F * 1 / ( 1 + 1 / Rsink )
         IF( Rsink > eps8) THEN
-          fractionation = 1._wp / (1._wp + 1._wp/Rsink) 
+          fractionation = 1._wp / (1._wp + 1._wp/Rsink)
         ELSE
           fractionation = 0.0_wp
         ENDIF
-     !> 2.0  .. 
+     !> 2.0  ..
      !!
-     ELSE 
+     ELSE
         ! source dC13
         hlp1 = calc_delta_C13(source_element,source_isotope2)
         ! source DC14
-        hlp2 = calc_delta_C14(source_element,source_isotope,hlp1) 
+        hlp2 = calc_delta_C14(source_element,source_isotope,hlp1)
         ! mixing ratio dependent on input C13 and C14 - discrimination
         fractionation = calc_mixing_ratio_C14C(hlp1,hlp2-discrimination)
      ENDIF

@@ -175,7 +175,7 @@ CONTAINS
       !$claw acc enter data create(hflx_form_ice)
     END IF
 
-    !$claw acc data create(hcap_wtr,zero,l_ice, & 
+    !$claw acc data create(hcap_wtr,zero,l_ice, &
     !$claw acc l_ice_formation,l_ice_melting,lhflx_tmp,hflx_tmp)
 
     !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_0
@@ -183,7 +183,7 @@ CONTAINS
     hcap_wtr        (:) = 0._wp
     l_ice_formation (:) = .FALSE.
     l_ice_melting   (:) = .FALSE.
-    hflx_tmp(:) = rad_net_lwtr(:) + latent_hflx_wtr(:) + sensible_hflx_wtr(:) 
+    hflx_tmp(:) = rad_net_lwtr(:) + latent_hflx_wtr(:) + sensible_hflx_wtr(:)
     !$claw end expand
     IF (config_l_ice_on_lakes) THEN
       !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_1
@@ -249,7 +249,7 @@ CONTAINS
         & min_ice_depth,                                  & !< in;    Mininum ice thickness
         & dtime                                           & !< in;    Time step
         & )
-    
+
       ! Calculate new water temperature for the case of complete ice melting
       !$claw sca forward update savepoint=ser_jsb_seb_lake_calc_lake_wtr_temp_2
       CALL calc_lake_wtr_temp( &
@@ -263,7 +263,7 @@ CONTAINS
         & dtime,                                          & !< in;    Time step
         & ml_depth,                                       & !< in;    Mixed-layer depth
         & min_ice_depth)                                    !< in;    Minimum ice thickness
-    
+
       ! Calculate new ice temperature and heat fluxes from melting of snow and ice
 
       !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_energy_lake_expand_3
@@ -418,7 +418,7 @@ CONTAINS
     REAL(wp) :: delta_hs
     REAL(wp) :: delta_t_lice
 
-    !$claw sca 
+    !$claw sca
 
     hcap_ice = rhoi * ci * hi_min + rhoh2o * cs * hs
 
@@ -580,7 +580,7 @@ CONTAINS
       & heat_tcoef (:)     !< Heat transfer coefficient (rho*C_h*|v|)
 
     INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: steplen
+    REAL(wp) :: steplen, alpha
 
     TYPE(t_jsb_model), POINTER :: model
 
@@ -591,6 +591,7 @@ CONTAINS
     ice     = options%ice
     nc      = options%nc
     steplen = options%steplen
+    alpha   = options%alpha
 
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
@@ -644,7 +645,7 @@ CONTAINS
     s_air(:) = t_acoef_wtr(:) * s_lwtr  (:) + t_bcoef_wtr(:)
 
     ! Transfer coefficient
-    heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen)
+    heat_tcoef(:) = heat_transfer_coef(drag_wtr(:), steplen, alpha)
 
     ! Compute sensible heat flux
     !
@@ -653,7 +654,7 @@ CONTAINS
     ! Compute latent heat flux
     !
     latent_hflx_wtr(:) = alv * evapo_wtr(:)
-    !$claw end expand 
+    !$claw end expand
 
     ! ================================================================================================================================
     ! Surface fluxes for lake ice
@@ -666,7 +667,7 @@ CONTAINS
       s_air(:) = t_acoef_ice(:) * s_lice  (:) + t_bcoef_ice(:)
 
       ! Transfer coefficient
-      heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen)
+      heat_tcoef(:) = heat_transfer_coef(drag_ice(:), steplen, alpha)
 
       ! Compute sensible heat flux
       !
@@ -681,12 +682,12 @@ CONTAINS
 
       sensible_hflx(:) = (1._wp - fract_lice(:)) * sensible_hflx_wtr(:) + fract_lice(:) * sensible_hflx_ice(:)
       latent_hflx  (:) = (1._wp - fract_lice(:)) * latent_hflx_wtr  (:) + fract_lice(:) * latent_hflx_ice  (:)
-      !$claw end expand 
+      !$claw end expand
     ELSE
       !$claw expand parallel update savepoint=ser_jsb_seb_lake_update_surface_fluxes_lake_expand_2
       sensible_hflx(:) = sensible_hflx_wtr(:)
       latent_hflx  (:) = latent_hflx_wtr  (:)
-      !$claw end expand 
+      !$claw end expand
     END IF
 
     !$cla$w acc end data

@@ -21,7 +21,6 @@ MODULE mo_pheno_parameters
   IMPLICIT NONE
   PUBLIC
 
-
   ! ======================================================================================================= !
   !> 1.0 general PHENO_ parameters
   !>
@@ -88,7 +87,7 @@ MODULE mo_pheno_parameters
     REAL(wp) :: &
       & alternation_temp = def_parameters,    & ! [Celsius] Critical temperature of the alternating model, above
                                                 ! which temperature contributes to the heat sum, and below which
-                                                ! days are considered as chilling days (see subroutine 
+                                                ! days are considered as chilling days (see subroutine
                                                 ! "update_growth_phase")
       & heat_sum_min = def_parameters,        & ! [degree days] Minimum value of critical heat sum [degree days]
                                                 ! (see "update_growth_phase")
@@ -125,7 +124,7 @@ MODULE mo_pheno_parameters
                                                 ! have. This parameter is introduced for technical reasons to assure
                                                 ! that the next growth pahse is not missed.
       & minLength_gvPhase = def_parameters      ! [days] 60 = growthPhaseLength  + 30 ! Number of days that growth plus
-                                                ! vegetative phase minimally should last. This parameter is introduced 
+                                                ! vegetative phase minimally should last. This parameter is introduced
                                                 ! to prevent leaf shedding when early after the growth phase there is a
                                                 ! cold snap.
   END TYPE t_summergreen_param
@@ -206,15 +205,15 @@ MODULE mo_pheno_parameters
   ! create object
   TYPE(t_PhenologyParameters), SAVE :: pheno_param_jsbach
 
-  !$acc declare create(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG, & 
-  !$acc pheno_param_jsbach%SG, pheno_param_jsbach%RG, pheno_param_jsbach%GRS, pheno_param_jsbach%CRP,   & 
+  !$acc declare create(pheno_param_jsbach%all, pheno_param_jsbach%EG_SG, pheno_param_jsbach%EG, &
+  !$acc pheno_param_jsbach%SG, pheno_param_jsbach%RG, pheno_param_jsbach%GRS, pheno_param_jsbach%CRP,   &
   !$acc pheno_param_jsbach%FR, pheno_param_jsbach)
 
   ! ======================================================================================================= !
   !> 3.0 QUINCY specific parameters
   !>
-  REAL(wp), SAVE :: & 
-    & gdd_t_air_threshold             !< temperature threshold for the accumulation of growing degree days [deg K]
+  REAL(wp), SAVE :: &
+    & gdd_t_air_threshold = def_parameters      !< temperature threshold for the accumulation of growing degree days [deg K]
 
   CHARACTER(len=*), PARAMETER, PRIVATE :: modname = 'mo_pheno_parameters'
 
@@ -228,56 +227,56 @@ CONTAINS
   SUBROUTINE init_pheno_parameters_jsbach
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_pheno_parameters_jsbach'
 
-    pheno_param_jsbach%all%LAI_negligible     = 1.0E-05_wp          !< citation or source ....  [-]   
+    pheno_param_jsbach%all%LAI_negligible     = 1.0E-05_wp          !< citation or source ....  [-]
     pheno_param_jsbach%all%laiSeed            = 0.40_wp             !< citation or source ....  [-]
     pheno_param_jsbach%all%wilt_point         = 0.35_wp             !< citation or source ....  [-]
 
     pheno_param_jsbach%EG_SG%tau_pseudo_soil  = 10.0_wp             !< citation or source ....  [days]
-    pheno_param_jsbach%EG_SG%max_chill_days   = 365.0_wp            !< citation or source ....  [days]  
-    
+    pheno_param_jsbach%EG_SG%max_chill_days   = 365.0_wp            !< citation or source ....  [days]
+
     pheno_param_jsbach%EG%alternation_temp    = 4.0_wp              !< citation or source ....  [Celsius]
     pheno_param_jsbach%EG%heat_sum_min        = 10.0_wp             !< citation or source ....  [degree days]
-    pheno_param_jsbach%EG%heat_sum_range      = 1.5E+02_wp          !< citation or source ....  [degree days]    
-    pheno_param_jsbach%EG%chill_decay_const   = 1.5E+01_wp          !< citation or source ....  [days]    
+    pheno_param_jsbach%EG%heat_sum_range      = 1.5E+02_wp          !< citation or source ....  [degree days]
+    pheno_param_jsbach%EG%chill_decay_const   = 1.5E+01_wp          !< citation or source ....  [days]
     pheno_param_jsbach%EG%growthPhaseLength   = 60.0_wp             !< citation or source ....  [days]
-    pheno_param_jsbach%EG%shedRate_vegetative = 8.0E-04_wp          !< citation or source ....  [1/days]    
-    pheno_param_jsbach%EG%growthRate          = 1.5E-02_wp          !< citation or source ....  [1/days]    
-    
+    pheno_param_jsbach%EG%shedRate_vegetative = 8.0E-04_wp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%EG%growthRate          = 1.5E-02_wp          !< citation or source ....  [1/days]
+
     pheno_param_jsbach%SG%alternation_temp    = 4.0_wp              !< citation or source ....  [Celsius]
     pheno_param_jsbach%SG%heat_sum_min        = 30.0_wp             !< citation or source ....  [Degree days]
-    pheno_param_jsbach%SG%heat_sum_range      = 2.0E+02_wp          !< citation or source ....  [Degree days]    
-    pheno_param_jsbach%SG%chill_decay_const   = 2.5E+01_wp          !< citation or source ....  [days]    
+    pheno_param_jsbach%SG%heat_sum_range      = 2.0E+02_wp          !< citation or source ....  [Degree days]
+    pheno_param_jsbach%SG%chill_decay_const   = 2.5E+01_wp          !< citation or source ....  [days]
     pheno_param_jsbach%SG%growthPhaseLength   = 60._wp              !< citation or source ....  [days]
     pheno_param_jsbach%SG%autumn_event_temp   = 10._wp              !< citation or source ....  [Celcius]
-    pheno_param_jsbach%SG%shedRate_veget      = 4.0E-03_wp          !< citation or source ....  [1/days]    
-    pheno_param_jsbach%SG%shedRate_rest       = 1.0E-01_wp          !< citation or source ....  [1/days]    
-    pheno_param_jsbach%SG%growthRate          = 8.7195E-02_wp       !< citation or source ....  [1/days]      
+    pheno_param_jsbach%SG%shedRate_veget      = 4.0E-03_wp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%SG%shedRate_rest       = 1.0E-01_wp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%SG%growthRate          = 8.7195E-02_wp       !< citation or source ....  [1/days]
     pheno_param_jsbach%SG%maxLength_gvPhase   = 270._wp             !< citation or source ....  [days]
     pheno_param_jsbach%SG%minLength_gvPhase   = 90._wp              !< citation or source ....  [days]
-     
-    pheno_param_jsbach%RG%shedRate_drySeason  = 1.20E-01_wp         !< citation or source ....  [1/days]    
-    pheno_param_jsbach%RG%shedRate_aging      = 5.0E-03_wp          !< citation or source ....  [1/days]    
-    pheno_param_jsbach%RG%growthRate          = 8.0E-02_wp          !< citation or source ....  [1/days]    
-    pheno_param_jsbach%RG%bucketFill_critical = 6.50E-01_wp         !< citation or source ....  [fraction]    
-    pheno_param_jsbach%RG%bucketFill_leafout  = 4.00E-01_wp         !< citation or source ....  [fraction]    
-     
+
+    pheno_param_jsbach%RG%shedRate_drySeason  = 1.20E-01_wp         !< citation or source ....  [1/days]
+    pheno_param_jsbach%RG%shedRate_aging      = 5.0E-03_wp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%RG%growthRate          = 8.0E-02_wp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%RG%bucketFill_critical = 6.50E-01_wp         !< citation or source ....  [fraction]
+    pheno_param_jsbach%RG%bucketFill_leafout  = 4.00E-01_wp         !< citation or source ....  [fraction]
+
     pheno_param_jsbach%GRS%crit_temp          = 4.0_wp              !< citation or source ....  [Celsius]
-    pheno_param_jsbach%GRS%shedRate_growth    = 1.50E-02_wp         !< citation or source ....  [1/days]    
-    pheno_param_jsbach%GRS%growthRate         = 9.E-02_wp           !< citation or source ....  [1/days]  
-    pheno_param_jsbach%GRS%shedRate_drySeason = 1.5E-02_wp          !< citation or source ....  [1/days]    
-     
-    pheno_param_jsbach%CRP%crit_temp          = 10.0_wp             !< citation or source ....  [Celsius]  
+    pheno_param_jsbach%GRS%shedRate_growth    = 1.50E-02_wp         !< citation or source ....  [1/days]
+    pheno_param_jsbach%GRS%growthRate         = 9.E-02_wp           !< citation or source ....  [1/days]
+    pheno_param_jsbach%GRS%shedRate_drySeason = 1.5E-02_wp          !< citation or source ....  [1/days]
+
+    pheno_param_jsbach%CRP%crit_temp          = 10.0_wp             !< citation or source ....  [Celsius]
     pheno_param_jsbach%CRP%gdd_temp           = 6.0_wp              !< citation or source ....  [Celsius]
-    pheno_param_jsbach%CRP%sproud             = 0.37_wp             !< citation or source ....  [-]  
-    pheno_param_jsbach%CRP%heat_sum_harvest   = 1300.0_wp           !< citation or source ....  [Degree days]    
-    pheno_param_jsbach%CRP%shedRate_growth    = 0.03333_wp          !< citation or source ....  [1/days]    
-    pheno_param_jsbach%CRP%shedRate_rest      = 0.1428_wp           !< citation or source ....  [1/days]    
+    pheno_param_jsbach%CRP%sproud             = 0.37_wp             !< citation or source ....  [-]
+    pheno_param_jsbach%CRP%heat_sum_harvest   = 1300.0_wp           !< citation or source ....  [Degree days]
+    pheno_param_jsbach%CRP%shedRate_growth    = 0.03333_wp          !< citation or source ....  [1/days]
+    pheno_param_jsbach%CRP%shedRate_rest      = 0.1428_wp           !< citation or source ....  [1/days]
     pheno_param_jsbach%CRP%leafAlloc_fract    = 0.8_wp              !< citation or source ....  [-]
 
-    pheno_param_jsbach%FR%m2toha              = 10000._wp           !< citation or source ....  [ ? ]    
+    pheno_param_jsbach%FR%m2toha              = 10000._wp           !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%kgCtokg             = 2._wp               !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%min_c               = 1._wp               !< citation or source ....  [ ? ]
-    pheno_param_jsbach%FR%min_zero            = 1.E-8_wp            !< citation or source ....  [ ? ]  
+    pheno_param_jsbach%FR%min_zero            = 1.E-8_wp            !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%log_maxind          = 9.5_wp              !< citation or source ....  [ ? ]
     pheno_param_jsbach%FR%min_maxLAI          = 0.5_wp              !< citation or source ....  [ ? ]
   END SUBROUTINE init_pheno_parameters_jsbach
@@ -286,7 +285,7 @@ CONTAINS
   !> initialize QUINCY specific parameters for the process: phenology
   !>
   SUBROUTINE init_pheno_parameters_quincy
-    USE mo_jsb_physical_constants,    ONLY: Tzero  
+    USE mo_jsb_physical_constants,    ONLY: Tzero
     ! ----------------------------------------------------------------------------------------------------- !
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_pheno_parameters_quincy'
 

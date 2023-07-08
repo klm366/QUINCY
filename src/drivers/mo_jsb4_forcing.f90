@@ -43,8 +43,8 @@ MODULE mo_jsb4_forcing
   USE mo_exception,              ONLY: message, message_text, finish
   USE mo_util_string,            ONLY: tolower, int2string, real2string
   USE mo_physical_constants,     ONLY: p0sl_bg, vtmpc2, rdv
-  USE mo_jsb_physical_constants, ONLY: cvdifts, grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
-    & tmelt, rd, amco2, amd, cpd, vtmpc1, cpvd1, ckap, zkappa
+  USE mo_jsb_physical_constants, ONLY: grav, & ! at the end grav comes from mo_physical_constants, however like this it is consistent with JSBACH
+    & tmelt, rd, amco2, amd, cpd, rvd1, cpvd1, ckap, zkappa
   USE mo_jsb_convect_tables_iface, ONLY: tlucua, jptlucu1, jptlucu2
   USE mo_orbit_solar,            ONLY: inquire_declination
 
@@ -577,7 +577,7 @@ CONTAINS
     INTEGER  :: cyclic_nyears           ! Number of years to use for cyclic forcing; default: 0
     INTEGER  :: cyclic_start_year       ! Start year of cyclic forcing; default: 9999
     INTEGER  :: forcing_synchron_factor ! Factor defines how many time steps the JS4 driver performs for
-                                        ! each atmospheric forcing time step that is read in      
+                                        ! each atmospheric forcing time step that is read in
     INTEGER  :: forcing_steps_per_day   ! The number of time steps included by the used forcing file(s) per day, e.g. 72
     LOGICAL                :: forcing_set_ocean_to_constants   !! Some external forcing is only defined for land cells (= true)
     !! false: forcing is expected for all variables and cells (e.g. echam)
@@ -1417,7 +1417,7 @@ CONTAINS
     ! in jsb3: rd = GasConstantDryAir; cpd = SpecificHeatDryAirConstPressure; grav = Gravity
     zcons9 = 3._wp * cb
     zcons11 = 3._wp * cb * cc
-    zcons12 = cvdifts * time_step_len * grav / rd
+    zcons12 = time_step_len * grav / rd
 
     ! Initializations needed for grid cells beyond icz
     drag_srf(:,:) = 0._wp
@@ -1446,15 +1446,16 @@ CONTAINS
       ! tv = t * (1 + 0.61 * q )    ! virtual temperature
       ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
       ! tvd = tair * (100000/p_pa)^zkappa * (1 + vtmpc1 * qair) ! virtual potential temperature
+      ! rvd1=>vtmpc1
       zsigma    = 0.99615_wp        ! corresponds to lowest level of 47 layer echam
       air_pressure(1:ic) = zsigma * pressure(1:ic, iblk)
-      ztvd(1:ic) = ( temp_air(1:ic, iblk) * ( 100000._wp/air_pressure(1:ic))**zkappa ) * ( 1._wp + vtmpc1 * qair(1:ic, iblk))
-      ztvir(1:ic) = temp_air(1:ic, iblk) * ( 1._wp + vtmpc1 * qair(1:ic, iblk) )
+      ztvd(1:ic) = ( temp_air(1:ic, iblk) * ( 100000._wp/air_pressure(1:ic))**zkappa ) * ( 1._wp + rvd1 * qair(1:ic, iblk))
+      ztvir(1:ic) = temp_air(1:ic, iblk) * ( 1._wp + rvd1 * qair(1:ic, iblk) )
 
       ! virtual potential surface temperature
       CALL sat_specific_humidity(ic, t_srf_proc(1:ic,iblk), pressure(1:ic,iblk), qsat_surf(1:ic))
       ztvs(1:ic) = t_srf_proc(1:ic,iblk) * ( 100000._wp/pressure(1:ic,iblk))**zkappa * &
-        & ( 1._wp + vtmpc1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) &
+        & ( 1._wp + rvd1 * ( fact_qsat_srf_proc(1:ic,iblk) * qsat_surf(1:ic) + ( 1._wp - fact_q_air_proc(1:ic,iblk) ) &
         & * qair(1:ic,iblk)))
 
       ! geopotential of the surface layer (see echam's auxhybc.f90 & geopot.f90)
@@ -1481,7 +1482,7 @@ CONTAINS
         & + zgh(1:ic) / (grav * rough_h_srf_proc(1:ic,iblk)))))
 
       ! ignoring cloud water correction (see mo_surface_land.f90)
-      zcons(1:ic) = zcons12 * pressure(1:ic,iblk) / ( temp_air(1:ic,iblk) * (1._wp + vtmpc1 * qair(1:ic,iblk)))
+      zcons(1:ic) = zcons12 * pressure(1:ic,iblk) / ( temp_air(1:ic,iblk) * (1._wp + rvd1 * qair(1:ic,iblk)))
       zcfnchl(1:ic)  = zcons(1:ic) * SQRT(zdu2(1:ic)) * zchnl(1:ic)
 
       ! Stable / Unstable case
@@ -1705,7 +1706,7 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':sat_specific_humidity'
 
     INTEGER :: i
-!    REAL(wp) :: vtmpc1           ! in jsb3 this is set in this function, but it is also already calculated in mo_physical_constants!
+!    REAL(wp) :: vtmpc1           ! in jsb3 this is set in this function, but it is also already calculated in mo_physical_constants! rvd1=>vtmpc1
     INTEGER  :: it(1:temp_dim)
     REAL(wp) :: tluc(1:temp_dim)
 
@@ -1724,7 +1725,7 @@ CONTAINS
     tluc = tlucua(it)
 
     WHERE (it >= jptlucu1 .AND. it <= jptlucu2)
-      qsat = tluc / (pressure - vtmpc1*tluc)
+      qsat = tluc / (pressure - rvd1*tluc) ! rvd1 => vtmpc1
     ELSEWHERE
       qsat = HUGE(1._wp)
     END WHERE

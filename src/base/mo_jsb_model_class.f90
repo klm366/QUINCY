@@ -190,8 +190,8 @@ CONTAINS
     IF (ASSOCIATED(this%processes(iproc)%p)) THEN
       IF (ASSOCIATED(this%processes(iproc)%p%config)) THEN
         Is_process_enabled = this%processes(iproc)%p%config%active
-      ELSE 
-        ! If the process is associated but the configuration is not associated 
+      ELSE
+        ! If the process is associated but the configuration is not associated
         ! we assume here that the process is active on the model -- currently this is the case for l2a and a2l
         Is_process_enabled = .TRUE.
       ENDIF
@@ -223,13 +223,13 @@ CONTAINS
   END SUBROUTINE Configure_model_processes
 
   ! ======================================================================================================= !
-  !> 
+  !>
   !> Checks if there is an active process that changes fractions on this tile
   !>
   FUNCTION Any_process_changes_fractions(this) RESULT(l_fractions_change)
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_model), INTENT(inout) :: this                 !< tile to check
-    LOGICAL                           :: l_fractions_change   
+    LOGICAL                           :: l_fractions_change
       !< true if there is any active land cover change (lcc) process
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: iproc
@@ -248,36 +248,6 @@ CONTAINS
 
   END FUNCTION Any_process_changes_fractions
 
-!!$  FUNCTION Get_process_configs(this) RESULT(return_ptr)
-!!$
-!!$    CLASS(t_jsb_model), INTENT(in) :: this
-!!$    CLASS(t_jsb_config_p), POINTER :: return_ptr(:)
-!!$
-!!$    INTEGER :: iproc
-!!$
-!!$    ALLOCATE(return_ptr(SIZE(this%processes)))
-!!$    DO iproc=1,SIZE(this%processes)
-!!$      IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-!!$        return_ptr(iproc)%p => this%processes(iproc)%p%config
-!!$      ELSE
-!!$        return_ptr(iproc)%p => NULL()
-!!$      END IF
-!!$    END DO
-!!$
-!!$  END FUNCTION Get_process_configs
-  !
-  ! State machine engine
-  !
-!!$  ! Just a stub to the real engine hsm%Process_message
-!!$  SUBROUTINE Process_task(this, task)
-!!$
-!!$    CLASS(t_jsb_model),    INTENT(inout) :: this
-!!$    CLASS(t_jsb_task_msg), INTENT(in)    :: msg
-!!$
-!!$    CALL this%Process_message(msg)
-!!$
-!!$  END SUBROUTINE Process_task
-!!$
 
   SUBROUTINE Run_tasks(this, debug)
 
@@ -301,6 +271,7 @@ CONTAINS
 
     msg => t_Message('', this%Get_action('INTEGRATE'))
 
+    ! loop over all tasks in the task queue
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
 
@@ -316,6 +287,7 @@ CONTAINS
         END IF
       END ASSOCIATE
 
+      ! go to the next task
       current_queue_element => current_queue_element%next
 
     END DO
@@ -464,7 +436,7 @@ CONTAINS
 
   END FUNCTION Get_tile
 
-  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, iblk, ics, ice, nc)
+  SUBROUTINE Set_options(this, current_datetime, dtime, steplen, alpha, iblk, ics, ice, nc)
 
     USE mo_jsb_utils_iface, ONLY: assign_if_present
     USE mo_jsb_time,        ONLY: t_datetime
@@ -473,6 +445,7 @@ CONTAINS
     TYPE(t_datetime), OPTIONAL, POINTER, INTENT(in)    :: current_datetime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: dtime
     REAL(wp),         OPTIONAL,          INTENT(in)    :: steplen
+    REAL(wp),         OPTIONAL,          INTENT(in)    :: alpha
     INTEGER,          OPTIONAL,          INTENT(in)    :: iblk
     INTEGER,          OPTIONAL,          INTENT(in)    :: ics
     INTEGER,          OPTIONAL,          INTENT(in)    :: ice
@@ -484,6 +457,7 @@ CONTAINS
 
     CALL assign_if_present(this%options(no_omp_thread)%dtime,   dtime)
     CALL assign_if_present(this%options(no_omp_thread)%steplen, steplen)
+    CALL assign_if_present(this%options(no_omp_thread)%alpha,   alpha)
     CALL assign_if_present(this%options(no_omp_thread)%iblk,    iblk)
     CALL assign_if_present(this%options(no_omp_thread)%ics,     ics)
     CALL assign_if_present(this%options(no_omp_thread)%ice,     ice)
@@ -528,8 +502,8 @@ CONTAINS
       jsbach_subsets(this%id)%sub(no_omp_thread)%ice  =  0
       jsbach_subsets(this%id)%sub(no_omp_thread)%nb   =  grid%nblks
       jsbach_subsets(this%id)%sub(no_omp_thread)%nc   =  grid%nproma
-    END SELECT 
-    jsbach_subsets(this%id)%sub(no_omp_thread)%type = type   
+    END SELECT
+    jsbach_subsets(this%id)%sub(no_omp_thread)%type = type
 
   END SUBROUTINE Set_subset
 
@@ -581,8 +555,12 @@ CONTAINS
           END ASSOCIATE
         END DO
 
+        ! mem%pools
         IF (ASSOCIATED(tile%mem(iproc)%p%pools)) &
           & CALL tile%mem(iproc)%p%pools%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
+        ! mem%bgc_material
+        IF (ASSOCIATED(tile%mem(iproc)%p%bgc_material)) &
+          & CALL tile%mem(iproc)%p%bgc_material%Associate_var_pointers(ic_start, ic_end, iblk_start, iblk_end)
 
       END DO
 

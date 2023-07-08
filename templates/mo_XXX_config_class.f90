@@ -30,14 +30,14 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
 #ifndef __NO_JSBACH__
   ! -------------------------------------------------------------------------------------------------------
   ! Used variables of module
-  
+
   USE mo_exception,         ONLY: message_text, message, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_config_class,  ONLY: t_jsb_config
 
   ! -------------------------------------------------------------------------------------------------------
-  ! Module variables 
+  ! Module variables
   IMPLICIT NONE
   PRIVATE
   PUBLIC :: t_<PROCESS_NAME_LOWER_CASE>_config
@@ -54,7 +54,7 @@ MODULE mo_<PROCESS_NAME_LOWER_CASE>_config_class
 CONTAINS
   ! -------------------------------------------------------------------------------------------------------
   !> Initialize <PROCESS_NAME_LOWER_CASE> process
-  !!  
+  !!
   SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
@@ -94,7 +94,7 @@ CONTAINS
     config%ic_filename         = ic_filename
     config%bc_filename         = bc_filename
     !X e.g: config%use_alb_veg_simple        = use_alb_veg_simple
-    
+
   END SUBROUTINE Init_<PROCESS_NAME_LOWER_CASE>_config
 
 #endif

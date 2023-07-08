@@ -1,6 +1,6 @@
 !> Summary: interface to the alcc process (anthropogenic land cover change)
 !>
-!>### Contains the interfaces to the alcc process, currently annually moving land and to be conserved matter 
+!>### Contains the interfaces to the alcc process, currently annually moving land and to be conserved matter
 !>
 !> Copyright (c) 2021 Julia Nabel
 !>
@@ -21,7 +21,7 @@ MODULE mo_alcc_interface
   USE mo_exception,       ONLY: message, finish, message_text
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract
 !  USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -42,19 +42,19 @@ MODULE mo_alcc_interface
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_alcc_interface'
   CHARACTER(len=*), PARAMETER :: procname = 'alcc'
-  
+
   !> Type definition for alcc pre task
   TYPE, EXTENDS(t_jsb_process_task) :: tsk_alcc
   CONTAINS
     PROCEDURE, NOPASS :: Integrate => update_alcc     !< Advances task computation for one timestep
     PROCEDURE, NOPASS :: Aggregate => aggregate_alcc  !< Aggregates computed task variables
   END TYPE tsk_alcc
-  
+
   !> Constructor interface for alcc pre task
   INTERFACE tsk_alcc
     PROCEDURE Create_task_alcc                        !< Constructor function for task
   END INTERFACE tsk_alcc
-  
+
 CONTAINS
 
   ! ====================================================================================================== !
@@ -71,7 +71,7 @@ CONTAINS
     CALL return_ptr%Construct(name=procname, process_id=ALCC_, owner_model_id=model_id)
 
   END FUNCTION Create_task_alcc
-    
+
   ! ====================================================================================================== !
   !
   !> Register tasks for alcc process
@@ -83,14 +83,14 @@ CONTAINS
     INTEGER,               INTENT(in)   :: model_id    !< Model id
     ! -------------------------------------------------------------------------------------------------- !
     CALL this%Register_task(tsk_alcc(model_id))
-    
+
   END SUBROUTINE Register_alcc_tasks
 
   ! ====================================================================================================== !
   !
   !> Implementation of "update" for task "alcc"
   !>
-  !> Task "alcc" currently annually moves land and to be conserved matter 
+  !> Task "alcc" currently annually moves land and to be conserved matter
   !
   SUBROUTINE update_alcc(tile, options)
 
@@ -154,7 +154,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     !>
-    !> Assert, that this tile is the VEG tile 
+    !> Assert, that this tile is the VEG tile
     !>
     ! - this lcc process changes the PFT tiles but it runs and is controlled on their parent tile
     IF (.NOT. tile%name .EQ. 'veg') THEN
@@ -190,7 +190,7 @@ CONTAINS
       i_tile = i_tile + 1
       i_cf_tile = i_cf_tile + 1
 
-      ! if running with forest age classes (acs) the forest pfts themselves (i.e. the nodes above the acs) 
+      ! if running with forest age classes (acs) the forest pfts themselves (i.e. the nodes above the acs)
       ! are not part of the lcc tiles
       IF((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
           ! Assertion: age-classes are subsequent parts of the lcc structure
@@ -201,7 +201,7 @@ CONTAINS
             IF (.NOT. TRIM(age_class_tile%name) .EQ. TRIM(lcc_relocations%tile_names(i_ac_index))) THEN
               CALL finish(TRIM(routine), 'Violation of assertion: age class (' //TRIM(age_class_tile%name) &
                 & //') is not listed in the expected place in the alcc lcc-structure. Found ' &
-                & // TRIM(lcc_relocations%tile_names(i_ac_index)) // ' instead. Please check!') 
+                & // TRIM(lcc_relocations%tile_names(i_ac_index)) // ' instead. Please check!')
             ENDIF
             age_class_tile => age_class_tile%Get_next_sibling_tile()
             i_ac_index = i_ac_index + 1
@@ -236,7 +236,7 @@ CONTAINS
         ! are part of the lcc structure
         IF (one_of(current_tile%name, lcc_relocations%tile_names) <= 0) THEN
           CALL finish(TRIM(routine), 'Violation of assertion: child tile of veg tile(' //TRIM(current_tile%name) &
-          & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.') 
+          & //') is not part of the alcc lcc-structure. Current implementation assumes that all pfts are part of it.')
         ENDIF
 
         cf_diff(:) = cf_current_year(:, i_cf_tile) - initial_area(:, i_tile)
@@ -258,9 +258,9 @@ CONTAINS
     END DO
 
     !>
-    !>     Assert: sum of gained area should equal sum of lost area 
+    !>     Assert: sum of gained area should equal sum of lost area
     !>
-    cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2) 
+    cf_diff = SUM(gained_area,DIM=2) - SUM(lost_area,DIM=2)
     IF (ANY( cf_diff > min_tolerated_cf_mismatch)) THEN
       WRITE (message_text,*) 'Violation of assertion: gained area does not equal lost area! Please check input data. ' &
         & // 'Max difference of: ', MAXVAL(cf_diff)
@@ -268,7 +268,7 @@ CONTAINS
     ENDIF
 
     !>
-    !> 3. collect to be transferred matter 
+    !> 3. collect to be transferred matter
     !>
     CALL start_lcc_reloc(lcc_relocations, options, lost_area, initial_area)
 
@@ -279,7 +279,7 @@ CONTAINS
     is_age_class = .FALSE.
     i_tile = 0
     DO WHILE (ASSOCIATED(current_tile))
-      
+
       ! In case of forest age classes we have to decent one level further
       IF((TRIM(model%config%usecase) == 'jsbach_forest_age_classes') .AND. (current_tile%Has_children())) THEN
         is_age_class = .TRUE.
@@ -306,16 +306,16 @@ CONTAINS
     ENDDO
 
     !>
-    !> 5. make the passive matter transfer 
+    !> 5. make the passive matter transfer
     !>
     CALL end_lcc_reloc(lcc_relocations, options, gained_area)
 
     DEALLOCATE(lost_area, gained_area, initial_area)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
-    
+
   END SUBROUTINE update_alcc
-  
+
   ! ====================================================================================================== !
   !
   !> Implementation of "aggregate" for task "alcc"
@@ -332,11 +332,11 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
 
     iblk = options%iblk
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
-    
+
     !> Currently nothing to do
-    
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_alcc
