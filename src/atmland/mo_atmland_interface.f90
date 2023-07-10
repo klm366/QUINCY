@@ -496,7 +496,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), POINTER :: land_tile
     dsl4jsb_Def_memory_tile(TURB_, land_tile)
 
-    INTEGER ::  iblk, ics, ice, nc, i, j, it, nt
+    INTEGER ::  iblk, ics, ice, nc, i, j, it, nt, ns
     REAL(wp) :: fact_lake(options%nc), fact_land(options%nc)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_land2atm'
@@ -539,8 +539,8 @@ CONTAINS
       & fract_lice_ptr, &
       & albedo_lwtr_ptr, &
       & albedo_lice_ptr, &
-      & sensible_hflx_ice_ptr, &
-      & fract_ptr
+      & sensible_hflx_ice_ptr   !, &
+!      & fract_ptr
 
     ! avoid compiler warnings about dummy arguments not being used
     IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
@@ -577,15 +577,19 @@ CONTAINS
       ! fractions are considered separately.
       ! Note that, if lakes are considered, the lake tile must be a direct child of the root tile.
 
-      DO j=1,SIZE(tile%lcts)
+      ns = SIZE(tile%lcts)
+      !$ACC SERIAL
+      DO j=1,ns
         IF (tile%lcts(j)%id == LAKE_TYPE) EXIT         ! We get index j of the lake tile
       END DO
+      !$ACC END SERIAL      
+!      fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)    ! Lake fraction
 
-      fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)    ! Lake fraction
-      !$ACC DATA CREATE(fract_ptr) PRESENT(tile%lcts)
-      !$ACC PARALLEL LOOP
+      !$ACC PARALLEL DEFAULT(PRESENT) ! maybe add ASYNC(1)
+      !$ACC LOOP GANG VECTOR
       DO i=1,nc
-        fact_lake(i) = fract_ptr(i)                    ! Lake fraction
+!        fact_lake(i) = fract_ptr(i)                    ! Lake fraction
+        fact_lake(i) = tile%lcts(j)%fract(i,iblk)
         fact_land(i) = 1._wp - fact_lake(i)            ! Land fraction
         IF (fact_lake(i) > 0._wp) THEN
           fact_lake(i) = 1._wp / fact_lake(i)          ! Lake factor: 1/lake_fraction
@@ -598,19 +602,17 @@ CONTAINS
           fact_land(i) = 1._wp
         END IF
       END DO
-      !$ACC END PARALLEL LOOP
-      !$ACC END DATA
+      !$ACC END PARALLEL
 
     ELSE    ! without lakes
  
-      !$ACC DATA PRESENT(fact_land, fact_lake)
-      !$ACC PARALLEL LOOP
+      !$ACC PARALLEL DEFAULT(PRESENT) ! maybe add ASYNC(1)
+      !$ACC LOOP GANG VECTOR
       DO i=1,nc
         fact_land(i) = 1._wp
         fact_lake(i) = 0._wp
       END DO
-      !$ACC END PARALLEL LOOP
-      !$ACC END DATA
+      !$ACC END PARALLEL
 
     END IF
 

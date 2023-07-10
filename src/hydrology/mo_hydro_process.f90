@@ -84,7 +84,7 @@ CONTAINS
   !! @param [out]    evapo_deficit          Evaporation deficit flux due to inconsistent treatment of snow evap. [m]
   !
 #ifndef _OPENACC
-  PURE &
+!  PURE &
 #endif
   SUBROUTINE calc_surface_hydrology_land (          &
     & lstart, delta_time, l_dynsnow, snow_depth_max,               &
@@ -291,6 +291,10 @@ CONTAINS
     !$ACC END LOOP
     !$ACC END PARALLEL
 
+!LK DEBUG
+!$acc update host(q_snocpymlt)
+    write(0,*) 'LK: DEBUG: SUM q_snocpymlt = ', sum(q_snocpymlt)
+    
   END SUBROUTINE calc_surface_hydrology_land
 
   ! ===============================================================================================================================
