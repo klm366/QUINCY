@@ -630,8 +630,13 @@ CONTAINS
 
     ELSE ! lstart
       IF (l_freeze .AND. PRESENT(ws)) THEN
-        !$claw expand parallel update
-        liquid_max(1:nidx,1:nsoil) = 0._wp
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR COLLAPSE(2)
+        DO jk = 1, nsoil
+          DO jl=1,nidx
+            liquid_max(jl,jk) = 0._wp
+          END DO
+        END DO
+        !$ACC END PARALLEL LOOP
       END IF
     END IF
 

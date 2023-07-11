@@ -102,6 +102,7 @@ CONTAINS
 
     !$ACC DATA CREATE(bottom, bottom_m1, root_depth)
     !$ACC PARALLEL DEFAULT(PRESENT)
+
     !$ACC LOOP GANG(STATIC:1) VECTOR
     DO ic = 1, nc
       root_depth(ic) = 0._wp
@@ -111,17 +112,17 @@ CONTAINS
     END DO
 
     !$ACC LOOP SEQ
-    DO ic = 1, nc
+    DO is = 1, nsoil
       !$ACC LOOP GANG(STATIC:1) VECTOR
-      DO is = 1, nsoil
+      DO ic = 1, nc
         root_depth(ic) = root_depth(ic) + dz_root(ic,is)
       END DO
     END DO
 
     !$ACC LOOP SEQ
-    DO ic = 1, nc
+    DO is = 1, nsoil
       !$ACC LOOP GANG(STATIC:1) VECTOR
-      DO is = 1, nsoil
+      DO ic = 1, nc
         bottom(ic)    = bottom(ic) + dz(ic,is)
           IF (root_depth(ic) >= bottom(ic)) THEN              ! Root zone extends to below current layer
             ws_root(ic) = ws_root(ic) + ws(ic,is)

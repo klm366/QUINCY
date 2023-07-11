@@ -848,6 +848,7 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)    (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max) (:,  i)  )
       END DO
+      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max))
       ! Set maximum root zone moisture to 0.2 for glacier and ocean areas (where weq_rootzone_max == 0)
       dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MERGE(       &
           & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), 0.2_wp, &
@@ -856,6 +857,7 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max) = MIN( &
         & dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max), dsl4jsb_Config(HYDRO_)%w_soil_limit)
       END IF
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max))
 
       ! Initialization of relative root zone soil moisture (ignoring ice).
       !   This is needed for the LoGro-P phenology, as phenology is updated before hydrology.
@@ -869,6 +871,7 @@ CONTAINS
           & dsl4jsb_var_ptr(HYDRO_, root_depth_sl)  (:,:,i), &
           & dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)   (:,  i)  )
       END DO
+      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
 
       ! Make sure wtr_rootzone is smaller than weq_rootzone_max
       ! Note: weq_rootzone_max corresponds to the maximum possible amount of water or ice in the root zone.
@@ -876,6 +879,7 @@ CONTAINS
       WHERE (dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) > dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max))
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone) = dsl4jsb_var2D_onDomain(HYDRO_, weq_rootzone_max)
       END WHERE
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone))
 
       ! Initialization of wtr_rootzone_rel (completely ignoring ice)
       !    It is re-calculated - considering ice - in update_water_stress.
@@ -886,9 +890,7 @@ CONTAINS
         dsl4jsb_var2D_onDomain(HYDRO_, wtr_rootzone_rel) = 0._wp
       END WHERE
 
-      !$ACC UPDATE HOST(dsl4jsb_var_ptr(HYDRO_, weq_rootzone_max)) &
-      !$ACC   HOST(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone)) &
-      !$ACC   HOST(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel))
+      !$ACC UPDATE DEVICE(dsl4jsb_var_ptr(HYDRO_, wtr_rootzone_rel))
 
     END IF ! Tile with vegetation
 
