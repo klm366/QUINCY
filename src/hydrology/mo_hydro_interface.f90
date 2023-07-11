@@ -1519,9 +1519,7 @@ CONTAINS
     !$ACC END PARALLEL LOOP
 
     ! Calculate relative soil moisture (used in LoGro-P Phenology)
-    !$claw acc data present(wtr_rootzone_avail, wtr_rootzone_avail_max, soil_depth_sl, root_depth_sl, wtr_rootzone_rel)
-    !$claw acc data present(wtr_soil_pot_scool_sl, wtr_rootzone_scool_act, wtr_rootzone_avail)
-    !$claw acc parallel loop gang vector
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
     DO ic= 1, nc
       IF (wtr_rootzone_avail_max(ic) > 0._wp) THEN
         wtr_rootzone_rel(ic) =  MIN(wtr_rootzone_avail(ic) / wtr_rootzone_avail_max(ic), 1._wp)
@@ -1530,6 +1528,7 @@ CONTAINS
         wtr_rootzone_rel(ic) = 0._wp
       END IF
     END DO
+    !$ACC END PARALLEL LOOP
 
     !$ACC END DATA
 

@@ -539,8 +539,7 @@ CONTAINS
       & fract_lice_ptr, &
       & albedo_lwtr_ptr, &
       & albedo_lice_ptr, &
-      & sensible_hflx_ice_ptr, &
-      & fract_ptr
+      & sensible_hflx_ice_ptr
 
     ! avoid compiler warnings about dummy arguments not being used
     IF (PRESENT(alb_nir_dif_wtr)) CONTINUE
@@ -581,12 +580,10 @@ CONTAINS
         IF (tile%lcts(j)%id == LAKE_TYPE) EXIT         ! We get index j of the lake tile
       END DO
 
-      fract_ptr => tile%lcts(j)%fract(ics:ice,iblk)    ! Lake fraction
-      !$ACC DATA CREATE(fract_ptr) PRESENT(tile%lcts)
-      !$ACC PARALLEL LOOP
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) PRESENT(tile%lcts(j)%fract)
       DO i=1,nc
-        fact_lake(i) = fract_ptr(i)                    ! Lake fraction
-        fact_land(i) = 1._wp - fact_lake(i)            ! Land fraction
+        fact_lake(i) = tile%lcts(j)%fract(i,iblk)         ! Lake fraction
+        fact_land(i) = 1._wp - tile%lcts(j)%fract(i,iblk) ! Land fraction
         IF (fact_lake(i) > 0._wp) THEN
           fact_lake(i) = 1._wp / fact_lake(i)          ! Lake factor: 1/lake_fraction
         ELSE
@@ -599,18 +596,16 @@ CONTAINS
         END IF
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC END DATA
+      !$noACC END DATA
 
     ELSE    ! without lakes
  
-      !$ACC DATA PRESENT(fact_land, fact_lake)
-      !$ACC PARALLEL LOOP
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT)
       DO i=1,nc
         fact_land(i) = 1._wp
         fact_lake(i) = 0._wp
       END DO
       !$ACC END PARALLEL LOOP
-      !$ACC END DATA
 
     END IF
 
