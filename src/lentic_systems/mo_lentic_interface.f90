@@ -50,7 +50,7 @@ MODULE mo_lentic_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes LENTIC_, A2L_
+  dsl4jsb_Use_processes LENTIC_, A2L_, SEB_
 
   ! Use of process configurations
   dsl4jsb_Use_config(LENTIC_)
@@ -58,6 +58,7 @@ MODULE mo_lentic_interface
   ! Use of process memories
   dsl4jsb_Use_memory(LENTIC_)
   dsl4jsb_Use_memory(A2L_)
+  dsl4jsb_Use_memory(SEB_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables 
@@ -138,14 +139,20 @@ CONTAINS
   !!
   SUBROUTINE update_lentic_wbphysics(tile, options)
 
+    USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
+
     USE mo_lentic_process, ONLY: calc_surface_temperature, calc_radflux
+    USE mo_lentic_SfcFlx_process, ONLY: calc_momsenlat
 
     USE mo_lentic_constants , ONLY : & 
       albedo_water_ref, &
       albedo_blueice_ref  , & ! Blue ice
       albedo_whiteice_ref , & ! White ice
+      h_Ice_min           , & ! Minimum ice thickness
       c_albice_MR         , & ! Constant in the interpolation formula for the ice albedo (Mironov and Ritter 2004)
       tpl_T_f           ! Fresh water freezing point [K]
+
+    USE mo_jsb_physical_constants, ONLY:  rhoh2o !> [kg/m3]  density of liquid water !! = tpl_rho_w_r
 
 !!#ifdef SERIALIZE
     !$claw verbatim USE mo_ser_common, ONLY: init
@@ -159,12 +166,13 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: steplen!, dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_lentic_wbphysics'
-
+    REAL(wp), PARAMETER :: h_atmvars = 2._wp !< height of atmospheric forcing variables (wind_air, t_air, q_air)
     TYPE(t_jsb_model), POINTER :: model
 
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_config(LENTIC_)
     dsl4jsb_Def_memory(A2L_)
+    dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(LENTIC_) 
 
 
@@ -172,16 +180,21 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
     ! ! atmospheric forcing
-    !   & wind_air,             &
-    !   & t_air,                &
-    !   & q_air,                &
-    !   & press_srf,            &
-      & lw_srf_down,          &
-      & swvis_srf_down,       &
-      & swnir_srf_down,       &
+      & wind_air,             & !< 2m air wind speed [m s-1]
+      & t_air,                & !< 2m air temperature [K]
+      & q_air,                & !< 2m air specific humidity [g g-1]
+      & press_srf,            & !< surface air pressure [Pa]
+      & lw_srf_down,          & !< longwave surface downward flux [W m-2]
+      & swvis_srf_down,       & !< shortwave surface downward flux in the visible band [W m-2]
+      & swnir_srf_down,       & !< shortwave surface downward flux in the near infrared band [W m-2]
+    ! ! heat fluxes
+      & latent_hflx_wtr,      & !< latent heat flux over water [W m-2]
+      & sensible_hflx_wtr,    & !< sensible heat flux over water [W m-2]
+      & latent_hflx_ice,      & !< latent heat flux over ice [W m-2]
+      & sensible_hflx_ice,    & !< sensible heat flux over ice [W m-2]
     ! ! topography and location
     !   & depth_w,              &
-    !   & fetch,                &
+      & fetch,                &
     !   & par_Coriolis,         &
     !   & pondtype,             &
     ! ! FLake inout
@@ -201,7 +214,8 @@ CONTAINS
         & albedo_ice(options%nc),     & 
         & albedo_snow(options%nc),    & 
     !   & w_star(options%nc),     &
-    !   & u_star(options%nc),     &
+        & u_star(options%nc),     &
+        & u_star_sf(options%nc),  &
         & I_atm(options%nc),      &
         & I_bot(options%nc),      &
         & I_h(options%nc),        &
@@ -209,8 +223,12 @@ CONTAINS
         & I_intm_0_h(options%nc), &
         & I_intm_h_D(options%nc), &
         & I_snow(options%nc),     & ! might not be needed
-        & I_w(options%nc)!,        & 
-    !   & Q_watvap(options%nc),   &
+        & I_w(options%nc),        & 
+        & Q_momentum(options%nc), &
+        & Q_sensible(options%nc), &
+        & Q_latent(options%nc),   &
+        & Q_watvap(options%nc),   &
+        & Q_w(options%nc)!,         &
     !   & steplen
     
     
@@ -233,18 +251,25 @@ CONTAINS
     ! Get process memories
     dsl4jsb_Get_memory(LENTIC_)
     dsl4jsb_Get_memory(A2L_)
+    dsl4jsb_Get_memory(SEB_)
 
     ! Get process variables
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)           ! in
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, t_air)              ! in
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, q_air)              ! in
-    ! dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)          ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)           ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, t_air)              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, q_air)              ! in
+    dsl4jsb_Get_var2D_onChunk(A2L_, press_srf)          ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, lw_srf_down)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)     ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)     ! in
 
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)    ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)    ! out 
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr)  ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice)  ! out
+
+
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! in
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, pondtype)        ! in
 
@@ -259,7 +284,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_sfc)           ! inout
 
-    ! USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
    
     ! ---------------------------
     ! Go    
@@ -308,20 +332,31 @@ CONTAINS
                         & I_w             & ! out
                         )
 
-    ! TODO: COMPARE THE CONSTANTS!
     !  Compute long-wave radiation fluxes (positive downward)
-    ! Q_w_flk = Q_atm_lw_in                          ! Radiation of the atmosphere 
+    Q_w = lwnet_from_lwdown(lw_srf_down, t_sfc)     ! Radiation of the atmosphere 
 
-    ! lwnet_from_lwdown = zemiss_def * (lwdown - stbo * t_srf**4._wp)
-    ! SfcFlx_lwradwsfc = c_lwrad_emis*tpsf_C_StefBoltz*T**4_iintegers
-    ! Q_w_flk = Q_w_flk - SfcFlx_lwradwsfc(T_sfc_p)  ! Radiation of the surface (notice the sign)
-    
-    ! ! JSBACH VERSION!  
-    ! ! Compute LW net radiation from incoming and the thermal radiation from the surface
-    ! zlw_net = lwnet_from_lwdown(lw_down, t)
+    !  Compute the surface friction velocity and fluxes of sensible and latent heat 
+    CALL calc_momsenlat ( h_atmvars, h_atmvars, fetch, wind_air, t_air, q_air, t_sfc, press_srf, h_ice,  &
+                            Q_momentum, Q_sensible, Q_latent, Q_watvap, u_star ) 
+    u_star_sf = SQRT(-Q_momentum/rhoh2o)
+
+    ! zr: Continue here!
 
     ! TEST
     !call calc_surface_temperature(T_sfc )
+
+    WHERE(h_ice.GE.h_Ice_min)  
+      latent_hflx_wtr   = 0._wp
+      sensible_hflx_wtr = 0._wp
+      latent_hflx_ice   = Q_latent
+      sensible_hflx_ice = Q_sensible
+    ELSEWHERE
+      latent_hflx_wtr   = Q_latent
+      sensible_hflx_wtr = Q_sensible
+      latent_hflx_ice   = 0._wp
+      sensible_hflx_ice = 0._wp
+    END WHERE
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
   END SUBROUTINE update_lentic_wbphysics

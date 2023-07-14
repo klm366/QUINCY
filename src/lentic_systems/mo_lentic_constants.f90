@@ -51,7 +51,7 @@ PUBLIC
       ! & C_TT_2        = 7._wp/45._wp       , & ! Constant in the expression for C_TT (thermocline)
 
       ! ! Thermodynamic parameters
-      ! & tpl_grav          = 9.81_wp       , & ! Acceleration due to gravity [m s^{-2}]
+      & tpl_grav          = 9.81_wp       , & ! Acceleration due to gravity [m s^{-2}]
       ! & tpl_T_r           = 277.13_wp     , & ! Temperature of maximum density of fresh water [K]
       ! & tpl_a_T           = 1.6509E-05_wp , & ! Constant in the fresh-water equation of state [K^{-2}]
 
@@ -59,7 +59,7 @@ PUBLIC
 
       ! & tpl_kappa_I       = 2.29_wp       , & ! Molecular heat conductivity of ice [J m^{-1} s^{-1} K^{-1}]
       ! & tpl_kappa_w       = 5.46E-01_wp   , & ! Molecular heat conductivity of water [J m^{-1} s^{-1} K^{-1}]
-      ! & tpl_L_f           = 3.3E+05_wp    , & ! Latent heat of fusion [J kg^{-1}]
+      !! & alf = tpl_L_f           = 3.3E+05_wp    , & ! Latent heat of fusion [J kg^{-1}]
 
       & tpl_T_f           = 273.15_wp     , & ! Fresh water freezing point [K]
       ! & tpl_rho_I         = 9.1E+02_wp    , & ! Density of ice [kg m^{-3}]
@@ -74,7 +74,7 @@ PUBLIC
       ! & Phi_T_pr0_2   = 20._wp/3._wp   , & ! Constant in the expression for the T shape-function derivative 
 
       ! !  Security constants
-      ! & c_small        = 1.0E-10_wp, & ! A small number
+      & c_small        = 1.0E-10_wp, & ! A small number
       ! & h_ML_max       = 1.0E+3_wp , & ! Maximum mixed-layer depth [m]
        & h_Snow_min     = 1.0E-5_wp , & ! Minimum snow thickness [m]
       & h_Ice_min      = 1.0E-9_wp , & ! Minimum ice thickness [m]

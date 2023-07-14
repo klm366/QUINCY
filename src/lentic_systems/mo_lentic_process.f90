@@ -84,7 +84,7 @@ MODULE mo_lentic_process
         albedo_snow   , & ! Albedo of the snow surface
         h_ice         , & ! Ice thickness [m]
         h_ML          , & ! Thickness of the mixed-layer [m] 
-        h_snow      , & ! Snow thickness [m]
+        h_snow        , & ! Snow thickness [m]
         I_atm             ! Radiation flux at the lower boundary of the atmosphere [W m^{-2}],
                           ! i.e. the incident radiation flux with no regard for the surface albedo
 
@@ -102,7 +102,7 @@ MODULE mo_lentic_process
 
       !  Local variables of type INTEGER
       INTEGER  :: & ! Help variable(s)
-      i                               ! DO loop index
+      i             ! DO loop index
 
       ! ---------------------------
       ! Go

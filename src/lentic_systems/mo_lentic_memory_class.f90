@@ -60,7 +60,8 @@ MODULE mo_lentic_memory_class
       & T_sfc, &  !< lake surface temperature wtr
       & h_ice, &  !< lake ice height
       & h_ML,  &  !< lake mixed-layer height
-      & h_snow    !< lake snow-layer height
+      & h_snow,&  !< lake snow-layer height
+      & fetch     !< lake fetch
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]
 
   CONTAINS
@@ -132,6 +133,13 @@ CONTAINS
       CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                          &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=BASIC, initval_r=280.0_wp )
+
+      CALL mem%Add_var( 'fetch', mem%T_sfc,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('fetch', 'm', 'lake fetch'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC, initval_r=280.0_wp )
