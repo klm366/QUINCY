@@ -36,6 +36,13 @@ MODULE mo_atmland_interface
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(CARBON_)
 
+#ifdef _OPENACC
+#ifdef _CRAYFTN
+#define LOCAL_ACC_PARALLEL 1
+#else
+#define GLOBAL_ACC_PARALLEL 1
+#endif
+#endif
 
   IMPLICIT NONE
   PRIVATE
@@ -252,130 +259,255 @@ CONTAINS
       q_bcoef_ice_ptr       => dsl4jsb_var2D_onChunk(A2L_, q_bcoef_ice)
     END IF
 
+#ifdef GLOBAL_ACC_PARALLEL
     !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
 
     IF (PRESENT(DEBUG_VAR)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         DEBUG_VAR_ptr(i) = DEBUG_VAR(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
 
     IF (PRESENT(t_air)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         t_air_ptr(i) = t_air(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(q_air)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         q_air_ptr(i) = q_air(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(rain)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         rain_ptr(i) = rain(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(snow)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         snow_ptr(i) = snow(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(wind_air)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         wind_air_ptr(i) = wind_air(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(wind_10m)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         wind_10m_ptr(i) = wind_10m(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(lw_srf_down)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         lw_srf_down_ptr(i) = lw_srf_down(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(swvis_srf_down)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         swvis_srf_down_ptr(i) = swvis_srf_down(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(swnir_srf_down)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         swnir_srf_down_ptr(i) = swnir_srf_down(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(swpar_srf_down)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         swpar_srf_down_ptr(i) = swpar_srf_down(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(fract_par_diffuse)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         fract_par_diffuse_ptr(i)  = fract_par_diffuse(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(press_srf)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         press_srf_ptr(i) = press_srf(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(drag_srf)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         drag_srf_ptr(i) = drag_srf(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(t_acoef)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         t_acoef_ptr(i) = t_acoef(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(t_bcoef)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         t_bcoef_ptr(i) = t_bcoef(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(q_acoef)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         q_acoef_ptr(i) = q_acoef(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(q_bcoef)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         q_bcoef_ptr(i) = q_bcoef(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(pch)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         pch_ptr(i) = pch(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(cos_zenith_angle)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         cos_zenith_angle_ptr(i) = cos_zenith_angle(i)
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
     IF (PRESENT(CO2_air)) THEN
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
       !$ACC LOOP GANG VECTOR
       DO i=1,nc
         CO2_air_ptr(i) = CO2_air(i)
@@ -384,74 +516,139 @@ CONTAINS
         ! convert CO2 from "molar ratio (volume)" to "co2 mixing ratio ppmv" (quincy | used in e.g. update_canopy_fluxes)
         IF (use_quincy) CO2_mixing_ratio_ptr(i) = CO2_air_mol_ptr(i) * 1000000._wp
       END DO
+#ifdef LOCAL_ACC_PARALLEL
+      !$ACC END PARALLEL
+#endif
     END IF
 
     IF (tile_contains_lake) THEN
 
       IF (PRESENT(drag_wtr)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           drag_wtr_ptr(i) = drag_wtr(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(drag_ice)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           drag_ice_ptr(i) = drag_ice(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(t_acoef_wtr)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           t_acoef_wtr_ptr(i) = t_acoef_wtr(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(t_bcoef_wtr)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           t_bcoef_wtr_ptr(i) = t_bcoef_wtr(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(q_acoef_wtr)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           q_acoef_wtr_ptr(i) = q_acoef_wtr(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(q_bcoef_wtr)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           q_bcoef_wtr_ptr(i) = q_bcoef_wtr(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(t_acoef_ice)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           t_acoef_ice_ptr(i) = t_acoef_ice(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(t_bcoef_ice)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           t_bcoef_ice_ptr(i) = t_bcoef_ice(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(q_acoef_ice)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           q_acoef_ice_ptr(i) = q_acoef_ice(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
       IF (PRESENT(q_bcoef_ice)) THEN
-      !$ACC LOOP GANG VECTOR
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC PARALLEL DEFAULT(PRESENT)
+#endif
+        !$ACC LOOP GANG VECTOR
         DO i=1,nc
           q_bcoef_ice_ptr(i) = q_bcoef_ice(i)
         END DO
+#ifdef LOCAL_ACC_PARALLEL
+        !$ACC END PARALLEL
+#endif
       END IF
 
     END IF
 
+#ifdef GLOBAL_ACC_PARALLEL
     !$ACC END PARALLEL
+#endif
 
   END SUBROUTINE update_atm2land
 
@@ -602,7 +799,7 @@ CONTAINS
       !$ACC END DATA
 
     ELSE    ! without lakes
- 
+
       !$ACC DATA PRESENT(fact_land, fact_lake)
       !$ACC PARALLEL LOOP
       DO i=1,nc
