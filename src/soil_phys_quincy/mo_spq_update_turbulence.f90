@@ -64,7 +64,7 @@ CONTAINS
     USE mo_jsb_math_constants,    ONLY: dtime
     USE mo_atmland_constants,     ONLY: min_wind, max_wind
     USE mo_atmland_util,          ONLY: calc_spec_humidity_sat
-    USE mo_jsb_physical_constants,ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, ckap, zkappa, rvd1
+    USE mo_jsb_physical_constants,ONLY: grav, r_gas_vapour, r_gas_dryair, cpd, cpvd1, von_karman, rd_o_cpd, rvd1
     USE mo_spq_constants,         ONLY: height_wind
 
     ! Use of process configurations (t_PROC_config)
@@ -199,13 +199,12 @@ CONTAINS
     ! according to Saucier, WJ Principles of Meteoroligical Analyses
     ! tv = t * (1 + 0.61 * q * t)    ! virtual temperature
     ! td = t * ( 1000 / p_mb ) ^ R/cdp  ! potential temperature
-    ! tvd = tair * (100000/p_pa)^zkappa * 1 + vtmpc1 * q_air) ! virtual potential temperature
-    ! rvd1=>vtmpc1
-    ztvd(:)       = t_air(:) * ( 100000._wp/press_srf(:))**zkappa * ( 1._wp + rvd1 * q_air(:) )
+    ! tvd = tair * (100000/p_pa)^rd_o_cpd * 1 + rvd1 * q_air) ! virtual potential temperature
+    ztvd(:)       = t_air(:) * ( 100000._wp/press_srf(:))**rd_o_cpd * ( 1._wp + rvd1 * q_air(:) )
     ztvir(:)      = t_air(:) * ( 1._wp + rvd1 * q_air(:) )
     ! virtual potential surface temperature
     q_sat_surf(:) = calc_spec_humidity_sat(t_soil_sl(:,1),press_srf(:))
-    ztvs(:)       = t_soil_sl(:,1) * ( 100000._wp/press_srf(:))**zkappa * &
+    ztvs(:)       = t_soil_sl(:,1) * ( 100000._wp/press_srf(:))**rd_o_cpd * &
                     ( 1._wp + rvd1 * ( csat(:) * q_sat_surf(:) + ( 1._wp - cair(:) ) * q_air(:)))
 
     ! Richardson number (dry, Brinkop & Roeckner 1995, Tellus)
@@ -243,7 +242,7 @@ CONTAINS
                                    drag_srf,pch,ga)
 
     USE mo_phy_schemes,             ONLY: heat_transfer_coef
-    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, ckap, rvd1
+    USE mo_jsb_physical_constants,  ONLY: grav, r_gas_vapour, r_gas_dryair, von_karman, rvd1
 
     IMPLICIT NONE
     ! ---------------------------
@@ -284,8 +283,8 @@ CONTAINS
     zdu2       = wind_air**2._wp
 
     ! Neutral drag coefficient for momentum and heat
-    zcdnl = (ckap / LOG(1._wp + zg / (grav *z0m )))**2._wp
-    zchnl = ckap**2._wp / (LOG(1._wp + zg / (grav * z0m )) * &
+    zcdnl = (von_karman / LOG(1._wp + zg / (grav *z0m )))**2._wp
+    zchnl = von_karman**2._wp / (LOG(1._wp + zg / (grav * z0m )) * &
                            LOG( ( grav * z0m + zgh ) / (grav * z0h )) )
 
     ! account for stable/unstable case: helper variables
@@ -293,7 +292,7 @@ CONTAINS
     zucfl  = 1._wp / (1._wp + zcons11 * zcdnl * SQRT(ABS(zril) * (1._wp  + zg / (grav * z0m))))
     zucfhl = 1._wp / (1._wp + zcons11 * zchnl * SQRT(ABS(zril) * (1._wp  + zgh / (grav * z0h))))
 
-    ! ignoring cloud water correction (see mo_surface_land.f90) rvd1=>vtmpc1
+    ! ignoring cloud water correction (see mo_surface_land.f90)
     zcons    = zcons12 * press_srf / ( t_air * (1._wp + rvd1 * q_air))
     zcfncl   = zcons * SQRT(zdu2) * zcdnl
     zcfnchl  = zcons * SQRT(zdu2) * zchnl

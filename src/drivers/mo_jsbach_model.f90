@@ -758,6 +758,9 @@ CONTAINS
     CALL message(routine, 'clean-up finished')
     IF (ltimer) CALL print_timer
 
+    ! print performance timers:
+    IF (ltimer) CALL print_timer
+
   END SUBROUTINE jsbach_model
 
   ! ======================================================================================================= !

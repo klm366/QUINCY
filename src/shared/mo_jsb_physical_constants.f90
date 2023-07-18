@@ -75,18 +75,9 @@ MODULE mo_jsb_physical_constants
                                                                           !< reduce the use of the very large/small AvogadroC/lambda_C14
     & scale_correction_c14       = 1.e12_wp                             !< conversion from mol to pico-mol for C14 (for numerical precision)
 
-
-  ! moved here from mo_jsb4_forcing for consistency
-  REAL(wp), PARAMETER :: ckap = 0.4_wp      !< von Karmann constant for evaporation
-                                            !originally from echam mo_physc2.f90 and in jsb3 initialised with jsbalone_iniphy
-  REAL(wp), PARAMETER :: zkappa = rd / cpd  !< specific gas constant for dry air / dry air specific heat at constant pressure
-
+  REAL(wp), PARAMETER :: von_karman = 0.4_wp      !< von Karmann constant for evaporation
 
   !! quincy - physical constants
-  ! most constants from host model (ECHAM/ICON) are defined in jsbach4_util_mods.f90
-  !   e.g. echam/src/echam/jsbach4_util_mods.f90 -> mo_physical_constants_iface -> mo_physical_constants.f90
-  !   ckap & zkappa are defined in drivers/mo_jsb4_forcing
-  !   cpvd1 is defined in mo_physical_constants_iface (pointing to vtmpc2 in mo_physical_constants.f90)
   REAL(wp), PARAMETER :: &
     & r_gas        = argas            ,  &      !< universal gas constant (J / mol / K)
     & r_gas_dryair = rd               ,  &      !< specific gas constant for dry air (J / kg / K)
