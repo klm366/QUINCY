@@ -317,7 +317,7 @@ CONTAINS
     !  Set initial values
     I_atm = lw_srf_down + swvis_srf_down + swnir_srf_down
     ! T_snow_p_flk = t_snow
-    ! T_ice_p_flk  = t_lice
+    ! T_lice_p_flk  = t_lice
     ! T_mnw_p_flk  = t_mnw
     ! T_wML_p_flk  = t_wml
     ! T_bot_p_flk  = t_bot
@@ -413,6 +413,7 @@ CONTAINS
                       & T_lice,       & ! inout
                       & l_ice_create  & ! out
                       )
+
     call calc_lake_temp_stratification( steplen,             & ! in & depth_w,              & ! in
                                       & extincoef_optic_water,  & ! in
                                       & l_ice_create,         & ! in
@@ -433,7 +434,14 @@ CONTAINS
                                       & T_wML,                & ! inout
                                       & h_ML,                 & ! inout
                                       & w_star                & ! out
-                                      )                  
+                                      )    
+
+    call calc_surface_temperature(h_snow, & ! in
+                                & T_lice, & ! in /instead of t_snow
+                                & h_ice,  & ! in
+                                & T_lice,  & ! in
+                                & T_wML,  & ! in
+                                & T_sfc   ) ! out          
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
   END SUBROUTINE update_lentic_wbphysics
