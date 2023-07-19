@@ -433,8 +433,7 @@ MODULE mo_lentic_process
 
     
     PURE ELEMENTAL SUBROUTINE calc_lake_temp_stratification( &
-      & del_time,             & ! in
-      & depth_w,              & ! in
+      & del_time,             & ! in & depth_w,              & ! in
       & extincoef_water_typ,  & ! in
       & l_ice_create,         & ! in
       & h_ice,                & ! in
@@ -457,6 +456,7 @@ MODULE mo_lentic_process
       )
 
       USE mo_lentic_constants,  ONLY: &
+        & depth_w,      &
         & c_cbl_1,      &
         & c_cbl_2,      &
         & c_sbl_ZM_i,   &
@@ -482,7 +482,7 @@ MODULE mo_lentic_process
 
       !$claw model-data
       REAL(wp), INTENT(in) :: del_time,             & ! The model time step [s]
-                            & depth_w,              & ! The waterbody depth [m]
+                            !& depth_w,              & ! The waterbody depth [m]
                             & extincoef_water_typ,  & ! "Typical" extinction coefficient of the lake water [m^{-1}], 
                                                       !   used to compute the equilibrium CBL depth
                             & h_ice,                & ! Ice thickness [m]

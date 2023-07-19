@@ -141,19 +141,23 @@ CONTAINS
 
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
-    USE mo_lentic_process, ONLY: calc_surface_temperature   , &
-                               & calc_radflux               , &
-                               & calc_ice_water_heatfluxes  !, &
+    USE mo_lentic_process, ONLY: calc_surface_temperature     , &
+                               & calc_radflux                 , &
+                               & calc_ice_water_heatfluxes    , &
+                               & calc_lake_ice                , &
+                               & calc_lake_temp_stratification
+
     USE mo_lentic_SfcFlx_process, ONLY: calc_momsenlat
 
     USE mo_lentic_constants , ONLY : & 
-      albedo_water_ref, &
-      albedo_blueice_ref  , & ! Blue ice
-      albedo_whiteice_ref , & ! White ice
-      h_Ice_min           , & ! Minimum ice thickness
-      h_Snow_min          , & ! Minimum snow thickness
-      c_albice_MR         , & ! Constant in the interpolation formula for the ice albedo (Mironov and Ritter 2004)
-      tpl_T_f                 ! Fresh water freezing point [K]
+      extincoef_optic_water , &
+      albedo_water_ref      , &
+      albedo_blueice_ref    , & ! Blue ice
+      albedo_whiteice_ref   , & ! White ice
+      h_Ice_min             , & ! Minimum ice thickness
+      h_Snow_min            , & ! Minimum snow thickness
+      c_albice_MR           , & ! Constant in the interpolation formula for the ice albedo (Mironov and Ritter 2004)
+      tpl_T_f                   ! Fresh water freezing point [K]
 
     USE mo_jsb_physical_constants, ONLY:  rhoh2o !> [kg/m3]  density of liquid water !! = tpl_rho_w_r
 
@@ -182,6 +186,7 @@ CONTAINS
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
+      & q_bot,                & !< Heat flux through the water-bottom sediment interface of lakes [W m-2]
     ! ! atmospheric forcing
       & wind_air,             & !< 2m air wind speed [m s-1]
       & t_air,                & !< 2m air temperature [K]
@@ -198,21 +203,22 @@ CONTAINS
     ! ! topography and location
     !   & depth_w,              &
       & fetch,                &
-    !   & par_Coriolis,         &
+      & par_Coriolis,         &
     !   & pondtype,             &
     ! ! FLake inout
     !   & t_snow,               &
-    !   & t_lice,               &
-    !   & t_mnw,                &
+      & t_lice,               &
+      & t_mnw,                &
       & t_wml,                &
       & t_bot,                &
       & c_t,                  &
       & h_ice,                &
       & h_snow,               &
       & h_ml,                 &
-      & t_sfc
+      & t_sfc,                &
+      & w_star
 
-     REAL(wp) ::                 &
+    REAL(wp) ::                 &
         & albedo_water,   & 
         & albedo_ice(options%nc),     & 
         & albedo_snow(options%nc),    & 
@@ -234,10 +240,10 @@ CONTAINS
         & Q_watvap(options%nc),   &
         & Q_w(options%nc),        &
         & Q_star(options%nc),     &
-        & Phi_T_pr0(options%nc)!,  &
-    !   & steplen
+        & Phi_T_pr0(options%nc)
     
-    
+    logical :: l_ice_create(options%nc)
+
     ! Get local variables from options argument
     iblk    = options%iblk
     ics     = options%ics
@@ -275,13 +281,14 @@ CONTAINS
 
 
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, Q_bot)           ! in
     dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! in
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! in
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, pondtype)        ! in
 
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)          ! inout
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_lice)          ! inout
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_mnw)           ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_lice)          ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_mnw)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_wml)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_bot)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, c_t)             ! inout
@@ -289,6 +296,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_snow)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_sfc)           ! inout
+    
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, w_star)           ! out
 
    
     ! ---------------------------
@@ -394,7 +403,37 @@ CONTAINS
                                   & Phi_T_pr0   & ! out
                                   )
 
-
+    call calc_lake_ice( I_ice,        & ! in
+                      & I_w,          & ! in 
+                      & T_wML,        & ! in 
+                      & Q_ice,        & ! in     
+                      & steplen,      & ! in
+                      & Q_w,          & ! inout
+                      & h_ice,        & ! inout
+                      & T_lice,       & ! inout
+                      & l_ice_create  & ! out
+                      )
+    call calc_lake_temp_stratification( steplen,             & ! in & depth_w,              & ! in
+                                      & extincoef_optic_water,  & ! in
+                                      & l_ice_create,         & ! in
+                                      & h_ice,                & ! in
+                                      & I_bot,                & ! in
+                                      & I_intm_0_h,           & ! in
+                                      & I_intm_h_d,           & ! in
+                                      & I_w,                  & ! in
+                                      & I_h,                  & ! in
+                                      & par_Coriolis,         & ! in
+                                      & Q_bot,                & ! in
+                                      & Q_star,               & ! in
+                                      & u_star,               & ! in 
+                                      & C_T,                  & ! inout
+                                      & Q_w,                  & ! inout
+                                      & T_bot,                & ! inout
+                                      & T_mnw,                & ! inout
+                                      & T_wML,                & ! inout
+                                      & h_ML,                 & ! inout
+                                      & w_star                & ! out
+                                      )                  
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
   END SUBROUTINE update_lentic_wbphysics
@@ -409,7 +448,7 @@ CONTAINS
   SUBROUTINE aggregate_lentic_wbphysics(tile, options)
 
     ! Arguments
-     TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_model), POINTER :: model
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
