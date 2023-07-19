@@ -57,7 +57,10 @@ MODULE mo_lentic_memory_class
 
     ! Additional variables for LAKE lct_type
     TYPE(t_jsb_var_real2d) :: &
+      & c_t,   &  !< lake tc shape factor
       & T_sfc, &  !< lake surface temperature wtr
+      & t_bot, &  !< lake bottom temperature at water/sediment interface
+      & t_wml, &  !< lake mixed-layer temperaturer wtr
       & h_ice, &  !< lake ice height
       & h_ML,  &  !< lake mixed-layer height
       & h_snow,&  !< lake snow-layer height
@@ -109,6 +112,13 @@ CONTAINS
       !   & prefix, suffix,                                                              &
       !   & output_level=BASIC, initval_r=280.0_wp )
 
+      CALL mem%Add_var( 'c_t', mem%c_t,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('l_tc_shapefactor', 'm', 'shape factor (thermocline)'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=BASIC, initval_r=280.0_wp )
+
       CALL mem%Add_var( 'h_ice', mem%h_ice,                                          &
         & hgrid, surface,                                                              &
         & t_cf('lice_height', 'm', 'lake ice height'),                  &
@@ -136,6 +146,20 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC, initval_r=280.0_wp )
+
+      CALL mem%Add_var( 'T_bot', mem%T_bot,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('lake_temp_bot', 'K', 'lake bottom temperature wtr/sediment'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=BASIC, initval_r=280.0_wp )      
+        
+      CALL mem%Add_var( 'T_wML', mem%T_wML,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('lake_temp_wtr_ML', 'K', 'lake mixed-layer temperature wtr'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=BASIC, initval_r=280.0_wp )  
 
       CALL mem%Add_var( 'fetch', mem%T_sfc,                                          &
         & hgrid, surface,                                                              &

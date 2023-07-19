@@ -141,7 +141,9 @@ CONTAINS
 
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
-    USE mo_lentic_process, ONLY: calc_surface_temperature, calc_radflux
+    USE mo_lentic_process, ONLY: calc_surface_temperature   , &
+                               & calc_radflux               , &
+                               & calc_ice_water_heatfluxes  !, &
     USE mo_lentic_SfcFlx_process, ONLY: calc_momsenlat
 
     USE mo_lentic_constants , ONLY : & 
@@ -149,8 +151,9 @@ CONTAINS
       albedo_blueice_ref  , & ! Blue ice
       albedo_whiteice_ref , & ! White ice
       h_Ice_min           , & ! Minimum ice thickness
+      h_Snow_min          , & ! Minimum snow thickness
       c_albice_MR         , & ! Constant in the interpolation formula for the ice albedo (Mironov and Ritter 2004)
-      tpl_T_f           ! Fresh water freezing point [K]
+      tpl_T_f                 ! Fresh water freezing point [K]
 
     USE mo_jsb_physical_constants, ONLY:  rhoh2o !> [kg/m3]  density of liquid water !! = tpl_rho_w_r
 
@@ -201,9 +204,9 @@ CONTAINS
     !   & t_snow,               &
     !   & t_lice,               &
     !   & t_mnw,                &
-    !   & t_wml,                &
-    !   & t_bot,                &
-    !   & c_t,                  &
+      & t_wml,                &
+      & t_bot,                &
+      & c_t,                  &
       & h_ice,                &
       & h_snow,               &
       & h_ml,                 &
@@ -224,11 +227,14 @@ CONTAINS
         & I_intm_h_D(options%nc), &
         & I_snow(options%nc),     & ! might not be needed
         & I_w(options%nc),        & 
+        & Q_ice(options%nc),      & 
         & Q_momentum(options%nc), &
         & Q_sensible(options%nc), &
         & Q_latent(options%nc),   &
         & Q_watvap(options%nc),   &
-        & Q_w(options%nc)!,         &
+        & Q_w(options%nc),        &
+        & Q_star(options%nc),     &
+        & Phi_T_pr0(options%nc)!,  &
     !   & steplen
     
     
@@ -276,9 +282,9 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)          ! inout
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_lice)          ! inout
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_mnw)           ! inout
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_wml)           ! inout
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_bot)           ! inout
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, c_t)             ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_wml)           ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_bot)           ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, c_t)             ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ice)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_snow)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
@@ -338,12 +344,7 @@ CONTAINS
     !  Compute the surface friction velocity and fluxes of sensible and latent heat 
     CALL calc_momsenlat ( h_atmvars, h_atmvars, fetch, wind_air, t_air, q_air, t_sfc, press_srf, h_ice,  &
                             Q_momentum, Q_sensible, Q_latent, Q_watvap, u_star ) 
-    u_star_sf = SQRT(-Q_momentum/rhoh2o)
-
-    ! zr: Continue here!
-
-    ! TEST
-    !call calc_surface_temperature(T_sfc )
+    u_star_sf = SQRT(-Q_momentum/rhoh2o) !zr todo: Check differences between u_star and u_star_sf
 
     WHERE(h_ice.GE.h_Ice_min)  
       latent_hflx_wtr   = 0._wp
@@ -356,6 +357,43 @@ CONTAINS
       latent_hflx_ice   = 0._wp
       sensible_hflx_ice = 0._wp
     END WHERE
+
+    !  Compute heat fluxes Q_snow, Q_ice, Q_w
+
+    Q_w = Q_w - Q_sensible - Q_latent  ! Add sensible and latent heat fluxes (notice the signs)
+
+    WHERE(h_ice.GE.h_Ice_min)             ! Ice exists
+      WHERE(h_snow.GE.h_Snow_min)         ! There is snow above the ice
+        !Q_snow = Q_w
+        Q_ice  = 0._wp
+        Q_w    = 0._wp
+      ELSEWHERE                                         ! No snow above the ice
+        !Q_snow = 0._wp
+        Q_ice  = Q_w
+        Q_w    = 0._wp
+      END WHERE
+    ELSEWHERE                                           ! No ice-snow cover
+        !Q_snow = 0._wp
+        Q_ice  = 0._wp
+    END WHERE
+
+    !  Advance FLake variables 
+    !  From here on the original file flake_driver is included but split into the routines
+
+    call calc_ice_water_heatfluxes( h_ice,      & ! in
+                                  & h_ML,       & ! in
+                                  & T_bot,      & ! in
+                                  & T_wML,      & ! in
+                                  & C_T,        & ! in  ! & depth_w,    & ! in
+                                  & I_w,        & ! in
+                                  & I_h,        & ! in
+                                  & I_intm_0_h, & ! in
+                                  & I_bot,      & ! inout
+                                  & Q_w,        & ! out
+                                  & Q_star,     & ! out
+                                  & Phi_T_pr0   & ! out
+                                  )
+
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
