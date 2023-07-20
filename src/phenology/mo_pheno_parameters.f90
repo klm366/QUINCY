@@ -219,7 +219,7 @@ MODULE mo_pheno_parameters
 
 CONTAINS
 
-  ! the init_constants routines are called in mo_jsb_base:jsbach_setup_models()
+  ! the init_constants routines are called in mo_jsb_base:jsbach_setup_models() or :quincy_proc_parameter_init()
 
   ! ======================================================================================================= !
   !> initialize JSBACH specific parameters for the process: phenology

@@ -234,6 +234,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_matrix_from_bgcm_2l_2d'
     ! ----------------------------------------------------------------------------------------------------- !
+    ! Assert a valid store
+    IF(.NOT. ALLOCATED(this%bgc_material_ID)) CALL finish(TRIM(routine), 'Attempt to get bgcm from an invalid store!')
+
+    ! Get index of the queried bgcm in this store
     bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
 
     ! Check that this bgc material complies with the expectations
@@ -274,6 +278,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_matrix_from_bgcm_2l_2d'
     ! ----------------------------------------------------------------------------------------------------- !
+    ! Assert a valid store
+    IF(.NOT. ALLOCATED(this%bgc_material_ID)) CALL finish(TRIM(routine), 'Attempt to get bgcm from an invalid store!')
+
+    ! Get index of the queried bgcm in this store
     bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
 
     ! Check that this bgc material complies with the expectations
@@ -314,6 +322,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_matrix_from_bgcm_1l_2d'
     ! ----------------------------------------------------------------------------------------------------- !
+    ! Assert a valid store
+    IF(.NOT. ALLOCATED(this%bgc_material_ID)) CALL finish(TRIM(routine), 'Attempt to get bgcm from an invalid store!')
+
+    ! Get index of the queried bgcm in this store
     bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
 
     ! Check that this bgc material complies with the expectations
@@ -321,7 +333,7 @@ CONTAINS
     CALL assert_matrix_shape(this, bgcm_idx, nc, SHAPE(bgcm_matrix), tile_name, routine)
     CALL assert_wrote_back_to_store(this, bgcm_idx, Get_omp_thread(), tile_name, routine)
 
-    ! 1level 2D -> fill matrix (elems, nc, var_dim2)
+    ! 1level 2D -> fill matrix (elems, nc)
     DO i_elem = 1,this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%nr_of_elems
       bgcm_matrix(i_elem,:) = &
         & this%store_1l_2d_bgcms(this%idx_in_store(bgcm_idx))%collection_1l_p(i_elem)%p%ptr2d(ics:ice,iblk)
@@ -352,6 +364,10 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Get_matrix_from_bgcm_1l_3d'
     ! ----------------------------------------------------------------------------------------------------- !
+    ! Assert a valid store
+    IF(.NOT. ALLOCATED(this%bgc_material_ID)) CALL finish(TRIM(routine), 'Attempt to get bgcm from an invalid store!')
+
+    ! Get index of the queried bgcm in this store
     bgcm_idx = get_bgcm_idx(this, bgcm_id, tile_name, routine)
 
     ! Check that this bgc material complies with the expectations
@@ -538,20 +554,24 @@ CONTAINS
     CHARACTER (len=*),          INTENT(IN)    :: tile_name   !< name of the current tile
     CHARACTER(len=*),           INTENT(in)    :: caller      !< calling routine
     ! ----------------------------------------------------------------------------------------------------- !
-    INTEGER  :: bgcm_idx                         !< index of the queried bgcm in the store
-    INTEGER  :: bgcm_min_idx(1), bgcm_max_idx(1) !< min and max index to check for uniqueness
+    INTEGER :: bgcm_idx  !< index of the queried bgcm in the store
+    INTEGER :: idx       !< current index
     ! ----------------------------------------------------------------------------------------------------- !
-    bgcm_min_idx = FINDLOC(this%bgc_material_ID, bgcm_id)
-    bgcm_idx = bgcm_min_idx(1)
+    bgcm_idx = 0
+    DO idx = 1,SIZE(this%bgc_material_ID)
+      IF (this%bgc_material_ID(idx) == bgcm_id) THEN
+        IF (bgcm_idx /= 0) THEN
+          CALL finish(TRIM(caller), 'Found not unique id '//int2string(bgcm_id)//      &
+            & ' used for '//TRIM(this%bgc_material_name(bgcm_idx))//' and '//          &
+            & TRIM(this%bgc_material_name(idx))//                                      &
+            & ' in bgcm store of tile '//TRIM(tile_name)//', please check!')
+        ENDIF
+        bgcm_idx = idx
+      ENDIF
+    ENDDO
 
-    bgcm_max_idx = FINDLOC(this%bgc_material_ID, bgcm_id, BACK=.TRUE.)
     IF (bgcm_idx == 0) THEN
       CALL finish(TRIM(caller), 'Did not find bgcm with given id '//int2string(bgcm_id)// &
-        & ' in bgcm store of tile '//TRIM(tile_name)//', please check!')
-    ELSEIF(bgcm_min_idx(1) /= bgcm_max_idx(1)) THEN
-      CALL finish(TRIM(caller), 'Found not unique id '//int2string(bgcm_id)//                  &
-        & ' used for '//TRIM(this%bgc_material_name(bgcm_idx))//' and '//                      &
-        & TRIM(this%bgc_material_name(bgcm_max_idx(1)))//                                      &
         & ' in bgcm store of tile '//TRIM(tile_name)//', please check!')
     ENDIF
 

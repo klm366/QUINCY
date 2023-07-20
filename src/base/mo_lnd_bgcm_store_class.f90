@@ -24,8 +24,11 @@ MODULE mo_lnd_bgcm_store_class
   PRIVATE
 
   PUBLIC :: t_lnd_bgcm_store_abstract
-  PUBLIC :: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_DELTA_POOLS_ID
-  PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID
+  PUBLIC :: SB_BGCM_POOL_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
+    &       SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
+  PUBLIC :: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID, &
+    &       VEG_BGCM_LITTERFALL_ID, VEG_BGCM_TOTAL_FLUX_ID, VEG_BGCM_FRAC_ALLOC_ID, &
+    &       VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID
 
   ! ======================================================================================================= !
   !>
@@ -34,10 +37,20 @@ MODULE mo_lnd_bgcm_store_class
   ENUM, BIND(C)
     ENUMERATOR ::                   &
       & SB_BGCM_POOL_ID = 1,        &   !< soil biogeochemistry bgcm pool
-      & SB_BGCM_FORMATION_ID,       &   !< soil biogeochemistry bgcm formation
       & SB_BGCM_DELTA_POOLS_ID,     &   !< soil biogeochemistry bgcm delta pools
+      & SB_BGCM_FORMATION_ID,       &   !< soil biogeochemistry bgcm formation
+      & SB_BGCM_LOSS_ID,            &   !< soil biogeochemistry bgcm loss
+      & SB_BGCM_TRANSPORT_ID,       &   !< soil biogeochemistry bgcm transport
+      & SB_BGCM_MYCO_EXPORT_ID,     &   !< soil biogeochemistry bgcm mycorrhiza export
       & VEG_BGCM_POOL_ID,           &   !< vegetation bgcm pool
-      & VEG_BGCM_TOTAL_BIO_ID           !< vegetation bgcm total biomass
+      & VEG_BGCM_TOTAL_BIO_ID,      &   !< vegetation bgcm total biomass
+      & VEG_BGCM_GROWTH_ID,         &   !< vegetation bgcm growth    
+      & VEG_BGCM_LITTERFALL_ID,     &   !< vegetation bgcm litterfall
+      & VEG_BGCM_TOTAL_FLUX_ID,     &   !< vegetation bgcm total_flux
+      & VEG_BGCM_FRAC_ALLOC_ID,     &   !< vegetation bgcm frac_alloc
+      & VEG_BGCM_EXUDATION_ID,      &   !< vegetation bgcm exudation    
+      & VEG_BGCM_ESTABLISHMENT_ID,  &   !< vegetation bgcm establishment
+      & VEG_BGCM_RESERVE_USE_ID         !< vegetation bgcm reserve_use  
   END ENUM
 
   ! ======================================================================================================= !

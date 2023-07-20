@@ -25,6 +25,7 @@
 !!
 !! @par Revision History
 !!  First version by Jan Engel (20190114)
+!!  updated against ICON-Land by Jan Engel (2023-02-24)
 !!
 MODULE mo_jsb_impl_constants
 #ifndef __NO_JSBACH__

@@ -48,6 +48,7 @@ CONTAINS
     USE mo_sb_constants,        ONLY: init_sb_constants
     USE mo_pheno_parameters,    ONLY: init_pheno_parameters_quincy, init_pheno_parameters_jsbach
     USE mo_spq_constants,       ONLY: init_spq_constants
+    USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 
     dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_
 
@@ -121,6 +122,36 @@ CONTAINS
          model_scheme = model%config%model_scheme
        ELSE IF (model%config%model_scheme /= model_scheme) THEN
           CALL finish(routine, 'Only one model_scheme allowed!')
+       END IF
+
+       !> set the bgcm index var used in the scientific routines
+       !>   it depends on the model config and is identical across models
+       !>   assuming the namelist options are identical across models
+       !> 
+       IF (model_idx == 1) THEN
+         CALL set_bgcm_element_idx(model%config%elements_index_map)
+       END IF
+
+       !> parameter init
+       !>
+       IF (model_idx == 1) THEN
+         ! assuming the shared/constants/ modules are available here already (impl, math, physical)
+         SELECT CASE (model_scheme)
+         CASE (MODEL_QUINCY)
+           CALL message(TRIM(routine), 'starting init of QUINCY process parameters')
+           CALL init_rad_parameters_quincy
+           CALL init_assimi_parameters_quincy
+           CALL init_veg_constants
+           CALL init_spq_constants
+           CALL init_sb_constants
+           CALL init_pheno_parameters_quincy
+           CALL init_atmland_constants
+         CASE (MODEL_JSBACH)
+           CALL message(TRIM(routine), 'starting init of JSBACH process parameters')
+           CALL init_pheno_parameters_jsbach
+           CALL init_assimi_parameters_jsbach
+           CALL init_rad_parameters_jsbach
+         END SELECT
        END IF
 
        CALL message(TRIM(routine), 'New jsbach model: '//TRIM(model%shortname))
@@ -274,25 +305,6 @@ CONTAINS
       END SELECT
 
     END DO
-
-    !>quincy constants init
-    !>
-    ! assuming the shared/constants/ modules are available here already (impl, math, physical)
-    SELECT CASE (model_scheme)
-    CASE (MODEL_QUINCY)
-      CALL message(TRIM(routine), 'starting init of QUINCY process constants')
-      CALL init_rad_parameters_quincy
-      CALL init_assimi_parameters_quincy
-      CALL init_veg_constants
-      CALL init_spq_constants
-      CALL init_sb_constants
-      CALL init_pheno_parameters_quincy
-      CALL init_atmland_constants
-    CASE (MODEL_JSBACH)
-      CALL init_pheno_parameters_jsbach
-      CALL init_assimi_parameters_jsbach
-      CALL init_rad_parameters_jsbach
-    END SELECT
 
     CALL message(TRIM(routine), 'done basic setup (models, process configs, QUINCY process constants init)')
 

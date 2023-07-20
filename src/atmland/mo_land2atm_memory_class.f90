@@ -42,8 +42,6 @@ MODULE mo_l2a_memory_class
       & t_srf                           , &  !< surface temperature [K]
       & t_eff_srf                       , &  !< effective surface temperature [K]
       & qsat_srf                        , &  !< surface saturated specific humidity [g g-1]
-      & fact_q_air                      , &  !< factor representing air at actual water content [unitless]
-      & fact_qsat_srf                   , &  !< factor representing air at saturating water content [unitless]
       & zh_srf                          , &  !< roughnesslength for heat transfer [m]
       & zm_srf                          , &  !< roughnesslength for momentum transfer [m]
       & alb_vis_dif                     , &  !< surface albedo for diffuse radiation in the visible band [unitless]
@@ -67,8 +65,7 @@ MODULE mo_l2a_memory_class
     PROCEDURE :: Init => Init_l2a_memory
   END TYPE t_l2a_memory
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_atmland_memory_class'
-
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_l2a_memory_class'
 
 CONTAINS
 
@@ -85,24 +82,26 @@ CONTAINS
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
     ! ----------------------------------------------------------------------------------------------------- !
-    CLASS(t_l2a_memory), INTENT(inout), TARGET :: mem
-    CHARACTER(len=*),    INTENT(in)            :: prefix
-    CHARACTER(len=*),    INTENT(in)            :: suffix
-    INTEGER,             INTENT(in)            :: lct_ids(:)
-    INTEGER,             INTENT(in)            :: model_id
+    CLASS(t_l2a_memory),       INTENT(inout), TARGET :: mem
+    CHARACTER(len=*),          INTENT(in)            :: prefix          !> process name
+    CHARACTER(len=*),          INTENT(in)            :: suffix          !> tile name
+    INTEGER,                   INTENT(in)            :: lct_ids(:)      !< Primary lct (1) and lcts of descendant tiles
+    INTEGER,                   INTENT(in)            :: model_id        !> model ID model\%id
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_grid),   POINTER :: hgrid
-    TYPE(t_jsb_vgrid),  POINTER :: surface
-    TYPE(t_jsb_model),  POINTER :: model
-    INTEGER                     :: table
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_l2a_memory'
+    TYPE(t_jsb_model), POINTER :: model
+    TYPE(t_jsb_grid),  POINTER :: hgrid                        ! Horizontal grid
+    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    INTEGER                    :: table
+    CHARACTER(len=*),PARAMETER :: routine = TRIM(modname)//':Init_l2a_memory'
     ! ----------------------------------------------------------------------------------------------------- !
-    model        => Get_model(model_id)
-    table        = tables(1)
-    hgrid        => Get_grid(mem%grid_id)
-    surface      => Get_vgrid('surface')
+    model         => Get_model(model_id)
+    table         =  tables(1)
+    hgrid         => Get_grid(mem%grid_id)
+    surface       => Get_vgrid('surface')
 
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !>add L2A_ variables to memory
+    !>
     CALL mem%Add_var('t_srf', mem%t_srf, &
       & hgrid, surface, &
       & t_cf('t_srf', 'K', 'surface temperature'), &
@@ -126,26 +125,6 @@ CONTAINS
     CALL mem%Add_var('qsat_srf', mem%qsat_srf, &
       & hgrid, surface, &
       & t_cf('qsat_srf', 'g g-1', 'surface saturated specific humidity'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('fact_q_air', mem%fact_q_air, &
-      & hgrid, surface, &
-      & t_cf('fact_q_air', 'unitless', 'factor representing air at actual water content'), &
-      & t_grib1(table, 255, grib_bits), &
-      & t_grib2(255, 255, 255, grib_bits), &
-      & prefix, suffix, &
-      & loutput = .TRUE., &
-      & lrestart = .FALSE., &
-      & initval_r = 0.0_wp)
-
-    CALL mem%Add_var('fact_qsat_srf', mem%fact_qsat_srf, &
-      & hgrid, surface, &
-      & t_cf('fact_qsat_srf', 'unitless', 'factor representing air at saturating water content'), &
       & t_grib1(table, 255, grib_bits), &
       & t_grib2(255, 255, 255, grib_bits), &
       & prefix, suffix, &
@@ -280,7 +259,7 @@ CONTAINS
         & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
-    END IF
+    END IF ! lake
 
   END SUBROUTINE Init_l2a_memory
 

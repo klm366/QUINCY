@@ -65,7 +65,7 @@ MODULE mo_jsb4_forcing
   PRIVATE
 
   PUBLIC :: get_interface_variables_from_external_forcing, setup_forcing, init_forcing, finalize_external_forcing, &
-    &       sat_specific_humidity, forcing_options
+    &       sat_specific_humidity, forcing_options, forcing_options_quincy
 
   REAL(wp), SAVE :: delta_time, time_step_len
   INTEGER,  SAVE :: time_steps_per_day
@@ -155,13 +155,24 @@ MODULE mo_jsb4_forcing
     REAL(wp) :: conv_CO2_2_MassRatio           !! Factor for the conversion of CO2 input data to kg(CO2)/kg(dry air)
     REAL(wp) :: heightWind                     !! Reference height for wind speed [m]; -1 for ECHAM lowest layer
     REAL(wp) :: heightHumidity                 !! Reference height for specific humidity [m]; -1 for ECHAM lowest layer
-    ! quincy @TODO  modify the use of the date-information to how this is done with jsbach4
+  END TYPE forcing_options_type
+  TYPE(forcing_options_type), ALLOCATABLE, SAVE :: forcing_options(:)
+
+  ! QUINCY model
+  !   this TYPE is not used with QUINCY in ICON-land
+  !   implemented here for compatibility with QS (the quincy standalone model)
+  TYPE t_q_forcing_options
+    ! namelist
+    ! ..
+    ! calculated
+    ! ..
+    ! read from forcing files
     INTEGER  :: forcing_year = 0
     INTEGER  :: forcing_doy  = 0
     REAL(wp) :: forcing_hour = 0.0_wp
-    ! quincy - end
-  END TYPE forcing_options_type
-  TYPE(forcing_options_type), ALLOCATABLE, SAVE :: forcing_options(:)
+  END TYPE t_q_forcing_options
+  TYPE(t_q_forcing_options), SAVE :: forcing_options_quincy
+
 
   ! information for single forcing variable and the file it is read from
   TYPE input_variable_type

@@ -453,10 +453,6 @@ CONTAINS
       CALL model%Queue_task(VEG_,     "reset_veg_fluxes")           !
       CALL model%Queue_task(SB_,      "reset_sb_fluxes")            !
       CALL model%Queue_task(SPQ_,     "reset_spq_fluxes")           !
-      ! testing bgcm
-      CALL model%Queue_task(SB_,      "copy_pool_to_bgcm_test")     !
-      CALL model%Queue_task(SB_,      "sb_pool_test")               !
-      CALL model%Queue_task(SB_,      "sb_bgcm_pool_test")          !
       ! science
       CALL model%Queue_task(SB_,      "sb_rate_modifier")           ! 
       CALL model%Queue_task(SPQ_,     "soil_turbulence")            ! 
