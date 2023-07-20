@@ -74,7 +74,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_pool), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
-    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
+    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine 
     ! -------------------------------------------------------------------------------------------------- !
     IF(ASSOCIATED(this%pool_list)) THEN
       IF(.NOT. SIZE(this%pool_list) .EQ. 0) THEN
@@ -97,7 +97,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_pool), POINTER, INTENT(IN) :: this      !< bgc material to test assertion for
     CHARACTER(len=*),           INTENT(IN) :: tile_name !< name of the tile with this bgc material
-    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine
+    CHARACTER(len=*),           INTENT(IN) :: routine   !< name of the calling routine 
     INTEGER                                :: this_dim  !< dimension
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: nr_of_elements, i_element

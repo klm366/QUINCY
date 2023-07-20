@@ -65,17 +65,20 @@ CONTAINS
 
     ! select init routine depending on the model
     SELECT CASE (model%config%model_scheme)
+#ifdef __QUINCY_STANDALONE__
+#else
     CASE (MODEL_JSBACH)
       IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
         CALL rad_read_init_vars(tile)
       END IF
-
+    
       CALL rad_init_bc_jsbach(tile)
       CALL rad_init_ic_jsbach(tile)
-
+    
       IF (tile%Is_last_process_tile(RAD_)) THEN
         CALL rad_finalize_init_vars()
       END IF
+#endif
     CASE (MODEL_QUINCY)
       IF (tile%contains_vegetation) THEN
         CALL rad_init_ic_quincy(tile)
@@ -84,6 +87,8 @@ CONTAINS
 
   END SUBROUTINE rad_init
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE rad_finalize_init_vars
 
     DEALLOCATE( &
@@ -308,6 +313,7 @@ CONTAINS
     END IF
 
   END SUBROUTINE rad_init_ic_jsbach
+#endif
 
   !-----------------------------------------------------------------------------------------------------
   !> Intialize radiation process (after memory has been set up)

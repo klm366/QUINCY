@@ -119,6 +119,7 @@ MODULE mo_pheno_memory_class
                                           ! ACHTUNG: da wir vorerst fract_fpc_max zur Abgrenzung zwischen "Wueste" und Vegetation
                                           !          in den JS4 Berechnungen haben, gilt eigentlich dies hier:
                                           ! var (tile area) = veg_fract_correction * var(canopy area)  * fract_fpc_max.
+#endif
 
   CONTAINS
     PROCEDURE :: Init => Init_pheno_memory

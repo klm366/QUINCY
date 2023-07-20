@@ -75,7 +75,7 @@ MODULE mo_jsb_physical_constants
                                                                           !< reduce the use of the very large/small AvogadroC/lambda_C14
     & scale_correction_c14       = 1.e12_wp                             !< conversion from mol to pico-mol for C14 (for numerical precision)
 
-  REAL(wp), PARAMETER :: von_karman = 0.4_wp      !< von Karmann constant for evaporation
+  REAL(wp), PARAMETER :: von_karman = 0.4_wp    !< von Karmann constant for evaporation
 
   !! quincy - physical constants
   REAL(wp), PARAMETER :: &
@@ -86,6 +86,8 @@ MODULE mo_jsb_physical_constants
     & Dco2         = 0.0000151_wp     ,  &      !< diffusion coefficient for CO2 in air (m2 s-1)
     & Tzero        = 273.15_wp        ,  &      !< the value of Tzero (QUINCY) is identical with tmelt (ECHAM/ICON/jsbach4)
                                                 !<  but in reality tmelt is not always at Tzero [K]
+    & rain_as_snow_temp_thresh = Tzero + 2.5_wp !< threshold below which rain falls as snow - source: OCN-weather generator
+  REAL(wp), PARAMETER :: &
     & LatentHeatVaporization = alv , &          !< [J/kg]   latent heat for vaporisation
     & LatentHeatSublimation  = als              !< [J/kg]   latent heat for sublimation
   ! molar masses

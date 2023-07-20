@@ -358,24 +358,24 @@ CONTAINS
 
   END SUBROUTINE pheno_init_ic_jsbach
 
-  !-----------------------------------------------------------------------------------------------------
+  ! ======================================================================================================= !
   !> Intialize pheno variables for boundary conditions (bc)
-  !!
-  !! quincy
-  !-----------------------------------------------------------------------------------------------------
+  !>
+  !> quincy
+  !>
   SUBROUTINE pheno_init_bc_quincy(tile)
 
     ! see also the USE statements in the module header
     USE mo_pheno_constants,       ONLY: ievergreen
     USE mo_jsb_impl_constants,    ONLY: false, true
-
+    
     ! ---------------------------
     ! 0.1 InOut
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ---------------------------
     ! 0.2 Local
     TYPE(t_jsb_model),       POINTER  :: model
-
+    
     CHARACTER(len=*), PARAMETER :: routine = modname//':pheno_init_bc_quincy'
     ! ---------------------------
     ! 0.3 Declare Memory
@@ -410,10 +410,23 @@ CONTAINS
     !!
     !! init growing_season, lai_max, lai
     IF (tile%lcts(1)%lib_id /= 0) THEN ! work with lctlib only if the present tile is a pft
+#ifdef __QUINCY_STANDALONE__
+      !> QS - QUINCY standalone
+      !>
+      ! set lai_max from the site specific LAI from all_site_list.dat (saved in pheno_config:lai_max) and check for sensible values
+      IF (dsl4jsb_Config(PHENO_)%lai_max > 0.5_wp .AND. dsl4jsb_Config(PHENO_)%lai_max < 8.0_wp) THEN
+        lai_max(:,:) = dsl4jsb_Config(PHENO_)%lai_max
+      ELSE
+        lai_max(:,:) = 6.0_wp
+      END IF
+#else
+      !> IQ - QUINCY in ICON-Land
+      !>
       ! lai_max
       lai_max(:,:) = 6.0_wp  ! for jsbach4 a lctlib parameter 'dsl4jsb_Lctlib_param(MaxLAI)' is available
       ! lai init should also work with 0.0_wp (in QUINCY canopy it is initialized with 6.0_wp)
       lai(:,:)     = 1.0_wp
+#endif
       ! growing season flag, set depending on whether this is a evergreen plant (TRUE) or not (FALSE)
       IF(dsl4jsb_Lctlib_param(phenology_type) == ievergreen) THEN
         growing_season(:,:) = true

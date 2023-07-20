@@ -1,3 +1,20 @@
+##    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles        
+##    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany         
+##    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.        
+##        
+##    This file is part of the QUINCY model.        
+##    The QUINCY model is free software: you can redistribute it and/or modify        
+##    it under the terms of the GNU General Public License version 3,        
+##    as published by the Free Software Foundation.        
+##        
+##    The QUINCY model is distributed in the hope that it will be useful,        
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of        
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        
+##    GNU General Public License for more details.        
+##        
+##    You should have received a copy of the GNU General Public License        
+##    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.        
+        
 #----------------------------------------------------------------------------------------                             
 # QUINCY Model
 # LANDCOVER LIBRARY
@@ -19,6 +36,29 @@
 #  7: TeH:  C3 grass & TeC: C3 crop ?        
 #  8: TrH:  C4 grass & TrC: C4 crop ?        
 #        
+#  JSBACH4.x reference        
+#  1: Glacier                             
+#  2: Tropical evergreen trees                             
+#  3: Tropical deciduous trees                             
+#  4: Extra-tropical evergreen trees                             
+#  5: Extra-tropical deciduous trees                             
+#  6: Temperate broadleaf evergreen trees                             
+#  7: Temperate broadleaf deciduous trees                             
+#  8: Coniferous evergreen trees                             
+#  9: Coniferous deciduous trees                             
+# 10: Raingreen shrubs                             
+# 11: Deciduous shrubs                             
+# 12: C3 grass                             
+# 13: C4 grass                             
+# 14: Pasture                             
+# 15: C3 pasture                             
+# 16: C4 pasture                             
+# 17: Tundra                             
+# 18: Swamp                             
+# 19: Crops                             
+# 20: C3 crop                             
+# 21: C4 crop                             
+                             
 #----------------------------------------------------------------------------------------                             
                              
 NLCT 8 # number of landcover types <- QUINCY 8 PFTs
@@ -173,16 +213,19 @@ k_est_light 2.0 2.0 4.0 4.0 2.0 4.0 4.0 4.0
         
 #seed_size: seed size (mol C)        
 seed_size 0.5 0.5 0.5 0.5 0.5 0.5 0.1 0.1
-        
+       
+#k1_mort_greff: asymptotic growth efficiency mortality rate (1/yr)
+k1_mort_greff 0.05 0.05 0.3 0.05 0.05 0.05 0.05 0.05
+ 
 #        
 # Phenology parameters        
 #        
         
 #beta_soil_flush: soil moisture limitation factor on stomatal conductance inducing leaf flushing        
-beta_soil_flush 0.0 0.0 0.98 0.0 0.0 0.0 0.9 0.9
+beta_soil_flush 0.0 0.0 0.85 0.0 0.0 0.0 0.75 0.75
         
 #beta_soil_senescence: soil moisture limitation factor on stomatal conductance inducing leaf senescence        
-beta_soil_senescence 0.0 0.0 0.5 0.0 0.0 0.0 0.01 0.01
+beta_soil_senescence 0.0 0.0 0.3 0.0 0.0 0.0 0.02 0.02
         
 #gdd_req_max: maximum GDD requirement (degC days) in the absence of chilling        
 gdd_req_max 0.0 0.0 0.0 800.0 0.0 800.0 20.0 40.0

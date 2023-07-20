@@ -96,9 +96,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> conversion: lowercase -> uppercase
-  !!
-  !! Copied from ICON module shared/mo_util_string
+  !> ifs2soil
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)

@@ -199,7 +199,7 @@ CONTAINS
     E1v             = 65330.0_wp                        !< Bernacchi 2001
     t_jmax_offset   = 17.0_wp                           !< Friend 2009
     t_jmax_slope    = 0.35_wp                           !< Friend 2009
-    t_jmax_opt_min  = t_jmax_offset                     !<
+    t_jmax_opt_min  = t_jmax_offset                     !< 
     t_jmax_opt_max  = 38.0_wp                           !< Friend 2009
     Tref_pepc       = 25._wp                            !< Friend 2009
     Tbase_pepc      = 10._wp                            !< Friend 2009
@@ -222,7 +222,7 @@ CONTAINS
     ! parameters for canopy profile and canopy light extinction (parameters describing the canopy profile of N)
     ka            = 0.005_wp                            !< .. reference
     kn            = 0.11_wp                             !< .. reference
-
+    
     ! ...
     soa_b         = -0.5_wp                             !< .. reference
     soa_t_s       = 5.0_wp                              !< .. reference

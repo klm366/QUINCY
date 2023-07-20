@@ -123,12 +123,31 @@ MODULE mo_a2l_memory_class
       & co2_DC14_const                    !< constant value (avrg of 1st year of input value) of co2_DC14 [scaled]
 #endif
 
+#ifdef __QUINCY_STANDALONE__
+    ! For calculation of constant input values (add values over the 1st year, calc avrg, and use this as input for teh rest of the simulation)
+    TYPE(t_jsb_var_real2d) :: &
+      & nhx_deposition_acc, &             !< accumulate (simply add) input value of nhx_deposition [mumol m-2 sec-1]
+      & nhy_deposition_acc, &             !< accumulate (simply add) input value of nhy_deposition [mumol m-2 sec-1]
+      & p_deposition_acc, &               !< accumulate (simply add) input value of p_deposition [mumol m-2 sec-1]
+      & co2_mixing_ratio_acc, &           !< accumulate (simply add) input value of co2_mixing_ratio [ppm]
+      & co2_dC13_acc, &                   !< accumulate (simply add) input value of co2_dC13 [ppm]
+      & co2_DC14_acc, &                   !< accumulate (simply add) input value of co2_DC14 [scaled]
+      & const_input_timestep_counter      !< count number of timesteps since simulation start [unitless]
+
+    TYPE(t_jsb_var_real2d) :: &
+      & nhx_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhx_deposition [mumol m-2 sec-1]
+      & nhy_deposition_const, &           !< constant value (avrg of 1st year of input value) of nhy_deposition [mumol m-2 sec-1]
+      & p_deposition_const, &             !< constant value (avrg of 1st year of input value) of p_deposition [mumol m-2 sec-1]
+      & co2_mixing_ratio_const, &         !< constant value (avrg of 1st year of input value) of co2_mixing_ratio [ppm]
+      & co2_dC13_const, &                 !< constant value (avrg of 1st year of input value) of co2_dC13 [ppm]
+      & co2_DC14_const                    !< constant value (avrg of 1st year of input value) of co2_DC14 [scaled]
+#endif
+
   CONTAINS
     PROCEDURE :: Init => Init_a2l_memory
   END TYPE t_a2l_memory
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_a2l_memory_class'
-
 
 CONTAINS
 
@@ -235,15 +254,6 @@ CONTAINS
       & lrestart=.FALSE.,                                                    &
       & output_level=BASIC, &
       & initval_r=777.7_wp )
-
-    CALL mem%Add_var( 'fract_par_diffuse', mem%fract_par_diffuse,            &
-      & hgrid, surface,                                                      &
-      & t_cf('fract_par_diffuse', '', ''),                                   &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
 
     CALL mem%Add_var( 'co2_air', mem%CO2_air,                                                      &
       & hgrid, surface,                                                                            &
@@ -353,6 +363,15 @@ CONTAINS
     CALL mem%Add_var( 'swpar_srf_down', mem%swpar_srf_down,                  &
       & hgrid, surface,                                                      &
       & t_cf('downward_par_shortwave_radiation', 'W/m2', ''),                &
+      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+      & prefix, suffix,                                                      &
+      & lrestart=.FALSE.,                                                    &
+      & output_level=BASIC,                                                  &
+      & initval_r=0.0_wp )
+
+    CALL mem%Add_var( 'fract_par_diffuse', mem%fract_par_diffuse,            &
+      & hgrid, surface,                                                      &
+      & t_cf('fract_par_diffuse', '', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &

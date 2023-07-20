@@ -278,15 +278,13 @@ CONTAINS
 
     !$ACC ROUTINE SEQ
 
-    USE mo_jsb_physical_constants, ONLY: grav
+    USE mo_jsb_physical_constants,      ONLY: grav
 
-    REAL(wp), INTENT(in) :: &
-      & drag,      &
-      & steplen,   &
-      & alpha
+    REAL(wp),           INTENT(in) :: drag      !< ..
+    REAL(wp),           INTENT(in) :: steplen   !< ..
+    REAL(wp), OPTIONAL, INTENT(in) :: alpha     !< differs for standalone & coupled simulations
 
     heat_transfer_coef = drag / (alpha * grav * steplen)
-
   END FUNCTION heat_transfer_coef
 
   ! ======================================================================================================= !

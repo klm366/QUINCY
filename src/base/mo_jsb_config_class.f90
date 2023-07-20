@@ -299,6 +299,13 @@ CONTAINS
       CALL message(TRIM(routine), 'WARNING: Model will not stop due to any land water balance violation.')
     END IF
 
+    ! set the model configuration id
+#ifdef __QUINCY_STANDALONE__
+    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model_name)
+#else
+    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model)
+#endif
+
     ! quincy - temporary solution @TODO
     model_config%flag_stand_harvest           = .FALSE.
     model_config%stand_replacing_year         = 1500
@@ -356,7 +363,7 @@ CONTAINS
     CALL setup_element(config, config%include_carbon14, ELEM_C14_ID, 'C14', caller)
     ! nitrogen15
     CALL setup_element(config, config%include_nitrogen15, ELEM_N15_ID, 'N15', caller)
-
+    
   END SUBROUTINE setup_element_index_map_in_config
 
   ! ======================================================================================================= !
