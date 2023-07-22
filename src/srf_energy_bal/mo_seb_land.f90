@@ -421,6 +421,8 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    !$ACC WAIT(1)
+
     !$ACC END DATA
 
 #ifndef _OPENACC
