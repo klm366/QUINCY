@@ -46,6 +46,8 @@ MODULE mo_lentic_SfcFlx_process
     &  Q_sensible , & ! out
     &  Q_latent   , & ! out
     &  Q_watvap   , & ! out
+    &  z0u_sf     , & ! out
+    &  z0t_sf     , & ! out
     &  u_star_st    & ! out
     )
 
@@ -96,6 +98,8 @@ MODULE mo_lentic_SfcFlx_process
                             & Q_sensible    , & ! Sensible heat flux [W m^{-2}]  
                             & Q_latent      , & ! Laten heat flux [W m^{-2}]
                             & Q_watvap      , & ! Flux of water vapour [kg m^{-2} s^{-1}]
+                            & z0u_sf        , & ! Roughness length with respect to wind velocity [m]
+                            & z0t_sf        , & ! Roughness length with respect to potential temperature [m]
                             & u_star_st         ! Friction velocity [m s^{-1}]
     !$claw end model-data
 
@@ -115,9 +119,7 @@ MODULE mo_lentic_SfcFlx_process
                         q_s                        ! Saturation specific humidity at T=T_s [-]
 
     !  Roughness lengths
-    REAL (KIND = wp) :: z0u_sf                 , & ! Roughness length with respect to wind velocity [m]
-                        z0t_sf                 , & ! Roughness length with respect to potential temperature [m]
-                        z0q_sf                     ! Roughness length with respect to specific humidity [m]
+    REAL (KIND = wp) :: z0q_sf                     ! Roughness length with respect to specific humidity [m]
 
     !  Local variables of type REAL
     REAL (KIND = wp) :: Q_mom_tur              , & ! Turbulent momentum flux [N m^{-2}]

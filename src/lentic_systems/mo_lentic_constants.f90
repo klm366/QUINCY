@@ -77,7 +77,7 @@ PUBLIC
       ! !  Security constants
       & c_small        = 1.0E-10_wp, & ! A small number
       & h_ML_max       = 1.0E+3_wp , & ! Maximum mixed-layer depth [m]
-       & h_Snow_min     = 1.0E-5_wp , & ! Minimum snow thickness [m]
+      & h_Snow_min     = 1.0E-5_wp , & ! Minimum snow thickness [m]
       & h_Ice_min      = 1.0E-9_wp , & ! Minimum ice thickness [m]
       & h_ML_min       = 1.0E-2_wp , & ! Minimum mixed-layer depth [m]
       & u_star_min     = 1.0E-6_wp , & ! Minimum value of the surface friction velocity [m s^{-1}]

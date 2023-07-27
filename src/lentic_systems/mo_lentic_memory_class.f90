@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Zoé Rehder (22-05-2023)
-!!
+!!cd
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.
 !! Please see URL http://www.mpimet.mpg.de/en/science/models/license .
@@ -55,6 +55,8 @@ MODULE mo_lentic_memory_class
       & fetch,        &  !< lake fetch
       & w_star,       &  !< convective velocity scale 
       & par_Coriolis, & !< The Coriolis parameter [s^{-1}]
+      & z0t_sf, &
+      & z0u_sf, &
       & Q_bot!, & !< ! Heat flux through the water-bottom sediment interface [W m^{-2}]
       !X add your 2D variables here e.g: & t_wtr,                & !< Lake surface temperature (water)     [K]
 
@@ -189,10 +191,24 @@ CONTAINS
 
       CALL mem%Add_var( 'w_star', mem%w_star,                                          &
         & hgrid, surface,                                                              &
-        & t_cf('w_star', 'm s-1', 'lake convective velocity scale '),                  &
+        & t_cf('w_star', 'm s-1', 'lake convective velocity scale'),                  &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC, initval_r=280.0_wp )
+
+        CALL mem%Add_var( 'z0t_sf', mem%w_star,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('z0t_sf', 'm', 'lake roughness length (heat)'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=FULL, initval_r=280.0_wp )
+
+        CALL mem%Add_var( 'z0u_sf', mem%w_star,                                          &
+        & hgrid, surface,                                                              &
+        & t_cf('z0u_sf', 'm', 'lake roughness length (momentum)'),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+        & prefix, suffix,                                                              &
+        & output_level=FULL, initval_r=280.0_wp )
     END IF
 
   END SUBROUTINE Init_lentic_memory

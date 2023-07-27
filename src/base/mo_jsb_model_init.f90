@@ -186,6 +186,7 @@ CONTAINS
     USE mo_turb_init,           ONLY: turb_init
     USE mo_sse_init,            ONLY: sse_init, init_soil_properties
     USE mo_hydro_init,          ONLY: hydro_init
+    USE mo_lentic_init,         ONLY: lentic_init
     USE mo_rad_init,            ONLY: rad_init
     USE mo_atm2land_init,       ONLY: atm2land_init
     USE mo_assimi_init,         ONLY: assimi_init
@@ -358,12 +359,12 @@ CONTAINS
         CALL model%Queue_task(HYDRO_,  "canopy_cond_stressed")
       END IF
       ! CALL model%Queue_task(HYDRO_,  "snow_and_wet_fraction")
-      CALL model%Queue_task(LENTIC_, "lentic_wbphysics")
       IF (model%processes(CARBON_)%p%config%active) THEN
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
+      CALL model%Queue_task(LENTIC_, "lentic_wbphysics")
       CALL model%Queue_task(RAD_,    "albedo")
           ! Albedo is updated at the end of the time step, one time step before the radiation is updated in
           ! the atmosphere. Otherwise, in between, the albedo changes would be consindered in the jsbach
@@ -587,6 +588,12 @@ CONTAINS
         END IF
       END SELECT
 
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_JSBACH)
+        IF (tile%Is_process_active(LENTIC_)) THEN
+          CALL lentic_init(tile)
+        END IF
+      END SELECT
       IF (tile%Is_process_active(A2L_)) THEN
         CALL atm2land_init(tile)
       END IF

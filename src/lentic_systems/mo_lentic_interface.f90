@@ -183,7 +183,6 @@ CONTAINS
     dsl4jsb_Def_memory(LENTIC_) 
 
 
-
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
       & q_bot,                & !< Heat flux through the water-bottom sediment interface of lakes [W m-2]
@@ -216,12 +215,14 @@ CONTAINS
       & h_snow,               &
       & h_ml,                 &
       & t_sfc,                &
+      & z0t_sf,                &
+      & z0u_sf,                &          
       & w_star
 
-    REAL(wp) ::                 &
-        & albedo_water,   & 
-        & albedo_ice(options%nc),     & 
-        & albedo_snow(options%nc),    & 
+    REAL(wp) ::                   &
+        & albedo_water,           & 
+        & albedo_ice(options%nc), & 
+        & albedo_snow(options%nc),& 
     !   & w_star(options%nc),     &
         & u_star(options%nc),     &
         & u_star_sf(options%nc),  &
@@ -279,6 +280,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr)  ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice)  ! out
 
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, z0u_sf)           ! out
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, z0t_sf)           ! out
 
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
     dsl4jsb_Get_var2D_onChunk(LENTIC_, Q_bot)           ! in
@@ -286,18 +289,18 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! in
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, pondtype)        ! in
 
-    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)          ! inout
+    ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)        ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_lice)          ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_mnw)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_wml)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_bot)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, c_t)             ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ice)           ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_snow)           ! inout
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, h_snow)          ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, t_sfc)           ! inout
     
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, w_star)           ! out
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, w_star)          ! out
 
    
     ! ---------------------------
@@ -352,7 +355,7 @@ CONTAINS
 
     !  Compute the surface friction velocity and fluxes of sensible and latent heat 
     CALL calc_momsenlat ( h_atmvars, h_atmvars, fetch, wind_air, t_air, q_air, t_sfc, press_srf, h_ice,  &
-                            Q_momentum, Q_sensible, Q_latent, Q_watvap, u_star ) 
+                            Q_momentum, Q_sensible, Q_latent, Q_watvap, z0u_sf, z0t_sf, u_star ) 
     u_star_sf = SQRT(-Q_momentum/rhoh2o) !zr todo: Check differences between u_star and u_star_sf
 
     WHERE(h_ice.GE.h_Ice_min)  
@@ -489,6 +492,15 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LENTIC_, h_ml,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, h_snow,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, T_sfc,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, t_lice,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, t_mnw,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, t_wml,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, t_bot,        weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, c_t,          weighted_by_fract) 
+    dsl4jsb_Aggregate_onChunk(LENTIC_, w_star,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, z0t_sf,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, z0u_sf,       weighted_by_fract)
+
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
