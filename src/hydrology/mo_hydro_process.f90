@@ -307,6 +307,7 @@ CONTAINS
 
     END DO
     !$ACC END LOOP
+    !$ACC WAIT(1)
     !$ACC END PARALLEL
 
   END SUBROUTINE calc_surface_hydrology_land
@@ -585,7 +586,7 @@ CONTAINS
       &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
       &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
 
-    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT)
 
     ! Aggregate the different runoff flux components
     !$ACC LOOP SEQ
@@ -607,7 +608,7 @@ CONTAINS
     ! recalculate soil moisture from the soil moisture of the individual levels
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       infilt(ic)        = infilt       (ic) * rhoh2o / dtime
       runoff(ic)        = runoff       (ic) * rhoh2o / dtime
@@ -619,6 +620,7 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE calc_soil_hydrology
@@ -982,6 +984,7 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL LOOP
+    !$ACC WAIT(1)
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -1050,6 +1053,7 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL
+    !$ACC WAIT(1)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
@@ -1892,6 +1896,8 @@ CONTAINS
     END DO
   END DO
 
+  !$ACC WAIT(1)
+
   ! Note that P & Q refer to the inter face above a given lvl not below.
   ! Hence for j == 1, there is no P(j) and Q(j)
   ! Make sure that this is consistent with the definition of input params.
@@ -2085,7 +2091,7 @@ CONTAINS
       END DO
       !$ACC END PARALLEL LOOP
     END IF
-    
+
     ! Compute impedance factor due to soil ice
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
@@ -2259,6 +2265,7 @@ CONTAINS
       !$ACC END PARALLEL LOOP
 
     END IF
+    !$ACC WAIT(1)
 
     ! Determining K & D on layer interface
     ! Possibility
@@ -2276,7 +2283,7 @@ CONTAINS
       END IF
 #endif
 
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP SEQ
       DO is = nsoil, 2, -1
         !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -2306,7 +2313,7 @@ CONTAINS
         CALL finish ('get_soilhyd_cond_properties', message_text)
       END IF
 #endif
-      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+      !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP SEQ
       DO is = nsoil, 2, -1
         !$ACC LOOP GANG(STATIC: 1) VECTOR
