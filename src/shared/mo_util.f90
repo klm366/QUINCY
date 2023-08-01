@@ -161,13 +161,17 @@ CONTAINS
       fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
     REAL(wp), INTENT(out)  ::  parameter_from_texture
 
-    parameter_from_texture = MAX(((fraction_sand + fraction_sand_deep)     &
-                             * 0.5_wp * parameter_sand) +                  &
-                             ((fraction_silt + fraction_silt_deep)         &
-                             * 0.5_wp * parameter_silt) +                  &
-                             ((fraction_clay + fraction_clay_deep)         &
-                             * 0.5_wp * parameter_clay),                   &
-                             MIN(parameter_sand,parameter_silt,parameter_clay))
+    ! Compute texture based soil parameter
+    parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
+      &                      * 0.5_wp * parameter_sand) +                  &
+      &                      ((fraction_silt + fraction_silt_deep)         &
+      &                      * 0.5_wp * parameter_silt) +                  &
+      &                      ((fraction_clay + fraction_clay_deep)         &
+      &                      * 0.5_wp * parameter_clay)
+
+    ! Ensure the parameter is within the correct bounds
+    parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand,parameter_silt,parameter_clay))
+    parameter_from_texture = MIN(parameter_from_texture, MAX(parameter_sand,parameter_silt,parameter_clay))
 
   END SUBROUTINE soil_init_from_texture
 
