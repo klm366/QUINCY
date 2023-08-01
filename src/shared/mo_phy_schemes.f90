@@ -6,7 +6,7 @@
 !!
 !! @par Revision History
 !! First version by Reiner Schnur (2013-04-04)
-!! Adapted for QUINCY purposes (by Sönke Zaehle (2016-12-22)
+!! Adapted for QUINCY purposes (by Soenke Zaehle (2016-12-22)
 !!
 !! @par Copyright
 !! This code is subject to the MPI-M-Software - License - Agreement in it's most recent form.

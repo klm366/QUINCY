@@ -20,10 +20,10 @@
 !! @brief Contains the routines to calculate the canopy layer C and N content, and routines using this functionality
 !!
 !! @author
-!!  Sönke Zaehle, Silvia Caldararu, MPI-BGC Jena
+!!  Soenke Zaehle, Silvia Caldararu, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2016-29-08)
+!! First version by Soenke Zaehle (2016-29-08)
 !!
 !!
 MODULE mo_veg_canopy
@@ -309,8 +309,8 @@ CONTAINS
            ! ! implied Vmax and Jmax in nmol / g DW / s
            ! !hlp1(:,:) = exp(4.44904_wp + 0.3472_wp*log10(hlp4(:,:)) + 0.49078*log10(hlp3(:,:)))
            ! !hlp2(:,:) = exp(5.49435_wp + 0.37345_wp*log10(hlp4(:,:)) + 0.41435_wp*log10(hlp3(:,:)))
-           ! ! convert to f_rub_cl: Vmax = vmax2n * frub * leaf_n | µmol / m2 / s
-           ! !                      Vmax1 = vmax2n * frub * leaf_n / DW * 1000 | nmol / gDW / s
+           ! ! convert to f_rub_cl: Vmax = vmax2n * frub * leaf_n | micro-mol / m2 / s
+           ! !                      Vmax1 = vmax2n * frub * leaf_n / DW * 1000 | nmol / gDW / s
            ! !                      exp(X) = vmax2n * frub * leaf_n
            ! !                      frub = exp(X) / leaf_n / vmax2n         
            ! !fn_rub_cl(:,:) = exp(4.44904_wp + 0.3472_wp*log(hlp4(:,:)) + 0.49078*log(hlp3(:,:))) / & 
@@ -919,7 +919,7 @@ CONTAINS
                                                           q_air                   , &   !< air specific humidity (--)
                                                           co2_mixing_ratio        , &   !< co2 mixing ratio (ppm)
                                                           ga                      , &   !< air temperature (K)
-                                                          net_assimilation        , &   !< net assimilation rate (µmol CO2 / m2 / s)
+                                                          net_assimilation        , &   !< net assimilation rate (micro-mol CO2 / m2 / s)
                                                           canopy_cond             , &   !< canopy conductance (m/s)
                                                           beta_air                , &   !< air humidity limiting factor for photosynthesis
                                                           beta_soa                , &   !< spring air temp lim factor for Evergr. needlel. photosynthesis

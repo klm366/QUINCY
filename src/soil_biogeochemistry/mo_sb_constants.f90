@@ -20,10 +20,10 @@
 !! @brief Contains constants for the soil_biogeochemistry process
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20170124)
+!! First version by Soenke Zaehle (20170124)
 !!
 MODULE mo_sb_constants
 
@@ -235,8 +235,8 @@ MODULE mo_sb_constants
       ea_gasdiffusion, &         !< activation energy for gas diffusion [J mol-1]
       lambda_anvf, &             !< lambda in the Weibull function relating soil moisture to the anaerobic volume fraction
       k_anvf, &                  !< k in the Weibull function relating soil moisture to the anaerobic volume fraction
-      vmax_nitrification, &      !< maximum nitrification rate [µmol N mol-1 N s-1] 
-      vmax_denitrification, &    !< maximum denitrification rate [µmol m-3 s-1] 
+      vmax_nitrification, &      !< maximum nitrification rate [micro-mol N mol-1 N s-1] 
+      vmax_denitrification, &    !< maximum denitrification rate [micro-mol m-3 s-1] 
       km_denitrification_c, &    !< half-saturation constant for carbon-limited (de-)nitrification [mol C m-3]
       km_denitrification_no3, &  !< half-saturation constant for nitrate-limited denitrifcation [mol N m-3]
       f_nit_noy, &               !< fraction of nitrification lost as NOy [--]
@@ -471,30 +471,30 @@ CONTAINS
     km1_up_no3 = 0.0416_wp                 ! Kronzucker et al. 1996, Plant Physiology
     km2_up_no3 = 1.0_wp                    ! Kronzucker et al. 1996, Plant Physiology
     km1_up_po4 = 0.0689_wp / 0.0003_wp     ! l/mol, corrected low affinity half-saturation, estimated based on Kavka and Polle 2016, 
-                                           ! assuming Km for low-affinity transporter is 300 µmol/l
+                                           ! assuming Km for low-affinity transporter is 300 micro-mol/l
     km2_up_po4 = 22.0_wp / 1.e6_wp         ! mol/l, Kavka and Polle 2016
 
     ! additional jsm parameters 
-    vmax_mic_uptake_nh4       = 106.56_wp / 3600._wp * molar_mass_C     ! µmol / mol / s from Zhu et al. 2017, and references therein 
+    vmax_mic_uptake_nh4       = 106.56_wp / 3600._wp * molar_mass_C     ! micro-mol / mol / s from Zhu et al. 2017, and references therein 
     km_mic_uptake_nh4         = 0.18_wp / molar_mass_N                  ! mol / m3 from Zhu et al. 2017, and references therein    
-    vmax_mic_uptake_no3       = 86.58_wp / 3600._wp * molar_mass_C      ! µmol / mol / s from Zhu et al. 2017, and references therein 
+    vmax_mic_uptake_no3       = 86.58_wp / 3600._wp * molar_mass_C      ! micro-mol / mol / s from Zhu et al. 2017, and references therein 
     km_mic_uptake_no3         = 0.41_wp / molar_mass_N                  ! mol / m3 from Zhu et al. 2017, and references therein   
     f_mic_carrier_n           = 0.5_wp / 10000._wp                      ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
-    vmax_plant_uptake_nh4     = 108.78_wp / 3600._wp * molar_mass_C     ! µmol / mol / s from Zhu et al. 2017, and references therein
+    vmax_plant_uptake_nh4     = 108.78_wp / 3600._wp * molar_mass_C     ! micro-mol / mol / s from Zhu et al. 2017, and references therein
     km_plant_uptake_nh4       = 0.896_wp / molar_mass_N                 ! mol / m3 from Zhu et al. 2017, and references therein 
-    vmax_plant_uptake_no3     = 18.2_wp / 3600._wp * molar_mass_C       ! µmol / mol / s from Zhu et al. 2017, and references therein
+    vmax_plant_uptake_no3     = 18.2_wp / 3600._wp * molar_mass_C       ! micro-mol / mol / s from Zhu et al. 2017, and references therein
     km_plant_uptake_no3       = 0.672_wp / molar_mass_N                 ! mol / m3 from Zhu et al. 2017, and references therein
     f_plant_carrier_n         = 1.25_wp / 10000._wp                     ! assuming 30% of the microbial enzymes are P transporter, based on Zhu et al. 2016
-    vmax_nitrification_nh4    = 636._wp / &                             ! µmol / mol / s , Kemp and Dodds 2002
+    vmax_nitrification_nh4    = 636._wp / &                             ! micro-mol / mol / s , Kemp and Dodds 2002
                                 molar_mass_N / one_day * molar_mass_C 
-    vmax_denitrification_no3  = 54._wp / &                              ! µmol / mol / s , Kemp and Dodds 2002
+    vmax_denitrification_no3  = 54._wp / &                              ! micro-mol / mol / s , Kemp and Dodds 2002
                                 molar_mass_N / one_day * molar_mass_C 
     km_nitrification_nh4      = 0.019_wp / molar_mass_N                 ! mol / m3 , Kemp and Dodds 2002
     km_denit_no3              = 0.3_wp / molar_mass_N                   ! mol / m3 , Kemp and Dodds 2002  
     k_nit_carrier_n           = 0.001_wp / 1000._wp                     ! estimated
-    vmax_mic_uptake_po4       = 15.72_wp / 3600._wp * molar_mass_C      ! µmol / mol / s, based on Zhu et al. 2016, and references therein
+    vmax_mic_uptake_po4       = 15.72_wp / 3600._wp * molar_mass_C      ! micro-mol / mol / s, based on Zhu et al. 2016, and references therein
     km_mic_uptake_po4         = 0.02_wp / molar_mass_P                  ! mol / m3, Zhu et al. 2016
-    vmax_plant_uptake_po4     = 0.0222 / 60._wp * molar_mass_C          ! µmol / mol / s, Kavka and Polle 2016
+    vmax_plant_uptake_po4     = 0.0222 / 60._wp * molar_mass_C          ! micro-mol / mol / s, Kavka and Polle 2016
     km_plant_uptake_po4       = 0.067_wp / molar_mass_P                 ! mol / m3
     k_mic_uptake_nh4          = 0.32_wp * 24._wp / one_day              ! [s-1], Zhu et al. 2016; 0.32 h-1, Zhu et al. 2017
     k_plant_uptake_nh4        = 10.8_wp * 24._wp / one_day              ! [s-1], Zhu et al. 2016; 10.8 h-1, Zhu et al. 2017
@@ -533,7 +533,7 @@ CONTAINS
     f_nit_noy                 = 0.02_wp                                 ! Xu-Ri & Prentice, 2008
     f_nit_n2o                 = 0.002_wp                                ! Xu-Ri & Prentice, 2008
     ea_denitrification        = 47000._wp                               ! Xu-Ri & Prentice, 2008, to fit their function
-    vmax_nitrification        = 0.4_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day at 20°C
+    vmax_nitrification        = 0.4_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day at 20degC
     vmax_denitrification      = 0.1_wp / one_day * 1.e6_wp              ! Xu-Ri & Prentice, 2008, 10% / day
     km_denitrification_c      = 20.0_wp                                 ! ???
     km_denitrification_no3    = 0.083_wp * 1000.0_wp / molar_mass_N     ! Xu-Ri & Prentice, 2008

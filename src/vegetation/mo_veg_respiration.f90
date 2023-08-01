@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the plant respiration 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2016-02-17)
+!! First version by Soenke Zaehle (2016-02-17)
 !!
 MODULE mo_veg_respiration
 
@@ -56,7 +56,7 @@ CONTAINS
     ! 0.1 InOut
     REAL(wp), INTENT(in) :: temp                      !< instantaneous temperature (K)
     REAL(wp), INTENT(in) :: temp_mavg                 !< average temperature for acclimation (K) 
-    REAL(wp)             :: temp_response             !< temperature response of respiration (1 at 10°C)
+    REAL(wp)             :: temp_response             !< temperature response of respiration (1 at 10degC)
     ! ---------------------------
     ! 0.2 Local
     REAL(wp)             :: hlp1
@@ -110,8 +110,8 @@ CONTAINS
     REAL(wp), INTENT(in) :: sap_wood_nitrogen        !< nitrogen content of sapwood (mol N / m2)
     REAL(wp), INTENT(in) :: coarse_root_nitrogen     !< nitrogen content of sapwood (mol N / m2)
     REAL(wp), INTENT(in) :: fine_root_nitrogen       !< nitrogen content of sapwood (mol N / m2)
-                                                     ! (calculated in photosynthesis; µmol C / m2 / s)
-    REAL(wp)             :: maint_respiration        !< maintenance respiration (µmol C / m2 / s)
+                                                     ! (calculated in photosynthesis; micro-mol C / m2 / s)
+    REAL(wp)             :: maint_respiration        !< maintenance respiration (micro-mol C / m2 / s)
 
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_maintenance_respiration'
 

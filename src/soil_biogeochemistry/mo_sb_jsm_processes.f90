@@ -20,10 +20,10 @@
 !! @brief Contains the science routines for the JSM version in SLM 
 !!
 !! @author
-!!  Sönke Zaehle 
+!!  Soenke Zaehle 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20170124): adopted from JSM_interface and JSM_core
+!! First version by Soenke Zaehle (20170124): adopted from JSM_interface and JSM_core
 !! some refactoring and rewriting for bgcm -- Julia Nabel (2023-04)
 !!
 MODULE mo_sb_jsm_processes
@@ -80,8 +80,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rtm_depolymerisation     !< temperature rate modifier [-]
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: rmm_depolymerisation     !< moisture rate modifier [-]
     REAL(wp),                           INTENT(in)    :: pool_mt_litter(:,:,:)    !< bgcm: litter pool to decompose [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration          !< heterotrophic respiration [µmol C/m3/s] 
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c13      !< heterotrophic respiration [µmol 13C/m3/s] 
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration          !< heterotrophic respiration [micro-mol C/m3/s] 
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c13      !< heterotrophic respiration [micro-mol 13C/m3/s] 
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c14      !< heterotrophic respiration [pmol 14C/m3/s] 
     REAL(wp),                           INTENT(inout) :: loss_mt_litter(:,:,:)    !< bgcm: reduction in litter pool [mol/m3/timestep]
     REAL(wp),                           INTENT(inout) :: formation_mt_sink(:,:,:) !< bgcm: formation of SOM pool [mol/m3/timestep]
@@ -227,14 +227,14 @@ CONTAINS
     REAL(wp), INTENT(inout)     :: loss_residue_assoc_po4       !< loss of PO4 in the mineral associated microbial necromass pool [mol/m3]
     REAL(wp), INTENT(inout)     :: loss_residue_po4             !< loss of PO4 in the microbial necromass pool [mol/m3]
     REAL(wp), INTENT(inout)     :: loss_dom_po4                 !< loss of PO4 in the dom pool [mol/m3]
-    REAL(wp), INTENT(out)       :: biochem_min_po4              !< phosphorus biochemical mineralization rate, [µmol P /m3 /s]
-    REAL(wp), INTENT(out)       :: gross_min_po4                !< DOM mineralization rate [µmol P /m3 /s]
-    REAL(wp), INTENT(out)       :: weathering_po4               !< phosphorus weathering rate [µmol P / m3 / s]
-    REAL(wp), INTENT(out)       :: mic_upt_nh4                  !< microbial nh4 uptake rate [µmol N / m3 / s], for eca_none only
-    REAL(wp), INTENT(out)       :: mic_upt_no3                  !< microbial no3 uptake rate [µmol N / m3 / s], for eca_none only
-    REAL(wp), INTENT(out)       :: mic_upt_po4                  !< microbial po4 uptake rate [µmol P / m3 / s], for eca_none only
-    REAL(wp), INTENT(out)       :: occlusion_po4                !< phosphorus occlusion rate, assoc_slow --> occluded [µmol P / m3 / s]
-    REAL(wp), INTENT(out)       :: slow_exchange_po4            !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
+    REAL(wp), INTENT(out)       :: biochem_min_po4              !< phosphorus biochemical mineralization rate, [micro-mol P /m3 /s]
+    REAL(wp), INTENT(out)       :: gross_min_po4                !< DOM mineralization rate [micro-mol P /m3 /s]
+    REAL(wp), INTENT(out)       :: weathering_po4               !< phosphorus weathering rate [micro-mol P / m3 / s]
+    REAL(wp), INTENT(out)       :: mic_upt_nh4                  !< microbial nh4 uptake rate [micro-mol N / m3 / s], for eca_none only
+    REAL(wp), INTENT(out)       :: mic_upt_no3                  !< microbial no3 uptake rate [micro-mol N / m3 / s], for eca_none only
+    REAL(wp), INTENT(out)       :: mic_upt_po4                  !< microbial po4 uptake rate [micro-mol P / m3 / s], for eca_none only
+    REAL(wp), INTENT(out)       :: occlusion_po4                !< phosphorus occlusion rate, assoc_slow --> occluded [micro-mol P / m3 / s]
+    REAL(wp), INTENT(out)       :: slow_exchange_po4            !< phosphorus desorption rate, assoc_fast --> assoc_slow [micro-mol P / m3 / s]
 
     REAL(wp)                    :: hlp1, hlp2, hlp3, hlp4, hlp5, hlp6, hlp7, &
                                    uptake_c, f_uptake, uptake_n, uptake_p, mic_upt_n, &
@@ -333,7 +333,7 @@ CONTAINS
           ENDIF
           loss_dom_po4  = loss_dom_po4 + gross_min_po4 * dtime / 1.e6_wp 
 
-          ! biochemical mineralisation in µmol P / m3 / s
+          ! biochemical mineralisation in micro-mol P / m3 / s
           biochem_min_po4 = biochem_min_po4 * (dom_assoc_po4 * hlp5 + residue_po4 * hlp7 + residue_assoc_po4 * hlp6) * 1.e6_wp
        ELSE
           biochem_min_po4 = 0.0_wp
@@ -421,11 +421,11 @@ CONTAINS
     REAL(wp)          , INTENT(in)    :: solute_available                         !< available solvent for all the sinking processes (mol / m3)
     REAL(wp), OPTIONAL, INTENT(in)    :: vmax_nitri_denitri                       !< maximum nitrification/denitrification rate, for eca_none
     REAL(wp), OPTIONAL, INTENT(in)    :: solute_alternative                       !< concentration of the alternative solvent to be taken up by plant (mol / m3)    
-    REAL(wp)          , INTENT(inout) :: microbial_uptake                         !< microbial uptake flux (µmol / m3 / s)
-    REAL(wp)          , INTENT(out)   :: plant_uptake                             !< plant uptake flux (µmol / m3 / s)
-    REAL(wp)          , INTENT(out)   :: plant_uptake_pot                         !< plant potential uptake rate (µmol / m3 / s)
-    REAL(wp), OPTIONAL, INTENT(out)   :: fast_adsorpt                             !< fast adsorption flux (µmol / m3 / s)
-    REAL(wp), OPTIONAL, INTENT(out)   :: flux_nitri_denitri                       !< nitrification or denitrification flux (µmol / m3 / s)
+    REAL(wp)          , INTENT(inout) :: microbial_uptake                         !< microbial uptake flux (micro-mol / m3 / s)
+    REAL(wp)          , INTENT(out)   :: plant_uptake                             !< plant uptake flux (micro-mol / m3 / s)
+    REAL(wp)          , INTENT(out)   :: plant_uptake_pot                         !< plant potential uptake rate (micro-mol / m3 / s)
+    REAL(wp), OPTIONAL, INTENT(out)   :: fast_adsorpt                             !< fast adsorption flux (micro-mol / m3 / s)
+    REAL(wp), OPTIONAL, INTENT(out)   :: flux_nitri_denitri                       !< nitrification or denitrification flux (micro-mol / m3 / s)
     ! ----------------------------------------------------------------------------------------------------- !
     REAL(wp)                        :: mic_hlp, plant_hlp, mineral_hlp, nitri_hlp, &
                                        hlp1, hlp2, hlp3
@@ -656,20 +656,20 @@ CONTAINS
                                                                        nsoil_sb
     CHARACTER(len=*),                                 INTENT(in)    :: sb_nloss_scheme                 !< sb n loss scheme 
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(in)    :: soil_depth_sl, &                !< soil depth per layer [m]
-                                                                       net_mineralisation_nh4, &       !< net mineralisation rate of NH4 [µmol/m2/s]
-                                                                       net_mineralisation_nh4_n15, &   !< net mineralisation rate of 15NH4 [µmol/m2/s]
+                                                                       net_mineralisation_nh4, &       !< net mineralisation rate of NH4 [micro-mol/m2/s]
+                                                                       net_mineralisation_nh4_n15, &   !< net mineralisation rate of 15NH4 [micro-mol/m2/s]
                                                                        rtm_denitrification_act         !< temperature modifier for denitrification
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: nitrification_no3, &            !< nitrification to NO3 [µmol/m2/s]
-                                                                       denitrification_n2              !< denitrification to N2 [µmol/m2/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: nitrification_noy, &            !< nitrification to NOy [µmol/m2/s]
-                                                                       nitrification_n2o, &            !< nitrification to N2O [µmol/m2/s]
-                                                                       denitrification_noy, &          !< denitrification to NOy [µmol/m2/s]
-                                                                       denitrification_n2o, &          !< denitrification to N2O [µmol/m2/s]
-                                                                       nitrification_no3_n15, &        !< nitrification to 15NO3 [µmol/m2/s]
-                                                                       volatilisation_nh4, &           !< volatilisation of NH4 [µmol/m2/s]
-                                                                       volatilisation_nh4_n15          !< volatilisation of 15NH4 [µmol/m2/s]
-    REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2, &                  !< soil efflux of N2 [µmol/m2/s]
-                                                                       emission_n2_n15                 !< soil efflux of 15N2 [µmol/m2/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: nitrification_no3, &            !< nitrification to NO3 [micro-mol/m2/s]
+                                                                       denitrification_n2              !< denitrification to N2 [micro-mol/m2/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: nitrification_noy, &            !< nitrification to NOy [micro-mol/m2/s]
+                                                                       nitrification_n2o, &            !< nitrification to N2O [micro-mol/m2/s]
+                                                                       denitrification_noy, &          !< denitrification to NOy [micro-mol/m2/s]
+                                                                       denitrification_n2o, &          !< denitrification to N2O [micro-mol/m2/s]
+                                                                       nitrification_no3_n15, &        !< nitrification to 15NO3 [micro-mol/m2/s]
+                                                                       volatilisation_nh4, &           !< volatilisation of NH4 [micro-mol/m2/s]
+                                                                       volatilisation_nh4_n15          !< volatilisation of 15NH4 [micro-mol/m2/s]
+    REAL(wp), DIMENSION(nc),                          INTENT(out)   :: emission_n2, &                  !< soil efflux of N2 [micro-mol/m2/s]
+                                                                       emission_n2_n15                 !< soil efflux of 15N2 [micro-mol/m2/s]
     ! ---------------------------
     ! 0.2 Local
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_nitri_denitri_partitioning_rate'
@@ -899,20 +899,20 @@ CONTAINS
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: microbial_cue_eff_tmic_mavg  !< microbial effective CUE given NP constraints
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(in)    :: asymb_n_fixation_rel_rate    !< asymb N fixation rate relative to demand []
     REAL(wp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)          !< bgcm sb_pool [mol/m3]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_nh4_sl      !< microbial uptake rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_nh4_n15_sl  !< microbial uptake rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_no3_sl      !< microbial uptake rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_no3_n15_sl  !< microbial uptake rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_po4_sl      !< microbial uptake rate [µmol P/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration              !< respiration rate [µmol C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c13          !< respiration rate [µmol 13C/m3/s] 
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c14          !< respiration rate [µmol 14C/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_nh4       !< net mineralisation rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_nh4_n15   !< net mineralisation rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_no3       !< net mineralisation rate [µmol N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_no3_n15   !< net mineralisation rate [µmol 15N/m3/s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: gross_mineralisation_po4     !< gross mienralization rate by DOM , [µmol P/m3/s]  
-    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_po4       !< net mineralisation rate [µmol P/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_nh4_sl      !< microbial uptake rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_nh4_n15_sl  !< microbial uptake rate [micro-mol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_no3_sl      !< microbial uptake rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_no3_n15_sl  !< microbial uptake rate [micro-mol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_uptake_po4_sl      !< microbial uptake rate [micro-mol P/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration              !< respiration rate [micro-mol C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c13          !< respiration rate [micro-mol 13C/m3/s] 
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration_c14          !< respiration rate [micro-mol 14C/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_nh4       !< net mineralisation rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_nh4_n15   !< net mineralisation rate [micro-mol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_no3       !< net mineralisation rate [micro-mol N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_no3_n15   !< net mineralisation rate [micro-mol 15N/m3/s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: gross_mineralisation_po4     !< gross mienralization rate by DOM , [micro-mol P/m3/s]  
+    REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: net_mineralisation_po4       !< net mineralisation rate [micro-mol P/m3/s]
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_cue_eff            !< current effective CUE given NP constraints 
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_nue_eff            !< current effective NUE given NP constraints 
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: microbial_pue_eff            !< current effective PUE given NP constraints 
@@ -953,7 +953,7 @@ CONTAINS
     uptake_n(:,:) = f_uptake(:,:) * sb_pool_mt(ix_dom, ixN, :, :) 
     uptake_p(:,:) = f_uptake(:,:) * sb_pool_mt(ix_dom, ixP, :, :)
 
-    !> 1.1 free-living N fixation rate supporting microbial growth (µmol / m3 / s)
+    !> 1.1 free-living N fixation rate supporting microbial growth (micro-mol / m3 / s)
     SELECT CASE(TRIM(bnf_scheme))
     ! for the SB_ asymbiotic N fixation no difference is made between "dynamic" and "fixed" 
     !  ("fixed" is only available in the VEG_ symbiotic N fixation)
@@ -971,7 +971,7 @@ CONTAINS
       CALL finish(TRIM(routine),'No such bnf_scheme available here.')
     END SELECT
 
-    !> 1.1 microbial growth rates in µmol C / m3 / s, given by C, N and P availability, and the rate-limiting growth rate
+    !> 1.1 microbial growth rates in micro-mol C / m3 / s, given by C, N and P availability, and the rate-limiting growth rate
     !! 
     growth_c(:,:) = microbial_cue_max * uptake_c(:,:) 
     growth_n(:,:) = (microbial_nue * uptake_n(:,:) + asymb_n_fixation(:,:) + &

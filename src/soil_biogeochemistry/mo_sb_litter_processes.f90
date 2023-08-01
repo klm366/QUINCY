@@ -21,7 +21,7 @@
 !!  Contains the science routines for the litter transport and partitioning for the JSM and SIMPLE soil models
 !!
 !! @author
-!!  Sönke Zaehle 
+!!  Soenke Zaehle 
 !!
 !! @par Revision History
 !!  First version by Jan Engel (20181001): copyied from sb/mo_sb_simple_model.f90

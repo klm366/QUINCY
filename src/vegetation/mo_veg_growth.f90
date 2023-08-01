@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the plant growth 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !!
 MODULE mo_veg_growth
 
@@ -941,7 +941,7 @@ CONTAINS
   !!
   !! As this is proportional to the size of the labile pool, there is no need for a direct temperature 
   !! function of the turnover, as this will result from the dynamics of the labile pool. \nThis function
-  !!  therefore only takes account of the impact of low temperatures (<5°C) and low moisture 
+  !!  therefore only takes account of the impact of low temperatures (<5degC) and low moisture 
   !! (<20\% saturation). \nAdditionally, phenological dormancy is accounted for.
   !-----------------------------------------------------------------------------------------------------
   PURE ELEMENTAL FUNCTION calc_meristem_activity(t_air, &
@@ -1168,7 +1168,7 @@ CONTAINS
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: growth_req_n_tlabile_mavg    !< time-averaged growth requirement for N 
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: demand_uptake_n_tuptake_mavg !< time-averaged N demand scalar (unitless) 
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: demand_uptake_p_tuptake_mavg !< time-averaged P demand scalar (unitless)
-    REAL(wp), DIMENSION(nc),              INTENT(in)    :: fmaint_rate_troot_mavg       !< time-averaged N-speficic root maintentance respiration rate (µmol C/mol N / s)
+    REAL(wp), DIMENSION(nc),              INTENT(in)    :: fmaint_rate_troot_mavg       !< time-averaged N-speficic root maintentance respiration rate (micro-mol C/mol N / s)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_npp_troot_mavg          !< time-averaged increase of NPP with increased leaf C investment (mol C/mol C)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: unit_uptake_n_troot_mavg     !< time-averaged increase of root N uptake with increased root C inventment (mol N / mol C)
     REAL(wp), DIMENSION(nc),              INTENT(in)    :: exudation_c_tmyc_mavg        !< time-averaged C allocation to mycorrhizae (mol C / mol N)
@@ -1332,7 +1332,7 @@ CONTAINS
       !>  limited to the current demand of the plant (as for N uptake)
       !>
       CASE ("fixed")
-        ! N fixation in µmol N / m2 / s
+        ! N fixation in micro-mol N / m2 / s
         n_fixation(:) = demand_uptake_n_tuptake_mavg(:) * lctlib_bnf_base 
 
       !>3.2 Case 2: symbiotic N fixation as a dynamic trade-off of carbon and nitrogen opportunity costs
@@ -1354,7 +1354,7 @@ CONTAINS
       !>3.3 Case 3: Give enough N to maintain N requirement in the labile pool 
       !> 
       CASE("unlimited")
-        ! N fixation in µmol N / m2 / s
+        ! N fixation in micro-mol N / m2 / s
         n_fixation(:) = MAX(labile_carbon(:) * growth_req_n_tlabile_mavg(:) - labile_nitrogen(:), 0.0_wp) / & 
           &             dtime * 1000000.0_wp
     ENDSELECT 
@@ -1367,7 +1367,7 @@ CONTAINS
       ! high support = high exudation // low/no support = low exudation
       !!only sensitive to N at the moment (last line)
       nsup(:) = 0.0_wp
-      hlp1(:) = SUM(myc_export_n_tlabile_mavg_sl(:,:) * soil_depth_sl(:,:),DIM=2) * 1000000.0_wp !coversion of mols to µmols
+      hlp1(:) = SUM(myc_export_n_tlabile_mavg_sl(:,:) * soil_depth_sl(:,:),DIM=2) * 1000000.0_wp !coversion of mols to micro-mols
       nsup(:) = hlp1(:) / (hlp1(:) + 0.0001)
       psup(:) = 0.0_wp
       hlp1(:) = SUM(myc_export_p_tlabile_mavg_sl(:,:) * soil_depth_sl(:,:),DIM=2) * 1000000.0_wp
@@ -1439,7 +1439,7 @@ CONTAINS
 
     !> 5.0 update diagnostics and soil related variables, as well as N15 fluxes
     !!
-    !> 5.1 Calculate actual N and P uptake per unit fine root carbon (µmol {N/P} / mol C / s)
+    !> 5.1 Calculate actual N and P uptake per unit fine root carbon (micro-mol {N/P} / mol C / s)
     !!
     WHERE(fine_root_carbon(:) > eps8)
       unit_uptake_n_act(:) = (uptake_nh4(:) + uptake_no3(:)) / fine_root_carbon(:)
@@ -1734,13 +1734,13 @@ CONTAINS
     REAL(wp),              INTENT(in)  :: growth_cn                    !< C:N of whole plant growth increment
     REAL(wp),              INTENT(in)  :: growth_cp                    !< C:P of whole plant growth increment
     REAL(wp),              INTENT(in)  :: growth_np                    !< N:P of whole plant growth increment
-    REAL(wp),              INTENT(in)  :: npp                          !< current average NPP (µmol C m-2 s-1)
-    REAL(wp),              INTENT(in)  :: unit_npp                     !< increase in NPP for unit increase in leaf mass (µmol C m-2 s-1 mol-1 leaf C)
+    REAL(wp),              INTENT(in)  :: npp                          !< current average NPP (micro-mol C m-2 s-1)
+    REAL(wp),              INTENT(in)  :: unit_npp                     !< increase in NPP for unit increase in leaf mass (micro-mol C m-2 s-1 mol-1 leaf C)
     REAL(wp),              INTENT(in)  :: transpiration                !< average transpiration flux (kg m-2 s-1)
     REAL(wp),              INTENT(in)  :: unit_transpiration           !< increase in transpiration with unit increase in leaf mass (kg m-1 s-2 mol-1 leaf C)
-    REAL(wp),              INTENT(in)  :: n_fixation                   !< N fixation (µmol N m-2 s-1)
-    REAL(wp),              INTENT(in)  :: unit_uptake_n                !< N uptake per unit root mass (µmol N m-2 s-1 mol-1 root C)
-    REAL(wp),              INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (µmol P m-2 s-1 mol-1 root C)
+    REAL(wp),              INTENT(in)  :: n_fixation                   !< N fixation (micro-mol N m-2 s-1)
+    REAL(wp),              INTENT(in)  :: unit_uptake_n                !< N uptake per unit root mass (micro-mol N m-2 s-1 mol-1 root C)
+    REAL(wp),              INTENT(in)  :: unit_uptake_p                !< P uptake per unit root mass (micro-mol P m-2 s-1 mol-1 root C)
     REAL(wp),              INTENT(in)  :: dphi                         !< leaf-soil water potential gradient (MPa) 
     REAL(wp),              INTENT(in)  :: kstar_labile                 !< labile pool turnover rate
     REAL(wp),              INTENT(in)  :: w_root_lim                   !< ..
@@ -2093,8 +2093,8 @@ CONTAINS
     REAL(wp),                INTENT(in)     :: lctlib_sla                        !< lctlib parameter
     REAL(wp),                INTENT(in)     :: lctlib_tau_leaf                   !< lctlib parameter
     REAL(wp),                INTENT(in)     :: lctlib_tau_fine_root              !< lctlib parameter
-    REAL(wp), DIMENSION(nc), INTENT(in)     :: gpp_mavg                      , & !< last week's GPP (µmol CO2/m2/s) 
-                                               maint_respiration_mavg        , & !< last week's maintenance respiration (µmol CO2/m2/s)
+    REAL(wp), DIMENSION(nc), INTENT(in)     :: gpp_mavg                      , & !< last week's GPP (micro-mol CO2/m2/s) 
+                                               maint_respiration_mavg        , & !< last week's maintenance respiration (micro-mol CO2/m2/s)
                                                growth_req_n_mavg             , & !< last week's requirement for growth (mol N / mol C)
                                                growth_req_p_mavg             , & !< last week's requirement for growth (mol P / mol N)
                                                leaf2root_mass_ratio_mavg     , & !< leaf to root mass ratio over the lifetime of fine roots
@@ -2866,14 +2866,14 @@ CONTAINS
                                                n_processing_respiration_c14     !< respiration associated with N processing
     REAL(wp),                 INTENT(inout) :: veg_growth_mt(:,:,:)             !< fluxes: growth; see section 4.1: veg_growth_mt(ix_labile, :, :) is overwriten
     REAL(wp),                 INTENT(inout) :: veg_exudation_mt(:,:)            !< vegetation flux to mycorrhiza (mol / m2 / timestep) 
-    REAL(wp), DIMENSION(nc),  INTENT(out)   :: maint_respiration                !< maintenance respiration (µmol C / m2 / s)
-    REAL(wp), DIMENSION(nc),  INTENT(out)   :: growth_respiration               !< growth respiration (µmol C / m2 / s)
+    REAL(wp), DIMENSION(nc),  INTENT(out)   :: maint_respiration                !< maintenance respiration (micro-mol C / m2 / s)
+    REAL(wp), DIMENSION(nc),  INTENT(out)   :: growth_respiration               !< growth respiration (micro-mol C / m2 / s)
     !------------------------------------------------------------------------------------------------------ !
     REAL(wp), DIMENSION(nc)     :: hlp1
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_partitioning' 
     !------------------------------------------------------------------------------------------------------ !
 
-    !> 1.0 Determine C use for maintenance (µmol C / m2 / s)
+    !> 1.0 Determine C use for maintenance (micro-mol C / m2 / s)
     !! 
     !! based on tissue N and Temperature, constrained by default turnover of the labile pool
     !! to avoid that maitenance respiration consumes all C in times of low GPP 
@@ -2922,7 +2922,7 @@ CONTAINS
         veg_growth_mt(ix_labile, ixC, :) = veg_growth_mt(ix_labile, ixN, :) / growth_req_n(:)
       END WHERE
     END WHERE  
-    ! Diagnose growth respiration (µmol C / m2 / s)
+    ! Diagnose growth respiration (micro-mol C / m2 / s)
     growth_respiration(:) = fresp_growth * veg_growth_mt(ix_labile, ixC, :) * 1.e6_wp / dtime
 
 
@@ -2945,7 +2945,7 @@ CONTAINS
       ! exudation (in mol C / m2 / timestep)
       veg_exudation_mt(ixC13, :) = veg_exudation_mt(ixC, :) * veg_pool_mt(ix_labile, ixC13, :) / veg_pool_mt(ix_labile, ixC, :)
       veg_exudation_mt(ixC14, :) = veg_exudation_mt(ixC, :) * veg_pool_mt(ix_labile, ixC14, :) / veg_pool_mt(ix_labile, ixC, :)
-      ! respiration (in µmol C / m2 / s)
+      ! respiration (in micro-mol C / m2 / s)
       maint_respiration_c13(:)        = maint_respiration(:)        * veg_pool_mt(ix_labile, ixC13, :) &
         &                               / veg_pool_mt(ix_labile, ixC, :)
       maint_respiration_c14(:)        = maint_respiration(:)        * veg_pool_mt(ix_labile, ixC14, :) &
@@ -3108,7 +3108,7 @@ CONTAINS
                                                        lctlib_k_root_dist           , & !< PFT specific root distribution factor
                                                        lctlib_phi_leaf_min              !< PFT specific minimum leaf water potential 
     LOGICAL,                          INTENT(in)    :: flag_dynroots_h2o_n_limit        !< root growth across layers affected by H2O and Nitrogen limitation
-    REAL(wp), DIMENSION(nc),          INTENT(in)    :: veg_growth_fine_root_carbon  , & !< growth rate of fine roots (µmol / m2 / s)] 
+    REAL(wp), DIMENSION(nc),          INTENT(in)    :: veg_growth_fine_root_carbon  , & !< growth rate of fine roots (micro-mol / m2 / s)] 
                                                        veg_pool_fine_root_carbon    , & !< current fine root pool (mol / m2)
                                                        root_limitation_state            !< dominating limiting factor affecting root growth 
     REAL(wp), DIMENSION(nc,nsoil_sb), INTENT(in)    :: soil_depth_sl                , & !< soil layer thinkness (m) 

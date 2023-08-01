@@ -20,7 +20,7 @@
 !! @brief Contains the main routines for the jsm soil model
 !!
 !! @author
-!!  Sönke Zaehle 
+!!  Soenke Zaehle 
 !!
 !! @par Revision History
 !! First version by Jan Engel (20170508): copyied from mo_sb_update_pools.f90
@@ -769,7 +769,7 @@ CONTAINS
       &                    plant_uptake     = plant_uptake_po4_sl(:,:), &             ! out
       &                    plant_uptake_pot = unit_uptake_p_pot_sl(:,:), &            ! out
       &                    fast_adsorpt     = fast_adsorpt_po4(:,:))                  ! OPTIONAL (out)
-    !! calculate potential P uptake (µmol P / mol C fine-root / s), weighted by root distribution          
+    !! calculate potential P uptake (micro-mol P / mol C fine-root / s), weighted by root distribution          
     DO ic = 1,nc
       DO isoil = 1,nsoil_sb
         IF (fine_root_carbon_sl(ic,isoil) > eps8) THEN
@@ -865,7 +865,7 @@ CONTAINS
 
     !>  7.1 update n15 for inorganic fluxes (need to be done before microbial turnover and growth)
     !>
-    ! here the function is called for JSM: flux rates in [µmol/m3/s] (unit conversion is applied within the routine)
+    ! here the function is called for JSM: flux rates in [micro-mol/m3/s] (unit conversion is applied within the routine)
     ! (simple_1d is using the same function but uses flux rates in [mol/m3/timestep])
     CALL calc_sb_inorganic_n15_fluxes( &
       & nc, &

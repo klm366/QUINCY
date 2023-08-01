@@ -20,10 +20,10 @@
 !! @brief Contains the routines for plant turnover related processes 
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (2015-12-04)
+!! First version by Soenke Zaehle (2015-12-04)
 !!
 MODULE mo_veg_turnover
 

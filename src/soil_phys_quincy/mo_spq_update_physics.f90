@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the Task update_spq_physics
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20160104)
+!! First version by Soenke Zaehle (20160104)
 !! Permafrost specific processes included (Fabrice Lacroix 04/11/2020)
 !! 
 MODULE mo_spq_update_physics
@@ -405,7 +405,7 @@ CONTAINS
     w_snow_max_snl(:,:) = w_snow_max    
     hlp1(:) = snow(:) * dtime / 1000._wp  ! recalculate snow to [m]
 
-    ! rain below a threshold temperature could be added, but this should be done with reading in inputs, ask Sönke Zähle
+    ! rain below a threshold temperature could be added, but this should be done with reading in inputs, ask Soenke Zaehle
     ! not really needed if the forcing input is correctly put together
 
     !>1.1 Add new snow to snow layers

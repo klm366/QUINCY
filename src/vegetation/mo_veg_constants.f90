@@ -37,14 +37,14 @@ MODULE mo_veg_constants
   REAL(wp), SAVE :: & 
       ! growth respiration per unit new biomass
       fresp_growth          , &   !< growth respiration per unit new biomass 
-      ! N-specific foliar maintenance respiration rate (µmol CO2 / mol N / s)
+      ! N-specific foliar maintenance respiration rate (micro-mol CO2 / mol N / s)
       ! Taken from Sprugel et al. Respiration from the organ level to the stand. 
       ! In: Smith WK, Hinckley, T.M., editor. Physiological Ecology of Coniferous Forests.
       ! San Diego, CA, USA: Academic Press; 1996.
       ! Note converted from 7.4 e-7 to 1.25 e-6 to account for the different values of the Lloyd&Taylor equation
-      ! such that the applied rates a comparable at 15-20°C
-      fmaint_rate_base      , &   !< N-specific maintenance respiration rate for roots and leaves (µmol CO2 / mmol N / s) 
-      fmaint_rate_wood      , &   !< N-specific maintenance respiration rate for wood (µmol CO2 / mmol N / s) 
+      ! such that the applied rates a comparable at 15-20degC
+      fmaint_rate_base      , &   !< N-specific maintenance respiration rate for roots and leaves (micro-mol CO2 / mmol N / s) 
+      fmaint_rate_wood      , &   !< N-specific maintenance respiration rate for wood (micro-mol CO2 / mmol N / s) 
       ! parameters in the Lloyd and Taylor temperature response function (Lloyd & Taylor, 1996, Funct. Ecol.) 
       t_maint_k1            , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
       t_maint_k2            , &   !< Coefficient in the equation for temperature sensitivity of foliar respiration
@@ -71,7 +71,7 @@ MODULE mo_veg_constants
       k_labphen_tree,       & !< ration between pull from reserve pool and allocation to growth for trees
       k_labphen_grass,      & !< ration between pull from reserve pool and allocation to growth for grass
       ! temperature scalar on turnover time of labile pool (1-exp(-(lambda * T)^k))
-      ! tuned to reduce growth between 5°C to zero at 0°C
+      ! tuned to reduce growth between 5degC to zero at 0degC
       lambda_labile_temp,   & !< lambda in temperature response function of labile pool 
       k_labile_temp,        & !< k in temperature response function of labile pool 
       ! moisture scalar on turnover time of labile pool (1-exp(-(lambda * theta)^k))
@@ -124,7 +124,7 @@ MODULE mo_veg_constants
       transform_cost_org   , & !< N transformation costs of converting organic N to organic N (mol C / mol N)
       f_nacq_no3           , & !< fractions of NO3 and NH4 uptake based on transformation costs
       f_nacq_nh4           , &
-      vmax_symb_bnf        , & !< maximum rate of N fixation (µmol N / mol C fine root / s )
+      vmax_symb_bnf        , & !< maximum rate of N fixation (micro-mol N / mol C fine root / s )
       km_symb_bnf          , & !< half_saturating cost of the response of N fixation (mol C / mol N) 
       k_cost_symb_bnf      , & !< cost of symbiotic N fixation (mol C / mol N)
       t_opt_symb_bnf       , & !< optimal temperature for BNF (K) 
@@ -182,7 +182,7 @@ MODULE mo_veg_constants
       ! Parameters controlling fruit allocation in: exp(-(lambda * reserve_use+offset)^k) 
       lambda_fruit_alloc          , & !< parameter in the Weibull function controlling fruit growth
       k4_fruit_alloc              , & !< parameter in the Weibull function controlling fruit growth
-      k3_fruit_alloc              , & !< parameter in the Weibull function controlling fruit growth; ~µmol C / m2 / s
+      k3_fruit_alloc              , & !< parameter in the Weibull function controlling fruit growth; ~micro-mol C / m2 / s
       ! minimum fraction of allocation going to fruit (flowers etc.)
       k1_fruit_alloc              , & !< minimum fraction of allocation going to fruit (flowers etc.)
       w_root_lim_max              , & !< value of the root water limitation below which root allocation starts responding
