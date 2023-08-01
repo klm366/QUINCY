@@ -24,10 +24,10 @@ MODULE mo_q_rad_interface
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
 
-  USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments, VEG_PART_LEAF_IDX
+  USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
-  USE mo_lnd_bgcm_class,          ONLY: ELEM_C_ID
+
 
   dsl4jsb_Use_processes RAD_, VEG_, A2L_, PHENO_
   dsl4jsb_Use_memory(RAD_)
@@ -230,9 +230,9 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ic, ics, ice, nc   !< dimensions, looping
-    REAL(wp), ALLOCATABLE                   :: veg_pool_mt(:,:,:)
-    INTEGER                                 :: nr_veg_parts, ixC, nr_elements
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation_quincy'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(VEG_)
@@ -281,13 +281,8 @@ CONTAINS
 
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
 
-    ixC             = model%config%elements_index_map(ELEM_C_ID)
-    nr_elements     = model%config%nr_of_used_elements
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_pool_mt(nr_veg_parts, nr_elements, nc))
-    ! And get them from the store
     bgcm_store => tile%bgcm_store
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
@@ -397,10 +392,7 @@ CONTAINS
     !>  2.3 tvegdyn (averages at the vegetation dynamics time-scale)
     !! 
     rfr_ratio_boc_tvegdyn_mavg(:) = calc_time_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
-      &                               mavg_period_tvegdyn, do_calc=(veg_pool_mt(VEG_PART_LEAF_IDX,ixC,:) > eps8))
-
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    DEALLOCATE(veg_pool_mt)
+      &                               mavg_period_tvegdyn, do_calc=(veg_pool_mt(ix_leaf,ixC,:) > eps8))
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE update_time_average_radiation_quincy

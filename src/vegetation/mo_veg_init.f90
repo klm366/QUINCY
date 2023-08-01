@@ -34,8 +34,7 @@ MODULE mo_veg_init
   USE mo_jsb_math_constants,      ONLY: eps8
 
   USE mo_lnd_bgcm_idx
-  USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
-  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
+  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -78,18 +77,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),              POINTER :: model              !< the model
-    TYPE(t_lnd_bgcm_store),         POINTER :: bgcm_store         !< the bgcm store of this tile
-    TYPE(t_jsb_grid),               POINTER :: hgrid              !< Horizontal grid
-    TYPE(t_lctlib_element),         POINTER :: lctlib             !< land-cover-type library - parameter across pft's
-    REAL(wp), ALLOCATABLE, DIMENSION(:,:)   :: hlp1               !< helper variable
-    REAL(wp)                                :: ref_lai            !< LAI                                 | for canopy model init
-    REAL(wp)                                :: ref_nleaf          !< N leaf per unit leaf area in gN/m2  | for canopy model init
-    INTEGER                                 :: iblk, ic           !< loop dimensions
-    INTEGER                                 :: nproma, nblks      !< dimensions
-    INTEGER                                 :: nr_elements            !< number of elements
-    INTEGER                                 :: nr_veg_parts           !< number of veg compartments
-    REAL(wp), ALLOCATABLE                   :: veg_pool_mt(:,:,:,:)   !< dim: compartments, elements, nc, nblks
+    TYPE(t_jsb_model),              POINTER :: model                !< the model
+    TYPE(t_lnd_bgcm_store),         POINTER :: bgcm_store           !< the bgcm store of this tile
+    TYPE(t_jsb_grid),               POINTER :: hgrid                !< Horizontal grid
+    TYPE(t_lctlib_element),         POINTER :: lctlib               !< land-cover-type library - parameter across pft's
+    REAL(wp)                                :: hlp1                 !< helper variable
+    REAL(wp)                                :: ref_lai              !< LAI                                 | for canopy model init
+    REAL(wp)                                :: ref_nleaf            !< N leaf per unit leaf area in gN/m2  | for canopy model init
+    INTEGER                                 :: iblk, ic             !< loop dimensions
+    INTEGER                                 :: nproma, nblks        !< dimensions
+    INTEGER                                 :: veg_pool_idx         !< index of the veg pool within the bgcm store
+    REAL(wp), POINTER           :: veg_pool_mt_domain(:,:,:,:)      !< dim: compartments, elements, nc, nblks -- on domain!
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':veg_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
@@ -184,7 +182,7 @@ CONTAINS
     IF (tile%lcts(1)%lib_id == 0) RETURN                !< run this init only if the present tile is a pft
     ! ----------------------------------------------------------------------------------------------------- !
     model  => Get_model(tile%owner_model_id)
-    lctlib => model%lctlib(tile%lcts(1)%lib_id)    
+    lctlib => model%lctlib(tile%lcts(1)%lib_id)
     hgrid  => Get_grid(model%grid_id)
     nblks  =  hgrid%nblks
     nproma =  hgrid%nproma
@@ -196,18 +194,14 @@ CONTAINS
       dsl4jsb_Get_memory(PHENO_)
     END SELECT
     ! ----------------------------------------------------------------------------------------------------- !
-    ALLOCATE(hlp1(nproma, nblks))
-    ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_pool_mt(nr_veg_parts, nr_elements, nproma, nblks))
     bgcm_store => tile%bgcm_store
-    ! init 'veg_pool_mt' with zero below
+    veg_pool_idx = get_bgcm_idx(bgcm_store, VEG_BGCM_POOL_ID, tile%name, routine)
+    veg_pool_mt_domain => bgcm_store%store_2l_2d_bgcms(bgcm_store%idx_in_store(veg_pool_idx))%mt_2l_2d_bgcm(:,:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     ! PHENO_ 2D & 3D
     SELECT CASE(model%config%qmodel_id)
-    CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)    
-      dsl4jsb_Get_var2D_onDomain(PHENO_, lai)    
+    CASE(QCANOPY, Q_TEST_CANOPY, Q_TEST_RADIATION)
+      dsl4jsb_Get_var2D_onDomain(PHENO_, lai)
       dsl4jsb_Get_var3D_onDomain(PHENO_, lai_cl)
     END SELECT
     ! VEG_ 2D
@@ -291,9 +285,9 @@ CONTAINS
     dsl4jsb_Get_var3D_onDomain(VEG_, leaf_nitrogen_cl)
     ! ----------------------------------------------------------------------------------------------------- !
 
-    !>0.9 init veg_pool_mt with zero
+    !>0.9 init veg_pool_mt_domain with zero
     !>
-    veg_pool_mt(:,:,:,:) = 0.0_wp
+    veg_pool_mt_domain(:,:,:,:) = 0.0_wp
 
     !>1.0 vegetation init specific to the SLM model
     !>
@@ -314,85 +308,109 @@ CONTAINS
         background_mort_rate_grass = 0.0_wp    ! default: 0.05_wp 
         dens_ind(:,:)              = 1.0_wp
         ! pool%reserve% C N P
-        veg_pool_mt(ix_reserve, ixC, :, :) = 1.0_wp
-        veg_pool_mt(ix_reserve, ixN, :, :) = veg_pool_mt(ix_reserve, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
-        veg_pool_mt(ix_reserve, ixP, :, :) = veg_pool_mt(ix_reserve, ixN, :, :) / lctlib%np_leaf
+        veg_pool_mt_domain(ix_reserve, ixC, :, :) = 1.0_wp
+        veg_pool_mt_domain(ix_reserve, ixN, :, :) &
+          & = veg_pool_mt_domain(ix_reserve, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
+        veg_pool_mt_domain(ix_reserve, ixP, :, :) = veg_pool_mt_domain(ix_reserve, ixN, :, :) / lctlib%np_leaf
         ! pool%reserve%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1(:,:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ELSE
-          hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ENDIF
-        veg_pool_mt(ix_reserve, ixC13, :, :) = calc_fractionation(def_co2_mixing_ratio, &
-          &                                                       def_co2_mixing_ratio_C13, &
-          &                                                       hlp1(:,:) ) &
-          &                                    * veg_pool_mt(ix_reserve, ixC, :, :)
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            veg_pool_mt_domain(ix_reserve, ixC13, ic, iblk) = calc_fractionation(def_co2_mixing_ratio,           &
+              &                                                                  def_co2_mixing_ratio_C13, hlp1) &
+              &                                                          * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
+          ENDDO
+        ENDDO
         ! pool%reserve%carbon14
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1(:,:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ELSE
-          hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ENDIF
-        veg_pool_mt(ix_reserve, ixC14, :, :) = calc_mixing_ratio_C14C(def_co2_deltaC13, &
-          &                                                           def_co2_deltaC14 - hlp1(:,:) ) &
-          &                                    * veg_pool_mt(ix_reserve, ixC, :, :)
-        ! pool%reserve%nitrogen15
-        veg_pool_mt(ix_reserve, ixN15, :, :) = veg_pool_mt(ix_reserve, ixN, :, :) &
-          &                                    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            veg_pool_mt_domain(ix_reserve, ixC14, ic, iblk) = calc_mixing_ratio_C14C(def_co2_deltaC13, &
+              &                                                           def_co2_deltaC14 - hlp1 )    &
+              &                                    * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
+            ! pool%reserve%nitrogen15
+            veg_pool_mt_domain(ix_reserve, ixN15, ic, iblk) = veg_pool_mt_domain(ix_reserve, ixN, ic, iblk) &
+              &                                    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          ENDDO
+        ENDDO
       ! start bareground with vegetation dynamics switched on: population scheme
       CASE ("population")
-        veg_pool_mt(ix_seed_bed, ixC, :, :) = lctlib%seed_size * 10.0_wp
+        veg_pool_mt_domain(ix_seed_bed, ixC, :, :) = lctlib%seed_size * 10.0_wp
         dens_ind(:,:)                       = 0.0_wp
-        veg_pool_mt(ix_seed_bed, ixN, :, :) = veg_pool_mt(ix_seed_bed, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
-        veg_pool_mt(ix_seed_bed, ixP, :, :) = veg_pool_mt(ix_seed_bed, ixN, :, :) / lctlib%np_leaf
+        veg_pool_mt_domain(ix_seed_bed, ixN, :, :) &
+          & = veg_pool_mt_domain(ix_seed_bed, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
+        veg_pool_mt_domain(ix_seed_bed, ixP, :, :) = veg_pool_mt_domain(ix_seed_bed, ixN, :, :) / lctlib%np_leaf
         ! pool%seed_bed%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1(:,:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ELSE
-          hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ENDIF
-        veg_pool_mt(ix_seed_bed, ixC13, :, :) = veg_pool_mt(ix_seed_bed, ixC, :, :) &
-          &                                     * calc_fractionation(def_co2_mixing_ratio, &
-          &                                                          def_co2_mixing_ratio_C13, &
-          &                                                          hlp1(:,:) )
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            veg_pool_mt_domain(ix_seed_bed, ixC13, ic, iblk) = veg_pool_mt_domain(ix_seed_bed, ixC, ic, iblk) &
+              &                                                * calc_fractionation(def_co2_mixing_ratio,     &
+              &                                                          def_co2_mixing_ratio_C13, hlp1)
+          ENDDO
+        ENDDO
         ! pool%seed_bed%carbon14
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1(:,:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ELSE
-          hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ENDIF
-        veg_pool_mt(ix_seed_bed, ixC14, :, :)  = calc_mixing_ratio_C14C(def_co2_deltaC13, &
-          &                                                             def_co2_deltaC14 - hlp1(:,:) ) &
-          &                                      * veg_pool_mt(ix_seed_bed, ixC, :, :) 
-        veg_pool_mt(ix_seed_bed, ixN15, :, :)  = veg_pool_mt(ix_seed_bed, ixN, :, :) &
-          &                                      / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            veg_pool_mt_domain(ix_seed_bed, ixC14, ic, iblk)  = calc_mixing_ratio_C14C(def_co2_deltaC13, &
+              &                                                             def_co2_deltaC14 - hlp1 )    &
+              &                                      * veg_pool_mt_domain(ix_seed_bed, ixC, ic, iblk)
+            veg_pool_mt_domain(ix_seed_bed, ixN15, ic, iblk)  = veg_pool_mt_domain(ix_seed_bed, ixN, ic, iblk) &
+              &                                      / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          ENDDO
+        ENDDO
       ! no vegetation dynamics and not starting with bare ground
       CASE ("none")
-        veg_pool_mt(ix_reserve, ixC, :, :) = 5.0_wp
+        veg_pool_mt_domain(ix_reserve, ixC, :, :) = 5.0_wp
         dens_ind(:,:)                      = 0.4_wp
-        veg_pool_mt(ix_reserve, ixN, :, :) = veg_pool_mt(ix_reserve, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
-        veg_pool_mt(ix_reserve, ixP, :, :) = veg_pool_mt(ix_reserve, ixN, :, :) / lctlib%np_leaf
+        veg_pool_mt_domain(ix_reserve, ixN, :, :) &
+          & = veg_pool_mt_domain(ix_reserve, ixC, :, :) / (1._wp + fresp_growth) / lctlib%cn_leaf
+        veg_pool_mt_domain(ix_reserve, ixP, :, :) = veg_pool_mt_domain(ix_reserve, ixN, :, :) / lctlib%np_leaf
         ! pool%reserve%carbon13
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1(:,:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ELSE
-          hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C13',lctlib%ps_pathway)
         ENDIF
-        veg_pool_mt(ix_reserve, ixC13, :, :) = veg_pool_mt(ix_reserve, ixC, :, :) &
-          &                                    * calc_fractionation(def_co2_mixing_ratio, &
-          &                                                         def_co2_mixing_ratio_C13,&
-          &                                                         hlp1(:,:) )
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            veg_pool_mt_domain(ix_reserve, ixC13, ic, iblk) = veg_pool_mt_domain(ix_reserve, ixC, ic, iblk) &
+              &                                               * calc_fractionation(def_co2_mixing_ratio,    &
+              &                                                         def_co2_mixing_ratio_C13, hlp1)
+          ENDDO
+        ENDDO
         ! pool%reserve%carbon14
         IF (lctlib%ps_pathway == ic3phot) THEN
-          hlp1(:,:) = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C3 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ELSE
-          hlp1(:,:) = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
+          hlp1 = discrimination_ps(CiCa_default_C4 * def_co2_mixing_ratio, def_co2_mixing_ratio, 'C14',lctlib%ps_pathway)
         ENDIF
-        veg_pool_mt(ix_reserve, ixC14, :, :) = calc_mixing_ratio_C14C(def_co2_deltaC13, &
-          &                                                           def_co2_deltaC14 - hlp1(:,:) ) &
-          &                                    * veg_pool_mt(ix_reserve, ixC, :, :) 
-        veg_pool_mt(ix_reserve, ixN15, :, :) = veg_pool_mt(ix_reserve, ixN, :, :) &
-          &                                    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            veg_pool_mt_domain(ix_reserve, ixC14, ic, iblk) = calc_mixing_ratio_C14C(def_co2_deltaC13, &
+              &                                                           def_co2_deltaC14 - hlp1)     &
+              &                                               * veg_pool_mt_domain(ix_reserve, ixC, ic, iblk)
+            veg_pool_mt_domain(ix_reserve, ixN15, ic, iblk) = veg_pool_mt_domain(ix_reserve, ixN, ic, iblk) &
+              &                                    / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
+          ENDDO
+        ENDDO
       CASE DEFAULT
         WRITE(message_text,'(2a)') 'not a valid veg_dynamics_scheme: ',TRIM(dsl4jsb_Config(VEG_)%veg_dynamics_scheme)
         CALL finish(TRIM(routine), message_text) 
@@ -405,11 +423,19 @@ CONTAINS
       lai(:,:)  = ref_lai
       !leaf_nitrogen
       IF (dsl4jsb_Config(VEG_)%pft_id == 0) THEN
-        veg_pool_mt(ix_leaf, ixN, :, :) = ref_nleaf / molar_mass_N * lai(:,:)
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            veg_pool_mt_domain(ix_leaf, ixN, ic, iblk) = ref_nleaf / molar_mass_N * lai(ic, iblk)
+          ENDDO
+        ENDDO
         height                          = 10.0_wp
       ELSE
-        veg_pool_mt(ix_leaf, ixN, :, :) = lai(:,:) / lctlib%sla / lctlib%cn_leaf
-        veg_pool_mt(ix_leaf, ixP, :, :) = veg_pool_mt(ix_leaf, ixN, :, :) / lctlib%np_leaf
+        DO ic = 1,nproma
+          DO iblk = 1,nblks
+            veg_pool_mt_domain(ix_leaf, ixN, ic, iblk) = lai(ic, iblk) / lctlib%sla / lctlib%cn_leaf
+          ENDDO
+        ENDDO
+        veg_pool_mt_domain(ix_leaf, ixP, :, :) = veg_pool_mt_domain(ix_leaf, ixN, :, :) / lctlib%np_leaf
         IF (lctlib%growthform == ITREE) THEN
           height(:,:) = 10.0_wp
         ELSE 
@@ -504,17 +530,6 @@ CONTAINS
     t_air_week_mavg(:,:)                  = 283.15_wp
     t_air_month_mavg(:,:)                 = 283.15_wp
     t_jmax_opt_mavg(:,:)                  = 17.0_wp
-
-    ! Deallocate local allocatable variables
-    DEALLOCATE(hlp1)
-
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    DO iblk = 1,nblks
-      CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_POOL_ID, 1, nproma, iblk, tile%name, veg_pool_mt(:, :, :, iblk))
-    END DO
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(veg_pool_mt)
 
   END SUBROUTINE veg_init
 

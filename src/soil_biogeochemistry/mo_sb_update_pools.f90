@@ -33,9 +33,9 @@ MODULE mo_sb_update_pools
   USE mo_exception,               ONLY: message, message_text, finish
   USE mo_jsb_math_constants,      ONLY: eps8
 
-  USE mo_lnd_bgcm_idx
-  USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
   USE mo_sb_config_class,         ONLY: get_number_of_sb_compartments
+
+  USE mo_lnd_bgcm_idx
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, &
     &                                   SB_BGCM_TRANSPORT_ID, SB_BGCM_DELTA_POOLS_ID, SB_BGCM_MYCO_EXPORT_ID
@@ -116,17 +116,18 @@ CONTAINS
     INTEGER                               :: nr_elements                    !< number of elements
     INTEGER                               :: nr_sb_parts                    !< number of sb compartments
     INTEGER                               :: nr_veg_parts                   !< number of veg compartments
-    REAL(wp), ALLOCATABLE                 :: veg_litterfall_mt(:,:,:)       !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE                 :: veg_exudation_mt(:,:)          !< dim: elements, nc
-    REAL(wp), ALLOCATABLE                 :: sb_pool_mt(:,:,:,:)            !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_formation_mt(:,:,:,:)       !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_loss_mt(:,:,:,:)            !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_transport_mt(:,:,:,:)       !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_delta_pools_mt(:,:,:)       !< dim: elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_mycorrhiza_export_mt(:,:,:) !< dim: elements, nc, nsoil
     REAL(wp), ALLOCATABLE                 :: sb_pool_prev_timestep_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
     REAL(wp), ALLOCATABLE                 :: sb_particle_transport_hlp_mt(:,:,:,:) !< dim: compartments, elements, nc, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_pools'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: veg_exudation_mt
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    dsl4jsb_Def_mt2L3D :: sb_formation_mt
+    dsl4jsb_Def_mt2L3D :: sb_loss_mt
+    dsl4jsb_Def_mt2L3D :: sb_transport_mt
+    dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
+    dsl4jsb_Def_mt1L3D :: sb_delta_pools_mt
     ! ----------------------------------------------------------------------------------------------------- !
     ! 0.3 Declare Memory
     ! Declare process configuration and memory Pointers
@@ -344,27 +345,18 @@ CONTAINS
     ! Allocate bgcm matrices
     nr_elements     = model%config%nr_of_used_elements
     nr_sb_parts     = get_number_of_sb_compartments()
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_litterfall_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_exudation_mt(nr_elements, nc))
-    ALLOCATE(sb_pool_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_formation_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_loss_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_transport_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_delta_pools_mt(nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_mycorrhiza_export_mt(nr_elements, nc, nsoil_sb))
     ALLOCATE(sb_pool_prev_timestep_hlp_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
     ALLOCATE(sb_particle_transport_hlp_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
     ! And get them from the store
     bgcm_store => tile%bgcm_store
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name, sb_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_FORMATION_ID, ics, ice, iblk, tile%name, sb_formation_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_LOSS_ID, ics, ice, iblk, tile%name, sb_loss_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_TRANSPORT_ID, ics, ice, iblk, tile%name, sb_transport_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(SB_BGCM_DELTA_POOLS_ID, ics, ice, iblk, tile%name, sb_delta_pools_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
+    dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
+    dsl4jsb_Get_mt1L3D(SB_BGCM_DELTA_POOLS_ID, sb_delta_pools_mt)
 
     ! Allocate local allocatable variables (deallocate below at the end of this routine)    
     ALLOCATE(p_deposition_sl(nc, nsoil_sb))
@@ -999,68 +991,29 @@ CONTAINS
     !> 13.0 bgc_material diagnostics - sum up sb_pool components
     !>     sum up: all, soil organic material, and litter for each particular element
     !>
-    sb_pool_total_c(:,:)          = SUM(sb_pool_mt(:, ixC, :, :))
-    sb_pool_total_n(:,:)          = SUM(sb_pool_mt(:, ixN, :, :))
-    sb_pool_total_p(:,:)          = SUM(sb_pool_mt(:, ixP, :, :))
-    sb_pool_total_c13(:,:)        = SUM(sb_pool_mt(:, ixC13, :, :))
-    sb_pool_total_c14(:,:)        = SUM(sb_pool_mt(:, ixC14, :, :))
-    sb_pool_total_n15(:,:)        = SUM(sb_pool_mt(:, ixN15, :, :))
-    sb_pool_total_som_c(:,:)      = SUM(sb_pool_mt(ix_dom, ixC, :, :))         + SUM(sb_pool_mt(ix_dom_assoc, ixC, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_fungi, ixC, :, :))     + SUM(sb_pool_mt(ix_mycorrhiza, ixC, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_microbial, ixC, :, :)) + SUM(sb_pool_mt(ix_residue, ixC, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_residue_assoc, ixC, :, :))
-    sb_pool_total_som_n(:,:)      = SUM(sb_pool_mt(ix_dom, ixN, :, :))         + SUM(sb_pool_mt(ix_dom_assoc, ixN, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_fungi, ixN, :, :))     + SUM(sb_pool_mt(ix_mycorrhiza, ixN, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_microbial, ixN, :, :)) + SUM(sb_pool_mt(ix_residue, ixN, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_residue_assoc, ixN, :, :))
-    sb_pool_total_som_p(:,:)      = SUM(sb_pool_mt(ix_dom, ixP, :, :))         + SUM(sb_pool_mt(ix_dom_assoc, ixP, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_fungi, ixP, :, :))     + SUM(sb_pool_mt(ix_mycorrhiza, ixP, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_microbial, ixP, :, :)) + SUM(sb_pool_mt(ix_residue, ixP, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_residue_assoc, ixP, :, :))
-    sb_pool_total_som_c13(:,:)    = SUM(sb_pool_mt(ix_dom, ixC13, :, :))         + SUM(sb_pool_mt(ix_dom_assoc, ixC13, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_fungi, ixC13, :, :))     + SUM(sb_pool_mt(ix_mycorrhiza, ixC13, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_microbial, ixC13, :, :)) + SUM(sb_pool_mt(ix_residue, ixC13, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_residue_assoc, ixC13, :, :))
-    sb_pool_total_som_c14(:,:)    = SUM(sb_pool_mt(ix_dom, ixC14, :, :))         + SUM(sb_pool_mt(ix_dom_assoc, ixC14, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_fungi, ixC14, :, :))     + SUM(sb_pool_mt(ix_mycorrhiza, ixC14, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_microbial, ixC14, :, :)) + SUM(sb_pool_mt(ix_residue, ixC14, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_residue_assoc, ixC14, :, :))
-    sb_pool_total_som_n15(:,:)    = SUM(sb_pool_mt(ix_dom, ixN15, :, :))         + SUM(sb_pool_mt(ix_dom_assoc, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_fungi, ixN15, :, :))     + SUM(sb_pool_mt(ix_mycorrhiza, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_microbial, ixN15, :, :)) + SUM(sb_pool_mt(ix_residue, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_residue_assoc, ixN15, :, :))
-    sb_pool_total_litter_c(:,:)   = SUM(sb_pool_mt(ix_soluable_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_polymeric_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_woody_litter, ixN15, :, :))
-    sb_pool_total_litter_n(:,:)   = SUM(sb_pool_mt(ix_soluable_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_polymeric_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_woody_litter, ixN15, :, :))
-    sb_pool_total_litter_p(:,:)   = SUM(sb_pool_mt(ix_soluable_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_polymeric_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_woody_litter, ixN15, :, :))
-    sb_pool_total_litter_c13(:,:) = SUM(sb_pool_mt(ix_soluable_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_polymeric_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_woody_litter, ixN15, :, :))
-    sb_pool_total_litter_c14(:,:) = SUM(sb_pool_mt(ix_soluable_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_polymeric_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_woody_litter, ixN15, :, :))
-    sb_pool_total_litter_n15(:,:) = SUM(sb_pool_mt(ix_soluable_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_polymeric_litter, ixN15, :, :)) &
-      &                             + SUM(sb_pool_mt(ix_woody_litter, ixN15, :, :))
+    sb_pool_total_c(:,:)          = SUM(sb_pool_mt(:, ixC, :, :), DIM=1)
+    sb_pool_total_n(:,:)          = SUM(sb_pool_mt(:, ixN, :, :), DIM=1)
+    sb_pool_total_p(:,:)          = SUM(sb_pool_mt(:, ixP, :, :), DIM=1)
+    sb_pool_total_c13(:,:)        = SUM(sb_pool_mt(:, ixC13, :, :), DIM=1)
+    sb_pool_total_c14(:,:)        = SUM(sb_pool_mt(:, ixC14, :, :), DIM=1)
+    sb_pool_total_n15(:,:)        = SUM(sb_pool_mt(:, ixN15, :, :), DIM=1)
+
+    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixC, sb_pool_total_som_c)
+    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixN, sb_pool_total_som_n)
+    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixP, sb_pool_total_som_p)
+    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixC13, sb_pool_total_som_c13)
+    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixC14, sb_pool_total_som_c14)
+    CALL calculate_sb_pool_som_for_element(sb_pool_mt, ixN15, sb_pool_total_som_n15)
+
+    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixC, sb_pool_total_litter_c)
+    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixN, sb_pool_total_litter_n)
+    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixP, sb_pool_total_litter_p)
+    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixC13, sb_pool_total_litter_c13)
+    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixC14, sb_pool_total_litter_c14)
+    CALL calculate_sb_pool_litter_for_element(sb_pool_mt, ixN15, sb_pool_total_litter_n15)
 
     !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name, sb_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_FORMATION_ID, ics, ice, iblk, tile%name, sb_formation_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_LOSS_ID, ics, ice, iblk, tile%name, sb_loss_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_TRANSPORT_ID, ics, ice, iblk, tile%name, sb_transport_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(SB_BGCM_DELTA_POOLS_ID, ics, ice, iblk, tile%name, sb_delta_pools_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(veg_litterfall_mt, veg_exudation_mt)
-    DEALLOCATE(sb_pool_mt, sb_formation_mt, sb_loss_mt, sb_transport_mt, sb_delta_pools_mt, sb_mycorrhiza_export_mt)
+    DEALLOCATE(sb_particle_transport_hlp_mt, sb_pool_prev_timestep_hlp_mt)
 
     ! Deallocate local allocatable variables
     DEALLOCATE(p_deposition_sl)
@@ -1379,5 +1332,37 @@ CONTAINS
     ENDIF  ! IF (PRESENT(assoc_slow))
 
   END SUBROUTINE calc_langmuir_kinetics
+
+  ! ======================================================================================================= !
+  !>
+  !> Small helper routine to calculate total SOM in sb_pool for a given element
+  !>
+  SUBROUTINE calculate_sb_pool_som_for_element(sb_pool_mt, ix_elem, sb_pool_total_som_elem)
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp), INTENT(IN)       :: sb_pool_mt(:,:,:,:)         !< sb pool for which the SOM is to be calculated
+    INTEGER,  INTENT(IN)       :: ix_elem                     !< index of the queried element in the sp pool
+    REAL(wp), INTENT(INOUT)    :: sb_pool_total_som_elem(:,:) !< total SOM for given element
+    ! ----------------------------------------------------------------------------------------------------- !
+    sb_pool_total_som_elem(:,:) &
+      & =  sb_pool_mt(ix_dom, ix_elem, :, :)       + sb_pool_mt(ix_dom_assoc, ix_elem, :, :)   &
+      &  + sb_pool_mt(ix_fungi, ix_elem, :, :)     + sb_pool_mt(ix_mycorrhiza, ix_elem, :, :)  &
+      &  + sb_pool_mt(ix_microbial, ix_elem, :, :) + sb_pool_mt(ix_residue, ix_elem, :, :)     &
+      &  + sb_pool_mt(ix_residue_assoc, ix_elem, :, :)
+  END SUBROUTINE calculate_sb_pool_som_for_element
+
+  ! ======================================================================================================= !
+  !>
+  !> Small helper routine to calculate total litter in sb_pool for a given element
+  !>
+  SUBROUTINE calculate_sb_pool_litter_for_element(sb_pool_mt, ix_elem, sb_pool_total_litter_elem)
+    ! ----------------------------------------------------------------------------------------------------- !
+    REAL(wp), INTENT(IN)       :: sb_pool_mt(:,:,:,:)         !< sb pool for which the SOM is to be calculated
+    INTEGER,  INTENT(IN)       :: ix_elem                     !< index of the queried element in the sp pool
+    REAL(wp), INTENT(INOUT)    :: sb_pool_total_litter_elem(:,:) !< total SOM for given element
+    ! ----------------------------------------------------------------------------------------------------- !
+    sb_pool_total_litter_elem(:,:) =  sb_pool_mt(ix_soluable_litter, ix_elem, :, :)   &
+      &                             + sb_pool_mt(ix_polymeric_litter, ix_elem, :, :) &
+      &                             + sb_pool_mt(ix_woody_litter, ix_elem, :, :)
+  END SUBROUTINE calculate_sb_pool_litter_for_element
 
 END MODULE mo_sb_update_pools

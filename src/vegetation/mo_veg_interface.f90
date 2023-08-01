@@ -57,6 +57,26 @@ MODULE mo_veg_interface
 
 
   !-----------------------------------------------------------------------------------------------------
+  !> Type definition: call_write_matrices_back task
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_call_write_matrices_back
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_call_write_matrices_back
+    PROCEDURE, NOPASS :: Aggregate => aggregate_call_write_matrices_back
+  END TYPE tsk_call_write_matrices_back
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Type definition: call_store_bgcms_in_matrices task
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  TYPE, EXTENDS(t_jsb_process_task) :: tsk_call_store_bgcms_in_matrices
+  CONTAINS
+    PROCEDURE, NOPASS :: Integrate => update_call_store_bgcms_in_matrices
+    PROCEDURE, NOPASS :: Aggregate => aggregate_call_store_bgcms_in_matrices
+  END TYPE tsk_call_store_bgcms_in_matrices
+
+  !-----------------------------------------------------------------------------------------------------
   !> Type definition: reset_veg_fluxes task
   !!
   !-----------------------------------------------------------------------------------------------------
@@ -126,6 +146,22 @@ MODULE mo_veg_interface
   END INTERFACE tsk_reset_veg_fluxes
 
   !-----------------------------------------------------------------------------------------------------
+  !> Constructor interface: call_write_matrices_back task
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  INTERFACE tsk_call_write_matrices_back
+    PROCEDURE Create_task_call_write_matrices_back         !< Constructor function for task
+  END INTERFACE tsk_call_write_matrices_back
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor interface: call_store_bgcms_in_matrices task
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  INTERFACE tsk_call_store_bgcms_in_matrices
+    PROCEDURE Create_task_call_store_bgcms_in_matrices         !< Constructor function for task
+  END INTERFACE tsk_call_store_bgcms_in_matrices
+
+  !-----------------------------------------------------------------------------------------------------
   !> Constructor interface: update_veg_turnover task
   !!
   !-----------------------------------------------------------------------------------------------------
@@ -178,6 +214,8 @@ CONTAINS
     INTEGER,              INTENT(in)    :: model_id
 
     CALL this%Register_task(tsk_reset_veg_fluxes(model_id))
+    CALL this%Register_task(tsk_call_write_matrices_back(model_id))
+    CALL this%Register_task(tsk_call_store_bgcms_in_matrices(model_id))
     CALL this%Register_task(tsk_veg_turnover(model_id))
     CALL this%Register_task(tsk_veg_dynamics(model_id))
     CALL this%Register_task(tsk_veg_growth(model_id))
@@ -198,6 +236,35 @@ CONTAINS
     CALL return_ptr%Construct(name='reset_veg_fluxes', process_id=VEG_, owner_model_id=model_id)
 
   END FUNCTION Create_task_reset_veg_fluxes
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor: call_write_matrices_back task
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Create_task_call_write_matrices_back(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_call_write_matrices_back::return_ptr)
+    CALL return_ptr%Construct(name='call_write_matrices_back', process_id=VEG_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_call_write_matrices_back
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Constructor: call_store_bgcms_in_matrices task
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  FUNCTION Create_task_call_store_bgcms_in_matrices(model_id) RESULT(return_ptr)
+
+    INTEGER,                   INTENT(in) :: model_id
+    CLASS(t_jsb_process_task), POINTER    :: return_ptr
+
+    ALLOCATE(tsk_call_store_bgcms_in_matrices::return_ptr)
+    CALL return_ptr%Construct(name='call_store_bgcms_in_matrices', process_id=VEG_, owner_model_id=model_id)
+
+  END FUNCTION Create_task_call_store_bgcms_in_matrices
+
 
   !-----------------------------------------------------------------------------------------------------
   !> Constructor: update_veg_turnover task
@@ -360,6 +427,114 @@ CONTAINS
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
   END SUBROUTINE aggregate_reset_veg_fluxes
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Implementation of "update": call_write_matrices_back task
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_call_write_matrices_back(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    INTEGER :: iblk
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_call_write_matrices_back'
+
+    iblk    = options%iblk
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, options%ics, options%ice, iblk)
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE update_call_write_matrices_back
+
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": call_write_matrices_back task
+  !>
+  SUBROUTINE aggregate_call_write_matrices_back(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_call_write_matrices_back'
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! do nothing
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_call_write_matrices_back
+
+
+  !-----------------------------------------------------------------------------------------------------
+  !> Implementation of "update": call_store_bgcms_in_matrices task
+  !!
+  !-----------------------------------------------------------------------------------------------------
+  SUBROUTINE update_call_store_bgcms_in_matrices(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+
+    INTEGER :: iblk
+
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_call_store_bgcms_in_matrices'
+
+    iblk    = options%iblk
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Starting on tile '//TRIM(tile%name)//' ...')
+
+    CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, options%ics, options%ice, iblk)
+
+    IF (debug_on() .AND. iblk==1) CALL message(routine, 'Finished.')
+
+  END SUBROUTINE update_call_store_bgcms_in_matrices
+
+  ! ======================================================================================================= !
+  !>Implementation of "aggregate": call_store_bgcms_in_matrices task
+  !>
+  SUBROUTINE aggregate_call_store_bgcms_in_matrices(tile, options)
+
+    CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
+    TYPE(t_jsb_task_options),   INTENT(in)    :: options
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model), POINTER                :: model
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_jsb_aggregator),  POINTER         :: weighted_by_fract
+    INTEGER                                   :: iblk, ics, ice
+    CHARACTER(len=*), PARAMETER :: routine = modname//':aggregate_call_store_bgcms_in_matrices'
+    ! ----------------------------------------------------------------------------------------------------- !
+    iblk    = options%iblk
+    ics     = options%ics
+    ice     = options%ice
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
+    ! ----------------------------------------------------------------------------------------------------- !
+    model => Get_model(tile%owner_model_id)
+    weighted_by_fract => tile%Get_aggregator("weighted_by_fract")
+    ! ----------------------------------------------------------------------------------------------------- !
+    ! do nothing
+
+    IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
+
+  END SUBROUTINE aggregate_call_store_bgcms_in_matrices
 
   ! ======================================================================================================= !
   !>Implementation of "aggregate": update_veg_turnover task

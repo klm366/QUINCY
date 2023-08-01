@@ -33,8 +33,6 @@ MODULE mo_veg_update_pools
   USE mo_exception,               ONLY: message
 
   USE mo_lnd_bgcm_idx
-  USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
-  USE mo_sb_config_class,         ONLY: get_number_of_sb_compartments
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID, &
     &                                   VEG_BGCM_LITTERFALL_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, &
@@ -101,19 +99,17 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)   :: hlp1                   !< dummy helper variable
     REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
-    INTEGER                           :: nr_elements                    !< number of elements
-    INTEGER                           :: nr_sb_parts                    !< number of sb compartments
-    INTEGER                           :: nr_veg_parts                   !< number of veg compartments
-    REAL(wp), ALLOCATABLE             :: veg_pool_mt(:,:,:)             !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_litterfall_mt(:,:,:)       !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_growth_mt(:,:,:)           !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_establishment_mt(:,:)      !< dim: elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_exudation_mt(:,:)          !< dim: elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_total_biomass_mt(:,:)      !< dim: elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_reserve_use_mt(:,:)        !< dim: elements, nc
-    REAL(wp), ALLOCATABLE             :: sb_pool_mt(:,:,:,:)            !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE             :: sb_mycorrhiza_export_mt(:,:,:) !< dim: elements, nc, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_pools'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt1L2D :: veg_exudation_mt
+    dsl4jsb_Def_mt1L2D :: veg_establishment_mt
+    dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
+    dsl4jsb_Def_mt1L2D :: veg_total_biomass_mt
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
@@ -247,28 +243,16 @@ CONTAINS
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_sb_parts     = get_number_of_sb_compartments()
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_pool_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_litterfall_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_growth_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_establishment_mt(nr_elements, nc))
-    ALLOCATE(veg_exudation_mt(nr_elements, nc))
-    ALLOCATE(veg_total_biomass_mt(nr_elements, nc))
-    ALLOCATE(veg_reserve_use_mt(nr_elements, nc))
-    ALLOCATE(sb_pool_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_mycorrhiza_export_mt(nr_elements, nc, nsoil_sb))
     bgcm_store => tile%bgcm_store
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_GROWTH_ID, ics, ice, iblk, tile%name, veg_growth_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_ESTABLISHMENT_ID, ics, ice, iblk, tile%name, veg_establishment_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_TOTAL_BIO_ID, ics, ice, iblk, tile%name, veg_total_biomass_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_RESERVE_USE_ID, ics, ice, iblk, tile%name, veg_reserve_use_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name, sb_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_TOTAL_BIO_ID, veg_total_biomass_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
+    dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! ASSIMI_ 2D
     dsl4jsb_Get_var2D_onChunk(ASSIMI_, gross_assimilation)          ! in
@@ -642,40 +626,24 @@ CONTAINS
     !> 6.0 bgc_material diagnostics
     !>     sum up veg_pool, veg_growth and veg_litterfall across components for each particular element
     !>
-    veg_pool_total_c(:)         = SUM(veg_pool_mt(:, ixC, :))
-    veg_pool_total_n(:)         = SUM(veg_pool_mt(:, ixN, :))
-    veg_pool_total_p(:)         = SUM(veg_pool_mt(:, ixP, :))
-    veg_pool_total_c13(:)       = SUM(veg_pool_mt(:, ixC13, :))
-    veg_pool_total_c14(:)       = SUM(veg_pool_mt(:, ixC14, :))
-    veg_pool_total_n15(:)       = SUM(veg_pool_mt(:, ixN15, :))
-    veg_growth_total_c(:)       = SUM(veg_growth_mt(:, ixC, :))
-    veg_growth_total_n(:)       = SUM(veg_growth_mt(:, ixN, :))
-    veg_growth_total_p(:)       = SUM(veg_growth_mt(:, ixP, :))
-    veg_growth_total_c13(:)     = SUM(veg_growth_mt(:, ixC13, :))
-    veg_growth_total_c14(:)     = SUM(veg_growth_mt(:, ixC14, :))
-    veg_growth_total_n15(:)     = SUM(veg_growth_mt(:, ixN15, :))
-    veg_litterfall_total_c(:)   = SUM(veg_litterfall_mt(:, ixC, :))
-    veg_litterfall_total_n(:)   = SUM(veg_litterfall_mt(:, ixN, :))
-    veg_litterfall_total_p(:)   = SUM(veg_litterfall_mt(:, ixP, :))
-    veg_litterfall_total_c13(:) = SUM(veg_litterfall_mt(:, ixC13, :))
-    veg_litterfall_total_c14(:) = SUM(veg_litterfall_mt(:, ixC14, :))
-    veg_litterfall_total_n15(:) = SUM(veg_litterfall_mt(:, ixN15, :))
-
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_GROWTH_ID, ics, ice, iblk, tile%name, veg_growth_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_ESTABLISHMENT_ID, ics, ice, iblk, tile%name, veg_establishment_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_TOTAL_BIO_ID, ics, ice, iblk, tile%name, veg_total_biomass_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_RESERVE_USE_ID, ics, ice, iblk, tile%name, veg_reserve_use_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name, sb_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(veg_pool_mt, veg_litterfall_mt, veg_growth_mt, veg_establishment_mt, veg_exudation_mt, &
-      &        veg_total_biomass_mt, veg_reserve_use_mt)
-    DEALLOCATE(sb_pool_mt, sb_mycorrhiza_export_mt)
+    veg_pool_total_c(:)         = SUM(veg_pool_mt(:, ixC, :), DIM = 1)
+    veg_pool_total_n(:)         = SUM(veg_pool_mt(:, ixN, :), DIM = 1)
+    veg_pool_total_p(:)         = SUM(veg_pool_mt(:, ixP, :), DIM = 1)
+    veg_pool_total_c13(:)       = SUM(veg_pool_mt(:, ixC13, :), DIM = 1)
+    veg_pool_total_c14(:)       = SUM(veg_pool_mt(:, ixC14, :), DIM = 1)
+    veg_pool_total_n15(:)       = SUM(veg_pool_mt(:, ixN15, :), DIM = 1)
+    veg_growth_total_c(:)       = SUM(veg_growth_mt(:, ixC, :), DIM = 1)
+    veg_growth_total_n(:)       = SUM(veg_growth_mt(:, ixN, :), DIM = 1)
+    veg_growth_total_p(:)       = SUM(veg_growth_mt(:, ixP, :), DIM = 1)
+    veg_growth_total_c13(:)     = SUM(veg_growth_mt(:, ixC13, :), DIM = 1)
+    veg_growth_total_c14(:)     = SUM(veg_growth_mt(:, ixC14, :), DIM = 1)
+    veg_growth_total_n15(:)     = SUM(veg_growth_mt(:, ixN15, :), DIM = 1)
+    veg_litterfall_total_c(:)   = SUM(veg_litterfall_mt(:, ixC, :), DIM = 1)
+    veg_litterfall_total_n(:)   = SUM(veg_litterfall_mt(:, ixN, :), DIM = 1)
+    veg_litterfall_total_p(:)   = SUM(veg_litterfall_mt(:, ixP, :), DIM = 1)
+    veg_litterfall_total_c13(:) = SUM(veg_litterfall_mt(:, ixC13, :), DIM = 1)
+    veg_litterfall_total_c14(:) = SUM(veg_litterfall_mt(:, ixC14, :), DIM = 1)
+    veg_litterfall_total_n15(:) = SUM(veg_litterfall_mt(:, ixN15, :), DIM = 1)
 
   END SUBROUTINE update_veg_pools
 

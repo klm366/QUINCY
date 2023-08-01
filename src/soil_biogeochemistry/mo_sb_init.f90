@@ -33,8 +33,7 @@ MODULE mo_sb_init
   USE mo_jsb_math_constants,    ONLY: eps4, eps8
   
   USE mo_lnd_bgcm_idx
-  USE mo_sb_config_class,         ONLY: get_number_of_sb_compartments
-  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
+  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store, get_bgcm_idx
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID
 
   IMPLICIT NONE
@@ -73,22 +72,21 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     ! ----------------------------------------------------------------------------------------------------- !
-    TYPE(t_jsb_model),      POINTER         :: model              !< the model
-    TYPE(t_lnd_bgcm_store), POINTER         :: bgcm_store         !< the bgcm store of this tile
-    TYPE(t_lctlib_element), POINTER         :: lctlib             !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_grid),       POINTER         :: hgrid              !< Horizontal grid
-    TYPE(t_jsb_vgrid),      POINTER         :: vgrid_soil_sb      !< Vertical grid
-    INTEGER                                 :: nsoil_sb           !< number of soil layers as used/defined by the SB_ process
-    REAL(wp)                                :: hlp1               !< helper var
-    REAL(wp)                                :: hlp_frac_c13       !< helper var
-    REAL(wp)                                :: hlp_frac_c14       !< helper var
-    CHARACTER(len=3)                        :: site_ID_spp1685    !< QUINCY standalone, SPP site-set, sideID
-    INTEGER                                 :: iblk, ic, isoil    !< loop over dimensions
-    INTEGER                                 :: nblks              !< number of blocks
-    INTEGER                                 :: nproma             !< number of grid points per iblk
-    INTEGER                                 :: nr_elements            !< number of elements
-    INTEGER                                 :: nr_sb_parts            !< number of sb compartments
-    REAL(wp), ALLOCATABLE                   :: sb_pool_mt(:,:,:,:,:)  !< dim: compartments, elements, nc, nsoil, nblks
+    TYPE(t_jsb_model),      POINTER :: model                 !< the model
+    TYPE(t_lnd_bgcm_store), POINTER :: bgcm_store            !< the bgcm store of this tile
+    TYPE(t_lctlib_element), POINTER :: lctlib                !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_grid),       POINTER :: hgrid                 !< Horizontal grid
+    TYPE(t_jsb_vgrid),      POINTER :: vgrid_soil_sb         !< Vertical grid
+    INTEGER                         :: nsoil_sb              !< number of soil layers as used/defined by the SB_ process
+    REAL(wp)                        :: hlp1                  !< helper var
+    REAL(wp)                        :: hlp_frac_c13          !< helper var
+    REAL(wp)                        :: hlp_frac_c14          !< helper var
+    CHARACTER(len=3)                :: site_ID_spp1685       !< QUINCY standalone, SPP site-set, sideID
+    INTEGER                         :: iblk, ic, isoil       !< loop over dimensions
+    INTEGER                         :: nblks                 !< number of blocks
+    INTEGER                         :: nproma                !< number of grid points per iblk
+    INTEGER                         :: sb_pool_idx           !< index of the sb pool within the bgcm store
+    REAL(wp),           POINTER :: sb_pool_mt_domain(:,:,:,:,:) !< dim: compartments, elements, nc, nsoil, nblks
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':sb_init'
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
@@ -171,14 +169,9 @@ CONTAINS
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_sb_parts     = get_number_of_sb_compartments()
-    ALLOCATE(sb_pool_mt(nr_sb_parts, nr_elements, nproma, nsoil_sb, nblks))
     bgcm_store => tile%bgcm_store
-    ! init sb_pool_mt with zero below
-    ! DO iblk = 1,nblks
-    !   CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_POOL_ID, 1, nproma, iblk, tile%name, sb_pool_mt(:,:,:,:,iblk))
-    ! END DO
+    sb_pool_idx = get_bgcm_idx(bgcm_store, SB_BGCM_POOL_ID, tile%name, routine)
+    sb_pool_mt_domain => bgcm_store%store_2l_3d_bgcms(bgcm_store%idx_in_store(sb_pool_idx))%mt_2l_3d_bgcm(:,:,:,:,:)
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var3D_onDomain(VEG_,   root_fraction_sl)
     ! ---------------------------
@@ -242,7 +235,7 @@ CONTAINS
     !>  NOTE: reading the restart files is done after init
     !>  NOTE: not using a "Get" function in process init for bgcm
     !> 
-    sb_pool_mt(:,:,:,:,:) = 0.0_wp
+    sb_pool_mt_domain(:,:,:,:,:) = 0.0_wp
 
     !>1.0 all soil models
     !>  simple_sm & jsm
@@ -364,7 +357,7 @@ CONTAINS
         & po4_occluded(:,:,:), &
         & po4_primary(:,:,:), &
         & Qmax_AlFe_cor(:,:,:), &
-        & sb_pool_mt(:,:,:,:,:), &                    ! inout
+        & sb_pool_mt_domain(:,:,:,:,:), &                    ! inout
         & nh4_solute(:,:,:), &                        ! out
         & no3_solute(:,:,:), &
         & nh4_n15_solute(:,:,:), &
@@ -429,7 +422,7 @@ CONTAINS
         & po4_occluded(:,:,:), &
         & Qmax_AlFe_cor(:,:,:), &
         & po4_primary(:,:,:), &
-        & sb_pool_mt(:,:,:,:,:), &                    ! inout
+        & sb_pool_mt_domain(:,:,:,:,:), &                    ! inout
         & qmax_org_min_sl(:,:,:), &                   ! out
         & qmax_nh4_min_sl(:,:,:), &
         & nh4_assoc(:,:,:), &
@@ -458,13 +451,6 @@ CONTAINS
       CALL finish(routine, 'Invalid setting of sb_model_scheme (simple_sm / jsm).')
     END SELECT  ! simple_sm | jsm
 
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    DO iblk = 1,nblks
-      CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_POOL_ID, 1, nproma, iblk, tile%name, sb_pool_mt(:,:,:,:,iblk))
-    END DO
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(sb_pool_mt)
   END SUBROUTINE sb_init
 
   ! ======================================================================================================= !
@@ -512,7 +498,7 @@ CONTAINS
     & po4_occluded, &
     & po4_primary, &
     & Qmax_AlFe_cor, &
-    & sb_pool_mt, &
+    & sb_pool_mt_domain, &
     & nh4_solute, &
     & no3_solute, &
     & nh4_n15_solute, &
@@ -589,7 +575,7 @@ CONTAINS
     REAL(wp),                   INTENT(inout) :: po4_occluded(:,:,:)
     REAL(wp),                   INTENT(inout) :: po4_primary(:,:,:)
     REAL(wp),                   INTENT(inout) :: Qmax_AlFe_cor(:,:,:)
-    REAL(wp),                   INTENT(inout) :: sb_pool_mt(:,:,:,:,:)          !< bgc_material sb_pool
+    REAL(wp),                   INTENT(inout) :: sb_pool_mt_domain(:,:,:,:,:)          !< bgc_material sb_pool
     REAL(wp),                   INTENT(out)   :: nh4_solute(:,:,:)
     REAL(wp),                   INTENT(out)   :: no3_solute(:,:,:)
     REAL(wp),                   INTENT(out)   :: nh4_n15_solute(:,:,:)
@@ -619,33 +605,35 @@ CONTAINS
 
     !>1.0 init
     !>
-    sb_pool_mt(ix_soluable_litter, ixC, :, 1, :)  = def_sb_pool_metabol_litter /  molar_mass_C / soil_lay_width_sl(:,1,:) &
+    sb_pool_mt_domain(ix_soluable_litter, ixC, :, 1, :)  = def_sb_pool_metabol_litter & 
+      &                                                        /  molar_mass_C / soil_lay_width_sl(:,1,:) &
       &                                             * (frac_prod_not_root + (1.0_wp - frac_prod_not_root) &
       &                                             * root_fraction_sl(:,1,:)) 
-    sb_pool_mt(ix_polymeric_litter, ixC, :, 1, :) = def_sb_pool_simple_struct_litter / molar_mass_C / soil_lay_width_sl(:,1,:) &
+    sb_pool_mt_domain(ix_polymeric_litter, ixC, :, 1, :) = def_sb_pool_simple_struct_litter &
+      &                                                    / molar_mass_C / soil_lay_width_sl(:,1,:) &
       &                                             * (frac_prod_not_root + (1.0_wp - frac_prod_not_root) &
       &                                             * root_fraction_sl(:,1,:)) 
     IF (lctlib_growthform == ITREE) THEN
-      sb_pool_mt(ix_woody_litter, ixC, :, 1, :) = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1,:)
+      sb_pool_mt_domain(ix_woody_litter, ixC, :, 1, :) = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1,:)
     ENDIF
-    sb_pool_mt(ix_microbial, ixC, :, 1, :) = def_sb_pool_fast_som / molar_mass_C / soil_lay_width_sl(:,1,:) &
+    sb_pool_mt_domain(ix_microbial, ixC, :, 1, :) = def_sb_pool_fast_som / molar_mass_C / soil_lay_width_sl(:,1,:) &
       &                                      * (frac_prod_not_root + (1.0_wp - frac_prod_not_root) &
       &                                      * root_fraction_sl(:,1,:)) 
-    sb_pool_mt(ix_residue, ixC, :, 1, :)   = def_sb_pool_slow_som / molar_mass_C / soil_lay_width_sl(:,1,:) &
+    sb_pool_mt_domain(ix_residue, ixC, :, 1, :)   = def_sb_pool_slow_som / molar_mass_C / soil_lay_width_sl(:,1,:) &
       &                                      * (frac_prod_not_root + (1.0_wp - frac_prod_not_root) &
       &                                      * root_fraction_sl(:,1,:))
     DO iblk = 1,nblks
       DO isoil = 2,nsoil_sb
-        sb_pool_mt(ix_soluable_litter, ixC, :, isoil, iblk)  = def_sb_pool_metabol_litter /  molar_mass_C &
-          &                                                    / soil_lay_width_sl(:, isoil, iblk) &
-          &                                                    * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, iblk) 
-        sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, iblk) = def_sb_pool_simple_struct_litter / molar_mass_C &
-          &                                                    / soil_lay_width_sl(:, isoil, iblk) &
-          &                                                    * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, iblk) 
-        sb_pool_mt(ix_microbial, ixC, :, isoil, iblk) = def_sb_pool_fast_som / molar_mass_C &
+        sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, iblk)  = def_sb_pool_metabol_litter /  molar_mass_C &
+          &                                                 / soil_lay_width_sl(:, isoil, iblk) &
+          &                                                 * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, iblk)
+        sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, iblk) = def_sb_pool_simple_struct_litter / molar_mass_C &
+          &                                                 / soil_lay_width_sl(:, isoil, iblk) &
+          &                                                 * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, iblk)
+        sb_pool_mt_domain(ix_microbial, ixC, :, isoil, iblk) = def_sb_pool_fast_som / molar_mass_C &
           &                                             / soil_lay_width_sl(:, isoil, iblk) &
-          &                                             * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, iblk) 
-        sb_pool_mt(ix_residue, ixC, :, isoil, iblk)   = def_sb_pool_slow_som / molar_mass_C &
+          &                                             * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, iblk)
+        sb_pool_mt_domain(ix_residue, ixC, :, isoil, iblk)   = def_sb_pool_slow_som / molar_mass_C &
           &                                             / soil_lay_width_sl(:, isoil, iblk) &
           &                                             * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, iblk)
       END DO
@@ -668,7 +656,7 @@ CONTAINS
         & nproma, &                           ! in
         & nsoil_sb,&
         & TRIM(sb_model_scheme), &
-        & sb_pool_mt(:,:,:,:,iblk), &         ! in
+        & sb_pool_mt_domain(:,:,:,:,iblk), &         ! in
         & bulk_soil_carbon_sl(:,:,iblk), &    ! inout
         & soil_litter_carbon_sl(:,:,iblk), &  
         & volume_min_sl(:,:,iblk) )           ! inout
@@ -705,7 +693,7 @@ CONTAINS
     ! Correct the first layer Qmax_AlFe_cor(:,:,:) with the woody litter
     Qmax_AlFe_cor(:, 1, :) = Qmax_AlFe_cor(:, 1, :) * 1._wp / ((1._wp - volume_min_sl(:, 1, :)) &
       &                      * (bulk_soil_carbon_sl(:, 1, :) + soil_litter_carbon_sl(:, 1, :)  &
-      &                      + sb_pool_mt(ix_woody_litter, ixC, :,  1, :)) &
+      &                      + sb_pool_mt_domain(ix_woody_litter, ixC, :,  1, :)) &
       &                      / (bulk_soil_carbon_sl(:, 1, :) + soil_litter_carbon_sl(:, 1, :)) &
       &                      + volume_min_sl(:, 1, :))
     DO iblk = 1,nblks
@@ -717,7 +705,7 @@ CONTAINS
         & ph_sl(:,:,iblk), &
         & bulk_soil_carbon_sl(:,:,iblk), &
         & soil_litter_carbon_sl(:,:,iblk), &
-        & sb_pool_mt(ix_woody_litter, ixC, :, :, iblk), &
+        & sb_pool_mt_domain(ix_woody_litter, ixC, :, :, iblk), &
         & bulk_dens_sl(:,:,iblk), &
         & volume_min_sl(:,:,iblk), &
         & po4_solute_prescribe, &             ! in - po4_solute(:,:,iblk)
@@ -775,40 +763,47 @@ CONTAINS
     nh4_assoc(:,:,:)     = qmax_nh4(:,:,:) * nh4_solute(:,:,:) / (nh4_solute(:,:,:) + km_adsorpt_nh4_sl(:,:,:))
     nh4_n15_assoc(:,:,:) = nh4_assoc(:,:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ! metabolic litter all other elements
-    sb_pool_mt(ix_soluable_litter, ixN, :, :, :)   = sb_pool_mt(ix_soluable_litter, ixC, :, :, :) / k_init_soluable_litter_cn
-    sb_pool_mt(ix_soluable_litter, ixP, :, :, :)   = sb_pool_mt(ix_soluable_litter, ixN, :, :, :) / k_init_litter_np
-    sb_pool_mt(ix_soluable_litter, ixC13, :, :, :) = sb_pool_mt(ix_soluable_litter, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_soluable_litter, ixC14, :, :, :) = sb_pool_mt(ix_soluable_litter, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt(ix_soluable_litter, ixN15, :, :, :) = sb_pool_mt(ix_soluable_litter, ixN, :, :, :) &
+    sb_pool_mt_domain(ix_soluable_litter, ixN, :, :, :) &
+      & = sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) / k_init_soluable_litter_cn
+    sb_pool_mt_domain(ix_soluable_litter, ixP, :, :, :) &
+      & = sb_pool_mt_domain(ix_soluable_litter, ixN, :, :, :) / k_init_litter_np
+    sb_pool_mt_domain(ix_soluable_litter, ixC13, :, :, :) &
+      & = sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_soluable_litter, ixC14, :, :, :) &
+      & = sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_soluable_litter, ixN15, :, :, :) = sb_pool_mt_domain(ix_soluable_litter, ixN, :, :, :) &
       &                                              / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ! non-woody litter all other elements
-    sb_pool_mt(ix_polymeric_litter, ixN, :, :, :)   = sb_pool_mt(ix_polymeric_litter, ixC, :, :, :) / k_init_polymeric_litter_cn
-    sb_pool_mt(ix_polymeric_litter, ixP, :, :, :)   = sb_pool_mt(ix_polymeric_litter, ixN, :, :, :) / k_init_litter_np
-    sb_pool_mt(ix_polymeric_litter, ixC13, :, :, :) = sb_pool_mt(ix_polymeric_litter, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_polymeric_litter, ixC14, :, :, :) = sb_pool_mt(ix_polymeric_litter, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt(ix_polymeric_litter, ixN15, :, :, :) = sb_pool_mt(ix_polymeric_litter, ixN, :, :, :) &
+    sb_pool_mt_domain(ix_polymeric_litter, ixN, :, :, :) &
+      & = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) / k_init_polymeric_litter_cn
+    sb_pool_mt_domain(ix_polymeric_litter, ixP, :, :, :) &
+      & = sb_pool_mt_domain(ix_polymeric_litter, ixN, :, :, :) / k_init_litter_np
+    sb_pool_mt_domain(ix_polymeric_litter, ixC13, :, :, :) = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_polymeric_litter, ixC14, :, :, :) = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_polymeric_litter, ixN15, :, :, :) = sb_pool_mt_domain(ix_polymeric_litter, ixN, :, :, :) &
       &                                               / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ! woody litter all other elements
-    sb_pool_mt(ix_woody_litter, ixN, :, :, :)   = sb_pool_mt(ix_woody_litter, ixC, :, :, :) / k_init_woody_litter_cn
-    sb_pool_mt(ix_woody_litter, ixP, :, :, :)   = sb_pool_mt(ix_woody_litter, ixN, :, :, :) / k_init_litter_np
-    sb_pool_mt(ix_woody_litter, ixC13, :, :, :) = sb_pool_mt(ix_woody_litter, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_woody_litter, ixC14, :, :, :) = sb_pool_mt(ix_woody_litter, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt(ix_woody_litter, ixN15, :, :, :) = sb_pool_mt(ix_woody_litter, ixN, :, :, :) &
+    sb_pool_mt_domain(ix_woody_litter, ixN, :, :, :) &
+      &  = sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) / k_init_woody_litter_cn
+    sb_pool_mt_domain(ix_woody_litter, ixP, :, :, :)   = sb_pool_mt_domain(ix_woody_litter, ixN, :, :, :) / k_init_litter_np
+    sb_pool_mt_domain(ix_woody_litter, ixC13, :, :, :) = sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_woody_litter, ixC14, :, :, :) = sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_woody_litter, ixN15, :, :, :) = sb_pool_mt_domain(ix_woody_litter, ixN, :, :, :) &
       &                                           / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ! fast pool (= microbial) all other elements
-    sb_pool_mt(ix_microbial, ixN, :, :, :)   = sb_pool_mt(ix_microbial, ixC, :, :, :) / (k_fast_som_cn_min + k_fast_som_cn_max) &
-      &                                        * 2.0_wp 
-    sb_pool_mt(ix_microbial, ixP, :, :, :)   = sb_pool_mt(ix_microbial, ixN, :, :, :) / k_fast_som_np
-    sb_pool_mt(ix_microbial, ixC13, :, :, :) = sb_pool_mt(ix_microbial, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_microbial, ixC14, :, :, :) = sb_pool_mt(ix_microbial, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt(ix_microbial, ixN15, :, :, :) = sb_pool_mt(ix_microbial, ixN, :, :, :) &
+    sb_pool_mt_domain(ix_microbial, ixN, :, :, :) &
+      & = sb_pool_mt_domain(ix_microbial, ixC, :, :, :) / (k_fast_som_cn_min + k_fast_som_cn_max) * 2.0_wp
+    sb_pool_mt_domain(ix_microbial, ixP, :, :, :)   = sb_pool_mt_domain(ix_microbial, ixN, :, :, :) / k_fast_som_np
+    sb_pool_mt_domain(ix_microbial, ixC13, :, :, :) = sb_pool_mt_domain(ix_microbial, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_microbial, ixC14, :, :, :) = sb_pool_mt_domain(ix_microbial, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_microbial, ixN15, :, :, :) = sb_pool_mt_domain(ix_microbial, ixN, :, :, :) &
       &                                        / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ! ..
-    sb_pool_mt(ix_residue, ixN, :, :, :)   = sb_pool_mt(ix_residue, ixC, :, :, :) / k_slow_som_cn
-    sb_pool_mt(ix_residue, ixP, :, :, :)   = sb_pool_mt(ix_residue, ixN, :, :, :) / k_slow_som_np
-    sb_pool_mt(ix_residue, ixC13, :, :, :) = sb_pool_mt(ix_residue, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_residue, ixC14, :, :, :) = sb_pool_mt(ix_residue, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt(ix_residue, ixN15, :, :, :) = sb_pool_mt(ix_residue, ixN, :, :, :) &
+    sb_pool_mt_domain(ix_residue, ixN, :, :, :)   = sb_pool_mt_domain(ix_residue, ixC, :, :, :) / k_slow_som_cn
+    sb_pool_mt_domain(ix_residue, ixP, :, :, :)   = sb_pool_mt_domain(ix_residue, ixN, :, :, :) / k_slow_som_np
+    sb_pool_mt_domain(ix_residue, ixC13, :, :, :) = sb_pool_mt_domain(ix_residue, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_residue, ixC14, :, :, :) = sb_pool_mt_domain(ix_residue, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_residue, ixN15, :, :, :) = sb_pool_mt_domain(ix_residue, ixN, :, :, :) &
       &                                      / (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ! ..
     nh4_n15_solute(:,:,:) = nh4_solute(:,:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
@@ -932,7 +927,7 @@ CONTAINS
     & po4_occluded, &
     & Qmax_AlFe_cor, &
     & po4_primary, &
-    & sb_pool_mt, &
+    & sb_pool_mt_domain, &
     & qmax_org_min_sl, &
     & qmax_nh4_min_sl, &
     & nh4_assoc, &
@@ -1010,7 +1005,7 @@ CONTAINS
     REAL(wp),                   INTENT(inout) :: po4_occluded(:,:,:)
     REAL(wp),                   INTENT(inout) :: Qmax_AlFe_cor(:,:,:)
     REAL(wp),                   INTENT(inout) :: po4_primary(:,:,:)
-    REAL(wp),                   INTENT(inout) :: sb_pool_mt(:,:,:,:,:)          !< bgc_material sb_pool
+    REAL(wp),                   INTENT(inout) :: sb_pool_mt_domain(:,:,:,:,:)          !< bgc_material sb_pool
     REAL(wp),                   INTENT(out)   :: qmax_org_min_sl(:,:,:)
     REAL(wp),                   INTENT(out)   :: qmax_nh4_min_sl(:,:,:)
     REAL(wp),                   INTENT(out)   :: nh4_assoc(:,:,:)
@@ -1055,32 +1050,35 @@ CONTAINS
     !>
 
     ! initialisation of litter pools
-    sb_pool_mt(ix_soluable_litter, ixC, :, 1, :)  = def_sb_pool_metabol_litter /  molar_mass_C / soil_lay_width_sl(:,1,:) &
+    sb_pool_mt_domain(ix_soluable_litter, ixC, :, 1, :) &
+      & = def_sb_pool_metabol_litter /  molar_mass_C / soil_lay_width_sl(:,1,:) &
       &                                             * (frac_prod_not_root + (1.0_wp - frac_prod_not_root) &
       &                                             * root_fraction_sl(:,1,:)) 
-    sb_pool_mt(ix_polymeric_litter, ixC, :, 1, :) = def_sb_pool_jsm_struct_litter / molar_mass_C / soil_lay_width_sl(:,1,:) &
+    sb_pool_mt_domain(ix_polymeric_litter, ixC, :, 1, :) &
+      & = def_sb_pool_jsm_struct_litter / molar_mass_C / soil_lay_width_sl(:,1,:) &
       &                                             * (frac_prod_not_root + (1.0_wp - frac_prod_not_root) &
       &                                             * root_fraction_sl(:,1,:)) 
     IF (lctlib_growthform == ITREE) THEN
-      sb_pool_mt(ix_woody_litter, ixC, :, 1, :)  = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1,:)
+      sb_pool_mt_domain(ix_woody_litter, ixC, :, 1, :)  = def_sb_pool_woody_litter / molar_mass_C / soil_lay_width_sl(:,1,:)
     ENDIF
     DO isoil = 2,nsoil_sb
-      sb_pool_mt(ix_soluable_litter, ixC, :, isoil, :)  = def_sb_pool_metabol_litter /  molar_mass_C &
+      sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, :)  = def_sb_pool_metabol_litter /  molar_mass_C &
         &                                                 / soil_lay_width_sl(:, isoil, :) &
         &                                                 * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, :) 
-      sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, :) = def_sb_pool_jsm_struct_litter / molar_mass_C &
+      sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, :) = def_sb_pool_jsm_struct_litter / molar_mass_C &
         &                                                 / soil_lay_width_sl(:, isoil, :) &
         &                                                 * (1.0_wp - frac_prod_not_root) * root_fraction_sl(:, isoil, :) 
     ENDDO
     
     ! for each soil layer
     DO isoil = 1,nsoil_sb
-      sb_pool_mt(ix_microbial, ixC, :, isoil, :) = MAX(def_sb_pool_microbial_biomass / soil_lay_width_sl(:, isoil, :) &
+      sb_pool_mt_domain(ix_microbial, ixC, :, isoil, :) = MAX(def_sb_pool_microbial_biomass / soil_lay_width_sl(:, isoil, :) &
         &                                          * root_fraction_sl(:, isoil, :), min_mic_biomass)
-      sb_pool_mt(ix_dom, ixC, :, isoil, :)       = def_sb_pool_dom / soil_lay_width_sl(:, isoil, :) &
+      sb_pool_mt_domain(ix_dom, ixC, :, isoil, :)       = def_sb_pool_dom / soil_lay_width_sl(:, isoil, :) &
         &                                          * root_fraction_sl(:, isoil, :)
-      sb_pool_mt(ix_dom_assoc, ixC, :, isoil, :) = k_sb_pool_dom_assoc_c_corr * sb_pool_mt(ix_dom, ixC, :,  isoil, :)
-      sb_pool_mt(ix_residue, ixC, :, isoil, :)   = def_sb_pool_microbial_necromass / soil_lay_width_sl(:, isoil, :) &
+      sb_pool_mt_domain(ix_dom_assoc, ixC, :, isoil, :) &
+        & = k_sb_pool_dom_assoc_c_corr * sb_pool_mt_domain(ix_dom, ixC, :,  isoil, :)
+      sb_pool_mt_domain(ix_residue, ixC, :, isoil, :)   = def_sb_pool_microbial_necromass / soil_lay_width_sl(:, isoil, :) &
         &                                          * root_fraction_sl(:, isoil, :)
       ! calc fraction of mineral-associated C in the soil
       ! @TODO make the '7.0_wp' a parameter
@@ -1090,43 +1088,44 @@ CONTAINS
       IF (isoil > 10._wp) THEN 
         frac_mineral_assoc_soil_c = frac_mineral_assoc_soil_c * k_deep_soil_moc_corr
       ENDIF
-      sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :) = qmax_org_fine_particle &
+      sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :) = qmax_org_fine_particle &
         &                                           * (clay_sl(:, isoil, :) + silt_sl(:, isoil, :)) &
         &                                           * bulk_dens_sl(:, isoil, :) * frac_mineral_assoc_soil_c
       ! To avoid over-saturation of OM in soil layer
       ! calculate the fast C and stable C content (saturation at 1._wp) for each layer
       IF (isoil == 1) THEN
-        arr_hlp7(:, isoil, :) = (sb_pool_mt(ix_microbial, ixC, :, isoil, :) &
-          &                     + sb_pool_mt(ix_dom, ixC, :, isoil, :) + &
-          &                     sb_pool_mt(ix_dom_assoc, ixC, :, isoil, :)) * &
+        arr_hlp7(:, isoil, :) = (sb_pool_mt_domain(ix_microbial, ixC, :, isoil, :) &
+          &                     + sb_pool_mt_domain(ix_dom, ixC, :, isoil, :) + &
+          &                     sb_pool_mt_domain(ix_dom_assoc, ixC, :, isoil, :)) * &
           &                     molar_mass_C / carbon_per_dryweight_SOM / 1000._wp / rho_bulk_org
-        arr_hlp8(:, isoil, :) = (sb_pool_mt(ix_residue, ixC, :, isoil, :) &
-          &                     + sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :)) * &
+        arr_hlp8(:, isoil, :) = (sb_pool_mt_domain(ix_residue, ixC, :, isoil, :) &
+          &                     + sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :)) * &
           &                     molar_mass_C / carbon_per_dryweight_SOM / 1000._wp / rho_bulk_org
       ELSE
-        arr_hlp7(:, isoil, :) = (sb_pool_mt(ix_soluable_litter, ixC, :, isoil, :) &
-          &                     + sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, :) + & 
-          &                     sb_pool_mt(ix_microbial, ixC, :, isoil, :) + sb_pool_mt(ix_dom, ixC, :, isoil, :) + &
-          &                     sb_pool_mt(ix_dom_assoc, ixC, :, isoil, :)) * &
-          &                     molar_mass_C / carbon_per_dryweight_SOM / 1000._wp / rho_bulk_org
-        arr_hlp8(:, isoil, :) = (sb_pool_mt(ix_residue, ixC, :, isoil, :) &
-          &                     + sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :)) * &
+        arr_hlp7(:, isoil, :) = (sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, :)   &
+          &                     + sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, :) &
+          &                     + sb_pool_mt_domain(ix_microbial, ixC, :, isoil, :)        &
+          &                     + sb_pool_mt_domain(ix_dom, ixC, :, isoil, :)              &
+          &                     + sb_pool_mt_domain(ix_dom_assoc, ixC, :, isoil, :))       &
+          &                     * molar_mass_C / carbon_per_dryweight_SOM / 1000._wp / rho_bulk_org
+        arr_hlp8(:, isoil, :) = (sb_pool_mt_domain(ix_residue, ixC, :, isoil, :) &
+          &                     + sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :)) * &
           &                     molar_mass_C / carbon_per_dryweight_SOM / 1000._wp / rho_bulk_org
       ENDIF
       ! check if soil is over-saturated with fast C
       WHERE (arr_hlp7(:, isoil, :) > 1._wp )
-        sb_pool_mt(ix_soluable_litter, ixC, :, isoil, :)  = sb_pool_mt(ix_soluable_litter, ixC, :, isoil, :)  &
+        sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, :)  = sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, :)  &
           &                                                 * 1._wp / arr_hlp7(:, isoil, :)
-        sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, :) = sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, :) &
+        sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, :) = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, :) &
           &                                                 * 1._wp / arr_hlp7(:, isoil, :)
-        sb_pool_mt(ix_microbial, ixC, :, isoil, :)        = sb_pool_mt(ix_microbial, ixC, :, isoil, :)        &
+        sb_pool_mt_domain(ix_microbial, ixC, :, isoil, :)        = sb_pool_mt_domain(ix_microbial, ixC, :, isoil, :)        &
           &                                                 * 1._wp / arr_hlp7(:, isoil, :)
-        sb_pool_mt(ix_dom, ixC, :, isoil, :)              = sb_pool_mt(ix_dom, ixC, :, isoil, :)              &
+        sb_pool_mt_domain(ix_dom, ixC, :, isoil, :)              = sb_pool_mt_domain(ix_dom, ixC, :, isoil, :)              &
           &                                                 * 1._wp / arr_hlp7(:, isoil, :)
-        sb_pool_mt(ix_dom_assoc, ixC, :, isoil, :)        = sb_pool_mt(ix_dom_assoc, ixC, :, isoil, :)        &
+        sb_pool_mt_domain(ix_dom_assoc, ixC, :, isoil, :)        = sb_pool_mt_domain(ix_dom_assoc, ixC, :, isoil, :)        &
           &                                                 * 1._wp / arr_hlp7(:, isoil, :)
-        sb_pool_mt(ix_residue, ixC, :, isoil, :)          = 0._wp
-        sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :)    = 0._wp
+        sb_pool_mt_domain(ix_residue, ixC, :, isoil, :)          = 0._wp
+        sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :)    = 0._wp
       ! check if soil is over-saturated with fast and stable C
     ELSEWHERE ((arr_hlp7(:, isoil, :) + arr_hlp8(:, isoil, :)) > 1._wp )
         arr_hlp9(:, isoil, :) = (1._wp - arr_hlp7(:, isoil, :)) * fact_repartition_om_init_cond1 * &
@@ -1135,37 +1134,41 @@ CONTAINS
         arr_hlp8(:, isoil, :) = (1._wp - arr_hlp7(:, isoil, :)) * (1._wp - fact_repartition_om_init_cond1) * &
           &                     rho_bulk_org * 1000._wp * carbon_per_dryweight_SOM / molar_mass_C
         WHERE (arr_hlp8(:, isoil, :) > arr_hlp9(:, isoil, :))
-          sb_pool_mt(ix_soluable_litter, ixC, :, isoil, :)  = sb_pool_mt(ix_soluable_litter, ixC, :, isoil, :) &
+          sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, :)  = sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, :) &
             &                                                 + (arr_hlp8(:, isoil, :) - arr_hlp9(:, isoil, :)) &
             &                                                 * fact_repartition_om_init_cond2
-          sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, :) = sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, :) &
+          sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, :) = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, :) &
             &                                                 + (arr_hlp8(:, isoil, :) - arr_hlp9(:, isoil, :)) &
             &                                                 * (1._wp - fact_repartition_om_init_cond2)
           arr_hlp8(:, isoil, :) = arr_hlp9(:, isoil, :)
         ENDWHERE
-        sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :) = calc_fast_po4(arr_hlp8(:, isoil, :), &
+        sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :) = calc_fast_po4(arr_hlp8(:, isoil, :), &
           &                                                            arr_hlp9(:, isoil, :), &
           &                                                            k_desorpt_det / k_adsorpt_det)
-        sb_pool_mt(ix_residue, ixC, :, isoil, :) = arr_hlp8(:, isoil, :) - sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :)
+        sb_pool_mt_domain(ix_residue, ixC, :, isoil, :) &
+          & = arr_hlp8(:, isoil, :) - sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :)
       ! check if the available mineral surface is enough for sorbed OM
       ELSEWHERE
         arr_hlp9(:, isoil, :) = (1._wp - arr_hlp7(:, isoil, :) - arr_hlp8(:, isoil, :)) &
           &                     * qmax_org_fine_particle &
           &                     * (clay_sl(:, isoil, :) + silt_sl(:, isoil, :)) * bulk_dens_sl(:, isoil, :)
-        arr_hlp8(:, isoil, :) = (sb_pool_mt(ix_residue, ixC, :, isoil, :) + sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :))
+        arr_hlp8(:, isoil, :) &
+          & = (sb_pool_mt_domain(ix_residue, ixC, :, isoil, :) + sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :))
         WHERE (arr_hlp8(:, isoil, :) > arr_hlp9(:, isoil, :))
-          sb_pool_mt(ix_soluable_litter, ixC, :, isoil, :)  = sb_pool_mt(ix_soluable_litter, ixC, :, isoil, :) &
+          sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, :) &
+            & = sb_pool_mt_domain(ix_soluable_litter, ixC, :, isoil, :) &
             &                                                 + (arr_hlp8(:, isoil, :) - arr_hlp9(:, isoil, :)) &
             &                                                 * fact_repartition_om_init_cond2
-          sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, :) = sb_pool_mt(ix_polymeric_litter, ixC, :, isoil, :) &
+          sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, :) = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, isoil, :) &
             &                                                 + (arr_hlp8(:, isoil, :) - arr_hlp9(:, isoil, :)) &
             &                                                 * (1._wp - fact_repartition_om_init_cond2)
           arr_hlp8(:, isoil, :) = arr_hlp9(:, isoil, :)
         ENDWHERE
-        sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :) = calc_fast_po4(arr_hlp8(:, isoil, :), &
+        sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :) = calc_fast_po4(arr_hlp8(:, isoil, :), &
           &                                                            arr_hlp9(:, isoil, :), &
           &                                                            k_desorpt_det / k_adsorpt_det)
-        sb_pool_mt(ix_residue, ixC, :, isoil, :) = arr_hlp8(:, isoil, :) - sb_pool_mt(ix_residue_assoc, ixC, :, isoil, :)
+        sb_pool_mt_domain(ix_residue, ixC, :, isoil, :) &
+          & = arr_hlp8(:, isoil, :) - sb_pool_mt_domain(ix_residue_assoc, ixC, :, isoil, :)
       ENDWHERE
     ENDDO
     
@@ -1173,9 +1176,9 @@ CONTAINS
     DO iblk = 1,nblks
       DO ic = 1,nproma
         nh4_solute(ic, :, iblk)      = nh4_solute_prescribe / soil_lay_depth_ubound_sl(ic, nsoil_sb, iblk)
-        nh4_n15_solute(ic, :, iblk)  = nh4_solute(ic, :, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+        nh4_n15_solute(ic, :, iblk)  = nh4_solute(ic, :, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
         no3_solute(ic, :, iblk)      = no3_solute_prescribe / soil_lay_depth_ubound_sl(ic, nsoil_sb, iblk)
-        no3_n15_solute(ic, :, iblk)  = no3_solute(ic, :, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp)) 
+        no3_n15_solute(ic, :, iblk)  = no3_solute(ic, :, iblk) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
       END DO
     END DO
     ! inital bulk density, Qmax_org & Qmax_po4 based on current soil carbon content
@@ -1184,7 +1187,7 @@ CONTAINS
         & nproma, &                           ! in
         & nsoil_sb, &
         & TRIM(sb_model_scheme), &
-        & sb_pool_mt(:,:,:,:,iblk), &         ! in
+        & sb_pool_mt_domain(:,:,:,:,iblk), &         ! in
         & bulk_soil_carbon_sl(:,:,iblk), &    ! inout
         & soil_litter_carbon_sl(:,:,iblk), &
         & volume_min_sl(:,:,iblk) )           ! inout
@@ -1225,7 +1228,7 @@ CONTAINS
     ! Correct the first layer Qmax_AlFe_cor(:,:,:) with the woody litter
     Qmax_AlFe_cor(:,1,:) = Qmax_AlFe_cor(:,1,:) * 1._wp / ((1._wp - volume_min_sl(:,1,:)) &
       &                    * (bulk_soil_carbon_sl(:,1,:) + soil_litter_carbon_sl(:,1,:) &
-      &                    + sb_pool_mt(ix_woody_litter, ixC, :, 1, :)) &
+      &                    + sb_pool_mt_domain(ix_woody_litter, ixC, :, 1, :)) &
       &                    / (bulk_soil_carbon_sl(:,1,:) + soil_litter_carbon_sl(:,1,:)) &
       &                    + volume_min_sl(:,1,:))
     DO iblk = 1,nblks
@@ -1237,7 +1240,7 @@ CONTAINS
         & ph_sl(:,:,iblk), &
         & bulk_soil_carbon_sl(:,:,iblk), &
         & soil_litter_carbon_sl(:,:,iblk), &
-        & sb_pool_mt(ix_woody_litter, ixC, :, :, iblk), &
+        & sb_pool_mt_domain(ix_woody_litter, ixC, :, :, iblk), &
         & bulk_dens_sl(:,:,iblk), &
         & volume_min_sl(:,:,iblk), &
         & po4_solute_prescribe, &             ! in - po4_solute(:,:,iblk)
@@ -1385,62 +1388,67 @@ CONTAINS
     
     ! isotopic signals in all pools
     ! microbial, DOM, aDOM, residue, and aRes pools
-    sb_pool_mt(ix_soluable_litter, ixN, :, :, :)   = sb_pool_mt(ix_soluable_litter, ixC, :, :, :) / k_init_soluable_litter_cn 
-    sb_pool_mt(ix_soluable_litter, ixP, :, :, :)   = sb_pool_mt(ix_soluable_litter, ixN, :, :, :) / k_init_litter_np 
-    sb_pool_mt(ix_soluable_litter, ixC13, :, :, :) = sb_pool_mt(ix_soluable_litter, ixC, :, :, :) * hlp_frac_c13 
-    sb_pool_mt(ix_soluable_litter, ixC14, :, :, :) = sb_pool_mt(ix_soluable_litter, ixC, :, :, :) * hlp_frac_c14 
-    sb_pool_mt(ix_soluable_litter, ixN15, :, :, :) = sb_pool_mt(ix_soluable_litter, ixN, :, :, :) / &
+    sb_pool_mt_domain(ix_soluable_litter, ixN, :, :, :) &
+      & = sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) / k_init_soluable_litter_cn
+    sb_pool_mt_domain(ix_soluable_litter, ixP, :, :, :) &
+      &  = sb_pool_mt_domain(ix_soluable_litter, ixN, :, :, :) / k_init_litter_np
+    sb_pool_mt_domain(ix_soluable_litter, ixC13, :, :, :) = sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_soluable_litter, ixC14, :, :, :) = sb_pool_mt_domain(ix_soluable_litter, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_soluable_litter, ixN15, :, :, :) = sb_pool_mt_domain(ix_soluable_litter, ixN, :, :, :) / &
       &                                              (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    sb_pool_mt(ix_polymeric_litter, ixN, :, :, :)   = sb_pool_mt(ix_polymeric_litter, ixC, :, :, :) / k_init_polymeric_litter_cn
-    sb_pool_mt(ix_polymeric_litter, ixP, :, :, :)   = sb_pool_mt(ix_polymeric_litter, ixN, :, :, :) / k_init_litter_np 
-    sb_pool_mt(ix_polymeric_litter, ixC13, :, :, :) = sb_pool_mt(ix_polymeric_litter, ixC, :, :, :) * hlp_frac_c13 
-    sb_pool_mt(ix_polymeric_litter, ixC14, :, :, :) = sb_pool_mt(ix_polymeric_litter, ixC, :, :, :) * hlp_frac_c14 
-    sb_pool_mt(ix_polymeric_litter, ixN15, :, :, :) = sb_pool_mt(ix_polymeric_litter, ixN, :, :, :) / &
+    sb_pool_mt_domain(ix_polymeric_litter, ixN, :, :, :) &
+      & = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) / k_init_polymeric_litter_cn
+    sb_pool_mt_domain(ix_polymeric_litter, ixP, :, :, :) &
+      & = sb_pool_mt_domain(ix_polymeric_litter, ixN, :, :, :) / k_init_litter_np 
+    sb_pool_mt_domain(ix_polymeric_litter, ixC13, :, :, :) = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_polymeric_litter, ixC14, :, :, :) = sb_pool_mt_domain(ix_polymeric_litter, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_polymeric_litter, ixN15, :, :, :) = sb_pool_mt_domain(ix_polymeric_litter, ixN, :, :, :) / &
       &                                               (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    sb_pool_mt(ix_woody_litter, ixN, :, :, :)   = sb_pool_mt(ix_woody_litter, ixC, :, :, :) / k_init_woody_litter_cn
-    sb_pool_mt(ix_woody_litter, ixP, :, :, :)   = sb_pool_mt(ix_woody_litter, ixN, :, :, :) / k_init_litter_np
-    sb_pool_mt(ix_woody_litter, ixC13, :, :, :) = sb_pool_mt(ix_woody_litter, ixC, :, :, :) * hlp_frac_c13 
-    sb_pool_mt(ix_woody_litter, ixC14, :, :, :) = sb_pool_mt(ix_woody_litter, ixC, :, :, :) * hlp_frac_c14 
-    sb_pool_mt(ix_woody_litter, ixN15, :, :, :) = sb_pool_mt(ix_woody_litter, ixN, :, :, :) / &
+    sb_pool_mt_domain(ix_woody_litter, ixN, :, :, :) &
+      & = sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) / k_init_woody_litter_cn
+    sb_pool_mt_domain(ix_woody_litter, ixP, :, :, :)   = sb_pool_mt_domain(ix_woody_litter, ixN, :, :, :) / k_init_litter_np
+    sb_pool_mt_domain(ix_woody_litter, ixC13, :, :, :) = sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_woody_litter, ixC14, :, :, :) = sb_pool_mt_domain(ix_woody_litter, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_woody_litter, ixN15, :, :, :) = sb_pool_mt_domain(ix_woody_litter, ixN, :, :, :) / &
       &                                           (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    sb_pool_mt(ix_microbial, ixN, :, :, :)   = sb_pool_mt(ix_microbial, ixC, :, :, :) / microbial_cn 
-    sb_pool_mt(ix_microbial, ixP, :, :, :)   = sb_pool_mt(ix_microbial, ixN, :, :, :) / microbial_np
-    sb_pool_mt(ix_microbial, ixC13, :, :, :) = sb_pool_mt(ix_microbial, ixC, :, :, :) * hlp_frac_c13 
-    sb_pool_mt(ix_microbial, ixC14, :, :, :) = sb_pool_mt(ix_microbial, ixC, :, :, :) * hlp_frac_c14 
-    sb_pool_mt(ix_microbial, ixN15, :, :, :) = sb_pool_mt(ix_microbial, ixN, :, :, :) / &
+    sb_pool_mt_domain(ix_microbial, ixN, :, :, :)   = sb_pool_mt_domain(ix_microbial, ixC, :, :, :) / microbial_cn
+    sb_pool_mt_domain(ix_microbial, ixP, :, :, :)   = sb_pool_mt_domain(ix_microbial, ixN, :, :, :) / microbial_np
+    sb_pool_mt_domain(ix_microbial, ixC13, :, :, :) = sb_pool_mt_domain(ix_microbial, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_microbial, ixC14, :, :, :) = sb_pool_mt_domain(ix_microbial, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_microbial, ixN15, :, :, :) = sb_pool_mt_domain(ix_microbial, ixN, :, :, :) / &
       &                                        (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    sb_pool_mt(ix_residue, ixN, :, :, :)   = sb_pool_mt(ix_residue, ixC, :, :, :) / microbial_cn 
-    sb_pool_mt(ix_residue, ixP, :, :, :)   = sb_pool_mt(ix_residue, ixN, :, :, :) / k_slow_som_np
-    sb_pool_mt(ix_residue, ixC13, :, :, :) = sb_pool_mt(ix_residue, ixC, :, :, :) * hlp_frac_c13 
-    sb_pool_mt(ix_residue, ixC14, :, :, :) = sb_pool_mt(ix_residue, ixC, :, :, :) * hlp_frac_c14 
-    sb_pool_mt(ix_residue, ixN15, :, :, :) = sb_pool_mt(ix_residue, ixN, :, :, :) / &
+    sb_pool_mt_domain(ix_residue, ixN, :, :, :)   = sb_pool_mt_domain(ix_residue, ixC, :, :, :) / microbial_cn
+    sb_pool_mt_domain(ix_residue, ixP, :, :, :)   = sb_pool_mt_domain(ix_residue, ixN, :, :, :) / k_slow_som_np
+    sb_pool_mt_domain(ix_residue, ixC13, :, :, :) = sb_pool_mt_domain(ix_residue, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_residue, ixC14, :, :, :) = sb_pool_mt_domain(ix_residue, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_residue, ixN15, :, :, :) = sb_pool_mt_domain(ix_residue, ixN, :, :, :) / &
       &                                      (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    sb_pool_mt(ix_residue_assoc, ixN, :, :, :)   = sb_pool_mt(ix_residue_assoc, ixC, :, :, :) / microbial_cn
-    sb_pool_mt(ix_residue_assoc, ixP, :, :, :)   = sb_pool_mt(ix_residue_assoc, ixN, :, :, :) / k_slow_som_np
-    sb_pool_mt(ix_residue_assoc, ixC13, :, :, :) = sb_pool_mt(ix_residue_assoc, ixC, :, :, :) * hlp_frac_c13 
-    sb_pool_mt(ix_residue_assoc, ixC14, :, :, :) = sb_pool_mt(ix_residue_assoc, ixC, :, :, :) * hlp_frac_c14 
-    sb_pool_mt(ix_residue_assoc, ixN15, :, :, :) = sb_pool_mt(ix_residue_assoc, ixN, :, :, :) / &
+    sb_pool_mt_domain(ix_residue_assoc, ixN, :, :, :)   = sb_pool_mt_domain(ix_residue_assoc, ixC, :, :, :) / microbial_cn
+    sb_pool_mt_domain(ix_residue_assoc, ixP, :, :, :)   = sb_pool_mt_domain(ix_residue_assoc, ixN, :, :, :) / k_slow_som_np
+    sb_pool_mt_domain(ix_residue_assoc, ixC13, :, :, :) = sb_pool_mt_domain(ix_residue_assoc, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_residue_assoc, ixC14, :, :, :) = sb_pool_mt_domain(ix_residue_assoc, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_residue_assoc, ixN15, :, :, :) = sb_pool_mt_domain(ix_residue_assoc, ixN, :, :, :) / &
       &                                            (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    sb_pool_mt(ix_dom, ixN, :, :, :)   = sb_pool_mt(ix_dom, ixC, :, :, :) / microbial_cn
-    sb_pool_mt(ix_dom, ixP, :, :, :)   = sb_pool_mt(ix_dom, ixN, :, :, :) / microbial_np
-    sb_pool_mt(ix_dom, ixC13, :, :, :) = sb_pool_mt(ix_dom, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_dom, ixC14, :, :, :) = sb_pool_mt(ix_dom, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt(ix_dom, ixN15, :, :, :) = sb_pool_mt(ix_dom, ixN, :, :, :) / &
+    sb_pool_mt_domain(ix_dom, ixN, :, :, :)   = sb_pool_mt_domain(ix_dom, ixC, :, :, :) / microbial_cn
+    sb_pool_mt_domain(ix_dom, ixP, :, :, :)   = sb_pool_mt_domain(ix_dom, ixN, :, :, :) / microbial_np
+    sb_pool_mt_domain(ix_dom, ixC13, :, :, :) = sb_pool_mt_domain(ix_dom, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_dom, ixC14, :, :, :) = sb_pool_mt_domain(ix_dom, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_dom, ixN15, :, :, :) = sb_pool_mt_domain(ix_dom, ixN, :, :, :) / &
       &                                  (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    sb_pool_mt(ix_dom_assoc, ixN, :, :, :)   = sb_pool_mt(ix_dom_assoc, ixC, :, :, :) / microbial_cn
-    sb_pool_mt(ix_dom_assoc, ixP, :, :, :)   = sb_pool_mt(ix_dom_assoc, ixN, :, :, :) / microbial_np
-    sb_pool_mt(ix_dom_assoc, ixC13, :, :, :) = sb_pool_mt(ix_dom_assoc, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_dom_assoc, ixC14, :, :, :) = sb_pool_mt(ix_dom_assoc, ixC, :, :, :) * hlp_frac_c14
-    sb_pool_mt(ix_dom_assoc, ixN15, :, :, :) = sb_pool_mt(ix_dom_assoc, ixN, :, :, :) / & 
+    sb_pool_mt_domain(ix_dom_assoc, ixN, :, :, :)   = sb_pool_mt_domain(ix_dom_assoc, ixC, :, :, :) / microbial_cn
+    sb_pool_mt_domain(ix_dom_assoc, ixP, :, :, :)   = sb_pool_mt_domain(ix_dom_assoc, ixN, :, :, :) / microbial_np
+    sb_pool_mt_domain(ix_dom_assoc, ixC13, :, :, :) = sb_pool_mt_domain(ix_dom_assoc, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_dom_assoc, ixC14, :, :, :) = sb_pool_mt_domain(ix_dom_assoc, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_dom_assoc, ixN15, :, :, :) = sb_pool_mt_domain(ix_dom_assoc, ixN, :, :, :) / & 
       &                                        (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     ! fungi and mycorrhiza      
-    sb_pool_mt(ix_fungi, ixC13, :, :, :) = sb_pool_mt(ix_fungi, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_fungi, ixC14, :, :, :) = sb_pool_mt(ix_fungi, ixC, :, :, :) * hlp_frac_c14 
-    sb_pool_mt(ix_fungi, ixN15, :, :, :) = sb_pool_mt(ix_fungi, ixN, :, :, :) / & 
+    sb_pool_mt_domain(ix_fungi, ixC13, :, :, :) = sb_pool_mt_domain(ix_fungi, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_fungi, ixC14, :, :, :) = sb_pool_mt_domain(ix_fungi, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_fungi, ixN15, :, :, :) = sb_pool_mt_domain(ix_fungi, ixN, :, :, :) / & 
       &                                    (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
-    sb_pool_mt(ix_mycorrhiza, ixC13, :, :, :) = sb_pool_mt(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c13
-    sb_pool_mt(ix_mycorrhiza, ixC14, :, :, :) = sb_pool_mt(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c14 
-    sb_pool_mt(ix_mycorrhiza, ixN15, :, :, :) = sb_pool_mt(ix_mycorrhiza, ixN, :, :, :) / & 
+    sb_pool_mt_domain(ix_mycorrhiza, ixC13, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c13
+    sb_pool_mt_domain(ix_mycorrhiza, ixC14, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixC, :, :, :) * hlp_frac_c14
+    sb_pool_mt_domain(ix_mycorrhiza, ixN15, :, :, :) = sb_pool_mt_domain(ix_mycorrhiza, ixN, :, :, :) / &
       &                                         (1._wp + 1._wp / calc_mixing_ratio_N15N14(0.0_wp))
     
     ! de-allocate local allocatable var

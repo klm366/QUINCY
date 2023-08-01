@@ -38,11 +38,9 @@ MODULE mo_veg_util
   USE mo_jsb_math_constants,    ONLY: zero, eps8
 
   USE mo_lnd_bgcm_idx
-  USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_LITTERFALL_ID, &
     &                                   VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID
-  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
 
   IMPLICIT NONE
   
@@ -72,14 +70,13 @@ CONTAINS
     TYPE(t_jsb_model),      POINTER   :: model                !< the model
     TYPE(t_lnd_bgcm_store), POINTER   :: bgcm_store           !< the bgcm store of this tile
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
-    INTEGER                           :: nr_elements                    !< number of elements
-    INTEGER                           :: nr_veg_parts                   !< number of veg compartments
-    REAL(wp), ALLOCATABLE             :: veg_growth_mt(:,:,:)           !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_litterfall_mt(:,:,:)       !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_establishment_mt(:,:)      !< dim: elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_exudation_mt(:,:)          !< dim: elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_reserve_use_mt(:,:)        !< dim: elements, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_veg_fluxes'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt1L2D :: veg_exudation_mt
+    dsl4jsb_Def_mt1L2D :: veg_establishment_mt
+    dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -95,21 +92,17 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(VEG_)
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_growth_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_litterfall_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_establishment_mt(nr_elements, nc))
-    ALLOCATE(veg_exudation_mt(nr_elements, nc))
-    ALLOCATE(veg_reserve_use_mt(nr_elements, nc))
     bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 bgcm fluxes
     !>
-    ! set the bgcm matrices to zero, and write these values back to the bgcm below
-    ! no need to get the values of the bgcm (`CALL bgcm_store%Get_matrix_from_bgcm_*`)
-    !   as these values are zeroed anyway
+    ! set the bgcm matrices to zero
     veg_growth_mt(:,:,:)      = zero
     veg_litterfall_mt(:,:,:)  = zero
     veg_establishment_mt(:,:) = zero
@@ -155,16 +148,6 @@ CONTAINS
     dsl4jsb_var2D_onChunk(VEG_, delta_dens_ind) = zero                 !< ??
     dsl4jsb_var2D_onChunk(VEG_, unit_transpiration) = zero             !< ??
 
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_GROWTH_ID, ics, ice, iblk, tile%name, veg_growth_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_ESTABLISHMENT_ID, ics, ice, iblk, tile%name, veg_establishment_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_RESERVE_USE_ID, ics, ice, iblk, tile%name, veg_reserve_use_mt)
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(veg_growth_mt, veg_litterfall_mt, veg_establishment_mt, veg_exudation_mt, veg_reserve_use_mt)
-
   END SUBROUTINE reset_veg_fluxes
 
 
@@ -208,11 +191,10 @@ CONTAINS
     INTEGER                                 :: icanopy              !< looping
     INTEGER                                 :: ncanopy              !< number of canopy layers, from vgrid
     INTEGER                                 :: iblk, ics, ice, nc   !< dimensions
-    INTEGER                                 :: nr_elements                    !< number of elements
-    INTEGER                                 :: nr_veg_parts                   !< number of veg compartments
-    REAL(wp), ALLOCATABLE                   :: veg_pool_mt(:,:,:)             !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE                   :: veg_exudation_mt(:,:)          !< dim: elements, nc
     CHARACTER(len=*), PARAMETER             :: routine = modname//':calculate_time_average_vegetation'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt1L2D :: veg_exudation_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
@@ -373,13 +355,9 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_exudation_mt(nr_elements, nc))
-    ALLOCATE(veg_pool_mt(nr_veg_parts, nr_elements, nc))
     bgcm_store => tile%bgcm_store
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)
@@ -821,10 +799,6 @@ CONTAINS
     t_air_week_mavg(:)  = calc_time_mavg(t_air_week_mavg(:), t_air(:), mavg_period_weekly)
     t_air_month_mavg(:) = calc_time_mavg(t_air_month_mavg(:), t_air(:), mavg_period_monthly)
     t_jmax_opt_mavg(:)  = calc_time_mavg(t_jmax_opt_mavg(:), t_jmax_opt_daytime(:), mavg_period_weekly)
-
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
-    DEALLOCATE(veg_exudation_mt, veg_pool_mt)
 
   END SUBROUTINE calculate_time_average_vegetation
 

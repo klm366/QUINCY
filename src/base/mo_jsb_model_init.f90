@@ -258,6 +258,9 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
+    grid  => Get_grid(model%grid_id)
+    blks = grid%get_blk_start()
+    blke = grid%get_blk_end()
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
@@ -544,6 +547,18 @@ CONTAINS
       IF (model%config%init_from_ifs) &
         & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
 
+      ! IQ: Work on bgcms is conducted on the matrices -> get data from vars into the matrices
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        IF (ASSOCIATED(tile%bgcm_store) .AND. tile%Is_process_active(VEG_)) THEN
+          DO blk = blks, blke
+            jcs = grid%get_col_start(blk)
+            jce = grid%get_col_end  (blk)
+            CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, jcs, jce, blk)
+          ENDDO
+        ENDIF
+      END SELECT
+
       ! TBD: Loop over processes instead of explicit
 
       SELECT CASE (model%config%model_scheme)
@@ -660,6 +675,18 @@ CONTAINS
         END IF
       END SELECT
 #endif
+      END SELECT
+
+      ! IQ: Work on bgcms is conducted on the matrices -> get data from matrices back into the vars
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        IF (ASSOCIATED(tile%bgcm_store) .AND. tile%Is_process_active(VEG_)) THEN
+          DO blk = blks, blke
+            jcs = grid%get_col_start(blk)
+            jce = grid%get_col_end  (blk)
+            CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, jcs, jce, blk)
+          ENDDO
+        ENDIF
       END SELECT
 
       CALL model%Goto_next_tile(tile)
