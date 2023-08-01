@@ -589,7 +589,7 @@ CONTAINS
     !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, field_cap_sl_tmp)
 
     IF (tile%is_glacier) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
 
@@ -621,8 +621,9 @@ CONTAINS
       END DO
       !$ACC END LOOP
       !$ACC END PARALLEL
+      !$ACC WAIT(1)
     ELSE
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO  ic = 1, nc
@@ -637,6 +638,7 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
+      !$ACC WAIT(1)
 
       ! Compute actual and maximum total rootzone moisture (liquid + ice)
       CALL get_amount_in_rootzone(weq_soil_sl_tmp(:,:),                                                  &
@@ -646,7 +648,7 @@ CONTAINS
         &  dsl4jsb_var3D_onChunk (HYDRO_, soil_depth_sl), dsl4jsb_var3D_onChunk (HYDRO_, root_depth_sl), &
         &  weq_rootzone_max(:))
 
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         IF (tile%is_vegetation .OR. tile%is_land) THEN
@@ -666,6 +668,7 @@ CONTAINS
         END IF
       END DO
       !$ACC END PARALLEL
+      !$ACC WAIT(1)
 
       CALL calc_surface_hydrology_land(   &
         ! in
@@ -720,7 +723,7 @@ CONTAINS
 
     END IF
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     IF (tile%is_glacier) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
@@ -741,9 +744,8 @@ CONTAINS
       !$ACC END LOOP
     END IF
     !$ACC END PARALLEL
-
+    !$ACC WAIT(1)
     !$ACC END DATA
-
 
   END SUBROUTINE update_surface_hydrology
   !
@@ -1021,6 +1023,7 @@ CONTAINS
       DEALLOCATE(hyd_cond_sat_uncon)
     END IF
 
+    !$ACC WAIT(1)
     !$ACC END DATA
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 
@@ -1195,11 +1198,12 @@ CONTAINS
       & )
 
     ! Convert soil hydrology balance error to volume
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR
+    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
       wtr_soilhyd_res(ic) = wtr_soilhyd_res(ic) * tile_fract(ic) * area(ic)
     END DO
-
+    !$ACC END PARALLEL
+    !$ACC WAIT(1)
     !$ACC END DATA
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
@@ -1842,6 +1846,7 @@ CONTAINS
       END DO
       !$ACC END LOOP
       !$ACC END PARALLEL
+      !$ACC WAIT(1)
 
     ELSE IF (tile%contains_soil .OR. tile%contains_glacier) THEN
 
@@ -1876,13 +1881,13 @@ CONTAINS
       END DO
       !$ACC END LOOP
       !$ACC END PARALLEL
+      !$ACC WAIT(1)
 
     ELSE
       CALL finish(TRIM(routine), 'Called for invalid lct_type')
     END IF
 
     !$ACC END DATA
-    !$ACC WAIT(1)
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Finished.')
 
@@ -2078,8 +2083,7 @@ CONTAINS
       IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_snow_lice)    ! in
         dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_lice)  ! out
-        !$ACC PARALLEL DEFAULT(PRESENT)
-        !$ACC LOOP GANG VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic=1,nc
           CALL calc_wskin_fractions_lice( &
             & weq_snow_lice(ic),          & ! in
@@ -2087,6 +2091,7 @@ CONTAINS
             & )
         END DO
         !$ACC END PARALLEL
+        !$ACC WAIT(1)
       END IF
       RETURN
     END IF
@@ -2136,8 +2141,8 @@ CONTAINS
 #endif
 
     !$ACC DATA CREATE(skinres_canopy_max, skinres_max)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG VECTOR
     DO ic=1,nc
       ! Maximum capacity of skin reservoir (soil + canopy)
@@ -2158,6 +2163,7 @@ CONTAINS
       END IF
     END DO
     !$ACC END PARALLEL
+    !$ACC WAIT(1)
 
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_can)       ! in
@@ -2177,12 +2183,13 @@ CONTAINS
         & fract_wet(:),              & ! out
         & fract_snow_soil(:)         & ! out
         & )
-      !$ACC PARALLEL DEFAULT(PRESENT)
-      !$ACC LOOP GANG VECTOR
+
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         fract_snow(ic) = fract_snow_soil(ic)
       END DO
       !$ACC END PARALLEL
+      !$ACC WAIT(1)
     END IF
 
     IF (tile%is_bare) THEN
@@ -2200,12 +2207,12 @@ CONTAINS
         & fract_wet(:),               & ! out
         & fract_snow_soil(:)          & ! out
         & )
-      !$ACC PARALLEL DEFAULT(PRESENT)
-      !$ACC LOOP GANG VECTOR
+      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
       DO ic=1,nc
         fract_snow(ic) = fract_snow_soil(ic)
       END DO
       !$ACC END PARALLEL
+      !$ACC WAIT(1)
     END IF
 
     !$ACC END DATA
@@ -2351,7 +2358,7 @@ CONTAINS
 
     !$ACC DATA CREATE(tile_fract, tile_area)
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR PRIVATE(weq_land_new)
     DO ic=1,nc
       tile_fract(ic) = tile%fract(ics-1+ic,iblk)
@@ -2413,6 +2420,7 @@ CONTAINS
     END DO
     !$ACC END LOOP
     !$ACC END PARALLEL
+    !$ACC WAIT(1)
 
     !$ACC END DATA
 

@@ -144,9 +144,14 @@ CONTAINS
     REAL(wp), PARAMETER :: zc3 = 1.56E5_wp     ! [m]
     !$noACC DECLARE COPYIN(zc1, zc2, zc3)
 
-
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
-    !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !$ACC LOOP GANG(STATIC: 1) VECTOR PRIVATE(rain_in_m, new_snow, weq_snow_soil_old)           &
+    !$ACC PRIVATE(evapotrans_in_m, evapotrans_soil_in_m, evapo_soil_in_m, evapo_skin_in_m)      &
+    !$ACC PRIVATE(transpiration_in_m, evapo_snow_in_m, snowmelt_can, snowmelt_pot_in_m)         &
+    !$ACC PRIVATE(new_snow_can, new_snow_soil, exp_t, exp_w, snow_blown, canopy_pre_snow)       &
+    !$ACC PRIVATE(evapotrans_no_snow, evapo_snow_pot_in_m, evapo_skin_pot_in_m)                 &
+    !$ACC PRIVATE(rain_to_skinres, wtr_skin_pre_rain)
+
     DO ic = 1, SIZE(snowmelt_soil)
       snow_accum(ic)        = 0._wp
       weq_snow_soil_old = weq_snow_soil(ic)
@@ -381,6 +386,7 @@ CONTAINS
     REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp !< [K]
     REAL(wp), PARAMETER :: zc2=1.87E5_wp       !< [Ks]
     REAL(wp), PARAMETER :: zc3=1.56E5_wp       !< [m]
+    !$ACC DECLARE COPYIN(zc1, zc2, zc3)
 
     !----------------------------------------------------------------------------------------------
 
@@ -522,7 +528,7 @@ CONTAINS
     !> Calculation of soil saturation, field capacity and wilting point
     !
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
@@ -541,6 +547,7 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL
+    !$ACC WAIT(1)
 
     ! Note: weq_rootzone_max calculated here (based on field capacity) is different from wsat calculated
     !       below (based on saturation).
@@ -2028,7 +2035,8 @@ CONTAINS
     !$ACC   CREATE(ws_vol, ice_vol, scool_vol, ws_rel_vol, ws_range_vol) &
     !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, ws_free_vol, ice_imp)
 
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
         ! Set defaults
@@ -2053,44 +2061,45 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END LOOP
 
     IF (PRESENT(K)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           K(ic,is)       = 0._wp
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
     END IF
     IF (PRESENT(D)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           D(ic,is)       = 0._wp
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
     END IF
     IF (PRESENT(K_inter)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           K_inter(ic,is) = 0._wp
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
     END IF
     IF (PRESENT(D_inter)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           D_inter(ic,is) = 0._wp
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
     END IF
+    !$ACC END PARALLEL
 
     ! Compute impedance factor due to soil ice
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
@@ -2109,37 +2118,40 @@ CONTAINS
       END DO
     END DO
     !$ACC END PARALLEL
+    !$ACC WAIT(1)
 
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     IF (PRESENT(ice_impedance)) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           ice_impedance(ic,is) = ice_imp(ic,is)
         END DO
       END DO
+      !$ACC END LOOP
     END IF
 
     ! Compute relative soil moisture depending on soil hydrological model
     IF (soilhydmodel == ClappHornberger_) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           ws_free_vol(ic,is)   = MAX(0._wp, ws_vol(ic,is) - scool_vol(ic,is))
           ws_range_vol(ic,is)  = wsat_vol(ic,is)
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
     ELSE  ! Brooks & Corey; Van Genuchten
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           ws_free_vol(ic,is)   = MAX(0._wp, ws_vol(ic,is) - MAX(scool_vol(ic,is), pwp_vol(ic,is)))
           ws_range_vol(ic,is)  = fc_vol(ic,is) - pwp_vol(ic,is)
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
     END IF
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+    !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
     DO is = 1, nsoil
       DO ic = 1, nc
         IF (ws_range_vol(ic,is) > 0._wp) THEN
@@ -2147,43 +2159,48 @@ CONTAINS
         END IF
       END DO
     END DO
-    !$ACC END PARALLEL LOOP
+    !$ACC END LOOP
+    !$ACC END PARALLEL
 
     ! Making sure ws_rel is in the physical range
     ! This is especially important when infiltration is added to the first layer
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     IF (soilhydmodel == VanGenuchten_) THEN
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           ws_rel_vol(ic,is) = MIN(0.9999_wp, MAX(0._wp, ws_rel_vol(ic,is))) ! doesn't work for wrel == 1;
                                                                             ! (1-ws_rel(ic,is)**(1/mvgn(ic,is)))**(-mvgn)
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
     ELSE  ! Brooks & Corey; Van Genuchten
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           ws_rel_vol(ic,is) = MIN(1._wp, MAX(0._wp, ws_rel_vol(ic,is)))
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
     END IF
+    !$ACC END PARALLEL
 
     ! Compute hydrological conductivity (K) for every layer
     IF (PRESENT(K)) THEN
 
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       IF (soilhydmodel == BrooksCorey_ .OR. soilhydmodel == ClappHornberger_) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+        !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
         DO is = 1, nsoil
           DO ic = 1, nc
             K(ic,is) =  k_sat(ic,is)                                                   &
               & * ws_rel_vol(ic,is)**(2._wp * bclapp(ic,is) + 3._wp)
           END DO
         END DO
-        !$ACC END PARALLEL LOOP
+        !$ACC END LOOP
+
       ELSE IF (soilhydmodel == VanGenuchten_) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+        !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
         DO is = 1, nsoil
           DO ic = 1, nc
             IF (mvgn(ic,is) > 0._wp) THEN
@@ -2194,27 +2211,27 @@ CONTAINS
             END IF
           END DO
         END DO
-        !$ACC END PARALLEL LOOP
+        !$ACC END LOOP
       END IF
 
       ! Reduce transport velocity in presence of ice
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR COLLAPSE(2) ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO ic = 1, nc
           K(ic,is) = K(ic,is) * ice_imp(ic,is)
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
+      !$ACC END LOOP
 
       ! Make sure percolation from top layer is limited to water content !!!
-      !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO is = 1, nsoil
         DO ic = 1, nc
           K(ic,1) = MIN(K(ic,1), MAX(0._wp,(ws(ic,1)-pwp(ic,1)) / dt))
         END DO
       END DO
-      !$ACC END PARALLEL LOOP
-
+      !$ACC END LOOP
+      !$ACC END PARALLEL
     END IF
 
     ! Compute hydrological diffusivity (D) for every layer
@@ -2263,7 +2280,6 @@ CONTAINS
         END DO
       END DO
       !$ACC END PARALLEL LOOP
-
     END IF
     !$ACC WAIT(1)
 
@@ -2330,7 +2346,7 @@ CONTAINS
       !$ACC END PARALLEL
 
     END IF
-
+    !$ACC WAIT(1)
     !$ACC END DATA
 
   END SUBROUTINE get_soilhyd_cond_properties
