@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the Task update_sb_pools
 !!
 !! @author
-!!  Silvia Caldararu, Sönke Zaehle 
+!!  Silvia Caldararu, Soenke Zaehle 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
+!! First version by Soenke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
 !! refactoring and rewriting for bgcm -- Julia Nabel (2023-04)
 !!
 MODULE mo_sb_update_pools
@@ -800,7 +800,7 @@ CONTAINS
     !>10.0 update of mineral NH4 & P pools
     !>
     p_deposition_sl(:,:) = 0._wp
-    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) ! µmol P / m3 / s
+    p_deposition_sl(:,1) = p_deposition(:) / soil_depth_sl(:,1) ! micro-mol P / m3 / s
     !> 10.1 init vertical variables
     !> 
     k_adsorpt_po4_act(:,:)    = rtm_sorption(:,:)   * rmm_sorption(:,:)   * k_adsorpt_po4
@@ -1142,24 +1142,24 @@ CONTAINS
                                                                        km_slow_po4_act, &            !< half saturation of po4 sorption in slow_assoc_po4, [mol P/ m3]
                                                                        k_adsorpt_po4_act, &          !< slow adsorption rate of po4, [1 / s]
                                                                        k_desorpt_po4_act, &          !< slow desorption rate of po4, [1 / s]
-                                                                       p_deposition_sl, &            !< actual P deposition rate, [µmol P / m3 / s]
-                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [µmol P / m3 / s]
-                                                                       transport_po4_solute, &       !< transport of soluble PO4 [µmol P / m3 / s]
-                                                                       lateral_loss_po4_solute_sl, & !< lateral loss of soluble PO4 [µmol P / m3 / s] 
-                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [µmol P / m3 / s]
-                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [µmol P / m3 / s]
-                                                                       weathering_po4, &             !< phosphorus weathering rate [µmol P / m3 / s]   
-                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [µmol P / m3 / s]
-                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [µmol P / m3 / s]
-                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [µmol P / m3 / s]
-                                                                       gross_mineralisation_po4, &   !< gross mineralisation of PO4 [µmol P / m3 / s]
-                                                                       net_mineralisation_po4        !< net mineralisation of PO4 [µmol P / m3 / s]
+                                                                       p_deposition_sl, &            !< actual P deposition rate, [micro-mol P / m3 / s]
+                                                                       biochem_mineralisation_po4, & !< biomineralisation rate [micro-mol P / m3 / s]
+                                                                       transport_po4_solute, &       !< transport of soluble PO4 [micro-mol P / m3 / s]
+                                                                       lateral_loss_po4_solute_sl, & !< lateral loss of soluble PO4 [micro-mol P / m3 / s] 
+                                                                       transport_po4_assoc_fast, &   !< transport of fast_assoc_po4 [micro-mol P / m3 / s]
+                                                                       transport_po4_assoc_slow, &   !< transport of slow_assoc_po4 [micro-mol P / m3 / s]
+                                                                       weathering_po4, &             !< phosphorus weathering rate [micro-mol P / m3 / s]   
+                                                                       mycorrhiza_uptake_po4_sl, &   !< mycorrhizal PO4 uptake [micro-mol P / m3 / s]
+                                                                       plant_uptake_po4_sl, &        !< plant PO4 uptake [micro-mol P / m3 / s]
+                                                                       microbial_uptake_po4_sl, &    !< microbial PO4 uptake [micro-mol P / m3 / s]
+                                                                       gross_mineralisation_po4, &   !< gross mineralisation of PO4 [micro-mol P / m3 / s]
+                                                                       net_mineralisation_po4        !< net mineralisation of PO4 [micro-mol P / m3 / s]
     REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(inout) :: po4_solute, &                 !< PO4 in solution [mol / m3]
                                                                        po4_assoc_fast, &             !< fast minerally associated PO4 pool [mol/m3]
                                                                        po4_assoc_slow, &             !< slow minerally associated PO4 pool [mol/m3]
-                                                                       occlusion_po4, &              !< phosphorus occlusion rate [µmol P / m3 / s]
-                                                                       slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [µmol P / m3 / s]
-    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [µmol P / m3 / s]
+                                                                       occlusion_po4, &              !< phosphorus occlusion rate [micro-mol P / m3 / s]
+                                                                       slow_exchange_po4             !< phosphorus desorption rate, assoc_fast --> assoc_slow [micro-mol P / m3 / s]
+    REAL(wp), DIMENSION(nc, nsoil_sb),                INTENT(out)   :: fast_exchange_po4             !< phosphorus adsorption rate, solute --> assoc_fast [micro-mol P / m3 / s]
 
     REAL(wp), DIMENSION(nc, nsoil_sb)           :: hlp1, hlp2, hlp3, hlp4, &
                                                    partition_coef, & !< partition coefficient to soluble po4
@@ -1285,7 +1285,7 @@ CONTAINS
     REAL(wp), OPTIONAL, INTENT(in)    :: km_slow                !< half-saturation concentration of Langmuir isotherm (mol/m3)
     REAL(wp), OPTIONAL, INTENT(in)    :: qmax_slow              !< maximum sorption capacity of adsorbed pool (mol/m3)
     REAL(wp), OPTIONAL, INTENT(inout) :: slow_partition_coef    !< partition coefficient to absorbed pool (po4 only)
-    REAL(wp), OPTIONAL, INTENT(inout) :: slow_exchange          !< slow exchange rate between soluble and absorbed po4 pool [µmol P / m3 / s], double Langmuir only
+    REAL(wp), OPTIONAL, INTENT(inout) :: slow_exchange          !< slow exchange rate between soluble and absorbed po4 pool [micro-mol P / m3 / s], double Langmuir only
 
     REAL(wp)                          :: hlp1, hlp2, hlp3, hlp4   
     CHARACTER(len=*), PARAMETER       :: routine = TRIM(modname)//':calc_langmuir_kinetics'

@@ -1503,7 +1503,7 @@ CONTAINS
   
       CALL mem%Add_var('het_respiration', mem%het_respiration, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('het_respiration', 'µmol m-3 s-1', 'heterotrophic respiration'), &
+        & t_cf('het_respiration', 'micro-mol m-3 s-1', 'heterotrophic respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1514,7 +1514,7 @@ CONTAINS
   
       CALL mem%Add_var('het_respiration_c13', mem%het_respiration_c13, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('het_respiration_c13', 'µmol m-3 s-1', 'c13 heterotrophic respiration'), &
+        & t_cf('het_respiration_c13', 'micro-mol m-3 s-1', 'c13 heterotrophic respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1525,7 +1525,7 @@ CONTAINS
   
       CALL mem%Add_var('het_respiration_c14', mem%het_respiration_c14, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('het_respiration_c14', 'µmol m-3 s-1', 'c14 heterotrophic respiration'), &
+        & t_cf('het_respiration_c14', 'micro-mol m-3 s-1', 'c14 heterotrophic respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1536,7 +1536,7 @@ CONTAINS
   
       CALL mem%Add_var('myc_respiration', mem%myc_respiration, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('myc_respiration', 'µmol m-3 s-1', 'mycorrhizae respiration'), &
+        & t_cf('myc_respiration', 'micro-mol m-3 s-1', 'mycorrhizae respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1547,7 +1547,7 @@ CONTAINS
   
       CALL mem%Add_var('myc_respiration_c13', mem%myc_respiration_c13, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('myc_respiration_c13', 'µmol m-3 s-1', 'c13 mycorrhizae respiration'), &
+        & t_cf('myc_respiration_c13', 'micro-mol m-3 s-1', 'c13 mycorrhizae respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1558,7 +1558,7 @@ CONTAINS
   
       CALL mem%Add_var('myc_respiration_c14', mem%myc_respiration_c14, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('myc_respiration_c14', 'µmol m-3 s-1', 'c14 mycorrhizae respiration'), &
+        & t_cf('myc_respiration_c14', 'micro-mol m-3 s-1', 'c14 mycorrhizae respiration'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1569,7 +1569,7 @@ CONTAINS
   
       CALL mem%Add_var('net_mineralisation_nh4', mem%net_mineralisation_nh4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('net_mineralisation_nh4', 'µmol m-3 s-1', 'net mineralisation of N'), &
+        & t_cf('net_mineralisation_nh4', 'micro-mol m-3 s-1', 'net mineralisation of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1580,7 +1580,7 @@ CONTAINS
   
       CALL mem%Add_var('net_mineralisation_nh4_n15', mem%net_mineralisation_nh4_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('net_mineralisation_nh4_n15', 'µmol m-3 s-1', 'net mineralisation of N15'), &
+        & t_cf('net_mineralisation_nh4_n15', 'micro-mol m-3 s-1', 'net mineralisation of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1591,7 +1591,7 @@ CONTAINS
   
       CALL mem%Add_var('net_mineralisation_no3', mem%net_mineralisation_no3, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('net_mineralisation_no3', 'µmol m-3 s-1', 'net mineralisation of N'), &
+        & t_cf('net_mineralisation_no3', 'micro-mol m-3 s-1', 'net mineralisation of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1602,7 +1602,7 @@ CONTAINS
   
       CALL mem%Add_var('net_mineralisation_no3_n15', mem%net_mineralisation_no3_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('net_mineralisation_no3_n15', 'µmol m-3 s-1', 'net mineralisation of N15'), &
+        & t_cf('net_mineralisation_no3_n15', 'micro-mol m-3 s-1', 'net mineralisation of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1613,7 +1613,7 @@ CONTAINS
   
       CALL mem%Add_var('net_mineralisation_po4', mem%net_mineralisation_po4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('net_mineralisation_po4', 'µmol m-3 s-1', 'net mineralisation of P'), &
+        & t_cf('net_mineralisation_po4', 'micro-mol m-3 s-1', 'net mineralisation of P'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1624,7 +1624,7 @@ CONTAINS
   
       CALL mem%Add_var('plant_uptake_nh4_sl', mem%plant_uptake_nh4_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('plant_uptake_nh4_sl', 'µmol m-3 s-1', 'plant uptake of N'), &
+        & t_cf('plant_uptake_nh4_sl', 'micro-mol m-3 s-1', 'plant uptake of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1635,7 +1635,7 @@ CONTAINS
   
       CALL mem%Add_var('plant_uptake_nh4_n15_sl', mem%plant_uptake_nh4_n15_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('plant_uptake_nh4_n15_sl', 'µmol m-3 s-1', 'plant uptake of N15'), &
+        & t_cf('plant_uptake_nh4_n15_sl', 'micro-mol m-3 s-1', 'plant uptake of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1646,7 +1646,7 @@ CONTAINS
   
       CALL mem%Add_var('plant_uptake_no3_sl', mem%plant_uptake_no3_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('plant_uptake_no3_sl', 'µmol m-3 s-1', 'plant uptake of N'), &
+        & t_cf('plant_uptake_no3_sl', 'micro-mol m-3 s-1', 'plant uptake of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1657,7 +1657,7 @@ CONTAINS
   
       CALL mem%Add_var('plant_uptake_no3_n15_sl', mem%plant_uptake_no3_n15_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('plant_uptake_no3_n15_sl', 'µmol m-3 s-1', 'plant uptake of N15'), &
+        & t_cf('plant_uptake_no3_n15_sl', 'micro-mol m-3 s-1', 'plant uptake of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1668,7 +1668,7 @@ CONTAINS
 
       CALL mem%Add_var('plant_uptake_po4_sl', mem%plant_uptake_po4_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('plant_uptake_po4_sl', 'µmol m-3 s-1', 'plant uptake of P'), &
+        & t_cf('plant_uptake_po4_sl', 'micro-mol m-3 s-1', 'plant uptake of P'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1679,7 +1679,7 @@ CONTAINS
 
       CALL mem%Add_var('microbial_uptake_nh4_sl', mem%microbial_uptake_nh4_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('microbial_uptake_nh4_sl', 'µmol m-3 s-1', 'microbial uptake of N'), &
+        & t_cf('microbial_uptake_nh4_sl', 'micro-mol m-3 s-1', 'microbial uptake of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1690,7 +1690,7 @@ CONTAINS
   
       CALL mem%Add_var('microbial_uptake_nh4_n15_sl', mem%microbial_uptake_nh4_n15_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('microbial_uptake_nh4_n15_sl', 'µmol m-3 s-1', 'microbial uptake of N15'), &
+        & t_cf('microbial_uptake_nh4_n15_sl', 'micro-mol m-3 s-1', 'microbial uptake of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1701,7 +1701,7 @@ CONTAINS
   
       CALL mem%Add_var('microbial_uptake_no3_sl', mem%microbial_uptake_no3_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('microbial_uptake_no3_sl', 'µmol m-3 s-1', 'microbial uptake of N'), &
+        & t_cf('microbial_uptake_no3_sl', 'micro-mol m-3 s-1', 'microbial uptake of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1712,7 +1712,7 @@ CONTAINS
   
       CALL mem%Add_var('microbial_uptake_no3_n15_sl', mem%microbial_uptake_no3_n15_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('microbial_uptake_no3_n15_sl', 'µmol m-3 s-1', 'microbial uptake of N15'), &
+        & t_cf('microbial_uptake_no3_n15_sl', 'micro-mol m-3 s-1', 'microbial uptake of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1723,7 +1723,7 @@ CONTAINS
 
       CALL mem%Add_var('microbial_uptake_po4_sl', mem%microbial_uptake_po4_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('microbial_uptake_po4_sl', 'µmol m-3 s-1', 'microbial uptake of P'), &
+        & t_cf('microbial_uptake_po4_sl', 'micro-mol m-3 s-1', 'microbial uptake of P'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1734,7 +1734,7 @@ CONTAINS
 
       CALL mem%Add_var('mycorrhiza_uptake_nh4_sl', mem%mycorrhiza_uptake_nh4_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('mycorrhiza_uptake_nh4_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N'), &
+        & t_cf('mycorrhiza_uptake_nh4_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1745,7 +1745,7 @@ CONTAINS
 
       CALL mem%Add_var('mycorrhiza_uptake_nh4_n15_sl', mem%mycorrhiza_uptake_nh4_n15_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('mycorrhiza_uptake_nh4_n15_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N15'), &
+        & t_cf('mycorrhiza_uptake_nh4_n15_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1756,7 +1756,7 @@ CONTAINS
   
       CALL mem%Add_var('mycorrhiza_uptake_no3_sl', mem%mycorrhiza_uptake_no3_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('mycorrhiza_uptake_no3_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N'), &
+        & t_cf('mycorrhiza_uptake_no3_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1767,7 +1767,7 @@ CONTAINS
   
       CALL mem%Add_var('mycorrhiza_uptake_no3_n15_sl', mem%mycorrhiza_uptake_no3_n15_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('mycorrhiza_uptake_no3_n15_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N15'), &
+        & t_cf('mycorrhiza_uptake_no3_n15_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1778,7 +1778,7 @@ CONTAINS
 
       CALL mem%Add_var('mycorrhiza_uptake_norg_sl', mem%mycorrhiza_uptake_norg_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('mycorrhiza_uptake_norg_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N'), &
+        & t_cf('mycorrhiza_uptake_norg_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1789,7 +1789,7 @@ CONTAINS
 
       CALL mem%Add_var('mycorrhiza_uptake_norg_n15_sl', mem%mycorrhiza_uptake_norg_n15_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('mycorrhiza_uptake_norg_n15_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of N15'), &
+        & t_cf('mycorrhiza_uptake_norg_n15_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1800,7 +1800,7 @@ CONTAINS
 
       CALL mem%Add_var('mycorrhiza_uptake_po4_sl', mem%mycorrhiza_uptake_po4_sl, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('mycorrhiza_uptake_po4_sl', 'µmol m-3 s-1', 'mycorrhiza uptake of P'), &
+        & t_cf('mycorrhiza_uptake_po4_sl', 'micro-mol m-3 s-1', 'mycorrhiza uptake of P'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1855,7 +1855,7 @@ CONTAINS
   
       CALL mem%Add_var('volatilisation_nh4', mem%volatilisation_nh4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('volatilisation_nh4', 'µmol m-3 s-1', 'volatilisation of NH4'), &
+        & t_cf('volatilisation_nh4', 'micro-mol m-3 s-1', 'volatilisation of NH4'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1866,7 +1866,7 @@ CONTAINS
   
       CALL mem%Add_var('volatilisation_nh4_n15', mem%volatilisation_nh4_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('volatilisation_nh4_n15', 'µmol m-3 s-1', 'volatilisation of 15NH4'), &
+        & t_cf('volatilisation_nh4_n15', 'micro-mol m-3 s-1', 'volatilisation of 15NH4'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1877,7 +1877,7 @@ CONTAINS
   
       CALL mem%Add_var('nitrification_no3', mem%nitrification_no3, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('nitrification_no3', 'µmol m-3 s-1', 'nitrification NO3'), &
+        & t_cf('nitrification_no3', 'micro-mol m-3 s-1', 'nitrification NO3'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1888,7 +1888,7 @@ CONTAINS
 
       CALL mem%Add_var('nitrification_no3_n15', mem%nitrification_no3_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('nitrification_no3_n15', 'µmol m-3 s-1', 'nitrification 15NO3'), &
+        & t_cf('nitrification_no3_n15', 'micro-mol m-3 s-1', 'nitrification 15NO3'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1899,7 +1899,7 @@ CONTAINS
 
       CALL mem%Add_var('nitrification_noy', mem%nitrification_noy, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('nitrification_noy', 'µmol m-3 s-1', 'nitrification to NOy'), &
+        & t_cf('nitrification_noy', 'micro-mol m-3 s-1', 'nitrification to NOy'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1910,7 +1910,7 @@ CONTAINS
 
       CALL mem%Add_var('nitrification_noy_n15', mem%nitrification_noy_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('nitrification_noy_n15', 'µmol m-3 s-1', 'nitrification to 15NOy'), &
+        & t_cf('nitrification_noy_n15', 'micro-mol m-3 s-1', 'nitrification to 15NOy'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1921,7 +1921,7 @@ CONTAINS
 
       CALL mem%Add_var('nitrification_n2o', mem%nitrification_n2o, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('nitrification_n2o', 'µmol m-3 s-1', 'nitrification to N2O'), &
+        & t_cf('nitrification_n2o', 'micro-mol m-3 s-1', 'nitrification to N2O'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1932,7 +1932,7 @@ CONTAINS
 
       CALL mem%Add_var('nitrification_n2o_n15', mem%nitrification_n2o_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('nitrification_n2o_n15', 'µmol m-3 s-1', 'nitrification to 15N2O'), &
+        & t_cf('nitrification_n2o_n15', 'micro-mol m-3 s-1', 'nitrification to 15N2O'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1943,7 +1943,7 @@ CONTAINS
 
       CALL mem%Add_var('denitrification_noy', mem%denitrification_noy, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('denitrification_noy', 'µmol m-3 s-1', 'nitrification NOy'), &
+        & t_cf('denitrification_noy', 'micro-mol m-3 s-1', 'nitrification NOy'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1954,7 +1954,7 @@ CONTAINS
 
       CALL mem%Add_var('denitrification_n2o_n15', mem%denitrification_n2o_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('denitrification_n2o_n15', 'µmol m-3 s-1', 'nitrification to 15N2O'), &
+        & t_cf('denitrification_n2o_n15', 'micro-mol m-3 s-1', 'nitrification to 15N2O'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1965,7 +1965,7 @@ CONTAINS
 
       CALL mem%Add_var('denitrification_n2o', mem%denitrification_n2o, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('denitrification_n2o', 'µmol m-3 s-1', 'nitrification to N2O'), &
+        & t_cf('denitrification_n2o', 'micro-mol m-3 s-1', 'nitrification to N2O'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1976,7 +1976,7 @@ CONTAINS
 
       CALL mem%Add_var('denitrification_noy_n15', mem%denitrification_noy_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('denitrification_noy_n15', 'µmol m-3 s-1', 'nitrification 15NOy'), &
+        & t_cf('denitrification_noy_n15', 'micro-mol m-3 s-1', 'nitrification 15NOy'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1987,7 +1987,7 @@ CONTAINS
 
       CALL mem%Add_var('denitrification_n2', mem%denitrification_n2, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('denitrification_n2', 'µmol m-3 s-1', 'denitrification to N2'), &
+        & t_cf('denitrification_n2', 'micro-mol m-3 s-1', 'denitrification to N2'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -1998,7 +1998,7 @@ CONTAINS
 
       CALL mem%Add_var('denitrification_n2_n15', mem%denitrification_n2_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('denitrification_n2_n15', 'µmol m-3 s-1', 'denitrification to 15N2'), &
+        & t_cf('denitrification_n2_n15', 'micro-mol m-3 s-1', 'denitrification to 15N2'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2009,7 +2009,7 @@ CONTAINS
 
       CALL mem%Add_var('asymb_n_fixation', mem%asymb_n_fixation, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('asymb_n_fixation', 'µmol m-3 s-1', 'asymboitic N fixation'), &
+        & t_cf('asymb_n_fixation', 'micro-mol m-3 s-1', 'asymboitic N fixation'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2020,7 +2020,7 @@ CONTAINS
 
       CALL mem%Add_var('asymb_n_fixation_n15', mem%asymb_n_fixation_n15, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('asymb_n_fixation_n15', 'µmol m-3 s-1', 'asymboitic 15N fixation'), &
+        & t_cf('asymb_n_fixation_n15', 'micro-mol m-3 s-1', 'asymboitic 15N fixation'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2031,7 +2031,7 @@ CONTAINS
 
       CALL mem%Add_var('weathering_po4', mem%weathering_po4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('weathering_po4', 'µmol m-3 s-1', 'phosphorus weathering rate'), &
+        & t_cf('weathering_po4', 'micro-mol m-3 s-1', 'phosphorus weathering rate'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2042,7 +2042,7 @@ CONTAINS
 
       CALL mem%Add_var('occlusion_po4', mem%occlusion_po4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('occlusion_po4', 'µmol m-3 s-1', 'phosphorus occlusion rate, assoc_slow --> occluded'), &
+        & t_cf('occlusion_po4', 'micro-mol m-3 s-1', 'phosphorus occlusion rate, assoc_slow --> occluded'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2053,7 +2053,7 @@ CONTAINS
 
       CALL mem%Add_var('slow_exchange_po4', mem%slow_exchange_po4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('slow_exchange_po4', 'µmol P m-3 s-1', 'phosphorus slow exchange rate, assoc_fast <--> assoc_slow'), &
+        & t_cf('slow_exchange_po4', 'micro-mol P m-3 s-1', 'phosphorus slow exchange rate, assoc_fast <--> assoc_slow'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2064,7 +2064,7 @@ CONTAINS
 
       CALL mem%Add_var('fast_exchange_po4', mem%fast_exchange_po4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('fast_exchange_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
+        & t_cf('fast_exchange_po4', 'micro-mol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2075,7 +2075,7 @@ CONTAINS
 
       CALL mem%Add_var('fast_exchange_nh4', mem%fast_exchange_nh4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('fast_exchange_nh4', 'µmol N m-3 s-1', 'nh4 fast exchange rate, solute <--> nh4_assoc'), &
+        & t_cf('fast_exchange_nh4', 'micro-mol N m-3 s-1', 'nh4 fast exchange rate, solute <--> nh4_assoc'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2086,7 +2086,7 @@ CONTAINS
 
       CALL mem%Add_var('fast_adsorpt_po4', mem%fast_adsorpt_po4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('fast_adsorpt_po4', 'µmol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
+        & t_cf('fast_adsorpt_po4', 'micro-mol P m-3 s-1', 'phosphorus fast exchange rate, solute <--> assoc_fast'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2097,7 +2097,7 @@ CONTAINS
 
       CALL mem%Add_var('fast_adsorpt_nh4', mem%fast_adsorpt_nh4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('fast_adsorpt_nh4', 'µmol N m-3 s-1', 'nh4 fast adsorption rate, solute --> nh4_assoc'), &
+        & t_cf('fast_adsorpt_nh4', 'micro-mol N m-3 s-1', 'nh4 fast adsorption rate, solute --> nh4_assoc'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2108,7 +2108,7 @@ CONTAINS
 
       CALL mem%Add_var('biochem_mineralisation_po4', mem%biochem_mineralisation_po4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('biochem_mineralisation_po4', 'µmol m-3 s-1', 'phosphorus biochemical mineralization rate'), &
+        & t_cf('biochem_mineralisation_po4', 'micro-mol m-3 s-1', 'phosphorus biochemical mineralization rate'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2119,7 +2119,7 @@ CONTAINS
 
       CALL mem%Add_var('gross_mineralisation_po4', mem%gross_mineralisation_po4, &
         & hgrid, vgrid_soil_sb, &
-        & t_cf('gross_mineralisation_po4', 'µmol m-3 s-1', 'phosphorus gross (biological) mineralization rate'), &
+        & t_cf('gross_mineralisation_po4', 'micro-mol m-3 s-1', 'phosphorus gross (biological) mineralization rate'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2130,7 +2130,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_dom_carbon', mem%leaching_dom_carbon, &
         & hgrid, surface, &
-        & t_cf('leaching_dom_carbon', 'µmol m-2 s-1', 'land to groundwater flux of DOM-C'), &
+        & t_cf('leaching_dom_carbon', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2141,7 +2141,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_dom_nitrogen', mem%leaching_dom_nitrogen, &
         & hgrid, surface, &
-        & t_cf('leaching_dom_nitrogen', 'µmol m-2 s-1', 'land to groundwater flux of DOM-N'), &
+        & t_cf('leaching_dom_nitrogen', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-N'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2152,7 +2152,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_dom_phosphorus', mem%leaching_dom_phosphorus, &
         & hgrid, surface, &
-        & t_cf('leaching_dom_phosphorus', 'µmol m-2 s-1', 'land to groundwater flux of DOM-P'), &
+        & t_cf('leaching_dom_phosphorus', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-P'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2163,7 +2163,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_dom_carbon13', mem%leaching_dom_carbon13, &
         & hgrid, surface, &
-        & t_cf('leaching_dom_carbon13', 'µmol m-2 s-1', 'land to groundwater flux of DOM-C13'), &
+        & t_cf('leaching_dom_carbon13', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C13'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2174,7 +2174,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_dom_carbon14', mem%leaching_dom_carbon14, &
         & hgrid, surface, &
-        & t_cf('leaching_dom_carbon14', 'µmol m-2 s-1', 'land to groundwater flux of DOM-C14'), &
+        & t_cf('leaching_dom_carbon14', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-C14'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2185,7 +2185,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_dom_nitrogen15', mem%leaching_dom_nitrogen15, &
         & hgrid, surface, &
-        & t_cf('leaching_dom_nitrogen15', 'µmol m-2 s-1', 'land to groundwater flux of DOM-N15'), &
+        & t_cf('leaching_dom_nitrogen15', 'micro-mol m-2 s-1', 'land to groundwater flux of DOM-N15'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2196,7 +2196,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_nh4_solute', mem%leaching_nh4_solute, &
         & hgrid, surface, &
-        & t_cf('leaching_nh4_solute', 'µmol m-2 s-1', 'land to groundwater flux of NH4'), &
+        & t_cf('leaching_nh4_solute', 'micro-mol m-2 s-1', 'land to groundwater flux of NH4'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2207,7 +2207,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_no3_solute', mem%leaching_no3_solute, &
         & hgrid, surface, &
-        & t_cf('leaching_no3_solute', 'µmol m-2 s-1', 'land to groundwater flux of NO3'), &
+        & t_cf('leaching_no3_solute', 'micro-mol m-2 s-1', 'land to groundwater flux of NO3'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2218,7 +2218,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_po4_solute', mem%leaching_po4_solute, &
         & hgrid, surface, &
-        & t_cf('leaching_po4_solute', 'µmol m-2 s-1', 'land to groundwater flux of PO4'), &
+        & t_cf('leaching_po4_solute', 'micro-mol m-2 s-1', 'land to groundwater flux of PO4'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2229,7 +2229,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_nh4_n15_solute', mem%leaching_nh4_n15_solute, &
         & hgrid, surface, &
-        & t_cf('leaching_nh4_n15_solute', 'µmol m-2 s-1', 'land to groundwater flux of 15NH4'), &
+        & t_cf('leaching_nh4_n15_solute', 'micro-mol m-2 s-1', 'land to groundwater flux of 15NH4'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2240,7 +2240,7 @@ CONTAINS
 
       CALL mem%Add_var('leaching_no3_n15_solute', mem%leaching_no3_n15_solute, &
         & hgrid, surface, &
-        & t_cf('leaching_no3_n15_solute', 'µmol m-2 s-1', 'land to groundwater flux of 15NO3'), &
+        & t_cf('leaching_no3_n15_solute', 'micro-mol m-2 s-1', 'land to groundwater flux of 15NO3'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2251,7 +2251,7 @@ CONTAINS
 
       CALL mem%Add_var('emission_noy', mem%emission_noy, &
         & hgrid, surface, &
-        & t_cf('emission_noy', 'µmol m-2 s-1', 'land to atmosphere flux of NOy'), &
+        & t_cf('emission_noy', 'micro-mol m-2 s-1', 'land to atmosphere flux of NOy'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2262,7 +2262,7 @@ CONTAINS
 
       CALL mem%Add_var('emission_n2o', mem%emission_n2o, &
         & hgrid, surface, &
-        & t_cf('emission_n2o', 'µmol m-2 s-1', 'land to atmosphere flux of N2O'), &
+        & t_cf('emission_n2o', 'micro-mol m-2 s-1', 'land to atmosphere flux of N2O'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2273,7 +2273,7 @@ CONTAINS
 
       CALL mem%Add_var('emission_n2', mem%emission_n2, &
         & hgrid, surface, &
-        & t_cf('emission_n2', 'µmol m-2 s-1', 'land to atmosphere flux of N2'), &
+        & t_cf('emission_n2', 'micro-mol m-2 s-1', 'land to atmosphere flux of N2'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2284,7 +2284,7 @@ CONTAINS
 
       CALL mem%Add_var('emission_noy_n15', mem%emission_noy_n15, &
         & hgrid, surface, &
-        & t_cf('emission_noy_n15', 'µmol m-2 s-1', 'land to atmosphere flux of 15NOy'), &
+        & t_cf('emission_noy_n15', 'micro-mol m-2 s-1', 'land to atmosphere flux of 15NOy'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2295,7 +2295,7 @@ CONTAINS
 
       CALL mem%Add_var('emission_n2o_n15', mem%emission_n2o_n15, &
         & hgrid, surface, &
-        & t_cf('emission_n2o_n15', 'µmol m-2 s-1', 'land to atmosphere flux of 15N2O'), &
+        & t_cf('emission_n2o_n15', 'micro-mol m-2 s-1', 'land to atmosphere flux of 15N2O'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
@@ -2306,7 +2306,7 @@ CONTAINS
 
       CALL mem%Add_var('emission_n2_n15', mem%emission_n2_n15, &
         & hgrid, surface, &
-        & t_cf('emission_n2_n15', 'µmol m-2 s-1', 'land to atmosphere flux of 15N2'), &
+        & t_cf('emission_n2_n15', 'micro-mol m-2 s-1', 'land to atmosphere flux of 15N2'), &
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &

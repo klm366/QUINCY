@@ -20,11 +20,11 @@
 !! @brief Contains the routines for the Task sb_simple_model 
 !!
 !! @author
-!!  Silvia Caldararu, Sönke Zaehle 
+!!  Silvia Caldararu, Soenke Zaehle 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
-!! Second version by Sönke Zaehle (20170331): added a 4 pool model 
+!! First version by Soenke Zaehle (20170105): copyied from vegetation/mo_veg_soil.f90
+!! Second version by Soenke Zaehle (20170331): added a 4 pool model 
 !! 3rd version: Jan Engel (20170627): split calc_sb_fluxes_simple() into multiple calc_ routines and rename to update_sb_simple_model()
 !!
 MODULE mo_sb_simple_model
@@ -772,7 +772,7 @@ CONTAINS
     !>  3.4 update n15 for inorganic fluxes 
     !>      here the function is called for the simple_1d soil-model: flux rates in [mol/m3/timestep]
     !>
-    !>    NOTE: JSM is using the same function but uses flux rates in [µmol/m3/s]; unit conversion is applied within the routine
+    !>    NOTE: JSM is using the same function but uses flux rates in [micro-mol/m3/s]; unit conversion is applied within the routine
     !>
     CALL calc_sb_inorganic_n15_fluxes( &
       & nc, &                                         ! in
@@ -922,8 +922,8 @@ CONTAINS
 
     !>7.0 unit conversion of rates and fluxes
     !>
-    !>    convert rates to [µmol/ m3 / s]
-    !>    covert surface fluxes to [µmol / m2 / s]
+    !>    convert rates to [micro-mol/ m3 / s]
+    !>    covert surface fluxes to [micro-mol / m2 / s]
     !>
     het_respiration(:,:)     = het_respiration(:,:) / dtime * 1000000._wp
     het_respiration_c13(:,:) = het_respiration_c13(:,:) / dtime * 1000000._wp
@@ -1100,7 +1100,7 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                                     INTENT(in)  :: nc                           !< dimensions
     INTEGER,                                     INTENT(in)  :: nsoil_sb                     !< number of soil layers
-    REAL(wp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [µmol m-2 s-1]
+    REAL(wp), DIMENSION(nc),                     INTENT(in)  :: p_deposition                 !< p deposition, [micro-mol m-2 s-1]
     REAL(wp), DIMENSION(nc, nsoil_sb),           INTENT(in)  :: &
                                                                 soil_depth_sl, &             !< soil depth of a layer [m]
                                                                 bulk_dens_sl, &              !< bulk density of a layer [kg m-3] 
@@ -1223,8 +1223,8 @@ CONTAINS
                                                                 plant_uptake_nh4_sl, &     !< potential plant uptake of NH4 [mol / m3 / timestep]
                                                                 plant_uptake_no3_sl, &     !< potential plant uptake of NO3 [mol / m3 / timestep]
                                                                 plant_uptake_po4_sl        !< potential plant uptake of PO4 [mol / m3 / timestep]
-    REAL(wp), DIMENSION(nc),                     INTENT(out) :: unit_uptake_n_pot, &       !< potential N uptake by fine roots per unit mass [µmol / mol / s]
-                                                                unit_uptake_p_pot          !< potential P uptake by fine roots per unit mass [µmol / mol / s]
+    REAL(wp), DIMENSION(nc),                     INTENT(out) :: unit_uptake_n_pot, &       !< potential N uptake by fine roots per unit mass [micro-mol / mol / s]
+                                                                unit_uptake_p_pot          !< potential P uptake by fine roots per unit mass [micro-mol / mol / s]
     ! ---------------------------
     ! 0.2 Local
     INTEGER                                          :: isoil        !< loop over nsoil_sb
@@ -1262,7 +1262,7 @@ CONTAINS
     DO isoil = 1,nsoil_sb
        !> 2.1 inorganic plant N uptake 
        !!
-       !! potential N uptake rate (µmol N / mol C fine-root / s), weighted by root distribution
+       !! potential N uptake rate (micro-mol N / mol C fine-root / s), weighted by root distribution
        hlp1(:,isoil) = root_fraction_sl(:,isoil) * rtm_root_uptake_act(:,isoil) * rmm_root_uptake_act(:,isoil) * &
                        (1.0_wp - myc_root_coverage_act(:)) * lctlib_vmax_uptake_n * f_vmax_uptake_act(:) * &
                        nh4_solute(:,isoil) * ( km1_uptake_nh4_act(:,isoil) + & 
@@ -1283,7 +1283,7 @@ CONTAINS
  
        !> 2.2 inorganic plant P uptake 
        !!
-       !! potential P uptake rate (µmol P / mol C fine-root / s), weighted by root distribution
+       !! potential P uptake rate (micro-mol P / mol C fine-root / s), weighted by root distribution
        hlp1(:,isoil) = root_fraction_sl(:,isoil)  * rtm_root_uptake_act(:,isoil) * rmm_root_uptake_act(:,isoil) * &
                        (1.0_wp - myc_root_coverage_act(:)) * lctlib_vmax_uptake_p * f_vmax_uptake_act(:) * &
                         po4_solute(:,isoil) * ( km1_uptake_po4_act(:,isoil) + &
@@ -1666,10 +1666,10 @@ CONTAINS
     REAL(wp),                           INTENT(in)    :: sb_pool_mt(:,:,:,:)      !< sb_pool [mol / m3]
     REAL(wp), DIMENSION(nc, nsoil_sb),  INTENT(inout) :: het_respiration, &       !< heterotrophic respiration [mol C / m3 / timestep]
                                                          het_respiration_c13, &   !< heterotrophic respiration [mol 13C / m3 / timestep]
-                                                         het_respiration_c14, &   !< heterotrophic respiration [µmol 14C / m3 / timestep]
+                                                         het_respiration_c14, &   !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                          myc_respiration, &       !< mycorrhizae respiration [mol C / m3 / timestep]
                                                          myc_respiration_c13, &   !< mycorrhizae respiration [mol 13C / m3 / timestep]
-                                                         myc_respiration_c14      !< mycorrhizae respiration [µmol 14C / m3 / timestep]
+                                                         myc_respiration_c14      !< mycorrhizae respiration [micro-mol 14C / m3 / timestep]
     REAL(wp),                           INTENT(inout) :: sb_loss_mt(:,:,:,:)      !< sb_loss flux [mol / m3  ??]
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER                           :: ielem                !< loop over bgcm elements
@@ -2261,7 +2261,7 @@ CONTAINS
   !   units for flux rates differ between the two models: \n
   !     in this routine they are assumed to be in [mol/m3/timestep] \n
   !     simple soil model: [mol/m3/timestep]
-  !     JSM:               [µmol/m3/s] (unit conversion is applied within the routine)
+  !     JSM:               [micro-mol/m3/s] (unit conversion is applied within the routine)
   !-----------------------------------------------------------------------------------------------------
   !> Calculates the N15 fluxes based on uptake or transformation of the inorganic NH4 / NO3 pools
   !! according to the framework proposed by Robinson, 2001, TREE. Includes a representation of the 
@@ -2365,7 +2365,7 @@ CONTAINS
     
     
     !>0.9 'INTENT(in) valiables': flux rates unit conversion when this routines is called from JSM
-    !>  unit conversion: [µmol/m3/s] -> [mol/m3/timestep]
+    !>  unit conversion: [micro-mol/m3/s] -> [mol/m3/timestep]
     !>
     !> @NOTE @TODO ? not all INTENT(in) variables are considered ?
     IF(sb_model_scheme == 'jsm') THEN
@@ -2526,7 +2526,7 @@ CONTAINS
     !! 
     asymb_n_fixation_n15(:,:) = asymb_n_fixation_local(:,:) / ( 1._wp + 1._wp / calc_mixing_ratio_N15N14(-eta_nfixation))
 
-    !> 4.0 unit conversion: [mol/m3/timestep] -> [µmol/m3/s]
+    !> 4.0 unit conversion: [mol/m3/timestep] -> [micro-mol/m3/s]
     !!  
     !! 'INTENT(out)' variables unit conversion when this routines is called from JSM
     !!
@@ -2598,7 +2598,7 @@ CONTAINS
                                                         microbial_uptake_po4_sl         !< microbial PO4 uptake [mol / m3 / timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: het_respiration, &              !< heterotrophic respiration [mol C / m3 / timestep]
                                                         het_respiration_c13, &          !< heterotrophic respiration [mol 13C / m3 / timestep]
-                                                        het_respiration_c14, &          !< heterotrophic respiration [µmol 14C / m3 / timestep]
+                                                        het_respiration_c14, &          !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                         net_mineralisation_nh4, &       !< net mineralisation of NH4 [mol / m3 / timestep]
                                                         net_mineralisation_no3, &       !< net mineralisation of NO3 [mol / m3 / timestep]
                                                         net_mineralisation_po4, &       !< net mineralisation of PO4 [mol / m3 / timestep]
@@ -2792,7 +2792,7 @@ CONTAINS
     REAL(wp),                          INTENT(in)    :: sb_loss_mt(:,:,:,:)           !< bgcm sb_loss flux: turnover of SOM and litter pools  [mol / m3 / timestep]
     REAL(wp), DIMENSION(nc, nsoil_sb), INTENT(inout) :: het_respiration, &            !< heterotrophic respiration [mol C / m3 / timestep]
                                                         het_respiration_c13, &        !< heterotrophic respiration [mol 13C / m3 / timestep]
-                                                        het_respiration_c14, &        !< heterotrophic respiration [µmol 14C / m3 / timestep]
+                                                        het_respiration_c14, &        !< heterotrophic respiration [micro-mol 14C / m3 / timestep]
                                                         net_mineralisation_nh4, &     !< net mineralisation of NH4 [mol / m3 / timestep]
                                                         net_mineralisation_po4, &     !< net mineralisation of PO4 [mol / m3 / timestep]
                                                         net_mineralisation_nh4_n15    !< net mineralisation of 15NH4 [mol / m3 / timestep]

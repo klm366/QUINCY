@@ -20,7 +20,7 @@
 !! @brief Contains constants for the spq process
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena
+!!  Soenke Zaehle, MPI-BGC Jena
 !!
 !! @par Revision History
 !! First version by Jan Engel (2016-07-21)
@@ -143,7 +143,7 @@ CONTAINS
     w_density               = 998.0_wp      ! water density at 20 degrees C (e.g. Tanaka et al., 2001)                 [kg / m3]
     ice_density             = 916.7_wp      ! density of ice, textbook value                                           [kg / m3]
     water2ice_density_ratio = w_density / ice_density !                                                  [-]
-    fact_water_supercooled  = 1.0_wp        ! fraction of soil water relative to the PWP that remains liquid below 0°C         [-]
+    fact_water_supercooled  = 1.0_wp        ! fraction of soil water relative to the PWP that remains liquid below 0degC         [-]
                                             ! set to 1.2 for now to be safe
     ! Saxton & Rawls, 2006, includes conversion from fractional to mass% texture
     wpot_pwp        = 1500._wp

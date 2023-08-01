@@ -364,7 +364,7 @@ t_jmax_opt 25 30 25 30 25 30 25 25 25 25 25 25 35 25 25 35 25 25 25 25 35
 #t_jmax_omega:         
 t_jmax_omega 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18
         
-#g0: intercept and slope of the An ~gs relationship (mmol/µmol)        
+#g0: intercept and slope of the An ~gs relationship (mmol/micro-mol)        
 g0 0.03 0.01 0.01 0.01 0.01 0.01 0.01 0.01 0.01 0.01 0.01 0.03 0.03 0.03 0.03 0.03 0.01 0.03 0.03 0.03 0.03
         
 #g1:         
@@ -413,12 +413,12 @@ tau_mycorrhiza 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0
 # N uptake parameters        
 #         
         
-#vmax_uptake_n: vmax of N uptake (~µmol N / mol C / s) [714.28_wp ? old value]        
+#vmax_uptake_n: vmax of N uptake (~micro-mol N / mol C / s) [714.28_wp ? old value]        
 # tuned from OCN's 1.5 gN/gC/1800s        
 vmax_uptake_n 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42 0.42
         
-#vmax_uptake_p: vmax of P uptake (~µmol P / mol C / s)        
-# tuned from OCN's 1.5 gN/gC/1800s plus changes by Lin following Kavka and Polle 2016 (0.01  µmol P / g fine root / min)        
+#vmax_uptake_p: vmax of P uptake (~micro-mol P / mol C / s)        
+# tuned from OCN's 1.5 gN/gC/1800s plus changes by Lin following Kavka and Polle 2016 (0.01  micro-mol P / g fine root / min)        
 vmax_uptake_p 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044 0.0044
         
 #bnf_base: base nitrogen fixation rate (g N / m2 / year)        

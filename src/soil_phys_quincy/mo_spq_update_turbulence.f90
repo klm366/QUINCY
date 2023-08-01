@@ -20,10 +20,10 @@
 !! @brief Contains the routines for the Task update_soil_turbulence
 !!
 !! @author
-!!  Sönke Zaehle, MPI-BGC Jena 
+!!  Soenke Zaehle, MPI-BGC Jena 
 !!
 !! @par Revision History
-!! First version by Sönke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
+!! First version by Soenke Zaehle (20171019): copyied from JSBACH3, mo_jsbalone.f90 
 !!
 MODULE mo_spq_update_turbulence
 
