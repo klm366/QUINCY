@@ -626,8 +626,14 @@ CONTAINS
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
       DO is = 1, nsoil
         DO  ic = 1, nc
-          weq_soil_sl_tmp(ic,is)  = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
           field_cap_sl_tmp(ic,is) = vol_field_cap_sl(ic,is) * soil_depth_sl(ic,is)
+          ! @todo There should be no water in cells with field_cap == 0. Still, this is currently
+          !       necessary. WHY?
+          IF (field_cap_sl_tmp(ic,is) > 0._wp) THEN
+            weq_soil_sl_tmp(ic,is) = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
+          ELSE
+            weq_soil_sl_tmp(ic,is) = 0._wp
+          END IF
         END DO
       END DO
       !$ACC END PARALLEL LOOP
