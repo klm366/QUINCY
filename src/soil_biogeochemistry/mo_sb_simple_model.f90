@@ -34,8 +34,6 @@ MODULE mo_sb_simple_model
   USE mo_exception,               ONLY: message, message_text, finish
   
   USE mo_lnd_bgcm_idx
-  USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
-  USE mo_sb_config_class,         ONLY: get_number_of_sb_compartments
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_POOL_ID, SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, &
@@ -107,17 +105,15 @@ CONTAINS
                                              km_dip_biochem_po4_act, &
                                              qmax_po4_mineral_act
     INTEGER                               :: iblk, ics, ice, nc             !< dimensions
-    INTEGER                               :: nr_elements                    !< number of elements
-    INTEGER                               :: nr_sb_parts                    !< number of sb compartments
-    INTEGER                               :: nr_veg_parts                   !< number of veg compartments
-    REAL(wp), ALLOCATABLE                 :: veg_pool_mt(:,:,:)             !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE                 :: veg_litterfall_mt(:,:,:)       !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE                 :: sb_pool_mt(:,:,:,:)            !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_formation_mt(:,:,:,:)       !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_loss_mt(:,:,:,:)            !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_transport_mt(:,:,:,:)       !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE                 :: sb_mycorrhiza_export_mt(:,:,:) !< dim: elements, nc, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_sb_simple_model'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    dsl4jsb_Def_mt2L3D :: sb_formation_mt
+    dsl4jsb_Def_mt2L3D :: sb_loss_mt
+    dsl4jsb_Def_mt2L3D :: sb_transport_mt
+    dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(SB_)
     dsl4jsb_Def_memory(SB_)
@@ -301,24 +297,14 @@ CONTAINS
     ALLOCATE(km_dip_biochem_po4_act(nc, nsoil_sb))
     ALLOCATE(qmax_po4_mineral_act(nc, nsoil_sb))
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_sb_parts     = get_number_of_sb_compartments()
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_pool_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_litterfall_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(sb_pool_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_formation_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_loss_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_transport_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_mycorrhiza_export_mt(nr_elements, nc, nsoil_sb))
     bgcm_store => tile%bgcm_store
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name, sb_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_FORMATION_ID, ics, ice, iblk, tile%name, sb_formation_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_LOSS_ID, ics, ice, iblk, tile%name, sb_loss_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_TRANSPORT_ID, ics, ice, iblk, tile%name, sb_transport_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
+    dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_ 2D
     dsl4jsb_Get_var2D_onChunk(A2L_,      p_deposition)                ! in
@@ -1038,19 +1024,6 @@ CONTAINS
     DEALLOCATE(k_desorpt_po4_act)
     DEALLOCATE(km_dip_biochem_po4_act)
     DEALLOCATE(qmax_po4_mineral_act)
-
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name, sb_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_FORMATION_ID, ics, ice, iblk, tile%name, sb_formation_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_LOSS_ID, ics, ice, iblk, tile%name, sb_loss_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_TRANSPORT_ID, ics, ice, iblk, tile%name, sb_transport_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(veg_pool_mt, veg_litterfall_mt)
-    DEALLOCATE(sb_pool_mt, sb_formation_mt, sb_loss_mt, sb_transport_mt, sb_mycorrhiza_export_mt)
 
   END SUBROUTINE update_sb_simple_model 
 

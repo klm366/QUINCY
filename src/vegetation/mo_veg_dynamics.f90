@@ -34,7 +34,6 @@ MODULE mo_veg_dynamics
   USE mo_jsb_math_constants,   ONLY: one_year, one_day, dtime, eps8, eps4
 
   USE mo_lnd_bgcm_idx
-  USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_LITTERFALL_ID, VEG_BGCM_ESTABLISHMENT_ID
 
@@ -78,12 +77,11 @@ CONTAINS
     TYPE(t_lctlib_element),   POINTER :: lctlib                 !< land-cover-type library - parameter across pft's
     REAL(wp), DIMENSION(options%nc)   :: fpc                    !< current foliage projective cover
     INTEGER                           :: iblk, ics, ice, nc     !< dimensions
-    INTEGER                           :: nr_elements                    !< number of elements
-    INTEGER                           :: nr_veg_parts                   !< number of veg compartments
-    REAL(wp), ALLOCATABLE             :: veg_pool_mt(:,:,:)             !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_litterfall_mt(:,:,:)       !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_establishment_mt(:,:)      !< dim: elements, nc
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_dynamics'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt2L2D :: veg_litterfall_mt
+    dsl4jsb_Def_mt1L2D :: veg_establishment_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(VEG_)
     dsl4jsb_Def_memory(VEG_)
@@ -127,15 +125,10 @@ CONTAINS
     dsl4jsb_Get_memory(PHENO_)
     dsl4jsb_Get_memory(SPQ_)
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_pool_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_litterfall_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_establishment_mt(nr_elements, nc))
     bgcm_store => tile%bgcm_store
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_ESTABLISHMENT_ID, ics, ice, iblk, tile%name, veg_establishment_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_ESTABLISHMENT_ID, veg_establishment_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
     dsl4jsb_Get_var2D_onChunk(RAD_, rfr_ratio_boc_tvegdyn_mavg) ! in
@@ -275,14 +268,6 @@ CONTAINS
         ENDIF
       ENDIF
     ENDSELECT
-
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name, veg_litterfall_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_ESTABLISHMENT_ID, ics, ice, iblk, tile%name, veg_establishment_mt)
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(veg_pool_mt, veg_litterfall_mt, veg_establishment_mt)
 
   END SUBROUTINE update_veg_dynamics
 

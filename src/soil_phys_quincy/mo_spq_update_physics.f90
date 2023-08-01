@@ -645,18 +645,22 @@ CONTAINS
     !> 2.3 solve energy balance calculation using implicit formulation (JSBACH4)
     !!
     ! calculate surface values depending on snow/bare coverage for implicit surface exchange scheme
-    nsnow_top = MAX(INT(SUM(snow_present_snl(:,:))),INT(1))
-    WHERE (w_snow_snl(:,1) > w_snow_min)
-      srf_heat_capa(:) = snow_heat_capa * fract_snow(:) + (1 - fract_snow(:)) * heat_capa_sl(:,1)
-      srf_dens(:)  = snow_dens * fract_snow(:) + (1 - fract_snow(:)) * bulk_dens_sl(:,1)
-      srf_depth(:) = snow_lay_thickness_snl(:,nsnow_top) * fract_snow(:) + (1 - fract_snow(:)) * soil_depth_sl(:,1)
-      srf_heat_flx_old(:) = snow_srf_heat_flux(:) * fract_snow(:) + (1 - fract_snow(:)) * ground_heat_flx(:)
-    ELSEWHERE 
-      srf_heat_capa(:) = heat_capa_sl(:,1)
-      srf_dens(:)  = bulk_dens_sl(:,1)
-      srf_depth(:) = soil_depth_sl(:,1)   
-      srf_heat_flx_old(:) = ground_heat_flx(:)
-    ENDWHERE
+    DO ichunk=1,nc
+      nsnow_top = MAX(INT(SUM(snow_present_snl(ichunk,:))),INT(1))
+      IF (w_snow_snl(ichunk,1) > w_snow_min) THEN
+        srf_heat_capa(ichunk) = snow_heat_capa * fract_snow(ichunk) + (1 - fract_snow(ichunk)) * heat_capa_sl(ichunk,1)
+        srf_dens(ichunk)  = snow_dens * fract_snow(ichunk) + (1 - fract_snow(ichunk)) * bulk_dens_sl(ichunk,1)
+        srf_depth(ichunk) = snow_lay_thickness_snl(ichunk,nsnow_top) &
+          & * fract_snow(ichunk) + (1 - fract_snow(ichunk)) * soil_depth_sl(ichunk,1)
+        srf_heat_flx_old(ichunk) = snow_srf_heat_flux(ichunk) &
+          & * fract_snow(ichunk) + (1 - fract_snow(ichunk)) * ground_heat_flx(ichunk)
+      ELSE
+        srf_heat_capa(ichunk) = heat_capa_sl(ichunk,1)
+        srf_dens(ichunk)  = bulk_dens_sl(ichunk,1)
+        srf_depth(ichunk) = soil_depth_sl(ichunk,1)
+        srf_heat_flx_old(ichunk) = ground_heat_flx(ichunk)
+      ENDIF
+    ENDDO
 
     hlp1 = calc_temp_srf_new_implicit(steplen, &
                                       alpha, &
@@ -1054,8 +1058,8 @@ CONTAINS
     DO isoil = 2,nsoil_sb-1
       ! turn off drainage if layer below is frozen/saturated
       hlp1(:) = drain_frac ** soil_depth_sl(:,isoil) * drainage_sl(:,isoil-1)
-      hlp2(:) = SUM(w_soil_fc_sl(:,isoil:nsoil_sb)) - (SUM(w_soil_sl(:,isoil:nsoil_sb)) + &
-        &       SUM(water2ice_density_ratio * w_ice_sl(:,isoil:nsoil_sb)))
+      hlp2(:) = SUM(w_soil_fc_sl(:,isoil:nsoil_sb),DIM=2) - (SUM(w_soil_sl(:,isoil:nsoil_sb),DIM=2) + &
+        &       SUM(water2ice_density_ratio * w_ice_sl(:,isoil:nsoil_sb),DIM=2))
       WHERE (t_soil_sl(:,isoil) <= Tzero)
         ! Available pore space in layer below
         drainage_sl(:,isoil)  = 0.0_wp
@@ -1081,8 +1085,8 @@ CONTAINS
         ! Calculate excess water in current soil layer (over field capacity)
         hlp1(:) = w_soil_sl(:,isoil) + w_ice_sl(:,isoil) * water2ice_density_ratio - w_soil_fc_sl(:,isoil)
         ! Calculate  remaining free water uptake capacity in all lower layers
-        hlp2(:) = SUM(w_soil_fc_sl(:,isoil:nsoil_sb)) - (SUM(w_soil_sl(:,isoil:nsoil_sb)) + &
-          &       SUM(water2ice_density_ratio * w_ice_sl(:,isoil:nsoil_sb)))
+        hlp2(:) = SUM(w_soil_fc_sl(:,isoil:nsoil_sb),DIM=2) - (SUM(w_soil_sl(:,isoil:nsoil_sb),DIM=2) + &
+          &       SUM(water2ice_density_ratio * w_ice_sl(:,isoil:nsoil_sb),DIM=2))
         ! Calculate remaining free water uptake capacity in upper layer
         hlp3(:) = w_soil_fc_sl(:,isoil-1) - (w_soil_sl(:,isoil-1) + w_ice_sl(:,isoil-1) * water2ice_density_ratio)
         ! Aggregated water capacity of lower layers has been reached either from liquid or frozen water (impermeable layer)
@@ -1741,7 +1745,9 @@ CONTAINS
       END WHERE
     END DO
     ! compute snow surface (top snow layer) heat flx for implicit scheme
-    nsnow_top = MAX(INT(SUM(snow_present_snl(:,:))),INT(1))
-    snow_srf_heat_flux = snow_heat_flux(:,nsnow_top)   
+    DO ichunk=1,nc
+      nsnow_top = MAX(INT(SUM(snow_present_snl(ichunk,:))),INT(1))
+      snow_srf_heat_flux(ichunk) = snow_heat_flux(ichunk,nsnow_top)
+    ENDDO
   END SUBROUTINE
 END MODULE mo_spq_update_physics

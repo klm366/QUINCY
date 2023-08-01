@@ -338,6 +338,9 @@ CONTAINS
     CHARACTER(len=*),            INTENT(IN) :: short_name   !< a short name for the element
     CHARACTER(len=*),            INTENT(IN) :: caller       !< calling routine
     ! -------------------------------------------------------------------------------------------------- !
+    ! information for logfile
+    CALL message(TRIM(caller), 'Setup element:')
+    
     IF (elem_flag) THEN
       config%nr_of_used_elements         = config%nr_of_used_elements + 1
       config%elements_index_map(elem_id) = config%nr_of_used_elements

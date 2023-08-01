@@ -845,14 +845,19 @@ CONTAINS
   !> Collects the pointers to the variables that contain bgc elements
   !>
   SUBROUTINE Collect_bgc_materials_on_tile(this)
-    USE mo_jsb_memory_class,     ONLY: t_jsb_memory
+    USE mo_jsb_memory_class,    ONLY: t_jsb_memory
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid, t_jsb_vgrid
+    USE mo_jsb_grid,            ONLY: Get_grid, Get_vgrid
     ! -------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile), INTENT(inout) :: this !< tile for which the conserved quantities are collected
     ! -------------------------------------------------------------------------------------------------- !
-    CLASS(t_jsb_memory), POINTER  :: mem
-    INTEGER                       :: i_proc
-    INTEGER                       :: ind_1l_2d_bgcm, ind_2l_2d_bgcm, ind_1l_3d_bgcm, ind_2l_3d_bgcm
-    INTEGER                       :: ind_bgcm
+    CLASS(t_jsb_memory), POINTER :: mem
+    TYPE(t_jsb_grid),    POINTER :: hgrid
+    TYPE(t_jsb_vgrid),   POINTER :: vgrid
+    INTEGER                      :: i_proc
+    INTEGER                      :: ind_1l_2d_bgcm, ind_2l_2d_bgcm, ind_1l_3d_bgcm, ind_2l_3d_bgcm
+    INTEGER                      :: ind_bgcm
+    INTEGER                      :: nblks, nproma, nsoil
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':Collect_bgc_materials_on_tile'
     ! -------------------------------------------------------------------------------------------------- !
@@ -874,6 +879,12 @@ CONTAINS
       RETURN
     ENDIF
 
+    hgrid  => Get_grid(this%grid_id)
+    nproma = hgrid%nproma
+    nblks  = hgrid%nblks
+    vgrid  => Get_vgrid('soil_layer_sb')
+    nsoil  =  vgrid%n_levels
+
     ! Loop over all processes
     DO i_proc=1,max_no_of_processes
       ! If the current process is not on the current tile exit DO loop
@@ -888,7 +899,7 @@ CONTAINS
       ! Only processes are relevant here that have any bgc material in their process memory
       mem => this%mem(i_proc)%p
       IF(mem%has_bgc_materials) THEN
-        CALL this%bgcm_store%append_bgcms(mem%bgc_material, this%name, &
+        CALL this%bgcm_store%append_bgcms(mem%bgc_material, nblks, nproma, nsoil, this%name, &
           & ind_bgcm, ind_1l_2d_bgcm, ind_2l_2d_bgcm, ind_1l_3d_bgcm, ind_2l_3d_bgcm)
       ENDIF
     ENDDO

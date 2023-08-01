@@ -38,7 +38,7 @@ MODULE mo_veg_memory_class
   USE mo_lnd_bgcm_class,         ONLY: ELEM_C_ID, ELEM_N_ID, ELEM_P_ID, ELEM_C13_ID, ELEM_C14_ID, ELEM_N15_ID, &
     &                                  LAST_ELEM_ID, get_name_for_element_id, get_short_name_for_element_id
   USE mo_lnd_bgcm_store_class,   ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_TOTAL_BIO_ID, VEG_BGCM_GROWTH_ID, &
-    &                                  VEG_BGCM_LITTERFALL_ID, VEG_BGCM_TOTAL_FLUX_ID, VEG_BGCM_FRAC_ALLOC_ID, &
+    &                                  VEG_BGCM_LITTERFALL_ID, VEG_BGCM_FRAC_ALLOC_ID,              &
     &                                  VEG_BGCM_EXUDATION_ID, VEG_BGCM_ESTABLISHMENT_ID, VEG_BGCM_RESERVE_USE_ID
   USE mo_jsb_memory_class,       ONLY: t_jsb_memory
   USE mo_jsb_var_class,          ONLY: t_jsb_var_real2d, t_jsb_var_real3d
@@ -366,13 +366,12 @@ MODULE mo_veg_memory_class
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegbpool
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbtotal_biomass
     !! fluxes
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbgrowth    
+    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbgrowth
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegblitterfall
-    TYPE(t_veg_bgcm_with_components),  POINTER :: vegbtotal_flux
     TYPE(t_veg_bgcm_with_components),  POINTER :: vegbfrac_alloc
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbexudation    
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbexudation
     TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbestablishment
-    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbreserve_use  
+    TYPE(t_veg_bgcm_with_elements),    POINTER :: vegbreserve_use
   CONTAINS
     PROCEDURE :: Get_element_name_by_id     => veg_bgcm_main_get_element_name_by_id
     PROCEDURE :: Init                       => veg_bgcm_main_init
@@ -483,12 +482,6 @@ CONTAINS
         & lct_ids = lct_ids, elements_index_map = elem_idx_map(:))                 ! create the bgcm object (l_elements=.TRUE. by default)
       CALL mem%veg_bgcm_main%Add_pool(veg_bgcm_components, VEG_BGCM_LITTERFALL_ID) ! add bgcm object to pool_list(:)
       mem%veg_bgcm_main%vegblitterfall => veg_bgcm_components                      ! link to bgcm object in pool_list(:)
-      ! veg_total_flux
-      veg_bgcm_components => Create_veg_bgc_material_components( &
-        & name = 'vegetation_bgcm_total_flux', shortname = 'veg_bgcm_total_flux', unit = unit_veg_flux, &
-        & lct_ids = lct_ids, elements_index_map = elem_idx_map(:))                 ! create the bgcm object (l_elements=.TRUE. by default)
-      CALL mem%veg_bgcm_main%Add_pool(veg_bgcm_components, VEG_BGCM_TOTAL_FLUX_ID) ! add bgcm object to pool_list(:)
-      mem%veg_bgcm_main%vegbtotal_flux => veg_bgcm_components                      ! link to bgcm object in pool_list(:)
       ! veg_frac_alloc
       veg_bgcm_components => Create_veg_bgc_material_components( &
         & name = 'vegetation_bgcm_frac_alloc', shortname = 'veg_bgcm_frac_alloc', unit = unit_veg_flux, &
@@ -554,14 +547,6 @@ CONTAINS
         & lrestart = .FALSE.,                                                                          &
         & initval_r = 0.0_wp)
       CALL mem%Add_var(mem%veg_bgcm_main%vegblitterfall, &
-        & hgrid, surface, vgrid_canopy,                                                                &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
-        & prefix, suffix,                                                                              &
-        & output_level = MEDIUM,                                                                       &
-        & loutput = .TRUE.,                                                                            &
-        & lrestart = .FALSE.,                                                                          &
-        & initval_r = 0.0_wp)
-      CALL mem%Add_var(mem%veg_bgcm_main%vegbtotal_flux, &
         & hgrid, surface, vgrid_canopy,                                                                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                           &
         & prefix, suffix,                                                                              &

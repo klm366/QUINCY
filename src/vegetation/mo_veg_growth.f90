@@ -32,8 +32,6 @@ MODULE mo_veg_growth
   USE mo_exception,               ONLY: message, message_text, finish
 
   USE mo_lnd_bgcm_idx
-  USE mo_veg_config_class,        ONLY: get_number_of_veg_compartments
-  USE mo_sb_config_class,         ONLY: get_number_of_sb_compartments
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID, VEG_BGCM_GROWTH_ID, VEG_BGCM_FRAC_ALLOC_ID, &
     &                                   VEG_BGCM_EXUDATION_ID, VEG_BGCM_RESERVE_USE_ID
@@ -92,17 +90,15 @@ CONTAINS
     REAL(wp), DIMENSION(options%nc)   :: hlp1
     REAL(wp)                          :: lctlib_g1              !< set to g1_medlyn or g1_bberry depending on canopy_conductance_scheme
     INTEGER                           :: iblk, ics, ice, nc     !< grid dimensions
-    INTEGER                           :: nr_elements                    !< number of elements
-    INTEGER                           :: nr_sb_parts                    !< number of sb compartments
-    INTEGER                           :: nr_veg_parts                   !< number of veg compartments
-    REAL(wp), ALLOCATABLE             :: veg_pool_mt(:,:,:)             !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_growth_mt(:,:,:)           !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_frac_alloc_mt(:,:,:)       !< dim: compartments, elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_exudation_mt(:,:)          !< dim: elements, nc
-    REAL(wp), ALLOCATABLE             :: veg_reserve_use_mt(:,:)        !< dim: elements, nc
-    REAL(wp), ALLOCATABLE             :: sb_pool_mt(:,:,:,:)            !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE             :: sb_mycorrhiza_export_mt(:,:,:) !< dim: elements, nc, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':update_veg_growth'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    dsl4jsb_Def_mt2L2D :: veg_growth_mt
+    dsl4jsb_Def_mt2L2D :: veg_frac_alloc_mt
+    dsl4jsb_Def_mt1L2D :: veg_exudation_mt
+    dsl4jsb_Def_mt1L2D :: veg_reserve_use_mt
+    dsl4jsb_Def_mt2L3D :: sb_pool_mt
+    dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_config(ASSIMI_)
     dsl4jsb_Def_config(VEG_)
@@ -296,24 +292,14 @@ CONTAINS
     dsl4jsb_Get_memory(SPQ_)
     dsl4jsb_Get_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_sb_parts     = get_number_of_sb_compartments()
-    nr_veg_parts    = get_number_of_veg_compartments()
-    ALLOCATE(veg_pool_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_growth_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_frac_alloc_mt(nr_veg_parts, nr_elements, nc))
-    ALLOCATE(veg_exudation_mt(nr_elements, nc))
-    ALLOCATE(veg_reserve_use_mt(nr_elements, nc))
-    ALLOCATE(sb_pool_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_mycorrhiza_export_mt(nr_elements, nc, nsoil_sb))
     bgcm_store => tile%bgcm_store
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_GROWTH_ID, ics, ice, iblk, tile%name, veg_growth_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(VEG_BGCM_FRAC_ALLOC_ID, ics, ice, iblk, tile%name, veg_frac_alloc_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(VEG_BGCM_RESERVE_USE_ID, ics, ice, iblk, tile%name, veg_reserve_use_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_2l(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name, sb_pool_mt)
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_GROWTH_ID, veg_growth_mt)
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_FRAC_ALLOC_ID, veg_frac_alloc_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_EXUDATION_ID, veg_exudation_mt)
+    dsl4jsb_Get_mt1L2D(VEG_BGCM_RESERVE_USE_ID, veg_reserve_use_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_POOL_ID, sb_pool_mt)
+    dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, growing_season)                   ! in
@@ -918,20 +904,7 @@ CONTAINS
         & delta_root_fraction_sl(:,:)                      ) ! out
     END IF
 
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_POOL_ID, ics, ice, iblk, tile%name, veg_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_GROWTH_ID, ics, ice, iblk, tile%name, veg_growth_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(VEG_BGCM_FRAC_ALLOC_ID, ics, ice, iblk, tile%name, veg_frac_alloc_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_EXUDATION_ID, ics, ice, iblk, tile%name, veg_exudation_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(VEG_BGCM_RESERVE_USE_ID, ics, ice, iblk, tile%name, veg_reserve_use_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_POOL_ID, ics, ice, iblk, tile%name, sb_pool_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(veg_pool_mt, veg_growth_mt, veg_frac_alloc_mt, veg_exudation_mt, veg_reserve_use_mt)
-    DEALLOCATE(sb_pool_mt, sb_mycorrhiza_export_mt)
-
-  END SUBROUTINE update_veg_growth 
+  END SUBROUTINE update_veg_growth
 
   !-----------------------------------------------------------------------------------------------------
   ! 1.0 Sub Task of update_veg_growth

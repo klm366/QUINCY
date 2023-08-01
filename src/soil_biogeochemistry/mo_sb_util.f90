@@ -35,7 +35,6 @@ MODULE mo_sb_util
   USE mo_jsb_math_constants,    ONLY: zero
 
   USE mo_lnd_bgcm_idx
-  USE mo_sb_config_class,         ONLY: get_number_of_sb_compartments
   USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
   USE mo_lnd_bgcm_store_class,    ONLY: SB_BGCM_FORMATION_ID, SB_BGCM_LOSS_ID, SB_BGCM_TRANSPORT_ID, SB_BGCM_MYCO_EXPORT_ID
 
@@ -71,13 +70,12 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb        !< Vertical grid
     INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
-    INTEGER                           :: nr_elements                    !< number of elements
-    INTEGER                           :: nr_sb_parts                    !< number of sb compartments
-    REAL(wp), ALLOCATABLE             :: sb_formation_mt(:,:,:,:)       !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE             :: sb_loss_mt(:,:,:,:)            !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE             :: sb_transport_mt(:,:,:,:)       !< dim: compartments, elements, nc, nsoil
-    REAL(wp), ALLOCATABLE             :: sb_mycorrhiza_export_mt(:,:,:) !< dim: elements, nc, nsoil
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':reset_sb_fluxes'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
+    dsl4jsb_Def_mt2L3D :: sb_formation_mt
+    dsl4jsb_Def_mt2L3D :: sb_loss_mt
+    dsl4jsb_Def_mt2L3D :: sb_transport_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -95,20 +93,16 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    nr_sb_parts     = get_number_of_sb_compartments()
-    ALLOCATE(sb_formation_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_loss_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_transport_mt(nr_sb_parts, nr_elements, nc, nsoil_sb))
-    ALLOCATE(sb_mycorrhiza_export_mt(nr_elements, nc, nsoil_sb))
     bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_FORMATION_ID, sb_formation_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_LOSS_ID, sb_loss_mt)
+    dsl4jsb_Get_mt2L3D(SB_BGCM_TRANSPORT_ID, sb_transport_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>1.0 bgcm fluxes
     !>
-    ! set the bgcm matrices to zero, and write these values back to the bgcm below
-    ! no need to get the values of the bgcm (`CALL bgcm_store%Get_matrix_from_bgcm_*`)
-    !   as these values are zeroed anyway
+    ! set the bgcm matrices to zero
     sb_formation_mt(:,:,:,:)       = zero
     sb_loss_mt(:,:,:,:)            = zero
     sb_transport_mt(:,:,:,:)       = zero
@@ -223,15 +217,6 @@ CONTAINS
     dsl4jsb_var3D_onChunk(SB_, denitrification_n2_n15)           = zero
     dsl4jsb_var3D_onChunk(SB_, asymb_n_fixation_n15)             = zero
 
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_FORMATION_ID, ics, ice, iblk, tile%name, sb_formation_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_LOSS_ID, ics, ice, iblk, tile%name, sb_loss_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_2l(SB_BGCM_TRANSPORT_ID, ics, ice, iblk, tile%name, sb_transport_mt)
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(sb_formation_mt, sb_loss_mt, sb_transport_mt, sb_mycorrhiza_export_mt)
-
   END SUBROUTINE reset_sb_fluxes
 
   ! ======================================================================================================= !
@@ -260,9 +245,9 @@ CONTAINS
     TYPE(t_jsb_vgrid),      POINTER   :: vgrid_soil_sb        !< Vertical grid
     INTEGER                           :: nsoil_sb             !< number of soil layers as used/defined by the SB_ process
     INTEGER                           :: iblk, ics, ice, nc   !< dimensions
-    INTEGER                           :: nr_elements                    !< number of elements
-    REAL(wp), ALLOCATABLE             :: sb_mycorrhiza_export_mt(:,:,:) !< dim: elements, nc, nsoil
     CHARACTER(len=*), PARAMETER       :: routine = modname//':calculate_time_average_soilbiogeochemistry'
+    ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt1L3D :: sb_mycorrhiza_export_mt
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(SB_)
     ! ----------------------------------------------------------------------------------------------------- !
@@ -326,10 +311,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_n_mavg)            ! out
     dsl4jsb_Get_var3D_onChunk(SB_,  enzyme_frac_poly_p_mavg)            ! out
     ! ----------------------------------------------------------------------------------------------------- !
-    nr_elements     = model%config%nr_of_used_elements
-    ALLOCATE(sb_mycorrhiza_export_mt(nr_elements, nc, nsoil_sb))
     bgcm_store => tile%bgcm_store
-    CALL bgcm_store%Get_matrix_from_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
+    dsl4jsb_Get_mt1L3D(SB_BGCM_MYCO_EXPORT_ID, sb_mycorrhiza_export_mt)
     ! ----------------------------------------------------------------------------------------------------- !
 
     !>0.9 daytime averages - not used here
@@ -380,12 +363,6 @@ CONTAINS
                                                   mavg_period_tenzyme)
     enzyme_frac_poly_p_mavg(:,:) = calc_time_mavg(enzyme_frac_poly_p_mavg(:,:), enzyme_frac_poly_p(:,:), &
                                                   mavg_period_tenzyme)
-
-    !------------------------------------------------------------------------------------------------------ !
-    ! write back data from bgcm_mt to bgc_material
-    CALL bgcm_store%Write_matrix_to_bgcm_1l(SB_BGCM_MYCO_EXPORT_ID, ics, ice, iblk, tile%name, sb_mycorrhiza_export_mt)
-    ! de-allocate local bgcm_mt matrices
-    DEALLOCATE(sb_mycorrhiza_export_mt)
 
   END SUBROUTINE calculate_time_average_soilbiogeochemistry
 
