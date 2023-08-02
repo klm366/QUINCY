@@ -286,15 +286,14 @@ MODULE mo_lentic_process
         & tpl_kappa_I,   &
        ! & tpl_L_f,       &
         & tpl_T_f,       &
-       ! & tpl_rho_I,     &
+        & rhoice,        &
         & c_small,       &
         & Phi_I_pr0_lin, &
         & Phi_I_pr1_lin, &
         & Phi_I_ast_MR,  &
         & H_Ice_max     
       
-      USE mo_jsb_physical_constants,    ONLY: alf            , & !< Latent heat of fusion [J kg^{-1}]
-                                              rhoice          ! & !< Density of pure ice   [kg/m3] 
+      USE mo_jsb_physical_constants,    ONLY: alf           !< Latent heat of fusion [J kg^{-1}]
 
       !$claw model-data      
       REAL(wp), INTENT(in) ::   del_time, & ! The model time step [s]

@@ -64,6 +64,9 @@ PUBLIC
 
       & tpl_T_f           = 273.15_wp     , & ! Fresh water freezing point [K]
       ! & rhoice = tpl_rho_I         = 9.1E+02_wp    , & ! Density of ice [kg m^{-3}]
+      & rhoice            =  916.7_wp     , & ! density of pure ice [kg/m3]  , !! copied from ICON
+      & con_m             = 1.50E-5_wp    , & ! [m^2/s]  kinematic viscosity of dry air, !! copied from ICON
+      & con_h             = 2.20E-5_wp    , & ! [m^2/s]  scalar conductivity of dry air, !! copied from ICON
       & tpl_rho_w_r       = 1.0E+03_wp    , & ! Maximum density of fresh water [kg m^{-3}]
 
       ! !  Parameters of the shape functions 

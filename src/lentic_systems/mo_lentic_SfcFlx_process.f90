@@ -57,8 +57,6 @@ MODULE mo_lentic_SfcFlx_process
                                             rd                      , & !< Gas constant for dry air               [J/(K kg)]
                                             rv                      , & !< Gas constant for water vapor           [J/(K*kg)]
                                             cpd                     , & !< Specific heat of air at constant pressure     [J kg^{-1} K^{-1}]
-                                            con_m                   , & !< Kinematic viscosity of dry air         [m^2/s]  
-                                            con_h                   , & !< Scalar conductivity of dry air         [m^2/s]  
                                             grav                        !< Acceleration due to gravity [m s^{-2}]
 
     USE mo_lentic_SfcFlx_constants,  ONLY : kappa_q_a               , & !< Molecular diffusivity of air for water vapour [m^{2} s^{-1}]  
@@ -80,7 +78,9 @@ MODULE mo_lentic_SfcFlx_process
                                             u_wind_min_sf           !, & !< Minimum wind speed [m s^{-1}]
                 
     USE mo_lentic_constants,         ONLY : c_small                 , & !< A small number
-                                            h_Ice_min                   !< Minimum ice thickness [m]
+                                            h_Ice_min               , & !< Minimum ice thickness [m]
+                                            con_m                   , & !< Kinematic viscosity of dry air         [m^2/s]  
+                                            con_h                   !, & !< Scalar conductivity of dry air         [m^2/s]  
                                             !grav                 ! &
 
     !$claw model-data
@@ -396,10 +396,10 @@ MODULE mo_lentic_SfcFlx_process
     !  are computed through the power-law formulations 
     !  in terms of the roughness Reynolds number (Andreas 2002).  
     
-    USE mo_jsb_physical_constants,    ONLY: con_m                   , & !< Kinematic viscosity of dry air         [m^2/s]  
-                                            grav                        !< Acceleration due to gravity [m s^{-2}]
+    USE mo_jsb_physical_constants,    ONLY: grav                        !< Acceleration due to gravity [m s^{-2}]
 
-    USE mo_lentic_constants,         ONLY : h_Ice_min                   !< Minimum ice thickness [m]
+    USE mo_lentic_constants,         ONLY : con_m                   , & !< Kinematic viscosity of dry air         [m^2/s]  
+                                            h_Ice_min                   !< Minimum ice thickness [m]
 
     USE mo_lentic_SfcFlx_constants,  ONLY : c_accur_sf              , & !< A small number (accuracy)
                                             c_Karman                , & !< The von Karman constant 
