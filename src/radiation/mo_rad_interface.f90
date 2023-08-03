@@ -635,9 +635,10 @@ CONTAINS
     ! END DO
 
     ! Create faPAR
-    !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+    !$ACC LOOP SEQ
     DO icanopy=1,ncanopy
-      !$ACC LOOP SEQ
+      !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         ! faPAR_cl is always the fraction relativ to incoming radiation on the top of the whole canopy
         faPAR(ic) = faPAR(ic) + faPAR_cl(ic,icanopy)
