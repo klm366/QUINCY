@@ -2387,7 +2387,8 @@ CONTAINS
       IF (ABS(weq_balance_err(ic)) > wb_threshold(ic)) THEN
         IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
           WRITE (message_text_long,*) 'Water balance violation [m3 dt-1]',             NEW_LINE('a'), &
-            & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E:',         NEW_LINE('a'), &
+            & 'on ',TRIM(tile%name),' tile at', lat(ic),'N and ',lon(ic),'E',          NEW_LINE('a'), &
+            & '(ic: ',ic,' iblk: ',iblk, ' tile_fract:',tile_fract(ic),'):',           NEW_LINE('a'), &
             & 'WB Error:           ', weq_balance_err(ic),                             NEW_LINE('a'), &
             & 'Rainfall:           ', rain(ic)       * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
             & 'Snowfall:           ', snow(ic)       * tile_area(ic) / rhoh2o * dtime, NEW_LINE('a'), &
