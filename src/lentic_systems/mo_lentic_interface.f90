@@ -302,7 +302,7 @@ CONTAINS
     
     dsl4jsb_Get_var2D_onChunk(LENTIC_, w_star)          ! out
 
-   
+    IF (tile%Is_process_active(LENTIC_)) RETURN
     ! ---------------------------
     ! Go    
 
