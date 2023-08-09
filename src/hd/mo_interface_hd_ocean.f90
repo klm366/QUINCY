@@ -24,8 +24,12 @@ MODULE mo_interface_hd_ocean
   USE mo_jsb_grid_class,      ONLY: t_jsb_grid
   USE mo_coupling_config,     ONLY: is_coupled_run
 #ifdef YAC_coupling
-  USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, yac_fget_field_id_from_name, &
-    &                               yac_fdef_mask, YAC_LOCATION_CELL
+  USE mo_yac_finterface,      ONLY: yac_fdef_field, yac_fput, &
+       &                            yac_fdef_mask,            &
+       &                            YAC_LOCATION_CELL,        &
+       &                            YAC_TIME_UNIT_ISO_FORMAT, &
+       &                            YAC_ACTION_PUT_FOR_RESTART
+  USE mo_run_config,          ONLY: modelTimeStep
 #endif
 
   USE mo_jsb_task_class,     ONLY: t_jsb_task_options
@@ -44,6 +48,8 @@ MODULE mo_interface_hd_ocean
   PUBLIC :: interface_hd_ocean
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_interface_hd_ocean'
+
+  INTEGER :: yac_river_runoff_field_id
 
 CONTAINS
 
@@ -67,7 +73,6 @@ CONTAINS
 
     CLASS(t_jsb_tile_abstract), POINTER :: tile
 
-    INTEGER :: field_id
     INTEGER :: cell_mask_ids(1)
     INTEGER :: model_id
     INTEGER :: jb, jc
@@ -126,7 +131,10 @@ CONTAINS
       & cell_point_ids,        &
       & cell_mask_ids(1),      &
       & 1,                     &
-      & field_id )
+      & 1,                     &
+      & modelTimeStep,         &
+      & YAC_TIME_UNIT_ISO_FORMAT, &
+      & yac_river_runoff_field_id )
 
       DEALLOCATE(is_valid)
 
@@ -155,7 +163,6 @@ CONTAINS
     ! Local variables
 
     LOGICAL               :: write_coupler_restart
-    INTEGER               :: field_id
     INTEGER               :: nbr_hor_cells
     REAL(wp), ALLOCATABLE :: buffer(:,:)
     INTEGER               :: collection_size, nbr_pointsets, nbr_subdomains
@@ -199,17 +206,14 @@ CONTAINS
       END DO
     END DO
 
-#ifdef YAC_coupling
-    CALL yac_fget_field_id_from_name('river_runoff', field_id)
-#endif
     nbr_hor_cells = grid%ntotal
     collection_size = 1
     nbr_pointsets   = 1
     nbr_subdomains  = 1
 #ifdef YAC_coupling
-    CALL yac_fput(field_id, nbr_hor_cells, collection_size, buffer, info, ierror)
+    CALL yac_fput(yac_river_runoff_field_id, nbr_hor_cells, collection_size, buffer, info, ierror)
+    IF ( info == YAC_ACTION_PUT_FOR_RESTART ) write_coupler_restart = .TRUE.
 #endif
-    IF ( info > 1 .AND. info < 7 ) write_coupler_restart = .TRUE.
 
     IF ( write_coupler_restart ) THEN
        CALL message(TRIM(routine), 'YAC says it is put for restart')
