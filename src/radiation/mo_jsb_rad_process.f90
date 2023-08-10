@@ -71,7 +71,6 @@ CONTAINS
 
     ! Compute net SW radiation from downward SW and albedo
     zswvis_net = swvis_down * (1._wp - alb_vis)
-    CALL message(TRIM(routine), 'swnir_down', TRIM(swnir_down), 'alb_nir', TRIM(alb_nir) )
     zswnir_net = swnir_down * (1._wp - alb_nir)
     zsw_net    = zswvis_net + zswnir_net
 
