@@ -72,10 +72,16 @@ CONTAINS
       & lw_net
 
     REAL(wp) :: zswvis_net, zswnir_net, zsw_net, zlw_net
+    LOGICAL  :: present_swvis_net, present_swnir_net, present_sw_net, present_lw_net
 
     INTEGER :: nc, ic
 
     nc = SIZE(swvis_down)
+
+    present_swvis_net = PRESENT(swvis_net)
+    present_swnir_net = PRESENT(swnir_net)
+    present_sw_net    = PRESENT(sw_net)
+    present_lw_net    = PRESENT(lw_net)
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG VECTOR &
@@ -93,10 +99,10 @@ CONTAINS
       ! Compute net radiation
       rad_net(ic) = zsw_net + zlw_net
 
-      IF (PRESENT(swvis_net)) swvis_net(ic) = zswvis_net
-      IF (PRESENT(swnir_net)) swnir_net(ic) = zswnir_net
-      IF (PRESENT(sw_net))    sw_net(ic)    = zsw_net
-      IF (PRESENT(lw_net))    lw_net(ic)    = zlw_net
+      IF (present_swvis_net) swvis_net(ic) = zswvis_net
+      IF (present_swnir_net) swnir_net(ic) = zswnir_net
+      IF (present_sw_net)    sw_net(ic)    = zsw_net
+      IF (present_lw_net)    lw_net(ic)    = zlw_net
 
     END DO
     !$ACC END PARALLEL
