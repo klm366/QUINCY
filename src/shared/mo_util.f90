@@ -11,7 +11,6 @@
 !! @par Revision History
 !! First version by Reiner Schnur (2014-03-17)
 !!
-
 MODULE mo_util
 #ifndef __NO_JSBACH__
 
@@ -98,9 +97,7 @@ CONTAINS
 
 
   !-----------------------------------------------------------------------------------------------------
-  !> conversion: lowercase -> uppercase
-  !!
-  !! Copied from ICON module shared/mo_util_string
+  !> ifs2soil
   !!
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE ifs2soil(ifs_3d, ifs_depth, soil_3d, soil_depth, ifs_sfc)
@@ -174,11 +171,14 @@ CONTAINS
     END DO
 
   END SUBROUTINE ifs2soil
-  !
-  !> Conversion: Lowercase -> Uppercase
-  !
-  !  Copied from ICON module shared/mo_util_string
-  !
+
+  !-----------------------------------------------------------------------------------------------------
+  !> conversion: lowercase -> uppercase
+  !! 
+  !! Copied from ICON module shared/mo_util_string
+  !! 
+  !! 
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION toupper (lowercase)
     CHARACTER(len=*), INTENT(in) :: lowercase
     CHARACTER(len=LEN_TRIM(lowercase)) :: toupper
@@ -247,11 +247,12 @@ CONTAINS
     END DO
   END FUNCTION one_of_int
 
-  !
-  ! returns integer n as a string (often needed in printing messages)
-  !
-  ! Copied from ICON module shared/mo_util_string
-  !
+  !-----------------------------------------------------------------------------------------------------
+  !> returns integer n as a string (often needed in printing messages)
+  !!
+  !! Copied from ICON module shared/mo\_util\_string
+  !!
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION int2string(n, opt_fmt)
     CHARACTER(len=:), ALLOCATABLE :: int2string ! result
     INTEGER, INTENT(in) :: n
@@ -270,6 +271,10 @@ CONTAINS
     !
   END FUNCTION int2string
 
+  !-----------------------------------------------------------------------------------------------------
+  !> returns real x as a string (often needed in printing messages)
+  !!
+  !-----------------------------------------------------------------------------------------------------
   FUNCTION real2string(x, opt_fmt)
     CHARACTER(len=:), ALLOCATABLE :: real2string ! result
     REAL(wp), INTENT(in) :: x

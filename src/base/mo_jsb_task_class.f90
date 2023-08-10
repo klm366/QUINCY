@@ -35,7 +35,7 @@ MODULE mo_jsb_task_class
   TYPE t_jsb_task_options
     REAL(wp)                  :: dtime   = -1._wp
     REAL(wp)                  :: steplen = -1._wp
-    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor
+    REAL(wp)                  :: alpha   = -1._wp !< Implicitness factor (differs between standalone and coupled simulations)
     TYPE(t_datetime), POINTER :: current_datetime
     INTEGER                   :: iblk    = -1  ! Number of current block (chunk)
     INTEGER                   :: ics     = -1  ! Index of chunk start

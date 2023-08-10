@@ -182,6 +182,10 @@ MODULE mo_rad_memory_class
       & arad_shaded_nir_cl          , & !< absorbed radiation in NIR band on shaded leaves [W m-2]
       & fleaf_sunlit_nir_cl             !< fraction of leaves that are sunlit in NIR band [unitless]
 
+    ! 3D Radiative transfer variables (appended by _sp for spectral_bands)
+    TYPE(t_jsb_var_real3d)  :: &   ! DIMENSION(nspec)
+      & canopy_reflectance_sp           !< top of the canopy directional reflectance factor [unitless]
+
   CONTAINS
     PROCEDURE :: Init => Init_rad_memory
   END TYPE t_rad_memory
@@ -241,9 +245,12 @@ CONTAINS
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
     USE mo_jsb_model_class,   ONLY: t_jsb_model
     USE mo_jsb_class,         ONLY: Get_model
+#ifdef __QUINCY_STANDALONE__
+#else
     USE mo_rad_parameters,    ONLY: AlbedoLakeWater, AlbedoLakeIceMin
     dsl4jsb_Use_processes SEB_
     dsl4jsb_Use_config(SEB_)
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_rad_memory), INTENT(inout), TARGET :: mem
     CHARACTER(len=*),    INTENT(in)            :: prefix
@@ -251,7 +258,10 @@ CONTAINS
     INTEGER,             INTENT(in)            :: lct_ids(:)
     INTEGER,             INTENT(in)            :: model_id
     ! ----------------------------------------------------------------------------------------------------- !
+#ifdef __QUINCY_STANDALONE__
+#else
     dsl4jsb_Def_config(SEB_)
+#endif
     TYPE(t_jsb_model), POINTER  :: model                        !< model
     TYPE(t_jsb_grid),  POINTER  :: hgrid                        !< Horizontal grid
     TYPE(t_jsb_vgrid), POINTER  :: surface                      !< Vertical grid
@@ -266,10 +276,15 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     vgrid_canopy => Get_vgrid('canopy_layer')
+#ifdef __QUINCY_STANDALONE__
+#else
     dsl4jsb_Get_config(SEB_)
+#endif
 
     !! !$acc enter data pcreate(mem)
 
+#ifdef __QUINCY_STANDALONE__
+#else
     CALL mem%Add_var( 'alb_background', mem%alb_background,                &
       & hgrid, surface,                                                    &
       & t_cf('surface_albedo_background', '', ''),                         &
@@ -278,6 +293,7 @@ CONTAINS
       & lrestart=.FALSE.,                                                  &
       & output_level=MEDIUM,                                               &
       & initval_r=0.0_wp, isteptype=TSTEP_CONSTANT )
+#endif
 
     ! Additional variables for soil
     IF ( (One_of(BARE_TYPE, lct_ids(:)) > 0 .OR. One_of(VEG_TYPE, lct_ids(:)) > 0 &
@@ -441,6 +457,8 @@ CONTAINS
 
     END IF ! vegetation
 
+#ifdef __QUINCY_STANDALONE__
+#else
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 ) THEN
 
@@ -482,6 +500,7 @@ CONTAINS
 
       END IF ! l_ice_on_lakes
     END IF ! lakes
+#endif
 
     CALL mem%Add_var( 'sw_srf_net', mem%sw_srf_net,                        &
       & hgrid, surface,                                                    &
@@ -643,6 +662,7 @@ CONTAINS
     TYPE(t_jsb_grid),   POINTER :: hgrid                        ! Horizontal grid
     TYPE(t_jsb_vgrid),  POINTER :: surface                      ! Vertical grid
     TYPE(t_jsb_vgrid),  POINTER :: vgrid_canopy                 ! Vertical grid
+    TYPE(t_jsb_vgrid),  POINTER :: vgrid_spectral               ! Vertical grid used to display the sprectal bands of light
     INTEGER                     :: table                        ! ...
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_memory_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -650,6 +670,9 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     vgrid_canopy => Get_vgrid('canopy_layer')
+#ifdef __QUINCY_STANDALONE__
+    vgrid_spectral => Get_vgrid('spectral_bands')
+#endif
 
     CALL mem%Add_var('sw_srf_net', mem%sw_srf_net, &
       & hgrid, surface, &
@@ -705,6 +728,7 @@ CONTAINS
       & loutput = .TRUE., &
       & lrestart = .TRUE., &
       & initval_r = 0.0_wp)
+
     CALL mem%Add_var('alb_vis', mem%alb_vis, &
       & hgrid, surface, &
       & t_cf('alb_vis', 'unitless', 'Albedo of the whole tile in the VIS (visible) range'), &
@@ -876,8 +900,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -887,8 +911,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -898,8 +922,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -909,8 +933,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -920,8 +944,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -931,8 +955,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -942,8 +966,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -953,8 +977,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -965,8 +989,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -976,8 +1000,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -987,8 +1011,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -998,8 +1022,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
   
@@ -1009,8 +1033,8 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = BASIC, &
-        & loutput = .TRUE., &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
 
@@ -1079,6 +1103,19 @@ CONTAINS
         & loutput = .TRUE., &
         & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
+
+#ifdef __QUINCY_STANDALONE__
+      CALL mem%Add_var('canopy_reflectance_sp', mem%canopy_reflectance_sp, &
+        & hgrid, vgrid_spectral, &
+        & t_cf('canopy_reflectance_sp', 'unitless', 'top of the canopy directional reflectance factor'), &
+        & t_grib1(table, 255, grib_bits), &
+        & t_grib2(255, 255, 255, grib_bits), &
+        & prefix, suffix, &
+        & output_level = FULL, &
+        & loutput = .FALSE., &
+        & lrestart = .FALSE., &
+        & initval_r = 0.0_wp)
+#endif
 
     END IF
   END SUBROUTINE Init_rad_memory_quincy

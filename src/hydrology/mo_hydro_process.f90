@@ -1918,29 +1918,29 @@ CONTAINS
     USE mo_hydro_constants,    ONLY: BrooksCorey_, ClappHornberger_, VanGenuchten_, &
       &                              Upstream_, Arithmetic_
 
-    INTEGER,  INTENT(in) :: soilhydmodel         !> Model to determine conductivites & diffusivities (KD)
-    INTEGER,  INTENT(in) :: interpol_mean        !> and how to derive values at layer interface (AVG scheme)
-    INTEGER,  INTENT(in) :: nc                   !> vector length
-    INTEGER,  INTENT(in) :: nsoil                !> number of below ground layers
-    REAL(wp), INTENT(in) :: dsoil(:,:)           !> soil depth (until bedrock) per layer
-    REAL(wp), INTENT(in) :: ws(:,:)              !> water content
-    REAL(wp), INTENT(in) :: is(:,:)              !> ice content
-    REAL(wp), INTENT(in) :: wscools(:,:)         !> potentially supercooled water
-    REAL(wp), INTENT(in) :: wsat(:,:)            !> soil depth (until bedrock) per layer
-    REAL(wp), INTENT(in) :: fc(:,:)              !> field capacity [m]
-    REAL(wp), INTENT(in) :: pwp(:,:)             !> residual water (until bedrock) per layer
-    REAL(wp), INTENT(in) :: k_sat(:,:)           !> hydraaulic conductivity
-    REAL(wp), INTENT(in) :: mpot_sat(:,:)        !> matric potential for saturated soils
-    REAL(wp), INTENT(in) :: bclapp(:,:)          !> clapp & Hornberger exponent
-    REAL(wp), INTENT(in) :: ps_index(:,:)        !> Pore size index
-    REAL(wp), INTENT(in),  OPTIONAL :: dt                 !> time step length
-    INTEGER,  INTENT(in),  OPTIONAL :: nsoil_act(:)       !> index of deepest soil layers (above bedrock)
-    REAL(wp), INTENT(out), OPTIONAL :: ice_impedance(:,:) !> Impedance factor to account for ice blocking flowpaths
-    REAL(wp), INTENT(out), OPTIONAL :: K(:,:)             !> hydraulic condctivity of the soil layer [m]
-    REAL(wp), INTENT(out), OPTIONAL :: D(:,:)             !> diffusivity of the soil layer [m]
-    REAL(wp), INTENT(out), OPTIONAL :: K_inter(:,:)       !> hydraulic condctivity at (upper) layer interface [m]
-    REAL(wp), INTENT(out), OPTIONAL :: D_inter(:,:)       !> diffusivity at (upper) layer interface [m]
-    REAL(wp), INTENT(out), OPTIONAL :: mpot_act(:,:)      !> matric potential at actual soil state
+    INTEGER,  INTENT(in) :: soilhydmodel         !< Model to determine conductivites & diffusivities (KD)
+    INTEGER,  INTENT(in) :: interpol_mean        !< and how to derive values at layer interface (AVG scheme)
+    INTEGER,  INTENT(in) :: nc                   !< vector length
+    INTEGER,  INTENT(in) :: nsoil                !< number of below ground layers
+    REAL(wp), INTENT(in) :: dsoil(:,:)           !< soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in) :: ws(:,:)              !< water content
+    REAL(wp), INTENT(in) :: is(:,:)              !< ice content
+    REAL(wp), INTENT(in) :: wscools(:,:)         !< potentially supercooled water
+    REAL(wp), INTENT(in) :: wsat(:,:)            !< soil depth (until bedrock) per layer
+    REAL(wp), INTENT(in) :: fc(:,:)              !< field capacity [m]
+    REAL(wp), INTENT(in) :: pwp(:,:)             !< residual water (until bedrock) per layer
+    REAL(wp), INTENT(in) :: k_sat(:,:)           !< hydraaulic conductivity
+    REAL(wp), INTENT(in) :: mpot_sat(:,:)        !< matric potential for saturated soils
+    REAL(wp), INTENT(in) :: bclapp(:,:)          !< clapp & Hornberger exponent
+    REAL(wp), INTENT(in) :: ps_index(:,:)        !< Pore size index
+    REAL(wp), INTENT(in),  OPTIONAL :: dt                 !< time step length
+    INTEGER,  INTENT(in),  OPTIONAL :: nsoil_act(:)       !< index of deepest soil layers (above bedrock)
+    REAL(wp), INTENT(out), OPTIONAL :: ice_impedance(:,:) !< Impedance factor to account for ice blocking flowpaths
+    REAL(wp), INTENT(out), OPTIONAL :: K(:,:)             !< hydraulic condctivity of the soil layer [m]
+    REAL(wp), INTENT(out), OPTIONAL :: D(:,:)             !< diffusivity of the soil layer [m]
+    REAL(wp), INTENT(out), OPTIONAL :: K_inter(:,:)       !< hydraulic condctivity at (upper) layer interface [m]
+    REAL(wp), INTENT(out), OPTIONAL :: D_inter(:,:)       !< diffusivity at (upper) layer interface [m]
+    REAL(wp), INTENT(out), OPTIONAL :: mpot_act(:,:)      !< matric potential at actual soil state
 
     ! local variables
     INTEGER  :: i,j ! cell index and soil layer index

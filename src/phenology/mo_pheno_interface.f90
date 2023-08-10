@@ -17,43 +17,37 @@
 MODULE mo_pheno_interface
 #ifndef __NO_JSBACH__
 
-  ! -------------------------------------------------------------------------------------------------------
-  ! Used variables of module
-
-  ! Use of basic structures
-  USE mo_jsb_control,     ONLY: debug_on
-  USE mo_kind,            ONLY: wp
-  USE mo_exception,       ONLY: message, finish
-
+  USE mo_jsb_control,        ONLY: debug_on
+  USE mo_kind,               ONLY: wp
+  USE mo_exception,          ONLY: message, finish
   USE mo_jsb_model_class,    ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_class,          ONLY: Get_model
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
-  ! Use of processes in this module (USE mo_jsb_process_class, ONLY: )
-  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, PHENO_, CARBON_, VEG_
-
-  ! Use of process configurations (t_<process>_config)
+  dsl4jsb_Use_processes PHENO_, VEG_
   dsl4jsb_Use_config(PHENO_)
-
-  ! Use of process memories (t_<process>_memory)
+  dsl4jsb_Use_memory(PHENO_)
+  dsl4jsb_Use_memory(VEG_)
+#ifdef __QUINCY_STANDALONE__
+#else
+  dsl4jsb_Use_processes SEB_, A2L_, HYDRO_, ASSIMI_, CARBON_
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
   dsl4jsb_Use_memory(HYDRO_)
-  dsl4jsb_Use_memory(PHENO_)
   dsl4jsb_Use_memory(ASSIMI_)
   dsl4jsb_Use_memory(CARBON_)
-  dsl4jsb_Use_memory(VEG_)
-
-  ! -------------------------------------------------------------------------------------------------------
-  ! Module variables
+#endif
 
   IMPLICIT NONE
   PRIVATE
-  PUBLIC :: Register_pheno_tasks, global_phenology_diagnostics, merge_pheno_variables_upon_ageing
-
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
+  PUBLIC :: Register_pheno_tasks
+  PUBLIC :: update_phenology
+#ifdef __QUINCY_STANDALONE__
+#else
+  PUBLIC :: global_phenology_diagnostics, merge_pheno_variables_upon_ageing
+#endif
 
   ! ======================================================================================================= !
   !> Type definition for the phenology task
@@ -85,6 +79,8 @@ MODULE mo_pheno_interface
   INTERFACE tsk_foliage_projected_cover
     PROCEDURE Create_task_foliage_projected_cover
   END INTERFACE tsk_foliage_projected_cover
+
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
 
 CONTAINS
 
@@ -731,7 +727,10 @@ CONTAINS
   SUBROUTINE aggregate_phenology(tile, options)
     USE mo_jsb_model_class,   ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
     USE mo_jsb_class,         ONLY: Get_model
+#ifdef __QUINCY_STANDALONE__
+#else
     USE mo_jsb_time,          ONLY: is_newyear
+#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
@@ -757,7 +756,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_memory(PHENO_)
-    ! dsl4jsb_Get_memory(VEG_) <- get it in the QUINCY-specific code-part (as VEG_ is not available in JSBACH)
 
     ! call aggregate for different variables depending on the model
     SELECT CASE (model%config%model_scheme)
@@ -765,6 +763,8 @@ CONTAINS
     !>JSBACH
     !>
     CASE (MODEL_JSBACH)
+#ifdef __QUINCY_STANDALONE__
+#else
       dsl4jsb_Aggregate_onChunk(PHENO_, lai,           weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(PHENO_, lai_ta,        weighted_by_fract)
       dsl4jsb_Aggregate_onChunk(PHENO_, fract_fpc_max, weighted_by_fract)
@@ -779,9 +779,9 @@ CONTAINS
           ! and other processes (NPP alloc of carbon) aggregate them
         ENDIF
       ENDIF
-
       !X Implementation: Start your process scheme here...
       !R: Das ist ein Provisorium bisher. Es muss noch festgelegt werden ob u. wie die einzeln. pheno Tasks aggregiert werden sollen.
+#endif
 
     ! ----------------------------------------------------------------------------------------------------- !
     !>QUINCY

@@ -41,6 +41,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: use_glacier
     LOGICAL                        :: enforce_water_budget
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
+    INTEGER                        :: qmodel_id           !< defines the applied model configuration (quincy_model_name)
     CHARACTER(len=SHORT_NAME_LEN)  :: tpe_scheme          !< For terraplanet setup: open/closed
     CHARACTER(len=SHORT_NAME_LEN)  :: hsm_mode
     LOGICAL                        :: l_compat401         !< Use configuration compatible with jsbach 4.01
@@ -55,6 +56,7 @@ MODULE mo_jsb_config_class
     LOGICAL                        :: include_nitrogen15    !< If bgc materials contain C15 as element
     INTEGER                        :: nr_of_used_elements   !< for bookkeeping: number of actually used elements
     INTEGER, ALLOCATABLE           :: elements_index_map(:) !< vector for ID -> IDX mapping of the elements
+    LOGICAL, ALLOCATABLE           :: is_element_used(:)    !< vector(ID) == .TRUE. if "element with ID" is used
 
     ! quincy @TODO temporary solution for model%config%options
     REAL(wp)          :: dtime                   !< length of one time step in seconds; defaults to 1800  @TODO
@@ -97,8 +99,9 @@ CONTAINS
 
   FUNCTION new_model_config(namelist_filename) RESULT(model_config)
 
-    USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_util_string,        ONLY: tolower
+    USE mo_jsb_namelist_iface,  ONLY: open_nml, POSITIONED, position_nml, close_nml
+    USE mo_util_string,         ONLY: tolower
+    USE mo_quincy_model_config, ONLY: QLAND, Get_quincy_model_config_id
 
     CHARACTER(len=*),         INTENT(in) :: namelist_filename
     TYPE(t_jsb_model_config), POINTER    :: model_config
@@ -117,6 +120,7 @@ CONTAINS
     LOGICAL                       :: use_glacier
     LOGICAL                       :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
+    INTEGER                       :: qmodel_id
     LOGICAL                       :: l_compat401
     CHARACTER(len=filename_max)   :: fract_filename
     CHARACTER(len=40)             :: usecase
@@ -180,6 +184,7 @@ CONTAINS
     use_glacier                = .TRUE.
     enforce_water_budget       = .TRUE.
     quincy_model               = 'land'
+    qmodel_id                  = QLAND
     l_compat401                = .FALSE.
     grid_filename              = ''
     grid_name                  = ''
@@ -238,6 +243,7 @@ CONTAINS
     model_config%use_glacier                = use_glacier
     model_config%enforce_water_budget       = enforce_water_budget
     model_config%quincy_model               = TRIM(quincy_model)
+    model_config%qmodel_id                  = qmodel_id
     model_config%l_compat401                = l_compat401
     model_config%usecase                    = usecase
     model_config%tpe_scheme                 = tpe_scheme
@@ -257,6 +263,13 @@ CONTAINS
     ELSE
       CALL message(TRIM(routine), 'WARNING: Model will not stop due to any land water balance violation.')
     END IF
+
+    ! set the model configuration id
+#ifdef __QUINCY_STANDALONE__
+    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model_name)
+#else
+    model_config%qmodel_id = Get_quincy_model_config_id(model_config%quincy_model)
+#endif
 
     ! quincy - temporary solution @TODO
     model_config%dtime                        = 1800.0_wp   ! length of one time step in seconds
@@ -281,7 +294,6 @@ CONTAINS
 
   END FUNCTION new_model_config
 
-
   ! ======================================================================================================= !
   !>
   !> Uses the element flags to setup the element map and to identify the number of used elements
@@ -294,9 +306,12 @@ CONTAINS
     CHARACTER(len=*),            INTENT(IN) :: caller  !< calling routine
     ! -------------------------------------------------------------------------------------------------- !
     ! allocate map with size "number of element IDs defined in mo_lnd_bgcm_class"
-    ALLOCATE(config%elements_index_map(LAST_ELEM_ID - 1))
+    ALLOCATE(config%elements_index_map(LAST_ELEM_ID))
     config%elements_index_map(:) = -1  ! set all IND to '-1' by default, -1 for "element not used"
     config%nr_of_used_elements = 0     ! init for use in setup_element
+    ! allocate vector with info about whether the element is used
+    ALLOCATE(config%is_element_used(LAST_ELEM_ID))
+    config%is_element_used(:) = .FALSE. ! set all elements to "not used" by default
     ! information for logfile
     CALL message(TRIM(caller), 'Mapping of element ID -> IND:')
 
@@ -313,10 +328,9 @@ CONTAINS
     CALL setup_element(config, config%include_carbon14, ELEM_C14_ID, 'C14', caller)
     ! nitrogen15
     CALL setup_element(config, config%include_nitrogen15, ELEM_N15_ID, 'N15', caller)
-
+    
   END SUBROUTINE setup_element_index_map_in_config
-
-
+  
   ! ======================================================================================================= !
   !>
   !> Small helper to setup a given element according to its given flag
@@ -329,16 +343,19 @@ CONTAINS
     CHARACTER(len=*),            INTENT(IN) :: short_name   !< a short name for the element
     CHARACTER(len=*),            INTENT(IN) :: caller       !< calling routine
     ! -------------------------------------------------------------------------------------------------- !
+    ! information for logfile
+    CALL message(TRIM(caller), 'Setup element:')
+    
     IF (elem_flag) THEN
-      config%nr_of_used_elements = config%nr_of_used_elements + 1
+      config%nr_of_used_elements         = config%nr_of_used_elements + 1
       config%elements_index_map(elem_id) = config%nr_of_used_elements
+      config%is_element_used(elem_id)    = .TRUE.
     END IF
 
     WRITE (message_text,*) elem_id, " -> ", config%elements_index_map(elem_id)
     CALL message(TRIM(short_name), TRIM(message_text))
 
   END SUBROUTINE setup_element
-
 
 #endif
 END MODULE mo_jsb_config_class

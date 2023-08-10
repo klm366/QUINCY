@@ -24,6 +24,11 @@ MODULE mo_q_rad_interface
   USE mo_jsb_process_class,   ONLY: t_jsb_process
   USE mo_jsb_task_class,      ONLY: t_jsb_process_task, t_jsb_task_options
 
+  USE mo_lnd_bgcm_idx
+  USE mo_lnd_bgcm_store,          ONLY: t_lnd_bgcm_store
+  USE mo_lnd_bgcm_store_class,    ONLY: VEG_BGCM_POOL_ID
+
+
   dsl4jsb_Use_processes RAD_, VEG_, A2L_, PHENO_
   dsl4jsb_Use_memory(RAD_)
   dsl4jsb_Use_memory(VEG_)
@@ -34,6 +39,9 @@ MODULE mo_q_rad_interface
   PRIVATE
 
   PUBLIC :: Register_rad_tasks_quincy
+#ifdef __QUINCY_STANDALONE__
+  PUBLIC :: update_time_average_radiation_quincy
+#endif
 
   ! ======================================================================================================= !
   !> radiation_quincy
@@ -162,6 +170,8 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir                   , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_soil              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_soil              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_snow              , weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_snow              , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_vis_can               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, alb_nir_can               , weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(RAD_, arad_vis_soil             , weighted_by_fract)
@@ -191,9 +201,7 @@ CONTAINS
   !> calculate time moving averages and daytime averages for RAD_
   !>
   SUBROUTINE update_time_average_radiation_quincy(tile, options)
-#ifdef __QUINCY_STANDALONE__
-#include "dsl_jsbach.inc"
-#endif
+
     USE mo_kind,                    ONLY: wp
     USE mo_jsb_math_constants,      ONLY: eps8
     USE mo_jsb_impl_constants,      ONLY: test_false_true
@@ -210,17 +218,13 @@ CONTAINS
     dsl4jsb_Use_memory(VEG_)
     dsl4jsb_Use_memory(RAD_)
     dsl4jsb_Use_memory(PHENO_)
-#ifdef __QUINCY_STANDALONE__
-    dsl4slm_Use_memory_a_veg
-    USE mo_veg_memory_class,    ONLY: veg_pool
-#else
-    dsl4jsb_Use_pools(VEG_) t_veg_tissues_pool
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
     ! ----------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_vgrid),      POINTER         :: vgrid_canopy         !< Vertical grid
+    TYPE(t_jsb_model),      POINTER         :: model
+    TYPE(t_lnd_bgcm_store), POINTER         :: bgcm_store           !< the bgcm store of this tile
     LOGICAL,  DIMENSION(options%nc)         :: l_growing_season     !< growing_season LOGICAL
     LOGICAL,  ALLOCATABLE, DIMENSION(:,:)   :: l_growing_season_cl  !< growing_season LOGICAL, at vgrid_canopy
     INTEGER                                 :: icanopy              !< looping
@@ -228,14 +232,12 @@ CONTAINS
     INTEGER                                 :: iblk, ic, ics, ice, nc   !< dimensions, looping
     CHARACTER(len=*), PARAMETER             :: routine = modname//':update_time_average_radiation_quincy'
     ! ----------------------------------------------------------------------------------------------------- !
+    dsl4jsb_Def_mt2L2D :: veg_pool_mt
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(VEG_)
     dsl4jsb_Def_memory(RAD_)
     dsl4jsb_Def_memory(PHENO_)
-#ifdef __QUINCY_STANDALONE__
-#else
-    dsl4jsb_Def_pool(t_veg_tissues_pool)    :: veg_pool
-#endif
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Real2D_onChunk      :: swpar_srf_down
@@ -266,27 +268,21 @@ CONTAINS
     nc      = options%nc
     ! ----------------------------------------------------------------------------------------------------- !
     IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
-    IF (tile%lcts(1)%lib_id == 0)           RETURN  ! only if the present tile is a pft
+    IF (tile%lcts(1)%lib_id == 0)               RETURN  ! only if the present tile is a pft
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! ----------------------------------------------------------------------------------------------------- !
-#ifdef __QUINCY_STANDALONE__
+    model         => Get_model(tile%owner_model_id)
     vgrid_canopy  => Get_vgrid('canopy_layer')
-#else
-    vgrid_canopy  => Get_vgrid('canopy_layer')
-#endif
     ncanopy       =  vgrid_canopy%n_levels
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(RAD_)
     dsl4jsb_Get_memory(PHENO_)
-#ifdef __QUINCY_STANDALONE__
-#else
-    ! Get pools
-    dsl4jsb_Get_pool(VEG_, veg_main_pool%veg_pool,            veg_pool)
-    ! associate element-variables with chunk
-    CALL veg_pool%Associate_chunk_var_ptr(ics, ice, iblk)
-#endif
+
     ALLOCATE(l_growing_season_cl(nc, ncanopy))
+
+    bgcm_store => tile%bgcm_store
+    dsl4jsb_Get_mt2L2D(VEG_BGCM_POOL_ID, veg_pool_mt)
     ! ----------------------------------------------------------------------------------------------------- !
     ! A2L_
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)                 ! in 
@@ -311,13 +307,8 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_shaded_tfrac_mavg_cl)      ! inout 
     dsl4jsb_Get_var3D_onChunk(RAD_, ppfd_sunlit_tfrac_mavg_cl)      ! inout 
     ! ----------------------------------------------------------------------------------------------------- !
-#ifdef __QUINCY_STANDALONE__
-#define Get_veg_pool
-#include "slm_pools_a_incl.f90"
-#undef Get_veg_pool
-#endif
 
-    !> 0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
+    !>0.9 transform REAL growing_season(:) into LOGICAL l_growing_season(:)/_cl(:,:)
     !>
     DO ic = 1, nc
       IF (growing_season(ic) > test_false_true) THEN
@@ -330,11 +321,11 @@ CONTAINS
     END DO
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 1.0 daytime averages
+    !>1.0 daytime averages
     !>
     !>
     
-    !>   1.1 accumulate values - if light is available (i.e. daytime)
+    !>  1.1 accumulate values - if light is available (i.e. daytime)
     !>
     DO ic = 1, nc
       IF (swpar_srf_down(ic) > eps8) THEN
@@ -348,7 +339,7 @@ CONTAINS
       END IF
     END DO
 
-    !>   1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
+    !>  1.2 calc daytime averages - at the timestep after local midnight (1st timestep of the new day)
     !>
     !>    calculate the average of the previous day and pass this value to the according variable
     !> 
@@ -374,7 +365,7 @@ CONTAINS
     END DO
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 2.0 moving averages
+    !>2.0 moving averages
     !>
     !>
 
@@ -384,31 +375,24 @@ CONTAINS
     !                RETURN(new current average)
     ! the unit of the averaging period is 'day' by default, but can also be 'week' or 'year'
     
-    !>   2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
+    !>  2.1 tfrac (averages at the time-scale of within-leaf N allocation fractions)
     !> 
     ppfd_sunlit_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_sunlit_tfrac_mavg_cl(:,:), ppfd_sunlit_daytime_cl(:,:), &
                                                     mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
     ppfd_shaded_tfrac_mavg_cl(:,:) = calc_time_mavg(ppfd_shaded_tfrac_mavg_cl(:,:), ppfd_shaded_daytime_cl(:,:), &
                                                     mavg_period_tfrac, do_calc=l_growing_season_cl(:,:))
 
-    !>   2.2 tcnl (averages at the time-scale of leaf N allocation fractions)
+    !>  2.2 tcnl (averages at the time-scale of leaf N allocation fractions)
     !>
     ppfd_sunlit_tcnl_mavg_cl(:,:) = calc_time_mavg(ppfd_sunlit_tcnl_mavg_cl(:,:), ppfd_sunlit_cl(:,:), &
                                                     mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
     ppfd_shaded_tcnl_mavg_cl(:,:) = calc_time_mavg(ppfd_shaded_tcnl_mavg_cl(:,:), ppfd_shaded_cl(:,:), &
                                                     mavg_period_tcnl, do_calc=l_growing_season_cl(:,:))
 
-    !>   2.3 tvegdyn (averages at the vegetation dynamics time-scale)
+    !>  2.3 tvegdyn (averages at the vegetation dynamics time-scale)
     !! 
     rfr_ratio_boc_tvegdyn_mavg(:) = calc_time_mavg(rfr_ratio_boc_tvegdyn_mavg(:), rfr_ratio_boc(:), &
-                                                    mavg_period_tvegdyn, do_calc=(veg_pool%leaf%carbon(:) > eps8))
-
-! not needed, because veg_pool not modified:
-! #ifdef __QUINCY_STANDALONE__
-! #define Passback_veg_pool
-! #include "slm_pools_a_incl.f90"
-! #undef Passback_veg_pool
-! #endif
+      &                               mavg_period_tvegdyn, do_calc=(veg_pool_mt(ix_leaf,ixC,:) > eps8))
 
     IF (debug_on() .AND. options%iblk==1) CALL message(routine, 'Finished.')
   END SUBROUTINE update_time_average_radiation_quincy

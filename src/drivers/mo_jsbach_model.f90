@@ -28,6 +28,8 @@ MODULE mo_jsbach_model
     &                     timer_model_init, print_timer,                        &
     &                     timer_domain_decomp, timer_compute_coeffs,            &
     &                     timer_read_restart, timer_total
+  USE mo_jsb_model_class, ONLY: t_jsb_model
+  USE mo_jsb_class,       ONLY: get_model
 
   IMPLICIT NONE
 
@@ -85,8 +87,8 @@ CONTAINS
     USE mo_jsb_model_init,          ONLY: jsbach_setup_grid, jsbach_init, jsbach_init_after_restart
     USE mo_jsb_model_final,         ONLY: jsbach_finalize
     USE mo_jsb_version,             ONLY: jsbach_label_run
-    USE mo_jsb_control,             ONLY: force_from_observations
-    USE mo_jsb4_forcing,            ONLY: init_forcing, finalize_external_forcing
+    USE mo_jsb_control,             ONLY: get_no_of_models, force_from_observations
+    USE mo_jsb4_forcing,            ONLY: setup_forcing, init_forcing, finalize_external_forcing
 
     USE mo_build_decomposition,     ONLY: build_decomposition
 
@@ -141,11 +143,12 @@ CONTAINS
 
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
+    TYPE(t_jsb_model), POINTER   :: model
 
     TYPE(t_key_value_store),      POINTER :: restartAttributes
     CLASS(t_RestartDescriptor),   POINTER :: restartDescriptor
     INTEGER :: jstep0, jstep, dedicatedRestartProcs
-    INTEGER :: jg, nblks  !, jgp
+    INTEGER :: no_models, jg
     INTEGER :: i
     CHARACTER(len=MAX_MTIME_ERROR_STR_LEN) :: errstring
     INTEGER                                :: error_status
@@ -183,6 +186,8 @@ CONTAINS
     CALL message('', '')
     CALL message('Namelist files', TRIM(jsb_namelist_filename) // ', ' // TRIM(shr_namelist_filename))
     CALL message('', '')
+
+    IF (n_dom > 1) CALL finish(routine, 'Only one atmospheric domain allowed')
 
     iequations = inh_atmosphere
 
@@ -274,6 +279,7 @@ CONTAINS
     ! adds its zaxes to zaxisTypeList
     !-------------------------------------------------------------------
     CALL jsbach_setup_models(shr_namelist_filename)
+    no_models = get_no_of_models()
 
     !-------------------------------------------------------------------
     ! 3.3 I/O initialization
@@ -297,7 +303,8 @@ CONTAINS
     IF (timers_level > 4) CALL timer_start(timer_domain_decomp)
     CALL build_decomposition(num_lev, nshift, is_ocean_decomposition = .false.)
     IF (timers_level > 4) CALL timer_stop(timer_domain_decomp)
-    nblks  = p_patch(1)%nblks_c
+
+    p_patch(:)%ldom_active = .TRUE.
 
     !--------------------------------------------------------------------------------
     ! 5. Construct interpolation state, compute interpolation coefficients.
@@ -318,20 +325,6 @@ CONTAINS
       CALL finish(routine, 'allocation for ptr_int_state failed')
     ENDIF
 
-    ! ALLOCATE( p_int_state_local_parent(n_dom_start+1:n_dom), &
-    !   &       STAT=error_status)
-    ! IF (error_status /= SUCCESS) &
-    !   CALL finish(routine, 'allocation for local parents failed')
-
-    ! Construct interpolation state
-    ! Please note that for parallel runs the divided state is constructed here
-    ! CALL construct_2d_interpol_state(p_patch, p_int_state)
-
-    ! Transfer interpolation state to local parent
-    ! jgp = p_patch(1)%parent_id
-    ! CALL transfer_interpol_state(p_patch(jgp),p_patch_local_parent(1), &
-    !   &  p_int_state(jgp), p_int_state_local_parent(1))
-
     !-------------------------------------------------------------------
     ! Initialize icon_comm_lib
     !-------------------------------------------------------------------
@@ -350,12 +343,15 @@ CONTAINS
 
     CALL init_convect_tables ! necessary for FUNCTION qsat
 
-    CALL jsbach_setup_grid( 1, p_patch(1), type='icon') !< in
-    CALL jsbach_setup_tiles(1)
-    CALL jsbach_init(1)
+    IF (force_from_observations()) CALL setup_forcing(no_models)
+    DO jg=1,no_models
+      model => Get_model(jg)
+      CALL jsbach_setup_grid(jg, p_patch(jg), type='icon')
+      CALL jsbach_setup_tiles(jg)
+      CALL jsbach_init(jg)
+      IF (force_from_observations()) CALL init_forcing(jg, model%namelist_filename, dtime, dtime)
+    END DO
     CALL jsbach_label_run(.TRUE.)
-
-    IF (force_from_observations()) CALL init_forcing(1, dtime, dtime)
 
     IF (isRestart()) THEN
       !
@@ -363,13 +359,18 @@ CONTAINS
       !
       IF (timers_level > 4) CALL timer_start(timer_read_restart)
       !
-      CALL read_restart_files( p_patch(1), n_dom)
-      !
+      DO jg = 1,n_dom
+        IF (p_patch(jg)%ldom_active) THEN
+          CALL read_restart_files( p_patch(jg), n_dom)
+        END IF
+      END DO      !
       CALL message(TRIM(routine),'normal exit from read_restart_files')
       !
       IF (timers_level > 4) CALL timer_stop(timer_read_restart)
       !
-      CALL jsbach_init_after_restart(1)
+      DO jg=1,no_models
+        CALL jsbach_init_after_restart(jg)
+      END DO
 
     END IF
 
@@ -415,7 +416,11 @@ CONTAINS
     !-------------------------------------------------------!
     !  (Optional) detailed print-out of some variable info  !
     !-------------------------------------------------------!
-    IF (my_process_is_stdio() .AND. (msg_level >= 15)) CALL vlr_print_groups(idom=1)
+    IF (my_process_is_stdio() .AND. (msg_level >= 15)) THEN
+      DO jg=1,n_dom
+        CALL vlr_print_groups(idom=jg)
+      END DO
+    END IF
 
     IF (timers_level > 1) CALL timer_stop(timer_model_init)
 
@@ -566,7 +571,9 @@ CONTAINS
       ! set namelist output flag
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
 
-      CALL perform_jsbach_for_timestep(dtime, mtime_current)
+      DO jg=1,no_models
+        CALL perform_jsbach_for_timestep(jg, p_patch(jg)%nblks_c, dtime, mtime_current)
+      END DO
 
       ! update accumlated values
       CALL update_statistics
@@ -599,7 +606,7 @@ CONTAINS
 
         IF ( &
               !  if normal checkpoint or restart cycle has been reached, i.e. checkpoint+model stop
-              &         (l_isRestart .OR. l_isCheckpoint)           &
+              &         (l_isRestart .OR. l_isCheckpoint)                     &
               &  .AND.                                                        &
               !  and the current date differs from the start date
               &        .NOT. l_isStartdate                                    &
@@ -612,15 +619,10 @@ CONTAINS
       END IF
 
       IF (lwrite_checkpoint) THEN
-
-        ! For multifile restart (restart_write_mode = "joint procs multifile")
-        ! the domain flag must be set to .TRUE. in order to activate the domain,
-        ! even though we have one currently in the ocean. Without this the
-        ! processes won't write out their data into a the patch restart files.
-        p_patch(1)%ldom_active = .TRUE.
-        !
-        CALL restartDescriptor%updatePatch(p_patch(1), opt_ndom=1)
-
+        DO jg=1,n_dom
+          CALL restartDescriptor%updatePatch(p_patch(jg), opt_ndom=n_dom)
+        END DO
+ 
         ! finally write restart file
         CALL restartDescriptor%writeRestart(mtime_current, jstep, opt_output_jfile = output_jfile)
       END IF  ! lwrite_checkpoint
@@ -650,10 +652,6 @@ CONTAINS
 
     ! TODO CALL deallocateDatetime(mtime_forcing)
     CALL deallocateDatetime(mtime_old)
-    ! TODO CALL deallocateDatetime(mtime_old_jsb)
-
-    ! print performance timers:
-    IF (ltimer) CALL print_timer
 
     ! Deallocate global registry for lon-lat grids
     CALL lonlat_grids%finalize()
@@ -663,8 +661,6 @@ CONTAINS
 
     ! Deallocate grid patches
     CALL destruct_patches( p_patch )
-    ! CALL destruct_patches( p_patch_local_parent )
-    IF (msg_level>5) CALL message(routine, 'destruct_patches is done')
 
     DEALLOCATE( p_patch, STAT=error_status )
     IF (error_status/=SUCCESS) THEN
@@ -676,7 +672,8 @@ CONTAINS
 
     CALL destruct_icon_communication()
 
-    CALL finalize_external_forcing()
+    CALL finalize_external_forcing(no_models)
+
     CALL jsbach_finalize()
 
     ! Delete variable lists
@@ -695,15 +692,17 @@ CONTAINS
 
     CALL message(routine, 'clean-up finished')
 
+    ! print performance timers:
+    IF (ltimer) CALL print_timer
+
   END SUBROUTINE jsbach_model
 
-  SUBROUTINE perform_jsbach_for_timestep(dtime, datetime_new)
+  SUBROUTINE perform_jsbach_for_timestep(model_id, nblks, dtime, datetime_new)
 
     USE mo_jsb_control,               ONLY: jsbach_is_restarted, force_from_observations, &
       &                                     debug_on, timer_on, l_timer_host, timer_jsbach, timer_forcing
     USE mo_jsb_time,                  ONLY: is_time_experiment_start, is_time_restart
-    USE mo_jsb_model_class,           ONLY: t_jsb_model, MODEL_QUINCY
-    USE mo_jsb_class,                 ONLY: get_model
+    USE mo_jsb_model_class,           ONLY: MODEL_QUINCY
     USE mo_jsb_grid,                  ONLY: Get_grid
     USE mo_jsb_grid_class,            ONLY: t_jsb_grid
     USE mo_jsb_tile_class,            ONLY: t_jsb_tile_abstract
@@ -721,6 +720,8 @@ CONTAINS
     dsl4jsb_Use_memory(TURB_)
     dsl4jsb_Use_memory(HYDRO_)
 
+    INTEGER,                INTENT(in)            :: model_id
+    INTEGER,                INTENT(in)            :: nblks
     REAL(wp)              , INTENT(in)            :: dtime          !< time step
     TYPE(datetime)        , POINTER               :: datetime_new   !< date and time at the end of this time step
 
@@ -730,10 +731,10 @@ CONTAINS
     TYPE(datetime)          , POINTER    :: datetime_old_old !< date and time one time step before datetime_old
     TYPE(datetime)          , POINTER    :: datetime_forcing
 
-    INTEGER  :: nproma, npromz, nblks
-    INTEGER  :: iblk        !< index of block loop
-    INTEGER  :: ibs, ibe    !< start and end indices of block   loop
-    INTEGER  :: ics, ice    !< start and end indices of columns loop
+    INTEGER  :: nproma
+    INTEGER  :: iblk                           !< index of block loop
+    INTEGER  :: startblk, endblk               !< start and end indices of block   loop
+    INTEGER  :: startidx(nblks), endidx(nblks) !< start and end indices of columns loop
 
     TYPE(t_jsb_model), POINTER           :: model
     TYPE(t_jsb_grid),  POINTER           :: grid       ! Horizontal grid
@@ -777,8 +778,7 @@ CONTAINS
     LOGICAL :: l_shift_one_timestep    = .TRUE.
     LOGICAL :: l_first_step_in_restart = .FALSE.
 
-    INTEGER :: nc, nt, it, ic
-    INTEGER :: no_omp_thread
+    INTEGER :: nc, nt, it, ics, ice
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':perform_jsbach_for_timestep'
 
@@ -805,9 +805,9 @@ CONTAINS
 
     datetime_forcing => newDatetime(datetime_old)
     IF (l_first_forcing_file) THEN
-      IF (forcing_options%forcing_steps_per_day == 1  .AND. .NOT. l_force_from_obs ) THEN
+      IF (forcing_options(model_id)%forcing_steps_per_day == 1  .AND. .NOT. l_force_from_obs ) THEN
         ! Go to next time step of next file
-        CALL getPTStringFromSeconds(forcing_options%forcing_synchron_factor * dtime, dtime_string)
+        CALL getPTStringFromSeconds(forcing_options(model_id)%forcing_synchron_factor * dtime, dtime_string)
         dtime_mtime  => newTimedelta(dtime_string)
         datetime_forcing  =  datetime_forcing + dtime_mtime
         CALL deallocateTimedelta(dtime_mtime)
@@ -818,13 +818,19 @@ CONTAINS
       END IF
     END IF
 
-    CALL jsbach_start_timestep(1, datetime_old, dtime)
+    CALL jsbach_start_timestep(model_id, datetime_old, dtime)
 
-    model => get_model(1)
+    model => get_model(model_id)
     grid  => get_grid(model%grid_id)
     nproma = grid%Get_nproma()
-    npromz = grid%Get_npromz()
-    nblks  = grid%Get_nblks()
+
+    startblk = grid%Get_blk_start()
+    endblk   = grid%Get_blk_end()
+    DO iblk = startblk, endblk
+      startidx(iblk) = grid%Get_col_start(iblk)
+      endidx  (iblk) = grid%Get_col_end(iblk)
+    END DO
+
 
     CALL model%Get_top_tile(tile)
     IF (tile%contains_lake) THEN
@@ -898,8 +904,9 @@ CONTAINS
       IF (model%config%use_lakes) THEN
         CALL get_interface_variables_from_external_forcing( &
           ! in
-          & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
-          & evapo_act2pot,                                                             &
+          & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
+          & .TRUE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                         &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
           & t_land_tile(:,:),                                                          &
           & fact_q_air_land_tile(:,:),                                                 &
           & fact_qsat_srf_land_tile(:,:),                                              &
@@ -946,8 +953,9 @@ CONTAINS
       ELSE
         CALL get_interface_variables_from_external_forcing( &
           ! in
-          & 1, 1, nproma, npromz, nblks, datetime_old, datetime_new, sinlat, coslat, lon,  &
-          & evapo_act2pot,                                                             &
+          & model_id, startblk, endblk, startidx, endidx, datetime_old, datetime_new,  &
+          & .FALSE., dsl4jsb_var2D_onDomain(HYDRO_, elevation),                        &
+          & sinlat, coslat, lon, evapo_act2pot,                                        &
           & dsl4jsb_var2D_onDomain(SEB_,  t),                                          &
           & dsl4jsb_var2D_onDomain(TURB_, fact_q_air),                                 &
           & dsl4jsb_var2D_onDomain(TURB_, fact_qsat_srf),                              &
@@ -1017,20 +1025,15 @@ CONTAINS
     END IF
 
 
-    ibs = grid%Get_blk_start()
-    ibe = grid%Get_blk_end()
+!$OMP PARALLEL DO PRIVATE(iblk,ics,ice,nc) IF(nblks > 1)
+    DO iblk = startblk, endblk
 
-!$OMP PARALLEL DO PRIVATE(iblk,ics,ice,nc)
-    DO iblk = ibs,ibe
-
-      ics = grid%Get_col_start(iblk)
-      ice = grid%Get_col_end(iblk)
+      ics = startidx(iblk)
+      ice = endidx  (iblk)
 
       IF (ics > ice) CYCLE
 
       IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model%id))
-
-      no_omp_thread = Get_omp_thread()
 
       nc = ice - ics + 1
 
@@ -1058,7 +1061,7 @@ CONTAINS
     END DO
 !$OMP END PARALLEL DO
 
-    CALL jsbach_finish_timestep(1, datetime_old, dtime)
+    CALL jsbach_finish_timestep(model_id, datetime_old, dtime)
 
     CALL deallocateDatetime(datetime_old)
     CALL deallocateDatetime(datetime_old_old)

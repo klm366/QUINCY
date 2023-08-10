@@ -178,6 +178,8 @@ CONTAINS
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_model_class,     ONLY: t_jsb_model, print_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
+    USE mo_jsb_grid,            ONLY: Get_grid
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, &
       &                               t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
@@ -214,8 +216,9 @@ CONTAINS
     INTEGER, INTENT(in) :: model_id !< ID of the model instance to be initialized
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER          :: model
+    TYPE(t_jsb_grid),  POINTER          :: grid
     CLASS(t_jsb_tile_abstract), POINTER :: tile, child
-    INTEGER                             :: ilct, jlct, i, no_children, lct_start
+    INTEGER                             :: ilct, jlct, i, no_children, lct_start, blks, blke, blk, jcs, jce
     REAL(wp), ALLOCATABLE               :: fract_tmp(:,:), tile_lct_fract_tmp(:,:)
     INTEGER                             :: no_omp_thread
     LOGICAL                             :: l_fixed_fractions
@@ -236,6 +239,9 @@ CONTAINS
     CALL cdiDefMissval(missval)
 
     model => Get_model(model_id)
+    grid  => Get_grid(model%grid_id)
+    blks = grid%get_blk_start()
+    blke = grid%get_blk_end()
 
     dsl4jsb_Get_config(PHENO_)
     dsl4jsb_Get_config(FAGE_)
@@ -450,33 +456,33 @@ CONTAINS
     ! for now: only QUINCY land
     !
     CASE (MODEL_QUINCY)
+      ! store all bgcms into their matrices for this timestep
+      CALL model%Queue_task(VEG_,     "call_store_bgcms_in_matrices")
       ! set flux variables to zero
       CALL model%Queue_task(ASSIMI_,  "reset_assimi_fluxes")        !
       CALL model%Queue_task(VEG_,     "reset_veg_fluxes")           !
       CALL model%Queue_task(SB_,      "reset_sb_fluxes")            !
       CALL model%Queue_task(SPQ_,     "reset_spq_fluxes")           !
-      ! testing bgcm
-      CALL model%Queue_task(SB_,      "copy_pool_to_bgcm_test")     !
-      CALL model%Queue_task(SB_,      "sb_pool_test")               !
-      CALL model%Queue_task(SB_,      "sb_bgcm_pool_test")          !
       ! science
-      CALL model%Queue_task(SB_,      "sb_rate_modifier")           ! 
-      CALL model%Queue_task(SPQ_,     "soil_turbulence")            ! 
-      CALL model%Queue_task(RAD_,     "radiation_quincy")           ! 
-      CALL model%Queue_task(PHENO_,   "phenology")                  ! 
-      CALL model%Queue_task(ASSIMI_,  "canopy_fluxes")              ! 
-      CALL model%Queue_task(SPQ_,     "spq_physics")                ! 
-      CALL model%Queue_task(VEG_,     "veg_turnover")               ! 
-      CALL model%Queue_task(VEG_,     "veg_dynamics")               ! 
-      CALL model%Queue_task(SB_,      "sb_simple_model")            ! 
-      CALL model%Queue_task(VEG_,     "veg_growth")                 ! 
-      CALL model%Queue_task(VEG_,     "veg_pools")                  ! 
-      CALL model%Queue_task(SB_,      "sb_pools")                   ! 
+      CALL model%Queue_task(SB_,      "sb_rate_modifier")           !
+      CALL model%Queue_task(SPQ_,     "soil_turbulence")            !
+      CALL model%Queue_task(RAD_,     "radiation_quincy")           !
+      CALL model%Queue_task(PHENO_,   "phenology")                  !
+      CALL model%Queue_task(ASSIMI_,  "canopy_fluxes")              !
+      CALL model%Queue_task(SPQ_,     "spq_physics")                !
+      CALL model%Queue_task(VEG_,     "veg_turnover")               !
+      CALL model%Queue_task(VEG_,     "veg_dynamics")               !
+      CALL model%Queue_task(SB_,      "sb_simple_model")            !
+      CALL model%Queue_task(VEG_,     "veg_growth")                 !
+      CALL model%Queue_task(VEG_,     "veg_pools")                  !
+      CALL model%Queue_task(SB_,      "sb_pools")                   !
       ! averaging variables in time
-      CALL model%Queue_task(RAD_,    "tavrg_radiation_quincy")      ! 
-      CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")          ! 
-      CALL model%Queue_task(VEG_,    "tavrg_vegetation")            ! 
-      CALL model%Queue_task(SB_,     "tavrg_soilbiogeochemistry")   ! 
+      CALL model%Queue_task(RAD_,    "tavrg_radiation_quincy")      !
+      CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")          !
+      CALL model%Queue_task(VEG_,    "tavrg_vegetation")            !
+      CALL model%Queue_task(SB_,     "tavrg_soilbiogeochemistry")   !
+      ! write all matrices back to bgcm variables for this timestep
+      CALL model%Queue_task(VEG_,    "call_write_matrices_back")
     END SELECT
     ! Task Queue created
     !--------------------------------------------------------------------------------------------------- !
@@ -542,6 +548,18 @@ CONTAINS
       !>
       IF (model%config%init_from_ifs) &
         & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
+
+      ! IQ: Work on bgcms is conducted on the matrices -> get data from vars into the matrices
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        IF (ASSOCIATED(tile%bgcm_store) .AND. tile%Is_process_active(VEG_)) THEN
+          DO blk = blks, blke
+            jcs = grid%get_col_start(blk)
+            jce = grid%get_col_end  (blk)
+            CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, jcs, jce, blk)
+          ENDDO
+        ENDIF
+      END SELECT
 
       ! TBD: Loop over processes instead of explicit
       IF (tile%Is_process_active(RAD_)) THEN
@@ -634,6 +652,18 @@ CONTAINS
           CALL hd_init_ic(tile)
         END IF
 #endif
+      END SELECT
+
+      ! IQ: Work on bgcms is conducted on the matrices -> get data from matrices back into the vars
+      SELECT CASE (model%config%model_scheme)
+      CASE (MODEL_QUINCY)
+        IF (ASSOCIATED(tile%bgcm_store) .AND. tile%Is_process_active(VEG_)) THEN
+          DO blk = blks, blke
+            jcs = grid%get_col_start(blk)
+            jce = grid%get_col_end  (blk)
+            CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, jcs, jce, blk)
+          ENDDO
+        ENDIF
       END SELECT
 
       CALL model%Goto_next_tile(tile)
