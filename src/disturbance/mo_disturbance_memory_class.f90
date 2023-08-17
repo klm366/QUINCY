@@ -267,7 +267,7 @@ CONTAINS
       &  'temperature annual data'),                                        &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),  &
       & prefix, suffix,                                                     &
-      & lrestart = .TRUE., initval_r = 0.0_wp)
+      & lrestart = .TRUE., initval_r = 293.15_wp)
 
     CALL mem%Add_var('q_ave', mem%q_ave,                                    &
       & hgrid, surface,                                                     &

@@ -20,18 +20,18 @@ MODULE mo_global_variable
 
   PUBLIC :: update_pid_batch, load_global_batch, update_trainable_parameters, load_trained_parameters
 
-  REAL(wp) ::                                                         &
-    & layer1_weight_global(39,  128*13), layer1_bias_global(128*13),  &
-    & layer2_weight_global(128, 128*13), layer2_bias_global(128*13),  &
-    & layer3_weight_global(128, 128*13), layer3_bias_global(128*13),  &
-    & layer4_weight_global(128, 128*13), layer4_bias_global(128*13),  &
-    & layer5_weight_global(128, 128*13), layer5_bias_global(128*13),  &
-    & layer6_weight_global(128,   1*13), layer6_bias_global(  1*13)
+  REAL(wp) ::                                                       &
+    & layer1_weight_global(39,  128*5), layer1_bias_global(128*5),  &
+    & layer2_weight_global(128, 128*5), layer2_bias_global(128*5),  &
+    & layer3_weight_global(128, 128*5), layer3_bias_global(128*5),  &
+    & layer4_weight_global(128, 128*5), layer4_bias_global(128*5),  &
+    & layer5_weight_global(128, 128*5), layer5_bias_global(128*5),  &
+    & layer6_weight_global(128,   1*5), layer6_bias_global(  1*5)
 
   REAL(wp) :: batch_global(1280, 43)   ! 160*8
   REAL(wp) :: batch_pid   (160,  43)   ! 
 
-  CHARACTER(len=*), parameter :: path = '/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/central/'
+  CHARACTER(len=*), parameter :: path = '/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/central/'
 
   INTEGER :: file_idx = 0
   INTEGER :: first_iblk = 0
@@ -41,14 +41,19 @@ MODULE mo_global_variable
 
 CONTAINS
   
+  !SUBROUTINE get_first_iblk(x)
+  !  INTEGER, INTENT(in) :: x
+
+  !  step = step + 1
+  !  IF (step .eq. 1) THEN
+  !    first_iblk = x
+  !    print*, first_iblk
+  !  ENDIF
+  !END SUBROUTINE get_first_iblk
+
   SUBROUTINE get_first_iblk(x)
     INTEGER, INTENT(in) :: x
-
-    step = step + 1
-    IF (step .eq. 1) THEN
-      first_iblk = x
-      print*, first_iblk
-    ENDIF
+    first_iblk = MOD(x,20) + 1
   END SUBROUTINE get_first_iblk
 
 
@@ -146,12 +151,12 @@ CONTAINS
 
     ! Input Arguments
     REAL(wp), INTENT(in) ::                             &
-      & layer1_weight(39, 128*13), layer1_bias(128*13), &
-      & layer2_weight(128,128*13), layer2_bias(128*13), &
-      & layer3_weight(128,128*13), layer3_bias(128*13), &
-      & layer4_weight(128,128*13), layer4_bias(128*13), &
-      & layer5_weight(128,128*13), layer5_bias(128*13), &
-      & layer6_weight(128,  1*13), layer6_bias(  1*13)
+      & layer1_weight(39, 128*5), layer1_bias(128*5), &
+      & layer2_weight(128,128*5), layer2_bias(128*5), &
+      & layer3_weight(128,128*5), layer3_bias(128*5), &
+      & layer4_weight(128,128*5), layer4_bias(128*5), &
+      & layer5_weight(128,128*5), layer5_bias(128*5), &
+      & layer6_weight(128,  1*5), layer6_bias(  1*5)
 
     INTEGER :: pid, getpid, i
     INTEGER :: file_idx_, file_idx_w
@@ -181,19 +186,19 @@ CONTAINS
     215 format('b5.bin'); write(b5, 215)
     216 format('b6.bin'); write(b6, 216)
 
-    open(201,file=path//w1, access='direct', form='unformatted', recl=39 *128*13*4)
-    open(202,file=path//w2, access='direct', form='unformatted', recl=128*128*13*4)
-    open(203,file=path//w3, access='direct', form='unformatted', recl=128*128*13*4)
-    open(204,file=path//w4, access='direct', form='unformatted', recl=128*128*13*4)
-    open(205,file=path//w5, access='direct', form='unformatted', recl=128*128*13*4)
-    open(206,file=path//w6, access='direct', form='unformatted', recl=128*  1*13*4)
+    open(201,file=path//w1, access='direct', form='unformatted', recl=39 *128*5*4)
+    open(202,file=path//w2, access='direct', form='unformatted', recl=128*128*5*4)
+    open(203,file=path//w3, access='direct', form='unformatted', recl=128*128*5*4)
+    open(204,file=path//w4, access='direct', form='unformatted', recl=128*128*5*4)
+    open(205,file=path//w5, access='direct', form='unformatted', recl=128*128*5*4)
+    open(206,file=path//w6, access='direct', form='unformatted', recl=128*  1*5*4)
 
-    open(211,file=path//b1, access='direct', form='unformatted', recl=128*13*4)
-    open(212,file=path//b2, access='direct', form='unformatted', recl=128*13*4)
-    open(213,file=path//b3, access='direct', form='unformatted', recl=128*13*4)
-    open(214,file=path//b4, access='direct', form='unformatted', recl=128*13*4)
-    open(215,file=path//b5, access='direct', form='unformatted', recl=128*13*4)
-    open(216,file=path//b6, access='direct', form='unformatted', recl=  1*13*4)
+    open(211,file=path//b1, access='direct', form='unformatted', recl=128*5*4)
+    open(212,file=path//b2, access='direct', form='unformatted', recl=128*5*4)
+    open(213,file=path//b3, access='direct', form='unformatted', recl=128*5*4)
+    open(214,file=path//b4, access='direct', form='unformatted', recl=128*5*4)
+    open(215,file=path//b5, access='direct', form='unformatted', recl=128*5*4)
+    open(216,file=path//b6, access='direct', form='unformatted', recl=  1*5*4)
 
     DO i = 1,8
       write(201,rec=i) layer1_weight
@@ -225,38 +230,6 @@ CONTAINS
     layer5_bias_global(:)     = layer5_bias(:)
     layer6_bias_global(:)     = layer6_bias(:)
 
-    !DO i = 1,13
-    !  layer1_weight_global(:,128*(i-1)+1:128*i) = layer1_weight(:,:)
-    !  layer2_weight_global(:,128*(i-1)+1:128*i) = layer2_weight(:,:)
-    !  layer3_weight_global(:,128*(i-1)+1:128*i) = layer3_weight(:,:)
-    !  layer4_weight_global(:,128*(i-1)+1:128*i) = layer4_weight(:,:)
-    !  layer5_weight_global(:,128*(i-1)+1:128*i) = layer5_weight(:,:)
-    !  layer6_weight_global(:,  1*(i-1)+1:  1*i) = layer6_weight(:,:)
-
-    !  layer1_bias_global(128*(i-1)+1:128*i)     = layer1_bias(:)
-    !  layer2_bias_global(128*(i-1)+1:128*i)     = layer2_bias(:)
-    !  layer3_bias_global(128*(i-1)+1:128*i)     = layer3_bias(:)
-    !  layer4_bias_global(128*(i-1)+1:128*i)     = layer4_bias(:)
-    !  layer5_bias_global(128*(i-1)+1:128*i)     = layer5_bias(:)
-    !  layer6_bias_global(  1*(i-1)+1:  1*i)     = layer6_bias(:)
-    !ENDDO
-
-    !DO i = 1,8
-    !  write(201,rec=i) layer1_weight_global
-    !  write(202,rec=i) layer2_weight_global
-    !  write(203,rec=i) layer3_weight_global
-    !  write(204,rec=i) layer4_weight_global
-    !  write(205,rec=i) layer5_weight_global
-    !  write(206,rec=i) layer6_weight_global
-
-    !  write(211,rec=i) layer1_bias_global
-    !  write(212,rec=i) layer2_bias_global
-    !  write(213,rec=i) layer3_bias_global
-    !  write(214,rec=i) layer4_bias_global
-    !  write(215,rec=i) layer5_bias_global
-    !  write(216,rec=i) layer6_bias_global
-    !ENDDO
-
   END SUBROUTINE update_trainable_parameters
 
 
@@ -269,13 +242,13 @@ CONTAINS
     & layer6_weight, layer6_bias              ) ! in
 
     ! Input Arguments
-    REAL(wp), INTENT(inout) ::                       &
-      & layer1_weight(39, 128*13), layer1_bias(128*13), &
-      & layer2_weight(128,128*13), layer2_bias(128*13), &
-      & layer3_weight(128,128*13), layer3_bias(128*13), &
-      & layer4_weight(128,128*13), layer4_bias(128*13), &
-      & layer5_weight(128,128*13), layer5_bias(128*13), &
-      & layer6_weight(128,  1*13), layer6_bias(  1*13)
+    REAL(wp), INTENT(inout) ::                        &
+      & layer1_weight(39, 128*5), layer1_bias(128*5), &
+      & layer2_weight(128,128*5), layer2_bias(128*5), &
+      & layer3_weight(128,128*5), layer3_bias(128*5), &
+      & layer4_weight(128,128*5), layer4_bias(128*5), &
+      & layer5_weight(128,128*5), layer5_bias(128*5), &
+      & layer6_weight(128,  1*5), layer6_bias(  1*5)
 
     INTEGER :: pid, getpid, i
     CHARACTER(len=200) :: w1, w2, w3 ,w4, w5, w6
@@ -298,19 +271,19 @@ CONTAINS
     315 format('b5.bin'); write(b5, 315)
     316 format('b6.bin'); write(b6, 316)
 
-    open(301,file=path//w1, access='direct', form='unformatted', recl=39 *128*13*4)
-    open(302,file=path//w2, access='direct', form='unformatted', recl=128*128*13*4)
-    open(303,file=path//w3, access='direct', form='unformatted', recl=128*128*13*4)
-    open(304,file=path//w4, access='direct', form='unformatted', recl=128*128*13*4)
-    open(305,file=path//w5, access='direct', form='unformatted', recl=128*128*13*4)
-    open(306,file=path//w6, access='direct', form='unformatted', recl=128*  1*13*4)
+    open(301,file=path//w1, access='direct', form='unformatted', recl=39 *128*5*4)
+    open(302,file=path//w2, access='direct', form='unformatted', recl=128*128*5*4)
+    open(303,file=path//w3, access='direct', form='unformatted', recl=128*128*5*4)
+    open(304,file=path//w4, access='direct', form='unformatted', recl=128*128*5*4)
+    open(305,file=path//w5, access='direct', form='unformatted', recl=128*128*5*4)
+    open(306,file=path//w6, access='direct', form='unformatted', recl=128*  1*5*4)
 
-    open(311,file=path//b1, access='direct', form='unformatted', recl=128*13*4)
-    open(312,file=path//b2, access='direct', form='unformatted', recl=128*13*4)
-    open(313,file=path//b3, access='direct', form='unformatted', recl=128*13*4)
-    open(314,file=path//b4, access='direct', form='unformatted', recl=128*13*4)
-    open(315,file=path//b5, access='direct', form='unformatted', recl=128*13*4)
-    open(316,file=path//b6, access='direct', form='unformatted', recl=  1*13*4)
+    open(311,file=path//b1, access='direct', form='unformatted', recl=128*5*4)
+    open(312,file=path//b2, access='direct', form='unformatted', recl=128*5*4)
+    open(313,file=path//b3, access='direct', form='unformatted', recl=128*5*4)
+    open(314,file=path//b4, access='direct', form='unformatted', recl=128*5*4)
+    open(315,file=path//b5, access='direct', form='unformatted', recl=128*5*4)
+    open(316,file=path//b6, access='direct', form='unformatted', recl=  1*5*4)
 
     read(301,rec=pid) layer1_weight
     read(302,rec=pid) layer2_weight
@@ -339,34 +312,6 @@ CONTAINS
     layer4_bias_global(:)     = layer4_bias(:)
     layer5_bias_global(:)     = layer5_bias(:)
     layer6_bias_global(:)     = layer6_bias(:)
-
-    !read(301,rec=pid) layer1_weight_global
-    !read(302,rec=pid) layer2_weight_global
-    !read(303,rec=pid) layer3_weight_global
-    !read(304,rec=pid) layer4_weight_global
-    !read(305,rec=pid) layer5_weight_global
-    !read(306,rec=pid) layer6_weight_global
-
-    !read(311,rec=pid) layer1_bias_global
-    !read(312,rec=pid) layer2_bias_global
-    !read(313,rec=pid) layer3_bias_global
-    !read(314,rec=pid) layer4_bias_global
-    !read(315,rec=pid) layer5_bias_global
-    !read(316,rec=pid) layer6_bias_global
-
-    !layer1_weight(:,:) = layer1_weight_global(:,1:128)
-    !layer2_weight(:,:) = layer2_weight_global(:,1:128)
-    !layer3_weight(:,:) = layer3_weight_global(:,1:128)
-    !layer4_weight(:,:) = layer4_weight_global(:,1:128)
-    !layer5_weight(:,:) = layer5_weight_global(:,1:128)
-    !layer6_weight(:,:) = layer6_weight_global(:,1:1)
-
-    !layer1_bias(:)     = layer1_bias_global(1:128)
-    !layer2_bias(:)     = layer2_bias_global(1:128)
-    !layer3_bias(:)     = layer3_bias_global(1:128)
-    !layer4_bias(:)     = layer4_bias_global(1:128)
-    !layer5_bias(:)     = layer5_bias_global(1:128)
-    !layer6_bias(:)     = layer6_bias_global(1:1)
 
   END SUBROUTINE load_trained_parameters
 

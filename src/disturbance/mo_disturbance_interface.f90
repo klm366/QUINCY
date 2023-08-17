@@ -311,7 +311,7 @@ CONTAINS
 
     INTEGER :: iteration, is_training, is_saving, is_infer, memory_idx, n, i_temporal, i_spatial, max_pft_idx
     INTEGER :: save_batch, n_zero, n_nozero
-    REAL(wp) :: weight, u, r, t, k, y
+    REAL(wp) :: weight, u, r, t, k, y, x
     CHARACTER(len=10) :: max_pft
 
     !LOGICAL  :: pft_mask ! True for pfts to which the disturbance should be applied.
@@ -531,9 +531,10 @@ CONTAINS
 
         iteration  = 0
         IF ((iyr .ge. 2003) .AND. (iyr .le. 2012)) THEN
-          IF (iteration .eq. 0) THEN
-            CALL get_first_iblk(iblk)
-          ENDIF
+          !IF (iteration .eq. 0) THEN
+          !  CALL get_first_iblk(iblk)
+          !ENDIF
+          CALL get_first_iblk(day_of_year)
 
           !is_training = 1
           is_training = 0
@@ -550,7 +551,8 @@ CONTAINS
             is_saving = 0
           ENDIF
 
-          max_pft_idx = MAXLOC(SUM(pfts_fract(:,:), dim=1), dim=1)
+          !max_pft_idx = MAXLOC(SUM(pfts_fract(:,:), dim=1), dim=1)
+          max_pft_idx = MOD(day_of_year,8) + 1
           IF (max_pft_idx .eq. 1) THEN
             max_pft = 'pft01'
           ELSEIF (max_pft_idx .eq. 2) THEN
@@ -590,15 +592,55 @@ CONTAINS
                 i_spatial  = 1 + INT(FLOOR((128)*u))
 
                 IF (R_memory(i_spatial,i_temporal) .ge. 1) THEN
-                  IF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
-                    n_nozero = n_nozero+1
-                    IF (n_nozero .le. 8) THEN
-                      save_batch = 1
+                  IF ((Koppen_memory(i_spatial,i_temporal) .eq. 4) .or. &
+                      (Koppen_memory(i_spatial,i_temporal) .eq. 2) .or. &
+                      (Koppen_memory(i_spatial,i_temporal) .eq. 5)) THEN
+                    
+                    IF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
+                      CALL RANDOM_NUMBER(x)
+                      IF (x .gt. 0.7) THEN
+                        save_batch = 1
+                      ELSE
+                        save_batch = 0
+                      ENDIF
                     ELSE
-                      save_batch = 0
+                      save_batch = 1
                     ENDIF
+                      !IF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
+                      !  n_nozero = n_nozero+1
+                      !  IF (n_nozero .le. 4) THEN
+                      !    save_batch = 1
+                      !  ELSE
+                      !    save_batch = 0
+                      !  ENDIF
+                      !ELSE
+                      !  save_batch = 1
+                      !ENDIF
+                    !save_batch = 1
+                  
+                  !ELSEIF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
                   ELSE
-                    save_batch = 1
+                    IF (Y_memory(i_spatial,i_temporal) .gt. 0) THEN
+                      CALL RANDOM_NUMBER(x)
+                      IF (x .gt. 0.5) THEN
+                        save_batch = 1
+                      ELSE
+                        save_batch = 0
+                      ENDIF
+                    ELSE
+                      save_batch = 1
+                    ENDIF
+
+                    !  n_nozero = n_nozero+1
+                    !ENDIF
+
+                    !IF (n_nozero .le. 4) THEN
+                    !  save_batch = 1
+                    !ELSE
+                    !  save_batch = 0
+                    !ENDIF
+                  !ELSE
+                    !save_batch = 0
                   ENDIF
 
                   IF (save_batch .eq. 1) THEN
@@ -622,23 +664,26 @@ CONTAINS
                   ENDIF
 
                 ELSE
-                  CALL update_pid_batch(                                                                                    &
-                    & 0._wp,  0._wp,  0._wp, & ! 1
-                    & 0._wp,  0._wp,  0._wp, & ! 2
-                    & 0._wp,  0._wp,  0._wp, & ! 3
-                    & 0._wp,  0._wp,  0._wp, & ! 4
-                    & 0._wp,  0._wp,  0._wp, & ! 5
-                    & 0._wp,  0._wp,  0._wp, & ! 6
-                    & 0._wp,  0._wp,  0._wp, & ! 7
-                    & 0._wp,  0._wp,  0._wp, & ! 8
-                    & 0._wp,  0._wp,  0._wp, & ! 9
-                    & 0._wp,  0._wp,  0._wp, & ! 10
-                    & 0._wp,  0._wp,  0._wp, & ! 11
-                    & 0._wp,  0._wp,  0._wp, & ! 12
-                    & 0._wp,  0._wp,  0._wp, & ! 13
-                    & 0._wp,  0._wp,  0._wp, & ! 14
-                    & 0._wp, n, iblk)
-                  n = n+1
+                  CALL RANDOM_NUMBER(x)
+                  IF (x .gt. 0.95) THEN
+                    CALL update_pid_batch(     &
+                      & 0._wp,  0._wp,  0._wp, & ! 1
+                      & 0._wp,  0._wp,  0._wp, & ! 2
+                      & 0._wp,  0._wp,  0._wp, & ! 3
+                      & 0._wp,  0._wp,  0._wp, & ! 4
+                      & 0._wp,  0._wp,  0._wp, & ! 5
+                      & 0._wp,  0._wp,  0._wp, & ! 6
+                      & 0._wp,  0._wp,  0._wp, & ! 7
+                      & 0._wp,  0._wp,  0._wp, & ! 8
+                      & 0._wp,  0._wp,  0._wp, & ! 9
+                      & 0._wp,  0._wp,  0._wp, & ! 10
+                      & 0._wp,  0._wp,  0._wp, & ! 11
+                      & 0._wp,  0._wp,  0._wp, & ! 12
+                      & 0._wp,  0._wp,  0._wp, & ! 13
+                      & 0._wp,  0._wp,  0._wp, & ! 14
+                      & 0._wp, n, iblk)
+                    n = n+1
+                  ENDIF
                 ENDIF
 
               ENDDO
@@ -745,7 +790,7 @@ CONTAINS
               & dsl4jsb_Config(DISTURB_)%layer5_bias_update,            &
               & dsl4jsb_Config(DISTURB_)%layer6_weight_update,          &
               & dsl4jsb_Config(DISTURB_)%layer6_bias_update             )
-            !print*, dsl4jsb_Config(DISTURB_)%layer1_weight_update(10,128*2+20)
+            print*, dsl4jsb_Config(DISTURB_)%layer1_weight_update(10,128*2+20)
           ENDIF
 
         ENDIF
@@ -774,8 +819,13 @@ CONTAINS
         gfed_region               => dsl4jsb_memory(DISTURB_)%gfed_region(ics:ice, iblk)               ! <Rackhun Son>
 
         ! annual record & Koppen_Geiger_classification
-        t_air_annual(:,day_of_year) = t_air_ave(:)
-        rain_annual (:,day_of_year) = rain_ave(:)
+        IF (iyr == time_config%tc_exp_startdate%date%year) THEN    ! 1st year
+          t_air_annual(:,day_of_year) = t_air_ave(:)
+          rain_annual (:,day_of_year) = rain_ave(:)
+        ELSE
+          t_air_annual(:,day_of_year) = t_air_annual(:,day_of_year)*0.85 + t_air_ave(:)*0.15
+          rain_annual (:,day_of_year) = rain_annual (:,day_of_year)*0.85 + rain_ave(:)*0.15
+        ENDIF
 
         CALL Koppen_Geiger_classification_lv2(nc, t_air_annual, rain_annual, lat, koppen)
         latitude(:) = lat(:)
@@ -946,55 +996,43 @@ CONTAINS
               ! save training results
               IF (iyr == 2015) then
 
-                open(1001,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/W1.bin', &
+                open(1001,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/W1.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_input*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=dsl4jsb_Config(DISTURB_)%d_input*1664*4)
-                open(1002,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/W2.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_input*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(1002,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/W2.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*1664*4)
-                open(1003,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/W3.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(1003,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/W3.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*1664*4)
-                open(1004,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/W4.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(1004,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/W4.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*1664*4)
-                open(1005,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/W5.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(1005,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/W5.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*1664*4)
-                open(1006,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/W6.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(1006,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/W6.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output_n_class*4)
-                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*13*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden*dsl4jsb_Config(DISTURB_)%d_output_n_class*4)
 
-                open(2001,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/b1.bin', &
+                open(2001,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/b1.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=1664*4)
-                open(2002,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/b2.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(2002,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/b2.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=1664*4)
-                open(2003,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/b3.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(2003,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/b3.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=1664*4)
-                open(2004,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/b4.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(2004,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/b4.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=1664*4)
-                open(2005,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/b5.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(2005,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/b5.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
-                  recl=1664*4)
-                open(2006,file='/work/mj0143/b301058/fire_online_2_koppen_lv2_fine/saved_parameters/b6.bin', &
+                  recl=dsl4jsb_Config(DISTURB_)%d_hidden_n_class*4)
+                open(2006,file='/work/mj0143/b301058/fire_online_2_koppen_lv1_fine/saved_parameters/b6.bin', &
                   access='direct', form='unformatted', &
-                  !recl=dsl4jsb_Config(DISTURB_)%d_output_n_class*4)
-                  recl=13*4)
+                  recl=dsl4jsb_Config(DISTURB_)%d_output_n_class*4)
 
                 write(1001,rec=1) layer1_weight_global
                 write(1002,rec=1) layer2_weight_global
