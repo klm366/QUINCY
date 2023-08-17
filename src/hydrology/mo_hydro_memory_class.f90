@@ -1104,7 +1104,7 @@ CONTAINS
         & t_cf('pfts_fract', 'PFT cover fractions', 'pfts fract'),            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                       &
-        !& output_level=BASIC,                                                   &
+        & output_level=BASIC,                                                   &
         & initval_r=0.0_wp )
     ENDIF
 

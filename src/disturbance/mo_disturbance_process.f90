@@ -279,6 +279,7 @@ CONTAINS
     burned_fract = nn_outputs(:,1)/100.
     WHERE (burned_fract < 0.) burned_fract = 0.
     WHERE (burned_fract > 1.) burned_fract = 1.
+    !burned_fract(:) = fba_smooth(:)
 
   END SUBROUTINE burned_fract_dl
 
