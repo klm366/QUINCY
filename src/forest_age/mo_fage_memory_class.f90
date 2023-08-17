@@ -107,7 +107,7 @@ CONTAINS
         & t_cf('mean_age', 'y', 'Mean age of this tile (avg of area per age)'), &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),    &
         & prefix, suffix,                                                       &
-        & output_level=BASIC,                                                   &
+        !& output_level=BASIC,                                                   &
         & loutput=.TRUE., lrestart=.FALSE., initval_r=0.0_wp )
 
       CALL mem%Add_var('fract_per_age', mem%fract_per_age,                     &

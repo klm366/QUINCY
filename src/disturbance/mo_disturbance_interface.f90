@@ -299,15 +299,15 @@ CONTAINS
 
     REAL(wp), POINTER      :: gfed_region(:)
 
-    REAL(wp), POINTER      :: t_air_local_clim(:)
-    REAL(wp), POINTER      :: q_rel_local_clim(:)
-    REAL(wp), POINTER      :: q_local_clim(:)
-    REAL(wp), POINTER      :: ws10_local_clim(:)
-    REAL(wp), POINTER      :: swvl1_local_clim(:)
-    REAL(wp), POINTER      :: swvl2_local_clim(:)
-    REAL(wp), POINTER      :: swvl3_local_clim(:)
-    REAL(wp), POINTER      :: swvl4_local_clim(:)
-    REAL(wp), POINTER      :: lai_local_clim(:)
+    !REAL(wp), POINTER      :: t_air_local_clim(:)
+    !REAL(wp), POINTER      :: q_rel_local_clim(:)
+    !REAL(wp), POINTER      :: q_local_clim(:)
+    !REAL(wp), POINTER      :: ws10_local_clim(:)
+    !REAL(wp), POINTER      :: swvl1_local_clim(:)
+    !REAL(wp), POINTER      :: swvl2_local_clim(:)
+    !REAL(wp), POINTER      :: swvl3_local_clim(:)
+    !REAL(wp), POINTER      :: swvl4_local_clim(:)
+    !REAL(wp), POINTER      :: lai_local_clim(:)
 
     !LOGICAL  :: pft_mask ! True for pfts to which the disturbance should be applied.
     REAL(wp) :: persist ! Factor (as fraction) determining the persistance of q_rel_air_climbuf
@@ -637,15 +637,15 @@ CONTAINS
 
         gfed_region               => dsl4jsb_memory(DISTURB_)%gfed_region(ics:ice, iblk)               ! <Rackhun Son>
 
-        t_air_local_clim      => dsl4jsb_memory(DISTURB_)%t_air_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
-        q_rel_local_clim      => dsl4jsb_memory(DISTURB_)%q_rel_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
-        q_local_clim          => dsl4jsb_memory(DISTURB_)%q_local_clim(ics:ice, iblk, day_of_year)             ! <Rackhun Son>
-        ws10_local_clim       => dsl4jsb_memory(DISTURB_)%ws10_local_clim(ics:ice, iblk, day_of_year)          ! <Rackhun Son>
-        swvl1_local_clim      => dsl4jsb_memory(DISTURB_)%swvl1_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
-        swvl2_local_clim      => dsl4jsb_memory(DISTURB_)%swvl2_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
-        swvl3_local_clim      => dsl4jsb_memory(DISTURB_)%swvl3_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
-        swvl4_local_clim      => dsl4jsb_memory(DISTURB_)%swvl4_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
-        lai_local_clim        => dsl4jsb_memory(DISTURB_)%lai_local_clim(ics:ice, iblk, day_of_year)           ! <Rackhun Son>
+        !t_air_local_clim      => dsl4jsb_memory(DISTURB_)%t_air_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
+        !q_rel_local_clim      => dsl4jsb_memory(DISTURB_)%q_rel_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
+        !q_local_clim          => dsl4jsb_memory(DISTURB_)%q_local_clim(ics:ice, iblk, day_of_year)             ! <Rackhun Son>
+        !ws10_local_clim       => dsl4jsb_memory(DISTURB_)%ws10_local_clim(ics:ice, iblk, day_of_year)          ! <Rackhun Son>
+        !swvl1_local_clim      => dsl4jsb_memory(DISTURB_)%swvl1_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
+        !swvl2_local_clim      => dsl4jsb_memory(DISTURB_)%swvl2_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
+        !swvl3_local_clim      => dsl4jsb_memory(DISTURB_)%swvl3_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
+        !swvl4_local_clim      => dsl4jsb_memory(DISTURB_)%swvl4_local_clim(ics:ice, iblk, day_of_year)         ! <Rackhun Son>
+        !lai_local_clim        => dsl4jsb_memory(DISTURB_)%lai_local_clim(ics:ice, iblk, day_of_year)           ! <Rackhun Son>
         
       ENDIF
 
@@ -692,16 +692,16 @@ CONTAINS
             CALL burned_fract_dl(                                         &
               !& t_air(:),                                                &
               & t_air_ave(:),                                             &
-              & t_air_local_clim(:),                                      &       
+              !& t_air_local_clim(:),                                      &       
               & t_air_clim(:,day_of_year)/diff_year,                      &  
               !& q_rel_air(:),                                            &
               & q_rel_ave(:),                                             &
-              & q_rel_local_clim(:),                                      &
+              !& q_rel_local_clim(:),                                      &
               & q_rel_clim(:,day_of_year)/diff_year,                      &
               !& q_rel_air_climbuf(:), dsl4jsb_Config(DISTURB_)%fire_rel_hum_threshold, &
               !& q_air(:),                                                &
               & q_ave(:),                                                 &
-              & q_local_clim(:),                                          &
+              !& q_local_clim(:),                                          &
               & q_clim(:,day_of_year)/diff_year,                          &
               & ws10_ave(:),                                              &
               !& wind_10m(:),                                             &
@@ -709,23 +709,23 @@ CONTAINS
               !& rain(:),                                                 &
               !& swl1(:),                                                 &
               & swl1_ave(:),                                              &
-              & swvl1_local_clim(:),                                      &
+              !& swvl1_local_clim(:),                                      &
               & swl1_clim(:,day_of_year)/diff_year,                       &
               !& swl2(:),                                                 &
               & swl2_ave(:),                                              &
-              & swvl2_local_clim(:),                                      &
+              !& swvl2_local_clim(:),                                      &
               & swl2_clim(:,day_of_year)/diff_year,                       &
               !& swl3(:),                                                 &
               & swl3_ave(:),                                              &
-              & swvl3_local_clim(:),                                      &
+              !& swvl3_local_clim(:),                                      &
               & swl3_clim(:,day_of_year)/diff_year,                       &
               !& swl4(:),                                                 &
               & swl4_ave(:),                                              &
-              & swvl4_local_clim(:),                                      &
+              !& swvl4_local_clim(:),                                      &
               & swl4_clim(:,day_of_year)/diff_year,                       &
               !& lai(:),                                                  &
               & lai_ave(:),                                               &
-              & lai_local_clim(:),                                        &
+              !& lai_local_clim(:),                                        &
               & lai_clim(:,day_of_year)/diff_year,                        &
               & modified_pfts_fract(:,:),                                 &
               & fuel(:),                                                  &

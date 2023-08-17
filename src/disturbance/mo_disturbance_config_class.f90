@@ -100,15 +100,15 @@ MODULE mo_disturb_config_class
   CHARACTER(len=filename_max) :: bc_gfed_region_filename        ! GFED4 reference regions for fire    <Rackhun Son>
   !CHARACTER(len=filename_max) :: bc_population_filename        ! population density (daily) for fire  <Rackhun Son>
   CHARACTER(len=filename_max) :: dl_fire_model_params_filename ! dl fire model parameters <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_t_air_filename   ! OBS local mean for dl fire model <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_rH_cf_filename   ! OBS local mean for dl fire model <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_q_filename       ! OBS local mean for dl fire model <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_ws10_filename    ! OBS local mean for dl fire model <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_swvl1_filename   ! OBS local mean for dl fire model <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_swvl2_filename   ! OBS local mean for dl fire model <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_swvl3_filename   ! OBS local mean for dl fire model <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_swvl4_filename   ! OBS local mean for dl fire model <Rackhun Son>
-  CHARACTER(len=filename_max) :: dl_local_clim_lai_filename     ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_t_air_filename   ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_rH_cf_filename   ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_q_filename       ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_ws10_filename    ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_swvl1_filename   ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_swvl2_filename   ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_swvl3_filename   ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_swvl4_filename   ! OBS local mean for dl fire model <Rackhun Son>
+  !CHARACTER(len=filename_max) :: dl_local_clim_lai_filename     ! OBS local mean for dl fire model <Rackhun Son>
 
 
    CONTAINS
@@ -142,15 +142,15 @@ CONTAINS
     !CHARACTER(len=filename_max) :: bc_population_filename        ! population density (daily) for fire  <Rackhun Son>
     CHARACTER(len=filename_max) :: dl_fire_model_params_filename ! dl fire model parameters               <Rackhun Son>
 
-    CHARACTER(len=filename_max) :: dl_local_clim_t_air_filename   ! OBS local mean for dl fire model      <Rackhun Son>
-    CHARACTER(len=filename_max) :: dl_local_clim_rH_cf_filename   ! OBS local mean for dl fire model      <Rackhun Son>
-    CHARACTER(len=filename_max) :: dl_local_clim_q_filename       ! OBS local mean for dl fire model      <Rackhun Son>
-    CHARACTER(len=filename_max) :: dl_local_clim_ws10_filename    ! OBS local mean for dl fire model      <Rackhun Son>
-    CHARACTER(len=filename_max) :: dl_local_clim_swvl1_filename   ! OBS local mean for dl fire model      <Rackhun Son>
-    CHARACTER(len=filename_max) :: dl_local_clim_swvl2_filename   ! OBS local mean for dl fire model      <Rackhun Son>
-    CHARACTER(len=filename_max) :: dl_local_clim_swvl3_filename   ! OBS local mean for dl fire model      <Rackhun Son>
-    CHARACTER(len=filename_max) :: dl_local_clim_swvl4_filename   ! OBS local mean for dl fire model      <Rackhun Son>
-    CHARACTER(len=filename_max) :: dl_local_clim_lai_filename     ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_t_air_filename   ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_rH_cf_filename   ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_q_filename       ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_ws10_filename    ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_swvl1_filename   ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_swvl2_filename   ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_swvl3_filename   ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_swvl4_filename   ! OBS local mean for dl fire model      <Rackhun Son>
+    !CHARACTER(len=filename_max) :: dl_local_clim_lai_filename     ! OBS local mean for dl fire model      <Rackhun Son>
 
 
     INTEGER                     :: fire_algorithm
@@ -260,15 +260,15 @@ CONTAINS
     !bc_population_filename = 'bc_land_population.nc'     ! population density (daily) for fire  <Rackhun Son>
     dl_fire_model_params_filename = 'dl_model_params.nc' ! dl fire model parameters             <Rackhun Son>
 
-    dl_local_clim_t_air_filename   = 'dl_local_clim_t2m.nc'   ! t2m local mean for fire           <Rackhun Son>
-    dl_local_clim_rH_cf_filename   = 'dl_local_clim_rH_cf.nc' ! rel humidity local mean for fire  <Rackhun Son>
-    dl_local_clim_q_filename       = 'dl_local_clim_q.nc'     ! humidity local mean for fire      <Rackhun Son>
-    dl_local_clim_ws10_filename    = 'dl_local_clim_ws10.nc'  ! wind speed local mean for fire    <Rackhun Son>
-    dl_local_clim_swvl1_filename   = 'dl_local_clim_swvl1.nc' ! swvl1 local mean for fire         <Rackhun Son>
-    dl_local_clim_swvl2_filename   = 'dl_local_clim_swvl2.nc' ! swvl2 local mean for fire         <Rackhun Son>
-    dl_local_clim_swvl3_filename   = 'dl_local_clim_swvl3.nc' ! swvl3 local mean for fire         <Rackhun Son>
-    dl_local_clim_swvl4_filename   = 'dl_local_clim_swvl4.nc' ! swvl4 local mean for fire         <Rackhun Son>
-    dl_local_clim_lai_filename     = 'dl_local_clim_lai.nc'   ! lai local mean for fire           <Rackhun Son>
+    !dl_local_clim_t_air_filename   = 'dl_local_clim_t2m.nc'   ! t2m local mean for fire           <Rackhun Son>
+    !dl_local_clim_rH_cf_filename   = 'dl_local_clim_rH_cf.nc' ! rel humidity local mean for fire  <Rackhun Son>
+    !dl_local_clim_q_filename       = 'dl_local_clim_q.nc'     ! humidity local mean for fire      <Rackhun Son>
+    !dl_local_clim_ws10_filename    = 'dl_local_clim_ws10.nc'  ! wind speed local mean for fire    <Rackhun Son>
+    !dl_local_clim_swvl1_filename   = 'dl_local_clim_swvl1.nc' ! swvl1 local mean for fire         <Rackhun Son>
+    !dl_local_clim_swvl2_filename   = 'dl_local_clim_swvl2.nc' ! swvl2 local mean for fire         <Rackhun Son>
+    !dl_local_clim_swvl3_filename   = 'dl_local_clim_swvl3.nc' ! swvl3 local mean for fire         <Rackhun Son>
+    !dl_local_clim_swvl4_filename   = 'dl_local_clim_swvl4.nc' ! swvl4 local mean for fire         <Rackhun Son>
+    !dl_local_clim_lai_filename     = 'dl_local_clim_lai.nc'   ! lai local mean for fire           <Rackhun Son>
 
     windbreak_algorithm    =  1
     lburn_pasture          = .FALSE.
@@ -537,15 +537,15 @@ CONTAINS
     !config%bc_population_filename = bc_population_filename  ! population density (daily) for fire        <Rackhun Son>
     config%dl_fire_model_params_filename = dl_fire_model_params_filename ! dl fire model parameters       <Rackhun Son>
 
-    config%dl_local_clim_t_air_filename   = dl_local_clim_t_air_filename
-    config%dl_local_clim_rH_cf_filename   = dl_local_clim_rH_cf_filename
-    config%dl_local_clim_q_filename       = dl_local_clim_q_filename
-    config%dl_local_clim_ws10_filename    = dl_local_clim_ws10_filename
-    config%dl_local_clim_swvl1_filename   = dl_local_clim_swvl1_filename
-    config%dl_local_clim_swvl2_filename   = dl_local_clim_swvl2_filename
-    config%dl_local_clim_swvl3_filename   = dl_local_clim_swvl3_filename
-    config%dl_local_clim_swvl4_filename   = dl_local_clim_swvl4_filename
-    config%dl_local_clim_lai_filename     = dl_local_clim_lai_filename
+    !config%dl_local_clim_t_air_filename   = dl_local_clim_t_air_filename
+    !config%dl_local_clim_rH_cf_filename   = dl_local_clim_rH_cf_filename
+    !config%dl_local_clim_q_filename       = dl_local_clim_q_filename
+    !config%dl_local_clim_ws10_filename    = dl_local_clim_ws10_filename
+    !config%dl_local_clim_swvl1_filename   = dl_local_clim_swvl1_filename
+    !config%dl_local_clim_swvl2_filename   = dl_local_clim_swvl2_filename
+    !config%dl_local_clim_swvl3_filename   = dl_local_clim_swvl3_filename
+    !config%dl_local_clim_swvl4_filename   = dl_local_clim_swvl4_filename
+    !config%dl_local_clim_lai_filename     = dl_local_clim_lai_filename
 
     config%fire_algorithm         = fire_algorithm
     config%windbreak_algorithm    = windbreak_algorithm
@@ -649,10 +649,12 @@ CONTAINS
 
     ! New axis for weather LSTM <Rackhun Son>
     d_weather_lstm => new_vgrid('d_weather_lstm', ZAXIS_GENERIC, d_weather_hidden*d_region, units='')
+    !d_weather_lstm => new_vgrid('d_weather_lstm', ZAXIS_GENERIC, d_weather_hidden, units='')
     CALL Register_vgrid(d_weather_lstm)
 
     ! New axis for land LSTM <Rackhun Son>
     d_land_lstm => new_vgrid('d_land_lstm', ZAXIS_GENERIC, d_land_hidden*d_region, units='')
+    !d_land_lstm => new_vgrid('d_land_lstm', ZAXIS_GENERIC, d_land_hidden, units='')
     CALL Register_vgrid(d_land_lstm)
 
     ! New axis for weather LSTM <Rackhun Son>

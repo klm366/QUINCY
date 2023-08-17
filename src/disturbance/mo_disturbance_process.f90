@@ -75,17 +75,29 @@ CONTAINS
 
   !!! DL based Fire model  <Rackhun Son>
   SUBROUTINE burned_fract_dl( &
-    & t_air,       t_clim_o,      t_clim_m,       & ! in
-    & q_rel_air,   q_rel_clim_o,  q_rel_clim_m,   & ! in
-    !& q_rel_air_climbuf, fire_rel_hum_threshold,  & ! in
-    & q_air,       q_clim_o,      q_clim_m,       & ! in
+    & t_air,       t_clim_m,       & ! in
+    & q_rel_air,   q_rel_clim_m,   & ! in
+    & q_air,       q_clim_m,       & ! in
     & wind_10m,                                   & ! in
     & rain,                                       & ! in
-    & swl1,        swl1_clim_o,   swl1_clim_m,    & ! in
-    & swl2,        swl2_clim_o,   swl2_clim_m,    & ! in
-    & swl3,        swl3_clim_o,   swl3_clim_m,    & ! in
-    & swl4,        swl4_clim_o,   swl4_clim_m,    & ! in
-    & lai,         lai_clim_o,    lai_clim_m,     & ! in
+    & swl1,        swl1_clim_m,    & ! in
+    & swl2,        swl2_clim_m,    & ! in
+    & swl3,        swl3_clim_m,    & ! in
+    & swl4,        swl4_clim_m,    & ! in
+    & lai,         lai_clim_m,     & ! in
+
+    !& t_air,       t_clim_o,      t_clim_m,       & ! in
+    !& q_rel_air,   q_rel_clim_o,  q_rel_clim_m,   & ! in
+    !& q_rel_air_climbuf, fire_rel_hum_threshold,  & ! in
+    !& q_air,       q_clim_o,      q_clim_m,       & ! in
+    !& wind_10m,                                   & ! in
+    !& rain,                                       & ! in
+    !& swl1,        swl1_clim_o,   swl1_clim_m,    & ! in
+    !& swl2,        swl2_clim_o,   swl2_clim_m,    & ! in
+    !& swl3,        swl3_clim_o,   swl3_clim_m,    & ! in
+    !& swl4,        swl4_clim_o,   swl4_clim_m,    & ! in
+    !& lai,         lai_clim_o,    lai_clim_m,     & ! in
+
     !& t_air,        t_clim,                       & ! in
     !& q_rel_air,    q_rel_clim,                   & ! in
     !& q_air,        q_clim,                       & ! in
@@ -184,17 +196,30 @@ CONTAINS
 
     ! Input Arguments
     REAL(wp), INTENT(in) ::                             &
-      & t_air(:),     t_clim_o(:),     t_clim_m(:),     &
-      & q_rel_air(:), q_rel_clim_o(:), q_rel_clim_m(:), &
+      & t_air(:),     t_clim_m(:),     &
+      & q_rel_air(:), q_rel_clim_m(:), &
       !& q_rel_air_climbuf(:), fire_rel_hum_threshold,   &
-      & q_air(:),     q_clim_o(:),     q_clim_m(:),     &
+      & q_air(:),     q_clim_m(:),     &
       & wind_10m(:),                                    &
       & rain(:),                                        &
-      & swl1(:),      swl1_clim_o(:),  swl1_clim_m(:),  &
-      & swl2(:),      swl2_clim_o(:),  swl2_clim_m(:),  &
-      & swl3(:),      swl3_clim_o(:),  swl3_clim_m(:),  &
-      & swl4(:),      swl4_clim_o(:),  swl4_clim_m(:),  &
-      & lai(:),       lai_clim_o(:),   lai_clim_m(:),   &
+      & swl1(:),      swl1_clim_m(:),  &
+      & swl2(:),      swl2_clim_m(:),  &
+      & swl3(:),      swl3_clim_m(:),  &
+      & swl4(:),      swl4_clim_m(:),  &
+      & lai(:),       lai_clim_m(:),   &
+
+      !& t_air(:),     t_clim_o(:),     t_clim_m(:),     &
+      !& q_rel_air(:), q_rel_clim_o(:), q_rel_clim_m(:), &
+      !& q_rel_air_climbuf(:), fire_rel_hum_threshold,   &
+      !& q_air(:),     q_clim_o(:),     q_clim_m(:),     &
+      !& wind_10m(:),                                    &
+      !& rain(:),                                        &
+      !& swl1(:),      swl1_clim_o(:),  swl1_clim_m(:),  &
+      !& swl2(:),      swl2_clim_o(:),  swl2_clim_m(:),  &
+      !& swl3(:),      swl3_clim_o(:),  swl3_clim_m(:),  &
+      !& swl4(:),      swl4_clim_o(:),  swl4_clim_m(:),  &
+      !& lai(:),       lai_clim_o(:),   lai_clim_m(:),   &
+
       !& t_air(:),     t_clim(:),                       &
       !& q_rel_air(:), q_rel_clim(:),                   &
       !& q_air(:),     q_clim(:),                       &

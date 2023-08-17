@@ -246,7 +246,7 @@ CONTAINS
         & t_cf('leaf_area_index', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
+        !& output_level=BASIC,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       ! setting for: fract_fpc
@@ -261,7 +261,7 @@ CONTAINS
         & t_cf('foliage_projected_cover', '', ''),                             &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
+        !& output_level=BASIC,                                                  &
         & initval_r=0.0_wp, l_aggregate_all=.TRUE. )
 
       CALL mem%Add_var( 'fract_fpc_max', mem%fract_fpc_max,                    &
@@ -269,7 +269,7 @@ CONTAINS
         & t_cf('maximum_fpc', '', ''),                                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
+        !& output_level=BASIC,                                                  &
         & initval_r=0.0_wp )
 
       CALL mem%Add_var( 'fract_forest', mem%fract_forest,                      &
@@ -447,7 +447,7 @@ CONTAINS
         & t_cf('leaf_area_index', '', ''),                                     &
         & t_grib1(table, 255, grib_bits), grib2_desc,                          &
         & prefix, suffix,                                                      &
-        & loutput=.TRUE., output_level=BASIC,                                  &
+        & loutput=.TRUE., &!output_level=BASIC,                                  &
         & initval_r=0.0_wp )
         
       CALL mem%Add_var('lai_cl', mem%lai_cl,                                 &

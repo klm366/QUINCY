@@ -176,7 +176,7 @@ CONTAINS
       & t_cf('soil_temperature', 'K', ''),                                   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
+      !& output_level=BASIC,                                                  &
       & initval_r=280.0_wp )
 
     CALL mem%Add_var( 't_soil_acoef', mem%t_soil_acoef,                      &
@@ -209,7 +209,7 @@ CONTAINS
         & t_cf('snow_temperature', 'K', ''),                                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
         & prefix, suffix,                                                      &
-        & output_level=BASIC,                                                  &
+        !& output_level=BASIC,                                                  &
         & initval_r=273.15_wp )
 
       CALL mem%Add_var( 't_snow_acoef', mem%t_snow_acoef,                      &
@@ -232,7 +232,7 @@ CONTAINS
       & t_cf('heat_capacity_ground', 'J m-2 K-1', 'Ground heat capacity'),   &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
+      !& output_level=BASIC,                                                  &
       & initval_r=1.3e5_wp )
 
     CALL mem%Add_var( 'hcap_grnd_old', mem%hcap_grnd_old,                            &
@@ -241,7 +241,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
       & prefix, suffix,                                                              &
       & lrestart=.FALSE.,                                                            &
-      & output_level=BASIC,                                                          &
+      !& output_level=BASIC,                                                          &
       & initval_r=1.3e5_wp )
 
     CALL mem%Add_var( 'grnd_hflx', mem%grnd_hflx,                            &
@@ -249,7 +249,7 @@ CONTAINS
       & t_cf('grnd_hflx', 'J m-2 s-1', 'Ground heat flux'),                  &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
-      & output_level=BASIC,                                                  &
+      !& output_level=BASIC,                                                  &
       & initval_r=10.0_wp )
 
     CALL mem%Add_var( 'grnd_hflx_old', mem%grnd_hflx_old,                    &
@@ -258,7 +258,7 @@ CONTAINS
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
       & prefix, suffix,                                                      &
       & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
+      !& output_level=BASIC,                                                  &
       & initval_r=10.0_wp )
 
     CALL mem%Add_var( 'thaw_depth', mem%thaw_depth,                          &

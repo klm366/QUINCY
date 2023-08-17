@@ -106,15 +106,15 @@ MODULE mo_disturb_memory_class
 
   !REAL(wp), POINTER :: population_density(:,:,:)    => NULL()   ! population density        (nproma,nblks,366) <Rackhun Son>
 
-  REAL(wp), POINTER :: t_air_local_clim(:,:,:)        => NULL()   ! temperature           (nproma,nblks,366)   <Rackhun Son>
-  REAL(wp), POINTER :: q_rel_local_clim(:,:,:)        => NULL()   ! relative humidity     (nproma,nblks,366)   <Rackhun Son>
-  REAL(wp), POINTER :: q_local_clim(:,:,:)            => NULL()   ! specific humidity     (nproma,nblks,366)   <Rackhun Son>
-  REAL(wp), POINTER :: ws10_local_clim(:,:,:)         => NULL()   ! wind speed            (nproma,nblks,366)   <Rackhun Son>
-  REAL(wp), POINTER :: swvl1_local_clim(:,:,:)        => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
-  REAL(wp), POINTER :: swvl2_local_clim(:,:,:)        => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
-  REAL(wp), POINTER :: swvl3_local_clim(:,:,:)        => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
-  REAL(wp), POINTER :: swvl4_local_clim(:,:,:)        => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
-  REAL(wp), POINTER :: lai_local_clim(:,:,:)          => NULL()   ! lai                   (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: t_air_local_clim(:,:,:)        => NULL()   ! temperature           (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: q_rel_local_clim(:,:,:)        => NULL()   ! relative humidity     (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: q_local_clim(:,:,:)            => NULL()   ! specific humidity     (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: ws10_local_clim(:,:,:)         => NULL()   ! wind speed            (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: swvl1_local_clim(:,:,:)        => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: swvl2_local_clim(:,:,:)        => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: swvl3_local_clim(:,:,:)        => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: swvl4_local_clim(:,:,:)        => NULL()   ! soil water content    (nproma,nblks,366)   <Rackhun Son>
+  !REAL(wp), POINTER :: lai_local_clim(:,:,:)          => NULL()   ! lai                   (nproma,nblks,366)   <Rackhun Son>
  
   CONTAINS
     PROCEDURE :: Init => Init_disturb_memory
@@ -196,15 +196,16 @@ CONTAINS
 
     !ALLOCATE(mem%population_density   (hgrid%nproma, hgrid%nblks, 1:366))   ! population density    <Rackhun Son>
 
-    ALLOCATE(mem%t_air_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! temperature           <Rackhun Son>
-    ALLOCATE(mem%q_rel_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! relative humidity     <Rackhun Son>
-    ALLOCATE(mem%q_local_clim         (hgrid%nproma, hgrid%nblks, 1:366))   ! specific humidity     <Rackhun Son>
-    ALLOCATE(mem%ws10_local_clim      (hgrid%nproma, hgrid%nblks, 1:366))   ! wind speed            <Rackhun Son>
-    ALLOCATE(mem%swvl1_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! soil water content    <Rackhun Son>
-    ALLOCATE(mem%swvl2_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! soil water content    <Rackhun Son>
-    ALLOCATE(mem%swvl3_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! soil water content    <Rackhun Son>
-    ALLOCATE(mem%swvl4_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! soil water content    <Rackhun Son>
-    ALLOCATE(mem%lai_local_clim       (hgrid%nproma, hgrid%nblks, 1:366))   ! lai                   <Rackhun Son>
+    !ALLOCATE(mem%t_air_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! temperature           <Rackhun Son>
+    !ALLOCATE(mem%q_rel_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! relative humidity     <Rackhun Son>
+    !ALLOCATE(mem%q_local_clim         (hgrid%nproma, hgrid%nblks, 1:366))   ! specific humidity     <Rackhun Son>
+    !ALLOCATE(mem%ws10_local_clim      (hgrid%nproma, hgrid%nblks, 1:366))   ! wind speed            <Rackhun Son>
+    !ALLOCATE(mem%swvl1_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! soil water content    <Rackhun Son>
+    !ALLOCATE(mem%swvl2_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! soil water content    <Rackhun Son>
+    !ALLOCATE(mem%swvl3_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! soil water content    <Rackhun Son>
+    !ALLOCATE(mem%swvl4_local_clim     (hgrid%nproma, hgrid%nblks, 1:366))   ! soil water content    <Rackhun Son>
+    !ALLOCATE(mem%lai_local_clim       (hgrid%nproma, hgrid%nblks, 1:366))   ! lai                   <Rackhun Son>
+
     !ALLOCATE(mem%t_air_local_clim     (hgrid%nproma, hgrid%nblks, 1:12))   ! temperature           <Rackhun Son>
     !ALLOCATE(mem%q_rel_local_clim     (hgrid%nproma, hgrid%nblks, 1:12))   ! relative humidity     <Rackhun Son>
     !ALLOCATE(mem%q_local_clim         (hgrid%nproma, hgrid%nblks, 1:12))   ! specific humidity     <Rackhun Son>
@@ -245,7 +246,7 @@ CONTAINS
                                                & at the end of the last day.'),                         &
       & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                              &
       & prefix, suffix,                                                                                 &
-      & output_level=BASIC,                                                                             &
+      !& output_level=BASIC,                                                                             &
       & lrestart=.FALSE., initval_r=50.0_wp ) ! initval taken from JSBACH3
 
     CALL mem%Add_var( 'prev_day_max_wind_10m', mem%prev_day_max_wind_10m,         &
