@@ -225,38 +225,6 @@ CONTAINS
     layer5_bias_global(:)     = layer5_bias(:)
     layer6_bias_global(:)     = layer6_bias(:)
 
-    !DO i = 1,13
-    !  layer1_weight_global(:,128*(i-1)+1:128*i) = layer1_weight(:,:)
-    !  layer2_weight_global(:,128*(i-1)+1:128*i) = layer2_weight(:,:)
-    !  layer3_weight_global(:,128*(i-1)+1:128*i) = layer3_weight(:,:)
-    !  layer4_weight_global(:,128*(i-1)+1:128*i) = layer4_weight(:,:)
-    !  layer5_weight_global(:,128*(i-1)+1:128*i) = layer5_weight(:,:)
-    !  layer6_weight_global(:,  1*(i-1)+1:  1*i) = layer6_weight(:,:)
-
-    !  layer1_bias_global(128*(i-1)+1:128*i)     = layer1_bias(:)
-    !  layer2_bias_global(128*(i-1)+1:128*i)     = layer2_bias(:)
-    !  layer3_bias_global(128*(i-1)+1:128*i)     = layer3_bias(:)
-    !  layer4_bias_global(128*(i-1)+1:128*i)     = layer4_bias(:)
-    !  layer5_bias_global(128*(i-1)+1:128*i)     = layer5_bias(:)
-    !  layer6_bias_global(  1*(i-1)+1:  1*i)     = layer6_bias(:)
-    !ENDDO
-
-    !DO i = 1,8
-    !  write(201,rec=i) layer1_weight_global
-    !  write(202,rec=i) layer2_weight_global
-    !  write(203,rec=i) layer3_weight_global
-    !  write(204,rec=i) layer4_weight_global
-    !  write(205,rec=i) layer5_weight_global
-    !  write(206,rec=i) layer6_weight_global
-
-    !  write(211,rec=i) layer1_bias_global
-    !  write(212,rec=i) layer2_bias_global
-    !  write(213,rec=i) layer3_bias_global
-    !  write(214,rec=i) layer4_bias_global
-    !  write(215,rec=i) layer5_bias_global
-    !  write(216,rec=i) layer6_bias_global
-    !ENDDO
-
   END SUBROUTINE update_trainable_parameters
 
 
@@ -339,34 +307,6 @@ CONTAINS
     layer4_bias_global(:)     = layer4_bias(:)
     layer5_bias_global(:)     = layer5_bias(:)
     layer6_bias_global(:)     = layer6_bias(:)
-
-    !read(301,rec=pid) layer1_weight_global
-    !read(302,rec=pid) layer2_weight_global
-    !read(303,rec=pid) layer3_weight_global
-    !read(304,rec=pid) layer4_weight_global
-    !read(305,rec=pid) layer5_weight_global
-    !read(306,rec=pid) layer6_weight_global
-
-    !read(311,rec=pid) layer1_bias_global
-    !read(312,rec=pid) layer2_bias_global
-    !read(313,rec=pid) layer3_bias_global
-    !read(314,rec=pid) layer4_bias_global
-    !read(315,rec=pid) layer5_bias_global
-    !read(316,rec=pid) layer6_bias_global
-
-    !layer1_weight(:,:) = layer1_weight_global(:,1:128)
-    !layer2_weight(:,:) = layer2_weight_global(:,1:128)
-    !layer3_weight(:,:) = layer3_weight_global(:,1:128)
-    !layer4_weight(:,:) = layer4_weight_global(:,1:128)
-    !layer5_weight(:,:) = layer5_weight_global(:,1:128)
-    !layer6_weight(:,:) = layer6_weight_global(:,1:1)
-
-    !layer1_bias(:)     = layer1_bias_global(1:128)
-    !layer2_bias(:)     = layer2_bias_global(1:128)
-    !layer3_bias(:)     = layer3_bias_global(1:128)
-    !layer4_bias(:)     = layer4_bias_global(1:128)
-    !layer5_bias(:)     = layer5_bias_global(1:128)
-    !layer6_bias(:)     = layer6_bias_global(1:1)
 
   END SUBROUTINE load_trained_parameters
 
