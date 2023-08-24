@@ -48,8 +48,7 @@ CONTAINS
     USE mo_jsb_model_class,         ONLY: t_jsb_model
     USE mo_jsb_lctlib_class,        ONLY: t_lctlib_element
     USE mo_jsb_process_class,       ONLY: A2L_, ASSIMI_, PHENO_, RAD_ , VEG_
-    USE mo_jsb_grid_class,          ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,                ONLY: Get_vgrid
+    USE mo_jsb_vertical_axes,       ONLY: t_jsb_vgrid, Get_vgrid
     USE mo_jsb_impl_constants,      ONLY: test_false_true
     USE mo_jsb_math_constants,      ONLY: dtime, one_day, one_year, eps4, eps8
     USE mo_veg_constants,           ONLY: k_leafon_canopy, max_leaf_shedding_rate

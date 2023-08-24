@@ -42,6 +42,7 @@ MODULE mo_jsb_task_class
     INTEGER                   :: ics     = -1  ! Index of chunk start
     INTEGER                   :: ice     = -1  ! Index of chunk end
     INTEGER                   :: nc      = -1  ! Length of chunk
+    INTEGER, ALLOCATABLE      :: vdims(:)      ! Dimensions of vertical grids
   END TYPE t_jsb_task_options
 
 !!$  TYPE, EXTENDS(t_Message) :: t_jsb_task_msg

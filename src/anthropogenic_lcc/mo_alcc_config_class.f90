@@ -54,8 +54,7 @@ CONTAINS
   SUBROUTINE Init_alcc_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_vertical_axes,  ONLY: t_jsb_vgrid, new_vgrid, Register_vgrid, VGRID_JSB_PFTS
     USE mo_jsb_io,             ONLY: ZAXIS_GENERIC
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -115,7 +114,7 @@ CONTAINS
     ! Create vertical axis
     ! JN-TODO (RS...): currently I get nr_of_pfts from namelist -> better way? usecase?
     ! -> + this grid might be useful in other contexts, too?
-    pft_layer  => new_vgrid('pfts', ZAXIS_GENERIC, nr_of_pfts, &
+    pft_layer  => new_vgrid('pfts', VGRID_JSB_PFTS, ZAXIS_GENERIC, nr_of_pfts, &
       & levels=(/ (REAL(i,kind=wp),i=1,nr_of_pfts) /), units='')
     CALL register_vgrid(pft_layer)
 

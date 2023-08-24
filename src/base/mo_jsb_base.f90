@@ -38,8 +38,7 @@ CONTAINS
     USE mo_jsb_config_class,    ONLY: new_model_config
     USE mo_jsb_process_factory, ONLY: max_no_of_processes, Create_process
     USE mo_jsb_time,            ONLY: init_time
-    USE mo_jsb_grid_class,      ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,            ONLY: Register_vgrid
+    USE mo_jsb_vertical_axes,   ONLY: t_jsb_vgrid, new_vgrid, Register_vgrid, Get_vgrid, Get_no_of_vgrids, VGRID_SURFACE
     USE mo_jsb_io,              ONLY: ZAXIS_SURFACE
     USE mo_rad_constants,       ONLY: init_rad_constants
     USE mo_atmland_constants,   ONLY: init_atmland_constants
@@ -70,9 +69,9 @@ CONTAINS
 
     TYPE(t_jsb_model), POINTER :: model => NULL()
 
-    TYPE(t_jsb_vgrid), POINTER :: surface                      ! Vertical grid
+    TYPE(t_jsb_vgrid), POINTER :: surface, vgrid_ptr ! Vertical grids
 
-    INTEGER :: no_of_models, model_idx, iproc
+    INTEGER :: no_of_models, model_idx, iproc, ivgrid
 
     CHARACTER(len=*), PARAMETER :: routine = 'mo_jsb_base:jsbach_setup_models'
 
@@ -122,7 +121,7 @@ CONTAINS
 
       CALL model%Set_mode(model%config%hsm_mode)
 
-      surface => new_vgrid('surface', ZAXIS_SURFACE, 1)
+      surface => new_vgrid('surface', VGRID_SURFACE, ZAXIS_SURFACE, 1)
       CALL register_vgrid(surface)
 
       ALLOCATE(model%processes(max_no_of_processes))
@@ -131,6 +130,12 @@ CONTAINS
       END DO
 
       CALL model%Configure_processes()
+
+      ! Now all active vertical axes should be configured ... put their dimensions into model%options
+      DO ivgrid=1,Get_no_of_vgrids()
+        vgrid_ptr => Get_vgrid(idx=ivgrid)
+        model%options(:)%vdims(vgrid_ptr%id) = vgrid_ptr%n_levels
+      END DO
 
       dsl4jsb_Get_config(SSE_)
       dsl4jsb_Get_config(HYDRO_)

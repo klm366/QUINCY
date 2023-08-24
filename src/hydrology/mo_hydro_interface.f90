@@ -31,8 +31,9 @@ MODULE mo_hydro_interface
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
   USE mo_jsb_class,          ONLY: Get_model
-  USE mo_jsb_grid_class,     ONLY: t_jsb_grid, t_jsb_vgrid
-  USE mo_jsb_grid,           ONLY: Get_grid, Get_vgrid
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+  USE mo_jsb_grid,           ONLY: Get_grid
+  USE mo_jsb_vertical_axes,  ONLY: t_jsb_vgrid, Get_vgrid, VGRID_JSB_WATER
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_process_class,  ONLY: t_jsb_process
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
@@ -785,7 +786,6 @@ CONTAINS
     ! Locally allocated vectors
     !
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     INTEGER  :: iblk, ics, ice, nc, ic, i
     INTEGER  :: nsoil, is
@@ -796,6 +796,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    nsoil = options%vdims(VGRID_JSB_WATER)
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
 
@@ -804,9 +805,6 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-
-    soil_w => Get_vgrid('soil_depth_water')
-    nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
 
@@ -964,6 +962,7 @@ CONTAINS
     ics   = options%ics
     ice   = options%ice
     nc    = options%nc
+    nsoil = options%vdims(VGRID_JSB_WATER)
     dtime = options%dtime
 
     IF (.NOT. tile%Is_process_active(HYDRO_)) RETURN
@@ -981,7 +980,6 @@ CONTAINS
     grid => Get_grid(model%grid_id)
 
     soil_w => Get_vgrid('soil_depth_water')
-    nsoil = soil_w%n_levels
     dz => soil_w%dz(:)
 
     dsl4jsb_Get_config(HYDRO_)
@@ -1236,7 +1234,6 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     TYPE(t_jsb_model), POINTER :: model
-    TYPE(t_jsb_vgrid), POINTER :: soil_w
 
     dsl4jsb_Def_config(HYDRO_)
 
@@ -1269,14 +1266,13 @@ CONTAINS
     ics  = options%ics
     ice  = options%ice
     nc   = options%nc
+    nsoil = options%vdims(VGRID_JSB_WATER)
 
     IF (.NOT. tile%Is_process_active(HYDRO_) .OR. .NOT. tile%is_vegetation) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    soil_w => Get_vgrid('soil_depth_water')
-    nsoil = soil_w%n_levels
 
     dsl4jsb_Get_config(HYDRO_)
 

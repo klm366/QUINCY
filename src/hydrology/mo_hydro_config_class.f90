@@ -55,8 +55,7 @@ CONTAINS
   SUBROUTINE Init_hydro_config(config)
 
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
-    USE mo_jsb_grid_class,     ONLY: t_jsb_vgrid, new_vgrid
-    USE mo_jsb_grid,           ONLY: Register_vgrid
+    USE mo_jsb_vertical_axes,  ONLY: t_jsb_vgrid, new_vgrid, Register_vgrid, VGRID_JSB_WATER
     USE mo_jsb_io,             ONLY: ZAXIS_DEPTH_BELOW_LAND
     USE mo_jsb_io_netcdf,      ONLY: t_input_file, jsb_netcdf_open_input
 
@@ -169,7 +168,7 @@ CONTAINS
 
     CALL input_file%Close()
 
-    soil_w  => new_vgrid('soil_depth_water', ZAXIS_DEPTH_BELOW_LAND, nsoil, &
+    soil_w  => new_vgrid('soil_depth_water', VGRID_JSB_WATER, ZAXIS_DEPTH_BELOW_LAND, nsoil, &
       & levels  = mids                 (1:nsoil  ),                         &
       & lbounds = depths               (1:nsoil  ),                         &
       & ubounds = depths               (2:nsoil+1),                         &

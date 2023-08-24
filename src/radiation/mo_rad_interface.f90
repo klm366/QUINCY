@@ -707,8 +707,6 @@ CONTAINS
 
     ! Use declarations
     USE mo_jsb_lctlib_class,  ONLY: t_lctlib_element
-    USE mo_jsb_grid_class,    ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,          ONLY: Get_vgrid
     USE mo_rad_process,       ONLY: &
       & get_surface_albedo_simple, calc_soil_albedo, calc_alb_lwtr, calc_alb_lice, calc_glacier_albedo, &
       & calc_sky_view_fractions, calc_snow_albedo, Merge_albedos_of_vegtile, &
@@ -1309,8 +1307,7 @@ CONTAINS
     USE mo_jsb_model_class,       ONLY: t_jsb_model
     USE mo_jsb_process_class,     ONLY: A2L_, RAD_, VEG_, PHENO_, HYDRO_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
-    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
-    USE mo_jsb_grid,              ONLY: Get_vgrid
+    USE mo_jsb_vertical_axes,     ONLY: t_jsb_vgrid, Get_vgrid, VGRID_Q_CANOPY
     !USE mo_rad_constants,         ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, rfr_ratio_toc, k_r2fr_chl
     USE mo_rad_process,           ONLY: calc_sw_srf_net, calc_albedo_radiation_quincy_hlp, &
                                         Has_minimal_radiation, calc_snow_albedo
@@ -1335,7 +1332,6 @@ CONTAINS
     ! 0.2 Local
     TYPE(t_jsb_model),      POINTER        :: model
     TYPE(t_lctlib_element), POINTER        :: lctlib              !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER        :: vgrid_canopy        ! Vertical grid
     LOGICAL,  DIMENSION(options%nc)        :: l_day               ! True = day | False = night
     REAL(wp), DIMENSION(options%nc)        :: alb_vis_snow_soil   ! albedo of snow and soil combined 
     REAL(wp), DIMENSION(options%nc)        :: alb_nir_snow_soil   ! albedo of snow and soil combined 
@@ -1412,6 +1408,7 @@ CONTAINS
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
+    ncanopy = options%vdims(VGRID_Q_CANOPY)
     ! ---------------------------
     ! 0.4 Process Activity, Debug Option
     IF (.NOT. tile%Is_process_active(RAD_)) RETURN   ! ask for all processes considered here ?
@@ -1429,8 +1426,6 @@ CONTAINS
     ! 0.5 Get Memory
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
-    vgrid_canopy  => Get_vgrid('canopy_layer_q_')
-    ncanopy       =  vgrid_canopy%n_levels
     ! Get process config
     dsl4jsb_Get_config(RAD_)
     ! Get process memories
