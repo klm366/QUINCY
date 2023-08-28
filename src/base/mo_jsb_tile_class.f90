@@ -37,7 +37,7 @@ MODULE mo_jsb_tile_class
   USE mo_jsb_memory_class,     ONLY: t_jsb_memory_p, t_jsb_memory
   USE mo_jsb_lct_class,        ONLY: t_jsb_lct, &
     &                                LAND_TYPE, VEG_TYPE, BARE_TYPE, GLACIER_TYPE, LAKE_TYPE, &
-    &                                UPLAND_TYPE, LOWLAND_TYPE, RIDGE_TYPE, DEPRES_TYPE
+    &                                STEEP_TYPE, HILLSLOPE_TYPE, LOWLAND_TYPE, FLOODPLAIN_TYPE
   USE mo_jsb_var_class,        ONLY: t_jsb_var_p, t_jsb_var, t_jsb_var_real2d, t_jsb_var_real3d
   USE mo_jsb_cqt_class,        ONLY: t_jsb_consQuan_p
   USE mo_jsb_lcc_class,        ONLY: t_jsb_lcc_proc_p
@@ -91,19 +91,19 @@ MODULE mo_jsb_tile_class
     LOGICAL                                :: is_land = .FALSE.             !< whether primary lct is LAND_TYPE
     LOGICAL                                :: is_glacier = .FALSE.          !< whether primary lct is GLACIER_TYPE
     LOGICAL                                :: is_lake = .FALSE.             !< whether primary lct is LAKE_TYPE
-    LOGICAL                                :: is_upland = .FALSE.           !< whether primary lct is UPLAND_TYPE
+    LOGICAL                                :: is_steep = .FALSE.            !< whether primary lct is STEEP_TYPE
+    LOGICAL                                :: is_hillslope = .FALSE.        !< whether primary lct is HILLSLOPE_TYPE
     LOGICAL                                :: is_lowland = .FALSE.          !< whether primary lct is LOWLAND_TYPE
-    LOGICAL                                :: is_ridge = .FALSE.            !< whether primary lct is RIDGE_TYPE
-    LOGICAL                                :: is_depression = .FALSE.       !< whether primary lct is DEPRES_TYPE
+    LOGICAL                                :: is_floodplain = .FALSE.       !< whether primary lct is FLOODPLAIN_TYPE
     LOGICAL                                :: contains_vegetation = .FALSE. !< whether any lct of tile is VEG_TYPE
     LOGICAL                                :: contains_bare = .FALSE.       !< whether any lct of tile is BARE_TYPE
     LOGICAL                                :: contains_land = .FALSE.       !< whether any lct of tile is LAND_TYPE
     LOGICAL                                :: contains_glacier = .FALSE.    !< whether any lct of tile is GLACIER_TYPE
     LOGICAL                                :: contains_lake = .FALSE.       !< whether any lct of tile is LAKE_TYPE
-    LOGICAL                                :: contains_upland = .FALSE.     !< whether any lct of tile is UPLAND_TYPE
+    LOGICAL                                :: contains_steep = .FALSE.      !< whether any lct of tile is STEEP_TYPE
+    LOGICAL                                :: contains_hillslope = .FALSE.  !< whether any lct of tile is HILLSLOPE_TYPE
     LOGICAL                                :: contains_lowland = .FALSE.    !< whether any lct of tile is LOWLAND_TYPE
-    LOGICAL                                :: contains_ridge = .FALSE.      !< whether any lct of tile is RIDGE_TYPE
-    LOGICAL                                :: contains_depression = .FALSE. !< whether any lct of tile is DEPRES_TYPE
+    LOGICAL                                :: contains_floodplain = .FALSE. !< whether any lct of tile is FLOODPLAIN_TYPE
     LOGICAL                                :: contains_soil = .FALSE.       !< whether any lct of tile is one that has soil
     !
     INTEGER :: owner_model_id = 0 !< ID of the jsbach model instance (needed e.g. for nesting)
@@ -366,14 +366,14 @@ CONTAINS
           this%is_glacier = .TRUE.
         CASE (LAKE_TYPE)
           this%is_lake = .TRUE.
-        CASE (UPLAND_TYPE)
-          this%is_upland = .TRUE.
+        CASE (STEEP_TYPE)
+          this%is_steep = .TRUE.
+        CASE (HILLSLOPE_TYPE)
+          this%is_hillslope = .TRUE.
         CASE (LOWLAND_TYPE)
           this%is_lowland = .TRUE.
-        CASE (RIDGE_TYPE)
-          this%is_ridge = .TRUE.
-        CASE (DEPRES_TYPE)
-          this%is_depression = .TRUE.
+        CASE (FLOODPLAIN_TYPE)
+          this%is_floodplain = .TRUE.
         END SELECT
       END IF
 
@@ -403,14 +403,14 @@ CONTAINS
       this%contains_glacier = .TRUE.
     CASE (LAKE_TYPE)
       this%contains_lake = .TRUE.
-    CASE (UPLAND_TYPE)
-      this%contains_upland = .TRUE.
+    CASE (STEEP_TYPE)
+      this%contains_steep = .TRUE.
+    CASE (HILLSLOPE_TYPE)
+      this%contains_hillslope = .TRUE.
     CASE (LOWLAND_TYPE)
       this%contains_lowland = .TRUE.
-    CASE (RIDGE_TYPE)
-      this%contains_ridge = .TRUE.
-    CASE (DEPRES_TYPE)
-      this%contains_depression = .TRUE.
+    CASE (FLOODPLAIN_TYPE)
+      this%contains_floodplain = .TRUE.
     END SELECT
 
     this%contains_soil       = this%contains_vegetation .OR. this%contains_bare .OR. this%contains_land

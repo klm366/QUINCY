@@ -31,7 +31,7 @@ MODULE mo_jsb_model_usecases
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
     &                               LAND_TYPE, VEG_TYPE, GLACIER_TYPE, LAKE_TYPE, & !, BARE_TYPE ! define the type of the tile
-    &                               UPLAND_TYPE, LOWLAND_TYPE, RIDGE_TYPE, DEPRES_TYPE
+    &                               STEEP_TYPE, HILLSLOPE_TYPE, LOWLAND_TYPE, FLOODPLAIN_TYPE
 !  USE mo_test_pools,          ONLY: test_pools                                                  ! to debug and test pools implementation
 
   IMPLICIT NONE
@@ -69,8 +69,8 @@ CONTAINS
     ! jsbach4 11 PFTs + forest age-classes
     CASE ('jsbach_forest_age_classes')
       CALL init_usecase_pfts_with_forest_age_classes(model)
-    CASE ('jsbach_qarctic')
-      CALL init_usecase_qarctic(model)
+    CASE ('jsbach_hydrotiles')
+      CALL init_usecase_hydrotiles(model)
     ! QUINCY 8 PFTs
     CASE ('quincy_eight_pfts')
       CALL init_usecase_quincy_eight_pfts(model)
@@ -514,9 +514,9 @@ CONTAINS
 
 
   ! ======================================================================================================= !
-  SUBROUTINE init_usecase_qarctic(model)
+  SUBROUTINE init_usecase_hydrotiles(model)
   ! This usecase consideres hydrologically different settings for all tiles below the land tile
-  ! Here, the tile tree branches into several copys for, e.g. upland and lowland settings
+  ! Here, the tile tree branches into several copys for, e.g. for tiles with different slope categories.
 
     TYPE(t_jsb_model), POINTER, INTENT(inout) :: model
 
@@ -528,19 +528,16 @@ CONTAINS
     INTEGER, PARAMETER :: ntopo = 4
 
     CHARACTER(len=6), PARAMETER :: topo_shortnames(ntopo) = [character(len=6) ::  &
-      & 'upup', 'uplow', 'lowup', 'lowlow' ]
+      & 'steep', 'hill', 'low', 'flood' ]
 
     CHARACTER(len=50), PARAMETER :: topo_longnames(ntopo) = [character(len=50) :: &
-      & 'micro-ridges within upland fraction',      &
-      & 'micro-depressions within upland fraction', &
-      & 'micro-ridges within lowland fraction',     &
-      & 'micro-depressions within lowland fraction' ]
+      & 'steep topography cell fraction',      &
+      & 'hillslope cell fraction', &
+      & 'lowland cell fraction',     &
+      & 'floodplain cell fraction' ]
 
-    INTEGER, PARAMETER :: macrotopo_types(ntopo) = [ &
-      & UPLAND_TYPE, UPLAND_TYPE, LOWLAND_TYPE, LOWLAND_TYPE ]
-
-    INTEGER, PARAMETER :: microtopo_types(ntopo) = [ &
-      & RIDGE_TYPE, DEPRES_TYPE, RIDGE_TYPE, DEPRES_TYPE ]
+    INTEGER, PARAMETER :: topo_types(ntopo) = [ &
+      & STEEP_TYPE, HILLSLOPE_TYPE, LOWLAND_TYPE, FLOODPLAIN_TYPE ]
 
     INTEGER, PARAMETER :: npft = 11
 
@@ -577,11 +574,11 @@ CONTAINS
     !   |
     !   |---------------------------------------------------------------------------------------------
     !   |                       |                         |                         |                |
-    !  veg_upup                veg_uplow                 veg_lowup                 veg_lowlow       glacier
+    !  veg_steep                veg_hill                  veg_low                   veg_flood        glacier
     !   |                       |                         |                         |
     !   |------------           |-------------            |-------------            |--------------
     !   |           |           |            |            |            |            |             |
-    !  pft01_upup  pftXX_upup  pft01_uplow  pftXX_uplow  pft01_lowup  pftXX_lowup  pft01_lowlow  pftXX_lowlow 
+    !  pft01_steep  pftXX_steep pft01_hill   pftXX_hill   pft01_low    pftXX_low    pft01_flood   pftXX_flood
     !
     ! Create root of the tile structure representing the whole grid box
     box_tile => t_jsb_tile('box', 'Top tile', &
@@ -632,8 +629,7 @@ CONTAINS
             & process_actions = (/ON_TILE_, ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
             & lct=t_jsb_lct(VEG_TYPE), parent=land_tile,  &
             & fract_varname='fract_veg_'//TRIM(topo_shortnames(t)))
-          CALL veg_tile%Add_lct(t_jsb_lct(macrotopo_types(t)))
-          CALL veg_tile%Add_lct(t_jsb_lct(microtopo_types(t)))
+          CALL veg_tile%Add_lct(t_jsb_lct(topo_types(t)))
 
           IF (model%processes(ALCC_)%p%config%active) THEN
             CALL veg_tile%Set_process_action(ALCC_, ON_TILE_, AGGREGATE_)
@@ -681,7 +677,7 @@ CONTAINS
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
     IF (model%config%use_lakes) NULLIFY(lake_tile)
 
-  END SUBROUTINE init_usecase_qarctic
+  END SUBROUTINE init_usecase_hydrotiles
 
   ! ======================================================================================================= !
   !>init routine for usecase quincy_eight_pfts
