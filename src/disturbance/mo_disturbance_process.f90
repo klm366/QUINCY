@@ -112,7 +112,6 @@ CONTAINS
 
     USE mo_physical_constants_iface, ONLY: rd  ! gas constant for dry air [J/(K*kg)]
     USE mo_physical_constants_iface, ONLY: rv  ! gas constant for water vapor [J/(K*kg)]
-    !USE mo_jsb4_forcing,             ONLY: sat_specific_humidity ! Function
 
     INTEGER, INTENT(in)  :: nc
     REAL(wp), INTENT(in) :: &

@@ -45,18 +45,15 @@ MODULE mo_jsb_var_class
     CHARACTER(len=VARNAME_LEN)    :: full_name                 ! Full name of variable in varlist, including prefix and suffix
     CHARACTER(len=:), ALLOCATABLE :: unit
     INTEGER                       :: type                      ! REAL1D / REAL2D / REAL3D
-    INTEGER                       :: len_dim3 = -1
-      !< bookkeeping variable for quick access of the size of the third dimension (only /= -1 if there is one)
     INTEGER                       :: subset_type               ! ON_DOMAIN / ON_CHUNK
     CHARACTER(len=:), ALLOCATABLE :: element_name              !
     CHARACTER(len=:), ALLOCATABLE :: element_shortname         ! Short name of element
-    INTEGER                       :: element_id                !
-    INTEGER                       :: owner_model_id            !
-    INTEGER                       :: owner_proc_id = -1        !
-    INTEGER, ALLOCATABLE          :: owner_tile_path(:)        !
-    INTEGER, ALLOCATABLE          :: child_idx(:)              ! Position-numbers of same variable for for the child tiles
-                                                               ! (according to mem%vars(:)).
-    !! TYPE(t_subset), POINTER     :: sub  <= not needed; because it is available via: sub = var%Get_subset() !!
+    INTEGER                       :: element_id                ! 
+    INTEGER                       :: owner_model_id            ! 
+    INTEGER                       :: owner_proc_id = -1        ! 
+    INTEGER, ALLOCATABLE          :: owner_tile_path(:)        ! 
+    INTEGER, ALLOCATABLE          :: child_idx(:)
+      !< Position-numbers of the same var (as this var) on the children of the current tile (i.e. within mem%vars(:) of that child).
     REAL(dp)                      :: missval
     LOGICAL                       :: l_aggregate_all = .FALSE. ! When aggregating, consider fractions of all child tiles even
                                                                ! of those where variable doesn't exist

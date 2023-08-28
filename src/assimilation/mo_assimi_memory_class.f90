@@ -489,7 +489,7 @@ CONTAINS
     hgrid        => Get_grid(mem%grid_id)
     surface      => Get_vgrid('surface')
     vgrid_canopy => Get_vgrid('canopy_layer')
-
+    
     ! ----------------------------------------------------------------------------------------------------- !
     ! create memory at tiles of LAND_TYPE or VEG_TYPE
     IF ( One_of(LAND_TYPE, lct_ids(:)) > 0 .OR. &
@@ -503,7 +503,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('gross_assimilation_cl', mem%gross_assimilation_cl, &
@@ -514,7 +514,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('canopy_cond_cl', mem%canopy_cond_cl, &
@@ -547,7 +547,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = BASIC, &
         & loutput = .TRUE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('gross_assimilation_C14', mem%gross_assimilation_C14, &
@@ -556,9 +556,9 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), &
         & t_grib2(255, 255, 255, grib_bits), &
         & prefix, suffix, &
-        & output_level = FULL, &
-        & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & output_level = BASIC, &
+        & loutput = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('net_assimilation', mem%net_assimilation, &
@@ -569,7 +569,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('net_assimilation_boc', mem%net_assimilation_boc, &
@@ -580,7 +580,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('maint_respiration_leaf', mem%maint_respiration_leaf, &
@@ -591,7 +591,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('net_assimilation_cl', mem%net_assimilation_cl, &
@@ -602,7 +602,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('maint_respiration_leaf_cl', mem%maint_respiration_leaf_cl, &
@@ -613,7 +613,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .TRUE., &
+        & lrestart = .FALSE., &
         & initval_r = 0.0_wp)
 
       CALL mem%Add_var('beta_air', mem%beta_air, &

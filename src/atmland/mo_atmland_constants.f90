@@ -1,4 +1,22 @@
 !>
+!!  @par Copyright
+!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+!!
+!!    This file is part of the QUINCY model.
+!!    The QUINCY model is free software: you can redistribute it and/or modify
+!!    it under the terms of the GNU General Public License version 3,
+!!    as published by the Free Software Foundation.
+!!
+!!    The QUINCY model is distributed in the hope that it will be useful,
+!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!    GNU General Public License for more details.
+!!
+!!    You should have received a copy of the GNU General Public License
+!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!! 
 !! @brief atmosphere-land constants, orbital parameters, conversion factors, plus init routine
 !!
 !! @author
@@ -13,7 +31,7 @@ MODULE mo_atmland_constants
   USE mo_kind,            ONLY: wp
 
   IMPLICIT NONE
-
+  
   ! solar constant
   REAL(wp),SAVE :: frac_vis_swtot_srf          !< fraction of solar shortwave radiation in the VIS band (here: 320-700nm for albedo)
   REAL(wp),SAVE :: frac_par_swvis_srf          !< fraction of visible solar shortwave radiation in the PAR band (400-700nm)
@@ -27,6 +45,7 @@ MODULE mo_atmland_constants
   REAL(wp),SAVE :: eps_vpd                     !< eps_vpd used for unit conversion Pa -> g g-1
 
   ! default values of model forcing for model testing:
+  !  @TODO some of the 'default values of model forcing' might not be used (and can be removed ?)
   REAL(wp),SAVE :: def_t_air                   !< temperature in deg K
   REAL(wp),SAVE :: def_vpd                     !< vpd in Pa
   REAL(wp),SAVE :: def_swdown                  !< PAR in W m-2
@@ -54,7 +73,6 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE init_atmland_constants
 
-    USE mo_jsb_math_constants,    ONLY: hourday
     USE mo_isotope_util,          ONLY: calc_mixing_ratio_C13C12, calc_mixing_ratio_C14C
 
     IMPLICIT NONE

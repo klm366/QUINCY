@@ -47,54 +47,47 @@ MODULE mo_q_rad_process
 CONTAINS
 
   ! ======================================================================================================= !
-  !> calculates surface radiation reflection and absorption
+  !>calculates surface radiation reflection and absorption
   !> 
-  !> @todo currently no soil and snow albedo calculation in the radiation_quincy routine
-  !>
+  ! @TODO currently no soil and snow albedo calculation in the radiation_quincy routine
   SUBROUTINE radiation_quincy(tile, options)
 
     USE mo_jsb_class,             ONLY: Get_model
     USE mo_jsb_tile_class,        ONLY: t_jsb_tile_abstract
     USE mo_jsb_task_class,        ONLY: t_jsb_task_options
     USE mo_jsb_model_class,       ONLY: t_jsb_model
-    USE mo_jsb_process_class,     ONLY: A2L_, VEG_, RAD_, PHENO_
+    USE mo_jsb_process_class,     ONLY: A2L_, RAD_, SPQ_, PHENO_, VEG_
     USE mo_jsb_lctlib_class,      ONLY: t_lctlib_element
     USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid
     USE mo_jsb_grid,              ONLY: Get_vgrid
-    USE mo_rad_parameters,        ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, rfr_ratio_toc, k_r2fr_chl
-
-    ! Use of process configurations (t_PROC_config)
-    ! ..
-
-    ! Use of process memories
+    USE mo_rad_parameters,        ONLY: rad2ppfd, def_alb_vis_soil, def_alb_nir_soil, rfr_ratio_toc, k_r2fr_chl, &
+      &                                 def_alb_vis_snow, def_alb_nir_snow
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_memory(A2L_)
-    dsl4jsb_Use_memory(RAD_)        !  USE mo_rad_memory_class, ONLY: t_rad_memory
-    dsl4jsb_Use_memory(VEG_)        !  USE mo_veg_memory_class, ONLY: t_veg_memory
+    dsl4jsb_Use_memory(RAD_)
+    dsl4jsb_Use_memory(SPQ_)
     dsl4jsb_Use_memory(PHENO_)
-
-
-    IMPLICIT NONE
-    ! ---------------------------
-    ! 0.1 InOut
+    dsl4jsb_Use_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
-    ! ---------------------------
-    ! 0.2 Local
-    TYPE(t_jsb_model),      POINTER        :: model
-    TYPE(t_lctlib_element), POINTER        :: lctlib              !< land-cover-type library - parameter across pft's
-    TYPE(t_jsb_vgrid),      POINTER        :: vgrid_canopy        ! Vertical grid
-    INTEGER                                :: ncanopy      ! number of canopy layers
-    INTEGER                                :: icanopy             !< loop 1,ncanopy
-    INTEGER                                :: iblk, ics, ice, nc
+    ! ----------------------------------------------------------------------------------------------------- !
+    TYPE(t_jsb_model),      POINTER   :: model               !< the model
+    TYPE(t_lctlib_element), POINTER   :: lctlib              !< land-cover-type library - parameter across pft's
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_canopy        !< Vertical grid
+    TYPE(t_jsb_vgrid),      POINTER   :: vgrid_snow_e        !< Vertical grid
+    INTEGER                           :: ncanopy             !< number of canopy layers
+    INTEGER                           :: icanopy             !< loop 1,ncanopy
+    INTEGER                           :: nsnow               !< number of snow layers
+    INTEGER                           :: iblk, ics, ice, nc  !< dimensions
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':radiation_quincy'
-    ! ---------------------------
-    ! 0.3 Declare Memory
-    ! Declare process configuration and memory Pointers
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Def_memory(A2L_)
-    dsl4jsb_Def_memory(RAD_)                        !     TYPE(t_rad_memory), POINTER :: rad__mem
-    dsl4jsb_Def_memory(VEG_)                        !     TYPE(t_veg_memory), POINTER :: veg__mem
+    dsl4jsb_Def_memory(RAD_)
+    dsl4jsb_Def_memory(SPQ_)
     dsl4jsb_Def_memory(PHENO_)
-    ! Declare pointers to variables in memory
+    dsl4jsb_Def_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     ! RAD_ 2D
     dsl4jsb_Real2D_onChunk :: sw_srf_net
     dsl4jsb_Real2D_onChunk :: swvis_srf_net
@@ -104,6 +97,8 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: alb_nir
     dsl4jsb_Real2D_onChunk :: alb_vis_soil
     dsl4jsb_Real2D_onChunk :: alb_nir_soil
+    dsl4jsb_Real2D_onChunk :: alb_vis_snow
+    dsl4jsb_Real2D_onChunk :: alb_nir_snow
     dsl4jsb_Real2D_onChunk :: alb_vis_can
     dsl4jsb_Real2D_onChunk :: alb_nir_can
     dsl4jsb_Real2D_onChunk :: arad_vis_soil
@@ -129,23 +124,24 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: cos_zenith_angle
     dsl4jsb_Real2D_onChunk :: swnir_srf_down
     dsl4jsb_Real2D_onChunk :: swvis_srf_down
-    ! VEG_
-    dsl4jsb_Real3D_onChunk :: leaf_nitrogen_cl
-    dsl4jsb_Real3D_onChunk :: fn_chl_cl
-    dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
+    ! SPQ_ 3D
+    dsl4jsb_Real3D_onChunk :: w_snow_snl    
     ! PHENO_ 2D
     dsl4jsb_Real2D_onChunk :: lai
     ! PHENO_ 3D
     dsl4jsb_Real3D_onChunk :: lai_cl
     dsl4jsb_Real3D_onChunk :: cumm_lai_cl
-    ! Get local variables from options argument
+    ! VEG_ 3D
+    dsl4jsb_Real3D_onChunk :: leaf_nitrogen_cl 
+    dsl4jsb_Real3D_onChunk :: fn_chl_cl 
+    dsl4jsb_Real3D_onChunk :: fleaf_sunlit_cl
+    ! ----------------------------------------------------------------------------------------------------- !
     iblk    = options%iblk
     ics     = options%ics
     ice     = options%ice
     nc      = options%nc
-    ! ---------------------------
-    ! 0.4 Process Activity, Debug Option
-    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN   ! ask for all processes considered here ?
+    ! ----------------------------------------------------------------------------------------------------- !
+    IF (.NOT. tile%Is_process_calculated(RAD_)) RETURN
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
     ! run only at PFT tiles (i.e. leafs of vegetation tile) because this routine is tailored towards vegetation only
     !  in the "usecase_pfts" RAD_ is defined to run at leafs, which includes also other tiles than PFT
@@ -153,20 +149,20 @@ CONTAINS
       IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Run only at PFT tiles. '//TRIM(tile%name)//' is not a PFT. ')
       RETURN
     ENDIF
-    ! ---------------------------
-    ! 0.5 Get Memory
+    ! ----------------------------------------------------------------------------------------------------- !
     model         => Get_model(tile%owner_model_id)
     lctlib        => model%lctlib(tile%lcts(1)%lib_id)
     vgrid_canopy  => Get_vgrid('canopy_layer')
     ncanopy       =  vgrid_canopy%n_levels
-    ! Get process config
-    ! ..
-    ! Get process memories
+    vgrid_snow_e  => Get_vgrid('snow_depth_energy')
+    nsnow         =  vgrid_snow_e%n_levels
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(RAD_)
-    dsl4jsb_Get_memory(VEG_)
     dsl4jsb_Get_memory(PHENO_)
-    ! Get process variables (Set pointers to variables in memory)
+    dsl4jsb_Get_memory(SPQ_)
+    dsl4jsb_Get_memory(VEG_)
+    ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Get_var2D_onChunk(A2L_, swpar_srf_down)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, fract_par_diffuse)        ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, cos_zenith_angle)         ! in
@@ -182,6 +178,8 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir)                  ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_soil)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_soil)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_snow)             ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_snow)             ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_vis_can)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, alb_nir_can)              ! out
     dsl4jsb_Get_var2D_onChunk(RAD_, arad_vis_soil)            ! out
@@ -201,38 +199,39 @@ CONTAINS
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_sunlit_nir_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, arad_shaded_nir_cl)       ! out
     dsl4jsb_Get_var3D_onChunk(RAD_, fleaf_sunlit_nir_cl)      ! out
-    ! VEG_ 3D
-    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)         ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                ! in
-    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)          ! out
+    ! ---------------------------
+    ! SPQ_ 3D
+    dsl4jsb_Get_var3D_onChunk(SPQ_, w_snow_snl)               ! in
+    ! ---------------------------
     ! PHENO_ 2D
     dsl4jsb_Get_var2D_onChunk(PHENO_, lai)                    ! in
     ! PHENO_ 3D
     dsl4jsb_Get_var3D_onChunk(PHENO_, lai_cl)                 ! in
     dsl4jsb_Get_var3D_onChunk(PHENO_, cumm_lai_cl)            ! in
+    ! ---------------------------
+    ! VEG_ 3D
+    dsl4jsb_Get_var3D_onChunk(VEG_, leaf_nitrogen_cl)         ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fn_chl_cl)                ! in
+    dsl4jsb_Get_var3D_onChunk(VEG_, fleaf_sunlit_cl)          ! out
+    ! ----------------------------------------------------------------------------------------------------- !
 
-
-    ! ------------------------------------------------------------------------------------------------------------
-    ! Go science
-    ! ------------------------------------------------------------------------------------------------------------
-
-
-
-    !> 1.0 Snow and soil albedo
-    !!
-    !! for now, prescribed, should be based on JSBACH 4 routines, and include the effect of snow on the
-    !! soil's albedo
+    !>1.0 Snow and soil albedo
+    !>
+    ! for now, prescribed, should be based on JSBACH 4 routines, and include the effect of snow on the
+    ! soil's albedo
     alb_vis_soil(:) = def_alb_vis_soil
     alb_nir_soil(:) = def_alb_nir_soil
+    alb_vis_snow(:) = def_alb_vis_snow
+    alb_nir_snow(:) = def_alb_nir_snow
 
     !> 2.0 calculate VIS radiation budget (absorbed radiation on canopy layers and soil + albedo)
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
-    CALL calc_sw_srf_net(nc, ncanopy, &
+    CALL calc_sw_srf_net(nc, ncanopy, nsnow, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "vis", &
                      swvis_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
-                     lai(:), lai_cl(:,:), cumm_lai_cl(:,:),&
-                     alb_vis_soil(:), &
+                     lai(:), lai_cl(:,:), cumm_lai_cl(:,:),& 
+                     alb_vis_soil(:), alb_vis_snow(:), w_snow_snl(:,:), &
                      arad_sunlit_vis_cl(:,:),arad_shaded_vis_cl(:,:),fleaf_sunlit_vis_cl(:,:), &
                      arad_vis_can(:),arad_vis_soil(:), &
                      alb_vis_can(:),alb_vis(:),swvis_srf_net(:))
@@ -242,12 +241,12 @@ CONTAINS
     !! Following Weiss & Norman, Agri. For. Met. 1985, the fraction of VIS and NIR
     !! diffuse radiation are very similar
     ! Note: shortwave diffuse fraction is assumed to be identical to PAR diffuse radiation
-    CALL calc_sw_srf_net(nc, ncanopy, &
+    CALL calc_sw_srf_net(nc, ncanopy, nsnow, &
                      lctlib%sigma_vis, lctlib%sigma_nir, lctlib%omega_clumping, lctlib%crown_shape_factor, &
                      "nir", &
                      swnir_srf_down(:), fract_par_diffuse(:), cos_zenith_angle(:), &
                      lai(:), lai_cl(:,:), cumm_lai_cl(:,:), &
-                     alb_nir_soil(:), &
+                     alb_nir_soil(:), alb_nir_snow, w_snow_snl(:,:), &
                      arad_sunlit_nir_cl(:,:),arad_shaded_nir_cl(:,:),fleaf_sunlit_nir_cl(:,:), &
                      arad_nir_can(:),arad_nir_soil(:), &
                      alb_nir_can(:),alb_nir(:),swnir_srf_net(:))
@@ -318,6 +317,7 @@ CONTAINS
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE calc_sw_srf_net( nc                  , &   ! in
                               ncanopy             , &   ! in
+                              nsnow               , &   ! in    
                               lctlib_sigma_vis    , &   ! in
                               lctlib_sigma_nir    , &   ! in
                               lctlib_omega_clumping     , &   ! in
@@ -330,6 +330,8 @@ CONTAINS
                               lai_cl              , &   ! in
                               cumm_lai_cl         , &   ! in
                               alb_soil            , &   ! in
+                              alb_snow            , &   ! in
+                              w_snow_snl          , &   ! in
                               arad_sunlit_cl      , &   ! out
                               arad_shaded_cl      , &   ! out
                               fleaf_sunlit_cl     , &   ! out
@@ -341,12 +343,13 @@ CONTAINS
 
     USE mo_rad_parameters,          ONLY: min_cos_zenith_angle_rad, kbl0_vis, kdf0_vis, kbl0_nir, kdf0_nir, rho2sbeta, &
                                           k_csf
-
+    USE mo_spq_constants,           ONLY: w_snow_min
     IMPLICIT NONE
     ! ---------------------------
     ! 0.1 InOut
     INTEGER                                , INTENT(in)  :: nc                 !< dimensions
     INTEGER                                , INTENT(in)  :: ncanopy            !< number of canopy layers
+    INTEGER                                , INTENT(in)  :: nsnow
     REAL(wp)                               , INTENT(in)  :: lctlib_sigma_vis   !< lctlib parameter
     REAL(wp)                               , INTENT(in)  :: lctlib_sigma_nir   !< lctlib parameter
     REAL(wp)                               , INTENT(in)  :: lctlib_omega_clumping     !< lctlib parameter
@@ -360,6 +363,8 @@ CONTAINS
     REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(in)  :: lai_cl             !< leaf area index of canopy layer (m-2 m-2)
     REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(in)  :: cumm_lai_cl        !< cummulative leaf area index above centre of canopy layer
     REAL(wp), DIMENSION(nc)                , INTENT(in)  :: alb_soil           !< soil albedo
+    REAL(wp), DIMENSION(nc)                , INTENT(in)  :: alb_snow           !< snow albedo
+    REAL(wp), DIMENSION(nc,nsnow)          , INTENT(in)  :: w_snow_snl         !< snow
     REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(out) :: arad_sunlit_cl     !< absorbed radiation on sunlit leaves (W m-2)
     REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(out) :: arad_shaded_cl     !< absorbed radiation of shaded leaves (W m-2)
     REAL(wp), DIMENSION(nc,ncanopy)        , INTENT(out) :: fleaf_sunlit_cl    !< fraction of leaves that is sunlit (--)
@@ -467,9 +472,14 @@ CONTAINS
           irad_dir_down_bc(:) = (1.0_wp - rho(:)) * irad_dir_down(:) * exp(radf4(:) * lai(:))
 
           !> diffuse upward shortwave flux from soil reflection and absorbed radiation of the soil
-          irad_dif_up(:) = alb_soil(:) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
-          arad_soil(:)   = (1.0_wp - alb_soil(:)) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
-
+          !> first check if there is snow
+          WHERE (w_snow_snl(:,1) < w_snow_min) 
+            irad_dif_up(:) = alb_soil(:) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
+            arad_soil(:)   = (1.0_wp - alb_soil(:)) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
+          ELSEWHERE 
+            irad_dif_up(:) = alb_snow(:) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
+            arad_soil(:)   = (1.0_wp - alb_snow(:)) * (irad_dif_down_bc(:) + irad_dir_down_bc(:))
+          ENDWHERE 
           !> factor for the absorption calculation of the upward stream
           radf5(:) = (1.0_wp - rho(:)) * irad_dif_up(:) * kdf(:)            ! eq 10
 
@@ -478,8 +488,13 @@ CONTAINS
 
        ELSEWHERE
           !> case of no LAI: absorped radiation and upward flux from soil only
-          arad_soil(:)   = (1.0_wp - alb_soil(:) ) * (irad_dif_down(:) + irad_dir_down(:))
-          irad_dif_up(:) = alb_soil(:)             * (irad_dif_down(:) + irad_dir_down(:))
+          WHERE (w_snow_snl(:,1) < w_snow_min) 
+            arad_soil(:)   = (1.0_wp - alb_soil(:) ) * (irad_dif_down(:) + irad_dir_down(:))
+            irad_dif_up(:) = alb_soil(:)             * (irad_dif_down(:) + irad_dir_down(:)) 
+          ELSEWHERE
+            arad_soil(:)   = (1.0_wp - alb_snow(:) ) * (irad_dif_down(:) + irad_dir_down(:))
+            irad_dif_up(:) = alb_snow(:)             * (irad_dif_down(:) + irad_dir_down(:))
+          ENDWHERE          
        ENDWHERE
 
     ENDWHERE

@@ -36,10 +36,12 @@
 !>       => suggestion: call it type_id
 !>
 !> @todo change default id to -1 instead of 0?
+!>
 MODULE mo_jsb_lct_class
 #ifndef __NO_JSBACH__
 
   USE mo_kind,      ONLY: wp
+  USE mo_exception, ONLY: message_text, message, finish
 
   IMPLICIT NONE
   PRIVATE
@@ -62,7 +64,7 @@ MODULE mo_jsb_lct_class
       & DEPRES_TYPE      !< Depression area (sink for micro-scale internal water transport)
   END ENUM
 
-   TYPE t_jsb_lct
+  TYPE t_jsb_lct
     INTEGER           :: id = 0               !< Id for lct, one of enumeration above
     CHARACTER(LEN=5)  :: name = ""            !< Short name for lct
     CHARACTER(LEN=30) :: long_name = ""       !< Long name for lct
@@ -124,7 +126,7 @@ CONTAINS
 !!$    INTEGER,         INTENT(in) :: lct_type
 !!$    LOGICAL                     :: return_value
 !!$
-!!$    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains'
+!!$    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains'
 !!$
 !!$    return_value = Contains_lct(this%id, lct_type)
 !!$
@@ -143,7 +145,7 @@ CONTAINS
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER :: ilct
 
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Contains_lct'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Contains_lct'
     ! -------------------------------------------------------------------------------------------------- !
 
     return_value = .FALSE.
@@ -165,7 +167,7 @@ CONTAINS
     CLASS(t_jsb_lct),  INTENT(in)  :: this
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_lct_type_name'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_name'
     ! -------------------------------------------------------------------------------------------------- !
     IF (this%name /= '') THEN
       return_value = TRIM(this%name)
@@ -203,7 +205,7 @@ CONTAINS
     CLASS(t_jsb_lct),  INTENT(in)  :: this
     CHARACTER(len=:), ALLOCATABLE :: return_value
     ! -------------------------------------------------------------------------------------------------- !
-    CHARACTER(len=*), PARAMETER :: routine = modname//':Get_lct_type_longname'
+    CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':Get_lct_type_longname'
     ! -------------------------------------------------------------------------------------------------- !
     IF (this%long_name /= '') THEN
       return_value = TRIM(this%long_name)

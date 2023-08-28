@@ -15,7 +15,7 @@
 MODULE mo_rad_config_class
 #ifndef __NO_JSBACH__
 
-  USE mo_exception,         ONLY: message
+  USE mo_exception,         ONLY: message, message_text, finish
   USE mo_io_units,          ONLY: filename_max
   USE mo_kind,              ONLY: wp
   USE mo_jsb_control,       ONLY: debug_on
@@ -87,7 +87,11 @@ CONTAINS
   !> read RAD_ namelist and init configuration parameters
   !>
   SUBROUTINE Init_rad_config(config)
+#ifdef __QUINCY_STANDALONE__
+    USE mo_namelist,           ONLY: open_nml, POSITIONED, position_nml, close_nml
+#else
     USE mo_jsb_namelist_iface, ONLY: open_nml, POSITIONED, position_nml, close_nml
+#endif
     USE mo_jsb_model_class,    ONLY: MODEL_JSBACH, MODEL_QUINCY
     ! ----------------------------------------------------------------------------------------------------- !
     CLASS(t_rad_config), INTENT(inout) :: config
@@ -158,9 +162,58 @@ CONTAINS
 
     !> model-specific routines
     !>
-    ! ...
-
+    SELECT CASE (config%model_config%model_scheme)
+    !------------------------------------------------------------------------------------------------------ !
+    !> 1.0 config init for JSBACH model
+    !>
+    CASE(MODEL_JSBACH)
+      ! ...
+    !------------------------------------------------------------------------------------------------------ !
+    !> 2.0 config init for QUINCY model
+    !>
+    CASE(MODEL_QUINCY)
+      CALL Init_rad_config_quincy(config)
+    !------------------------------------------------------------------------------------------------------ !
+    !> 3.0 error handling
+    !>
+    CASE DEFAULT
+      WRITE(message_text,'(2a)') 'invalid model_scheme', config%model_config%model_scheme
+      CALL finish(routine, message_text) 
+    END SELECT
   END SUBROUTINE Init_rad_config
+
+  ! ======================================================================================================= !
+  !> config for the process assimilation specific to the QUINCY model
+  !>
+  SUBROUTINE Init_rad_config_quincy(config)
+    USE mo_jsb_grid_class,        ONLY: t_jsb_vgrid, new_vgrid
+    USE mo_jsb_grid,              ONLY: Register_vgrid
+    USE mo_jsb_io,                ONLY: ZAXIS_GENERIC
+    ! ----------------------------------------------------------------------------------------------------- !
+    CLASS(t_rad_config), INTENT(inout) :: config
+    ! ----------------------------------------------------------------------------------------------------- !
+    INTEGER                     :: nspec
+    TYPE(t_jsb_vgrid), POINTER  :: vgrid_spectral
+    CHARACTER(len=*), PARAMETER :: routine = modname//':Init_rad_config_quincy'
+
+    ! number of spectal bands (3rd dimension of 'vgrid_spectral')
+    nspec = 2162
+
+    !>Create vertical axis - spectral bands
+    !>  spectral bands of the light for RAD_ variables
+    !> 
+#ifdef __QUINCY_STANDALONE__
+    vgrid_spectral  => new_vgrid('spectral_bands', ZAXIS_GENERIC, nspec, &
+                      longname='Number of spectral bands the light is divided into, from RAD_ QUINCY') !, &
+                      ! units=''  , &
+                      ! levels=   , &
+                      ! lbounds=  , & 
+                      ! ubounds=  , &
+                      ! dz=       )
+    CALL register_vgrid(vgrid_spectral)
+#endif
+
+  END SUBROUTINE Init_rad_config_quincy
 
 #endif
 END MODULE mo_rad_config_class

@@ -49,6 +49,10 @@ PROGRAM example
   dsl4jsb_Get_pool_var2d_onChunk(CARBON_, pools%soil, soil_respiration)
   dsl4jsb_Use_elements(CARBON_) CARBON
 
+  dsl4jsb_Def_mt2L2D :: veg_pool_mt
+  dsl4jsb_Get_mt2L2D(VEG_BGCM_LITTERFALL_ID, veg_litterfall_mt)
+  ! veg_litterfall_mt => bgcm_store%Get_matrix_from_store_2l(VEG_BGCM_LITTERFALL_ID, ics, ice, iblk, tile%name)
+
   CALL sub($CARBON@sub:soil_respiration$) ! comment
   CALL sub($carbon@dom:soil_respiration$) ! comment
   CALL sub($CARBON:soil_respiration$, $carbon@dom:soil_respiration$)

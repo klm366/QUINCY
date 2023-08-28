@@ -248,36 +248,6 @@ CONTAINS
 
   END FUNCTION Any_process_changes_fractions
 
-!!$  FUNCTION Get_process_configs(this) RESULT(return_ptr)
-!!$
-!!$    CLASS(t_jsb_model), INTENT(in) :: this
-!!$    CLASS(t_jsb_config_p), POINTER :: return_ptr(:)
-!!$
-!!$    INTEGER :: iproc
-!!$
-!!$    ALLOCATE(return_ptr(SIZE(this%processes)))
-!!$    DO iproc=1,SIZE(this%processes)
-!!$      IF (ASSOCIATED(this%processes(iproc)%p)) THEN
-!!$        return_ptr(iproc)%p => this%processes(iproc)%p%config
-!!$      ELSE
-!!$        return_ptr(iproc)%p => NULL()
-!!$      END IF
-!!$    END DO
-!!$
-!!$  END FUNCTION Get_process_configs
-  !
-  ! State machine engine
-  !
-!!$  ! Just a stub to the real engine hsm%Process_message
-!!$  SUBROUTINE Process_task(this, task)
-!!$
-!!$    CLASS(t_jsb_model),    INTENT(inout) :: this
-!!$    CLASS(t_jsb_task_msg), INTENT(in)    :: msg
-!!$
-!!$    CALL this%Process_message(msg)
-!!$
-!!$  END SUBROUTINE Process_task
-!!$
 
   SUBROUTINE Run_tasks(this, debug)
 
@@ -301,6 +271,7 @@ CONTAINS
 
     msg => t_Message('', this%Get_action('INTEGRATE'))
 
+    ! loop over all tasks in the task queue
     current_queue_element => this%queue
     DO WHILE (ASSOCIATED(current_queue_element))
 
@@ -316,6 +287,7 @@ CONTAINS
         END IF
       END ASSOCIATE
 
+      ! go to the next task
       current_queue_element => current_queue_element%next
 
     END DO

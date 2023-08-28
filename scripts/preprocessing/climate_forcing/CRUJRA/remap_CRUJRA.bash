@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# Script to remap CRUJRA climate data from 0.5° (r720x360)
+# Script to remap CRUJRA climate data from 0.5deg (r720x360)
 #
 # The script is based on remap_to_T63_common_weight_TRENDY_v10.bash down to remap_to_T63_TRENDY_v4.bash, which in turn were based on
 # Change_grid_from_T63_to_R720x360_140108.tcsh (Author: J. Nabel, 2014/01/07; modified by J. Pongratz, 2014/01/08)
-# which had the purpose to remap all files to be handed in for trendy v2 from T63 to 0.5° x 0.5° (r720x360)
+# which had the purpose to remap all files to be handed in for trendy v2 from T63 to 0.5deg x 0.5deg (r720x360)
 #
 # The script calculates the weights once with conservative remapping
 # and then remaps all files with given postfix and creates new files with prefix "crujra_v2.2_T63_"

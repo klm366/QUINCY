@@ -1,7 +1,7 @@
 !>
 !!  @par Copyright
 !!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
-!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
 !!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
 !!
 !!    This file is part of the QUINCY model.
@@ -16,7 +16,7 @@
 !!
 !!    You should have received a copy of the GNU General Public License
 !!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
-!!
+!! 
 !! @brief Contains the utilities for the spq process
 !!
 !! @author
@@ -29,15 +29,12 @@
 MODULE mo_spq_util
 #ifndef __NO_JSBACH__
 
-#ifdef __QUINCY_STANDALONE__
-#include "dsl_jsbach.inc"
-#endif
-
   USE mo_kind,          ONLY: wp
   USE mo_exception,     ONLY: finish, message, message_text
   USE mo_jsb_control,   ONLY: debug_on
 
   IMPLICIT NONE
+
   PRIVATE
   PUBLIC :: calc_qmax_texture
   PUBLIC :: reset_spq_fluxes           ! called in the land model interface prior to all Tasks
@@ -46,11 +43,10 @@ MODULE mo_spq_util
 
 CONTAINS
 
-
   !-----------------------------------------------------------------------------------------------------
   !> FUNCTION calc_qmax_texture
   !!
-  !! Output: sorption capacity for organic material
+  !! Output: sorption capacity for organic material 
   !-----------------------------------------------------------------------------------------------------
   ELEMENTAL FUNCTION calc_qmax_texture(qmax_fine_particle, silt_sl, clay_sl) RESULT(qmax_texture)
 
@@ -74,7 +70,7 @@ CONTAINS
 
   !-----------------------------------------------------------------------------------------------------
   !> init/reset soil fluxes (with/to zero)
-  !!
+  !! 
   !! called in the land model interface prior to all Tasks
   !-----------------------------------------------------------------------------------------------------
   SUBROUTINE reset_spq_fluxes(tile, options)
@@ -95,7 +91,7 @@ CONTAINS
     CLASS(t_jsb_tile_abstract), INTENT(inout)     :: tile         !< one tile with data structure for one lct
     TYPE(t_jsb_task_options),   INTENT(in)        :: options      !< model options
     ! ---------------------------
-    ! 0.2 Local
+    ! 0.2 Local 
     TYPE(t_jsb_model),      POINTER       :: model
     !TYPE(t_lctlib_element), POINTER       :: lctlib         !< land-cover-type library - parameter across pft's
     INTEGER                               :: iblk, ics, ice, nc
@@ -123,7 +119,9 @@ CONTAINS
     ! Go science
     ! ------------------------------------------------------------------------------------------------------------
 
-    dsl4jsb_var2D_onChunk(SPQ_, transpiration) = zero                  !< transpiration in kg m-2 s-1
+    dsl4jsb_var2D_onChunk(SPQ_, transpiration) = zero        !< transpiration in kg m-2 s-1
+    dsl4jsb_var3D_onChunk(SPQ_, w_soil_freeze_flux) = zero
+    dsl4jsb_var3D_onChunk(SPQ_, w_soil_melt_flux) = zero
 
   END SUBROUTINE reset_spq_fluxes
 
