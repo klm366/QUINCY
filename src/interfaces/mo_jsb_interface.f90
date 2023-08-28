@@ -514,50 +514,102 @@ CONTAINS
 
   END SUBROUTINE jsbach_finish_timestep
 
-  SUBROUTINE jsbach_get_var(var_name, model_id, ics, ice, iblk, ptr1d, ptr2d, ptr3d)
+  ! ====================================================================================================== !
+  !
+  !> Routine to be called from host model in order to inquire a variable (section) on a specified tile
+  !
+  SUBROUTINE jsbach_get_var( &
+    & var_name,              &
+    & model_id,              &
+    & tile,                  &
+    & ics, ice, iblk,        &
+    & arr1d, arr2d, arr3d,   &
+    & ptr1d, ptr2d, ptr3d)
 
     USE mo_jsb_var_class,     ONLY: t_jsb_var, REAL2D, REAL3D
     USE mo_jsb_process_class, ONLY: Get_process_id
 
-    CHARACTER(len=*),  INTENT(in) :: var_name
-    INTEGER,           INTENT(in) :: model_id
-    INTEGER, OPTIONAL, INTENT(in) :: &
-      & iblk,              &
-      & ics,               &
-      & ice
-    REAL(wp), OPTIONAL, POINTER   :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
+    CHARACTER(len=*),  INTENT(in)          :: var_name
+                                              !< Name of requested variable including the leading process name
+    INTEGER,           INTENT(in)          :: model_id
+                                              !< Model id
+    ! Optional arguments, exactly one of the ptr?d or arr?d arguments is required
+    CHARACTER(len=*), OPTIONAL, INTENT(in) :: tile
+                                              !< Name of tile from which variable is taken; box tile if not given
+    INTEGER, OPTIONAL, INTENT(in)          :: ics, ice, iblk
+                                              !< If given, chunk (ics:ice,iblk) is returned, otherwise whole domain
+    REAL(wp), OPTIONAL, INTENT(inout)      :: arr1d(:), arr2d(:,:), arr3d(:,:,:)
+                                              !< Requested variable (section) is copied into these arrays
+    REAL(wp), OPTIONAL, POINTER            :: ptr1d(:), ptr2d(:,:), ptr3d(:,:,:)
+                                              !< Pointers to the requested variable (section); must not be associated
 
     TYPE(t_jsb_model),           POINTER :: model
-    CLASS(t_jsb_tile_abstract),  POINTER :: tile
+    CLASS(t_jsb_tile_abstract),  POINTER :: tile_ptr
     CLASS(t_jsb_var),            POINTER :: var_ptr
     CHARACTER(len=:), ALLOCATABLE :: process_name, variable_name
-    INTEGER :: process_id, pos
-    LOGICAL :: l_on_chunk
+    INTEGER :: process_id, pos, nc, icount
+    LOGICAL :: l_on_chunk, l_found
     INTEGER :: no_omp_thread
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_get_var'
 
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
 
+    icount = 0
+    IF (PRESENT(ptr1d)) THEN
+      IF (ASSOCIATED(ptr1d)) CALL finish(routine, 'ptr1d must not be ASSOCIATED')
+      icount = icount + 1
+    END IF
+    IF (PRESENT(ptr2d)) THEN
+      IF (ASSOCIATED(ptr2d)) CALL finish(routine, 'ptr2d must not be ASSOCIATED')
+      icount = icount + 1
+    END IF
+    IF (PRESENT(ptr3d)) THEN
+      IF (ASSOCIATED(ptr3d)) CALL finish(routine, 'ptr3d must not be ASSOCIATED')
+      icount = icount + 1
+    END IF
+    IF (PRESENT(arr1d)) icount = icount + 1
+    IF (PRESENT(arr2d)) icount = icount + 1
+    IF (PRESENT(arr3d)) icount = icount + 1
+    IF (icount == 0) CALL finish(routine, 'no target specified')
+    IF (icount > 1) CALL finish(routine, 'more than one target specified')
+
     model => Get_model(model_id)
-    CALL model%Get_top_tile(tile)
+
+    CALL model%Reset_tiles()
+    CALL model%Get_top_tile(tile_ptr)
+    ! If `tile` is not present the variable on the box tile is used, otherwise search for tile with given name
+    l_found = .TRUE.
+    IF (PRESENT(tile)) THEN
+      l_found = .FALSE.
+      DO WHILE (ASSOCIATED(tile_ptr))
+        IF (TRIM(tile_ptr%name) == tile) THEN
+          l_found = .TRUE.
+          EXIT
+        END IF
+        CALL model%Goto_next_tile(tile_ptr)
+      END DO
+    END IF
+    IF (.NOT. l_found) CALL finish(routine, 'tile '//tile//' not found!')
 
     pos = INDEX(var_name, '_')
     IF (pos < 1) CALL finish(routine, 'var_name must have format <process name>_<variable name>')
     process_name = var_name(1:pos-1)
     variable_name = var_name(pos+1:LEN(TRIM(var_name)))
     process_id = Get_process_id(process_name)
-    var_ptr => tile%mem(process_id)%p%Get_var(variable_name)
+    var_ptr => tile_ptr%mem(process_id)%p%Get_var(variable_name)
+    IF (.NOT. ASSOCIATED(var_ptr)) CALL finish(routine, 'variable '//var_name//'_'//TRIM(tile_ptr%name)//' not found')
 
     IF (PRESENT(ics) .OR. PRESENT(ice) .OR. PRESENT(iblk)) THEN
       IF (.NOT. (PRESENT(ics) .AND. PRESENT(ice) .AND. PRESENT(iblk))) THEN
         CALL finish(routine, 'Must provide either none or all of ics,ice,iblk arguments!')
       ELSE
         l_on_chunk = .TRUE.
+        nc = ice - ics + 1
         IF (var_ptr%type == REAL2d) THEN
-          IF (.NOT. PRESENT(ptr1d)) CALL finish(routine, 'Must provide argument ptr1d')
+          IF (.NOT. PRESENT(ptr1d) .AND. .NOT. PRESENT(arr1d)) CALL finish(routine, 'Must provide argument ptr1d or arr1d')
         ELSE
-          IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
+          IF (.NOT. PRESENT(ptr2d) .AND. .NOT. PRESENT(arr2d)) CALL finish(routine, 'Must provide argument ptr2d or arr2d')
         END IF
       END IF
     ELSE
@@ -566,23 +618,68 @@ CONTAINS
       END IF
       l_on_chunk = .FALSE.
       IF (var_ptr%type == REAL2d) THEN
-        IF (.NOT. PRESENT(ptr2d)) CALL finish(routine, 'Must provide argument ptr2d')
+        IF (.NOT. PRESENT(ptr2d) .AND. .NOT. PRESENT(arr2d)) CALL finish(routine, 'Must provide argument ptr2d or arr2d')
       ELSE
-        IF (.NOT. PRESENT(ptr3d)) CALL finish(routine, 'Must provide argument ptr3d')
+        IF (.NOT. PRESENT(ptr3d) .AND. .NOT. PRESENT(arr3d)) CALL finish(routine, 'Must provide argument ptr3d or arr3d')
       END IF
     END IF
 
     IF (l_on_chunk) THEN
       IF (var_ptr%type == REAL2d) THEN
-        ptr1d => var_ptr%ptr2d(ics:ice,iblk)
+        IF (PRESENT(ptr1d)) THEN
+          ptr1d => var_ptr%ptr2d(ics:ice,iblk)
+        ELSE IF (PRESENT(arr1d)) THEN
+          IF (SIZE(arr1d,1) /= nc) THEN
+            CALL finish(routine, 'arr1d dimension mismatch')
+          ELSE
+            arr1d(:) = var_ptr%ptr2d(ics:ice,iblk)
+          END IF
+        ELSE
+          CALL finish(routine, 'argument ptr1d or arr1d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
+        END IF
+      ELSE IF (var_ptr%type == REAL3d) THEN
+        IF (PRESENT(ptr2d)) THEN
+          ptr2d => var_ptr%ptr3d(ics:ice,:,iblk)
+        ELSE IF (PRESENT(arr2d)) THEN
+          IF (SIZE(arr2d,1) /= nc .OR. SIZE(arr2d,2) /= SIZE(var_ptr%ptr3d,2)) THEN
+            CALL finish(routine, 'arr2d dimension mismatch')
+          ELSE
+            arr2d(:,:) = var_ptr%ptr3d(ics:ice,:,iblk)
+          END IF
+        ELSE
+          CALL finish(routine, 'argument ptr2d or arr2d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
+        END IF
       ELSE
-        ptr2d => var_ptr%ptr3d(ics:ice,:,iblk)
+        CALL finish(routine, 'not implemented - '//var_name//'_'//TRIM(tile_ptr%name)//' is not 2D or 3D')
       END IF
     ELSE
       IF (var_ptr%type == REAL2d) THEN
-        ptr2d => var_ptr%ptr2d(:,:)
+        IF (PRESENT(ptr2d)) THEN
+          ptr2d => var_ptr%ptr2d(:,:)
+        ELSE IF (PRESENT(arr2d)) THEN
+          IF (SIZE(arr2d,1) /= SIZE(var_ptr%ptr2d,1) .OR. SIZE(arr2d,2) /= SIZE(var_ptr%ptr2d,2)) THEN
+            CALL finish(routine, 'arr2d dimension mismatch')
+          ELSE
+            arr2d(:,:) = var_ptr%ptr2d(:,:)
+          END IF
+        ELSE
+          CALL finish(routine, 'argument ptr2d or arr2d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
+        END IF
+      ELSE IF (var_ptr%type == REAL3d) THEN
+        IF (PRESENT(ptr3d)) THEN
+          ptr3d => var_ptr%ptr3d(:,:,:)
+        ELSE IF (PRESENT(arr3d)) THEN
+          IF (SIZE(arr3d,1) /= SIZE(var_ptr%ptr3d,1) .OR. SIZE(arr3d,2) /= SIZE(var_ptr%ptr3d,2) .OR. &
+            & SIZE(arr3d,3) /= SIZE(var_ptr%ptr3d,3)) THEN
+            CALL finish(routine, 'arr3d dimension mismatch')
+          ELSE
+            arr3d(:,:,:) = var_ptr%ptr3d(:,:,:)
+          END IF
+        ELSE
+          CALL finish(routine, 'argument ptr3d or arr3d needed for variable '//var_name//'_'//TRIM(tile_ptr%name))
+        END IF
       ELSE
-        ptr3d => var_ptr%ptr3d(:,:,:)
+        CALL finish(routine, 'not implemented - '//var_name//'_'//TRIM(tile_ptr%name)//' is not 2D or 3D')
       END IF
     END IF
 
