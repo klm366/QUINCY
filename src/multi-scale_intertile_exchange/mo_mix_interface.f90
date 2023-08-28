@@ -383,8 +383,8 @@ CONTAINS
       wtr_pond_max(:) = MAX(0._wp, dsl4jsb_var2D_onChunk (HYDRO_, weq_pond_max) &
         &                        - dsl4jsb_var2D_onChunk (HYDRO_, ice_pond))
 
-      ! Source tiles are always either upland or ridge tiles
-      IF (tile%contains_upland .OR. tile%contains_ridge) THEN
+      ! Source tiles can be all except floodplains
+      IF (.NOT. tile%contains_floodplain) THEN
 
         ! Get area fraction of source tile
         CALL tile%Get_fraction(ics, ice, iblk, fract=source_fract(:))
@@ -399,12 +399,9 @@ CONTAINS
           END IF
 
           ! Identify correct downhill target sibling for runoff
-          l_latflow = (tile%contains_upland       .AND. tile%contains_ridge           .AND. &
-            &          sibl_tile%contains_upland  .AND. sibl_tile%contains_depression) .OR. & ! upland ridge      --> upland depression
-            &         (tile%contains_upland       .AND. tile%contains_depression      .AND. &
-            &          sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. & ! upland depression --> lowland depression
-            &         (tile%contains_lowland      .AND. tile%contains_ridge           .AND. &
-            &          sibl_tile%contains_lowland .AND. sibl_tile%contains_depression)        ! lowland ridge     --> lowland depression
+          l_latflow = (tile%contains_steep     .AND. sibl_tile%contains_hillslope) .OR. & ! Steep     --> hillslope
+            &         (tile%contains_hillslope .AND. sibl_tile%contains_lowland)   .OR. & ! hillslope --> lowland
+            &         (tile%contains_lowland   .AND. sibl_tile%contains_floodplain)       ! lowland   --> floodplain
 
           IF (l_latflow) THEN
             ! Get target tile area fraction
@@ -415,7 +412,7 @@ CONTAINS
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow, sibl_tile)
             dsl4jsb_Get_var2d_onChunk_tile_name(HYDRO_, wtr_pond,    sibl_tile)
 
-            l_lag = tile%contains_upland .AND. sibl_tile%contains_lowland
+            l_lag = .TRUE.
             retention_time = 36000._wp   ! Ten hours retention time (
                                          ! outflow = h_re * dt/retention_time)
 
@@ -439,14 +436,9 @@ CONTAINS
           END IF
 
           ! Identify correct downhill target sibling for drainage
-          l_latflow = (tile%contains_upland       .AND. tile%contains_ridge           .AND. &
-            &          sibl_tile%contains_upland  .AND. sibl_tile%contains_depression) .OR. & ! upland ridge      --> upland depression
-            ! This condition should only be used if soils are frozen, does not yet seem to be implemented
-            &         (tile%contains_upland       .AND. tile%contains_depression      .AND. &
-            &          sibl_tile%contains_lowland .AND. sibl_tile%contains_depression) .OR. & ! upland depression --> lowland depression
-            !
-            &         (tile%contains_lowland      .AND. tile%contains_ridge           .AND. &
-            &          sibl_tile%contains_lowland .AND. sibl_tile%contains_depression)        ! lowland ridge     --> lowland depression
+          l_latflow = (tile%contains_steep     .AND. sibl_tile%contains_hillslope) .OR. & ! Steep     --> hillslope
+            &         (tile%contains_hillslope .AND. sibl_tile%contains_lowland)   .OR. & ! hillslope --> lowland
+            &         (tile%contains_lowland   .AND. sibl_tile%contains_floodplain)       ! lowland   --> floodplain
 
           IF (l_latflow) THEN
             ! Get target tile area fraction
@@ -457,7 +449,7 @@ CONTAINS
             dsl4jsb_Get_var2d_onChunk_tile_name(MIX_,   wtr_latflow,    sibl_tile)
             dsl4jsb_Get_var3d_onChunk_tile_name(HYDRO_, wtr_soil_sl,    sibl_tile)
 
-            l_lag = tile%contains_upland .AND. sibl_tile%contains_lowland
+            l_lag = .TRUE.
             retention_time = 360000._wp  ! Hundert hours retention time (
                                          ! outflow = h_re * dt/retention_time)
 
@@ -484,10 +476,7 @@ CONTAINS
           END IF
 
           ! Identify correct downhill target sibling for lateral diffusion
-          l_latflow = (tile%contains_upland       .AND. tile%contains_ridge           .AND. &
-            &          sibl_tile%contains_upland  .AND. sibl_tile%contains_depression) .OR. & ! upland ridge  --> upland depression
-            &         (tile%contains_lowland      .AND. tile%contains_ridge           .AND. &
-            &          sibl_tile%contains_lowland .AND. sibl_tile%contains_depression)        ! lowland ridge --> lowland depression
+          l_latflow = (tile%contains_lowland .AND. sibl_tile%contains_floodplain) ! lowland  <--> floodplain
 
           IF (l_latflow) THEN
             ! Get target tile area fraction
@@ -562,7 +551,7 @@ CONTAINS
               mpot_act=mpot_act_target(:,:)         & !< matrix potential
             )
 
-            ! Lateral soil water diffusion between ridge and depression tiles of the same macrotopography
+            ! Lateral soil water diffusion between tiles which are likely close to each other
             DO i = 1, nc
               IF (source_fract(i) > 1.0e-10_wp .AND. target_fract(i) > 1.0e-10_wp .AND. &
                   wtr_soil_fc_sl(i,1) > 1.0e-10_wp .AND. wtr_soil_fc_sl_sibl_tile(i,1) > 1.0e-10_wp) THEN
@@ -603,8 +592,8 @@ CONTAINS
         END DO
       END IF
 
-      ! Runoff on lowland depressions is only generated if pond storage is at maximum
-      IF (tile%contains_lowland .AND. tile%contains_depression) THEN
+      ! Runoff on floodplains is only generated if pond storage is at maximum
+      IF (tile%contains_floodplain) THEN
         WHERE (wtr_pond(:) < wtr_pond_max(:))
             wtr_pond_tmp(:) = wtr_pond(:) + runoff(:) * dtime / rhoh2o
             runoff(:)       = MAX(0._wp, wtr_pond_tmp(:) - wtr_pond_max(:)) * rhoh2o / dtime
