@@ -751,59 +751,32 @@ CONTAINS
   !!
   !! @par Revision History
   !!   Written by Tobias Stacke (MPI-M) in January 2023 based on the
-  !!   ARNO Scheme infiltration routine and extented for HydroTiles usecase
+  !!   ARNO Scheme infiltration routine
 
-  SUBROUTINE calc_orographic_features(nc, nlat, l_hydrotiles, l_upland, &
-    & max_slope, oro_stddev, steepness, micro_slope, macro_slope )
+  SUBROUTINE calc_orographic_features(nc, nlat, oro_stddev, steepness)
 
     USE mo_hydro_constants,        ONLY: oro_var_min, oro_var_max
 
     INTEGER,  INTENT(in)  :: nc                    !< Number of gridcells
     INTEGER,  INTENT(in)  :: nlat                  !< (Effective) number of latitudes for steepness parameter
-    LOGICAL,  INTENT(in)  :: l_hydrotiles          !< use HydroTiles setup
-    LOGICAL,  INTENT(in)  :: l_upland              !< Tile belongs to upland fraction
 
-    REAL(wp), INTENT(in)  :: max_slope             !< Maximum slope threshold                           [m/m]
     REAL(wp), INTENT(in)  :: oro_stddev(:)         !< standard deviation of orography                   [m]
     REAL(wp), INTENT(out) :: steepness(:)          !< parameter defining the subgrid slope distribution [/]
-    REAL(wp), INTENT(out) :: micro_slope(:)        !< slope on microtopography tiles
-    REAL(wp), INTENT(out) :: macro_slope(:)        !< slope on macrotopography tiles
-
 
     ! Local variables
     REAL(wp) ::                       &
       & sigma_0,                      &            !< minimum value (100 m); below b = 0.01
       & sigma_max                                  !< resolution-dependent maximum
-    !
-    ! steepness b: shape parameter, defining the sub-gid scale steepness of the orographie:
-    !
+
+    ! steepness b: shape parameter, defining the sub-gid scale steepness of the orographie
+    ! required by the ARNO Scheme
     ! b = (oro_stddev - sigma_0) / (oro_stddev + sigma_max)
-    !
     sigma_0   = oro_var_min
     sigma_max = oro_var_max * 64._wp / REAL(nlat, wp) ! @todo: site level
-
-    IF (.NOT. l_hydrotiles) THEN
-      ! Compute steepness parameter for standard setup
-      steepness(:)   = MAX(0._wp, oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max)
-      ! Limit parameter to realistic bounds
-      steepness(:)   = MAX(MIN(steepness(:), 0.5_wp), 0.01_wp)
-      micro_slope(:) = 0._wp
-      macro_slope(:) = 0._wp
-
-    ELSE
-      ! Compute tile specific steepness for HydroTiles setup
-      micro_slope(:) = 0._wp
-      IF (l_upland) THEN
-        macro_slope(:) = MIN(max_slope, MAX(0.01_wp, &
-          & (oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max) ))
-      ELSE
-        macro_slope(:) = 0.01_wp
-      END IF
-
-      ! Add micro and macro slopes
-      steepness(:) = MIN(0.5_wp, macro_slope(:) + micro_slope(:))
-
-    END IF
+    ! Compute steepness parameter for standard setup
+    steepness(:)   = MAX(0._wp, oro_stddev(:) - sigma_0) / (oro_stddev(:) + sigma_max)
+    ! Limit parameter to realistic bounds
+    steepness(:)   = MAX(MIN(steepness(:), 0.5_wp), 0.01_wp)
 
   END SUBROUTINE calc_orographic_features
 

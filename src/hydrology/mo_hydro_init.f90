@@ -45,6 +45,10 @@ MODULE mo_hydro_init
     REAL(wp), POINTER ::                &
       & elevation      (:,:) => NULL(), &
       & oro_stddev     (:,:) => NULL(), &
+      & slp_steep      (:,:) => NULL(), &
+      & slp_hillslope  (:,:) => NULL(), &
+      & slp_lowland    (:,:) => NULL(), &
+      & slp_floodplain (:,:) => NULL(), &
       & soil_depth     (:,:) => NULL(), &
       & vol_porosity   (:,:) => NULL(), &
       & hyd_cond_sat   (:,:) => NULL(), &
@@ -100,6 +104,10 @@ CONTAINS
     DEALLOCATE( &
       & hydro_init_vars%elevation       ,       &
       & hydro_init_vars%oro_stddev      ,       &
+      & hydro_init_vars%slp_steep       ,       &
+      & hydro_init_vars%slp_hillslope   ,       &
+      & hydro_init_vars%slp_lowland     ,       &
+      & hydro_init_vars%slp_floodplain  ,       &
       & hydro_init_vars%soil_depth      ,       &
       & hydro_init_vars%vol_porosity    ,       &
       & hydro_init_vars%hyd_cond_sat    ,       &
@@ -159,6 +167,10 @@ CONTAINS
     ALLOCATE( &
       & hydro_init_vars%elevation       (nproma, nblks),       &
       & hydro_init_vars%oro_stddev      (nproma, nblks),       &
+      & hydro_init_vars%slp_steep       (nproma, nblks),       &
+      & hydro_init_vars%slp_hillslope   (nproma, nblks),       &
+      & hydro_init_vars%slp_lowland     (nproma, nblks),       &
+      & hydro_init_vars%slp_floodplain  (nproma, nblks),       &
       & hydro_init_vars%soil_depth      (nproma, nblks),       &
       & hydro_init_vars%vol_porosity    (nproma, nblks),       &
       & hydro_init_vars%hyd_cond_sat    (nproma, nblks),       &
@@ -174,6 +186,10 @@ CONTAINS
 
       hydro_init_vars%elevation      (:,:)   = missval
       hydro_init_vars%oro_stddev     (:,:)   = missval
+      hydro_init_vars%slp_steep      (:,:)   = missval
+      hydro_init_vars%slp_hillslope  (:,:)   = missval
+      hydro_init_vars%slp_lowland    (:,:)   = missval
+      hydro_init_vars%slp_floodplain (:,:)   = missval
       hydro_init_vars%soil_depth     (:,:)   = missval
       hydro_init_vars%vol_porosity   (:,:)   = missval
       hydro_init_vars%hyd_cond_sat   (:,:)   = missval
@@ -216,6 +232,29 @@ CONTAINS
       & variable_name='orostd',    &
       & fill_array = hydro_init_vars%oro_stddev)
     hydro_init_vars%oro_stddev = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+    IF (TRIM(model%config%usecase) == 'jsbach_hydrotiles') THEN
+      ! Read hydrotiles specific slope fields
+      ptr_2D => input_file%Read_2d(  &
+        & variable_name='slp_steep',    &
+        & fill_array = hydro_init_vars%slp_steep)
+      hydro_init_vars%slp_steep = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+      ptr_2D => input_file%Read_2d(  &
+        & variable_name='slp_hill',    &
+        & fill_array = hydro_init_vars%slp_hillslope)
+      hydro_init_vars%slp_hillslope = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+      ptr_2D => input_file%Read_2d(  &
+        & variable_name='slp_low',    &
+        & fill_array = hydro_init_vars%slp_lowland)
+      hydro_init_vars%slp_lowland = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+
+      ptr_2D => input_file%Read_2d(  &
+        & variable_name='slp_flood',    &
+        & fill_array = hydro_init_vars%slp_floodplain)
+      hydro_init_vars%slp_floodplain = MERGE(ptr_2D, 0._wp, ptr_2D >= 0._wp)
+    END IF
 
     CALL input_file%Close()
 
@@ -425,22 +464,33 @@ CONTAINS
     !$acc update device(dsl4jsb_var2D_onDomain(HYDRO_,elevation), &
     !$acc dsl4jsb_var2D_onDomain(HYDRO_,oro_stddev)
 
-    ! Compute steepness parameter for surface runoff
-    DO i = 1, grid%Get_nblks()
-      CALL calc_orographic_features(                      &
-        ! in
-        & grid%Get_nproma(),                              & !< Number of gridcells
-        & grid%nlat_g,                                    & !< (Effective) number of latitudes for steepness parameter
-        & TRIM(model%config%usecase) == 'jsbach_qarctic', & !< T: HydroTiles setup is active
-        & tile%contains_upland,                           & !< T: Upland HydroTile
-        & dsl4jsb_Config(HYDRO_)%max_slope,               & !< maximum slope threshold [m/m]
-        & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),      & !< Standard deviation of orography [m]
-        ! out
-        & dsl4jsb_var_ptr(HYDRO_, steepness  )(:,i),      & !< parameter defining the subgrid slope distribution [m/m]
-        & dsl4jsb_var_ptr(HYDRO_, micro_slope)(:,i),      & !< slope on microtopography tiles [m/m]
-        & dsl4jsb_var_ptr(HYDRO_, macro_slope)(:,i)       & !< slope on macrotopography tiles [m/m]
-        & )
-    END DO
+    IF (TRIM(model%config%usecase) == 'jsbach_hydrotiles') THEN
+      ! Assign slope data to respective hydrotile
+      ! @todo check whether this could be done better during tile generation similar to fractions
+      IF (tile%contains_steep) THEN
+        dsl4jsb_var_ptr(HYDRO_, steepness) = hydro_init_vars%slp_steep
+      ELSE IF (tile%contains_hillslope) THEN
+        dsl4jsb_var_ptr(HYDRO_, steepness) = hydro_init_vars%slp_hillslope
+      ELSE IF (tile%contains_lowland) THEN
+        dsl4jsb_var_ptr(HYDRO_, steepness) = hydro_init_vars%slp_lowland
+      ELSE IF (tile%contains_floodplain) THEN
+        dsl4jsb_var_ptr(HYDRO_, steepness) = hydro_init_vars%slp_floodplain
+      END IF
+
+    ELSE
+      ! Compute steepness for ARNO scheme
+      DO i = 1, grid%Get_nblks()
+        CALL calc_orographic_features(                         &
+          ! in
+          & grid%Get_nproma(),                                 & !< Number of gridcells
+          & grid%nlat_g,                                       & !< (Effective) number of latitudes for steepness parameter
+          & dsl4jsb_var_ptr(HYDRO_, oro_stddev )(:,i),         & !< Standard deviation of orography [m]
+          ! out
+          & dsl4jsb_var_ptr(HYDRO_, steepness  )(:,i)          & !< parameter defining the subgrid slope distribution [m/m]
+          & )
+      END DO
+
+    END IF
 
     IF (tile%contains_soil) THEN
 
@@ -504,8 +554,8 @@ CONTAINS
       END IF
 
       ! Maximum depth and extent of surface water ponds
-      IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. .NOT. tile%contains_ridge) THEN
-        ! @todo Ponds now restricted to Q-Arctic usecase --> additional switch, or fine like this?
+      IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. tile%contains_floodplain) THEN
+        ! @todo Ponds now restricted to Hydrotile usecase --> additional switch, or fine like this?
         IF (MAXVAL(hydro_init_vars%fract_pond_max(:,:)) < 0._wp) THEN
           ! No maximum pond fraction found in init file --> estimate from steepness
           ! This equation is based on curve fitting steepness data to the
