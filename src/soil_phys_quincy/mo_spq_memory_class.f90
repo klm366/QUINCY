@@ -395,7 +395,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
         
       CALL mem%Add_var('fact_qsat_srf', mem%fact_qsat_srf, &
@@ -406,7 +406,7 @@ CONTAINS
         & prefix, suffix, &
         & output_level = FULL, &
         & loutput = .FALSE., &
-        & lrestart = .FALSE., &
+        & lrestart = .TRUE., &
         & initval_r = 0.0_wp)
         
       CALL mem%Add_var('w_skin', mem%w_skin, &
