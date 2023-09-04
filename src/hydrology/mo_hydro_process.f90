@@ -150,6 +150,7 @@ CONTAINS
       & wtr_skin_pre_rain(nc),    & !< amount of water in the skin reservoir prior to the update [m]
       & manning(nc),              & !< Manning coefficient for surface roughness [/]
       & t_pond(nc),               & !< surface pond water temperature [K]
+      & wtr_pond_max(nc),         & !< maximum pond water storage capacity (without ice) [m]
       & wtr_pond_inflow(nc),      & !< pond inflow [m]
       & wtr_pond_outflow(nc),     & !< pond outflow [m]
       & wtr_pond_overflow(nc),    & !< water exceeding the maximum allowed pond water content (liquid + ice) [m]
@@ -368,16 +369,21 @@ CONTAINS
       infilt(:) = water_to_soil(:)
 
     ELSE IF (runoff_scheme == QArctic_) THEN
-      i_infil    = 1
-      manning(:) = manning_n
-      CALL infiltration_new(nc, dt_sat, dtime, MAX(0._wp, weq_pond_max(:) - ice_pond(:)),       &
-                          & i_infil, soilhydmodel,          &
-                          & steepness(:), manning(:), soil_depth_sl1(:),                       &
-                          & pore_size_index_sl1(:), bclapp_sl1(:), vol_porosity_sl1(:),        &
+      ! Infiltration scheme based on surface hydraulic conductivity and hydrotile specific
+      ! slopes
+      i_infil          = 1
+      manning(:)       = manning_n
+      wtr_pond_max(:)  = MAX(0._wp, weq_pond_max(:) - ice_pond(:))
+      water_to_soil(:) = water_to_soil(:) + wtr_pond(:)
+
+      CALL infiltration_new(nc, dt_sat, dtime, wtr_pond_max, i_infil, soilhydmodel,          &
+                          & steepness(:), manning(:), soil_depth_sl1(:),                     &
+                          & pore_size_index_sl1(:), bclapp_sl1(:), vol_porosity_sl1(:),      &
                           & vol_field_cap_sl1(:), vol_p_wilt_sl1(:), hyd_cond_sat_sl1(:),    &
                           & wtr_soil_sl1(:), ice_soil_sl1(:), wtr_soil_pot_scool_sl1(:),     &
-                          & water_to_soil(:) + wtr_pond(:), wtr_pond(:),                                      &
-                          & runoff_horton(:), infilt(:))
+                          & water_to_soil(:),                                                &
+                          & wtr_pond(:), runoff_horton(:), infilt(:))
+
       runoff(:) = runoff_horton(:)
 
     ELSE IF (runoff_scheme == Arno_) THEN
@@ -869,11 +875,12 @@ CONTAINS
   !! @par Revision History
   !!   Developed by Philipp de Vrese (MPI-M) in September 2022
 
-  SUBROUTINE infiltration_new(nc, dt_sat, dtime, wtr_pond_max, i_infil,                   &
-                            & soilhydmodel, slope, manning, dsoil,                        &
-                            & pore_size_index, bclapp, vol_porosity, vol_field_cap,       &
-                            & vol_p_wilt, hyd_cond_sat, ws_soil, ice_soil, wtr_pot_scool, &
-                            & water_to_soil, wtr_pond, runoff, infilt)
+  SUBROUTINE infiltration_new(nc, dt_sat, dtime, wtr_pond_max, i_infil,             &
+                            & soilhydmodel, slope, manning, dsoil,                  &
+                            & pore_size_index, bclapp, vol_porosity, vol_field_cap, &
+                            & vol_p_wilt, hyd_cond_sat, wtr_soil_top, ice_soil_top, &
+                            & wtr_pot_scool, water_to_soil,                         &
+                            & wtr_pond, runoff, infilt)
 
     INTEGER,  INTENT(in) :: nc
 
@@ -882,12 +889,12 @@ CONTAINS
       &  dt_sat               !< Time it takes hydraulic conductivity to reach max [sec]
 
     INTEGER,  INTENT(in) :: &
-      & i_infil,            &
+      & i_infil,            & !< Infiltration scheme
       & soilhydmodel          !< Soil hydrology model for computation of K
 
     REAL(wp), INTENT(in) :: &
       & wtr_pond_max(:),    &
-      & slope(nc),          & !< Slope of the contributing areas ... for now use b
+      & slope(nc),          & !< Slope of the hydrotile
       & pore_size_index(:), &
       & bclapp(:),          &
       & vol_porosity(:),    &
@@ -896,15 +903,13 @@ CONTAINS
       & hyd_cond_sat(:),    &
       & dsoil(:),           &
       & manning(:),         &
-      & ws_soil(:),         &
+      & wtr_soil_top(:),    &
       & wtr_pot_scool(:),   &
-      & ice_soil(:),        &
+      & ice_soil_top(:),    &
       & water_to_soil(:)
 
-    REAL(wp), INTENT(inout) ::   &
-      & wtr_pond(:)
-
     REAL(wp), INTENT(out) ::     &
+      & wtr_pond(:),             &
       & runoff(:),               &
       & infilt(:)
 
@@ -918,84 +923,87 @@ CONTAINS
       & ws_max(nc),          &
       & fc(nc),              &
       & pwp(nc),             &
-      & ice_impede(nc),      &   ! Inhibition of infiltration due to teh presence of ice
-      & k_start(nc),         &   ! hydrualic conductivity at the beginning ...
+      & ice_impede(nc),      &   ! Inhibition of infiltration due to the presence of ice
+      & hyd_cond_slp(nc),    &   ! Saturated hydraulic conductivity scaled by tile slope
+      & k_start(nc),         &   ! hydraulic conductivity at the beginning ...
       & k_end(nc),           &   ! ... and the end of the timestep (assuming all water to infiltrate)
       & delta_k(nc),         &   ! ... additional infiltration capacity
-      & water_excess(nc),    &   ! Water that doesn infiltrte immediatly but ponds
+      & water_excess(nc),    &   ! Water that doesn't infiltrate immediatly but ponds
       & pond_pot(nc),        &   ! Ponding depth reached during saturation time
       & v_max(nc),           &   ! Avg. velocity of water; vertical crossection
       & sro_max(nc),         &   ! velocity relative to m2 gridcell area
-      & fract_infilt(nc),    &   ! fraction of ponding water that can infiltrate due to inicreasing k
+      & fract_infilt(nc),    &   ! fraction of ponding water that can infiltrate due to increasing k
       & infilt_pot(nc),      &   ! Additional infitration flux due to increasing k
       & zmvg(nc)                 ! vanGenuchten parameter
 
-    REAL(wp) ::              &
-      & ice_impeda_s1(nc,1), &  ! layered ice impedance on a singled layer
-      & hyd_cond_s1(nc,1)       ! layered hydrologic conductivity on a single layer
+    REAL(wp) ::               &
+      & ice_impeda_top(nc,1), &  ! layered ice impedance on a singled layer
+      & hyd_cond_top(nc,1)       ! layered hydrologic conductivity on a single layer
 
     !--------------------------------------------------------------------------------------------------------------------------------------
 
     nlay           = 1 ! Number of soil layers set to 1 because only top soil layer is used
     zeros(:)       = 0._wp
-    wtr_scool(:)   = MIN(wtr_pot_scool(:), ws_soil(:))
-    ws_incl_ice(:) = ws_soil(:) + ice_soil(:)
+    wtr_scool(:)   = MIN(wtr_pot_scool(:), wtr_soil_top(:))
+    ws_incl_ice(:) = wtr_soil_top(:) + ice_soil_top(:)
     ws_max(:)      = MAX(0._wp, vol_porosity(:)  * dsoil(:))
     fc(:)          = MAX(0._wp, vol_field_cap(:) * dsoil(:))
     pwp(:)         = MAX(0._wp, vol_p_wilt(:)    * dsoil(:))
+    hyd_cond_slp(:)= hyd_cond_sat(:) * MAX(0._wp, 1._wp - ATAN(slope(:)))
 
-    !> Get ice impedance and hydraulic conductivity for the uppermost soil layer based
+    !> 1. Get ice impedance and hydraulic conductivity for the uppermost soil layer based
     !!   on the state prior to infiltration
     !    The interpolation scheme is set to 1 as it is not used in this case
     !    All soil fields are spread onto 2D variables with only one index (top layer soil)
     CALL get_soilhyd_cond_properties(                    &
       & soilhydmodel, 1, nc, nlay,                       & ! nlay == nsoil and is now set to 1 (top soil layer)
       & SPREAD(dsoil(:),           DIM=2, ncopies=nlay), & ! soil depth of top layer
-      & SPREAD(ws_soil(:),         DIM=2, ncopies=nlay), &
-      & SPREAD(ice_soil(:),        DIM=2, ncopies=nlay), &
+      & SPREAD(wtr_soil_top(:),    DIM=2, ncopies=nlay), &
+      & SPREAD(ice_soil_top(:),    DIM=2, ncopies=nlay), &
       & SPREAD(wtr_scool(:),       DIM=2, ncopies=nlay), &
       & SPREAD(ws_max(:),          DIM=2, ncopies=nlay), &
       & SPREAD(fc(:),              DIM=2, ncopies=nlay), &
       & SPREAD(pwp(:),             DIM=2, ncopies=nlay), &
-      & SPREAD(hyd_cond_sat(:),    DIM=2, ncopies=nlay), &
+      & SPREAD(hyd_cond_slp(:),    DIM=2, ncopies=nlay), &
       & SPREAD(zeros(:),           DIM=2, ncopies=nlay), &
       & SPREAD(bclapp(:),          DIM=2, ncopies=nlay), &
       & SPREAD(pore_size_index(:), DIM=2, ncopies=nlay), &
-      & ice_impedance=ice_impeda_s1(:,:),                &
-      & K=hyd_cond_s1(:,:)                               &
+      & ice_impedance=ice_impeda_top(:,:),               &
+      & K=hyd_cond_top(:,:)                              &
       & )
-    ice_impede(:) = ice_impeda_s1(:,1)
-    k_start(:)    = hyd_cond_s1(:,1)
+    ice_impede(:) = ice_impeda_top(:,1)
+    k_start(:)    = hyd_cond_top(:,1)
 
+    !> 2. Get estimate for hydraulic conductivity at the end of the time step
     IF (i_infil == 1) THEN
       !!---Assuming the wetting front moves with the speed of ksat
-      k_end(:) = ice_impede(:) * hyd_cond_sat(:)
+      k_end(:) = ice_impede(:) * hyd_cond_slp(:)
     ELSE IF (i_infil == 2) THEN
       !!---Assuming that by the end of the timestep k = precip*
-      k_end(:) = MIN(ice_impede(:) * hyd_cond_sat(:), water_to_soil(:) / dtime)
+      k_end(:) = MIN(ice_impede(:) * hyd_cond_slp(:), water_to_soil(:) / dtime)
     ELSE IF (i_infil == 3) THEN
-      !!---Assuming that pondig water is euqally distributed throughout the soil layer
-      CALL get_soilhyd_cond_properties(                               &
-        & soilhydmodel, 1, nc, nlay,                                  & ! nlay == nsoil and is now set to 1 (top soil layer)
-        & SPREAD(dsoil(:),                      DIM=2, ncopies=nlay), & ! soil depth of top layer
-        & SPREAD(ws_soil(:) + water_to_soil(:), DIM=2, ncopies=nlay), &
-        & SPREAD(ice_soil(:),                   DIM=2, ncopies=nlay), &
-        & SPREAD(wtr_scool(:),                  DIM=2, ncopies=nlay), &
-        & SPREAD(ws_max(:),                     DIM=2, ncopies=nlay), &
-        & SPREAD(fc(:),                         DIM=2, ncopies=nlay), &
-        & SPREAD(pwp(:),                        DIM=2, ncopies=nlay), &
-        & SPREAD(hyd_cond_sat(:),               DIM=2, ncopies=nlay), &
-        & SPREAD(zeros(:),                      DIM=2, ncopies=nlay), &
-        & SPREAD(bclapp(:),                     DIM=2, ncopies=nlay), &
-        & SPREAD(pore_size_index(:),            DIM=2, ncopies=nlay), &
-        & K=hyd_cond_s1(:,:)                                          &
+      !!---Assuming that ponding water is euqally distributed throughout the soil layer
+      CALL get_soilhyd_cond_properties(                                    &
+        & soilhydmodel, 1, nc, nlay,                                       & ! nlay == nsoil and is now set to 1 (top soil layer)
+        & SPREAD(dsoil(:),                           DIM=2, ncopies=nlay), & ! soil depth of top layer
+        & SPREAD(wtr_soil_top(:) + water_to_soil(:), DIM=2, ncopies=nlay), &
+        & SPREAD(ice_soil_top(:),                    DIM=2, ncopies=nlay), &
+        & SPREAD(wtr_scool(:),                       DIM=2, ncopies=nlay), &
+        & SPREAD(ws_max(:),                          DIM=2, ncopies=nlay), &
+        & SPREAD(fc(:),                              DIM=2, ncopies=nlay), &
+        & SPREAD(pwp(:),                             DIM=2, ncopies=nlay), &
+        & SPREAD(hyd_cond_slp(:),                    DIM=2, ncopies=nlay), &
+        & SPREAD(zeros(:),                           DIM=2, ncopies=nlay), &
+        & SPREAD(bclapp(:),                          DIM=2, ncopies=nlay), &
+        & SPREAD(pore_size_index(:),                 DIM=2, ncopies=nlay), &
+        & K=hyd_cond_top(:,:)                                              &
         & )
-      k_end(:) = hyd_cond_s1(:,1)
+      k_end(:) = hyd_cond_top(:,1)
     ELSE IF (i_infil == 4) THEN
       !!---Assuming the wetting front moves with the speed of ksat
       !!     and in frozen soils water can enter until pore space of top layer is saturated
-      k_end(:) = MIN(hyd_cond_sat(:),                                  &
-                     MAX(ice_impede(:) * hyd_cond_sat(:),              &
+      k_end(:) = MIN(hyd_cond_slp(:),                                  &
+                     MAX(ice_impede(:) * hyd_cond_slp(:),              &
                          (fc(:) - ws_incl_ice(:)) / dtime))
     END IF
 
@@ -1036,10 +1044,10 @@ CONTAINS
     runoff(:)   = MAX(0._wp,    water_to_soil(:) - infilt(:)  - wtr_pond(:))
 
     !!! Unbedingt noch dahingehend korrigieren, das unter gepondeten Bereichen ziemlich sicher mit ksat infiltriert
-    WHERE (infilt(:) < ice_impede(:) * hyd_cond_sat(:) * dtime .AND. wtr_pond(:) > 0._wp)
-      infilt(:)   = MIN(ice_impede(:) * hyd_cond_sat(:) * dtime, infilt(:) + wtr_pond(:))
+    WHERE (infilt(:) < ice_impede(:) * hyd_cond_slp(:) * dtime .AND. wtr_pond(:) > 0._wp)
+      infilt(:)   = MIN(ice_impede(:) * hyd_cond_slp(:) * dtime, infilt(:) + wtr_pond(:))
       wtr_pond(:) = water_to_soil(:) - infilt(:) - runoff(:)
-  END WHERE
+    END WHERE
 
   END SUBROUTINE infiltration_new
 
