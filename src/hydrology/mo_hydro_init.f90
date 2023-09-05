@@ -28,6 +28,7 @@ MODULE mo_hydro_init
   USE mo_jsb_io,             ONLY: missval
   USE mo_jsb_impl_constants, ONLY: ifs_nsoil, ifs_soil_depth
   USE mo_util,               ONLY: int2string
+  USE mo_hydro_constants,    ONLY: QArctic_
 
   dsl4jsb_Use_processes HYDRO_, PHENO_, SSE_
   dsl4jsb_Use_config(HYDRO_)
@@ -363,7 +364,7 @@ CONTAINS
             & variable_name='fract_pond_max',                           &
             & fill_array=hydro_init_vars%fract_pond_max)
           ptr_2D(:,:) = MERGE(ptr_2D(:,:), 0._wp, ptr_2D(:,:) >= 0._wp)
-        ELSE
+        ELSE IF (dsl4jsb_Config(HYDRO_)%runoff_scheme /= QArctic_) THEN
           hydro_init_vars%fract_pond_max(:,:) = -1._wp
           CALL message(TRIM(routine), '*** Warning: fract_pond_max not found in bc file --> '// &
             & 'will be computed using steepness values')
@@ -435,6 +436,7 @@ CONTAINS
     TYPE(t_jsb_grid),  POINTER        :: grid
     TYPE(t_jsb_vgrid), POINTER        :: soil_w
     INTEGER                           :: i, nsoil
+    REAL(wp), POINTER                 :: tile_fract(:,:)
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':hydro_init_bc'
 
@@ -554,19 +556,38 @@ CONTAINS
       END IF
 
       ! Maximum depth and extent of surface water ponds
-      IF (dsl4jsb_Config(HYDRO_)%l_ponds .AND. tile%contains_floodplain) THEN
-        ! @todo Ponds now restricted to Hydrotile usecase --> additional switch, or fine like this?
-        IF (MAXVAL(hydro_init_vars%fract_pond_max(:,:)) < 0._wp) THEN
-          ! No maximum pond fraction found in init file --> estimate from steepness
-          ! This equation is based on curve fitting steepness data to the
-          ! compound topographical index (CTI) dataset (https://doi.org/10.5285/6b0c4358-2bf3-4924-aa8f-793d468b92be)
-          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = &
-            & 0.3_wp / ( 0.5_wp + dsl4jsb_var_ptr(HYDRO_, steepness)**0.4_wp)
+      IF (dsl4jsb_Config(HYDRO_)%l_ponds) THEN
+        IF (dsl4jsb_Config(HYDRO_)%runoff_scheme == QArctic_) THEN
+          ! Ponds fraction and depth controlled by Hydrotile fractions
+          ALLOCATE(tile_fract(grid%nproma, grid%nblks))
+          CALL tile%Get_fraction(fract=tile_fract(:,:))
+          IF (tile%contains_floodplain) THEN
+            ! Floodsplains are allowed to be completely inundated
+            dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = tile_fract(:,:)
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = dsl4jsb_Config(HYDRO_)%max_pond_depth
+          ELSE IF (tile%contains_lowland) THEN
+            ! Lowlands are allowed to be inundated up to 50%
+            dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = tile_fract(:,:) * 0.5_wp
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = dsl4jsb_Config(HYDRO_)%max_pond_depth * 0.5_wp
+          ELSE
+            ! No ponding is allowed on this hydrotile
+            dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0_wp
+            dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = 0._wp
+          END IF
+          DEALLOCATE(tile_fract)
         ELSE
-          ! Maximum pond fraction read from from init file
-          dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+          IF (MAXVAL(hydro_init_vars%fract_pond_max(:,:)) < 0._wp) THEN
+            ! No maximum pond fraction found in init file --> estimate from steepness
+            ! This equation is based on curve fitting steepness data to the
+            ! compound topographical index (CTI) dataset (https://doi.org/10.5285/6b0c4358-2bf3-4924-aa8f-793d468b92be)
+            dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = &
+              & 0.3_wp / ( 0.5_wp + dsl4jsb_var_ptr(HYDRO_, steepness)**0.4_wp)
+          ELSE
+            ! Maximum pond fraction read from from init file
+            dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = hydro_init_vars%fract_pond_max(:,:)
+          END IF
+          dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = dsl4jsb_Config(HYDRO_)%max_pond_depth
         END IF
-        dsl4jsb_var_ptr(HYDRO_, weq_pond_max) = dsl4jsb_Config(HYDRO_)%max_pond_depth
       ELSE
         dsl4jsb_var_ptr(HYDRO_, fract_pond_max) = 0._wp
         dsl4jsb_var_ptr(HYDRO_, weq_pond_max)   = 0._wp
