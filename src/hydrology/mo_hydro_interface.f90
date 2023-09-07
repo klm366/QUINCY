@@ -547,7 +547,7 @@ CONTAINS
     ! IF (is_experiment_start) THEN ! Start of experiment
     IF (is_time_experiment_start(options%current_datetime)) THEN
       lstart = .TRUE.
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         w_snow(ic) = 0._wp
@@ -563,7 +563,7 @@ CONTAINS
     !$ACC DATA CREATE(w_skin_max, w_skin_canopy_max, trans_tmp)
 
     IF (tile%is_glacier) THEN
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
 
@@ -596,7 +596,7 @@ CONTAINS
       !$ACC END PARALLEL
     ELSE
 
-      !$ACC PARALLEL DEFAULT(PRESENT)
+      !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
         IF (tile%is_vegetation .OR. tile%is_land) THEN
@@ -650,7 +650,7 @@ CONTAINS
         & )
 
       IF (l_compat401_config) THEN
-        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
+        !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
         DO ic=1,nc
           snow_soil_dens(ic) = 330._wp
         END DO
@@ -659,7 +659,7 @@ CONTAINS
 
     END IF
 
-    !$ACC PARALLEL DEFAULT(PRESENT)
+    !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     IF (tile%is_glacier) THEN
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic=1,nc
@@ -682,6 +682,8 @@ CONTAINS
     !$ACC END PARALLEL
 
     !$ACC END DATA
+
+    !$ACC WAIT(1)
 
 
   END SUBROUTINE update_surface_hydrology
