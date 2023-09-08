@@ -95,6 +95,9 @@ MODULE mo_pheno_memory_class
                                           !<      1.0  .. during growth phase of second crop (i.e. from summer to autumn)
                                           !<      2.0  .. during growth phase of winter crops (i.e. from autumn to spring)
                                           !< Updated every day by the subroutine "update_growth_phase()".
+      & growth_phase_CC,                & ! LJ < For extratropical cover crops only: values are:
+                                          !< 1 .. growth phase of cover crops
+                                          !< 0 .. rest phase of cover crops
       & days_since_growth_begin_EG,     & !< For summergreen and evergreen only: serves to remember the number of
                                           !< days elapsed since the growth phase began
       & days_since_growth_begin_SG,     & !< (as real numbers to save it in a stream).
@@ -324,6 +327,13 @@ CONTAINS
           & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
           & prefix, suffix,                                                    &
           & initval_r=-1.0_wp )
+
+        CALL mem%Add_var('growth_phase_cc', mem%growth_phase_CC,             & !LJ
+          & hgrid, surface,                                                    &
+          & t_cf('growth_phase_CoverCrop', '', ''),                                 &
+          & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits), &
+          & prefix, suffix,                                                    &
+          & initval_r=0.0_wp )
 
         CALL mem%Add_var('growth_days_eg', mem%days_since_growth_begin_EG,      &
           & hgrid, surface,                                                     &

@@ -35,6 +35,8 @@ MODULE mo_pheno_config_class
     !> MODEL_JSBACH
     !>
     LOGICAL             :: l_forestRegrowth           !< If TRUE, the maxLAI is derived from biomass via allometric relationships
+    LOGICAL :: l_cropdynamics   ! If TRUE, summer cropping, double cropping, winter cropping are changed for extra-tropical crops
+    LOGICAL :: l_covercrops     ! If TRUE, cover crops grow in the rest phase of extra-tropical crops
     CHARACTER(len=15)   :: scheme_jsbach              !< Phenology scheme to use ('logrop', 'climatology')
     !LOGICAL :: first_call_phenology_this_day         !< TRUE marks if a new day has just started and
     !                                                 !< update_phenology is called for the top tile
@@ -64,6 +66,8 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     LOGICAL                     :: active
     LOGICAL                     :: l_forestRegrowth
+    LOGICAL                     :: l_cropdynamics
+    LOGICAL                     :: l_covercrops
     REAL(wp)                    :: lai_site_specific      !< site specific lai, used to init lai_max in PHENO_
     CHARACTER(len=15)           :: scheme                 !< scheme_jsbach
     CHARACTER(len=filename_max) :: ic_filename, bc_filename
@@ -76,8 +80,11 @@ CONTAINS
       & l_forestRegrowth,     &
       & scheme,               &
       & ic_filename,          &
-      & bc_filename,          &
+      & bc_filename,          &      
+      & l_cropdynamics,       &
+      & l_covercrops,         &
       & lai_site_specific
+      
     INTEGER :: nml_handler, nml_unit, istat
     CHARACTER(len=*), PARAMETER :: routine = modname//':Init_pheno_config'
     ! ----------------------------------------------------------------------------------------------------- !
@@ -89,6 +96,8 @@ CONTAINS
     scheme              = 'logrop'
     bc_filename         = 'bc_land_phenology.nc'
     ic_filename         = 'ic_land_phenology.nc'
+    l_cropdynamics      = .TRUE.
+    l_covercrops        = .FALSE.
     lai_site_specific   = 6.0_wp
     !first_call_phenology_this_day = .FALSE.
     ! ----------------------------------------------------------------------------------------------------- !
@@ -108,7 +117,13 @@ CONTAINS
     config%scheme_jsbach              = TRIM(scheme)
     config%ic_filename                = ic_filename
     config%bc_filename                = bc_filename
+    config%l_cropdynamics             = l_cropdynamics
+    config%l_covercrops               = l_covercrops
     config%lai_max                    = lai_site_specific
+
+    IF (.NOT. l_cropdynamics) CALL message(TRIM(routine), 'Extra-tropical cropping season is fixed.')
+    IF (l_covercrops) CALL message(TRIM(routine), 'Extra-tropical crops include cover crops.')
+
     CALL close_nml(nml_handler)
 
     !> model-specific routines
