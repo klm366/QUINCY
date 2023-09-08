@@ -278,6 +278,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: growth_phase_SG
     dsl4jsb_Real2D_onChunk :: growth_phase_EG
     dsl4jsb_Real2D_onChunk :: growth_phase_CRP
+    dsl4jsb_Real2D_onChunk :: growth_phase_CC
     dsl4jsb_Real2D_onChunk :: previous_day_temp_mean
     dsl4jsb_Real2D_onChunk :: pseudo_soil_temp
     dsl4jsb_Real2D_onChunk :: chill_days_SG
@@ -398,6 +399,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_SG)        ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_EG)        ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_CRP)       ! inout
+    dsl4jsb_Get_var2D_onChunk(PHENO_,    growth_phase_CC)       ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    chill_days_SG)          ! inout
     dsl4jsb_Get_var2D_onChunk(PHENO_,    chill_days_EG)          ! inout
 
@@ -613,6 +615,8 @@ CONTAINS
       CALL calc_crop_phenology(            &
         & day_of_year,                     & ! in
         & l_newday,                        & ! in
+        & pheno__conf%l_cropdynamics, & ! in
+        & pheno__conf%l_covercrops,   & !in
         & timestep,                        & ! in
         & NPP_pot_rate_ca(:),              & ! in
         & lat(:),                          & ! in
@@ -626,6 +630,7 @@ CONTAINS
         & heat_sum_CRP(:),                 & ! inout
         & heat_sum_winter,                 & ! inout
         & growth_phase_CRP(:),             & ! inout
+        & growth_phase_CC(:),              & ! inout
         & lai(:)                           & ! inout
         & )
     END IF
