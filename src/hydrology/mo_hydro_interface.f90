@@ -2354,7 +2354,7 @@ CONTAINS
 
     ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
     ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
-    wb_threshold(:) = 1.0e-11_wp * tile_area(:) / dtime
+    wb_threshold(:) = 1.0e-11_wp * tile_area(:) * dtime
 
     !$claw acc parallel loop gang vector
     DO i=1,nc
