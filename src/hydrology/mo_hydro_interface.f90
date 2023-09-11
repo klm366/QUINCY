@@ -2899,4 +2899,3 @@ CONTAINS
     IF (HYDRO__mem%weq_balance_err_gsum%is_in_output)  &
       &  weq_balance_err_gsum = global_sum_array(weq_balance_err(:,:) * notsea(:,:) * in_domain(:,:))
 
-    DEALLOCATE (scaling, in_domain)
