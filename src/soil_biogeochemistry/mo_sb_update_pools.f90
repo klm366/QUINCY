@@ -687,8 +687,18 @@ CONTAINS
       ! ...
       sb_transport_mt(:,:,:,:) = sb_transport_mt(:, :, :, :) + sb_particle_transport_hlp_mt(:, :, :, :)
       sb_pool_mt(:,:,:,:)      = sb_pool_mt(:, :, :, :)      + sb_particle_transport_hlp_mt(:, :, :, :) 
-      dom_cn(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixN, :, :)
-      dom_cp(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixP, :, :)
+      WHERE (sb_pool_mt(ix_dom, ixN, :, :) < eps8)
+        dom_cn(:,:)              = microbial_cn
+      ELSEWHERE
+        dom_cn(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixN, :, :)
+      ENDWHERE
+          
+      WHERE (sb_pool_mt(ix_dom, ixP, :, :) < eps8)
+        dom_cp(:,:)              = microbial_np
+      ELSEWHERE
+        dom_cp(:,:)              = sb_pool_mt(ix_dom, ixC, :, :) / sb_pool_mt(ix_dom, ixP, :, :)
+      ENDWHERE
+
       ! unit conversion of inorganic transport fluxes to [mumol m3 s-1] for compatibility with the simple_1d soil model
       transport_nh4_solute(:,:)           = transport_nh4_solute(:,:)     * 1.e6_wp / dtime
       transport_nh4_assoc(:,:)            = transport_nh4_assoc(:,:)      * 1.e6_wp / dtime

@@ -470,7 +470,7 @@ CONTAINS
       CALL model%Queue_task(SPQ_,     "spq_physics")                !
       CALL model%Queue_task(VEG_,     "veg_turnover")               !
       CALL model%Queue_task(VEG_,     "veg_dynamics")               !
-      CALL model%Queue_task(SB_,      "sb_simple_model")            !
+      CALL model%Queue_task(SB_,      "sb_jsm")            !
       CALL model%Queue_task(VEG_,     "veg_growth")                 !
       CALL model%Queue_task(VEG_,     "veg_pools")                  !
       CALL model%Queue_task(SB_,      "sb_pools")                   !
