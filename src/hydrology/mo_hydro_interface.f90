@@ -2382,7 +2382,7 @@ CONTAINS
 #ifndef _OPENACC
       ! Compute water balance threshold based on model resolution and time step. The threshold corresponds
       ! to a global water balance violation in the magnitude of 10cm of sea level rise after 1000 years
-      wb_threshold(ic) = 1.0e-11_wp * tile_area(ic) / dtime
+      wb_threshold(ic) = 1.0e-11_wp * tile_area(ic) * dtime
 
       IF (ABS(weq_balance_err(ic)) > wb_threshold(ic)) THEN
         IF (tile%contains_soil .AND. .NOT. tile%is_glacier) THEN
