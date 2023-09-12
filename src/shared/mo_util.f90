@@ -21,7 +21,7 @@ MODULE mo_util
   PRIVATE
 
   PUBLIC :: soil_depth_to_layers_2d, ifs2soil, one_of, toupper, tolower, int2string, real2string, logical2string, &
-    &       report_memory_usage
+    &       report_memory_usage, soil_init_from_texture
 
   INTERFACE one_of
     MODULE PROCEDURE one_of_str
@@ -171,6 +171,40 @@ CONTAINS
     END DO
 
   END SUBROUTINE ifs2soil
+
+  !> Calculate mineral soil parameters fom soil texture.
+  !!
+  !! Input to this routine should conform:
+  !! fraction_sand + fraction_silt + fraction_clay = 1
+  !! fraction_sand_deep + fraction_silt_deep + fraction_clay_deep = 1
+  !! The calculated mineral soil parameters do not have a vertical dimension,
+  !! as calculations are based on averages of the upper and lower soil textures.
+  !! TODO: Calculate layer dependant parameters
+  PURE ELEMENTAL SUBROUTINE soil_init_from_texture(                 &
+    & parameter_sand, parameter_silt, parameter_clay, parameter_oc, &
+    & fraction_sand, fraction_silt, fraction_clay,                  &
+    & fraction_sand_deep, fraction_silt_deep, fraction_clay_deep,   &
+    & parameter_from_texture)
+
+    REAL(wp), INTENT(in)  ::  parameter_sand, parameter_silt, parameter_clay, parameter_oc
+    REAL(wp), INTENT(in)  ::                                      &
+      fraction_sand, fraction_silt, fraction_clay,                &
+      fraction_sand_deep, fraction_silt_deep, fraction_clay_deep
+    REAL(wp), INTENT(out)  ::  parameter_from_texture
+
+    ! Compute texture based soil parameter
+    parameter_from_texture = ((fraction_sand + fraction_sand_deep)         &
+      &                      * 0.5_wp * parameter_sand) +                  &
+      &                      ((fraction_silt + fraction_silt_deep)         &
+      &                      * 0.5_wp * parameter_silt) +                  &
+      &                      ((fraction_clay + fraction_clay_deep)         &
+      &                      * 0.5_wp * parameter_clay)
+
+    ! Ensure the parameter is within the correct bounds
+    parameter_from_texture = MAX(parameter_from_texture, MIN(parameter_sand,parameter_silt,parameter_clay))
+    parameter_from_texture = MIN(parameter_from_texture, MAX(parameter_sand,parameter_silt,parameter_clay))
+
+  END SUBROUTINE soil_init_from_texture
 
   !-----------------------------------------------------------------------------------------------------
   !> conversion: lowercase -> uppercase

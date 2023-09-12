@@ -52,6 +52,7 @@ MODULE mo_hydro_config_class
       & enforce_water_budget, & !< stop in case of water conservation problem
       & l_organic,            & !< Use organic component of soil layers
       & l_socmap,             & !< Replace computed organic layer with 3D map of soil carbon fraction
+      & l_soil_texture,       & !< Deduce soil hydrological parameters from soil texture
       & l_glac_in_soil,       & !< Treat glacier as part of soil, not separate glacier tile
       & l_infil_subzero,      & !< Allow infiltration at soil temperatures below 0degC
       & l_ponds                 !< Additional surface water storage
@@ -86,7 +87,8 @@ CONTAINS
     REAL(wp)                    :: manning_n, dt_sat, max_slope, max_pond_depth
     REAL(wp)                    :: w_soil_limit, w_soil_crit_fract, w_soil_wilt_fract
     CHARACTER(len=15)           :: scheme_stom_cond, runoff_scheme, soilhydmodel, interpol_mean
-    LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, l_glac_in_soil, l_infil_subzero, l_ponds
+    LOGICAL                     :: enforce_water_budget, l_organic, l_socmap, &
+      &                            l_soil_texture, l_glac_in_soil, l_infil_subzero, l_ponds
 
     NAMELIST /jsb_hydro_nml/        &
       & active,                     &
@@ -106,6 +108,7 @@ CONTAINS
       & enforce_water_budget,       &
       & l_organic,                  &
       & l_socmap,                   &
+      & l_soil_texture,             &
       & l_glac_in_soil,             &
       & l_infil_subzero,            &
       & l_ponds,                    &
@@ -143,6 +146,7 @@ CONTAINS
     enforce_water_budget   = config%model_config%enforce_water_budget
     l_organic              = .TRUE.
     l_socmap               = .TRUE.
+    l_soil_texture         = .FALSE.
     l_glac_in_soil         = .FALSE.
     l_infil_subzero        = .TRUE.
     l_ponds                = .FALSE.
@@ -216,6 +220,9 @@ CONTAINS
     config%l_socmap = l_socmap
     IF (l_socmap .AND. l_organic) &
       & CALL message(TRIM(routine), 'Replacing organic carbon fractions with map from bc file: ' //TRIM(logical2string(l_socmap)))
+
+    config%l_soil_texture      = l_soil_texture
+    IF (l_soil_texture) CALL message(TRIM(routine), 'Using soil texture in soil hydrology')
 
     config%l_glac_in_soil      = l_glac_in_soil
     config%l_infil_subzero     = l_infil_subzero
