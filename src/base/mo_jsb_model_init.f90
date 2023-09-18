@@ -178,6 +178,7 @@ CONTAINS
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_model_class,     ONLY: t_jsb_model, print_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY
     USE mo_jsb_grid_class,      ONLY: t_jsb_grid
     USE mo_jsb_grid,            ONLY: Get_grid
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, &
@@ -451,36 +452,71 @@ CONTAINS
     !
     ! quincy - using the SPQ_ process for soil physics
     !
-    ! for now: only QUINCY land
+    ! QUINCY model modes represent different levels of model complexity:
+    !
+    ! By setting the 'quincy_model' in the namelist, 'qmodel_id' is set to QCANOPY, QPLANT, QLAND, QSOIL
+    ! QCANOPY, QPLANT, QLAND share many tasks (indicated with 'ALL' below)
+    !
+    ! QCANOPY: CANOPY model mode - basic set of tasks ('ALL') excluding the ones specific to other model modes
+    !                              (calling only tasks to calculate biogeophysical processes)
+    ! QPLANT:  PLANT  model mode - with additional tasks calculating vegetation biogeochemistry and dynamics
+    ! QLAND:   LAND   model mode - adding tasks to calculate soil biogeochemistry
+    !                              (on top of the tasks specific for the PLANT model mode)
+    !
+    ! Later a separated task queue set-up might be specified for QSOIL
+    ! # QSOIL:   SOIL   model mode - standalone soil biogeochemistry with forcing from vegetation
     !
     CASE (MODEL_QUINCY)
-      ! store all bgcms into their matrices for this timestep
-      CALL model%Queue_task(VEG_,     "call_store_bgcms_in_matrices")
-      ! set flux variables to zero
-      CALL model%Queue_task(ASSIMI_,  "reset_assimi_fluxes")        !
-      CALL model%Queue_task(VEG_,     "reset_veg_fluxes")           !
-      CALL model%Queue_task(SB_,      "reset_sb_fluxes")            !
-      CALL model%Queue_task(SPQ_,     "reset_spq_fluxes")           !
-      ! science
-      CALL model%Queue_task(SB_,      "sb_rate_modifier")           !
-      CALL model%Queue_task(SPQ_,     "soil_turbulence")            !
-      CALL model%Queue_task(RAD_,     "radiation_quincy")           !
-      CALL model%Queue_task(PHENO_,   "phenology")                  !
-      CALL model%Queue_task(ASSIMI_,  "canopy_fluxes")              !
-      CALL model%Queue_task(SPQ_,     "spq_physics")                !
-      CALL model%Queue_task(VEG_,     "veg_turnover")               !
-      CALL model%Queue_task(VEG_,     "veg_dynamics")               !
-      CALL model%Queue_task(SB_,      "sb_simple_model")            !
-      CALL model%Queue_task(VEG_,     "veg_growth")                 !
-      CALL model%Queue_task(VEG_,     "veg_pools")                  !
-      CALL model%Queue_task(SB_,      "sb_pools")                   !
-      ! averaging variables in time
-      CALL model%Queue_task(RAD_,    "tavrg_radiation_quincy")      !
-      CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")          !
-      CALL model%Queue_task(VEG_,    "tavrg_vegetation")            !
-      CALL model%Queue_task(SB_,     "tavrg_soilbiogeochemistry")   !
+      !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
+      IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) &
+                .OR. (model%config%qmodel_id == QCANOPY)) THEN
+        CALL finish(TRIM(routine), &
+          & 'Unexpected / not yet implemented Quincy model mode: '//TRIM(model%config%quincy_model))
+      ENDIF
+
+      !-- store all bgcms into their matrices for this timestep
+      CALL model%Queue_task(VEG_, "call_store_bgcms_in_matrices") ! ALL
+
+      !-- set flux variables to zero
+      CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")       ! ALL
+      CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
+      IF(model%config%qmodel_id == QLAND) THEN
+        CALL model%Queue_task(SB_, "reset_sb_fluxes")             ! LAND ONLY
+      ENDIF
+      CALL model%Queue_task(SPQ_, "reset_spq_fluxes")             ! ALL
+
+      !-- science
+      IF(model%config%qmodel_id == QLAND) THEN
+        CALL model%Queue_task(SB_, "sb_rate_modifier")            ! LAND ONLY
+      ENDIF
+      CALL model%Queue_task(SPQ_, "soil_turbulence")              ! ALL
+      CALL model%Queue_task(RAD_, "radiation_quincy")             ! ALL
+      CALL model%Queue_task(PHENO_, "phenology")                  ! ALL
+      CALL model%Queue_task(ASSIMI_, "canopy_fluxes")             ! ALL
+      CALL model%Queue_task(SPQ_, "spq_physics")                  ! ALL
+
+      IF(model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) THEN
+        CALL model%Queue_task(VEG_, "veg_turnover")               ! LAND or PLANT
+        CALL model%Queue_task(VEG_, "veg_dynamics")               ! LAND or PLANT
+        IF(model%config%qmodel_id == QLAND) THEN
+          CALL model%Queue_task(SB_, "sb_simple_model")           ! LAND ONLY
+        ENDIF
+        CALL model%Queue_task(VEG_, "veg_growth")                 ! LAND or PLANT
+      ENDIF
+
+      CALL model%Queue_task(VEG_, "veg_pools")                    ! ALL
+      IF(model%config%qmodel_id == QLAND) THEN
+        CALL model%Queue_task(SB_, "sb_pools")                    ! LAND ONLY
+      ENDIF
+
+      !-- averaging variables in time
+      CALL model%Queue_task(RAD_, "tavrg_radiation_quincy")       ! ALL
+      CALL model%Queue_task(ASSIMI_, "tavrg_assimilation")        ! ALL
+      CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
+      CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")     ! ALL
+
       ! write all matrices back to bgcm variables for this timestep
-      CALL model%Queue_task(VEG_,    "call_write_matrices_back")
+      CALL model%Queue_task(VEG_, "call_write_matrices_back")     ! ALL
     END SELECT
     ! Task Queue created
     !--------------------------------------------------------------------------------------------------- !
