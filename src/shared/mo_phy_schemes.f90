@@ -148,9 +148,9 @@ CONTAINS
 
     USE mo_jsb_physical_constants,      ONLY: grav
 
-    REAL(wp),           INTENT(in) :: drag      !< ..
-    REAL(wp),           INTENT(in) :: steplen   !< ..
-    REAL(wp), OPTIONAL, INTENT(in) :: alpha     !< differs for standalone & coupled simulations
+    REAL(wp), INTENT(in) :: drag      !< ..
+    REAL(wp), INTENT(in) :: steplen   !< ..
+    REAL(wp), INTENT(in) :: alpha     !< differs for standalone & coupled simulations
 
     !$claw sca routine
     heat_transfer_coef = drag / (alpha * grav * steplen)

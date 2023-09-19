@@ -468,8 +468,8 @@ CONTAINS
     !
     CASE (MODEL_QUINCY)
       !-- currently only QLAND, QPLANT and QCANOPY are ported from Quincy standalone (QS)
-      IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT) &
-                .OR. (model%config%qmodel_id == QCANOPY)) THEN
+      IF(.NOT. (model%config%qmodel_id == QLAND .OR. model%config%qmodel_id == QPLANT &
+                .OR. (model%config%qmodel_id == QCANOPY))) THEN
         CALL finish(TRIM(routine), &
           & 'Unexpected / not yet implemented Quincy model mode: '//TRIM(model%config%quincy_model))
       ENDIF
