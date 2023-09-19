@@ -390,6 +390,10 @@ CONTAINS
           & evapo_act2pot_proc(:,:), tmin_data(:,:), t_air_C(:,:))
       ENDIF
       q_air(:,:) = fun_specific_humidity(temporary_data1(:,:), press_srf(:,:))
+      ! Fill uninitialized cells with global mean values instead
+      WHERE(q_air(:,:) < 0._wp)
+        q_air(:,:) = 0.01_wp
+      END WHERE
 
     CASE(RH_)
       ALLOCATE(rel_humidity(nproma, nblks))
