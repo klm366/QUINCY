@@ -570,9 +570,7 @@ CONTAINS
       !---------------------
 
       ! Initilalization of drainage
-      drainage(ic) = 0._wp
       drain_lat(ic) = 0._wp
-      wtr_soilhyd_res(ic) = 0._wp
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -606,7 +604,7 @@ CONTAINS
 
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
-      drainage(ic)  = drainage(ic) + drain_rock(ic) + drain_lat(ic)
+      drainage(ic)  = drain_rock(ic) + drain_lat(ic)
       runoff(ic)    = runoff(ic) + infilt_over(ic)
     END DO
 
@@ -861,8 +859,8 @@ CONTAINS
       DO ic = 1, nc
         IF (wtr_soil_sl(ic,is) < 0._wp .AND. l_fract(ic)) THEN
           WRITE (message_text,*) 'negative soil moisture (routine start) at ', &
-            & lat(ic),'N and ',lon(ic),'E:', NEW_LINE('a'), &
-            & 'Soil moisture:    ', wtr_soil_sl(ic,:)
+            & lat(ic),'N and ',lon(ic),'E, layer ', is, ':', NEW_LINE('a'), &
+            & 'Soil moisture:    ', wtr_soil_sl(ic,is)
           CALL finish ('soilhyd', message_text)
         END IF
       END DO
@@ -889,11 +887,13 @@ CONTAINS
       END DO
     END DO
 
-    !> Initialize surface runoff components
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
+      !> Initialize surface runoff components
       wtr_exinfcap(ic) = infilt(ic)
       wtr_exwsat(ic)   = 0._wp
+      !> Initialize active layers
+      last_soil_layer(ic) = 0
     END DO
 
     !$ACC LOOP SEQ
@@ -903,6 +903,10 @@ CONTAINS
         IF (dsoil(ic,is) > 0._wp) last_soil_layer(ic) = is
       END DO
     END DO
+
+#ifndef _OPENACC
+    IF (ANY(last_soil_layer(:) < 1)) CALL finish('soilhyd', 'Problem with no. of active soil layers (=0)')
+#endif
 
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
@@ -996,7 +1000,7 @@ CONTAINS
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
     DO ic = 1, nc
       hlp2(ic) = (infilt(ic) + evapo_soil_sl1(ic)) / dtime     ! Upper boundary condition
-      hlp3(ic) = drain_rock(ic) / dtime                        ! Lower boundary condition
+      hlp3(ic) = hyd_cond_sl(ic,last_soil_layer(ic))           ! Lower boundary condition
     END DO
     !$ACC END PARALLEL LOOP
 
@@ -1899,7 +1903,9 @@ CONTAINS
   DO j=2,nsoil
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
-      dzh(ic,j) = (dzf(ic,j-1) + dzf(ic,j)) / 2._wp
+      IF (j <= n_act(ic)) THEN
+        dzh(ic,j) = (dzf(ic,j-1) + dzf(ic,j)) / 2._wp
+      END IF
     END DO
   END DO
 
@@ -1973,7 +1979,7 @@ CONTAINS
   END DO
 
   !$ACC LOOP SEQ
-  DO j  = nsoil-1, 1, -1
+  DO j  = nsoil, 1, -1
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic=1,nc
       IF (j <= n_act(ic)-1) THEN
