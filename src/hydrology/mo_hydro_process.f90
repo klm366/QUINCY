@@ -505,11 +505,6 @@ CONTAINS
       & transpiration_in_m(nc)          !< transpiration within time step [m]
 
     REAL(wp) ::              &
-      & weq_rootzone_max(nc),& ! maximum water holding capacity of the rootzone (liquid water + ice) [m]
-      & wtr_rootzone(nc),    & ! amount of liquid water in the rootzone [m]
-      & ice_rootzone(nc)       ! amount of ice in the rootzone [m]
-
-    REAL(wp) ::              &
       & drain_lat_sl(nc,nsoil)
 
     REAL(wp) ::              &
@@ -521,7 +516,7 @@ CONTAINS
     !$ACC DECLARE COPYIN(ilog)
 
     !$ACC DATA &
-    !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m, weq_rootzone_max, wtr_rootzone, ice_rootzone) &
+    !$ACC   CREATE(evapo_soil_in_m, transpiration_in_m) &
     !$ACC   CREATE(drain_lat_sl, hlp_2d)
 
     !
@@ -548,12 +543,6 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
     !$ACC WAIT(1)
-
-    ! Note: weq_rootzone_max calculated here (based on field capacity) is different from wsat calculated
-    !       below (based on saturation).
-    CALL get_amount_in_rootzone(hlp_2d(:,:),      soil_depth_sl(:,:), root_depth_sl(:,:), weq_rootzone_max(:))
-    CALL get_amount_in_rootzone(ice_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), ice_rootzone(:))
-    CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG VECTOR ASYNC(1)
     DO ic = 1, nc
@@ -609,9 +598,6 @@ CONTAINS
     END DO
 
     !$ACC END PARALLEL
-
-    ! recalculate soil moisture from the soil moisture of the individual levels
-    CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
