@@ -827,7 +827,6 @@ CONTAINS
     REAL(wp) :: wtr_soil_mobile_sl(nc,nsoil) ! mobile soil water (needed with ACC)
     REAL(wp) :: hlp1(nc,nsoil), hlp4(nc,nsoil)
     REAL(wp) :: hlp2(nc), hlp3(nc), hlp5
-    INTEGER  :: n
 
     !$ACC DATA &
     !$ACC   CREATE(weq_soil, ws_inter_sl, ws_vol_sl, ice_impeda_sl, hyd_cond_sl, diffus_sl) &
@@ -972,9 +971,6 @@ CONTAINS
         IF (dsoil(ic,is) > 0._wp) THEN
           ws_vol_sl(ic,is) = (wtr_soil_sl(ic,is) - wtr_rsdl_sl(ic,is)) / dsoil(ic,is)
           transpiration_sl(ic,is) = transpiration_sl(ic,is) / dsoil(ic,is)
-        ELSE
-          ! without soil there is no change within the soil and the values do not matter
-          ws_vol_sl(ic,is) = wtr_soil_sl(ic,is) - wtr_rsdl_sl(ic,is)
         END IF
         hlp1(ic,is) = 1._wp
         hlp4(ic,is) = transpiration_sl(ic,is) / dtime ! Normalized storage change term (Transpiration)
@@ -1012,8 +1008,6 @@ CONTAINS
       DO ic = 1, nc
         IF (dsoil(ic,is) > 0._wp) THEN
           wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) * dsoil(ic,is) + wtr_rsdl_sl(ic,is)
-        ELSE
-          wtr_soil_sl(ic,is) = ws_vol_sl(ic,is) + wtr_rsdl_sl(ic,is)
         END IF
       END DO
     END DO
