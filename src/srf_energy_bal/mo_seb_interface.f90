@@ -199,7 +199,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%is_lake) THEN
-      CALL update_surface_energy_lake(tile, options)
+      ! CALL update_surface_energy_lake(tile, options)
     ELSE IF (tile%is_land) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
@@ -526,7 +526,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%contains_lake) THEN
-      CALL update_surface_fluxes_lake(tile, options)
+      ! CALL update_surface_fluxes_lake(tile, options)
     ELSE IF (tile%contains_land) THEN
       CALL update_surface_fluxes_land(tile, options)
     ELSE

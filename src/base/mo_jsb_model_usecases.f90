@@ -26,7 +26,7 @@ MODULE mo_jsb_model_usecases
 
   USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH, MODEL_QUINCY
   USE mo_jsb_process_class,   ONLY: A2L_, L2A_, SEB_, TURB_, SSE_, HYDRO_, RAD_, HD_, ASSIMI_, PHENO_, CARBON_, DISTURB_, &
-    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_
+    &                               FUEL_, FAGE_, ALCC_, FLCC_, WLCC_, NLCC_, PPLCC_, TLCC_, TCQ_, VEG_, SB_, SPQ_, LENTIC_
   USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, AGGREGATE_ !, ON_SUBTREE_
   USE mo_jsb_tile,            ONLY: t_jsb_tile
   USE mo_jsb_lct_class,       ONLY: t_jsb_lct, &
@@ -51,7 +51,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase'
 
-    IF (model%config%use_lakes) THEN
+    IF (model%config%use_flake) THEN
+      CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'" with FLAKE')
+    ELSE IF (model%config%use_lakes) THEN
       CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'" with lakes')
     ELSE
       CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'"')
@@ -202,11 +204,14 @@ CONTAINS
     !  pft01  pft02  pftXX
 
     ! Create root of the tile structure representing the whole grid box
+
     box_tile => t_jsb_tile('box', 'Top tile', &
       & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
+
+    CALL message(TRIM(routine), 'using ')
 
 #ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
@@ -218,14 +223,23 @@ CONTAINS
       CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
     END IF
 
-      IF (model%config%use_lakes) THEN
+      IF (model%config%use_flake) THEN
+        CALL message(TRIM(routine), 'setting up lentic/Flake processes for lake tile')
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
-          & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+          & processes=(/SEB_, HYDRO_, LENTIC_/), process_actions=(/ ON_TILE_, ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+      ! ELSE IF (model%config%use_lakes) THEN
+      !   lake_tile => t_jsb_tile('lake', 'Lake tile', &
+      !     & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+      !     & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+      !   land_tile => t_jsb_tile('land', 'Land tile', &
+      !     & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+      !     & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
       ELSE
+        CALL message(TRIM(routine), 'NO LAKE TILE; NO LENTIC PROCESS')
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
@@ -313,7 +327,12 @@ CONTAINS
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
-    IF (model%config%use_lakes) NULLIFY(lake_tile)
+    IF (model%config%use_lakes) THEN
+       NULLIFY(lake_tile)
+    ELSE IF (model%config%use_flake) THEN
+      NULLIFY(lake_tile)
+    END IF
+
 
     ! CALL test_pools()
 

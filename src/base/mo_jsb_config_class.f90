@@ -37,6 +37,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=20)              :: model_scheme_char   !< model_scheme from namelist (used in mo_jsb_lctlib_class)
     INTEGER                        :: model_scheme        !< model_scheme as integer
     LOGICAL                        :: use_lakes
+    LOGICAL                        :: use_flake
     LOGICAL                        :: use_glacier
     LOGICAL                        :: enforce_water_budget
     CHARACTER(len=10)              :: quincy_model        !< canopy/plant/land - selection of Tasks and Code within subroutines
@@ -115,6 +116,7 @@ CONTAINS
 
     CHARACTER(len=20)             :: model_scheme     !< model_scheme: jsbach / jsbach_quincy / quincy
     LOGICAL                       :: use_lakes
+    LOGICAL                       :: use_flake
     LOGICAL                       :: use_glacier
     LOGICAL                       :: enforce_water_budget
     CHARACTER(len=10)             :: quincy_model
@@ -139,6 +141,7 @@ CONTAINS
     NAMELIST /jsb_model_nml/  &
       model_scheme, &
       use_lakes, &
+      use_flake, &
       use_glacier, &
       enforce_water_budget, &
       quincy_model, &
@@ -176,7 +179,8 @@ CONTAINS
 
     ! Set defaults
     model_scheme               = "jsbach"
-    use_lakes                  = .TRUE.
+    use_lakes                  = .FALSE.
+    use_flake                  = .TRUE.
     use_glacier                = .TRUE.
     enforce_water_budget       = .TRUE.
     quincy_model               = 'land'
@@ -235,6 +239,7 @@ CONTAINS
     model_config%relative_fractions_in_file = relative_fractions_in_file
     ! set other namelist options
     model_config%use_lakes                  = use_lakes
+    model_config%use_flake                  = use_flake
     model_config%use_glacier                = use_glacier
     model_config%enforce_water_budget       = enforce_water_budget
     model_config%quincy_model               = TRIM(quincy_model)
