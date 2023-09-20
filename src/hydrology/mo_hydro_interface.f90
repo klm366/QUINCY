@@ -1181,7 +1181,8 @@ CONTAINS
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_rock        ),     &
       & dsl4jsb_var2D_onChunk (HYDRO_, drain_lat         ),     &
       & dsl4jsb_var3D_onChunk (HYDRO_, drain_lat_sl      ),     &
-      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   )      &
+      & dsl4jsb_var2D_onChunk (HYDRO_, wtr_soilhyd_res   ),     &
+      & dsl4jsb_var3D_onChunk (HYDRO_, wtr_transp_down   )      &
       & )
 
     ! Update weq_pond storage due to potential soil infiltration overflow
@@ -1243,6 +1244,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(HYDRO_, drain_lat_sl,    weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, evapo_deficit,   weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_soilhyd_res, weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(HYDRO_, wtr_transp_down, weighted_by_fract)
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
 

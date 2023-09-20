@@ -592,7 +592,7 @@ CONTAINS
     & evapo_deficit, &
     ! out
     & wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, infilt_over, runoff_dunne, drainage, &
-    & drain_rock, drain_lat, drain_lat_sl, wtr_soilhyd_res                               &
+    & drain_rock, drain_lat, drain_lat_sl, wtr_soilhyd_res, wtr_transp_down              &
     & )
 
     USE mo_jsb_physical_constants, ONLY: rhoh2o
@@ -621,7 +621,7 @@ CONTAINS
       & infilt_over, runoff_dunne, drainage,    &
       & drain_rock, drain_lat, wtr_soilhyd_res
     REAL(wp), INTENT(out), DIMENSION(:,:) :: &
-      & drain_lat_sl, wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl
+      & drain_lat_sl, wtr_wsat_sl, wtr_field_cap_sl, wtr_p_wilt_sl, wtr_transp_down
 
     ! Local variables
     REAL(wp) ::                       &
@@ -714,7 +714,8 @@ CONTAINS
       &     wtr_soil_pot_scool_sl, ice_soil_sl, wtr_soil_sl,                         &
       &     transpiration_in_m, evapo_soil_in_m, root_depth_sl,                      &
       &     infilt, infilt_over, drain_rock, drain_lat_sl,                           &
-      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, ltpe_closed, ltpe_open)
+      &     tpe_overflow, evapo_deficit, wtr_soilhyd_res, wtr_transp_down,           &
+      &     ltpe_closed, ltpe_open)
 
     ! Aggregate or distribute the different runoff flux components
     drain_lat(:) = SUM(drain_lat_sl(:,:),  DIM=2)
@@ -740,6 +741,7 @@ CONTAINS
       drain_rock(i)    = drain_rock (i)  * rhoh2o / dtime
       drain_lat(i)     = drain_lat  (i)  * rhoh2o / dtime
       drain_lat_sl(i,:) = drain_lat_sl(i,:) * rhoh2o / dtime  ! Only temporary!
+      wtr_transp_down(i,:) = wtr_transp_down(i,:) * rhoh2o / dtime
       evapo_deficit(i) = evapo_deficit(i) * rhoh2o / dtime
     END DO
     !$claw acc end data
@@ -1069,7 +1071,7 @@ CONTAINS
     & transpiration_in_m, evapo_soil_in_m, root_depth_sl,           &
     & infilt, infilt_over, drain_rock, drain_lat_sl,                &
     & tpe_overflow, evapo_deficit, wtr_soilhyd_res,                 &
-    & ltpe_closed, ltpe_open)
+    & wtr_transp_down, ltpe_closed, ltpe_open)
 
     INTEGER,  INTENT(IN)            :: nc                         ! vector length
     LOGICAL,  INTENT(IN)            :: l_fract(:)                 ! Tile fraction > 0
@@ -1103,6 +1105,7 @@ CONTAINS
     REAL(wp), INTENT(INOUT)         :: tpe_overflow(:)
     REAL(wp), INTENT(INOUT)         :: evapo_deficit(:)           ! Water evaporated from unintended sources [m]
     REAL(wp), INTENT(OUT)           :: wtr_soilhyd_res(:)         ! Residual error of the vertical transport scheme
+    REAL(wp), INTENT(OUT)           :: wtr_transp_down(:,:)       ! Vertical water transport into the next deeper soil layer [m]
 
     LOGICAL, INTENT(IN) :: ltpe_closed
     LOGICAL, INTENT(IN) :: ltpe_open
@@ -1114,6 +1117,7 @@ CONTAINS
 
     REAL(wp) :: weq_soil(nc)                 ! total column soil moisture (water + ice)
     REAL(wp) :: ws_inter_sl(nc,nsoil)        ! soil moisture with infiltration added to first layer
+    REAL(wp) :: wtr_soil_sl_t0(nc,nsoil)     ! soil moisture state prior to lateral transport
     REAL(wp) :: ws_vol_sl(nc,nsoil)          ! volumetric soil mositure
     REAL(wp) :: ice_impeda_sl(nc,nsoil)      ! ice impedance factor on all soil layers
     REAL(wp) :: hyd_cond_sl(nc,nsoil)        ! hydraulic conductivity of a layer [m/s]
@@ -1133,6 +1137,7 @@ CONTAINS
     REAL(wp) :: wtr_exinfcap(nc)             ! surface runoff due to exceeding the soil infiltration capacity [m]
                                              ! (currently zero, as process is not implemented)
     REAL(wp) :: wtr_exwsat(nc)               ! surface runoff due to exceeding the soil moisture saturation [m]
+    REAL(wp) :: wtr_flux_top(nc)             ! water flux entering a soil layer from above [m]
 
     !$claw acc data &
     !$claw acc present(dsoil, wtr_field_cap_sl, hyd_cond_sat_sl, bclapp_sl, matrix_pot_sl, &
@@ -1151,9 +1156,10 @@ CONTAINS
       END IF
     END DO
 
-    !> Initialize surface runoff components
-    wtr_exinfcap(:) = infilt(:)
-    wtr_exwsat(:)   = 0._wp
+    !> Initialize surface runoff components and lateral water flow diagnostics
+    wtr_exinfcap(:)      = infilt(:)
+    wtr_exwsat(:)        = 0._wp
+    wtr_transp_down(:,:) = 0._wp
 
     DO i = 1, nc
       nsoil_act(i) = 0
@@ -1193,6 +1199,9 @@ CONTAINS
       &                      dsoil, wtr_field_cap_sl, transpiration_in_m, evapo_soil_in_m,   &
       &                      wtr_soil_sl - wtr_rsdl_sl, evapo_deficit, evapo_soil_sl1,       &
       &                      transpiration_sl, deficit_sevap, deficit_trans)
+
+    ! Store soil moisture state for later diagnosis of lateral water fluxes
+    wtr_soil_sl_t0(:,:) = wtr_soil_sl(:,:)
 
     DO i = 1, nc
       ! Diagnose infiltration from the hydraulic conductivity of the top soil layer [m s-1 -->] [m]
@@ -1325,6 +1334,15 @@ CONTAINS
           & 'Soil moisture:      ', wtr_soil_sl(i,:)
         CALL finish ('soilhyd', message_text_long)
       END IF
+    END DO
+
+    ! Diagnose lateral water transport
+    wtr_flux_top(:) = infilt(:) + evapo_soil_sl1(:)
+    DO i = 1, nc
+      DO j = 1, nsoil_act(i)
+        wtr_transp_down(i,j) = wtr_soil_sl_t0(i,j) - wtr_soil_sl(i,j) + wtr_flux_top(i) + transpiration_sl(i,j)
+        wtr_flux_top(i)      = wtr_transp_down(i,j)
+      END DO
     END DO
 
     ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water,
