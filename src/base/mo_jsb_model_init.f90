@@ -210,7 +210,7 @@ CONTAINS
     USE mo_hd_init,             ONLY: hd_init_ic, hd_init_bc
 #endif
     USE mo_jsb_io,              ONLY: cdiDefMissval, missval
-    USE mo_util,                ONLY: one_of, int2string
+    USE mo_util,                ONLY: one_of
 
     ! -------------------------------------------------------------------------------------------------- !
     INTEGER, INTENT(in) :: model_id !< ID of the model instance to be initialized
@@ -371,7 +371,6 @@ CONTAINS
       CALL model%Queue_task(TURB_,   "humidity_scaling")
       CALL model%Queue_task(TURB_,   "surface_roughness")
       CALL model%Queue_task(LENTIC_, "lentic_wbphysics")
-      CALL message(TRIM(routine), 'queued lentic_wbphysics')
       CALL model%Queue_task(RAD_,    "albedo")
           ! Albedo is updated at the end of the time step, one time step before the radiation is updated in
           ! the atmosphere. Otherwise, in between, the albedo changes would be consindered in the jsbach
@@ -543,8 +542,6 @@ CONTAINS
         & l_fixed_fractions=l_fixed_fractions,                            &
         & l_rel_fractions=model%config%relative_fractions_in_file)
       
-      CALL message(TRIM(tile%name), 'loop, Initialize fractions of each tile')
-
       ! ---------------------------------------------------------------------------------------------- !
       !>
       !>     2.3 Initialize processes on each tile
@@ -590,7 +587,6 @@ CONTAINS
       CASE (MODEL_JSBACH)
         ! HYDRO_ needs to be initialized prior to SSE_
         IF (tile%Is_process_active(HYDRO_)) THEN
-          CALL message(TRIM(routine), 'will call hydro_init')
           CALL hydro_init(tile)
         END IF
         IF (tile%Is_process_active(SSE_)) THEN
@@ -613,9 +609,7 @@ CONTAINS
       SELECT CASE (model%config%model_scheme)
       CASE (MODEL_JSBACH)
         IF (tile%Is_process_active(LENTIC_)) THEN
-          CALL message(TRIM(routine), 'will call lentic_init')
           CALL lentic_init(tile)
-          CALL message(TRIM(routine), 'INITIALIZED FLAKE LENTIC PROCESS')
         END IF
       END SELECT
       IF (tile%Is_process_active(A2L_)) THEN

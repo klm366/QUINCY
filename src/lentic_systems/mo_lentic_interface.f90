@@ -153,9 +153,8 @@ CONTAINS
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: steplen!, dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_lentic_wbphysics'
-
-    REAL(wp), PARAMETER :: h_atmvars = 2._wp !< height of atmospheric forcing variables (wind_air, t_air, q_air)
-    TYPE(t_jsb_model), POINTER :: model
+    REAL(wp), PARAMETER         :: h_atmvars = 2._wp !< height of atmospheric forcing variables (wind_air, t_air, q_air)
+    TYPE(t_jsb_model), POINTER  :: model
 
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_config(LENTIC_)
@@ -164,10 +163,10 @@ CONTAINS
     dsl4jsb_Def_memory(LENTIC_) 
 
 
-    ! ! Declare pointers to variables in memory
+    ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
       & q_bot,                & !< Heat flux through the water-bottom sediment interface of lakes [W m-2]
-    ! ! ! atmospheric forcing
+    ! atmospheric forcing
       & wind_air,             & !< 2m air wind speed [m s-1]
       & t_air,                & !< 2m air temperature [K]
       & q_air,                & !< 2m air specific humidity [g g-1]
@@ -175,17 +174,17 @@ CONTAINS
       & lw_srf_down,          & !< longwave surface downward flux [W m-2]
       & swvis_srf_down,       & !< shortwave surface downward flux in the visible band [W m-2]
       & swnir_srf_down,       & !< shortwave surface downward flux in the near infrared band [W m-2]
-    ! ! heat fluxes
+    ! heat fluxes
       & latent_hflx_wtr,      & !< latent heat flux over water [W m-2]
       & sensible_hflx_wtr,    & !< sensible heat flux over water [W m-2]
       & latent_hflx_ice,      & !< latent heat flux over ice [W m-2]
       & sensible_hflx_ice,    & !< sensible heat flux over ice [W m-2]
-    ! ! topography and location
+    ! topography and location
     !   & depth_w,              &
       & fetch,                &
       & par_Coriolis,         &
     !   & pondtype,             &
-    ! ! FLake inout
+    ! FLake inout
     !   & t_snow,               &
       & t_lice,               &
       & t_mnw,                &
@@ -234,13 +233,8 @@ CONTAINS
     !X if necessary: dtime   = options%dtime
     steplen = options%steplen
     
-    ! CALL message(TRIM(routine), 'checking if lentic process is active')
-
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(LENTIC_)) RETURN
-
-    ! CALL message(TRIM(routine), 'starting lentic process')
-
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
@@ -251,7 +245,7 @@ CONTAINS
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
 
-    ! ! Get process variables
+    ! Get process variables
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)           ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, t_air)              ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, q_air)              ! in
@@ -304,14 +298,6 @@ CONTAINS
 
     !  Set initial values
     I_atm = lw_srf_down + swvis_srf_down + swnir_srf_down
-    ! T_snow_p_flk = t_snow
-    ! T_lice_p_flk  = t_lice
-    ! T_mnw_p_flk  = t_mnw
-    ! T_wML_p_flk  = t_wml
-    ! T_bot_p_flk  = t_bot
-    ! C_T_p_flk    = c_t
-    ! h_ML_n_flk   = h_ml
-
 
     !  Compute solar radiation fluxes (positive downward)    (needed?)
     ! I_atm_flk = I_atm_in
@@ -404,17 +390,6 @@ CONTAINS
                       & l_ice_create  & ! out
                       )
 
-    ! t_lice= 20.1_wp
-    ! t_mnw= 20.1_wp
-    ! t_wml= 20.1_wp
-    ! t_bot= 20.1_wp
-    ! c_t= 20.1_wp
-    ! h_ice= 20.1_wp
-    ! h_snow= 20.1_wp
-    ! h_ml= 20.1_wp
-    ! t_sfc= 20.1_wp
-    ! w_star= 20.1_wp
-
     call calc_lake_temp_stratification( steplen,            & ! in & depth_w,  & extincoef_optic_water,   & ! in
                                       & l_ice_create,      & ! in
                                       & h_ice,                & ! in
@@ -436,16 +411,6 @@ CONTAINS
                                       & w_star                & ! out
                                       )    
 
-    ! t_lice= 40.1_wp
-    ! t_mnw= 40.1_wp
-    ! t_wml= 40.1_wp
-    ! t_bot= 40.1_wp
-    ! c_t= 40.1_wp
-    ! h_ice= 40.1_wp
-    ! h_snow= 40.1_wp
-    ! h_ml= 40.1_wp
-    ! t_sfc= 40.1_wp
-    ! w_star= 40.1_wp
     call calc_surface_temperature(h_snow, & ! in
                                 & T_lice, & ! in /instead of t_snow
                                 & h_ice,  & ! in

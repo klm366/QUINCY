@@ -27,10 +27,10 @@ MODULE mo_lentic_memory_class
   !USE mo_jsb_physical_constants, ONLY: !X e.g: tmelt
   
   ! Use of prcesses in this module
-  ! dsl4jsb_Use_processes LENTIC_
+  dsl4jsb_Use_processes LENTIC_
 
   ! Use process configurations
-  ! dsl4jsb_Use_config(LENTIC_)
+  dsl4jsb_Use_config(LENTIC_)
   IMPLICIT NONE
   PRIVATE
 
@@ -95,15 +95,8 @@ CONTAINS
     hgrid   => Get_grid(mem%grid_id)
     surface => Get_vgrid('surface')
 
-    ! ! Additional variables for lakes
+    ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
-
-    !   ! CALL mem%Add_var( 'depth_w', mem%depth_w,                                            &
-    !   !   & hgrid, surface,                                                              &
-    !   !   & t_cf('lake_depth', 'm', 'lake mean wtr depth'),                  &
-    !   !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-    !   !   & prefix, suffix,                                                              &
-    !   !   & output_level=BASIC, initval_r=0.0_wp )
 
       CALL mem%Add_var( 'c_t', mem%c_t,                                                &
         & hgrid, surface,                                                              &
@@ -191,21 +184,21 @@ CONTAINS
 
       CALL mem%Add_var( 'w_star', mem%w_star,                                          &
         & hgrid, surface,                                                              &
-        & t_cf('w_star', 'm s-1', 'lake convective velocity scale'),                  &
+        & t_cf('w_star', 'm s-1', 'lake convective velocity scale'),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=BASIC, initval_r=0.0_wp )
 
-        CALL mem%Add_var( 'z0t_sf', mem%z0t_sf,                                          &
+        CALL mem%Add_var( 'z0t_sf', mem%z0t_sf,                                        &
         & hgrid, surface,                                                              &
-        & t_cf('z0t_sf', 'm', 'lake roughness length (heat)'),                  &
+        & t_cf('z0t_sf', 'm', 'lake roughness length (heat)'),                         &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=FULL, initval_r=0.0_wp )
 
-        CALL mem%Add_var( 'z0u_sf', mem%z0u_sf,                                          &
+        CALL mem%Add_var( 'z0u_sf', mem%z0u_sf,                                        &
         & hgrid, surface,                                                              &
-        & t_cf('z0u_sf', 'm', 'lake roughness length (momentum)'),                  &
+        & t_cf('z0u_sf', 'm', 'lake roughness length (momentum)'),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=FULL, initval_r=0.0_wp )

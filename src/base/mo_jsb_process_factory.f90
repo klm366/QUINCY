@@ -283,7 +283,6 @@ CONTAINS
     CASE (LENTIC_)
       ALLOCATE(t_lentic_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_lentic_vars
-      !CALL finish('Initialized FLAKE LENTIC MEMORY')
     CASE (ASSIMI_)
       ALLOCATE(t_assimi_memory::return_ptr)
       return_ptr%max_no_of_vars = max_no_of_assimi_vars

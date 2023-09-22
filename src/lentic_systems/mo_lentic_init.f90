@@ -45,13 +45,10 @@ CONTAINS
     USE mo_lentic_constants, ONLY : tpl_T_r, &
                                   & tpl_T_f
     
-
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':lentic_init'
     
-    !CALL message(TRIM(routine), 'Starting lentic init')
-
     dsl4jsb_Real2D_onDomain :: &
       & c_t   , &
       & h_ice , &
@@ -64,27 +61,20 @@ CONTAINS
       !& T_snow, &
       & T_wML
 
-    ! CALL message(TRIM(routine), 'get lentic memory')
-
     dsl4jsb_Def_memory(LENTIC_)
-
     dsl4jsb_Get_memory(LENTIC_)
 
-
     IF (tile%contains_lake) THEN
-      CALL message(TRIM(routine), 'def lentic init values')
-
-
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, c_t) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, h_ice) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, h_ML) ! OUT
+      dsl4jsb_Get_var2D_onDomain(LENTIC_, c_t)    ! OUT
+      dsl4jsb_Get_var2D_onDomain(LENTIC_, h_ice)  ! OUT
+      dsl4jsb_Get_var2D_onDomain(LENTIC_, h_ML)   ! OUT
       dsl4jsb_Get_var2D_onDomain(LENTIC_, h_snow) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_bot) ! OUT
+      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_bot)  ! OUT
       dsl4jsb_Get_var2D_onDomain(LENTIC_, T_lice) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_mnw) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_sfc) ! OUT
+      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_mnw)  ! OUT
+      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_sfc)  ! OUT
       ! dsl4jsb_Get_var2D_onDomain(LENTIC_, T_snow) ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_wML) ! OUT
+      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_wML)  ! OUT
 
       c_t         = 0.5_wp 
       h_ice       = 0.0_wp

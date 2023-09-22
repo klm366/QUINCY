@@ -106,7 +106,7 @@ MODULE mo_lentic_process
 
       ! ---------------------------
       ! Go
- 
+
       IF(h_ice.GE.h_Ice_min) THEN            ! Ice exists
         IF(h_snow.GE.h_Snow_min) THEN        ! There is snow above the ice
           I_snow = I_atm*(1._wp-albedo_snow) 
@@ -200,7 +200,7 @@ MODULE mo_lentic_process
       ! ---------------------------
       ! Go
 
-      buoypar = 5 !grav*tpl_a_T*(T_water-tpl_T_r)
+      buoypar = grav*tpl_a_T*(T_water-tpl_T_r)
       
     END SUBROUTINE calc_buoypar
 
@@ -480,11 +480,8 @@ MODULE mo_lentic_process
       
       USE mo_jsb_physical_constants,    ONLY: clw     ! Specific heat capacity of liquid water [J/(K kg)]
 
-      ! !$claw model-data
+      !$claw model-data
       REAL(wp), INTENT(in) :: del_time,             & ! The model time step [s]
-                            !& depth_w,              & ! The waterbody depth [m]
-                            ! & extincoef_water_typ,  & ! "Typical" extinction coefficient of the lake water [m^{-1}], 
-      !                                                 !   used to compute the equilibrium CBL depth
                             & h_ice,                & ! Ice thickness [m]
                             & I_bot,                & ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
                             & I_h,                  & ! Radiation flux through the mixed-layer-thermocline interface [W m^{-2}]

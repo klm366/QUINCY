@@ -211,8 +211,6 @@ CONTAINS
       & model_id=model%id, fract_varname='notsea')
     model%top => box_tile
 
-    CALL message(TRIM(routine), 'using ')
-
 #ifndef __NO_JSBACH_HD__
     IF (model%processes(HD_)%p%config%active) THEN
       CALL box_tile%Set_process_action(HD_, ON_TILE_)
@@ -224,7 +222,6 @@ CONTAINS
     END IF
 
       IF (model%config%use_flake) THEN
-        CALL message(TRIM(routine), 'setting up lentic/Flake processes for lake tile')
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_, LENTIC_/), process_actions=(/ ON_TILE_, ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
@@ -239,7 +236,6 @@ CONTAINS
       !     & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
       !     & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
       ELSE
-        CALL message(TRIM(routine), 'NO LAKE TILE; NO LENTIC PROCESS')
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile, &
