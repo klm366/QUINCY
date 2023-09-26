@@ -333,10 +333,6 @@ MODULE mo_lentic_process
 
       ! ---------------------------
       ! Go
-<<<<<<< HEAD
-=======
-
->>>>>>> local/lentictest
     
       IF(h_ice_p.LT.h_Ice_min) THEN   
       ! Ice does not exist 

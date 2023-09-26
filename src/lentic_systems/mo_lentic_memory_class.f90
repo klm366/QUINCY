@@ -98,166 +98,88 @@ CONTAINS
     ! Additional variables for lakes
     IF (One_of(LAKE_TYPE, lct_ids(:)) > 0) THEN
 
-<<<<<<< HEAD
-      ! CALL mem%Add_var( 'depth_w', mem%depth_w,                                            &
-      !   & hgrid, surface,                                                              &
-      !   & t_cf('lake_depth', 'm', 'lake mean wtr depth'),                  &
-      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-      !   & prefix, suffix,                                                              &
-      !   & output_level=BASIC, initval_r=280.0_wp )
-
-=======
->>>>>>> local/lentictest
       CALL mem%Add_var( 'c_t', mem%c_t,                                                &
         & hgrid, surface,                                                              &
         & t_cf('l_tc_shapefactor', 'm', 'shape factor (thermocline)'),                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
->>>>>>> local/lentictest
 
       CALL mem%Add_var( 'h_ice', mem%h_ice,                                            &
         & hgrid, surface,                                                              &
         & t_cf('lice_height', 'm', 'lake ice height'),                                 &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
->>>>>>> local/lentictest
 
       CALL mem%Add_var( 'h_ML', mem%h_ML,                                              &
         & hgrid, surface,                                                              &
         & t_cf('lake_mixedLayer', 'm', 'lake mixed-layer height'),                     &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
->>>>>>> local/lentictest
         
       CALL mem%Add_var( 'h_snow', mem%h_snow,                                          &
         & hgrid, surface,                                                              &
         & t_cf('lake_snowthickness', 'm', 'lake snow-layer height'),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
->>>>>>> local/lentictest
         
       CALL mem%Add_var( 'par_Coriolis', mem%par_Coriolis,                              &
         & hgrid, surface,                                                              &
         & t_cf('par_Coriolis', 's-1', 'coriolis parameter'),                           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
->>>>>>> local/lentictest
 
       CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                            &
         & hgrid, surface,                                                              &
         & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr'),                   &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
->>>>>>> local/lentictest
 
       CALL mem%Add_var( 'T_lice', mem%T_lice,                                          &
         & hgrid, surface,                                                              &
         & t_cf('lice_temp', 'K', 'lake ice temperature'),                              &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
->>>>>>> local/lentictest
 
       CALL mem%Add_var( 'T_bot', mem%T_bot,                                            &
         & hgrid, surface,                                                              &
         & t_cf('lake_temp_bot', 'K', 'lake bottom temperature wtr/sediment'),          &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )      
-=======
         & output_level=BASIC, initval_r=0.0_wp )      
->>>>>>> local/lentictest
         
       CALL mem%Add_var( 'T_wML', mem%T_wML,                                            &
         & hgrid, surface,                                                              &
         & t_cf('lake_temp_wtr_ML', 'K', 'lake mixed-layer temperature wtr'),           &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )  
-=======
         & output_level=BASIC, initval_r=0.0_wp )  
->>>>>>> local/lentictest
 
       CALL mem%Add_var( 'T_mnw', mem%T_mnw,                                            &
         & hgrid, surface,                                                              &
         & t_cf('lake_temp_wtr_mean', 'K', 'lake mean temperature wtr'),                &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp ) 
-=======
         & output_level=BASIC, initval_r=0.0_wp ) 
->>>>>>> local/lentictest
 
       CALL mem%Add_var( 'fetch', mem%fetch,                                            &
         & hgrid, surface,                                                              &
         & t_cf('fetch', 'm', 'lake fetch'),                                            &
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
->>>>>>> local/lentictest
 
       CALL mem%Add_var( 'Q_bot', mem%Q_bot,                                            &
         & hgrid, surface,                                                              &
         & t_cf('Q_bot', 'W m-2', 'Heat flux through water-sediment interface (lakes)'),&
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
-<<<<<<< HEAD
-        & output_level=BASIC, initval_r=280.0_wp )
-
-      CALL mem%Add_var( 'w_star', mem%w_star,                                          &
-        & hgrid, surface,                                                              &
-        & t_cf('w_star', 'm s-1', 'lake convective velocity scale'),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=BASIC, initval_r=280.0_wp )
-
-        CALL mem%Add_var( 'z0t_sf', mem%w_star,                                          &
-        & hgrid, surface,                                                              &
-        & t_cf('z0t_sf', 'm', 'lake roughness length (heat)'),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=FULL, initval_r=280.0_wp )
-
-        CALL mem%Add_var( 'z0u_sf', mem%w_star,                                          &
-        & hgrid, surface,                                                              &
-        & t_cf('z0u_sf', 'm', 'lake roughness length (momentum)'),                  &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=FULL, initval_r=280.0_wp )
-=======
         & output_level=BASIC, initval_r=0.0_wp )
 
       CALL mem%Add_var( 'w_star', mem%w_star,                                          &
@@ -280,7 +202,6 @@ CONTAINS
         & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
         & prefix, suffix,                                                              &
         & output_level=FULL, initval_r=0.0_wp )
->>>>>>> local/lentictest
     END IF
 
   END SUBROUTINE Init_lentic_memory
