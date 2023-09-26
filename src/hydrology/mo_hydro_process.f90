@@ -1412,25 +1412,25 @@ CONTAINS
       ! @todo In the current model configuration lateral drainage seems to deteriorate river
       !      discharge while it has little effect on evapotranspiration. Therefore it is
       !      disabled, but this should be revised, e.g. for high resolution simulations.
-      DO j = nsoil, 1, -1
-        ! If maximum moisture is exceeded, add the excess water to lateral drainage
-        IF (wtr_soil_sl(i,j) > wtr_field_cap_sl(i,j)) THEN
-          drain_sl(i)      = wtr_soil_sl(i,j) - wtr_field_cap_sl(i,j) ! Put excess water in lateral drainage
-          wtr_soil_sl(i,j) = wtr_soil_sl(i,j) - drain_sl(i)           ! remove lateral drainage of the layer from soil moisture
-          IF (.NOT. ltpe_closed) THEN
-            ! Add excess water to lateral drainage
-            drain_lat_sl(i,j)   = drain_lat_sl(i,j)  + drain_sl(i)
-          ELSE
-            ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
-            tpe_overflow(i) = tpe_overflow(i) + drain_sl(i)
-          END IF
-        ELSE IF (ltpe_closed) THEN
-          ! refill soil moisture from overflow pool
-          remoist(i)       = MIN(tpe_overflow(i), wtr_field_cap_sl(i,j) - wtr_soil_sl(i,j))
-          wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + remoist(i)
-          tpe_overflow(i)  = tpe_overflow(i) - remoist(i)
-        END IF
-      END DO
+      ! DO j = nsoil, 1, -1
+      !   ! If maximum moisture is exceeded, add the excess water to lateral drainage
+      !   IF (wtr_soil_sl(i,j) > wtr_field_cap_sl(i,j)) THEN
+      !     drain_sl(i)      = wtr_soil_sl(i,j) - wtr_field_cap_sl(i,j) ! Put excess water in lateral drainage
+      !     wtr_soil_sl(i,j) = wtr_soil_sl(i,j) - drain_sl(i)           ! remove lateral drainage of the layer from soil moisture
+      !     IF (.NOT. ltpe_closed) THEN
+      !       ! Add excess water to lateral drainage
+      !       drain_lat_sl(i,j)   = drain_lat_sl(i,j)  + drain_sl(i)
+      !     ELSE
+      !       ! no drainage for TPE closed case --> redirect overflow from drainage to overflow pool
+      !       tpe_overflow(i) = tpe_overflow(i) + drain_sl(i)
+      !     END IF
+      !   ELSE IF (ltpe_closed) THEN
+      !     ! refill soil moisture from overflow pool
+      !     remoist(i)       = MIN(tpe_overflow(i), wtr_field_cap_sl(i,j) - wtr_soil_sl(i,j))
+      !     wtr_soil_sl(i,j) = wtr_soil_sl(i,j) + remoist(i)
+      !     tpe_overflow(i)  = tpe_overflow(i) - remoist(i)
+      !   END IF
+      ! END DO
 
       ! Modification for TPE (open)
       IF (ltpe_open) THEN
