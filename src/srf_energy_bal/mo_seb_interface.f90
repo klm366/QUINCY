@@ -199,11 +199,7 @@ CONTAINS
     IF (.NOT. tile%Is_process_calculated(SEB_)) RETURN
 
     IF (tile%is_lake) THEN
-<<<<<<< HEAD
-      !CALL update_surface_energy_lake(tile, options)
-=======
       ! CALL update_surface_energy_lake(tile, options)
->>>>>>> local/lentictest
     ELSE IF (tile%is_land) THEN
       CALL update_surface_energy_land(tile, options)
     ELSE
