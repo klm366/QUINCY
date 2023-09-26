@@ -24,7 +24,8 @@ MODULE mo_lentic_interface
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
-  USE mo_jsb_class,          ONLY: Get_model    
+  USE mo_jsb_class,          ONLY: Get_model  
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -120,6 +121,7 @@ CONTAINS
   !!
   SUBROUTINE update_lentic_wbphysics(tile, options)
 
+    USE mo_jsb_grid,      ONLY: Get_grid  
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
     USE mo_lentic_process, ONLY: calc_surface_temperature     , &
@@ -131,6 +133,7 @@ CONTAINS
     USE mo_lentic_SfcFlx_process, ONLY: calc_momsenlat
 
     USE mo_lentic_constants , ONLY : & 
+      rot_earth             , & ! Rotation rate of the earth [rad/s]
       albedo_water_ref      , &
       albedo_blueice_ref    , & ! Blue ice
       albedo_whiteice_ref   , & ! White ice
@@ -140,6 +143,7 @@ CONTAINS
       tpl_T_f                   ! Fresh water freezing point [K]
 
     USE mo_jsb_physical_constants, ONLY:  rhoh2o !> [kg/m3]  density of liquid water !! = tpl_rho_w_r
+    USE mo_util,                ONLY: real2string
 
 !!#ifdef SERIALIZE
     !$claw verbatim USE mo_ser_common, ONLY: init
@@ -150,11 +154,14 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
-    INTEGER  :: iblk, ics, ice, nc
-    REAL(wp) :: steplen!, dtime
+    INTEGER                     :: iblk, ics, ice, nc
+    REAL(wp), POINTER           :: lat(:)
+    REAL(wp)                    :: steplen!, dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_lentic_wbphysics'
     REAL(wp), PARAMETER         :: h_atmvars = 2._wp !< height of atmospheric forcing variables (wind_air, t_air, q_air)
     TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: grid
+
 
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_config(LENTIC_)
@@ -232,14 +239,15 @@ CONTAINS
     nc      = options%nc
     !X if necessary: dtime   = options%dtime
     steplen = options%steplen
-    
+
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(LENTIC_)) RETURN
 
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    
+    grid => Get_grid(model%grid_id)
+    lat  => grid%lat(ics:ice, iblk) 
     ! Get process memories
     dsl4jsb_Get_memory(LENTIC_)
     dsl4jsb_Get_memory(A2L_)
@@ -265,7 +273,7 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
     dsl4jsb_Get_var2D_onChunk(LENTIC_, Q_bot)           ! in
     dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! in
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! out
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, pondtype)        ! in
 
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)        ! inout
@@ -284,6 +292,11 @@ CONTAINS
 
     ! ---------------------------
     ! Go    
+
+    !  Compute coriolis parameter
+    par_Coriolis = 2.0_wp*rot_earth*SIN(lat(:)*3.1416_wp/180_wp)
+
+    ! CALL message('     ', '... lat: '//TRIM(real2string(lat(0))))
 
     !  Set albedos of the lake water, lake ice and snow
 
@@ -398,7 +411,7 @@ CONTAINS
                                       & I_intm_h_d,           & ! in
                                       & I_w,                  & ! in
                                       & I_h,                  & ! in
-                                      & par_Coriolis,         & ! in
+                                      & lat(:),         & ! in
                                       & Q_bot,                & ! in
                                       & Q_star,               & ! in
                                       & u_star,               & ! in 
@@ -475,6 +488,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LENTIC_, w_star,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, z0t_sf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, z0u_sf,       weighted_by_fract)
+    dsl4jsb_Aggregate_onChunk(LENTIC_, par_Coriolis, weighted_by_fract)
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')

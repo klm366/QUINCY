@@ -488,7 +488,6 @@ MODULE mo_lentic_process
                             & I_intm_0_h,           & ! Mean radiation flux over the mixed layer [W m^{-1}]
                             & I_intm_h_D,           & ! Mean radiation flux over the thermocline [W m^{-1}]
                             & I_w,                  & ! Radiation flux through the ice-water or air-water interface [W m^{-2}]
-                            & par_Coriolis,         & ! The Coriolis parameter [s^{-1}]
                             & Q_bot,                & ! Heat flux through the water-bottom sediment interface [W m^{-2}]
                             & Q_star,               & ! A generalized heat flux scale [W m^{-2}]
                             & u_star_w                ! Friction velocity in the surface layer of lake water [m s^{-1}]
@@ -496,6 +495,7 @@ MODULE mo_lentic_process
       LOGICAL, intent(in) ::  l_ice_create            ! Switch, .TRUE. = ice does not exist but should be created
 
       REAL(wp),  INTENT(inout) :: C_T,                  & ! Shape factor (thermocline)
+                                & par_Coriolis,         & ! The Coriolis parameter [s^{-1}]
                                 & Q_w,                  & ! Heat flux through the ice-water or air-water interface [W m^{-2}]
                                 & T_bot,                & ! Temperature at the water-bottom sediment interface [K] 
                                 & T_mnw,                & ! Mean temperature of the water column [K] 
@@ -699,7 +699,6 @@ MODULE mo_lentic_process
     
         ELSE  
           ! Wind mixing
-    
           d_h_ML_dt = MAX(u_star_w, u_star_min)                        ! The surface friction velocity
           ZM_h_scale = (ABS(par_Coriolis)/c_sbl_ZM_n + N_T_mean/c_sbl_ZM_i)*d_h_ML_dt**2
           ZM_h_scale = ZM_h_scale + flk_str_1/c_sbl_ZM_s

@@ -23,7 +23,9 @@ IMPLICIT NONE
 PUBLIC
 
      REAL(wp), PARAMETER ::  &
-       & depth_w = 10.0_wp, & ! constant lake depth [m] ! As a first step, keep lake depths constant
+      & depth_w   = 10.0_wp       , & ! constant lake depth [m] ! As a first step, keep lake depths constant
+      & rot_earth = 7.2921E-05_wp , & ! rotation rate of the earth  [rad/s]
+
 
       !  Dimensionless constants 
       !  in the equations for the mixed-layer depth 
