@@ -333,6 +333,10 @@ MODULE mo_lentic_process
 
       ! ---------------------------
       ! Go
+<<<<<<< HEAD
+=======
+
+>>>>>>> local/lentictest
     
       IF(h_ice_p.LT.h_Ice_min) THEN   
       ! Ice does not exist 
@@ -432,8 +436,12 @@ MODULE mo_lentic_process
 
     
     PURE ELEMENTAL SUBROUTINE calc_lake_temp_stratification( &
+<<<<<<< HEAD
       & del_time,             & ! in & depth_w,              & ! in
       & extincoef_water_typ,  & ! in
+=======
+      & del_time,             & ! in & depth_w,              & ! in & extincoef_water_typ,  & ! in
+>>>>>>> local/lentictest
       & l_ice_create,         & ! in
       & h_ice,                & ! in
       & I_bot,                & ! in
@@ -455,6 +463,10 @@ MODULE mo_lentic_process
       )
 
       USE mo_lentic_constants,  ONLY: &
+<<<<<<< HEAD
+=======
+        & extincoef_optic_water, &
+>>>>>>> local/lentictest
         & depth_w,      &
         & c_cbl_1,      &
         & c_cbl_2,      &
@@ -481,16 +493,22 @@ MODULE mo_lentic_process
 
       !$claw model-data
       REAL(wp), INTENT(in) :: del_time,             & ! The model time step [s]
+<<<<<<< HEAD
                             !& depth_w,              & ! The waterbody depth [m]
                             & extincoef_water_typ,  & ! "Typical" extinction coefficient of the lake water [m^{-1}], 
                                                       !   used to compute the equilibrium CBL depth
+=======
+>>>>>>> local/lentictest
                             & h_ice,                & ! Ice thickness [m]
                             & I_bot,                & ! Radiation flux through the water-bottom sediment interface [W m^{-2}]
                             & I_h,                  & ! Radiation flux through the mixed-layer-thermocline interface [W m^{-2}]
                             & I_intm_0_h,           & ! Mean radiation flux over the mixed layer [W m^{-1}]
                             & I_intm_h_D,           & ! Mean radiation flux over the thermocline [W m^{-1}]
                             & I_w,                  & ! Radiation flux through the ice-water or air-water interface [W m^{-2}]
+<<<<<<< HEAD
                             & par_Coriolis,         & ! The Coriolis parameter [s^{-1}]
+=======
+>>>>>>> local/lentictest
                             & Q_bot,                & ! Heat flux through the water-bottom sediment interface [W m^{-2}]
                             & Q_star,               & ! A generalized heat flux scale [W m^{-2}]
                             & u_star_w                ! Friction velocity in the surface layer of lake water [m s^{-1}]
@@ -498,6 +516,10 @@ MODULE mo_lentic_process
       LOGICAL, intent(in) ::  l_ice_create            ! Switch, .TRUE. = ice does not exist but should be created
 
       REAL(wp),  INTENT(inout) :: C_T,                  & ! Shape factor (thermocline)
+<<<<<<< HEAD
+=======
+                                & par_Coriolis,         & ! The Coriolis parameter [s^{-1}]
+>>>>>>> local/lentictest
                                 & Q_w,                  & ! Heat flux through the ice-water or air-water interface [W m^{-2}]
                                 & T_bot,                & ! Temperature at the water-bottom sediment interface [K] 
                                 & T_mnw,                & ! Mean temperature of the water column [K] 
@@ -618,7 +640,11 @@ MODULE mo_lentic_process
         .AND. T_wML_p.GT.tpl_T_r) THEN   ! The equilibrium CBL depth scale is only used above T_r
           conv_equil_h_scale = SQRT(6._wp*conv_equil_h_scale)                 &
             + 2._wp*conv_equil_h_scale/(1._wp-conv_equil_h_scale)
+<<<<<<< HEAD
           conv_equil_h_scale = MIN(depth_w, conv_equil_h_scale/extincoef_water_typ)
+=======
+          conv_equil_h_scale = MIN(depth_w, conv_equil_h_scale/extincoef_optic_water(1))
+>>>>>>> local/lentictest
         ELSE
           conv_equil_h_scale = 0._wp       ! Set the equilibrium CBL depth to zero
         END IF
@@ -701,7 +727,10 @@ MODULE mo_lentic_process
     
         ELSE  
           ! Wind mixing
+<<<<<<< HEAD
     
+=======
+>>>>>>> local/lentictest
           d_h_ML_dt = MAX(u_star_w, u_star_min)                        ! The surface friction velocity
           ZM_h_scale = (ABS(par_Coriolis)/c_sbl_ZM_n + N_T_mean/c_sbl_ZM_i)*d_h_ML_dt**2
           ZM_h_scale = ZM_h_scale + flk_str_1/c_sbl_ZM_s

@@ -50,7 +50,7 @@ CONTAINS
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, LENTIC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, LENTIC_, LENTIC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
@@ -115,14 +115,14 @@ CONTAINS
 
     ! Configure models according to model namelist(s)
     DO model_idx=1,no_of_models
-       NULLIFY(model)
-       model => jsbach%models(model_idx)%m
-       model%config => new_model_config(model%namelist_filename)
+        NULLIFY(model)
+        model => jsbach%models(model_idx)%m
+        model%config => new_model_config(model%namelist_filename)
 
-       ! Require that only one model_scheme is used!
-       IF (model_idx == 1) THEN
-         model_scheme = model%config%model_scheme
-       ELSE IF (model%config%model_scheme /= model_scheme) THEN
+        ! Require that only one model_scheme is used!
+        IF (model_idx == 1) THEN
+          model_scheme = model%config%model_scheme
+        ELSE IF (model%config%model_scheme /= model_scheme) THEN
           CALL finish(routine, 'Only one model_scheme allowed!')
        END IF
 

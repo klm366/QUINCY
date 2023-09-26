@@ -51,7 +51,9 @@ CONTAINS
 
     CHARACTER(len=*), PARAMETER :: routine = modname//':init_usecase'
 
-    IF (model%config%use_lakes) THEN
+    IF (model%config%use_flake) THEN
+      CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'" with FLAKE')
+    ELSE IF (model%config%use_lakes) THEN
       CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'" with lakes')
     ELSE
       CALL message(TRIM(routine), 'Initializing model usecase "'//TRIM(model%config%usecase)//'"')
@@ -202,6 +204,7 @@ CONTAINS
     !  pft01  pft02  pftXX
 
     ! Create root of the tile structure representing the whole grid box
+
     box_tile => t_jsb_tile('box', 'Top tile', &
       & processes      =(/A2L_,     L2A_,     RAD_  ,    TURB_    /), &
       & process_actions=(/ON_TILE_, ON_TILE_, ON_LEAFS_, ON_LEAFS_/), &
@@ -218,20 +221,20 @@ CONTAINS
       CALL box_tile%Set_process_action(PPLCC_, ON_LEAFS_)
     END IF
 
-      IF (model%config%use_lakes) THEN
-        lake_tile => t_jsb_tile('lake', 'Lake tile', &
-          & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
-          & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
-        land_tile => t_jsb_tile('land', 'Land tile', &
-          & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
-          & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
-      ELSE IF (model%config%use_flake) THEN
+      IF (model%config%use_flake) THEN
         lake_tile => t_jsb_tile('lake', 'Lake tile', &
           & processes=(/SEB_, HYDRO_, LENTIC_/), process_actions=(/ ON_TILE_, ON_TILE_, ON_TILE_/), &
           & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
           & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
+      ! ELSE IF (model%config%use_lakes) THEN
+      !   lake_tile => t_jsb_tile('lake', 'Lake tile', &
+      !     & processes=(/SEB_, HYDRO_/), process_actions=(/ON_TILE_, ON_TILE_/), &
+      !     & lct=t_jsb_lct(LAKE_TYPE), parent=box_tile)
+      !   land_tile => t_jsb_tile('land', 'Land tile', &
+      !     & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
+      !     & lct=t_jsb_lct(LAND_TYPE), parent=box_tile)
       ELSE
         land_tile => t_jsb_tile('land', 'Land tile', &
           & processes=(/SEB_/), process_actions=(/ON_TILE_/), &
@@ -320,7 +323,12 @@ CONTAINS
 
     NULLIFY(box_tile, land_tile, veg_tile, pft_tile)
     IF (model%config%use_glacier) NULLIFY(glacier_tile)
-    IF (model%config%use_lakes) NULLIFY(lake_tile)
+    IF (model%config%use_lakes) THEN
+       NULLIFY(lake_tile)
+    ELSE IF (model%config%use_flake) THEN
+      NULLIFY(lake_tile)
+    END IF
+
 
     ! CALL test_pools()
 

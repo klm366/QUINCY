@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ! ===============================================================================================================================
 ! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
 ! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
@@ -17,6 +18,8 @@
 
 
 
+=======
+>>>>>>> local/lentictest
 !>
 !! @brief Contains the interfaces to the processes related to lentic systems
 !!
@@ -43,7 +46,12 @@ MODULE mo_lentic_interface
   USE mo_exception,       ONLY: message
 
   USE mo_jsb_model_class,    ONLY: t_jsb_model
+<<<<<<< HEAD
   USE mo_jsb_class,          ONLY: Get_model    
+=======
+  USE mo_jsb_class,          ONLY: Get_model  
+  USE mo_jsb_grid_class,     ONLY: t_jsb_grid
+>>>>>>> local/lentictest
   USE mo_jsb_tile_class,     ONLY: t_jsb_tile_abstract, t_jsb_aggregator
   USE mo_jsb_config_class,   ONLY: t_jsb_config, t_jsb_config_p
   USE mo_jsb_process_class,  ONLY: t_jsb_process
@@ -139,6 +147,10 @@ CONTAINS
   !!
   SUBROUTINE update_lentic_wbphysics(tile, options)
 
+<<<<<<< HEAD
+=======
+    USE mo_jsb_grid,      ONLY: Get_grid  
+>>>>>>> local/lentictest
     USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
 
     USE mo_lentic_process, ONLY: calc_surface_temperature     , &
@@ -150,7 +162,11 @@ CONTAINS
     USE mo_lentic_SfcFlx_process, ONLY: calc_momsenlat
 
     USE mo_lentic_constants , ONLY : & 
+<<<<<<< HEAD
       extincoef_optic_water , &
+=======
+      rot_earth             , & ! Rotation rate of the earth [rad/s]
+>>>>>>> local/lentictest
       albedo_water_ref      , &
       albedo_blueice_ref    , & ! Blue ice
       albedo_whiteice_ref   , & ! White ice
@@ -170,11 +186,22 @@ CONTAINS
     TYPE(t_jsb_task_options),   INTENT(in)    :: options
 
     ! Local variables
+<<<<<<< HEAD
     INTEGER  :: iblk, ics, ice, nc
     REAL(wp) :: steplen!, dtime
     CHARACTER(len=*), PARAMETER :: routine = modname//':update_lentic_wbphysics'
     REAL(wp), PARAMETER :: h_atmvars = 2._wp !< height of atmospheric forcing variables (wind_air, t_air, q_air)
     TYPE(t_jsb_model), POINTER :: model
+=======
+    INTEGER                     :: iblk, ics, ice, nc
+    REAL(wp), POINTER           :: lat(:)
+    REAL(wp)                    :: steplen!, dtime
+    CHARACTER(len=*), PARAMETER :: routine = modname//':update_lentic_wbphysics'
+    REAL(wp), PARAMETER         :: h_atmvars = 2._wp !< height of atmospheric forcing variables (wind_air, t_air, q_air)
+    TYPE(t_jsb_model), POINTER  :: model
+    TYPE(t_jsb_grid),  POINTER  :: grid
+
+>>>>>>> local/lentictest
 
     ! Declare pointers to process configs and memory
     dsl4jsb_Def_config(LENTIC_)
@@ -186,7 +213,11 @@ CONTAINS
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
       & q_bot,                & !< Heat flux through the water-bottom sediment interface of lakes [W m-2]
+<<<<<<< HEAD
     ! ! atmospheric forcing
+=======
+    ! atmospheric forcing
+>>>>>>> local/lentictest
       & wind_air,             & !< 2m air wind speed [m s-1]
       & t_air,                & !< 2m air temperature [K]
       & q_air,                & !< 2m air specific humidity [g g-1]
@@ -194,17 +225,29 @@ CONTAINS
       & lw_srf_down,          & !< longwave surface downward flux [W m-2]
       & swvis_srf_down,       & !< shortwave surface downward flux in the visible band [W m-2]
       & swnir_srf_down,       & !< shortwave surface downward flux in the near infrared band [W m-2]
+<<<<<<< HEAD
     ! ! heat fluxes
+=======
+    ! heat fluxes
+>>>>>>> local/lentictest
       & latent_hflx_wtr,      & !< latent heat flux over water [W m-2]
       & sensible_hflx_wtr,    & !< sensible heat flux over water [W m-2]
       & latent_hflx_ice,      & !< latent heat flux over ice [W m-2]
       & sensible_hflx_ice,    & !< sensible heat flux over ice [W m-2]
+<<<<<<< HEAD
     ! ! topography and location
+=======
+    ! topography and location
+>>>>>>> local/lentictest
     !   & depth_w,              &
       & fetch,                &
       & par_Coriolis,         &
     !   & pondtype,             &
+<<<<<<< HEAD
     ! ! FLake inout
+=======
+    ! FLake inout
+>>>>>>> local/lentictest
     !   & t_snow,               &
       & t_lice,               &
       & t_mnw,                &
@@ -252,7 +295,10 @@ CONTAINS
     nc      = options%nc
     !X if necessary: dtime   = options%dtime
     steplen = options%steplen
+<<<<<<< HEAD
     
+=======
+>>>>>>> local/lentictest
 
     ! If process is not active on this tile, do nothing
     IF (.NOT. tile%Is_process_active(LENTIC_)) RETURN
@@ -260,7 +306,12 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
+<<<<<<< HEAD
     
+=======
+    grid => Get_grid(model%grid_id)
+    lat  => grid%lat(ics:ice, iblk) 
+>>>>>>> local/lentictest
     ! Get process memories
     dsl4jsb_Get_memory(LENTIC_)
     dsl4jsb_Get_memory(A2L_)
@@ -286,7 +337,11 @@ CONTAINS
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, depth_w)         ! in
     dsl4jsb_Get_var2D_onChunk(LENTIC_, Q_bot)           ! in
     dsl4jsb_Get_var2D_onChunk(LENTIC_, fetch)           ! in
+<<<<<<< HEAD
     dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! in
+=======
+    dsl4jsb_Get_var2D_onChunk(LENTIC_, par_Coriolis)    ! out
+>>>>>>> local/lentictest
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, pondtype)        ! in
 
     ! dsl4jsb_Get_var2D_onChunk(LENTIC_, t_snow)        ! inout
@@ -302,10 +357,20 @@ CONTAINS
     
     dsl4jsb_Get_var2D_onChunk(LENTIC_, w_star)          ! out
 
+<<<<<<< HEAD
     IF (tile%Is_process_active(LENTIC_)) RETURN
     ! ---------------------------
     ! Go    
 
+=======
+
+    ! ---------------------------
+    ! Go    
+
+    !  Compute coriolis parameter
+    par_Coriolis = 2.0_wp*rot_earth*SIN(lat(:)*3.1416_wp/180_wp)
+
+>>>>>>> local/lentictest
     !  Set albedos of the lake water, lake ice and snow
 
     albedo_water = albedo_water_ref
@@ -319,6 +384,7 @@ CONTAINS
 
     !  Set initial values
     I_atm = lw_srf_down + swvis_srf_down + swnir_srf_down
+<<<<<<< HEAD
     ! T_snow_p_flk = t_snow
     ! T_lice_p_flk  = t_lice
     ! T_mnw_p_flk  = t_mnw
@@ -327,6 +393,8 @@ CONTAINS
     ! C_T_p_flk    = c_t
 !    h_ML_n_flk   = h_ml
 
+=======
+>>>>>>> local/lentictest
 
     !  Compute solar radiation fluxes (positive downward)    (needed?)
     ! I_atm_flk = I_atm_in
@@ -406,6 +474,11 @@ CONTAINS
                                   & Phi_T_pr0   & ! out
                                   )
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> local/lentictest
     call calc_lake_ice( I_ice,        & ! in
                       & I_w,          & ! in 
                       & T_wML,        & ! in 
@@ -417,9 +490,14 @@ CONTAINS
                       & l_ice_create  & ! out
                       )
 
+<<<<<<< HEAD
     call calc_lake_temp_stratification( steplen,             & ! in & depth_w,              & ! in
                                       & extincoef_optic_water,  & ! in
                                       & l_ice_create,         & ! in
+=======
+    call calc_lake_temp_stratification( steplen,            & ! in & depth_w,  & extincoef_optic_water,   & ! in
+                                      & l_ice_create,      & ! in
+>>>>>>> local/lentictest
                                       & h_ice,                & ! in
                                       & I_bot,                & ! in
                                       & I_intm_0_h,           & ! in
@@ -444,7 +522,14 @@ CONTAINS
                                 & h_ice,  & ! in
                                 & T_lice,  & ! in
                                 & T_wML,  & ! in
+<<<<<<< HEAD
                                 & T_sfc   ) ! out          
+=======
+                                & T_sfc   ) ! out    
+
+                                
+                
+>>>>>>> local/lentictest
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
   END SUBROUTINE update_lentic_wbphysics
@@ -500,6 +585,10 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LENTIC_, w_star,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, z0t_sf,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, z0u_sf,       weighted_by_fract)
+<<<<<<< HEAD
+=======
+    dsl4jsb_Aggregate_onChunk(LENTIC_, par_Coriolis, weighted_by_fract)
+>>>>>>> local/lentictest
 
 
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
