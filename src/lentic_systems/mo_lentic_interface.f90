@@ -143,7 +143,6 @@ CONTAINS
       tpl_T_f                   ! Fresh water freezing point [K]
 
     USE mo_jsb_physical_constants, ONLY:  rhoh2o !> [kg/m3]  density of liquid water !! = tpl_rho_w_r
-    USE mo_util,                ONLY: real2string
 
 !!#ifdef SERIALIZE
     !$claw verbatim USE mo_ser_common, ONLY: init
@@ -296,8 +295,6 @@ CONTAINS
     !  Compute coriolis parameter
     par_Coriolis = 2.0_wp*rot_earth*SIN(lat(:)*3.1416_wp/180_wp)
 
-    ! CALL message('     ', '... lat: '//TRIM(real2string(lat(0))))
-
     !  Set albedos of the lake water, lake ice and snow
 
     albedo_water = albedo_water_ref
@@ -411,7 +408,7 @@ CONTAINS
                                       & I_intm_h_d,           & ! in
                                       & I_w,                  & ! in
                                       & I_h,                  & ! in
-                                      & lat(:),         & ! in
+                                      & par_Coriolis,         & ! in
                                       & Q_bot,                & ! in
                                       & Q_star,               & ! in
                                       & u_star,               & ! in 
