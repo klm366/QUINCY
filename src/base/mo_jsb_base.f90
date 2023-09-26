@@ -50,7 +50,7 @@ CONTAINS
     USE mo_spq_constants,       ONLY: init_spq_constants
     USE mo_lnd_bgcm_idx,        ONLY: set_bgcm_element_idx
 
-    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, LENTIC_, LENTIC_
+    dsl4jsb_Use_processes SSE_, HYDRO_, RAD_, CARBON_, DISTURB_, FUEL_, PPLCC_, WLCC_, FLCC_, FAGE_, LENTIC_
 
     dsl4jsb_Use_config(SSE_)
     dsl4jsb_Use_config(HYDRO_)
