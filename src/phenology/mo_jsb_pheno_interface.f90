@@ -19,7 +19,7 @@
 !NEC$ options "-finline-file=externals/jsbach/src/shared/mo_time_averages.pp-jsb.f90"
 !NEC$ options "-finline-max-function-size=100"
 
-MODULE mo_pheno_interface
+MODULE mo_jsb_pheno_interface
 #ifndef __NO_JSBACH__
 
   USE mo_jsb_control,        ONLY: debug_on
@@ -72,7 +72,7 @@ MODULE mo_pheno_interface
     PROCEDURE Create_task_foliage_projected_cover
   END INTERFACE tsk_foliage_projected_cover
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_interface'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_pheno_interface'
 
 CONTAINS
 
@@ -80,26 +80,22 @@ CONTAINS
   !> Constructor for phenology task
   !>
   FUNCTION Create_task_phenology(model_id) RESULT(return_ptr)
-
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_phenology::return_ptr)
     CALL return_ptr%Construct(name='phenology', process_id=PHENO_, owner_model_id=model_id)
-
   END FUNCTION Create_task_phenology
 
   ! ======================================================================================================= !
   !> Constructor for foliage_projected_cover task
   !>
   FUNCTION Create_task_foliage_projected_cover(model_id) RESULT(return_ptr)
-
     INTEGER,                   INTENT(in) :: model_id
     CLASS(t_jsb_process_task), POINTER    :: return_ptr
 
     ALLOCATE(tsk_foliage_projected_cover::return_ptr)
     CALL return_ptr%Construct(name='foliage_projected_cover', process_id=PHENO_, owner_model_id=model_id)
-
   END FUNCTION Create_task_foliage_projected_cover
 
   ! ======================================================================================================= !

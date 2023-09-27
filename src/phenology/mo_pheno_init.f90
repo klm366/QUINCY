@@ -243,8 +243,8 @@ CONTAINS
 
   SUBROUTINE pheno_init_ic_jsbach(tile)
 
-    USE mo_pheno_process, ONLY: get_foliage_projected_cover
-    USE mo_jsb_time,      ONLY: get_time_interpolation_weights
+    USE mo_jsb_pheno_process, ONLY: get_foliage_projected_cover
+    USE mo_jsb_time,          ONLY: get_time_interpolation_weights
 
     CLASS(t_jsb_tile_abstract), INTENT(inout) :: tile
 

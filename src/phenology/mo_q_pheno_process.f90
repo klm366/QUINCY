@@ -8,7 +8,8 @@
 !! First version by Soenke Zaehle (2016-04-11)
 !! Second version by Jan Engel (20161214): just moved from vegetation to phenology making it an individual process
 !!
-MODULE mo_pheno_update_phenology
+
+MODULE mo_q_pheno_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                ONLY: wp
@@ -20,7 +21,7 @@ MODULE mo_pheno_update_phenology
   PRIVATE
   PUBLIC :: update_phenology_quincy
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_update_phenology'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_pheno_process'
 
 CONTAINS
 
@@ -290,4 +291,4 @@ CONTAINS
   END SUBROUTINE calc_phenology 
 
 #endif
-END MODULE mo_pheno_update_phenology
+END MODULE mo_q_pheno_process
