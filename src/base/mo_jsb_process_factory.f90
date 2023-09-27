@@ -54,7 +54,8 @@ MODULE mo_jsb_process_factory
   USE mo_hydro_config_class,   ONLY: t_hydro_config
   USE mo_assimi_interface,     ONLY: Register_assimi_tasks
   USE mo_assimi_config_class,  ONLY: t_assimi_config
-  USE mo_pheno_interface,      ONLY: Register_pheno_tasks
+  USE mo_q_pheno_interface,    ONLY: Register_pheno_tasks_quincy
+  USE mo_jsb_pheno_interface,  ONLY: Register_pheno_tasks_jsbach
   USE mo_pheno_config_class,   ONLY: t_pheno_config
 #ifndef __NO_JSBACH_HD__
   USE mo_hd_interface,         ONLY: Register_hd_tasks
@@ -155,7 +156,12 @@ CONTAINS
       CALL Register_assimi_tasks(return_ptr, model_id)
       ALLOCATE(t_assimi_config::return_ptr%config)
     CASE (PHENO_)
-      CALL Register_pheno_tasks(return_ptr, model_id)
+      SELECT CASE (model_scheme)
+      CASE (MODEL_JSBACH)
+        CALL Register_pheno_tasks_jsbach(return_ptr, model_id)
+      CASE (MODEL_QUINCY)
+        CALL Register_pheno_tasks_quincy(return_ptr, model_id)
+      END SELECT
       ALLOCATE(t_pheno_config::return_ptr%config)
 #ifndef __NO_JSBACH_HD__
     CASE (HD_)
