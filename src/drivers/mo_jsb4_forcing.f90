@@ -154,9 +154,12 @@ MODULE mo_jsb4_forcing
   END TYPE forcing_options_type
   TYPE(forcing_options_type), ALLOCATABLE, SAVE :: forcing_options(:)
 
-  ! QUINCY model
-  !   this TYPE is not used with QUINCY in ICON-land
-  !   implemented here for compatibility with QS (the quincy standalone model)
+  ! ======================================================================================================= !
+  !>
+  !> this TYPE is NOT used with QUINCY in ICON-Land
+  !> implemented here for compatibility with QS (the quincy standalone model)
+  !>
+  !  QUINCY model
   TYPE t_q_forcing_options
     ! namelist
     ! ..
@@ -820,6 +823,11 @@ CONTAINS
     !$ACC EXIT DATA DELETE(temporary_data1, help1, help2)
     DEALLOCATE(temporary_data1)
     DEALLOCATE(help1, help2)
+    DEALLOCATE(rel_humidity)
+    IF (use_lakes) THEN
+      DEALLOCATE (pch_lake)
+    END IF
+  END SUBROUTINE get_standalone_driver
 
   END SUBROUTINE get_standalone_driver
 

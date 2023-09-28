@@ -476,7 +476,6 @@ CONTAINS
       IF (output_mode%l_nml) THEN
           CALL write_name_list_output(jstep=0, lacc=i_am_accel_node)
       END IF
-
     END IF ! not isRestart()
 
     IF (ltimer) CALL timer_start(timer_total)
@@ -760,7 +759,6 @@ CONTAINS
 
     ! print performance timers:
     IF (ltimer) CALL print_timer
-
   END SUBROUTINE jsbach_model
 
   ! ======================================================================================================= !
@@ -836,7 +834,6 @@ CONTAINS
     dsl4jsb_Real2D_onDomain :: prev_two_cos_zenith_angle
     dsl4jsb_Real2D_onDomain :: prev_three_cos_zenith_angle
     dsl4jsb_Real2D_onDomain :: daytime_counter
-
 
     REAL(wp), POINTER     :: lon(:,:), lat(:,:), coslat(:,:), sinlat(:,:)
     REAL(wp), ALLOCATABLE :: evapo_act2pot(:,:)

@@ -44,7 +44,7 @@ MODULE mo_jsb_interface
   PRIVATE
 
   PUBLIC :: jsbach_interface, jsbach_start_timestep, jsbach_finish_timestep
-  PUBLIC :: jsbach_get_var
+  ! PUBLIC :: jsbach_get_var
 
   INTERFACE jsbach_interface
     MODULE PROCEDURE interface_full
@@ -238,7 +238,6 @@ CONTAINS
     IF (timer_on() .OR. l_timer_host) CALL timer_start(timer_jsbach(model_id))
 
     no_omp_thread = Get_omp_thread()
-
     ! Note: Since write_interface_variables is not yet implemented for ICON, the call to it is suppressed here for ICON.
     !       This is an exception since we don't want to use conditional compiling, but otherwise there are lots
     !       of compiler warnings about unused dummy arguments.
@@ -595,17 +594,22 @@ CONTAINS
 
     IF (debug_on('basic') .AND. iblk == 1) CALL message( TRIM(routine), 'Updating '//TRIM(model%name))
 
-    ! Update options
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 1.0 Update options
+    !>
     CALL model%Set_options(iblk=iblk, ics=ics, ice=ice, nc=nc, current_datetime=current_datetime, &
       & dtime=dtime, steplen=steplen, alpha=1._wp)
     CALL model%Set_subset(type=ON_CHUNK, iblk=iblk, ics=ics, ice=ice)
 
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 2.0 associate variable pointers to current chunk of gridcells
+    !>
     CALL model%Associate_var_pointers(ics, ice, iblk, iblk)
 
-    ! Put atmospheric forcing into the a2l memory.
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 3.0 put atmospheric forcing into the a2l memory
+    !>
     CALL model%Get_top_tile(tile)
-
     CALL update_atm2land(                           &
       & tile,                                       &
       & model%options(no_omp_thread),               &
@@ -633,8 +637,11 @@ CONTAINS
       & )
     NULLIFY(tile)
 
-    ! Run tasks in queue
-    ! This is the basic call that initiates all process updates (tasks, s. mo_jsb_model_class.f90)
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.0 Run tasks in queue
+    !>
+    !>  run tasks of processes as defined in 'mo_jsb_model_init:jsbach_init'
+    !>
     CALL model%Run_tasks(debug_on('hsm') .AND. iblk == 1)
 
     ! Finally, give the required variables back to the atmosphere
@@ -687,7 +694,6 @@ CONTAINS
   !     & zm_srf   (:), &
   !     & alb_vis  (:), &
   !     & alb_nir  (:)
-
   ! END SUBROUTINE interface_inquire
 
   ! ======================================================================================================= !
@@ -699,7 +705,6 @@ CONTAINS
   !>      host model (ICON):    './atm_phy_echam/mo_interface_iconam_echam.f90'
   !>
   SUBROUTINE jsbach_start_timestep(model_id, current_datetime, dtime)
-
     USE mo_alcc_init,           ONLY : read_land_use_data
     ! ----------------------------------------------------------------------------------------------------- !
     INTEGER,                   INTENT(in) :: model_id
@@ -711,17 +716,18 @@ CONTAINS
     CHARACTER(len=*), PARAMETER :: routine = modname//':jsbach_start_timestep'
     ! ----------------------------------------------------------------------------------------------------- !
     IF (debug_on()) CALL message( TRIM(routine), 'Starting routine')
-
     IF (.NOT. Is_omp_inside_serial()) THEN
       CALL finish(TRIM(routine), 'Should not be called within parallel OMP region')
     END IF
-
+    ! ----------------------------------------------------------------------------------------------------- !
     no_omp_thread = Get_omp_thread()   ! Should always be 1
     IF (no_omp_thread /= 1) THEN
       CALL finish(routine, 'should not be called inside OMP parallel region!')
     END IF
     model => Get_model(model_id)
-
+    ! ----------------------------------------------------------------------------------------------------- !
+    
+    ! ..
     CALL model%Set_options(current_datetime=current_datetime, dtime=dtime)
 
     ! Reset all tiles at the beginning of the timestep
@@ -733,7 +739,6 @@ CONTAINS
     ENDIF
 
     IF (debug_on()) CALL message( TRIM(routine), 'Finishing routine')
-
   END SUBROUTINE jsbach_start_timestep
 
   ! ======================================================================================================= !
