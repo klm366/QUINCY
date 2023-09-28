@@ -28,6 +28,14 @@ MODULE mo_jsb_base
 
 CONTAINS
 
+  ! ======================================================================================================= !
+  !>
+  !> setup the ICON-Land models
+  !>
+  !>   is called by both:
+  !>      ICON-Land standalone: 'mo_jsbach_model:jsbach_model'
+  !>      host model (ICON):    'src/drivers/mo_atmo_model.f90'
+  !>
   SUBROUTINE jsbach_setup_models(master_namelist_filename)
 
     USE mo_jsb_control,         ONLY: jsb_models_nml, get_no_of_models, init_jsb_master_control, &
