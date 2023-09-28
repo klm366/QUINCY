@@ -24,7 +24,7 @@
 !!
 !! @par Revision History
 !! First version by Soenke Zaehle (2015-12-04)
-!! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_assimi_update_canopy_fluxes.f90
+!! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_q_assimi_process.f90
 !! some refactoring and rewriting for bgcm -- Jan Engel MPI-BGC (2023-05)
 !!
 MODULE mo_veg_update_pools
@@ -73,7 +73,7 @@ CONTAINS
     USE mo_assimi_constants,                ONLY: ic3phot, ic4phot
     USE mo_atmland_constants,               ONLY: def_co2_mixing_ratio, def_co2_mixing_ratio_C13, def_co2_mixing_ratio_C14, &
                                                   def_co2_deltaC13, def_co2_deltaC14
-    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
+    USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_pheno_constants,                 ONLY: ievergreen
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(ASSIMI_)    

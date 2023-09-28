@@ -22,7 +22,7 @@ MODULE mo_assimi_process
   PUBLIC :: calc_assimilation_scaling_factors, calc_assimilation_waterunlimited, &
     &       calc_assimilation_waterlimited, calc_NPP_pot_rate, calc_NPPbuf
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_process'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_jsb_assimi_process'
 
 CONTAINS
 
@@ -820,4 +820,4 @@ CONTAINS
   END SUBROUTINE calc_NPPbuf
 
 #endif
-END MODULE mo_assimi_process
+END MODULE mo_jsb_assimi_process

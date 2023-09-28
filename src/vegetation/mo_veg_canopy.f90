@@ -31,7 +31,7 @@ MODULE mo_veg_canopy
   USE mo_kind,                        ONLY: wp
   USE mo_jsb_impl_constants,          ONLY: test_false_true
   USE mo_exception,                   ONLY: message_text, finish
-  USE mo_assimi_update_canopy_fluxes, ONLY: calc_photosynthesis
+  USE mo_q_assimi_process,            ONLY: calc_photosynthesis
 
   IMPLICIT NONE
 
