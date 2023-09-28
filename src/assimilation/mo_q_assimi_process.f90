@@ -25,8 +25,10 @@
 !! @par Revision History
 !! First version by Soenke Zaehle (2015-12-04)
 !! 2nd version by Jan Engel (20160719): svn move vegetation/mo_veg_photosynthesis.f90 assimilation/mo_assimi_update_canopy_fluxes.f90
+!! 3rd version by Jan Engel (2023-09-27): rename mo_assimi_update_canopy_fluxes -> mo_q_assimi_process
 !!
-MODULE mo_assimi_update_canopy_fluxes
+
+MODULE mo_q_assimi_process
 #ifndef __NO_JSBACH__
 
   USE mo_kind,                  ONLY: wp
@@ -40,7 +42,7 @@ MODULE mo_assimi_update_canopy_fluxes
   PUBLIC :: update_canopy_fluxes, calc_photosynthesis, calc_soil_moisture_stress
   PUBLIC :: discrimination_ps
 
-  CHARACTER(len=*), PARAMETER :: modname = 'mo_assimi_update_canopy_fluxes'
+  CHARACTER(len=*), PARAMETER :: modname = 'mo_q_assimi_process'
 
 CONTAINS
 
@@ -834,4 +836,4 @@ CONTAINS
   END FUNCTION discrimination_ps
 
 #endif
-END MODULE mo_assimi_update_canopy_fluxes
+END MODULE mo_q_assimi_process

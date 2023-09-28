@@ -883,7 +883,7 @@ CONTAINS
 
     USE mo_jsb_math_constants,          ONLY: dtime, eps8
     USE mo_jsb_physical_constants,      ONLY: grav, Tzero
-    USE mo_assimi_update_canopy_fluxes, ONLY: calc_soil_moisture_stress
+    USE mo_q_assimi_process,            ONLY: calc_soil_moisture_stress
     USE mo_spq_constants,               ONLY: drain_frac, fdrain_srf_runoff, &
                                               InterceptionEfficiency, w_skin_max, &
                                               wpot_min, water2ice_density_ratio, &

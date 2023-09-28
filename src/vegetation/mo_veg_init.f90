@@ -68,7 +68,7 @@ CONTAINS
     USE mo_veg_constants,                   ONLY: fresp_growth, background_mort_rate_tree, &
       &                                           background_mort_rate_grass, w_root_lim_max
     USE mo_isotope_util,                    ONLY: calc_fractionation,calc_mixing_ratio_N15N14,calc_mixing_ratio_C14C
-    USE mo_assimi_update_canopy_fluxes,     ONLY: discrimination_ps
+    USE mo_q_assimi_process,                ONLY: discrimination_ps
     USE mo_veg_constants,                   ONLY: root2leaf_cn, root2leaf_np, ITREE
     ! ----------------------------------------------------------------------------------------------------- !
     dsl4jsb_Use_config(VEG_)
