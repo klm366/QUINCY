@@ -574,10 +574,12 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    ! Aggregate the different runoff flux components
+    !> Aggregate the different runoff flux components
+    !>
 
-    ! sum up values over soil layers
     !$ACC LOOP SEQ
+    !> sum up values over soil layers
+    !>
     DO is = 1, nsoil
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
@@ -586,6 +588,8 @@ CONTAINS
     END DO
 
     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !> drainage and runoff
+    !>
     DO ic = 1, nc
       drainage(ic)  = drainage(ic) + drain_rock(ic) + drain_lat(ic)
       runoff(ic)    = runoff(ic) + infilt_over(ic)
@@ -593,13 +597,17 @@ CONTAINS
 
     !$ACC END PARALLEL
 
-    ! recalculate soil moisture from the soil moisture of the individual levels, after 'soilhyd()' was called
-    ! 
+    !> recalculate soil moisture from the soil moisture of the individual levels, after 'soilhyd()' was called
+    !>   probably just diagnostic output
+    !>
     CALL get_amount_in_rootzone(wtr_soil_sl(:,:), soil_depth_sl(:,:), root_depth_sl(:,:), wtr_rootzone(:))
 
     !$ACC PARALLEL LOOP DEFAULT(PRESENT) GANG(STATIC: 1) VECTOR ASYNC(1)
-    ! [m / timestep] -> [kg / m^2 / s]
-    ! @TODO check ([kg / m^2 / s] -> [m / timestep]) and make consistent
+    !> unit conversion
+    !>
+    !>  [m / timestep] -> [kg / m^2 / s]
+    !>
+    !   @TODO check ([kg / m^2 / s] -> [m / timestep]) and make consistent
     DO ic = 1, nc
       infilt(ic)        = infilt       (ic) * rhoh2o / dtime
       runoff(ic)        = runoff       (ic) * rhoh2o / dtime
@@ -1042,9 +1050,9 @@ CONTAINS
     END DO
     !$ACC END PARALLEL LOOP
 
-    !< If lowest soil layer becomes negative, reduce bottom drainage
-    !    In rare cases - when the bottom layer is very thin - also above layers might get negative.
-    !    Generally, this only happens right after initialization.
+    !< If water content (wtr_soil_sl) in lowest soil layer becomes negative, reduce bottom drainage
+    !<   In rare cases - when the bottom layer is very thin - also above layers might get negative.
+    !<   Generally, this only happens right after initialization.
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP SEQ
     DO is = nsoil, 1, -1
@@ -1076,17 +1084,23 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
 
-    !< Subtract new soil state and bottom drainage (lower boundary condition) from water balance
+    !> calculate the vertical transport error - a numeric precision error ('wtr_transp_residual')
+    !>  Subtract new soil state and bottom drainage (lower boundary condition) from water balance
+    !>
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       wtr_transp_residual(ic) = wtr_transp_residual(ic) - (SUM(wtr_soil_sl(ic,:)) + drain_rock(ic))
       wtr_soilhyd_res(ic) = wtr_transp_residual(ic)
     END DO
 
-    !< Correct for the vertical transport error.
+    !> correct the vertical transport error - a numeric precision error
+    !>
 
 #ifndef _OPENACC
-    !< 1. Complain if the overall transport error is too large
+    !> 1. document (output) if the overall transport error is too large
+    !>   finish the model if the error is larger than '1.0e-10_wp'
+    !>   @TODO make '1.0e-10_wp' a parameter 
+    !>
     DO ic = 1, nc
       IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
         WRITE (message_text_long,*) 'Soil water transport residual too large at ', &
@@ -1102,7 +1116,8 @@ CONTAINS
     END DO
 #endif
 
-    !< 2. Modify lower boundary condition (drainage) as much as possible
+    !> 2. correction step 1: Modify lower boundary condition (drainage) as much as possible
+    !>
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       IF (ABS(wtr_transp_residual(ic)) > 0._wp) THEN
@@ -1112,7 +1127,9 @@ CONTAINS
       END IF
     END DO
 
-    !< 3. Modify soil layers if necessary
+    !> 3. correction step 2 (if step 1 ): Modify soil water content in soil layers if necessary
+    !>      ensure that soil water content does not become negative
+    !>
     !$ACC LOOP SEQ
     DO is = nsoil, 1, -1
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1129,7 +1146,11 @@ CONTAINS
     END DO
 
 #ifndef _OPENACC
-    !> 4. Complain if correction is not sufficient
+
+    !> 4. again document (output) if the overall transport error is too large
+    !>    and finish the model if the error is larger than '1.0e-10_wp'
+    !>    @TODO double-check if really useful in addition to '1.'
+    !>
     DO ic = 1, nc
       IF (ABS(wtr_transp_residual(ic)) > 1.0e-10_wp .AND. l_fract(ic)) THEN
         WRITE (message_text_long,*) 'Cannot correct soil water transport residual at ', &
@@ -1145,6 +1166,11 @@ CONTAINS
     END DO
 #endif
 
+    !> evaporation deficit - only for bare soil and from most upper soil layer
+    !>  @NOTE this is needed because "the atmostphere" could take more water than taken from plants
+    !>       i.e., if deficit then take soil moisture water from most upper soil layer
+    !>  this is all based on physical principles
+    !>
     ! Extract remaining bare soil evaporation from top layer (mobile and immoble soil water,
     ! because this has to be consistent with the computation of the upper soil layer relative humidity
     ! in sse_processes:relative_humidity_soil)
@@ -1162,12 +1188,19 @@ CONTAINS
       evapo_deficit(ic) = evapo_deficit(ic) + deficit_sevap(ic)        ! remaining demand is added to deficit
     END DO
 
-    ! Correct remaining evapotranspiration deficit
+    !> if still a evaporation defincit is present - rarely happens
+    !>   apply correction beyond on physical principles, to both soil water and soil ice across all layers
+    !> 
     ! @todo this is an unfortunate necessity as sometimes the evaporative demand is not fully
     !       backed by the water available in the land surface reservoirs.
     !       Changing the soil ice content here obviously violates the energy balance. A correction
     !       term is needed for this, if no better solution can be found to avoid the evaporation deficit.
     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !> 
+    !> test if the deficit can actually be corrected with the soil water and ise available
+    !>   if not, just write out a message - later the model will stop (crash) anyway
+    !>   if will run until the "soil water check" where multiple output is generated
+    !> 
     DO ic = 1, nc
       deficit_evapotrans(ic) = deficit_sevap(ic) + deficit_trans(ic)
       weq_soil(ic) = SUM(wtr_soil_sl(ic,:)) + SUM(ice_soil_sl(ic,:))  ! water and ice within the column
@@ -1179,6 +1212,8 @@ CONTAINS
 #endif
     END DO
     !$ACC LOOP SEQ
+    !> deficit is corrected, after checking (above) that enough water/ice is available at all
+    !>
     DO is = 1, nsoil
       !$ACC LOOP GANG(STATIC: 1) VECTOR
       DO ic = 1, nc
@@ -1190,9 +1225,14 @@ CONTAINS
       END DO
     END DO
 
-    ! Additional corrections for excess soil moisture
-    ! In case of over-saturation water would not have infiltrated in the first place --> pile
-    ! water upwards
+    !>
+    !> check if a soil layer has too much water content than possible (pore volume * layer thickness)
+    !>
+
+    !> corrections for excess soil moisture (soil layers 2-x)
+    !>  In case of over-saturation water would not have infiltrated in the first place
+    !>   -> in which case the water is moved upwards
+    !>
     !$ACC LOOP SEQ
     DO is = nsoil, 2, -1
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -1205,16 +1245,22 @@ CONTAINS
       END DO
     END DO
     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    !> corrections for excess soil moisture for soil layer 1
+    !>  -> excess soil moisture is simply added to runoff ('wtr_exwsat' = "excess water" over saturation)
+    !>
     DO ic = 1, nc
-      ! Top layer saturation excess is added to the surface runoff (Dunne runoff)
       IF (wtr_soil_sl(ic,1) > wtr_wsat_sl(ic,1)) THEN
         wtr_exwsat(ic)      = wtr_soil_sl(ic,1) - wtr_wsat_sl(ic,1)
         wtr_soil_sl(ic,1)   = wtr_wsat_sl(ic,1)
       END IF
     END DO
 
-    !
-    ! Lateral Drainage (i.e. drainage from upper soil layers)
+    !>
+    !> Lateral Drainage (i.e. drainage from upper soil layers)
+    !>   soil water flow in vertical direction to "baseflow storage of HD model" or "into another tile - Q-Arctic project"
+    !>
+    !>  @TODO improve and then move up here in this routine -> to vertical water transport calc
+    !>
     ! ---- In supersaturated (or frozen) soils the water above the field capacity is assumed to
     !      move lateraly until it reaches the stream (or the neighbouring topo-tile).
     !      In this implementation all water above field capacity is added to the drainage. However,
@@ -1244,7 +1290,9 @@ CONTAINS
     !   END IF
     ! END DO
 
-    ! Modification for TPE (open)
+    !> TPE: used with terra planet setup
+    !>      usually not used; water balance is not closed; just for testing
+    !>
     IF (ltpe_open) THEN
       !$ACC LOOP SEQ
       DO is = 1, nsoil
@@ -1261,14 +1309,20 @@ CONTAINS
       END DO
     END IF
 
-    ! Add surface runoff components as infiltration overflow
+    !> calc infiltration overflow ('infilt_over') and add later to surface runoff
+    !>
+    !>   wtr_exwsat: water that cannot enter soil because soil is saturated
+    !>   wtr_exinfcap: water that cannot enter soil because it is not fast enough, and during this moment is surface runoff
+    !>
     !$ACC LOOP GANG(STATIC: 1) VECTOR
     DO ic = 1, nc
       infilt_over(ic) = wtr_exinfcap(ic) + wtr_exwsat(ic)
     END DO
 
 #ifndef _OPENACC
-    ! Check value range for soil moisture
+    !> check value range for soil moisture, and finish model if not correct
+    !> 
+    ! soil moisture: negative value
     DO ic = 1, nc
       IF (ANY(wtr_soil_sl(ic,:) < -EPSILON(1.0_wp)) .AND. l_fract(ic)) THEN
         WRITE (message_text_long,*) 'negative soil moisture (routine end) at ', &
@@ -1287,7 +1341,7 @@ CONTAINS
         ! CALL message ('soilhyd', message_text)
         wtr_soil_sl(ic,:) = MAX(wtr_soil_sl(ic,:), 0.0_wp)
       END IF
-
+      ! soil moisture: over saturation
       IF (ANY(wtr_soil_sl(ic,:) > wtr_wsat_sl(ic,:) + EPSILON(1.0_wp)) .AND. l_fract(ic)) THEN
         WRITE (message_text_long,*) 'soil moisture exceeds saturation capacity(routine end) at ', &
           &  lat(ic),'N and ',lon(ic),'E:',                 NEW_LINE('a'), &
@@ -1302,6 +1356,10 @@ CONTAINS
     END DO
 #else
     !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+    !>
+    !> ensure: no negative soil water
+    !> run at GPU
+    !>
     DO is=1,nsoil
       DO ic=1,nc
         IF (wtr_soil_sl(ic,is) < 0._wp) THEN
