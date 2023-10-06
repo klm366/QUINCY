@@ -92,7 +92,7 @@ CONTAINS
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil,       &
     & evapo_deficit, infilt, runoff)
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow  ! snow parameters needed for cases w/o dynamic snow calculation
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
     USE mo_sse_constants,          ONLY: snow_depth_min
 
@@ -110,7 +110,8 @@ CONTAINS
       & evapo_skin(:), evapo_snow(:), water_to_soil(:), evapo_deficit(:),    &
       & infilt(:), runoff(:)
     !
-    !  local variables
+    !  local variables (input/output var converted into meter soil column)
+    !    @TODO improve var naming
     !
     REAL(wp) ::               &
       & rain_in_m,            & !< amount of rainfall within time step [m]
@@ -147,6 +148,7 @@ CONTAINS
 
     !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
     !$ACC LOOP GANG(STATIC: 1) VECTOR
+    ! init variables
     DO ic = 1, SIZE(snowmelt_soil)
       snow_accum(ic)        = 0._wp
       weq_snow_soil_old = weq_snow_soil(ic)
@@ -159,6 +161,7 @@ CONTAINS
 
       !-----------------------------------------------------------------
       ! Convert water fluxes to m water equivalent within the time step
+      ! NOTE: the water that is evaporated is already known, here we just calc we it is comming from - same as with soil hydrology
       !-----------------------------------------------------------------
       rain_in_m           = rain(ic)          * dtime/rhoh2o
       new_snow            = snow(ic)          * dtime/rhoh2o   !in_m       ! snow_fall
@@ -169,7 +172,7 @@ CONTAINS
       evapo_skin_pot_in_m = (1._wp - fract_snow(ic)) * fract_wet(ic) * evapopot(ic) * dtime/rhoh2o
 
       !---------------------------------------------
-      !  Budgets of snow (canopy, ground)
+      !  Budgets of snow (canopy & ground)
       !---------------------------------------------
 
       ! amount of snow remaining on the canopy
@@ -178,34 +181,35 @@ CONTAINS
       ! remaining snow falls on the ground
       new_snow_soil = new_snow - new_snow_can
 
-      ! update snow on the canopy
+      ! update snow on the canopy (i.e., snow storage at the canopy)
       ! Note: evaporation happens from canopy, as long as there is enough snow
       canopy_pre_snow  = weq_snow_can(ic)
       weq_snow_can(ic) = MIN(MAX(0._wp, canopy_pre_snow + new_snow_can + evapo_snow_pot_in_m), skinres_canopy_max(ic))
       evapo_snow_in_m  = evapo_snow_pot_in_m - (weq_snow_can(ic) - canopy_pre_snow - new_snow_can)
-      ! unloading of snow from the canopy due to melting
+      ! removal of snow from the canopy due to melting
       exp_t            = MAX(0._wp, t_air(ic) - zc1) / zc2 * dtime
       snowmelt_can     = weq_snow_can(ic) * (1._wp-EXP(-exp_t))
       weq_snow_can(ic) = weq_snow_can(ic) - snowmelt_can
 
-      ! unloading of snow from the canopy due to wind
+      ! removal of snow from the canopy due to wind
       exp_w            = wind_10m(ic) / zc3 * dtime
       snow_blown       = weq_snow_can(ic) * (1._wp-EXP(-exp_w))
       weq_snow_can(ic) = weq_snow_can(ic)  - snow_blown
       new_snow_soil    = new_snow_soil + snow_blown
 
-      ! Heating due to snow melt on canopy
-      ! @Todo Why is heating only computed for canopy?
+      ! calc how much heat energy you need for snow melt on canopy
+      ! soil: 'snowmelt_soil'
       q_snocpymlt(ic) = snowmelt_can * rhoh2o * alf / dtime
 
       !  Snowfall and sublimation
       !-----------------------------------------------
+      ! update amount of snow on soil
       weq_snow_soil(ic) = weq_snow_soil(ic) + new_snow_soil + evapo_snow_in_m
 
       ! Correction if there was too much snow evaporation
       IF (weq_snow_soil(ic) < 0._wp) THEN
         evapotrans_no_snow = evapotrans_no_snow + weq_snow_soil(ic)
-        evapo_deficit(ic)  = weq_snow_soil(ic)
+        evapo_deficit(ic)  = weq_snow_soil(ic)      ! add to deficit to correct below for evaporating water that actually is not available
         weq_snow_soil(ic)  = 0._wp
       ELSE
         evapo_deficit(ic)  = 0._wp
@@ -219,21 +223,27 @@ CONTAINS
           snowmelt_soil(ic) = MAX(MIN(snowmelt_pot_in_m, weq_snow_soil(ic)), 0._wp)  ! snow melt limited by actual snow depth
           weq_snow_soil(ic) = weq_snow_soil(ic) - snowmelt_soil(ic)                  ! reduce snow depth according to melting
           ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
+          !  i.e., the heat energy we need to snow melt is calculated elsewhere (compare 'q_snocpymlt' for canopy, which is calculated here)
         END IF
       END IF
 
       !  Snow budget and meltwater
       !-----------------------------------------------------
-      wtr_skin(ic)      = wtr_skin(ic) + snowmelt_can                              ! Add melt water from canopy to skin reservoir
-      water_to_soil(ic) = snowmelt_soil(ic) + MAX(0._wp, wtr_skin(ic) - skinres_max(ic)) ! Excess water enters the soil, and
-      wtr_skin(ic)      = MIN(skinres_max(ic), wtr_skin(ic))                       ! skin reservoir is limited to the maximum
+      wtr_skin(ic)      = wtr_skin(ic) + snowmelt_can                                         ! Add melt water from canopy to skin reservoir
+      water_to_soil(ic) = snowmelt_soil(ic) + MAX(0._wp, wtr_skin(ic) - skinres_max(ic))      ! Excess water enters the soil, and
+      wtr_skin(ic)      = MIN(skinres_max(ic), wtr_skin(ic))                                  ! skin reservoir is limited to the maximum
       snow_accum(ic)    = new_snow + evapo_snow_pot_in_m - snowmelt_soil(ic) - snowmelt_can
 
+      ! Limit snow depth to avoid grid cells with infinitely growing snow depths in cooler climates
+      ! ... we cannot convert a tile into a glacier (when snow is increasingly growing to become a glacier), hence we just stop snow groth at 'some point'
       IF (snow_depth_max >= 0._wp) THEN
-        ! Limit snow depth to avoid grid cells with infinitely growing snow depths in cooler climates
         water_to_soil(ic) = water_to_soil(ic) + MAX(0._wp, weq_snow_soil(ic) - snow_depth_max)
         weq_snow_soil(ic) = MIN(snow_depth_max, weq_snow_soil(ic))
       END IF
+
+!
+! ==>> go on here at October 13th session - Jan cannot join, Julia might cover the documentation instead
+!
 
       !-----------------------------------------------------------
       !   Budget of water in skin reservoir (canopy and ground)
@@ -345,11 +355,11 @@ CONTAINS
     & evapotrans, evapopot, rain, snow,                      &
     & weq_glac, q_snocpymlt,                                 &
     & snowmelt, runoff_glac,                                 &
-    & pme_glacier)
+    & pme_glacier)    ! "p minus e" precipitation minus evaporation (evaporation = sublimation)
 
     !$ACC ROUTINE SEQ
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf   ! TODO rename alf to ... [a better var name]
 
     LOGICAL,  INTENT(in) :: lstart
     REAL(wp), INTENT(IN) :: dtime
@@ -362,7 +372,8 @@ CONTAINS
       & q_snocpymlt, snowmelt, runoff_glac, pme_glacier
 
     !
-    !  local variables
+    !  local variables - used to work in m water column (input/output variables are converted into these local var)
+    !   @TODO make compatible & consistent with in/out
     !
     REAL(wp) ::              &
       & rain_in_m,           & !< amount of rainfall within time step [m]
@@ -370,20 +381,13 @@ CONTAINS
       & evapotrans_in_m,     & !< amount of evapotranspiration within time step [m]
       & snowmelt_pot_in_m,   & !< potential amount of snow melt [m]
       & evapo_snow_pot_in_m, & !< potential snow evaporation
-      & pme_glacier_in_m,    & !< P-E in m
+      & pme_glacier_in_m,    & !< P-E in m ("p minus e" precipitation minus evaporation)
       & runoff_glac_in_m,    & !< Runoff in m
       & snowmelt_in_m          !< Snow/ice melt in m
 
-    !
-    !  Parameters  - compare chapter 2 "Land Physics" of the JSBACH3 documentation
-    !
-    REAL(wp), PARAMETER :: zc1 = tmelt - 3._wp !< [K]
-    REAL(wp), PARAMETER :: zc2=1.87E5_wp       !< [Ks]
-    REAL(wp), PARAMETER :: zc3=1.56E5_wp       !< [m]
-
     !----------------------------------------------------------------------------------------------
 
-    ! Convert water fluxes to m water equivalent within the time step
+    ! Convert water fluxes to m water column equivalent within the time step (in/out var -> local var)
     !-----------------------------------------------------------------
 
     rain_in_m          = rain       * dtime/rhoh2o
@@ -403,18 +407,22 @@ CONTAINS
     !------------------------
 
     snowmelt_in_m = 0._wp
+    ! 't_unfilt' == surface temperature; why using this one here is not clear
+    !
     IF (.NOT. lstart) THEN      ! hcap_ground = 0. at model start
       IF (t_unfilt > tmelt) THEN
-        snowmelt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o) !  potential snow and ice melt [m]
-        snowmelt_in_m     = snowmelt_pot_in_m                       ! there is an unlimited amount of snow
-        weq_glac          = weq_glac - snowmelt_in_m                ! reduce glacier depth according to melting
-        runoff_glac_in_m  = runoff_glac_in_m + snowmelt_in_m        ! add melt water to the runoff
+        snowmelt_pot_in_m = hcap_grnd * (t_unfilt-tmelt)/(alf*rhoh2o) ! potential snow and ice melt [m] (how much water can we melt with this temperature diff)
+        snowmelt_in_m     = snowmelt_pot_in_m                         ! there is an unlimited amount of snow
+        weq_glac          = weq_glac - snowmelt_in_m                  ! reduce glacier depth according to melting (weq_glac == glacier storage); only diagnostic
+        runoff_glac_in_m  = runoff_glac_in_m + snowmelt_in_m          ! add melt water to the runoff
         ! surface temperature correction for snow/ice melt is applied in task "snowmelt_correction"
       END IF
     END IF
 
+    ! Heating due to snow melt on canopy [W m-2]
     q_snocpymlt = 0._wp
 
+    ! convert local to output variables back into flux
     snowmelt    = snowmelt_in_m    * rhoh2o / dtime
     runoff_glac = runoff_glac_in_m * rhoh2o / dtime
     pme_glacier = pme_glacier_in_m * rhoh2o / dtime

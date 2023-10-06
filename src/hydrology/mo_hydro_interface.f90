@@ -380,7 +380,8 @@ CONTAINS
   !!
   SUBROUTINE update_surface_hydrology(tile, options)
 
-    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land, calc_surface_hydrology_glacier
+    USE mo_hydro_process,          ONLY: calc_surface_hydrology_land        ! with soil
+    USE mo_hydro_process,          ONLY: calc_surface_hydrology_glacier     ! no soil
     USE mo_jsb_physical_constants, ONLY: dens_snow
     USE mo_hydro_util,             ONLY: get_amount_in_rootzone
 
@@ -409,7 +410,7 @@ CONTAINS
     dsl4jsb_Real2D_onChunk :: fract_wet
     dsl4jsb_Real2D_onChunk :: weq_snow_soil
     dsl4jsb_Real2D_onChunk :: snow_soil_dens
-    dsl4jsb_Real2D_onChunk :: steepness
+    dsl4jsb_Real2D_onChunk :: steepness       ! std deviation orography (high value: much relief | low: rather flat)
     dsl4jsb_Real2D_onChunk :: weq_snow
     dsl4jsb_Real2D_onChunk :: snow_accum
     dsl4jsb_Real2D_onChunk :: fract_snow
@@ -440,8 +441,8 @@ CONTAINS
     ! Locally allocated vectors
     !
     REAL(wp), DIMENSION(options%nc) :: &
-      & skinres_max,        &
-      & skinres_canopy_max, &
+      & skinres_max,        &       ! skinres max high (a.k.a. water column)  == 0.2 mm // water that is not actually able to move because it sticks to the surface
+      & skinres_canopy_max, &       ! same for canopy, but can accumulate to larger values depeding on LAI
       & weq_rootzone,       &
       & weq_rootzone_max,   &
       & trans_tmp
@@ -495,11 +496,13 @@ CONTAINS
     ltpe_closed = .FALSE.
     IF (model%config%tpe_scheme == 'closed') ltpe_closed = .TRUE.
 
+    !> lake tile (no soil or anyhing below the lake)
+    !>
+    ! compute runoff (P-E) for lakes here and exit
+    ! Note: for the purpose of the water balance it is assumed here that all rain and snow fall is going into runoff
+    ! @todo: compute actual water balance (snow/ice melt) in lake model and use for runoff. The corresponding energy
+    ! fluxes and snow/ice budgets are already computed in the lake model.
     IF (tile%is_lake) THEN
-      ! compute runoff (P-E) for lakes here and exit
-      ! Note: for the purpose of the water balance it is assumed here that all rain and snow fall is going into runoff
-      ! @todo: compute actual water balance (snow/ice melt) in lake model and use for runoff. The corresponding energy
-      ! fluxes and snow/ice budgets are already computed in the lake model.
       dsl4jsb_Get_var2D_onChunk(A2L_,   rain)               ! in
       dsl4jsb_Get_var2D_onChunk(A2L_,   snow)               ! in
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapotrans)         ! in
@@ -511,8 +514,10 @@ CONTAINS
       dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_snow)         ! out
 
       !$ACC PARALLEL LOOP DEFAULT(PRESENT) ASYNC(1) GANG VECTOR
+      ! actual calculation
+      ! very simple scheme !
       DO ic=1,nc
-        runoff  (ic) = rain(ic) + snow(ic) + evapotrans(ic)
+        runoff  (ic) = rain(ic) + snow(ic) + evapotrans(ic)   ! can be negative runoff value w/o precipitation - but it is a diagnostic for land (might take some water from ocean)
         infilt(ic)   = 0._wp
         drainage(ic) = 0._wp
         weq_snow(ic) = 0._wp
@@ -551,6 +556,10 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_, drainage)       ! out
     dsl4jsb_Get_var2D_onChunk(SEB_,   t_unfilt)       ! in
 
+    !> glacier tile
+    !>   just get the vatiables needed
+    !>   as there is no soil beneath glacier, some variables not needed
+    !>
     IF (tile%is_glacier) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    weq_glac)        ! inout
       dsl4jsb_Get_var2D_onChunk(HYDRO_,    runoff_glac)     ! inout
@@ -575,6 +584,9 @@ CONTAINS
       END IF
     END IF
 
+    ! start without snow
+    !   @TODO modify if an ic input file is present
+    !
     IF (is_experiment_start) THEN ! Start of experiment
       !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -588,6 +600,8 @@ CONTAINS
     !$ACC DATA CREATE(skinres_max, skinres_canopy_max, weq_rootzone, weq_rootzone_max) &
     !$ACC   CREATE(trans_tmp, weq_soil_sl_tmp, field_cap_sl_tmp)
 
+    !> calculate for glacier tile
+    !>
     IF (tile%is_glacier) THEN
       !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
@@ -606,9 +620,10 @@ CONTAINS
           & weq_glac(ic),                    & !< inout
           & q_snocpymlt(ic),                 & !< out
           & snowmelt(ic),                    & !< out
-          & runoff_glac(ic),                 & !< out
+          & runoff_glac(ic),                 & !< out, diagnostic, water that really melt form the glacier
           & pme_glacier = runoff(ic)         & !< out, P-E ... used as runoff for HD model
           & )
+        ! no soil or snow at glacier tile, so set relevant values to zero
         infilt(ic)   = 0._wp
         drainage(ic) = 0._wp
         weq_snow_soil(ic) = 0._wp
@@ -621,9 +636,13 @@ CONTAINS
       END DO
       !$ACC END LOOP
       !$ACC END PARALLEL
+    !>
+    !> land surface hydrology (with soil underneath)
+    !>
     ELSE
       !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP GANG(STATIC: 1) VECTOR COLLAPSE(2)
+      ! calc water equalivalent in soil and field capacity
       DO is = 1, nsoil
         DO  ic = 1, nc
           weq_soil_sl_tmp(ic,is)  = wtr_soil_sl(ic,is) + ice_soil_sl(ic,is)
@@ -642,6 +661,8 @@ CONTAINS
 
       !$ACC PARALLEL DEFAULT(PRESENT)
       !$ACC LOOP GANG(STATIC: 1) VECTOR
+      ! 'skin reservoir max' == height value
+      ! to detect skin reservoir overflow (after precipitation) -> water for infiltration and surface runoff etc. ...
       DO ic=1,nc
         IF (tile%is_vegetation .OR. tile%is_land) THEN
           skinres_canopy_max(ic) = w_skin_max_config * lai(ic) * fract_fpc_max(ic)
