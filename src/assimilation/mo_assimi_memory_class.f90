@@ -166,7 +166,8 @@ MODULE mo_assimi_memory_class
     ! diagnostics
     TYPE(t_jsb_var_real3d)    :: &
       & jmax_cl                   , &  !< maximum rate of electron transport [micro-mol CO2 m-2 s-1]
-      & vcmax_cl                       !< maximum rate of carboxylation [micro-mol CO2 m-2 s-1]
+      & vcmax_cl                  , &  !< maximum rate of carboxylation [micro-mol CO2 m-2 s-1]
+      & chlfl_yield_cl                 !< steady-state chlorophyll fluorescence yield [unitless]
 
     ! averaging
     TYPE(t_jsb_var_real2d)    :: &
