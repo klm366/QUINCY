@@ -499,7 +499,7 @@ CONTAINS
                                                fn_pepc_cl             !< fraction of leaf N in electron transport
     ! ---------------------------
     ! 0.2 Local
-    REAL(wp) :: hlp1, hlp2, hlp3
+    REAL(wp) :: hlp1, hlp2, hlp3, hlp4
     REAl(wp) :: ag0_cl, an0_cl, r0_cl, ci0_cl,gs0_cl           ! photosynthesis outputs of initial guess
     REAL(wp) :: fn_chl0_cl, fn_rub0_cl, fn_et0_cl, fn_pepc0_cl ! N fractions of initial guess
     REAL(wp) :: ag_cl, an_cl, r_cl, ci_cl,  gs_cl              ! photosynthesis outputs of optimisation runs
@@ -571,7 +571,8 @@ CONTAINS
                                  ci0_cl                        , &
                                  m_rub                         , &
                                  m_et                          , &
-                                 m_pepc )
+                                 m_pepc                        , &
+                                 hlp1  )
 
       !> 2.0 Attempt to increase PS by increasing the N fraction in chlorophyll
       !!
@@ -601,7 +602,8 @@ CONTAINS
                lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                leaf_nitrogen_cl, &
                t_jmax_opt, &
-               ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3)
+               ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3, &
+               hlp4  )
 
 
       !> 3.0 check if increased chlorophyll has increased photosynthesis. If not, try decreasing it.
@@ -637,7 +639,8 @@ CONTAINS
                  lai_cl                        , &    ! used for: IF statement whether this routine may run or not
                  leaf_nitrogen_cl, &
                  t_jmax_opt, &
-                 ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3)
+                 ag_cl,an_cl,r_cl,gs_cl,ci_cl,hlp1,hlp2,hlp3, &
+                 hlp4 ) 
 
         ! if photosyntheis has still not increased, do not change fn_chl_cl
         IF (an_cl < an0_cl) THEN
@@ -966,9 +969,11 @@ CONTAINS
                                                           resp                      , &
                                                           gs                        , &
                                                           q_sat                     , &
-                                                          hlp0, hlp1, hlp2, hlp3          ! calc_photosynthesis dummy output
+                                                          hlp0, hlp1, hlp2          , &   ! calc_photosynthesis dummy output
+                                                          hlp3, hlp4                      ! calc_photosynthesis dummy output
+                                                                                                
     LOGICAL, DIMENSION(nc)                             :: l_day   !< calc_photosynthesis dummy input, not used & always .FALSE. with QS
-    INTEGER                                            :: icanopy                         ! looping
+    INTEGER                                            :: icanopy !< looping
     CHARACTER(len=*), PARAMETER :: routine = TRIM(modname)//':calc_marginal_canopy_flux_increment'
 
 
@@ -1090,7 +1095,8 @@ CONTAINS
                                     hlp0(:)                         , &
                                     hlp1(:)                         , &
                                     hlp2(:)                         , &
-                                    hlp3(:)                         )
+                                    hlp3(:)                         , &
+                                    hlp4(:)                          )
 
       net_assimilation_new(:) = net_assimilation_new(:) + an(:) * lai_new_cl(:,icanopy)
       canopy_cond_new(:)      = canopy_cond_new(:)      + gs(:) * lai_new_cl(:,icanopy)
@@ -1252,7 +1258,8 @@ CONTAINS
                                                              loc_fleaf_sunlit_cl
     REAL(wp),DIMENSION(3)                                 :: npp_direction
     REAL(wp)                                              :: anl, agl, rl
-    REAL(wp)                                              :: hlp00, hlp0, hlp1, hlp2, hlp3       ! calc_photosynthesis dummy output
+    REAL(wp)                                              :: hlp00, hlp0, hlp1        ! calc_photosynthesis dummy output
+    REAL(wp)                                              :: hlp2, hlp3, hlp4         ! calc_photosynthesis dummy output
     REAL(wp)                                              :: direction
     REAL(wp), DIMENSION(nc)                               :: beta_sinklim_ps_local
     LOGICAL, DIMENSION(nc)                                :: l_day   !< calc_photosynthesis dummy input, not used & always .FALSE. with QS
@@ -1386,7 +1393,8 @@ CONTAINS
                        agl                                       , &
                        anl                                       , &
                        rl                                        , &
-                       hlp00, hlp0, hlp1, hlp2, hlp3                )
+                       hlp00, hlp0, hlp1, hlp2, hlp3             , &
+                       hlp4    )
 
                 npp_direction(dd) = npp_direction(dd) + anl * lai_new_cl(ic,icanopy)
                 ENDDO  ! icanopy =1, ncanopy

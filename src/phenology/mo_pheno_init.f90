@@ -25,8 +25,11 @@ MODULE mo_pheno_init
   USE mo_jsb_grid,            ONLY: Get_grid
   USE mo_jsb_class,           ONLY: get_model
   USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
+#ifdef __QUINCY_STANDALONE__
+#else
   USE mo_jsb_io_netcdf,       ONLY: t_input_file, jsb_netcdf_open_input
   USE mo_jsb_io,              ONLY: missval
+#endif
 
   dsl4jsb_Use_processes PHENO_
   dsl4jsb_Use_config(PHENO_)
@@ -37,6 +40,8 @@ MODULE mo_pheno_init
 
   PUBLIC :: pheno_init
 
+#ifdef __QUINCY_STANDALONE__
+#else
   TYPE t_pheno_init_vars
     REAL(wp), POINTER ::  &
       & lai_mon(:,:,:), &
@@ -46,6 +51,7 @@ MODULE mo_pheno_init
   END TYPE t_pheno_init_vars
 
   TYPE(t_pheno_init_vars) :: pheno_init_vars
+#endif
 
   CHARACTER(len=*), PARAMETER :: modname = 'mo_pheno_init'
 
@@ -70,6 +76,8 @@ CONTAINS
 
     ! select init routine depending on the model
     SELECT CASE (model%config%model_scheme)
+#ifdef __QUINCY_STANDALONE__
+#else
     CASE (MODEL_JSBACH)
       IF (.NOT. ASSOCIATED(tile%parent_tile)) THEN
         CALL pheno_read_init_vars(tile)
@@ -79,11 +87,14 @@ CONTAINS
       IF (tile%Is_last_process_tile(PHENO_)) THEN
         CALL pheno_finalize_init_vars()
       END IF
+#endif
     CASE (MODEL_QUINCY)
       CALL pheno_init_bc_quincy(tile)
     END SELECT
   END SUBROUTINE pheno_init
 
+#ifdef __QUINCY_STANDALONE__
+#else
   SUBROUTINE pheno_finalize_init_vars
 
     DEALLOCATE( &
@@ -302,6 +313,7 @@ CONTAINS
     !$acc update device(dsl4jsb_var2D_onDomain(PHENO_, lai))
 
   END SUBROUTINE pheno_init_ic_jsbach
+#endif
 
   ! ======================================================================================================= !
   !> Intialize pheno variables for boundary conditions (bc)

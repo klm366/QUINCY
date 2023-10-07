@@ -1,7 +1,30 @@
 !>
-!! @brief Contains the interface to the phenlogy processes of the quincy model
+!!  @par Copyright
+!!    QUINCY terrestrial biosphere model with coupled carbon, nitrogen, and phosphorus cycles
+!!    Copyright (C) 2019 Max Planck Institute for Biogeochemistry (MPI-BGC), Jena, Germany 
+!!    Contributors: Caldararu S., Engel J., Kern M., Pallandt M., Schnur R., Thum T., Yu L., Zaehle S.
+!!
+!!    This file is part of the QUINCY model.
+!!    The QUINCY model is free software: you can redistribute it and/or modify
+!!    it under the terms of the GNU General Public License version 3,
+!!    as published by the Free Software Foundation.
+!!
+!!    The QUINCY model is distributed in the hope that it will be useful,
+!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!    GNU General Public License for more details.
+!!
+!!    You should have received a copy of the GNU General Public License
+!!    along with the QUINCY model.  If not, see <https://www.gnu.org/licenses/>.
+!! 
+!! @brief Contains the interface to the phenology processes of the quincy model
+!!
+!! @author
+!!  Jan Engel, MPI-BGC Jena
 !!
 !! @par Revision History
+!! First version by Jan Engel (20161214)
+!! Second version by Steffen Richter (June 2018)
 !! Jan Engel MPI-BGC (2023-09-26): re-write for quincy model based on the jsbach module
 !!
 
