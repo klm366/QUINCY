@@ -48,8 +48,8 @@ CONTAINS
 
     !$claw sca routine
 
-    it = NINT(temperature*1000._wp)
-!!$    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
+    !it = NINT(temperature*1000._wp)
+    it = MIN(MAX(NINT(temperature*1000._wp), 50000),400000)    ! Temporary fix
     tluc = tlucua(it) !<- TODO catch seg fault for unplausible temperatures? (e.g. see mo_jsb4_forcing)
 
     IF (it >= jptlucu1 .AND. it <= jptlucu2) THEN

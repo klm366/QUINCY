@@ -57,7 +57,7 @@ CONTAINS
       & T_bot , &
       & T_lice , &
       & T_mnw , &
-      & T_sfc , &
+      !& T_sfc , &
       !& T_snow, &
       & T_wML
 
@@ -72,7 +72,7 @@ CONTAINS
       dsl4jsb_Get_var2D_onDomain(LENTIC_, T_bot)  ! OUT
       dsl4jsb_Get_var2D_onDomain(LENTIC_, T_lice) ! OUT
       dsl4jsb_Get_var2D_onDomain(LENTIC_, T_mnw)  ! OUT
-      dsl4jsb_Get_var2D_onDomain(LENTIC_, T_sfc)  ! OUT
+      ! dsl4jsb_Get_var2D_onDomain(LENTIC_, T_sfc)  ! OUT
       ! dsl4jsb_Get_var2D_onDomain(LENTIC_, T_snow) ! OUT
       dsl4jsb_Get_var2D_onDomain(LENTIC_, T_wML)  ! OUT
 
@@ -83,7 +83,7 @@ CONTAINS
       T_bot       = tpl_T_r
       T_lice       = tpl_T_f
       T_mnw       = tpl_T_f
-      T_sfc       = tpl_T_f
+      ! T_sfc       = tpl_T_f
       ! T_snow      = tpl_T_f
       T_wML       = tpl_T_f
 

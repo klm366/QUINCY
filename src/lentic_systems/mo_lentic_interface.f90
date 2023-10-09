@@ -32,7 +32,7 @@ MODULE mo_lentic_interface
   USE mo_jsb_task_class,     ONLY: t_jsb_process_task, t_jsb_task_options
 
   ! Use of processes in this module
-  dsl4jsb_Use_processes LENTIC_, A2L_, SEB_
+  dsl4jsb_Use_processes LENTIC_, A2L_, SEB_, HYDRO_, RAD_
 
   ! Use of process configurations
   dsl4jsb_Use_config(LENTIC_)
@@ -41,6 +41,8 @@ MODULE mo_lentic_interface
   dsl4jsb_Use_memory(LENTIC_)
   dsl4jsb_Use_memory(A2L_)
   dsl4jsb_Use_memory(SEB_)
+  dsl4jsb_Use_memory(HYDRO_)
+  dsl4jsb_Use_memory(RAD_)
 
   ! -------------------------------------------------------------------------------------------------------
   ! Module variables 
@@ -120,9 +122,11 @@ CONTAINS
   !! @param[in]     options Additional run-time parameters.
   !!
   SUBROUTINE update_lentic_wbphysics(tile, options)
+    USE mo_util,                ONLY: real2string
 
     USE mo_jsb_grid,      ONLY: Get_grid  
-    USE mo_phy_schemes,   ONLY: lwnet_from_lwdown
+    USE mo_phy_schemes,   ONLY: lwnet_from_lwdown, qsat, surface_dry_static_energy
+
 
     USE mo_lentic_process, ONLY: calc_surface_temperature     , &
                                & calc_radflux                 , &
@@ -167,24 +171,34 @@ CONTAINS
     dsl4jsb_Def_memory(A2L_)
     dsl4jsb_Def_memory(SEB_)
     dsl4jsb_Def_memory(LENTIC_) 
+    dsl4jsb_Def_memory(HYDRO_) 
+    dsl4jsb_Def_memory(RAD_) 
 
 
     ! Declare pointers to variables in memory
     dsl4jsb_Real2D_onChunk :: &
-      & q_bot,                & !< Heat flux through the water-bottom sediment interface of lakes [W m-2]
+      & q_bot,                & !< Heat flux through the water-bottom sediment interface of lakes   [W m-2]
     ! atmospheric forcing
-      & wind_air,             & !< 2m air wind speed [m s-1]
-      & t_air,                & !< 2m air temperature [K]
-      & q_air,                & !< 2m air specific humidity [g g-1]
-      & press_srf,            & !< surface air pressure [Pa]
-      & lw_srf_down,          & !< longwave surface downward flux [W m-2]
-      & swvis_srf_down,       & !< shortwave surface downward flux in the visible band [W m-2]
-      & swnir_srf_down,       & !< shortwave surface downward flux in the near infrared band [W m-2]
-    ! heat fluxes
-      & latent_hflx_wtr,      & !< latent heat flux over water [W m-2]
-      & sensible_hflx_wtr,    & !< sensible heat flux over water [W m-2]
-      & latent_hflx_ice,      & !< latent heat flux over ice [W m-2]
-      & sensible_hflx_ice,    & !< sensible heat flux over ice [W m-2]
+      & wind_air,             & !< 2m air wind speed                                                [m s-1]
+      & t_air,                & !< 2m air temperature                                               [K]
+      & q_air,                & !< 2m air specific humidity                                         [g g-1]
+      & press_srf,            & !< surface air pressure                                             [Pa]
+      & lw_srf_down,          & !< longwave surface downward flux                                   [W m-2]
+      & swvis_srf_down,       & !< shortwave surface downward flux in the visible band              [W m-2]
+      & swnir_srf_down,       & !< shortwave surface downward flux in the near infrared band        [W m-2]
+    ! heat fluxes and atm exchange
+      & albedo_lwtr,          & !< albedo of lake water
+      & albedo_lice,          & !< albedo of ice on lake water
+      & latent_hflx_wtr,      & !< latent heat flux over water                                      [W m-2]
+      & sensible_hflx_wtr,    & !< sensible heat flux over water                                    [W m-2]
+      & qsat_lwtr,            & !< saturation specific humidity at surface over lake water          [kg kg-1]
+      & s_lwtr,               & !< surface dry static energy over lake water                        [m2 s-2]
+      & latent_hflx_ice,      & !< latent heat flux over ice                                        [W m-2]
+      & sensible_hflx_ice,    & !< sensible heat flux over ice                                      [W m-2]
+      & qsat_lice,            & !< saturation specific humidity at surface over lake ice            [kg kg-1]
+      & s_lice,               & !< surface dry static energy over lake ice                          [m2 s-2]
+      & evapo_wtr,            & !< evaporation over lake water
+      & evapo_ice,            & !< evaporation over lake water
     ! topography and location
     !   & depth_w,              &
       & fetch,                &
@@ -200,14 +214,14 @@ CONTAINS
       & h_ice,                &
       & h_snow,               &
       & h_ml,                 &
-      & t_sfc,                &
+      & T_lwtr,                &
       & z0t_sf,                &
       & z0u_sf,                &          
       & w_star
 
     REAL(wp) ::                   &
-        & albedo_water,           & 
-        & albedo_ice(options%nc), & 
+        ! & albedo_water,           & 
+        ! & albedo_lice(options%nc), & 
         & albedo_snow(options%nc),& 
     !   & w_star(options%nc),     &
         & u_star(options%nc),     &
@@ -251,6 +265,8 @@ CONTAINS
     dsl4jsb_Get_memory(LENTIC_)
     dsl4jsb_Get_memory(A2L_)
     dsl4jsb_Get_memory(SEB_)
+    dsl4jsb_Get_memory(HYDRO_)
+    dsl4jsb_Get_memory(RAD_)
 
     ! Get process variables
     dsl4jsb_Get_var2D_onChunk(A2L_, wind_air)           ! in
@@ -261,10 +277,21 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(A2L_, swvis_srf_down)     ! in
     dsl4jsb_Get_var2D_onChunk(A2L_, swnir_srf_down)     ! in
 
+    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lwtr)        ! out
+    dsl4jsb_Get_var2D_onChunk(RAD_, albedo_lice)        ! out
+
     dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_wtr)    ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, latent_hflx_ice)    ! out 
+    dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lwtr)          ! out 
+    dsl4jsb_Get_var2D_onChunk(SEB_, qsat_lice)          ! out 
+    dsl4jsb_Get_var2D_onChunk(SEB_, s_lwtr)             ! out 
+    dsl4jsb_Get_var2D_onChunk(SEB_, s_lice)             ! out 
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_wtr)  ! out
     dsl4jsb_Get_var2D_onChunk(SEB_, sensible_hflx_ice)  ! out
+    dsl4jsb_Get_var2D_onChunk(SEB_, T_lwtr)             ! inout
+
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_wtr)        ! out
+    dsl4jsb_Get_var2D_onChunk(HYDRO_, evapo_ice)       ! out
 
     dsl4jsb_Get_var2D_onChunk(LENTIC_, z0u_sf)           ! out
     dsl4jsb_Get_var2D_onChunk(LENTIC_, z0t_sf)           ! out
@@ -284,7 +311,6 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ice)           ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_snow)          ! inout
     dsl4jsb_Get_var2D_onChunk(LENTIC_, h_ml)            ! inout
-    dsl4jsb_Get_var2D_onChunk(LENTIC_, t_sfc)           ! inout
     
     dsl4jsb_Get_var2D_onChunk(LENTIC_, w_star)          ! out
 
@@ -297,13 +323,13 @@ CONTAINS
 
     !  Set albedos of the lake water, lake ice and snow
 
-    albedo_water = albedo_water_ref
+    albedo_lwtr = albedo_water_ref
     ! Use empirical formulation proposed by Mironov and Ritter (2004) for GME 
-    !_nu albedo_ice   = albedo_whiteice_ref 
-    albedo_ice   = EXP(-c_albice_MR*(tpl_T_f-T_sfc)/tpl_T_f)
-    albedo_ice   = albedo_whiteice_ref*(1._wp-albedo_ice) + albedo_blueice_ref*albedo_ice
+    !_nu albedo_lice   = albedo_whiteice_ref 
+    albedo_lice   = EXP(-c_albice_MR*(tpl_T_f-T_lwtr)/tpl_T_f)
+    albedo_lice   = albedo_whiteice_ref*(1._wp-albedo_lice) + albedo_blueice_ref*albedo_lice
     ! Snow is not considered
-    albedo_snow  = albedo_ice
+    albedo_snow  = albedo_lice
     
 
     !  Set initial values
@@ -315,8 +341,8 @@ CONTAINS
 
     call calc_radflux ( &
                         !& depth_w,        & ! in
-                        & albedo_water,   & ! in
-                        & albedo_ice,     & ! in
+                        & albedo_lwtr,    & ! in
+                        & albedo_lice,    & ! in
                         & albedo_snow,    & ! in
                         & h_ice,          & ! in 
                         & h_ML,           & ! in 
@@ -332,23 +358,27 @@ CONTAINS
                         )
 
     !  Compute long-wave radiation fluxes (positive downward)
-    Q_w = lwnet_from_lwdown(lw_srf_down, t_sfc)     ! Radiation of the atmosphere 
+    Q_w = lwnet_from_lwdown(lw_srf_down, T_lwtr)     ! Radiation of the atmosphere 
 
     !  Compute the surface friction velocity and fluxes of sensible and latent heat 
-    CALL calc_momsenlat ( h_atmvars, h_atmvars, fetch, wind_air, t_air, q_air, t_sfc, press_srf, h_ice,  &
+    CALL calc_momsenlat ( h_atmvars, h_atmvars, fetch, wind_air, t_air, q_air, T_lwtr, press_srf, h_ice,  &
                             Q_momentum, Q_sensible, Q_latent, Q_watvap, z0u_sf, z0t_sf, u_star ) 
     u_star_sf = SQRT(-Q_momentum/rhoh2o) !zr todo: Check differences between u_star and u_star_sf
 
     WHERE(h_ice.GE.h_Ice_min)  
       latent_hflx_wtr   = 0._wp
       sensible_hflx_wtr = 0._wp
+      evapo_wtr         = 0._wp
       latent_hflx_ice   = Q_latent
       sensible_hflx_ice = Q_sensible
+      evapo_ice        = Q_watvap
     ELSEWHERE
       latent_hflx_wtr   = Q_latent
       sensible_hflx_wtr = Q_sensible
+      evapo_wtr         = Q_watvap
       latent_hflx_ice   = 0._wp
       sensible_hflx_ice = 0._wp
+      evapo_ice        = 0._wp
     END WHERE
 
     !  Compute heat fluxes Q_snow, Q_ice, Q_w
@@ -424,12 +454,23 @@ CONTAINS
     call calc_surface_temperature(h_snow, & ! in
                                 & T_lice, & ! in /instead of t_snow
                                 & h_ice,  & ! in
-                                & T_lice,  & ! in
+                                & T_lice, & ! in
                                 & T_wML,  & ! in
-                                & T_sfc   ) ! out    
+                                & T_lwtr  ) ! out    
 
-                                
-                
+    CALL message(TRIM(routine), &
+    & 'Lake temperatures, min: '&
+    & //real2string(MINVAL(T_wML)) //'; max: '//real2string(MAXVAL(T_wML))  )    
+    qsat_lwtr = qsat(T_wML, press_srf)
+    s_lwtr(:)    = surface_dry_static_energy(T_wML(:), qsat_lwtr(:))
+    WHERE(h_ice.GE.h_Ice_min)             ! Ice exists
+      qsat_lice(:) = qsat(t_lice(:), press_srf(:))
+      s_lice(:)    = surface_dry_static_energy(t_lice(:), qsat_lice(:)) 
+    ELSEWHERE
+      qsat_lice(:) = 0._wp
+      s_lice(:)    = 0._wp
+    END WHERE
+
     IF (debug_on() .AND. iblk==1) CALL message(TRIM(routine), 'Finished.')
     
   END SUBROUTINE update_lentic_wbphysics
@@ -476,7 +517,7 @@ CONTAINS
     dsl4jsb_Aggregate_onChunk(LENTIC_, h_ice,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, h_ml,         weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, h_snow,       weighted_by_fract)
-    dsl4jsb_Aggregate_onChunk(LENTIC_, T_sfc,        weighted_by_fract)
+    ! dsl4jsb_Aggregate_onChunk(LENTIC_, T_sfc,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, t_lice,       weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, t_mnw,        weighted_by_fract)
     dsl4jsb_Aggregate_onChunk(LENTIC_, t_wml,        weighted_by_fract)

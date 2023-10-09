@@ -45,7 +45,7 @@ MODULE mo_lentic_memory_class
     TYPE(t_jsb_var_real2d) :: &
       & c_t,          &  !< lake tc shape factor
       & T_lice,       &  !< lake ice temperature 
-      & T_sfc,        &  !< lake surface temperature wtr
+      ! & T_sfc,        &  !< lake surface temperature wtr
       & t_bot,        &  !< lake bottom temperature at water/sediment interface
       & t_wml,        &  !< lake mixed-layer temperaturer wtr
       & t_mnw,        &  !< lake mean wtr temperature
@@ -133,12 +133,12 @@ CONTAINS
         & prefix, suffix,                                                              &
         & output_level=BASIC, initval_r=0.0_wp )
 
-      CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                            &
-        & hgrid, surface,                                                              &
-        & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr'),                   &
-        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
-        & prefix, suffix,                                                              &
-        & output_level=BASIC, initval_r=0.0_wp )
+      ! CALL mem%Add_var( 'T_sfc', mem%T_sfc,                                            &
+      !   & hgrid, surface,                                                              &
+      !   & t_cf('sfc_temp_wtr', 'K', 'lake surface temperature wtr'),                   &
+      !   & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),           &
+      !   & prefix, suffix,                                                              &
+      !   & output_level=BASIC, initval_r=0.0_wp )
 
       CALL mem%Add_var( 'T_lice', mem%T_lice,                                          &
         & hgrid, surface,                                                              &

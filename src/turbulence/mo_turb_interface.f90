@@ -289,23 +289,23 @@ CONTAINS
 
     ELSE IF (tile%contains_lake) THEN
 
-      ! IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
-      !   dsl4jsb_Get_memory(SEB_)
-      !   dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! IN
-      !   !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_12 tile_name=tile%name
-      !   rough_m_star(:) =            fract_lice(:)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
-      !     &               + (1._wp - fract_lice(:)) / (LOG(config_blending_height / config_rough_water) ** 2)
-      ! ELSE
-      !   !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_13 tile_name=tile%name
-      !   rough_m_star(:) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
-      ! END IF
-      ! !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_14 tile_name=tile%name
-      ! rough_h_star(:) = rough_m_star(:)
+      IF (dsl4jsb_Config(SEB_)%l_ice_on_lakes) THEN
+        dsl4jsb_Get_memory(SEB_)
+        dsl4jsb_Get_var2D_onChunk(SEB_, fract_lice) ! IN
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_12 tile_name=tile%name
+        rough_m_star(:) =            fract_lice(:)  / (LOG(config_blending_height / config_rough_snow)  ** 2)  &
+          &               + (1._wp - fract_lice(:)) / (LOG(config_blending_height / config_rough_water) ** 2)
+      ELSE
+        !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_13 tile_name=tile%name
+        rough_m_star(:) = 1._wp / (LOG(config_blending_height / config_rough_water) ** 2)
+      END IF
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_14 tile_name=tile%name
+      rough_h_star(:) = rough_m_star(:)
 
-      ! !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_15 tile_name=tile%name
-      ! rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
-      ! !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_16 tile_name=tile%name
-      ! rough_h(:) = rough_m(:)
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_15 tile_name=tile%name
+      rough_m(:) = config_blending_height * EXP(-1._wp / SQRT(rough_m_star(:)))
+      !$claw expand parallel update savepoint=ser_jsb_turb_update_roughness_expand_16 tile_name=tile%name
+      rough_h(:) = rough_m(:)
 
     ELSE
       CALL finish(TRIM(routine), 'Don"t know what to do.')
