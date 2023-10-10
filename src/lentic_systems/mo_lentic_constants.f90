@@ -23,7 +23,6 @@ IMPLICIT NONE
 PUBLIC
 
      REAL(wp), PARAMETER ::  &
-      & depth_w   = 10.0_wp       , & ! constant lake depth [m] ! As a first step, keep lake depths constant
       & rot_earth = 7.2921E-05_wp , & ! rotation rate of the earth  [rad/s]
 
 
@@ -39,17 +38,11 @@ PUBLIC
       & c_relax_C     = 0.0030_wp          , & ! Constant in the relaxation equation for the shape factor
                                                   ! with respect to the temperature profile in the thermocline
 
-      & albedo_bot    = 0.2_wp             , & ! Albedo of sediment at waterbody bottom [-]
-      & C_T_min       = 0.5_wp             , & ! Minimum value of the shape factor C_T (thermocline)
-      & C_T_max       = 0.9_wp             , & ! Maximum value of the shape factor C_T (thermocline)
-      & C_I_lin       = 0.5_wp             , & ! Shape factor (linear temperature profile in the ice layer)
       & C_I_MR        = 1._wp/12._wp       , & ! Constant in the MR2004 expression for I shape factor
-
       & Phi_I_pr0_lin = 1._wp              , & ! I shape-function derivative (linear profile) 
       & Phi_I_pr1_lin = 1._wp              , & ! I shape-function derivative (linear profile) 
       & Phi_I_ast_MR  = 2._wp              , & ! Constant in the MR2004 expression for I shape factor
-      & H_Ice_max     = 3._wp              , & ! Maximum ice tickness in 
-                                               ! the Mironov and Ritter (2004, MR2004) ice model [m] 
+   
       & C_TT_1        = 11._wp/18._wp      , & ! Constant in the expression for C_TT (thermocline)
       & C_TT_2        = 7._wp/45._wp       , & ! Constant in the expression for C_TT (thermocline)
 
@@ -77,35 +70,8 @@ PUBLIC
       ! !  "pr0" and "pr1" denote zeta derivatives of the corresponding shape function 
       ! !  at "zeta=0" ad "zeta=1", respectively.
       & Phi_T_pr0_1   = 40._wp/3._wp   , & ! Constant in the expression for the T shape-function derivative 
-      & Phi_T_pr0_2   = 20._wp/3._wp   , & ! Constant in the expression for the T shape-function derivative 
+      & Phi_T_pr0_2   = 20._wp/3._wp       ! Constant in the expression for the T shape-function derivative 
 
-      ! !  Security constants
-      & c_small        = 1.0E-10_wp, & ! A small number
-      & h_ML_max       = 1.0E+3_wp , & ! Maximum mixed-layer depth [m]
-      & h_Snow_min     = 1.0E-5_wp , & ! Minimum snow thickness [m]
-      & h_Ice_min      = 1.0E-9_wp , & ! Minimum ice thickness [m]
-      & h_ML_min       = 1.0E-2_wp , & ! Minimum mixed-layer depth [m]
-      & u_star_min     = 1.0E-6_wp , & ! Minimum value of the surface friction velocity [m s^{-1}]
-
-      ! !  Albedo for water, ice and snow.
-      & albedo_water_ref       = 0.20_wp  , & ! Water
-      & albedo_whiteice_ref    = 0.60_wp  , & ! White ice
-      & albedo_blueice_ref     = 0.10_wp  , & ! Blue ice
-      ! & albedo_drysnow_ref     = 0.60_wp  , & ! Dry snow 
-      ! & albedo_meltingsnow_ref = 0.10_wp  , & ! Melting snow 
-
-      !  Empirical parameters.
-      & c_albice_MR = 95.6_wp, &        ! Constant in the interpolation formula for 
-                                      ! the ice albedo (Mironov and Ritter 2004)
-
-      ! tpl_c_w = clw
-      ! These parameters should be carefully reviewed before using them
-      & frac_optic_water(2)      = (/0.10_wp, 0.90_wp/),  &! Fractions of total radiation flux [-] 
-      & extincoef_optic_water(2) = (/2.0_wp,  0.20_wp/),  &! Extinction coefficients per fraction [m^{-1}]
-      & frac_optic_ice(1)        = (/1._wp/),             &! Fractions of total radiation flux [-] 
-      & extincoef_optic_ice(1)   = (/1.0E+07_wp/),        &! Extinction coefficients per fraction [m^{-1}]
-      & frac_optic_snow (1)      = (/1._wp/),             &! Fractions of total radiation flux  [-] 
-      & extincoef_optic_snow(1)  = (/1.0E+07_wp/)          ! Extinction coefficients per fraction [m^{-1}]
         
       CHARACTER(len=*), PARAMETER, PRIVATE :: modname =  'mo_lentic_constants'
 #endif 

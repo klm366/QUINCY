@@ -138,13 +138,15 @@ CONTAINS
 
     USE mo_lentic_constants , ONLY : & 
       rot_earth             , & ! Rotation rate of the earth [rad/s]
+      tpl_T_f                   ! Fresh water freezing point [K]  
+    
+    USE mo_lentic_parameters, ONLY : &
       albedo_water_ref      , &
       albedo_blueice_ref    , & ! Blue ice
       albedo_whiteice_ref   , & ! White ice
       h_Ice_min             , & ! Minimum ice thickness
       h_Snow_min            , & ! Minimum snow thickness
-      c_albice_MR           , & ! Constant in the interpolation formula for the ice albedo (Mironov and Ritter 2004)
-      tpl_T_f                   ! Fresh water freezing point [K]
+      c_albice_MR               ! Constant in the interpolation formula for the ice albedo (Mironov and Ritter 2004)
 
     USE mo_jsb_physical_constants, ONLY:  rhoh2o !> [kg/m3]  density of liquid water !! = tpl_rho_w_r
 

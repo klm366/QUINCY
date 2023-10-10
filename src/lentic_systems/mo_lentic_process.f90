@@ -64,7 +64,7 @@ MODULE mo_lentic_process
       !  the mean radiation flux over the mixed layer,
       !  and the mean radiation flux over the thermocline.
 
-      USE mo_lentic_constants , ONLY : & 
+      USE mo_lentic_parameters , ONLY : & 
         depth_w               , & ! lake depth, constant as a first attempt
         h_Snow_min            , & ! Minimum snow thickness [m]
         h_Ice_min             , & ! Minimum ice thickness [m]
@@ -220,12 +220,14 @@ MODULE mo_lentic_process
       )
 
       USE mo_lentic_constants,  ONLY: &
+        & tpl_kappa_w,   &
+        & Phi_T_pr0_1,   &
+        & Phi_T_pr0_2
+
+      USE mo_lentic_parameters, ONLY: &
         & depth_w,       &
         & h_Ice_min,     &
         & h_ML_min,      &
-        & tpl_kappa_w,   &
-        & Phi_T_pr0_1,   &
-        & Phi_T_pr0_2,   &
         & albedo_bot    
         
         
@@ -279,19 +281,22 @@ MODULE mo_lentic_process
       )
     
       USE mo_lentic_constants,  ONLY: &
-        & C_I_lin,       &
         & C_I_MR,        &
-        & h_Ice_min,     &
         & tpl_c_I,       &
         & tpl_kappa_I,   &
        ! & tpl_L_f,       &
         & tpl_T_f,       &
         & rhoice,        &
-        & c_small,       &
         & Phi_I_pr0_lin, &
         & Phi_I_pr1_lin, &
-        & Phi_I_ast_MR,  &
-        & H_Ice_max     
+        & Phi_I_ast_MR
+        
+      USE mo_lentic_parameters,  ONLY: &
+        & C_I_lin,       &
+        & c_small,       &
+        & h_Ice_min,     &
+        & H_Ice_max    
+
       
       USE mo_jsb_physical_constants,    ONLY: alf           !< Latent heat of fusion [J kg^{-1}]
 
@@ -454,27 +459,29 @@ MODULE mo_lentic_process
       )
 
       USE mo_lentic_constants,  ONLY: &
-        & extincoef_optic_water, &
-        & depth_w,      &
         & c_cbl_1,      &
         & c_cbl_2,      &
         & c_sbl_ZM_i,   &
         & c_sbl_ZM_n,   &
         & c_sbl_ZM_s,   &
-        & c_small,      &
         & c_relax_C,    &
         & c_relax_h,    & 
-        & C_T_min,      &
-        & C_T_max,      &
         & C_TT_1,       &
         & C_TT_2,       &
-        & h_ML_min,     &
-        & h_ML_max,     & 
-        & h_Ice_min,    &
       !  & tpl_c_w,      &
         & tpl_rho_w_r,  &
         & tpl_T_f,      &
-        & tpl_T_r,      &
+        & tpl_T_r
+
+      USE mo_lentic_parameters,  ONLY: &
+        & c_small,      &
+        & C_T_min,      &
+        & C_T_max,      &
+        & extincoef_optic_water, &
+        & h_ML_min,     &
+        & h_ML_max,     & 
+        & h_Ice_min,    &
+        & depth_w,      &
         & u_star_min
       
       USE mo_jsb_physical_constants,    ONLY: clw     ! Specific heat capacity of liquid water [J/(K kg)]
@@ -797,7 +804,7 @@ MODULE mo_lentic_process
       & T_wML,  & ! in
       & T_sfc   ) ! out
 
-      USE mo_lentic_constants,  ONLY: &
+      USE mo_lentic_parameters,  ONLY: &
         & h_Snow_min, &
         & h_Ice_min   
 
