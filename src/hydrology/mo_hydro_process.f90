@@ -2018,8 +2018,8 @@ CONTAINS
              &  pwp_vol(nc,nsoil), ws_free_vol(nc,nsoil), ice_imp(nc,nsoil)
 
     !$ACC DATA &
-    !$ACC   CREATE(ws_vol, ice_vol, scool_vol, ws_rel_vol, ws_range_vol) &
-    !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, ws_free_vol, ice_imp)
+    !$ACC   CREATE(ws_vol, ice_vol, scool_vol, nvgn, mvgn, ws_rel_vol, ws_range_vol) &
+    !$ACC   CREATE(wsat_vol, fc_vol, pwp_vol, ws_free_vol, ice_imp, dt)
 
     ck = 8.0_wp ! For matric potential formula from Zhang 2007 (https://doi.org/10.1175/JHM605.1)
 
@@ -2221,15 +2221,16 @@ CONTAINS
         END DO
       END DO
       !$ACC END LOOP
+      !$ACC END PARALLEL
+      !$ACC WAIT(1)
 
       ! Make sure percolation from top layer is limited to water content !!!
       IF (PRESENT(dt)) THEN
-        IF (dt > 0) THEN
+        !$ACC PARALLEL DEFAULT(PRESENT) ASYNC(1)
+        IF (dt > 0._wp) THEN
           !$ACC LOOP GANG(STATIC: 1) VECTOR
-          DO is = 1, nsoil
-            DO ic = 1, nc
-              K(ic,1) = MIN(K(ic,1), MAX(0._wp,(ws(ic,1)-pwp(ic,1)) / dt))
-            END DO
+          DO ic = 1, nc
+            K(ic,1) = MIN(K(ic,1), MAX(0._wp,(ws(ic,1)-pwp(ic,1)) / dt))
           END DO
           !$ACC END LOOP
         END IF
