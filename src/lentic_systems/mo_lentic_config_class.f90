@@ -1,17 +1,3 @@
-! ===============================================================================================================================
-! === THIS IS A TEMPLATE. PLEASE REPLACE ...                                                                                  ===
-! === ... <FIRST NAME LAST NAME>    with your name e.g. "Martin Mustermann"                                                   ===
-! === ... <DATE>                    with the present date in YYYY-MM-DD format e.g. "2016-04-30"                              ===
-! === ... lentic with your process name e.g. "seb" for surface energy balance                              ===
-! ===                                                                                                                         ===
-! === Then go through the code line by line to adapt it to your needs:                                                        ===
-! === !X marks lines with examples (e.g:), templates (if necessary:) and implementation points (Implementation:) that you     ===
-! === have to adapt to your process.                                                                                          ===
-! ===                                                                                                                         ===
-! === Finally delete this header.                                                                                             ===
-! ===============================================================================================================================
-
-
 !>
 !! @brief Contains structures and methods for lentic config
 !!
