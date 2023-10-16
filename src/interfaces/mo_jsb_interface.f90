@@ -480,7 +480,11 @@ CONTAINS
     no_omp_thread = Get_omp_thread()
     model => Get_model(model_id)
     ! ----------------------------------------------------------------------------------------------------- !
-    
+
+    ! TBD: this is only required if restart or output is written for this timestep!
+    ! BGCMs need to be copied back to the variables from the matrices on which calculations are conducted
+    CALL model%Write_back_to_bgcms()
+
     ! Update options
     CALL model%Set_options(current_datetime=current_datetime, steplen=steplen)
 

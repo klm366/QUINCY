@@ -615,7 +615,7 @@ CONTAINS
           & mtime_current)          ! ..
       END DO
 
-      ! update accumlated values
+      ! update accumulated values
       CALL update_statistics
 
       IF (l_nml_output) THEN
@@ -633,7 +633,7 @@ CONTAINS
       !>
       ! default is to assume we do not write a checkpoint/restart file
       lwrite_checkpoint = .FALSE.
-      ! if thwe model is not supposed to write output, do not write checkpoints
+      ! if the model is not supposed to write output, do not write checkpoints
       IF (.NOT. output_mode%l_none ) THEN
         ! to clarify the decision tree we use shorter and more expressive names:
         l_isStartdate    = (time_config%tc_startdate == mtime_current)

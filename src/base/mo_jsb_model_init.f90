@@ -28,6 +28,8 @@ MODULE mo_jsb_model_init
   USE mo_jsb_class,        ONLY: Get_model
   USE mo_jsb_control,      ONLY: get_no_of_models, debug_on
   USE mo_jsb_model_class,  ONLY: t_jsb_model
+  USE mo_jsb_grid,         ONLY: Get_grid
+  USE mo_jsb_grid_class,   ONLY: t_jsb_grid
 
   USE mo_kind,             ONLY: wp
   USE mo_exception,        ONLY: message, finish
@@ -66,7 +68,7 @@ CONTAINS
     ! <<
     USE mo_jsb_grid_iface,       ONLY: get_lons_and_lats_from_file, get_nlon_nlat_from_file
     USE mo_jsb_domain_iface,     ONLY: t_patch, jsbalone_init_decomp
-    USE mo_jsb_grid_class,       ONLY: t_jsb_grid, new_grid
+    USE mo_jsb_grid_class,       ONLY: new_grid
     USE mo_jsb_grid,             ONLY: Register_grid
 #endif
 
@@ -138,7 +140,7 @@ CONTAINS
   SUBROUTINE setup_grid_patch( model_id, patch, type)
 
     USE mo_jsb_domain_iface, ONLY: t_patch
-    USE mo_jsb_grid_class,   ONLY: t_jsb_grid, new_grid
+    USE mo_jsb_grid_class,   ONLY: new_grid
     USE mo_jsb_grid,         ONLY: Register_grid
 
     ! -------------------------------------------------------------------------------------------------- !
@@ -177,10 +179,8 @@ CONTAINS
   SUBROUTINE jsbach_init(model_id)
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
-    USE mo_jsb_model_class,     ONLY: t_jsb_model, print_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
+    USE mo_jsb_model_class,     ONLY: print_model, MODEL_JSBACH, MODEL_JSBACH_QUINCY, MODEL_QUINCY
     USE mo_quincy_model_config, ONLY: QLAND, QPLANT, QCANOPY
-    USE mo_jsb_grid_class,      ONLY: t_jsb_grid
-    USE mo_jsb_grid,            ONLY: Get_grid
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract, &
       &                               t_jsb_aggregator, t_jsb_aggregator_weighted_by_fract
     USE mo_jsb_lct_class,       ONLY: Contains_lct
@@ -474,9 +474,6 @@ CONTAINS
           & 'Unexpected / not yet implemented Quincy model mode: '//TRIM(model%config%quincy_model))
       ENDIF
 
-      !-- store all bgcms into their matrices for this timestep
-      CALL model%Queue_task(VEG_, "call_store_bgcms_in_matrices") ! ALL
-
       !-- set flux variables to zero
       CALL model%Queue_task(ASSIMI_, "reset_assimi_fluxes")       ! ALL
       CALL model%Queue_task(VEG_, "reset_veg_fluxes")             ! ALL
@@ -515,8 +512,6 @@ CONTAINS
       CALL model%Queue_task(VEG_, "tavrg_vegetation")             ! ALL
       CALL model%Queue_task(SB_, "tavrg_soilbiogeochemistry")     ! ALL
 
-      ! write all matrices back to bgcm variables for this timestep
-      CALL model%Queue_task(VEG_, "call_write_matrices_back")     ! ALL
     END SELECT
     ! Task Queue created
     !--------------------------------------------------------------------------------------------------- !
@@ -582,18 +577,6 @@ CONTAINS
       !>
       IF (model%config%init_from_ifs) &
         & model%config%ifs_input_file = jsb_netcdf_open_input(model%config%ifs_filename, model%grid_id)
-
-      ! IQ: Work on bgcms is conducted on the matrices -> get data from vars into the matrices
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_QUINCY)
-        IF (ASSOCIATED(tile%bgcm_store) .AND. tile%Is_process_active(VEG_)) THEN
-          DO blk = blks, blke
-            jcs = grid%get_col_start(blk)
-            jce = grid%get_col_end  (blk)
-            CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, jcs, jce, blk)
-          ENDDO
-        ENDIF
-      END SELECT
 
       ! TBD: Loop over processes instead of explicit
       IF (tile%Is_process_active(RAD_)) THEN
@@ -680,18 +663,6 @@ CONTAINS
           CALL hd_init_ic(tile)
         END IF
 #endif
-      END SELECT
-
-      ! IQ: Work on bgcms is conducted on the matrices -> get data from matrices back into the vars
-      SELECT CASE (model%config%model_scheme)
-      CASE (MODEL_QUINCY)
-        IF (ASSOCIATED(tile%bgcm_store) .AND. tile%Is_process_active(VEG_)) THEN
-          DO blk = blks, blke
-            jcs = grid%get_col_start(blk)
-            jce = grid%get_col_end  (blk)
-            CALL tile%bgcm_store%Write_stored_matrices_to_bgcms(tile%name, jcs, jce, blk)
-          ENDDO
-        ENDIF
       END SELECT
 
       CALL model%Goto_next_tile(tile)
@@ -932,7 +903,7 @@ CONTAINS
 
     USE mo_jsb_process_class,   ONLY: ON_LEAFS_, ON_TILE_, ON_SUBTREE_, AGGREGATE_
     USE mo_jsb_tile_class,      ONLY: t_jsb_tile_abstract
-    USE mo_jsb_model_class,     ONLY: t_jsb_model, MODEL_JSBACH
+    USE mo_jsb_model_class,     ONLY: MODEL_JSBACH
     USE mo_carbon_init,         ONLY: carbon_read_cpools
     USE mo_util,                ONLY: one_of
 
@@ -940,8 +911,9 @@ CONTAINS
     INTEGER, INTENT(in) :: model_id !< ID of model instance to be initialized
     ! -------------------------------------------------------------------------------------------------- !
     TYPE(t_jsb_model), POINTER          :: model
+    TYPE(t_jsb_grid),  POINTER          :: grid
     CLASS(t_jsb_tile_abstract), POINTER :: tile
-    INTEGER                             :: no_omp_thread
+    INTEGER                             :: no_omp_thread, blks, blke, blk, jcs, jce
 
     dsl4jsb_Def_config(CARBON_)
 
@@ -955,6 +927,9 @@ CONTAINS
     END IF
 
     model => Get_model(model_id)
+    grid  => Get_grid(model%grid_id)
+    blks = grid%get_blk_start()
+    blke = grid%get_blk_end()
 
     SELECT CASE (model%config%model_scheme)
     CASE (MODEL_JSBACH)
@@ -973,6 +948,14 @@ CONTAINS
         call model%Goto_next_tile(tile)
         CYCLE
       END IF
+
+      IF (ASSOCIATED(tile%bgcm_store)) THEN
+        DO blk = blks, blke
+          jcs = grid%get_col_start(blk)
+          jce = grid%get_col_end  (blk)
+          CALL tile%bgcm_store%Store_bgcms_in_matrices(tile%name, jcs, jce, blk)
+        ENDDO
+      ENDIF
 
       ! Indicate to the weighted average aggregator that tile fractions might have changed after restart
       tile%l_fract_children_changed(:,:) = model%Do_fractions_change()
