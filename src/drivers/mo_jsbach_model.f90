@@ -48,9 +48,13 @@ CONTAINS
 
   ! ======================================================================================================= !
   !>
-  !> main routine for running ICON-Land standalone using ICON infrastructure
+  !> main routine for running ICON-Land standalone using ICON infrastructure (without atmosphere)
   !>
-  !>   'jsbach_model()' is called from the ICON program `src/drivers/icon:icon` (ICON-MPIM repo)
+  !>  see master_model_nml 'model_name' in icon_master.namelist ('atmo' vs. 'jsbach')
+  !>
+  !>  either using a global grid or just one grid cell a.k.a. site-level
+  !>
+  !>  'jsbach_model()' is called from the ICON program `src/drivers/icon:icon`
   !>
   SUBROUTINE jsbach_model(jsb_namelist_filename, shr_namelist_filename)
 
@@ -116,7 +120,7 @@ CONTAINS
 #endif
     USE mo_name_list_output_config, ONLY: use_async_name_list_io
     USE mo_output_event_types,      ONLY: t_sim_step_info
-    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio, inh_atmosphere
+    USE mo_impl_constants,          ONLY: SUCCESS, pio_type_async, pio_type_cdipio
     USE mo_memory_log,              ONLY: memory_log_terminate
     USE mo_util_mtime,              ONLY: getElapsedSimTimeInSeconds, is_event_active
 
@@ -145,7 +149,13 @@ CONTAINS
     USE mo_jsb_convect_tables_iface,ONLY: init_convect_tables
 
     USE mo_derived_variable_handling, ONLY: update_statistics
+
+    !> set up the ICON infrastructure
+    !>
+
     ! ----------------------------------------------------------------------------------------------------- !
+    ! jsbach and master namlist filename
+    ! @TODO rename to "master_*"
     CHARACTER(LEN=*), INTENT(in) :: jsb_namelist_filename
     CHARACTER(LEN=*), INTENT(in) :: shr_namelist_filename
     ! ----------------------------------------------------------------------------------------------------- !
@@ -194,24 +204,28 @@ CONTAINS
     CALL message('Namelist files', TRIM(jsb_namelist_filename) // ', ' // TRIM(shr_namelist_filename))
     CALL message('', '')
 
+    ! test global ICON var 'n_dom': number of domains when running nested-domain experiments (different grid resolutions)
+    ! ICON-Land: at the moment just one is possible
     IF (n_dom > 1) CALL finish(routine, 'Only one atmospheric domain allowed')
-
-    iequations = inh_atmosphere
 
     ! ----------------------------------------------------------------------------------------------------- !
     !> 0.1 Initialize global registry of lon-lat grids
     !>
+    !> ICON-Land does not use lon/lat regular grid, but it needs to be set up here anyway as part of ICON
+    !> it can be used for some output operations
+    !>
     CALL lonlat_grids%init()
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 0.2 If this is a resumed or warm-start run...
+    !> 0.2 If this is a re-started experiment
     !>
+    ! use the restart infrastructure of ICON
+    ! read attributes and namelists for all available domains from restart file
+    ! These namelist values will overwrite the model default,
+    !  and will later be overwritten if the user has specified something different for this integration.
     restartAttributes => NULL()
     IF (isRestart()) THEN
       CALL message('','Read restart file meta data ...')
-      ! Reads attributes and namelists for all available domains from restart file.
-      ! These namelist values will overwrite the model default, and will later be overwritten if the user has
-      ! specified something different for this integration.
       CALL read_restart_header(TRIM(get_my_process_name()))
     ENDIF
 
@@ -223,17 +237,18 @@ CONTAINS
     !> 1.1 read namelists required for the ICON infrastructure and fill the
     !>     corresponding sections of the ICON configuration states
     !>
-    ! Create a new file in which all the namelist variables and their
-    ! actual values used in the model run will be stored.
+    ! create and open a new file ('*_output') in which all the namelist variables
+    ! and their actual values used in the model run will be stored
     IF (my_process_is_stdio()) CALL open_nml_output(TRIM(jsb_namelist_filename)//'_output')
 
+    ! read multiple namelists
+    ! partly needed only for ICON infrastructure
     CALL read_infrastructure_namelists_for_jsbach(TRIM(jsb_namelist_filename), TRIM(shr_namelist_filename))
-
-    ! The following can't be called from the previous subroutine since it's causing a circular dependency.
+    ! read output namelist (can't be called from the previous subroutine since it's causing a circular dependency)
     CALL read_name_list_output_namelists (TRIM(jsb_namelist_filename))
 
-    ! Close the file in which all the namelist variables and their
-    ! actual values were stored and write an annotated table of all namelist settings to a text file
+    ! close the above created '*_output' file
+    ! write a '*.log' file
     IF (my_process_is_stdio()) THEN
       CALL close_nml_output()
       CALL log_nml_settings(TRIM(jsb_namelist_filename)//".log")
