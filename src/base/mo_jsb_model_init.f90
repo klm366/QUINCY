@@ -300,6 +300,10 @@ CONTAINS
         ! --- before it was between humidity_scaling and foliage_projected_cover
         ! + prev comment: can be placed between the task "surface_radiation" and "asselin_filter"
       CALL model%Queue_task(PHENO_,  "foliage_projected_cover")
+      IF (model%config%use_tmx) THEN
+        CALL model%Queue_task(TURB_, "surface_roughness")
+        CALL model%Queue_task(TURB_, "exchange_coefficients")
+      END IF
       CALL model%Queue_task(HYDRO_,  "snow_and_skin_fraction")
       CALL model%Queue_task(HYDRO_,  "soil_properties")
       CALL model%Queue_task(SEB_,    "surface_energy")
@@ -338,7 +342,9 @@ CONTAINS
          CALL model%Queue_task(CARBON_, "C_NPP_pot_allocation")
       END IF
       CALL model%Queue_task(TURB_,   "humidity_scaling")
-      CALL model%Queue_task(TURB_,   "surface_roughness")
+      IF (.NOT. model%config%use_tmx) THEN
+        CALL model%Queue_task(TURB_,   "surface_roughness")
+      END IF
       CALL model%Queue_task(RAD_,    "albedo")
           ! Albedo is updated at the end of the time step, one time step before the radiation is updated in
           ! the atmosphere. Otherwise, in between, the albedo changes would be consindered in the jsbach

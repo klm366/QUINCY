@@ -37,6 +37,7 @@ MODULE mo_a2l_memory_class
       DEBUG_VAR          , &
       t_air              , &
       q_air              , &
+      press_air          , &
       rain               , &
       snow               , &
       wind_air           , &
@@ -45,8 +46,10 @@ MODULE mo_a2l_memory_class
       swvis_srf_down     , &
       swnir_srf_down     , &
       swpar_srf_down     , &
-      fract_par_diffuse   , &
+      fract_par_diffuse  , &
+      dz_srf             , &
       press_srf          , &
+      rho_srf            , &
       drag_srf           , &
       t_acoef            , &
       t_bcoef            , &
@@ -112,7 +115,7 @@ CONTAINS
 
     USE mo_jsb_io,            ONLY: grib_bits, t_cf, t_grib1, t_grib2, tables
     USE mo_jsb_grid_class,    ONLY: t_jsb_grid, t_jsb_vgrid
-    USE mo_jsb_varlist,       ONLY: BASIC !, MEDIUM, FULL
+    USE mo_jsb_varlist,       ONLY: BASIC, MEDIUM, FULL
     USE mo_jsb_grid,          ONLY: Get_grid, Get_vgrid
 
     CLASS(t_a2l_memory), INTENT(inout), TARGET :: mem
@@ -253,14 +256,51 @@ CONTAINS
       & initval_r=101325.0_wp )  ! R: I just took average atmospheric pressure
                                  !    at sea level as value to start with...
 
-    CALL mem%Add_var( 'drag_srf', mem%drag_srf,                              &
-      & hgrid, surface,                                                      &
-      & t_cf('surface_drag', '', ''),                                        &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
+    IF (model%config%use_tmx) THEN
+      CALL mem%Add_var( 'press_air', mem%press_air,                                         &
+        & hgrid, surface,                                                                   &
+        & t_cf('air_pressure', 'N m-2', 'Pressure at lowest level'), &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),                &
+        & prefix, suffix,                                                                   &
+        & lrestart=.FALSE.,                                                                 &
+        & output_level=BASIC, &
+        & initval_r=98300.0_wp )
+
+      CALL mem%Add_var( 'dz_srf', mem%dz_srf,                                  &
+        & hgrid, surface,                                                      &
+        & t_cf('reference height in surface layer', 'm', ''),                  &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=FULL,                                                   &
+        & initval_r=10.0_wp )
+
+      CALL mem%Add_var( 'rho_srf', mem%rho_srf,                                &
+        & hgrid, surface,                                                      &
+        & t_cf('air density at surface', '', ''),                              &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
+        & initval_r=1.0_wp )
+    ELSE
+      CALL mem%Add_var( 'drag_srf', mem%drag_srf,                              &
+        & hgrid, surface,                                                      &
+        & t_cf('surface_drag', '', ''),                                        &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )
+      CALL mem%Add_var( 'pch', mem%pch,                                        &
+        & hgrid, surface,                                                      &
+        & t_cf('pch', '', ''),                                                 &
+        & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
+        & prefix, suffix,                                                      &
+        & lrestart=.FALSE.,                                                    &
+        & output_level=BASIC,                                                  &
+        & initval_r=0.0_wp )  
+      END IF
 
     CALL mem%Add_var( 't_acoef', mem%t_acoef,                                &
       & hgrid, surface,                                                      &
@@ -298,15 +338,6 @@ CONTAINS
       & output_level=BASIC,                                                  &
       & initval_r=0.0_wp )
 
-    CALL mem%Add_var( 'pch', mem%pch,                                        &
-      & hgrid, surface,                                                      &
-      & t_cf('pch', '', ''),                                                 &
-      & t_grib1(table, 255, grib_bits), t_grib2(255, 255, 255, grib_bits),   &
-      & prefix, suffix,                                                      &
-      & lrestart=.FALSE.,                                                    &
-      & output_level=BASIC,                                                  &
-      & initval_r=0.0_wp )
-
     CALL mem%Add_var( 'cos_zenith_angle', mem%cos_zenith_angle,              &
       & hgrid, surface,                                                      &
       & t_cf('cosine_zenith_angle', '', ''),                                 &
@@ -334,7 +365,7 @@ CONTAINS
       & output_level=BASIC, &
       & lrestart=.FALSE., initval_r=4.0E-4_wp ) ! R: I just choosed this value for 400 ppm
 
-    IF (One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
+    IF (.NOT. model%config%use_tmx .AND. One_of(LAKE_TYPE, lct_ids(:)) > 0 .AND. .NOT. ASSOCIATED(mem%t_acoef_wtr%ptr)) THEN
 
       CALL mem%Add_var( 'drag_wtr', mem%drag_wtr,                              &
         & hgrid, surface,                                                      &

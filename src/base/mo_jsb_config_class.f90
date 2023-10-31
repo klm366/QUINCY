@@ -31,6 +31,7 @@ MODULE mo_jsb_config_class
     CHARACTER(len=filename_max)    :: fract_filename
     CHARACTER(len=30)              :: grid_name
     CHARACTER(len=40)              :: usecase
+    LOGICAL                        :: use_tmx
     LOGICAL                        :: use_lakes
     LOGICAL                        :: use_glacier
     LOGICAL                        :: use_quincy
@@ -85,6 +86,7 @@ CONTAINS
       grid_filename,          &
       grid_name
 
+    LOGICAL                       :: use_tmx
     LOGICAL                       :: use_lakes
     LOGICAL                       :: use_glacier
     LOGICAL                       :: use_quincy
@@ -99,6 +101,7 @@ CONTAINS
     CHARACTER(len=filename_max)   :: ifs_filename
 
     NAMELIST /jsb_model_nml/  &
+      use_tmx, &
       use_lakes, &
       use_glacier, &
       use_quincy, &
@@ -121,6 +124,7 @@ CONTAINS
     ALLOCATE(model_config)
 
     ! Set defaults
+    use_tmx                    = .FALSE.
     use_lakes                  = .TRUE.
     use_glacier                = .TRUE.
     use_quincy                 = .FALSE.
@@ -150,6 +154,7 @@ CONTAINS
     IF (istat == POSITIONED) READ(nml_unit, jsb_model_nml)
     CALL close_nml(nml_handler)
 
+    model_config%use_tmx                    = use_tmx
     model_config%use_lakes                  = use_lakes
     model_config%use_glacier                = use_glacier
     model_config%use_quincy                 = use_quincy
