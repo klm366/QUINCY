@@ -422,22 +422,25 @@ CONTAINS
 
     !> 2.3 Prepare output
     !>
+    !>  ICON-Land does not use grib output, but is needed for ICON infrastructure
+    !>  configure I/O
+    !>
     CALL configure_gribout(grid_generatingCenter, grid_generatingSubcenter, n_dom)
     CALL configure_io()
-
-    !> 2.4 Map the variable groups given in the output namelist onto the corresponding variable subsets:
-    !>
-    !>   @NOTE all add_vars must be finished before calling this routine.
-    !>
+    ! Map the variable groups given in the output namelist onto the corresponding variable subsets
+    !   Note: all add_vars must be finished before calling this routine (jsbach is already inited above)
+    !   each process has its own group (generated on the fly; e.g. BASIC is just a level of how many var one wants into this group)
     IF (output_mode%l_nml) THEN
+      ! look into namelist and init the groups
       CALL parse_variable_groups()
     END IF
 
-    !> 2.5 If async IO is in effect, init_name_list_output is a collective call
-    !>      with the IO procs and effectively starts async IO
+    !> 2.4 
     !>
+    !>
+    ! 'l_nml' is an option in the namelist: by default this is TRUE if (there is currently no alternative system for ICON-Land)
     IF (output_mode%l_nml) THEN
-      ! compute sim_start, sim_end
+      ! calculate sim_start, sim_end, ..
       sim_step_info%sim_start    = time_config%tc_exp_startdate
       sim_step_info%sim_end      = time_config%tc_exp_stopdate
       sim_step_info%run_start    = time_config%tc_startdate
@@ -447,20 +450,24 @@ CONTAINS
       sim_step_info%jstep0 = 0
 
       CALL getAttributesForRestarting(restartAttributes)
-      ! get start counter for time loop from restart file:
+      ! restart simulation: get start counter for time loop from restart file
       IF (restartAttributes%is_init) &
         & CALL restartAttributes%get("jstep", sim_step_info%jstep0)
+      ! init the output system
       CALL init_name_list_output(sim_step_info)
       CALL create_mipz_level_selections(output_file)
+      ! let cdi know about the vertical axes
       CALL create_vertical_axes(output_file)
-
     END IF
 
-    !> 2.6 Initialize reset-Action, i.e. assign variables to action object
+    !> 2.5 Initialize the reset-Action
+    !>
+    !>  'action' is an ICON concept for something to be done, e.g., do output, calc mean (of output)
+    !>  'reset-Action' may be the action that resets the summarizing variables used for e.g. 'output mean'
     !>
     CALL reset_act%initialize(ACTION_RESET)
 
-    !> 2.7 Optional: detailed print-out of some variable info  !
+    !> 2.6 if set 'msg_level >= 15' print to logfile  for eaxch group what variables are included in this output group
     !>
     IF (my_process_is_stdio() .AND. (msg_level >= 15)) THEN
       DO jg=1,n_dom
@@ -468,34 +475,48 @@ CONTAINS
       END DO
     END IF
 
+    ! stop timer for model init
     IF (timers_level > 1) CALL timer_stop(timer_model_init)
 
     ! ----------------------------------------------------------------------------------------------------- !
-    !> 14.0 get and write out some of the initial values
+    !> 3.0 model configuration and run some routines also called again in the time loop
     !>
+    !>
+
+    !> 3.1 get and write out some of the initial values
+    !>
+    ! get current timestep date
     mtime_current => time_config%tc_current_date
+    ! if this is the start of experiement and no restart:
     IF (.NOT. isRestart() .AND. (mtime_current >= time_config%tc_exp_startdate)) THEN
-      ! ..
-      CALL update_statistics ! R: notwendig siehe Rechnertext
-      ! --
+      ! update statistics
+      CALL update_statistics
+      ! write initial values into output
       IF (output_mode%l_nml) THEN
         CALL write_name_list_output(jstep=0)
       END IF
-    END IF ! not isRestart()
+    END IF
 
+    ! start timer: model runtime w/o model init
     IF (ltimer) CALL timer_start(timer_total)
 
-    ! calculate elapsed simulation time in seconds
+    ! calc the number of seconds since model simulatoin has started
+    ! no used by ICON-Land, but ICON infrastructure
+    ! @NOTE can be deleted - is just a local var, not used anymore
     sim_time = getElapsedSimTimeInSeconds(mtime_current)
 
-    ! allocate temporary variable for restarting purposes
+    ! allocate temporary variable for restart simulations
+    !   (restart system needs a copy of the output file - ICON infrastructure)
     IF (output_mode%l_nml) THEN
       ALLOCATE(output_jfile(SIZE(output_file)), STAT=error_status)
       IF (error_status /= SUCCESS)  CALL finish (routine, 'ALLOCATE failed!')
     ENDIF
 
-    mtime_old     => newDatetime(mtime_current) ! in
+    ! @NOTE can be deleted - is just a local var, not used anymore
+    mtime_old => newDatetime(mtime_current)
 
+    !> 3.2 init structure for restart system specific to jsbach a.k.a. ICON-Land
+    !>
     restartDescriptor => createRestartDescriptor("jsbach")
     jstep0 = 0
     CALL getAttributesForRestarting(restartAttributes)
@@ -504,13 +525,18 @@ CONTAINS
       CALL restartAttributes%get("jstep", jstep0)
     END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 14.1 for debug purposes print var lists: for msg_level >= 13 short and for >= 20 long format
+    !> 3.3 for debug purposes print 'var lists'
     !>
-    IF  (msg_level >= 13) CALL vlr_print_vls(lshort=(msg_level < 20))
+    !>   for msg_level >= 13 short and for >= 20 long format
+    !>
+    IF (msg_level >= 13) THEN
+      CALL vlr_print_vls(lshort=(msg_level < 20))
+    END IF
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 15.0 set events, group and the events
+    !> 3.4 init and configure events (for actions)
+    !>
+    !>  events: when actions may be done
+    !>          e.g., when output and restart may be done
     !>
     CALL message('','')
     eventStartDate => time_config%tc_exp_startdate
@@ -524,15 +550,15 @@ CONTAINS
     ELSE
       checkpointRefDate => time_config%tc_exp_startdate
       restartRefDate    => time_config%tc_exp_startdate
-    ENDIF
-    ! --- create an event group for checkpointing and restart
+    END IF
+    ! create an event group for checkpointing and restart
     checkpointEvents =  addEventGroup('checkpointEventGroup')
     checkpointEventGroup => getEventGroup(checkpointEvents)
-    ! --- --- create checkpointing event
+    ! create checkpointing event
     eventInterval  => time_config%tc_dt_checkpoint
     checkpointEvent => newEvent('checkpoint', checkpointRefDate, eventStartDate, eventEndDate, eventInterval, errno=error_status)
     IF (error_status /= NO_ERROR) THEN
-      ! give an elaborate error message:
+      ! give an elaborate error message (into logfile)
       CALL datetimeToString(checkpointRefDate, dt_string)
       WRITE (0,*) "event reference date: ",    dt_string
       CALL datetimeToString(eventStartDate,    dt_string)
@@ -543,13 +569,13 @@ CONTAINS
       WRITE (0,*) "event interval      : ",    td_string
       CALL mtime_strerror(error_status, errstring)
       CALL finish('perform_nh_timeloop', "event 'checkpoint': "//errstring)
-    ENDIF
+    END IF
     lret = addEventToEventGroup(checkpointEvent, checkpointEventGroup)
-    ! --- --- create restart event, ie. checkpoint + model stop
+    ! create restart event, ie. checkpoint + model stop
     eventInterval  => time_config%tc_dt_restart
     restartEvent => newEvent('restart', restartRefDate, eventStartDate, eventEndDate, eventInterval, errno=error_status)
     IF (error_status /= NO_ERROR) THEN
-      ! give an elaborate error message:
+      ! give an elaborate error message (into logfile)
       CALL datetimeToString(restartRefDate, dt_string)
       WRITE (0,*) "event reference date: ", dt_string
       CALL datetimeToString(eventStartDate, dt_string)
@@ -560,15 +586,16 @@ CONTAINS
       WRITE (0,*) "event interval      : ", td_string
       CALL mtime_strerror(error_status, errstring)
       CALL finish('perform_nh_timeloop', "event 'restart': "//errstring)
-    ENDIF
+    END IF
     lret = addEventToEventGroup(restartEvent, checkpointEventGroup)
+    ! printout information into logfile
     CALL printEventGroup(checkpointEvents)
 
-    ! ----------------------------------------------------------------------------------------------------- !
-    !> 16.0 set time loop properties
+    !> 3.5 set time loop properties
     !>
+    ! get the length of the timestep: 'delta t' (e.g., 30 minutes)
     model_time_step => time_config%tc_dt_model
-
+    ! convert time information to string and printout to logfile
     CALL message('','')
     CALL datetimeToString(mtime_current, dstring)
     WRITE(message_text,'(a,a)') 'Start date of this run: ', dstring
@@ -578,34 +605,50 @@ CONTAINS
     CALL message('',message_text)
     CALL message('','')
 
-    jstep = jstep0+1
-
     ! ----------------------------------------------------------------------------------------------------- !
     !>
-    !> 17.0 time loop for running ICON-Land
+    !> Time loop
+    !>
+    ! ----------------------------------------------------------------------------------------------------- !
+
+    ! ----------------------------------------------------------------------------------------------------- !
+    !> 4.0 model time loop
+    !>
+    !>
+
+    !> 4.1 set loop counter to 1 (jstep is an ICON variable)
+    !>
+    !>    'jstep0 != zero' for restart simulations
+    !>
+    jstep = jstep0 + 1
+
+    !> 4.2 time loop for running ICON-Land
     !>
     TIME_LOOP: DO
-      ! optional memory loggin
+      ! optional memory loggin (probably messages about memory usage)
       CALL memory_log_add
 
-      !TODO Compute mtime_forcing
+      ! increase current timestep by 'model_time_step'
       mtime_current = mtime_current + model_time_step
 
       ! store state of output files for restarting purposes
+      ! (copy parts of output files into another structure used for restarts)
       IF (output_mode%l_nml .AND. jstep>=0 ) THEN
         DO i=1,SIZE(output_file)
           output_jfile(i) = get_current_jfile(output_file(i)%out_event)
         END DO
-      ENDIF
+      END IF
 
+      ! print out timing information to logfile
       IF (msg_level > 2) THEN
         lprint_timestep = .TRUE.
       ELSE
         lprint_timestep = MOD(jstep,timesteps_per_day(dtime,1)) == 0
-      ENDIF
-      ! always print the first and the last time step
-      lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
+      END IF
 
+      ! always print the first and the last time step
+      ! print out timing information to logfile independent of 'message level'
+      lprint_timestep = lprint_timestep .OR. (jstep == jstep0+1) .OR. (jstep == jstep0+nsteps)
       IF (lprint_timestep) THEN
         WRITE(message_text,'(a,i8,a,i0,a,5(i2.2,a),i3.3)') &
               &             'Time step: ', jstep, ' model time ',                                &
@@ -614,13 +657,12 @@ CONTAINS
               &             mtime_current%time%minute, ':', mtime_current%time%second,   '.',    &
               &             mtime_current%time%ms
         CALL message('',message_text)
-      ENDIF
+      END IF
 
-      ! set namelist output flag
+      ! set model output to TRUE/FALSE for this timestep
       l_nml_output = output_mode%l_nml .AND. jstep >= 0 .AND. istime4name_list_output(jstep)
 
-      ! --------------------------------------------------------------------------------------------------- !
-      !> 17.1 run ICON-Land for one timestep
+      !> 4.2.1 run ICON-Land for one timestep
       !>
       DO jg = 1,no_models
         CALL run_one_timestep( &
@@ -635,7 +677,7 @@ CONTAINS
 
       IF (l_nml_output) THEN
         CALL write_name_list_output(jstep)
-      ENDIF
+      END IF
 
       ! re-initialize MAX/MIN fields with 'resetval'
       !   @NOTE must be done AFTER output
@@ -707,7 +749,6 @@ CONTAINS
     ! ----------------------------------------------------------------------------------------------------- !
     !> 19.0 deallocation of structure and variables
     !>
-    ! @TODO CALL deallocateDatetime(mtime_forcing)
     CALL deallocateDatetime(mtime_old)
 
     ! Deallocate global registry for lon-lat grids
