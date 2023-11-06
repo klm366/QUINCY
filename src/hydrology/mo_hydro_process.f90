@@ -92,10 +92,12 @@ CONTAINS
     & evapotrans_soil, evapo_skin, evapo_snow, water_to_soil,       &
     & evapo_deficit, infilt, runoff)
 
-    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow  ! snow parameters needed for cases w/o dynamic snow calculation
+    ! snow parameters needed for cases w/o dynamic snow calculation
+    USE mo_jsb_physical_constants, ONLY: tmelt, rhoh2o, alf, dens_snow_min, dens_snow_max, dens_snow
     USE mo_hydro_constants,        ONLY: InterceptionEfficiency
     USE mo_sse_constants,          ONLY: snow_depth_min
 
+    ! TODO: Separate variables on individual lines and document with FORD stabdard
     LOGICAL,  INTENT(in) :: lstart, ltpe_closed, l_dynsnow, l_infil_subzero
     REAL(wp), INTENT(in) :: dtime, snow_depth_max
     REAL(wp), INTENT(in) ::                                                 &
@@ -248,18 +250,20 @@ CONTAINS
       !-----------------------------------------------------------
       !   Budget of water in skin reservoir (canopy and ground)
       !-----------------------------------------------------------
-      ! Interception of rain (part of rain goes into skin reservoir)
+      ! Interception of rain (part of rain which fits and is not too fast goes into skin reservoir)
       rain_to_skinres = MIN(rain_in_m * InterceptionEfficiency, MAX(skinres_max(ic) - wtr_skin(ic), 0._wp))
       ! Rest of rain goes to soil
       ! Note: the MAX in following line is only to account for apparent precision error (small negative values)
       water_to_soil(ic) = water_to_soil(ic) + MAX(rain_in_m - rain_to_skinres, 0._wp)
-      wtr_skin_pre_rain = wtr_skin(ic)
+      wtr_skin_pre_rain = wtr_skin(ic) ! Save for later
+      ! Update skin reservoir to have values between 0 and skinres_max
       wtr_skin(ic)      = MIN(skinres_max(ic), MAX(0._wp, wtr_skin_pre_rain + rain_to_skinres + evapo_skin_pot_in_m))
 
-      ! Note: at this point ignoring the amount of dew that exceeds the skin reservoir
+      ! Note: at this point ignoring the amount of dew (evapo_skin_pot_in_m > 0) that exceeds the skin reservoir
       !       as dew is calculated later based on evapo_soil_in_m (f(evapotrans_soil))
       evapo_skin_in_m = wtr_skin(ic) - (wtr_skin_pre_rain + rain_to_skinres)
       evapotrans_soil_in_m = evapotrans_no_snow - evapo_skin_in_m
+      ! This evaporation cannot be taken from the skin reservoir and needs to be taken from elsewhere (except dew)
       IF (evapo_skin_pot_in_m < 0._wp) THEN
         evapo_deficit(ic) = evapo_deficit(ic) + evapo_skin_pot_in_m - evapo_skin_in_m
       END IF
@@ -272,6 +276,7 @@ CONTAINS
 
       ! Compute snow density
       IF (l_dynsnow) THEN
+        ! If more old snow (in m) is larger than threshold (currently 2cm)
         IF (weq_snow_soil_old * rhoh2o / snow_soil_dens(ic) > snow_depth_min) THEN
           ! Update density of old snow following eq. 31 of Verseghy, 1991
           snow_soil_dens(ic) = dens_snow_max - (dens_snow_max - snow_soil_dens(ic)) * EXP(-0.01_wp * dtime/3600._wp)
@@ -285,6 +290,7 @@ CONTAINS
             &                 / weq_snow_soil(ic)
         END IF
       ELSE
+        ! Snow is regarded as having constant density (l_dynsnow = .FALSE.)
         snow_soil_dens(ic) = dens_snow
       END IF
 
@@ -295,12 +301,19 @@ CONTAINS
       !! ARNO Scheme (default). Note that both, infiltration and runoff, are further
       !! modified in the soil hydrology routine.
 
+      ! Terraplanet settings may be removed at some point
       IF (ltpe_closed) THEN
         ! Terra planet setup without runoff
         runoff(ic) = 0._wp
+        ! Thus all water goes to the soil
         infilt(ic) = water_to_soil(ic)
 
       ELSE
+        ! Infiltration by the Arno-scheme is designed for large scales may need reconsideration at high resolution
+        ! Infiltration takes place in the root zone and what doesn't fit goes to the runoff
+        ! Runoff has two components:
+        ! 1) Orographic runoff which depends only on steepness
+        ! 2) Excess water which exceeds the water holding capacity of the root zone
         CALL arno_scheme(l_infil_subzero, t_soil_sl1(ic),        &
           &              water_to_soil(ic), weq_rootzone(ic),    &
           &              steepness(ic), weq_rootzone_max(ic),    &
@@ -714,7 +727,6 @@ CONTAINS
       & ws_rel,                    & !< relative rootzone soil moisture (water + ice)
       & zb1, zbm, zconw1, zvol
 
-    ! todo: parameters should be defined as parameters
     zb1    = 1._wp + steepness
     zbm    = 1._wp / zb1
     zconw1 = weq_rootzone_max * zb1
@@ -1648,6 +1660,8 @@ CONTAINS
     REAL(wp),  INTENT(in)    :: weq_snow_lice
     REAL(wp),  INTENT(out)   :: fract_snow_lice
 
+    ! TANH creates a steep increase in for increasing (positive) weq_snow_lice 
+    ! which asympototically approaches 1 for high weq_snow_lice (Roesch et al. 2002, Climate Dynamics)
     fract_snow_lice = TANH(weq_snow_lice * 100._wp)
 
   END SUBROUTINE calc_wskin_fractions_lice
@@ -1708,7 +1722,8 @@ CONTAINS
       ! Snow fraction on canopy
       ! Wet skin reservoir fraction on soil and canopy (between 0 and 1)
       IF (skinres_max(ic) > EPSILON(1._wp)) THEN
-        fract_snow_can(ic) = MIN(1._wp, weq_snow_can(ic) / skinres_max(ic))
+        ! Simply assume that the fractions are proportional to the content (uniform layer thickess where snow/water is present)
+        fract_snow_can(ic) = MIN(1._wp, weq_snow_can(ic) / skinres_max(ic)) ! StW: Does it make sense to use skinres_max here?
         fract_wet(ic)      = MIN(1._wp, wtr_skin(ic)     / skinres_max(ic))
       ELSE
         fract_snow_can(ic) = 0._wp
@@ -1717,11 +1732,13 @@ CONTAINS
 
       ! Snow fraction on soil
       fract_snow_soil(ic) = Get_snow_fract_noforest(weq_snow_soil(ic), oro_stddev(ic)) ! snow on soil below forest
+      ! @todo: Is MERGE GPU-compatible?
       fract_snow_soil(ic) = MERGE(fract_snow_can(ic), fract_snow_soil(ic), &
                                fract_snow_soil(ic) < EPSILON(1._wp) .AND. fract_snow_can(ic) > EPSILON(1._wp))
 
 
       ! Potential evaporation using old values of air and surface humidity
+      ! @todo: Suffix "_old" does likely not make sense at this routine level
       qsat_srf_old = qsat(t_srf_old(ic), press_srf(ic))
       evapo_pot    = -1._wp * heat_transfer_coef(drag_srf(ic), steplen) * (q_air(ic) - qsat_srf_old)  ! Positive upwards
 
@@ -1729,6 +1746,7 @@ CONTAINS
       ! snow water content from soil and canopy; same for skin reservoir
       IF (fract_snow_soil(ic) > 0._wp) THEN
         ! @todo Shouldn't one take rhoice here insteady of rhoh2o?
+        ! @todo Can we be sure that weq_snow_soil + weq_snow_can > 0 or should a MAX(EPSILON(1._wp),...) be added?
         fract_snow_soil(ic) = fract_snow_soil(ic) / MAX(1._wp, fract_snow_soil(ic) * evapo_pot * dtime             &
           &                                                    / (rhoh2o * (weq_snow_soil(ic) + weq_snow_can(ic))) &
           &                                            )
@@ -1796,6 +1814,7 @@ CONTAINS
     !$ACC   PRIVATE(t_srf_old, qsat_srf_old, evapo_pot)
     DO ic=1,nc
 
+      ! Simply assume that the fraction is proportional to the content (uniform layer thickess where water is present)
       IF (skinres_max(ic) > EPSILON(1._wp)) THEN
         fract_wet(ic) = MIN(1._wp, wtr_skin(ic) / skinres_max(ic))
       ELSE
@@ -1803,15 +1822,17 @@ CONTAINS
       END IF
 
       ! Snow fraction on soil
+      ! StW: Below forest on bare tile?
       fract_snow_soil(ic) = Get_snow_fract_noforest(weq_snow_soil(ic), oro_stddev(ic)) ! snow on soil below forest
 
       ! Potential evaporation using old values of air and surface humidity
+      ! @todo: Suffix "_old" does likely not make sense at this routine level
       t_srf_old    = t_srf(ic)
       qsat_srf_old = qsat(t_srf_old, press_srf(ic))
       evapo_pot    = heat_transfer_coef(drag_srf(ic), steplen) * (qsat_srf_old - q_air(ic)) ! Positive upwards
 
       ! Reduce snow cover on soil if snow loss during the time step due to potential evaporation is larger than
-      ! snow water content from soil and canopy together
+      ! snow water content from soil (no canopy on bare tiles)
       IF (fract_snow_soil(ic) > 0._wp .AND. weq_snow_soil(ic) > EPSILON(1._wp)) THEN
         fract_snow_soil(ic) = fract_snow_soil(ic) / MAX(1._wp, fract_snow_soil(ic) * evapo_pot * dtime            &
           &                                                    / (rhoh2o * MAX(EPSILON(1._wp), weq_snow_soil(ic))) )

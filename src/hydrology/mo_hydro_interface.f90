@@ -458,7 +458,7 @@ CONTAINS
       & snow_depth_max_config
     LOGICAL  :: &
       & is_experiment_start,    &
-      & l_compat401_config,     &
+      & l_compat401_config,     & ! @todo: For backward compatibility with quite old ICON setup. Do we still need it?
       & l_dynsnow_config,       &
       & l_infil_subzero_config, &
       & ltpe_closed
@@ -479,7 +479,7 @@ CONTAINS
     IF (debug_on() .AND. iblk == 1) CALL message(TRIM(routine), 'Starting on tile '//TRIM(tile%name)//' ...')
 
     model => Get_model(tile%owner_model_id)
-    l_compat401_config = model%config%l_compat401
+    l_compat401_config = model%config%l_compat401 ! @todo: The backward compatibility is used to disable snow with dynamic density
 
     dsl4jsb_Get_config(HYDRO_)
     w_skin_max_config      = dsl4jsb_Config(HYDRO_)%w_skin_max ! Maximum capacity of skin reservoir (soil + canopy)
@@ -2026,6 +2026,8 @@ CONTAINS
   !!
   SUBROUTINE update_snow_and_skin_fraction( tile, options)
 
+    ! Update of fract_snow and fract_wet are needed to determine potential evaporation of water to the atmosphere
+
     ! Use declarations
     USE mo_hydro_process,          ONLY: calc_wskin_fractions_lice, calc_wskin_fractions_veg, calc_wskin_fractions_bare
     ! sollte jetzt in dieses File hier kommen: USE mo_hydro_process,  ONLY: calc_hydro_snow_and_skin_fraction
@@ -2147,6 +2149,7 @@ CONTAINS
     dsl4jsb_Get_var2D_onChunk(HYDRO_,    fract_snow_soil)  ! out
 
 #ifndef _OPENACC
+    ! Test of sainity of temperature to prevent inunderstandable errors later - currently checks are not GPU-compatible
     IF (ANY(t(:) < 50._wp .OR. t(:) > 400._wp)) THEN
       IF (ANY(t(:) < 50._wp)) THEN
         ic = MINLOC(t(:), DIM=1)
@@ -2164,18 +2167,20 @@ CONTAINS
     !$ACC PARALLEL DEFAULT(PRESENT)
     !$ACC LOOP GANG VECTOR
     DO ic=1,nc
-      ! Maximum capacity of skin reservoir (soil + canopy)
+      ! Maximum capacity of canopy skin reservoir for tiles with canopy
       IF (tile%is_vegetation .OR. tile%is_land) THEN
         skinres_canopy_max(ic) = config_w_skin_max * lai(ic) * fract_fpc_max(ic)
       ELSE
         skinres_canopy_max(ic) = 0._wp
       END IF
+      ! Maximum total skin reservoir capacity for tiles with soil is to total of soil and canopy capacity
       IF (tile%contains_soil) THEN
         skinres_max(ic) = config_w_skin_max + skinres_canopy_max(ic)
       ELSE
         skinres_max(ic) = 0._wp
       END IF
 
+      ! Glacier surface is treated as if the are entirely covered with snow without depth
       IF (tile%is_glacier) THEN
         fract_snow(ic)      = 1._wp
         fract_snow_soil(ic) = 1._wp
@@ -2183,11 +2188,14 @@ CONTAINS
     END DO
     !$ACC END PARALLEL
 
+    ! Vegetated tiles
     IF (tile%is_vegetation .OR. tile%is_land) THEN
       dsl4jsb_Get_var2D_onChunk(HYDRO_, weq_snow_can)       ! in
       CALL calc_wskin_fractions_veg( &
-        & dtime,                     & ! in
-        & steplen,                   & ! in
+        & dtime,                     & ! in, Time step [s]
+        & steplen,                   & ! in, Time step [s]
+                                       ! TODO: The two time steps are used to distinguish the first time step in ECHAM's leap-frog
+                                       !       integration scheme from all other time steps. Do we still need both?
         & skinres_max(:),            & ! in
         & oro_stddev(:),             & ! in
         & t(:),                      & ! in, from the previous time step as long as this is called before the asselin filter
@@ -2209,11 +2217,12 @@ CONTAINS
       !$ACC END PARALLEL
     END IF
 
+    ! Bare tiles (not yet in use)
     IF (tile%is_bare) THEN
       CALL calc_wskin_fractions_bare( &
         & dtime,                      & ! in
         & steplen,                    & ! in
-        & skinres_max,                & ! in
+        & skinres_max(:),             & ! in
         & oro_stddev(:),              & ! in
         & t(:),                       & ! in
         & press_srf(:),               & ! in
